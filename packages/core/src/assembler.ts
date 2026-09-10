@@ -1,3 +1,6 @@
+import { normalizeAddressForWidth } from "./address-width.js";
+import { AddressToLineMapping } from "./addressToLine.js";
+import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
 import type {
   ArchitectureEncoder,
   ArchitectureEncoderContext,
@@ -6,9 +9,6 @@ import type {
   LoweredOperand,
   OperandResolutionContext,
 } from "./architecture-types.js";
-import { AddressToLineMapping } from "./addressToLine.js";
-import { normalizeAddressForWidth } from "./address-width.js";
-import { CORE_DIRECTIVE_GROUPS, type CoreDirectiveGroup } from "./directive-groups.js";
 import type {
   AssemblerTraceCommandEvent,
   AssemblerTraceListener,
@@ -26,6 +26,10 @@ import {
   createAssemblySourceLocation,
   diagnosticFromError,
 } from "./diagnostics.js";
+import { CORE_DIRECTIVE_GROUPS, type CoreDirectiveGroup } from "./directive-groups.js";
+import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
+import { NodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
+import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
 import type { ConditionalBranchNode, ExecutableNode, LoopNode } from "./ir/assembly-tree.js";
 import {
   isReferenceExpressionNode,
@@ -43,45 +47,7 @@ import {
 } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
-import { ArchitectureRegistry, type ArchitectureDefinition } from "./architecture-registry.js";
-import { DirectiveRegistry, createDirectiveRegistry } from "./directives/registry.js";
-import { DefineEngine } from "./services/define-engine.js";
-import {
-  DirectiveRuntimeService,
-  type PushPcStackEntry,
-} from "./services/directive-runtime-service.js";
-import {
-  AssemblyFrontEndService,
-  type AssemblyFrontEndHost,
-} from "./services/assembly-front-end-service.js";
-import {
-  CommandLoweringService,
-  type LoweredCommand,
-  type LoweredExecutableNode,
-  type LoweredLoopNode,
-  type LoweredProgram,
-} from "./services/command-lowering-service.js";
-import { FrontEndCommandService } from "./services/front-end-command-service.js";
-import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
-import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
-import {
-  ProgramModelBuilder,
-  type IncrementalProgramParseState,
-  type ProgramModel,
-} from "./services/program-model-builder.js";
-import { OutputWriterService } from "./services/output-writer-service.js";
-import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
-import { parseStructInitializer, splitInitializerList } from "./services/struct-initializer.js";
-import {
-  SymbolScopeService,
-  parseUnnamedLabelReference,
-  type LabelEntry,
-} from "./services/symbol-scope-service.js";
-import { getDefineVariable, isBareLabelReference } from "./services/command-text-service.js";
-import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "./syntax-profile.js";
-import type { SourceSpan } from "./source-location.js";
-import { NodeAssemblyFileProvider, type AssemblyFileProvider } from "./file-provider.js";
-import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
+import type { AssemblyStageName } from "./plugin/contracts.js";
 import {
   type AssemblerEnvironment,
   type LifecycleContribution,
@@ -93,7 +59,41 @@ import {
   PluginSessionStateStore,
   type PluginStateSnapshot,
 } from "./plugin/index.js";
-import type { AssemblyStageName } from "./plugin/contracts.js";
+import {
+  AssemblyFrontEndService,
+  type AssemblyFrontEndHost,
+} from "./services/assembly-front-end-service.js";
+import {
+  CommandLoweringService,
+  type LoweredCommand,
+  type LoweredExecutableNode,
+  type LoweredLoopNode,
+  type LoweredProgram,
+} from "./services/command-lowering-service.js";
+import { getDefineVariable, isBareLabelReference } from "./services/command-text-service.js";
+import { DefineEngine } from "./services/define-engine.js";
+import {
+  DirectiveRuntimeService,
+  type PushPcStackEntry,
+} from "./services/directive-runtime-service.js";
+import { FrontEndCommandService } from "./services/front-end-command-service.js";
+import { IncludeSourceService, type IncludedFileInfo } from "./services/include-source-service.js";
+import { MacroEngine, type MacroDefinition } from "./services/macro-engine.js";
+import { OutputWriterService } from "./services/output-writer-service.js";
+import {
+  ProgramModelBuilder,
+  type IncrementalProgramParseState,
+  type ProgramModel,
+} from "./services/program-model-builder.js";
+import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
+import { parseStructInitializer, splitInitializerList } from "./services/struct-initializer.js";
+import {
+  SymbolScopeService,
+  parseUnnamedLabelReference,
+  type LabelEntry,
+} from "./services/symbol-scope-service.js";
+import type { SourceSpan } from "./source-location.js";
+import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "./syntax-profile.js";
 
 type RuntimeConditionalNode = ConditionalBranchNode;
 type RuntimeNode = NormalizedCommand | LoopNode | RuntimeConditionalNode;

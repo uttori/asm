@@ -12,9 +12,9 @@ import {
   type DebugRegister,
 } from "@uttori/asm-debug-adapter";
 
+import { test } from "../../../tests/ava-helper.js";
 import { MESEN_BACKEND_ID, MESEN_CAPABILITIES, MesenDebugBackend } from "../src/mesen-backend.js";
 import { MesenProcessHost, parseMesenRuntimeManifest } from "../src/mesen-process-host.js";
-import { test } from "../../../tests/ava-helper.js";
 
 const enabled = process.env.UTTORI_MESEN_LIVE === "1";
 const liveTest = enabled ? test.serial : test.serial.skip;

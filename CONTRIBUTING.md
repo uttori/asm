@@ -124,13 +124,30 @@ your change merely to make `git status` shorter.
 - Reject unsupported versions and malformed identities. Never silently coerce a newer schema.
 - Use half-open ranges (`start` inclusive, `end` exclusive).
 - Preserve stable ids and deterministic ordering. Avoid routine timestamps in mergeable artifacts.
-- Public functions, classes, interfaces with non-obvious semantics, and internal algorithms with
-  hidden constraints need useful JSDoc—not a restatement of the signature.
+- Add or update concise, meaningful JSDoc for public APIs and for types, interfaces, type aliases,
+  fields, and internal algorithms with non-obvious semantics. Explain relevant units, defaults,
+  valid ranges, ownership, lifecycle, side effects, failure behavior, or invariants. Avoid
+  restating obvious names or signatures and adding boilerplate tags without useful information.
+- Add short inline comments immediately before complex branches and non-obvious logic. Explain
+  why the path exists, which invariant it protects, or why ordering matters, especially around
+  validation, fallbacks, state transitions, cancellation/recovery, and compatibility behavior.
+  Keep explanations close to the code, usually one or two sentences; do not narrate each statement.
 - Any performance or allocation optimization must have an adjacent inline invariant comment and
   thorough JSDoc where applicable. Explain its complexity, ordering, allocation, determinism, and
   validation constraints so a locally attractive rewrite cannot reintroduce the original problem.
 - Comments should explain why a constraint exists. Tests should show the externally observable
-  contract.
+  contract. Update or remove stale comments when behavior changes; tests and final summaries do
+  not replace explanations in the source.
+- Do not write nested ternaries, including within template interpolations. Use named intermediate
+  values, explicit if/else branches, or a small helper to make the decision readable.
+- Do not spread input-sized collections into function arguments (`push`, `unshift`, `splice`,
+  `Math.min`/`Math.max`, or similar calls); fitting in memory does not avoid the engine's argument
+  limit. Append iteratively, use numeric folds, or use a stack that preserves processing order.
+  Array/object spread is unaffected. Call spread is acceptable when a small bound is enforced
+  before the call. Test large-input regressions in a normal Node child because AVA workers have
+  a larger native stack and can hide this failure.
+- Before finishing, review changed code for missing explanations, misleading or redundant
+  comments, and nested ternaries. Apply these expectations to all new or substantively modified code.
 - Run `npm run fmt` to format owned files. If a new path is not covered by the root scripts, add it to
   the appropriate formatting, lint, and TypeScript scope.
 
@@ -141,10 +158,14 @@ unreached, conflicting, or unsupported bytes must remain visible and round-trip 
 
 AVA is the test runner. A focused test is the fastest development loop:
 
+Put package behavior tests in `packages/<package>/tests/`, following `src/` paths where practical.
+Keep repository structure checks in `tests/project/`, cross-package scenarios in `tests/integration/`,
+and script tests in `tests/scripts/`. Shared test harnesses belong in `tests/helpers/`.
+
 ```sh
 npx ava packages/disassembler/tests/project-store.test.ts
 npx ava packages/plugin-snes/tests/65816-decoder.test.ts
-npx ava tests/vscode-debugger.test.ts
+npx ava tests/project/vscode-extension/debugger.test.ts
 ```
 
 Tests should be deterministic, hermetic by default, and safe to run concurrently. Use

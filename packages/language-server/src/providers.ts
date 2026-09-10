@@ -1,6 +1,17 @@
-import { pathToFileURL, fileURLToPath } from "node:url";
-import path from "node:path";
 import fs from "node:fs";
+import path from "node:path";
+import { pathToFileURL, fileURLToPath } from "node:url";
+
+import type {
+  AssemblyDiagnostic,
+  AssemblyDiagnosticSeverity,
+  AssemblySymbolDefinition,
+  AssemblySymbolKind,
+  AssemblySymbolReference,
+  ProjectOutlineNode,
+  SourceRange,
+  WorkspaceIndex,
+} from "@uttori/asm-core";
 import {
   CompletionItem,
   CompletionItemKind,
@@ -25,6 +36,7 @@ import {
   TextEdit,
   WorkspaceEdit,
 } from "vscode-languageserver";
+
 import {
   findInstruction,
   findDirectiveInCatalog,
@@ -40,16 +52,6 @@ import {
   findReferences,
   positionInRange,
 } from "./core.js";
-import type {
-  AssemblyDiagnostic,
-  AssemblyDiagnosticSeverity,
-  AssemblySymbolDefinition,
-  AssemblySymbolKind,
-  AssemblySymbolReference,
-  ProjectOutlineNode,
-  SourceRange,
-  WorkspaceIndex,
-} from "@uttori/asm-core";
 
 /**
  * The LSP 3.18 semantic-token legend advertised to clients. All entries use

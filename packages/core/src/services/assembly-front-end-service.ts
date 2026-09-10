@@ -1,3 +1,6 @@
+import type { ExecutableNode } from "../ir/assembly-tree.js";
+import { createNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { SyntaxProfile } from "../syntax-profile.js";
 import {
   preprocessBlockCommands as preprocessCommandBlock,
   removeInlineComment,
@@ -6,10 +9,7 @@ import {
   splitCommandIntoWords,
   type SourcedCommand,
 } from "./command-text-service.js";
-import type { ExecutableNode } from "../ir/assembly-tree.js";
 import { ProgramModelBuilder } from "./program-model-builder.js";
-import { createNormalizedCommand, type NormalizedCommand } from "../ir/normalized-command.js";
-import type { SyntaxProfile } from "../syntax-profile.js";
 import { isOpenStructInitializer } from "./struct-initializer.js";
 
 export type AssemblyFrontEndHost = {

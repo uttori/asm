@@ -5,6 +5,7 @@ import {
   importRuntimeInstructionTrace,
   validateRuntimeInstructionTrace,
   mergeRuntimeEvidence,
+  createRuntimeInstructionTraceImporter,
   type AnalysisProjectShards,
   type RuntimeInstructionTraceArtifact,
 } from "../src/index.js";
@@ -33,6 +34,103 @@ const emptyShards = (): AnalysisProjectShards => ({
   runtime: [],
   evidence: [],
   imports: [],
+});
+
+test("disassembly index folds changing general registers while preserving code, decoding state, counts and source identity", (t) => {
+  const details = Array.from({ length: 1000 }, (_, x) => ({
+    bytes: [0xa9, 1],
+    state: { a: x, x, y: x, s: 512 - x, p: 0x30, e: 0, db: 0x7e, d: 0, pb: 0x7e, pc: 0x2000 },
+  }));
+  details.push({ ...details[0], bytes: [0xa9, 2] });
+  details.push({ ...details[0], state: { ...details[0].state, db: 0x7f } });
+  details.push({ ...details[0], state: { ...details[0].state, d: 0x100 } });
+  details.push({ ...details[0], bytes: [0xa9, 1, 0], state: { ...details[0].state, p: 0x10 } });
+  const trace = {
+    ...artifact(),
+    chunks: [
+      {
+        sequenceStart: 1,
+        addresses: details.map(() => 0x7e2000),
+        details,
+        droppedEvents: 0,
+        active: false,
+      },
+    ],
+  };
+  const context = { projectRomContentSha256: romContentSha256, sourceName: "large.json" };
+  const full = importRuntimeInstructionTrace(trace, context);
+  const indexed = importRuntimeInstructionTrace(trace, {
+    ...context,
+    indexMode: "65816-disassembly",
+    maxIndexRecords: 11,
+  });
+  t.is(indexed.sourceSha256, full.sourceSha256);
+  t.deepEqual(indexed.batch.evidence, full.batch.evidence);
+  t.is(indexed.observedEvents, 1004);
+  t.is(indexed.batch.runtime.length, 11);
+  const instructions = indexed.batch.runtime.filter((r) => r.kind === "runtime-instruction");
+  t.is(instructions.length, 5);
+  t.true(instructions.some((r) => r.count === 1000));
+  t.true(instructions.every((r) => !("x" in r.state) && !("a" in r.state) && !("s" in r.state)));
+  t.is(indexed.report.indexProfile, "65816-disassembly-v1");
+  t.true(indexed.report.warnings.some((w) => w.includes("original capture")));
+  t.is(trace.chunks[0].details[500].state.x, 500);
+  const merged = mergeRuntimeEvidence(emptyShards(), indexed.batch);
+  t.false(mergeRuntimeEvidence(merged.shards, indexed.batch).changed);
+  t.throws(() => mergeRuntimeEvidence(merged.shards, full.batch), {
+    message: /different index profile/,
+  });
+  t.throws(
+    () =>
+      mergeRuntimeEvidence(mergeRuntimeEvidence(emptyShards(), full.batch).shards, indexed.batch),
+    { message: /different index profile/ },
+  );
+});
+
+test("trace indexes fail at an explicit record budget without sampling or exhausting a Map", (t) => {
+  const context = {
+    projectRomContentSha256: romContentSha256,
+    sourceName: "bounded.json",
+    maxIndexRecords: 3,
+  };
+  const importer = createRuntimeInstructionTraceImporter(artifact(), context);
+  const chunk = {
+    sequenceStart: 1,
+    addresses: [0x808000],
+    details: [{ bytes: [0xea], state: { p: 0x30, x: 1 } }],
+    droppedEvents: 0,
+    active: false,
+  };
+  importer.push(chunk);
+  t.throws(
+    () =>
+      importer.push({
+        ...chunk,
+        sequenceStart: 2,
+        details: [{ bytes: [0xea], state: { p: 0x30, x: 2 } }],
+      }),
+    { message: /Trace index exceeds 3 records.*disassembly index/ },
+  );
+  t.throws(() => importer.finish(), { message: /Trace index exceeds 3 records/ });
+  const projected = createRuntimeInstructionTraceImporter(artifact(), {
+    ...context,
+    indexMode: "65816-disassembly",
+  });
+  projected.push(chunk);
+  projected.push({
+    ...chunk,
+    sequenceStart: 2,
+    details: [{ bytes: [0xea], state: { p: 0x30, x: 2 } }],
+  });
+  t.is(projected.finish().batch.runtime.find((r) => r.kind === "runtime-instruction")?.count, 2);
+  t.throws(
+    () =>
+      createRuntimeInstructionTraceImporter(
+        { ...artifact(), architecture: "snes.spc700" },
+        { ...context, indexMode: "65816-disassembly" },
+      ),
+    { message: /requires snes.65816/ },
+  );
 });
 
 test("rich traces retain byte variants, state, bus actors and explicit loss without double counting PCs", (t) => {
@@ -73,6 +171,16 @@ test("rich traces retain byte variants, state, bus actors and explicit loss with
     sourceName: "rich.json",
   });
   const runtime = imported.batch.runtime;
+  const compact = importRuntimeInstructionTrace(trace, {
+    projectRomContentSha256: romContentSha256,
+    sourceName: "rich.json",
+    indexMode: "65816-disassembly",
+  });
+  t.deepEqual(
+    compact.batch.runtime,
+    runtime,
+    "bus actors, values, counts and unchanged decoding states survive compact indexing",
+  );
   t.is(runtime.filter((record) => record.kind === "runtime-execution")[0]?.count, 2);
   t.is(runtime.filter((record) => record.kind === "runtime-instruction").length, 2);
   t.is(runtime.filter((record) => record.kind === "runtime-cpu-state").length, 2);

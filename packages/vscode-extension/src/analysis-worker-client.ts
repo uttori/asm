@@ -1,5 +1,6 @@
-import * as path from "node:path";
 import { fork, type ChildProcess } from "node:child_process";
+import * as path from "node:path";
+
 import type { AnalysisWorkerRequest } from "./analysis-worker.js";
 
 interface PendingProjection {

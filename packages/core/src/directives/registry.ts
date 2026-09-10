@@ -1,5 +1,5 @@
-import type { NormalizedCommand } from "../ir/normalized-command.js";
 import { CORE_DIRECTIVE_GROUPS, type CoreDirectiveGroup } from "../directive-groups.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 import { registerDataDirectives } from "./data.js";
 import { registerFillPadDirectives } from "./fill-pad.js";
 import { registerFlowControlDirectives } from "./flow-control.js";

@@ -17,6 +17,10 @@ validation](../../../docs/ares-paused-state-runtime-fix.md). The original rich
 source checkout remains preserved; maintenance lives on
 `codex/ares-rich-state-load-fix` in its own checkout.
 
+## Downstream lossless instruction capture
+
+The [capture-v2 package](capture-v2/README.md) adds lossless 65816 instruction capture to the rich maintenance source on `codex/ares-capture-v2`, independently of the prepared upstream series. It includes exact source reconstruction, bounded queue/reserve tests, desktop TCP evidence, and partial-file recovery. The [implementation guide](../../../docs/ares-capture-v2-implementation.md) documents the staged runtime, editor setting, and instruction-only completeness boundary.
+
 ## Historical execution detail supplement
 
 `rich-instruction-trace.patch` extends the historical SNES debugger/trace hooks. It depends on the archived base series and debugger patch. It was built against the local `Local Only/ares-current-port` working tree based on `0e74a98c72017f2c1aad2319e035f3a223c4196e`, including its existing desktop instruction-boundary support. The [preserved source inventory](upstream/source-inventory.json) records the exact working tree and supplement hashes. Do not apply this patch to the new U3–U5 series; trace infrastructure is the subsequent U7 work.

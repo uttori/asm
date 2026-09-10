@@ -1,3 +1,4 @@
+import { canonicalValue } from "./canonical-json.js";
 import type {
   AnalysisControlFlowNodeRecord,
   AnalysisProjectManifest,
@@ -153,18 +154,6 @@ const sortedStrings = (values?: Iterable<string>): readonly string[] =>
 const sortedNumbers = (values?: Iterable<number>): readonly number[] =>
   values ? [...new Set(values)].sort((left, right) => left - right) : [];
 
-const canonicalValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalValue);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Readonly<Record<string, unknown>>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, entry]) => [key, canonicalValue(entry)]),
-    );
-  }
-  return value;
-};
-
 const valueKey = (value: unknown, present: boolean): string =>
   present ? JSON.stringify(canonicalValue(value)) : "<absent>";
 
@@ -251,11 +240,13 @@ const runtimeState = (record: RuntimeCpuStateRecord): Readonly<Record<string, Ru
  * leak into the public result or weaken exact logical/output identity deduplication.
  * @param {Pick<AnalysisProjectManifest, "addressSpaces">} manifest Validated project address spaces.
  * @param {AnalysisProjectShards} shards Validated native project shards.
+ * @param {Function} [runtime] Fresh iterator per pass: point facts establish locations before coverage is attached.
  * @returns {InstructionAnalysisAnnotations} Stable instruction annotations and malformed-metadata notes.
  */
 export const buildInstructionAnalysisAnnotations = (
   manifest: Pick<AnalysisProjectManifest, "addressSpaces">,
   shards: AnalysisProjectShards,
+  runtime: () => Iterable<AnalysisProjectShards["runtime"][number]> = () => shards.runtime,
 ): InstructionAnalysisAnnotations => {
   const fileAddressSpaces = new Set(
     manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id),
@@ -376,7 +367,7 @@ export const buildInstructionAnalysisAnnotations = (
     }
   }
 
-  for (const record of shards.runtime) {
+  for (const record of runtime()) {
     if (record.kind === "runtime-execution") {
       const instruction = ensure(record.addressSpace, record.address);
       if (record.fileOffset !== undefined) {
@@ -520,7 +511,7 @@ export const buildInstructionAnalysisAnnotations = (
   }
 
   const coverageById = new Map<string, RuntimeCoverageRecord>();
-  for (const record of shards.runtime) {
+  for (const record of runtime()) {
     if (record.kind !== "runtime-coverage") continue;
     coverageById.set(record.id, record);
     attachToRange(record.addressSpace, record.start, record.end, (instruction) => {

@@ -1,17 +1,17 @@
 import sinon from "sinon";
-import { test } from "../../../tests/ava-helper.js";
 
+import { test } from "../../../tests/ava-helper.js";
 import { Assembler } from "../../../tests/test-assembler.js";
-import { createTraceCollector } from "../../../packages/core/src/debug-tracing.js";
-import { parseExpressionNode } from "../../../packages/core/src/ir/expression-node.js";
-import { createNormalizedCommand } from "../../../packages/core/src/ir/normalized-command.js";
+import { createTraceCollector } from "../../core/src/debug-tracing.js";
+import { handleIncbin } from "../../core/src/directives/include-source.js";
+import { handleArch } from "../../core/src/directives/layout.js";
+import { parseExpressionNode } from "../../core/src/ir/expression-node.js";
+import { createNormalizedCommand } from "../../core/src/ir/normalized-command.js";
 import {
   getDefineVariable,
   splitCommandIntoWords,
   splitInlineCommands,
-} from "../../../packages/core/src/services/command-text-service.js";
-import { handleArch } from "../../../packages/core/src/directives/layout.js";
-import { handleIncbin } from "../../../packages/core/src/directives/include-source.js";
+} from "../../core/src/services/command-text-service.js";
 
 const makeCommand = (command: string) =>
   createNormalizedCommand(command, command, command.trim().split(/\s+/), "test.asm", 1);
@@ -5252,8 +5252,6 @@ test("getDefineVariable - extracts variable name from define statements", (t) =>
 });
 
 test("getDefineVariable - integration", (t) => {
-  const assembler = new Assembler();
-
   // Test cases that should work with both methods
   const validCases = ["!counter = 0", "!MAX_VALUE = 255", "!offset_x = 10", "!game_active = 1"];
 
@@ -7392,7 +7390,7 @@ test("asblock_pick - spc700 architecture", (t) => {
 
   const originalMethod = assembler.archSPC700.encode;
   let wasCalled = false;
-  assembler.archSPC700.encode = (words) => {
+  assembler.archSPC700.encode = () => {
     wasCalled = true;
     return true;
   };
@@ -7434,7 +7432,7 @@ test("asblock_pick - superfx architecture", (t) => {
 
   const originalMethod = assembler.archSuperFX.encode;
   let wasCalled = false;
-  assembler.archSuperFX.encode = (words) => {
+  assembler.archSuperFX.encode = () => {
     wasCalled = true;
     return true;
   };
@@ -7494,7 +7492,7 @@ test("asblock_pick - 65816 architecture", (t) => {
 
   const originalMethod = assembler.arch65816.encode;
   let wasCalled = false;
-  assembler.arch65816.encode = (words) => {
+  assembler.arch65816.encode = () => {
     wasCalled = true;
     return true;
   };

@@ -1,10 +1,10 @@
+import type { CoreDirectiveGroup } from "../../packages/core/src/directive-groups.js";
 import {
   definePlugin,
   PLUGIN_API_VERSION,
   type AssemblerPlugin,
   type PluginActivationContext,
 } from "../../packages/core/src/plugin/index.js";
-import type { CoreDirectiveGroup } from "../../packages/core/src/directive-groups.js";
 
 export interface FixturePluginOptions {
   readonly byte: number;

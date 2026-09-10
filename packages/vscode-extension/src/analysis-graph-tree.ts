@@ -1,5 +1,6 @@
 /** Function/call and unresolved-flow tree over validated native analysis projects. */
 import * as path from "node:path";
+
 import {
   ANALYSIS_PROJECT_MANIFEST,
   type AnalysisCallGraph,
@@ -17,8 +18,9 @@ import {
   type Event,
   type TreeDataProvider,
 } from "vscode";
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+
 import { analysisWorker } from "./analysis-worker-client.js";
+import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 
 const PAGE_SIZE = 200;
 

@@ -10,7 +10,7 @@ import {
   RomImage,
   canonicalJson,
   loadAnalysisProject,
-  migrateManifest,
+  parseAnalysisProjectManifest,
   validateAnalysisProject,
   writeAnalysisProject,
   type AnalysisProject,
@@ -89,7 +89,7 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
 
 const schemaFixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
 
-test("large analysis shards take the streaming path without changing validation", async (t) => {
+test("large SQLite payloads round trip without changing validation", async (t) => {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-large-shard-"));
   try {
     const project = projectFor(new RomImage(new Uint8Array(0x8000)));
@@ -102,35 +102,22 @@ test("large analysis shards take the streaming path without changing validation"
   }
 });
 
-const readTree = async (directory: string): Promise<Record<string, string>> => {
-  const result: Record<string, string> = {};
-  const visit = async (current: string): Promise<void> => {
-    for (const entry of await fs.readdir(current, { withFileTypes: true })) {
-      const absolute = path.join(current, entry.name);
-      if (entry.isDirectory()) await visit(absolute);
-      else result[path.relative(directory, absolute)] = await fs.readFile(absolute, "utf8");
-    }
-  };
-  await visit(directory);
-  return result;
-};
-
-test("analysis projects are deterministic shards without ROM bytes", async (t) => {
+test("analysis projects preserve deterministic records without ROM bytes", async (t) => {
   const temporary = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-store-"));
   try {
     const rom = new RomImage(new Uint8Array(0x8000).fill(0xa5));
     const input = projectFor(rom);
     writeAnalysisProject(temporary, input);
-    const first = await readTree(temporary);
+    const first = loadAnalysisProject(temporary).shards;
     const loaded = loadAnalysisProject(temporary);
     const { shards: ignored, ...manifest } = loaded.manifest;
     void ignored;
     writeAnalysisProject(temporary, { manifest, shards: loaded.shards });
-    const second = await readTree(temporary);
+    const second = loadAnalysisProject(temporary).shards;
 
     t.deepEqual(second, first);
-    t.false(Object.values(first).some((text) => text.includes("romBytes")));
-    t.true(Object.values(first).every((text) => !text.includes("a5a5a5a5")));
+    t.false(JSON.stringify(first).includes("romBytes"));
+    t.false(JSON.stringify(first).includes("a5a5a5a5"));
     t.notThrows(() => validateAnalysisProject(temporary, rom));
     t.is(
       loaded.shards.regions.find((region) => region.id === "region-child")?.parentRegion,
@@ -417,7 +404,7 @@ test("mixed-architecture records retain distinct validated address-space identit
   }
 });
 
-test("manifest migrations are explicit and never downgrade newer schemas", async (t) => {
+test("manifest validation rejects obsolete storage and never downgrades newer schemas", async (t) => {
   const legacy = JSON.parse(await fs.readFile(path.join(schemaFixtures, "schema-v0.json"), "utf8"));
   const versionOne = JSON.parse(
     await fs.readFile(path.join(schemaFixtures, "schema-v1.json"), "utf8"),
@@ -426,12 +413,16 @@ test("manifest migrations are explicit and never downgrade newer schemas", async
     await fs.readFile(path.join(schemaFixtures, "schema-v2.json"), "utf8"),
   );
   const future = JSON.parse(await fs.readFile(path.join(schemaFixtures, "schema-v3.json"), "utf8"));
-  const migrated = migrateManifest(legacy);
-  t.is(migrated.schemaVersion, ANALYSIS_PROJECT_SCHEMA_VERSION);
-  t.is(migrated.rom.sha256, "1".repeat(64));
-  t.is(migrateManifest(versionOne).schemaVersion, ANALYSIS_PROJECT_SCHEMA_VERSION);
-  t.is(migrateManifest(current).schemaVersion, ANALYSIS_PROJECT_SCHEMA_VERSION);
-  t.throws(() => migrateManifest(future), { message: /refusing to downgrade/ });
+  for (const obsolete of [legacy, versionOne, current, future])
+    t.throws(() => parseAnalysisProjectManifest(obsolete));
+  t.throws(
+    () =>
+      parseAnalysisProjectManifest({
+        ...future,
+        schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION + 1,
+      }),
+    { message: /refusing to downgrade/ },
+  );
   t.is(canonicalJson({ z: 1, a: 2 }), '{\n  "a": 2,\n  "z": 1\n}\n');
   t.is(
     canonicalJson({

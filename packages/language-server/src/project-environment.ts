@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 
 import { Assembler, WorkspaceIndex, type AssemblerOptions } from "@uttori/asm-core";
+import type { AssemblerPlugin, PluginLogger } from "@uttori/asm-core/plugin";
 import {
   NodePluginLoader,
   discoverProjectConfigurationPath,
@@ -9,7 +10,6 @@ import {
   type PluginModuleRequest,
   type ProjectConfigurationDefaults,
 } from "@uttori/asm-plugin-loader-node";
-import type { AssemblerPlugin, PluginLogger } from "@uttori/asm-core/plugin";
 
 export type PluginModuleSetting = string | PluginModuleRequest;
 

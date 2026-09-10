@@ -1,6 +1,7 @@
-import { canonicalSourceExportJson } from "@uttori/asm-disassembler";
 import * as fs from "node:fs";
 import path from "node:path";
+
+import { canonicalSourceExportJson } from "@uttori/asm-disassembler";
 
 /** Format identifier for a user-maintained SNES RAM map. */
 export const SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";

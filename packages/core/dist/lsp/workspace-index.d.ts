@@ -1,6 +1,6 @@
-import type { AssemblerEnvironment } from "../plugin/environment.js";
-import type { ToolingCatalog } from "../plugin/contracts.js";
 import type { AssemblyDiagnostic, AssemblyIncludeEdge, AssemblySymbolDefinition, AssemblySymbolReference } from "../diagnostics.js";
+import type { ToolingCatalog } from "../plugin/contracts.js";
+import type { AssemblerEnvironment } from "../plugin/environment.js";
 import type { DirectiveDescriptor } from "./directive-catalog.js";
 import { RootAnalysisCache, type CachedRootAnalysis } from "./root-analysis-cache.js";
 /**

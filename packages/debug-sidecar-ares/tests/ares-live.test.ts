@@ -4,8 +4,6 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import test from "ava";
-
 import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
 import {
   DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
@@ -20,6 +18,7 @@ import {
   type DapResponse,
   type DebugBackendConformanceFixture,
 } from "@uttori/asm-debug-adapter";
+import test from "ava";
 
 import { AresProcessHost, parseAresRuntimeManifest } from "../src/ares-process-host.js";
 import {

@@ -3,9 +3,11 @@ import {
   type AnalysisProjectSnapshot,
   type AnalysisControlFlowNodeRecord,
   type RuntimeInstructionRecord,
+  type RuntimeEvidenceRecord,
 } from "@uttori/asm-disassembler";
-import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
+
 import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
+import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
 
 export interface AnalysisNavigationProjection {
   readonly lines: readonly string[];
@@ -16,11 +18,13 @@ export interface AnalysisNavigationProjection {
  * Build a small disassembly window in the analysis process, preserving exact architecture/space.
  * @param {Pick<AnalysisProjectSnapshot, "manifest" | "shards">} project Validated native snapshot.
  * @param {AnalysisGraphNavigationTarget} target Exact navigation identity.
+ * @param {Function} [runtimeAt] SQLite location lookup, avoiding a full runtime materialization.
  * @returns {AnalysisNavigationProjection} At most 32 CFG rows plus 32 saved instruction variants.
  */
 export const projectAnalysisNavigation = (
   project: Pick<AnalysisProjectSnapshot, "manifest" | "shards">,
   target: AnalysisGraphNavigationTarget,
+  runtimeAt?: (space: string, address: number) => Iterable<RuntimeEvidenceRecord>,
 ): AnalysisNavigationProjection => {
   if (
     project.manifest.target !== target.target ||
@@ -56,7 +60,19 @@ export const projectAnalysisNavigation = (
     if (space === target.addressSpace) return [...addresses];
     return fileSpaces.has(space) ? [...offsets] : [];
   };
-  const runtime = project.shards.runtime.filter((record) => {
+  // SQLite callers fetch only the visible locations; array callers retain the same projection rules.
+  function* runtimeCandidates(): IterableIterator<RuntimeEvidenceRecord> {
+    if (!runtimeAt) {
+      yield* project.shards.runtime;
+      return;
+    }
+    for (const address of addresses) yield* runtimeAt(target.addressSpace, address);
+    for (const space of fileSpaces) {
+      if (space === target.addressSpace) continue;
+      for (const offset of offsets) yield* runtimeAt(space, offset);
+    }
+  }
+  const runtime = [...runtimeCandidates()].filter((record) => {
     if (!matchesArchitecture(record.architecture)) return false;
     if (record.kind === "runtime-memory-access")
       return (

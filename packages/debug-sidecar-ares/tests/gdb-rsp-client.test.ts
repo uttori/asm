@@ -1,7 +1,7 @@
 import type { DebugSubscription } from "@uttori/asm-debug-adapter";
 
-import { GdbRspClient, type GdbRspStop, type GdbRspTransport } from "../src/index.js";
 import { test } from "../../../tests/ava-helper.js";
+import { GdbRspClient, type GdbRspStop, type GdbRspTransport } from "../src/index.js";
 
 class FakeTransport implements GdbRspTransport {
   readonly writes: Uint8Array[] = [];

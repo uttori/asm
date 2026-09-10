@@ -1,5 +1,6 @@
 /** Hash-gated inline source annotations derived from native analysis projects. */
 import * as path from "node:path";
+
 import {
   type AnalysisProjectManifest,
   type InstructionAnalysisAnnotation,
@@ -17,22 +18,23 @@ import {
   type TextEditor,
   type TextEditorDecorationType,
 } from "vscode";
-import { analysisWorker } from "./analysis-worker-client.js";
-import {
-  currentAnalysisSourcePath,
-  findAnalysisDebugMapCandidates,
-  type AnalysisDebugMapIdentity,
-} from "./analysis-debug-maps.js";
+
 import {
   formatInstructionAnnotationDetails,
   formatInstructionAnnotationSummary,
 } from "./analysis-annotation-format.js";
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import {
   annotationOverlayColumn,
   annotationOverlayColor,
   annotationSourceColumns,
 } from "./analysis-annotation-layout.js";
+import {
+  currentAnalysisSourcePath,
+  findAnalysisDebugMapCandidates,
+  type AnalysisDebugMapIdentity,
+} from "./analysis-debug-maps.js";
+import { analysisWorker } from "./analysis-worker-client.js";
+import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 
 /** Editor toolbar command for showing or hiding project-state overlays. */
 export const TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";

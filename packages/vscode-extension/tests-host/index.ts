@@ -1,11 +1,12 @@
-import { renderWebviewTemplate } from "../src/webview-template.js";
 import * as assert from "node:assert/strict";
 
 import * as vscode from "vscode";
-import { AnalysisCoverageProvider } from "../src/coverage-tree.js";
-import { AnalysisSourcesProvider } from "../src/analysis-sources-tree.js";
+
 import { AnalysisGraphProvider } from "../src/analysis-graph-tree.js";
+import { AnalysisSourcesProvider } from "../src/analysis-sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis-worker-client.js";
+import { AnalysisCoverageProvider } from "../src/coverage-tree.js";
+import { renderWebviewTemplate } from "../src/webview-template.js";
 
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [

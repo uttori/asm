@@ -1,14 +1,16 @@
+import { spawnSync, execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync, execFileSync } from "node:child_process";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
-import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+
 import { WorkspaceIndex } from "@uttori/asm-core";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+
+import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 import { runWithInternalInstrumentation } from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
-import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 import { getFixtureStatus } from "./external-fixtures.ts";
 
 const root = process.cwd();
@@ -277,8 +279,9 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
     .filter(([name]) => !CHILD_PHASES.has(name))
     .sort(([, a], [, b]) => b - a);
 
-  const numLen = Math.max(...entries.map(([, ms]) => ms.toFixed(1).length)) + 3; // " ms"
-  const nameLen = Math.max(...entries.map(([n]) => n.length)) + 4; // indent + extra
+  // Instrumentation can add phases; compute display widths without variadic argument growth.
+  const numLen = entries.reduce((width, [, ms]) => Math.max(width, ms.toFixed(1).length), 0) + 3; // " ms"
+  const nameLen = entries.reduce((width, [name]) => Math.max(width, name.length), 0) + 4; // indent + extra
 
   console.log(`\nPhase breakdown (${label}):`);
   for (const [name, ms] of topLevel) {

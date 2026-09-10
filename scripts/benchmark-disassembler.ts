@@ -7,6 +7,12 @@ import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
 
 import {
+  DebugAdapterSession,
+  ReplayDebugBackend,
+  type DebugBackend,
+  type DebugBackendEvent,
+} from "@uttori/asm-debug-adapter";
+import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_MANIFEST,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -32,12 +38,6 @@ import {
   type LoadedAnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "@uttori/asm-disassembler";
-import {
-  DebugAdapterSession,
-  ReplayDebugBackend,
-  type DebugBackend,
-  type DebugBackendEvent,
-} from "@uttori/asm-debug-adapter";
 import {
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
@@ -209,7 +209,8 @@ const parseOptions = (args: readonly string[]): BenchmarkOptions => {
     } else if (argument === "--repetitions") {
       repetitions = parseNonNegativeInteger(args[++index], argument);
     } else if (argument === "--fixture") {
-      requestedFixtures.push(...parseCommaList(args[++index], argument));
+      for (const fixture of parseCommaList(args[++index], argument))
+        requestedFixtures.push(fixture);
     } else if (argument === "--operation") {
       for (const operation of parseCommaList(args[++index], argument)) {
         if (!operationSet.has(operation)) {
@@ -579,7 +580,7 @@ const prepareOperation = (
         retained: manifest,
         observation: {
           projectRecords: countRecords(project.shards),
-          shardFiles: manifest.shards.length,
+          databaseRevision: manifest.revision ?? 0,
         },
       };
     };
@@ -646,13 +647,13 @@ const prepareOperation = (
         retained: reloaded,
         observation: {
           projectRecords: countRecords(reloaded.shards),
-          shardFiles: reloaded.manifest.shards.length,
+          databaseRevision: reloaded.manifest.revision ?? 0,
         },
       };
     };
   }
   if (operation === "transaction-commit") {
-    // Commit legitimately needs one caller snapshot and one prepared generation. Write the fixture,
+    // Commit needs one caller snapshot and a validated in-memory edit. Write the fixture,
     // then load exactly that single snapshot; writeAndLoad() plus another snapshot would retain two
     // equivalent projects before the measured commit begins.
     writeAnalysisProject(projectDirectory, project);
@@ -667,7 +668,7 @@ const prepareOperation = (
       );
       return {
         retained: committed,
-        observation: { generationPublished: true, shardFiles: committed.manifest.shards.length },
+        observation: { databaseRevision: committed.manifest.revision ?? 0 },
       };
     };
   }
@@ -692,8 +693,7 @@ const prepareOperation = (
       return {
         retained: prepared,
         observation: {
-          generationLength: prepared.generation.length,
-          shardFiles: prepared.manifest.shards.length,
+          projectRecords: countRecords(prepared.project.shards),
         },
       };
     };

@@ -265,11 +265,10 @@ export const renderSnesStructDefines = (map: LoadedSnesStructMap): string => {
     detail: readonly string[],
     binding?: SnesStructBinding,
   ): void => {
-    lines.push(
-      `; ${name}: ${hex(structure.size)} bytes per record.`,
-      ...detail.map((note) => `; ${note}`),
-      `struct ${name} ${hex(base)}`,
-    );
+    lines.push(`; ${name}: ${hex(structure.size)} bytes per record.`);
+    // Notes come from the struct map; retain their order without an input-sized argument list.
+    for (const note of detail) lines.push(`; ${note}`);
+    lines.push(`struct ${name} ${hex(base)}`);
     for (const field of completeFields(structure))
       lines.push(
         `  .${field.name}: ${fieldType(field)} ; +${hex(field.offset)}${field.description ? ` ${field.description}` : ""}`,

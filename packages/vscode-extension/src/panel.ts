@@ -1,9 +1,5 @@
-/**
- * Explorer sidebar panel for Uttori Assembly project settings.
- * @see https://code.visualstudio.com/api/extension-guides/webview
- */
-import { renderWebviewTemplate } from "./webview-template.js";
 import * as path from "node:path";
+
 import {
   ConfigurationTarget,
   commands,
@@ -14,6 +10,12 @@ import {
   type WebviewViewProvider,
 } from "vscode";
 import type { LanguageClient } from "vscode-languageclient/node";
+
+/**
+ * Explorer sidebar panel for Uttori Assembly project settings.
+ * @see https://code.visualstudio.com/api/extension-guides/webview
+ */
+import { renderWebviewTemplate } from "./webview-template.js";
 
 type ProjectStatus = {
   fileCount: number;

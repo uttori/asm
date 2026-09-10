@@ -1,48 +1,51 @@
 import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards } from "./project-types.js";
+import { type RuntimeRecordProjection } from "./project-validation.js";
 import type { RomImage } from "./rom-image.js";
+import { SqliteAnalysisStore } from "./sqlite-store.js";
+export { canonicalJson } from "./canonical-json.js";
+export { validateAnalysisProjectManifest, type RuntimeRecordProjection, } from "./project-validation.js";
 /**
- * Deterministic JSON: sorted object keys, dropped `undefined`, trailing newline.
- * Use this for manifests and bounded values. Large shard arrays must go through the streaming
- * writer so canonicalization does not retain a second complete project-sized object graph.
- * @param {unknown} value Manifest or shard payload.
- * @returns {string} Canonical JSON text used for SHA-256 and on-disk writes.
+ * Parse the current SQLite pointer. Obsolete JSON/shard containers require no compatibility reader.
+ * @param {unknown} input Parsed watcher or database manifest.
+ * @returns {AnalysisProjectManifest} Validated current manifest; obsolete containers throw.
  */
-export declare const canonicalJson: (value: unknown) => string;
+export declare const parseAnalysisProjectManifest: (input: unknown) => AnalysisProjectManifest;
 /**
- * Validates the current native manifest contract without reading its shard files.
- * @param {AnalysisProjectManifest} manifest Manifest to validate.
- * @returns {void}
+ * Open the existing database selected by a validated pointer, without creating missing files.
+ * @param {string} directory Project root containing analysis.json.
+ * @returns {SqliteAnalysisStore} Owned connection; the caller must close it.
  */
-export declare const validateAnalysisProjectManifest: (manifest: AnalysisProjectManifest) => void;
-/**
- * Applies explicit one-way manifest migrations. Newer schema versions are refused.
- * v0 promotes `romHash`/`romSize` into `RomIdentity`; v1 bumps `schemaVersion`.
- * Missing current-schema shards are materialized as empty arrays while loading.
- * @param {unknown} input Parsed `analysis.json`.
- * @returns {AnalysisProjectManifest} Current-schema manifest.
- */
-export declare const migrateManifest: (input: unknown) => AnalysisProjectManifest;
-/** Project as loaded from disk: current-schema manifest plus validated shards. */
+export declare const openAnalysisProjectStore: (directory: string) => SqliteAnalysisStore;
+/** Current manifest and complete validated in-memory records. */
 export interface LoadedAnalysisProject {
     readonly manifest: AnalysisProjectManifest;
     readonly shards: AnalysisProjectShards;
 }
+/** Metadata and an optional runtime projection; publish with the view-update API. */
+export interface LoadedAnalysisProjectView {
+    readonly manifest: AnalysisProjectManifest;
+    readonly view: AnalysisProjectShards;
+}
 /**
- * Writes canonical `analysis.json` and `analysis/*.json` shards.
- * Records are sorted, ROM byte payloads are forbidden, and shard SHA-256s are recorded. Shards use
- * bounded streaming canonicalization: this is an allocation invariant, not a format change, and
- * must remain byte-compatible with `canonicalJson()` for the same normalized record array.
- * @param {string} directory Destination project directory.
- * @param {AnalysisProject} project Manifest fields plus in-memory shards.
- * @returns {AnalysisProjectManifest} Written manifest including shard descriptors.
- */
-export declare const writeAnalysisProject: (directory: string, project: AnalysisProject) => AnalysisProjectManifest;
-/**
- * Loads a project, migrating the manifest and verifying each shard SHA-256 and record count.
- * @param {string} directory Project directory containing `analysis.json`.
- * @returns {LoadedAnalysisProject} Validated manifest and shards.
+ * Load and validate the complete project, including all runtime facts.
+ * @param {string} directory Existing project root.
+ * @returns {LoadedAnalysisProject} Complete validated project; large runtime histories are materialized.
  */
 export declare const loadAnalysisProject: (directory: string) => LoadedAnalysisProject;
+/**
+ * Load metadata only, or stream runtime through an explicit reducer in the same read snapshot.
+ * @param {string} directory Existing project root.
+ * @param {Function} [createProjection] Reducer for a validated runtime stream; omitted to skip runtime.
+ * @returns {LoadedAnalysisProjectView} Metadata and optional projection from one revision.
+ */
+export declare const loadAnalysisProjectView: (directory: string, createProjection?: () => RuntimeRecordProjection) => LoadedAnalysisProjectView;
+/**
+ * Atomically create or replace all records, including runtime. Use view updates to preserve history.
+ * @param {string} directory Project root to create or replace.
+ * @param {AnalysisProject} project Complete replacement, including runtime history.
+ * @returns {AnalysisProjectManifest} Committed manifest and next revision.
+ */
+export declare const writeAnalysisProject: (directory: string, project: AnalysisProject) => AnalysisProjectManifest;
 /**
  * Checks that a loaded ROM matches the project's stored identity.
  * @param {AnalysisProjectManifest} manifest Project manifest.

@@ -1,9 +1,11 @@
-import { test } from "../../../tests/ava-helper.js";
 import {
   RomImage,
+  importRuntimeInstructionTrace,
   type AnalysisProjectShards,
   type RuntimeInstructionRecord,
 } from "@uttori/asm-disassembler";
+
+import { test } from "../../../tests/ava-helper.js";
 import {
   analyzeSnesRuntimeCode,
   analyzeSnesFunctionRoles,
@@ -51,6 +53,43 @@ const captured = (
 };
 const roles = (shards: AnalysisProjectShards) =>
   analyzeSnesFunctionRoles(shards).roles.map((role) => role.role);
+
+test("compact trace index produces the same captured CFG as full register snapshots", (t) => {
+  const details = [
+    { bytes: [0xa9, 1], state: { a: 1, x: 2, y: 3, s: 511, p: 0x30, e: 0, d: 0, db: 0x7e } },
+    { bytes: [0xa9, 1], state: { a: 40, x: 400, y: 500, s: 509, p: 0x30, e: 0, d: 0, db: 0x7e } },
+    { bytes: [0xa9, 1, 0], state: { a: 1, x: 2, y: 3, s: 511, p: 0x10, e: 0, d: 0x100, db: 0x7f } },
+    { bytes: [0xa9, 2], state: { a: 1, x: 2, y: 3, s: 511, p: 0x30, e: 0, d: 0, db: 0x7e } },
+  ];
+  const trace = {
+    format: "uttori-asm-instruction-trace" as const,
+    schemaVersion: 1 as const,
+    architecture: "snes.65816",
+    addressSpace: "snes.cpu",
+    romContentSha256: "a".repeat(64),
+    producer: { id: "test", revision: "1" },
+    chunks: [
+      {
+        sequenceStart: 1,
+        addresses: details.map(() => 0x7e2000),
+        details,
+        droppedEvents: 0,
+        active: false,
+      },
+    ],
+  };
+  const context = { projectRomContentSha256: trace.romContentSha256, sourceName: "trace.json" };
+  const full = importRuntimeInstructionTrace(trace, context);
+  const compact = importRuntimeInstructionTrace(trace, {
+    ...context,
+    indexMode: "65816-disassembly",
+  });
+  const rom = new RomImage(new Uint8Array(0x10000));
+  t.deepEqual(
+    analyzeSnesRuntimeCode({ ...empty(), ...compact.batch }, rom, "lorom"),
+    analyzeSnesRuntimeCode({ ...empty(), ...full.batch }, rom, "lorom"),
+  );
+});
 
 test("captured WRAM and SRAM instructions become nodes without invented ROM offsets", (t) => {
   for (const start of [0x7e2000, 0x7f9000, 0x700000]) {

@@ -1,7 +1,7 @@
 import type { DebugSubscription } from "@uttori/asm-debug-adapter";
 
-import { FramedMesenDebugClient, type MesenDebugTransport } from "../src/mesen-debug-client.js";
 import { test } from "../../../tests/ava-helper.js";
+import { FramedMesenDebugClient, type MesenDebugTransport } from "../src/mesen-debug-client.js";
 
 const token = "ab".repeat(32);
 

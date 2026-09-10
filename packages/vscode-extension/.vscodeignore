@@ -6,3 +6,4 @@ esbuild.mjs
 **/*.map
 node_modules/**
 tests-host/**
+tests/**

@@ -1,9 +1,9 @@
 import type { ArchitectureEncoder, ArchitectureEncoderContext, InstructionDescriptor, LoweredOperand, MathValue, OperandResolutionContext } from "../architecture-types.js";
 import type { Assembler } from "../assembler.js";
+import type { ArchitectureDecoder, ArchitectureInstructionSpecification } from "../decoder-types.js";
+import type { CoreDirectiveGroup } from "../directive-groups.js";
 import type { DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
-import type { CoreDirectiveGroup } from "../directive-groups.js";
-import type { ArchitectureDecoder, ArchitectureInstructionSpecification } from "../decoder-types.js";
 export declare const PLUGIN_API_VERSION: 1;
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
 export interface AssemblerPluginManifest {

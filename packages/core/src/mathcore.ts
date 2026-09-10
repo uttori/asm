@@ -1,5 +1,10 @@
 import type { ExpressionHost, MathValue } from "./architecture-types.js";
 import { AssemblyError } from "./diagnostics.js";
+import {
+  incrementInternalCounter,
+  isInternalInstrumentationActive,
+  measureInternalPhase,
+} from "./internal-instrumentation.js";
 import type {
   BinaryOperator,
   ExpressionNode,
@@ -13,11 +18,6 @@ import {
   renderExpressionNode,
   renderReferenceExpressionNode,
 } from "./ir/expression-node.js";
-import {
-  incrementInternalCounter,
-  isInternalInstrumentationActive,
-  measureInternalPhase,
-} from "./internal-instrumentation.js";
 
 type UserFunction = {
   readonly args: readonly string[];
@@ -1201,15 +1201,15 @@ export class MathCore {
       // Min, Max, Clamp
       case "min": {
         if (args.length < 2) throw new Error("min() expects at least 2 numeric arguments.");
-        // Convert all arguments to numbers
+        // Binary Math.min calls retain NaN/signed-zero semantics without V8's argument-count limit.
         const numArgs = args.map((arg) => this.numArg(name, arg));
-        return Math.min(...numArgs);
+        return numArgs.reduce((minimum, value) => Math.min(minimum, value), Infinity);
       }
       case "max": {
         if (args.length < 2) throw new Error("max() expects at least 2 numeric arguments.");
-        // Convert all arguments to numbers
+        // Keep the same numeric conversion and special-value behavior for arbitrarily long lists.
         const numArgs = args.map((arg) => this.numArg(name, arg));
-        return Math.max(...numArgs);
+        return numArgs.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
       }
       case "clamp": {
         if (args.length !== 3) throw new Error("clamp() expects exactly 3 numeric arguments.");

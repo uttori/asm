@@ -1,13 +1,14 @@
+import { Buffer } from "node:buffer";
+
 import {
   DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
   runDebugBackendConformance,
   type DebugBackendConformanceFixture,
   type DebugSubscription,
 } from "@uttori/asm-debug-adapter";
-import { Buffer } from "node:buffer";
 
-import { MesenDebugBackend, type MesenDebugClient } from "../src/index.js";
 import { test } from "../../../tests/ava-helper.js";
+import { MesenDebugBackend, type MesenDebugClient } from "../src/index.js";
 
 const INITIAL_PC = 0x80_8000;
 
@@ -615,6 +616,8 @@ test("Mesen translator handles SuperFX state and execution failure paths", async
   const pollingClient = new FakeMesenDebugClient(fakeState());
   const pollingRequest = pollingClient.request.bind(pollingClient);
   pollingClient.request = async (method, parameters) => {
+    // A third-party client can reject with a non-Error value; the backend must normalize it.
+    // oxlint-disable-next-line typescript/only-throw-error
     if (method === "status") throw "poll failed";
     return pollingRequest(method, parameters);
   };

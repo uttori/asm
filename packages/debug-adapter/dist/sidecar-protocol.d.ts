@@ -3,7 +3,7 @@ export declare const DEBUG_SIDECAR_PROTOCOL: "uttori-asm-debug-sidecar";
 /** Initial sidecar wire revision. This project is unreleased, so the revision remains version 1. */
 export declare const DEBUG_SIDECAR_PROTOCOL_VERSION: 1;
 /** Commands available across the sidecar boundary. */
-export declare const DEBUG_SIDECAR_COMMANDS: readonly ["initialize", "connect", "disconnect", "pause", "continue", "step", "threads", "stackFrames", "registers", "readMemory", "setBreakpoints", "disassemble", "startTrace", "readTrace", "stopTrace", "ping", "shutdown"];
+export declare const DEBUG_SIDECAR_COMMANDS: readonly ["initialize", "connect", "disconnect", "pause", "continue", "step", "threads", "stackFrames", "registers", "readMemory", "setBreakpoints", "disassemble", "startTrace", "readTrace", "stopTrace", "capture", "ping", "shutdown"];
 /** Events available across the sidecar boundary. */
 export declare const DEBUG_SIDECAR_EVENTS: readonly ["stopped", "continued", "terminated", "breakpoint", "output"];
 /** Protocol limits enforced before emulator-specific code sees a request. */

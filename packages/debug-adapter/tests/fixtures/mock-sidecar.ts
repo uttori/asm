@@ -34,7 +34,7 @@ const server = new DebugSidecarServer({
   session,
   write: (data) =>
     new Promise((resolve, reject) => {
-      process.stdout.write(data, (error) => {
+      process.stdout.write(data, (error?: Error | null) => {
         if (error) reject(error);
         else resolve();
       });

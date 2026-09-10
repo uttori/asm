@@ -5,13 +5,13 @@ import type {
   TargetOutputFormat,
 } from "@uttori/asm-core/plugin";
 
+import { applyLinkerSymbols, closeActiveSegment } from "../directives/ca65.js";
 import {
   defaultLd65ConfigText,
   linkerDefinedSymbolNames,
   parseLd65Config,
   type Ld65Config,
 } from "../linker-config.js";
-import { applyLinkerSymbols, closeActiveSegment } from "../directives/ca65.js";
 import {
   cloneNes65xxSessionState,
   nes65xxSessionStateKey,

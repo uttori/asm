@@ -10,3 +10,5 @@ export * from "./sidecar-client.js";
 export * from "./sidecar-protocol.js";
 export * from "./sidecar-server.js";
 export * from "./trace-buffer.js";
+export * from "./capture-v2.js";
+export * from "./capture-file.js";

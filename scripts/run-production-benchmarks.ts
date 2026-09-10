@@ -1,18 +1,20 @@
+import { spawnSync, execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { spawnSync, execFileSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { performance } from "node:perf_hooks";
 import { fileURLToPath } from "node:url";
+
 import { Assembler } from "@uttori/asm-core";
 import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+
+import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 import {
   runWithInternalInstrumentation,
   type InternalInstrumentationSnapshot,
 } from "../packages/core/src/internal-instrumentation.js";
 import { aggregateSamples, type BenchmarkSample } from "./benchmark-report.js";
-import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 import { assembleExternalFixture } from "./external-fixtures.ts";
 
 const snesEnvironment = await createSnesAssemblerEnvironment();
@@ -146,7 +148,7 @@ function parseOptions(args: string[]): BenchmarkOptions {
       if (!fixtureIds?.length) {
         throw new Error("--fixture requires a fixture id or comma-separated fixture ids.");
       }
-      options.fixtureIds.push(...fixtureIds);
+      for (const fixtureId of fixtureIds) options.fixtureIds.push(fixtureId);
     } else if (argument === "--max-median-ms") {
       options.maxMedianMs = parseNonNegativeInteger(args[++index], argument);
     }
@@ -412,7 +414,9 @@ function main(): void {
   );
   const rssLabel = options.instrumentation ? "peak RSS" : "end RSS";
   for (const result of benchmarkResults) {
-    const status = !result.validation.valid ? "FAIL" : result.performance.valid ? "PASS" : "SLOW";
+    let status = "PASS";
+    if (!result.validation.valid) status = "FAIL";
+    else if (!result.performance.valid) status = "SLOW";
     console.log(
       `${result.id.padEnd(22)} ${status}  median ${formatMilliseconds(result.aggregate.wallMs.median).padStart(11)}  MAD ${formatMilliseconds(result.aggregate.wallMs.medianAbsoluteDeviation).padStart(11)}  range ${formatMilliseconds(result.aggregate.wallMs.min)}–${formatMilliseconds(result.aggregate.wallMs.max)}  ${rssLabel} ${(result.aggregate.peakRssBytes / 1048576).toFixed(1)} MiB  heap ${(result.aggregate.peakHeapUsedBytes / 1048576).toFixed(1)} MiB`,
     );

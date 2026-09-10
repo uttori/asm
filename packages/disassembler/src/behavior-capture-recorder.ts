@@ -1,4 +1,3 @@
-import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 import {
   MAX_CAPTURE_EVENTS,
   MAX_CAPTURE_MILLISECONDS,
@@ -10,6 +9,7 @@ import {
   type RuntimeInstructionTraceChunk,
   type RuntimeInstructionTraceArtifact,
 } from "./runtime-trace.js";
+import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 
 type EditorTraceMetadata = Pick<
   RuntimeInstructionTraceArtifact,

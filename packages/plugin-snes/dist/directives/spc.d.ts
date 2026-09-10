@@ -1,6 +1,6 @@
 import type { Assembler } from "@uttori/asm-core";
-import type { SnesSessionState } from "../session-state.js";
 import { SnesSpcRuntimeService } from "../services/spc-runtime.js";
+import type { SnesSessionState } from "../session-state.js";
 /**
  * Builds a session-bound SPC-block runtime.
  * A new instance per directive invocation is cheap; it holds no extra state.

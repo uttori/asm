@@ -1,7 +1,6 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
-import { directiveCatalog, type DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
-import { PluginError } from "./diagnostics.js";
+import { directiveCatalog, type DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import type {
   ArchitectureContribution,
   ArchitectureSummary,
@@ -17,6 +16,7 @@ import type {
   ToolingCatalog,
   AddressSpaceContribution,
 } from "./contracts.js";
+import { PluginError } from "./diagnostics.js";
 
 /**
  * A plugin contribution plus the owner metadata recorded at registration time.

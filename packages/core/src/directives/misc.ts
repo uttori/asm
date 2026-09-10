@@ -1,7 +1,7 @@
-import type { DirectiveRegistry } from "./registry.js";
-import { splitRespectingFunctions } from "../services/command-text-service.js";
-import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
 import type { CoreDirectiveGroup } from "../directive-groups.js";
+import { splitRespectingFunctions } from "../services/command-text-service.js";
+import type { DirectiveRegistry } from "./registry.js";
+import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
 
 export type MiscDirectiveContexts = {
   table: TableDirectiveContext;

@@ -39,13 +39,16 @@ export interface RuntimeEvidenceMergeResult {
     readonly added: Readonly<Record<keyof AnalysisProjectShards, number>>;
     readonly updated: Readonly<Record<keyof AnalysisProjectShards, number>>;
     readonly existing: Readonly<Record<keyof AnalysisProjectShards, number>>;
+    /** Computed and cached on first access; may expand millions of per-register observations. */
     readonly conflicts: readonly RuntimeEvidenceConflict[];
+    /** Computed and cached on first access; maintenance callers can merge without building this report. */
     readonly explanations: readonly RuntimeEvidenceExplanation[];
 }
 /**
  * Merges an offline evidence batch by stable id. Existing claims are never removed or rewritten.
  * Reimporting an identical batch returns `changed: false`; differing observations remain separate
- * and are surfaced through `conflicts`.
+ * and are surfaced through `conflicts`. Diagnostic getters are lazy; reading or serializing
+ * them can require substantially more memory than merging the facts alone.
  * @param {AnalysisProjectShards} shards Existing native project shards.
  * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
  * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.

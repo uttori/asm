@@ -8,14 +8,14 @@
 
 import type { Assembler } from "@uttori/asm-core";
 
-import type { Ld65Segment } from "../linker-config.js";
-import type { Nes65xxSessionState } from "../session-state.js";
 import {
   ca65CpuNames,
   ca65CpuShorthands,
   resolve65xxCpuName,
   type Ca65SessionState,
 } from "../ca65-profile.js";
+import type { Ld65Segment } from "../linker-config.js";
+import type { Nes65xxSessionState } from "../session-state.js";
 
 /**
  * Strips one layer of matching quotes from a token.

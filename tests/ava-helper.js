@@ -6,6 +6,6 @@
 // import type { TestFn } from "ava";
 import * as ava from "ava";
 
-const test = (ava).default;
+const test = ava.default;
 export { test };
 // export type { TestFn };

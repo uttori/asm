@@ -368,11 +368,10 @@ export const analyzeSpc700Aram = (
       .filter((annotation) => intervalContains(annotation, address) && stateOverrideFor(annotation))
       .map((annotation) => ({
         annotation,
-        rank: Math.max(
+        // Imported evidence is input-sized even though the CPU address space is only 64 KiB.
+        rank: annotation.evidence.reduce(
+          (rank, id) => Math.max(rank, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]),
           0,
-          ...annotation.evidence.map(
-            (id) => EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"],
-          ),
         ),
       }))
       .sort(
@@ -383,7 +382,8 @@ export const analyzeSpc700Aram = (
     const consumed: string[] = [];
     for (const { annotation } of matching) {
       state = applySpc700StateOverride(state, stateOverrideFor(annotation)!);
-      consumed.push(...annotation.evidence);
+      // Keep every evidence identity without spreading it onto the native call stack.
+      for (const id of annotation.evidence) consumed.push(id);
     }
     return { state, evidence: [...new Set(consumed)].sort() };
   };

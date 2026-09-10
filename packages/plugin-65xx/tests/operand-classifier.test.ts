@@ -1,6 +1,6 @@
 import { test } from "../../../tests/ava-helper.js";
 
-import { OperandResolver } from "../../../packages/core/src/operand-resolver.js";
+import { OperandResolver } from "../../core/src/operand-resolver.js";
 import { classify65xxOperand } from "../src/operands/classifier.js";
 
 const createResolver = () =>

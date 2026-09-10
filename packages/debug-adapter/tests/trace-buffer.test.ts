@@ -1,5 +1,5 @@
-import { DebugTraceBuffer } from "../src/index.js";
 import { test } from "../../../tests/ava-helper.js";
+import { DebugTraceBuffer } from "../src/index.js";
 
 test("DebugTraceBuffer bounds producer memory and exposes ordered oldest-first loss", (t) => {
   const trace = new DebugTraceBuffer({

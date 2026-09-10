@@ -54,6 +54,26 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// packages/core/src/address-width.ts
+function maximumAddressForWidth(addressWidth) {
+  if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
+    throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
+  }
+  return 2 ** addressWidth - 1;
+}
+function normalizeAddressForWidth(address3, addressWidth) {
+  const modulus = maximumAddressForWidth(addressWidth) + 1;
+  if (!Number.isFinite(address3) || !Number.isInteger(address3)) {
+    throw new Error(`Logical address must be a finite integer, got ${address3}.`);
+  }
+  return (address3 % modulus + modulus) % modulus;
+}
+var init_address_width = __esm({
+  "packages/core/src/address-width.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
@@ -214,43 +234,57 @@ var init_addressToLine = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
-function maximumAddressForWidth(addressWidth) {
-  if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
-    throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
-  }
-  return 2 ** addressWidth - 1;
-}
-function normalizeAddressForWidth(address3, addressWidth) {
-  const modulus = maximumAddressForWidth(addressWidth) + 1;
-  if (!Number.isFinite(address3) || !Number.isInteger(address3)) {
-    throw new Error(`Logical address must be a finite integer, got ${address3}.`);
-  }
-  return (address3 % modulus + modulus) % modulus;
-}
-var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+// packages/core/src/architecture-registry.ts
+var ArchitectureRegistry;
+var init_architecture_registry = __esm({
+  "packages/core/src/architecture-registry.ts"() {
     "use strict";
-  }
-});
-
-// packages/core/src/directive-groups.ts
-var CORE_DIRECTIVE_GROUPS;
-var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
-    "use strict";
-    CORE_DIRECTIVE_GROUPS = Object.freeze([
-      "data",
-      "memory",
-      "include",
-      "layout",
-      "namespace",
-      "table",
-      "struct",
-      "control",
-      "macro",
-      "diagnostic"
-    ]);
+    ArchitectureRegistry = class {
+      definitions = /* @__PURE__ */ new Map();
+      aliases = /* @__PURE__ */ new Map();
+      /**
+       * Registers the value.
+       * @param {ArchitectureDefinition} definition The definition.
+       * @param {string[]} [aliases] The aliases.
+       */
+      register(definition, aliases2 = []) {
+        const canonical2 = definition.name.toLowerCase();
+        this.definitions.set(canonical2, { ...definition, name: canonical2 });
+        this.aliases.set(canonical2, canonical2);
+        for (const alias of aliases2) {
+          this.aliases.set(alias.toLowerCase(), canonical2);
+        }
+      }
+      /**
+       * Gets canonical name.
+       * @param {string} name The name.
+       * @returns {string | undefined} The result.
+       */
+      getCanonicalName(name) {
+        return this.aliases.get(name.toLowerCase());
+      }
+      /**
+       * Gets definition.
+       * @param {string} name The name.
+       * @returns {ArchitectureDefinition | undefined} The result.
+       */
+      getDefinition(name) {
+        const canonical2 = this.getCanonicalName(name);
+        if (!canonical2) {
+          return void 0;
+        }
+        return this.definitions.get(canonical2);
+      }
+      /**
+       * Returns editor metadata from the same registered encoder used for builds.
+       * @param {string} name Architecture name or alias.
+       * @returns {InstructionDescriptor[]} Registered instruction descriptors.
+       */
+      getInstructionCatalog(name) {
+        const definition = this.getDefinition(name);
+        return [...definition?.instructions ?? definition?.encoder.getInstructionCatalog?.() ?? []];
+      }
+    };
   }
 });
 
@@ -374,6 +408,156 @@ var init_diagnostics = __esm({
         this.location = options.location;
         this.stage = options.stage;
       }
+    };
+  }
+});
+
+// packages/core/src/directive-groups.ts
+var CORE_DIRECTIVE_GROUPS;
+var init_directive_groups = __esm({
+  "packages/core/src/directive-groups.ts"() {
+    "use strict";
+    CORE_DIRECTIVE_GROUPS = Object.freeze([
+      "data",
+      "memory",
+      "include",
+      "layout",
+      "namespace",
+      "table",
+      "struct",
+      "control",
+      "macro",
+      "diagnostic"
+    ]);
+  }
+});
+
+// packages/core/src/directives/data.ts
+var handleDataDirective, registerDataDirectives;
+var init_data = __esm({
+  "packages/core/src/directives/data.ts"() {
+    "use strict";
+    handleDataDirective = ({ runtime }, words) => {
+      runtime.handleDataDirective(words[0], words.slice(1));
+    };
+    registerDataDirectives = (registry, context) => {
+      registry.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
+    };
+  }
+});
+
+// packages/core/src/directives/fill-pad.ts
+var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
+var init_fill_pad = __esm({
+  "packages/core/src/directives/fill-pad.ts"() {
+    "use strict";
+    FILL_PATTERN_SIZE = 12;
+    PATTERN_WIDTH = {
+      fillbyte: 1,
+      fillword: 2,
+      filllong: 3,
+      filldword: 4,
+      padbyte: 1,
+      padword: 2,
+      padlong: 3,
+      paddword: 4
+    };
+    patternWidth = (keyword, kind) => {
+      if (!keyword.startsWith(kind)) {
+        throw new Error(`Unrecognized ${kind} directive.`);
+      }
+      const width = PATTERN_WIDTH[keyword];
+      if (width === void 0) {
+        throw new Error(`Unrecognized ${kind} directive.`);
+      }
+      return width;
+    };
+    writeLittleEndianRepeats = (value, width, dest, length) => {
+      const unit = value >>> 0;
+      const bytes = [unit & 255, unit >>> 8 & 255, unit >>> 16 & 255, unit >>> 24 & 255];
+      for (let i = 0; i < length; i++) {
+        dest[i] = bytes[i % width];
+      }
+    };
+    resolvePatternValue = ({ session, operandResolver }, words, kind) => {
+      const keyword = words[0];
+      const width = patternWidth(keyword, kind);
+      if (words.length !== 2) {
+        throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+      }
+      return {
+        width,
+        value: operandResolver.getnum(session.resolvedefines(words[1]))
+      };
+    };
+    handleFillPattern = (ctx, words) => {
+      const { width, value } = resolvePatternValue(ctx, words, "fill");
+      writeLittleEndianRepeats(value, width, ctx.session.fillbyte, FILL_PATTERN_SIZE);
+    };
+    handleFill = ({ session, operandResolver }, words) => {
+      if (words.length !== 2) {
+        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
+      }
+      const count = operandResolver.getnum(session.resolvedefines(words[1]));
+      for (let i = 0; i < count; i++) {
+        session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
+      }
+    };
+    handlePadPattern = (ctx, words) => {
+      const { session } = ctx;
+      const { width, value } = resolvePatternValue(ctx, words, "pad");
+      session.padUnit = width;
+      writeLittleEndianRepeats(value, width, session.padbyte, width);
+    };
+    handlePad = ({ session, operandResolver }, words) => {
+      let gap;
+      if (words.length === 1) {
+        gap = 65536 - (session.currentTargetAddress & 65535);
+      } else if (words.length === 2) {
+        const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
+        const targetPC = session.outputWriter.toOutputOffset(targetAddress);
+        if (targetPC < 0) {
+          throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
+        }
+        const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
+        if (targetPC <= currentPC) {
+          return;
+        }
+        gap = targetPC - currentPC;
+      } else {
+        throw new Error("PAD directive accepts zero or one parameter.");
+      }
+      for (let i = 0; i < gap; i++) {
+        session.write1(session.padbyte[i % session.padUnit]);
+      }
+    };
+    registerFillPadDirectives = (registry, context) => {
+      registry.registerLowered(
+        ["fillbyte", "fillword", "filllong", "filldword"],
+        context,
+        handleFillPattern
+      );
+      registry.registerLowered("fill", context, handleFill);
+      registry.registerLowered(
+        ["padbyte", "padword", "padlong", "paddword"],
+        context,
+        handlePadPattern
+      );
+      registry.registerLowered("pad", context, handlePad);
+    };
+  }
+});
+
+// packages/core/src/directives/flow-control.ts
+var handleRelativeLabel, registerFlowControlDirectives;
+var init_flow_control = __esm({
+  "packages/core/src/directives/flow-control.ts"() {
+    "use strict";
+    handleRelativeLabel = ({ session }, _words, raw) => {
+      session.symbolScope.handleRelativeLabel(raw);
+    };
+    registerFlowControlDirectives = (registry, context) => {
+      registry.register(["+", "-"], context, handleRelativeLabel);
     };
   }
 });
@@ -1017,2157 +1201,6 @@ var init_expression_node = __esm({
       peek() {
         return this.tokens[this.index];
       }
-    };
-  }
-});
-
-// packages/core/src/internal-instrumentation.ts
-import { performance } from "node:perf_hooks";
-function sampleMemory(metrics) {
-  const memory = process.memoryUsage();
-  metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
-  metrics.peakHeapUsedBytes = Math.max(metrics.peakHeapUsedBytes, memory.heapUsed);
-}
-function incrementInternalCounter(name, amount = 1) {
-  const metrics = activeInstrumentation;
-  if (metrics) {
-    metrics.counters[name] += amount;
-  }
-}
-function isInternalInstrumentationActive() {
-  return activeInstrumentation !== void 0;
-}
-function recordInternalCounterPeak(name, value) {
-  const metrics = activeInstrumentation;
-  if (metrics) {
-    metrics.counters[name] = Math.max(metrics.counters[name], value);
-  }
-}
-function measureInternalPhase(name, callback) {
-  const metrics = activeInstrumentation;
-  if (!metrics) {
-    return callback();
-  }
-  const start = performance.now();
-  try {
-    return callback();
-  } finally {
-    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance.now() - start;
-    sampleMemory(metrics);
-  }
-}
-var activeInstrumentation;
-var init_internal_instrumentation = __esm({
-  "packages/core/src/internal-instrumentation.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/ir/normalized-command.ts
-function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
-  if (!collectSourceMetadata) {
-    return {
-      file,
-      line,
-      raw,
-      normalized,
-      span: EMPTY_COMMAND_SPAN,
-      normalizedSpan: EMPTY_COMMAND_SPAN,
-      tokenSpans: EMPTY_TOKEN_SPANS
-    };
-  }
-  return {
-    file,
-    line,
-    raw,
-    normalized,
-    span: createLineSpan(raw, line),
-    normalizedSpan: createLineSpan(normalized, line),
-    tokenSpans: deriveTokenSpans(raw, words, line)
-  };
-}
-function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
-  const command = normalized.trim();
-  const keyword = words[0] ?? "";
-  return {
-    kind: classifyCommand(command, words),
-    source: createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata),
-    command,
-    words,
-    keyword,
-    labelName: deriveLabelName(keyword),
-    assignmentTarget: deriveAssignmentTarget(words),
-    parsed: deriveCommandSemantics(command, words)
-  };
-}
-function cloneNormalizedCommand(command) {
-  incrementInternalCounter("normalizedCommandClones");
-  return { ...command };
-}
-function setCommandWords(command, words, normalized) {
-  command.words = words;
-  command.keyword = words[0] ?? "";
-  command.command = (normalized ?? words.join(" ")).trim();
-  const normalizedSource = normalized ?? command.command;
-  if (command.source.tokenSpans === EMPTY_TOKEN_SPANS) {
-    command.source = {
-      ...command.source,
-      normalized: normalizedSource,
-      normalizedSpan: EMPTY_COMMAND_SPAN,
-      tokenSpans: EMPTY_TOKEN_SPANS
-    };
-  } else {
-    command.source = {
-      ...command.source,
-      normalized: normalizedSource,
-      normalizedSpan: createLineSpan(normalizedSource, command.source.line),
-      tokenSpans: deriveTokenSpans(command.source.raw, words, command.source.line)
-    };
-  }
-  command.labelName = deriveLabelName(command.keyword);
-  command.assignmentTarget = deriveAssignmentTarget(words);
-  command.parsed = deriveCommandSemantics(command.command, words);
-  command.kind = classifyCommand(command.command, words);
-  return command;
-}
-function setCommandKind(command, kind) {
-  command.kind = kind;
-  return command;
-}
-function classifyCommand(command, words) {
-  const trimmed = command.trim();
-  const keyword = (words[0] ?? "").toLowerCase();
-  if (!trimmed || trimmed.startsWith(";")) {
-    return "commentOrEmpty";
-  }
-  if (words.length === 3 && words[1] === "=" && (words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
-    return "characterMapping";
-  }
-  if (trimmed.startsWith("!")) {
-    return "defineCommand";
-  }
-  if (keyword === "macro" || keyword === "endmacro" || keyword.startsWith("%")) {
-    return "macroDefinitionOrInvoke";
-  }
-  if (keyword === "undef") {
-    return "defineCommand";
-  }
-  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip" || keyword === "datastruct" || keyword === "datastructs" || keyword === "enddatastructs" || /^\[[^\]]+]\s*=/.test(trimmed)) {
-    return "structCommand";
-  }
-  if (keyword === "function") {
-    return "functionDefinition";
-  }
-  if (keyword === "global") {
-    return "labelDefinition";
-  }
-  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
-    return "staticAssignment";
-  }
-  if (deriveLabelName(words[0] ?? "")) {
-    return "labelDefinition";
-  }
-  return keyword ? "opcodeCandidate" : "unknown";
-}
-function deriveLabelName(keyword) {
-  if (!keyword) {
-    return void 0;
-  }
-  if (keyword === ":") {
-    return ":";
-  }
-  if (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword)) {
-    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-  }
-  if (keyword.endsWith(":") || keyword.startsWith(".")) {
-    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-  }
-  return void 0;
-}
-function deriveAssignmentTarget(words) {
-  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
-    return words[0];
-  }
-  return void 0;
-}
-function deriveCommandSemantics(command, words) {
-  const keyword = (words[0] ?? "").toLowerCase();
-  const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
-  const semantics = {};
-  if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
-    semantics.condition = {
-      expression: parseExpressionNode(words.slice(1).join(" "))
-    };
-  }
-  if (keyword === "for" && words.length >= 4 && words[2] === "=") {
-    const variable = words[1];
-    const parsedRange = parseExpressionNode(words.slice(3).join(" "));
-    if (parsedRange.type === "range") {
-      semantics.forLoop = {
-        variable,
-        range: parsedRange,
-        start: parsedRange.start,
-        end: parsedRange.end
-      };
-    }
-  }
-  if (words.length === 3 && (words[1] === "=" || words[1] === ":=") && !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
-    semantics.assignment = {
-      target: words[0],
-      expression: parseExpressionNode(words[2])
-    };
-  }
-  if (bareKeyword === "incbin" && words.length >= 2) {
-    const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
-    const colonIndex = incbinSource.indexOf(":");
-    const rangeCandidate = colonIndex === -1 ? void 0 : incbinSource.slice(colonIndex + 1);
-    if (rangeCandidate) {
-      const parsedRange = parseExpressionNode(rangeCandidate);
-      if (parsedRange.type === "range") {
-        semantics.incbinRange = {
-          range: parsedRange,
-          start: parsedRange.start,
-          end: parsedRange.end
-        };
-      }
-    }
-    const includePath = extractIncludePath(incbinSource);
-    if (includePath) {
-      semantics.includeTarget = { directive: "incbin", target: includePath };
-    }
-  }
-  if (keyword.startsWith("%")) {
-    const invocationText = command.trim().slice(1);
-    const openParen = invocationText.indexOf("(");
-    if (openParen !== -1 && invocationText.endsWith(")")) {
-      const name = invocationText.slice(0, openParen).trim();
-      const argsText = invocationText.slice(openParen + 1, -1);
-      const args = splitCommaArguments(argsText);
-      semantics.macroInvocation = { name, args };
-    } else if (invocationText) {
-      semantics.macroInvocation = { name: invocationText.trim(), args: [] };
-    }
-  }
-  if ((bareKeyword === "include" || bareKeyword === "incsrc") && words.length >= 2) {
-    semantics.includeTarget = {
-      directive: bareKeyword,
-      target: words.slice(1).join(" ").trim()
-    };
-  }
-  const labelSplit = extractLabelSplit(command);
-  if (labelSplit) {
-    semantics.labelSplit = labelSplit;
-  }
-  if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword) && words.length >= 2) {
-    const payload = command.slice((words[0] ?? "").length).trim();
-    semantics.dataDirective = {
-      directive: keyword,
-      operands: splitCommaArguments(payload)
-    };
-  }
-  if (keyword && !keyword.startsWith("%") && !keyword.startsWith("!")) {
-    const payload = command.slice((words[0] ?? "").length).trim();
-    const args = semantics.dataDirective?.operands ?? (payload ? splitCommaArguments(payload) : []);
-    semantics.directiveArgs = {
-      name: keyword,
-      args
-    };
-    if (!deriveLabelName(words[0] ?? "") && payload) {
-      semantics.opcodeOperands = {
-        mnemonic: words[0] ?? "",
-        operandText: payload,
-        operands: args
-      };
-    }
-  }
-  return semantics;
-}
-function extractIncludePath(raw) {
-  const trimmed = raw.trim();
-  const quote = trimmed[0];
-  if (quote === '"' || quote === "'" || quote === "`") {
-    const end = trimmed.indexOf(quote, 1);
-    if (end !== -1) {
-      return trimmed.slice(1, end);
-    }
-  }
-  const colonIndex = trimmed.indexOf(":");
-  const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
-  return pathToken.replace(/^["'`]+|["'`]+$/g, "");
-}
-function extractLabelSplit(command) {
-  const trimmed = command.trim();
-  const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
-  if (!labelMatch) {
-    return void 0;
-  }
-  const trailing = labelMatch[2].trim();
-  return {
-    label: labelMatch[1],
-    trailing: trailing || void 0
-  };
-}
-function splitCommaArguments(input) {
-  const values = [];
-  let current = "";
-  let depth = 0;
-  let inQuote = false;
-  let quoteChar = "";
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
-      if (!inQuote) {
-        inQuote = true;
-        quoteChar = char;
-      } else if (quoteChar === char) {
-        inQuote = false;
-      }
-      current += char;
-      continue;
-    }
-    if (!inQuote && char === "(") {
-      depth++;
-      current += char;
-      continue;
-    }
-    if (!inQuote && char === ")") {
-      depth = Math.max(0, depth - 1);
-      current += char;
-      continue;
-    }
-    if (!inQuote && depth === 0 && char === ",") {
-      const normalized = current.trim();
-      if (normalized) {
-        values.push(normalized);
-      }
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  const tail = current.trim();
-  if (tail) {
-    values.push(tail);
-  }
-  return values;
-}
-var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
-var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
-    "use strict";
-    init_expression_node();
-    init_source_location();
-    init_internal_instrumentation();
-    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
-    EMPTY_TOKEN_SPANS = Object.freeze([]);
-  }
-});
-
-// packages/core/src/mathcore.ts
-function throwMathError(message) {
-  throw new AssemblyError("MATH_EVALUATION_ERROR", message);
-}
-function getOperator(operators, token) {
-  if (!Object.hasOwn(operators, token)) {
-    return void 0;
-  }
-  return operators[token];
-}
-function isScanWhitespace(code) {
-  if (code === 32 || code === 9 || code === 10 || code === 13) {
-    return true;
-  }
-  if (code === 11 || code === 12 || code === 160 || code === 65279) {
-    return true;
-  }
-  return false;
-}
-function isWordChar(code) {
-  if (code >= 48 && code <= 57) {
-    return true;
-  }
-  if (code >= 65 && code <= 90) {
-    return true;
-  }
-  if (code >= 97 && code <= 122) {
-    return true;
-  }
-  return code === 95;
-}
-var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
-var init_mathcore = __esm({
-  "packages/core/src/mathcore.ts"() {
-    "use strict";
-    init_diagnostics();
-    init_expression_node();
-    init_internal_instrumentation();
-    OPERATORS = {
-      // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
-      "**": { priority: 6, operation: (left, right) => Math.pow(left, right) },
-      "*": { priority: 5, operation: (left, right) => left * right },
-      "/": {
-        priority: 5,
-        operation: (left, right) => right !== 0 ? left / right : throwMathError("Division by zero")
-      },
-      "%": {
-        priority: 5,
-        operation: (left, right) => right !== 0 ? left % right : throwMathError("Modulo by zero")
-      },
-      "+": { priority: 4, operation: (left, right) => left + right },
-      "-": { priority: 4, operation: (left, right) => left - right },
-      "<<": { priority: 3, operation: (left, right) => left << right },
-      ">>": { priority: 3, operation: (left, right) => left >> right },
-      "&": { priority: 3, operation: (left, right) => left & right },
-      "|": { priority: 3, operation: (left, right) => left | right },
-      "^": { priority: 3, operation: (left, right) => left ^ right },
-      "<": { priority: 2, operation: (left, right) => left < right ? 1 : 0 },
-      ">": { priority: 2, operation: (left, right) => left > right ? 1 : 0 },
-      "<=": { priority: 2, operation: (left, right) => left <= right ? 1 : 0 },
-      ">=": { priority: 2, operation: (left, right) => left >= right ? 1 : 0 },
-      "==": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
-      "=": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
-      "!=": { priority: 2, operation: (left, right) => left !== right ? 1 : 0 },
-      "&&": { priority: 1, operation: (left, right) => left && right ? 1 : 0 },
-      "||": { priority: 0, operation: (left, right) => left || right ? 1 : 0 }
-    };
-    BUILTIN_NUMERIC_UNARY = {
-      sqrt: Math.sqrt,
-      sin: Math.sin,
-      cos: Math.cos,
-      tan: Math.tan,
-      asin: Math.asin,
-      acos: Math.acos,
-      atan: Math.atan,
-      log: Math.log,
-      log10: Math.log10,
-      log2: Math.log2,
-      ceil: Math.ceil,
-      floor: Math.floor
-    };
-    NUMERIC_UNARY_ALIASES = {
-      arcsin: "asin",
-      arccos: "acos",
-      arctan: "atan"
-    };
-    STRING_FIRST_ARG_FUNCTIONS = /* @__PURE__ */ new Set([
-      "defined",
-      "sizeof",
-      "objectsize",
-      "datasize",
-      "filesize",
-      "getfilestatus"
-    ]);
-    STRING_TWO_ARG_FUNCTIONS = /* @__PURE__ */ new Set(["stringsequal", "stringsequalnocase"]);
-    FILE_STRING_FUNCTION = /^(?:canreadfile|readfile)\d?$/;
-    MathCore = class {
-      pureStringExpressionCache = /* @__PURE__ */ new Map();
-      roundedPureStringExpressionCache = /* @__PURE__ */ new Map();
-      pureStringClassification = /* @__PURE__ */ new Map();
-      instrumentedExpressionStrings = /* @__PURE__ */ new Set();
-      instrumentedPureExpressionStrings = /* @__PURE__ */ new Set();
-      instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
-      instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
-      host;
-      math_round = false;
-      userFunctions = /* @__PURE__ */ new Map();
-      expressionFunctions = /* @__PURE__ */ new Map();
-      operators = OPERATORS;
-      /** Full expression currently being scanned. */
-      scanSource = "";
-      /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
-      scanIndex = 0;
-      /**
-       * Remaining unconsumed expression text.
-       * @returns {string} The unconsumed source from the scan cursor.
-       */
-      get str() {
-        return this.scanSource.slice(this.scanIndex);
-      }
-      /**
-       * Replaces the expression being scanned.
-       * @param {string} value The new expression source.
-       */
-      set str(value) {
-        this.scanSource = value;
-        this.scanIndex = 0;
-      }
-      /**
-       * Advances the scan cursor past ASCII / trim whitespace.
-       */
-      skipWhitespace() {
-        const source = this.scanSource;
-        let index2 = this.scanIndex;
-        while (index2 < source.length && isScanWhitespace(source.charCodeAt(index2))) {
-          index2++;
-        }
-        this.scanIndex = index2;
-      }
-      /**
-       * Returns whether the remaining source starts with a literal.
-       * @param {string} text The literal to match.
-       * @returns {boolean} Whether the literal is present at the cursor.
-       */
-      remainingStartsWith(text) {
-        return this.scanSource.startsWith(text, this.scanIndex);
-      }
-      /**
-       * Consumes a fixed number of characters from the scan cursor.
-       * @param {number} count The number of characters to consume.
-       */
-      advance(count) {
-        this.scanIndex += count;
-      }
-      /**
-       * Initialize the math core.
-       */
-      reset() {
-        this.math_round = false;
-        this.userFunctions.clear();
-        this.clearExpressionCaches();
-      }
-      /**
-       * Installs a target-provided expression function for this session.
-       * @param {string | readonly string[]} names The canonical name and aliases.
-       * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
-       */
-      registerExpressionFunction(names, expressionFunction) {
-        for (const name of typeof names === "string" ? [names] : names) {
-          this.expressionFunctions.set(name.toLowerCase(), expressionFunction);
-        }
-      }
-      /**
-       * Starts a new expression-cache snapshot for an assembly.
-       */
-      beginAssemblySnapshot() {
-        this.clearExpressionCaches();
-      }
-      /**
-       * Releases expression values retained for a completed assembly.
-       */
-      endAssemblySnapshot() {
-        this.clearExpressionCaches();
-      }
-      /**
-       * Clears expression caches retained for the current assembly.
-       */
-      clearExpressionCaches() {
-        this.pureStringExpressionCache.clear();
-        this.roundedPureStringExpressionCache.clear();
-        this.pureStringClassification.clear();
-        this.instrumentedExpressionStrings.clear();
-        this.instrumentedPureExpressionStrings.clear();
-        this.instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
-        this.instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
-      }
-      /**
-       * Evaluates an expression.
-       * This is a direct conversion of `math` in `asar_math.cpp`.
-       * @param {string} expression The expression to evaluate.
-       * @returns {number} The result of the expression.
-       */
-      math = (expression) => {
-        if (isInternalInstrumentationActive()) {
-          return measureInternalPhase("expressionEvaluation", () => {
-            this.recordExpressionEvaluation(expression);
-            return this.evaluateMathInput(expression);
-          });
-        }
-        return this.evaluateMathInput(expression);
-      };
-      /**
-       * Evaluates a string or typed expression without instrumentation dispatch.
-       * @param {string | ExpressionNode} expression The expression to evaluate.
-       * @returns {number} The expression result.
-       */
-      evaluateMathInput(expression) {
-        if (typeof expression !== "string") {
-          return this.evaluateExpressionNode(expression);
-        }
-        return this.evaluateCachedStringExpression(expression);
-      }
-      /**
-       * Reuses successful results only for strings proven to contain literal operators.
-       * @param {string} expression The legacy expression source.
-       * @returns {number} The expression result.
-       */
-      evaluateCachedStringExpression(expression) {
-        let isPure = this.pureStringClassification.get(expression);
-        if (isPure === void 0) {
-          isPure = this.isPureExpressionNode(parseExpressionNode(expression));
-          this.pureStringClassification.set(expression, isPure);
-        }
-        if (!isPure) {
-          return this.evaluateStringExpression(expression);
-        }
-        const cache = this.math_round ? this.roundedPureStringExpressionCache : this.pureStringExpressionCache;
-        const cached = cache.get(expression);
-        if (cached !== void 0) {
-          incrementInternalCounter("pureStringExpressionCacheHits");
-          return cached;
-        }
-        incrementInternalCounter("pureStringExpressionCacheMisses");
-        const result = this.evaluateStringExpression(expression);
-        cache.set(expression, result);
-        return result;
-      }
-      /**
-       * Records the shape and reuse of a top-level expression evaluation.
-       * @param {string | ExpressionNode} expression The evaluated expression.
-       */
-      recordExpressionEvaluation(expression) {
-        incrementInternalCounter("expressionEvaluations");
-        if (typeof expression === "string") {
-          incrementInternalCounter("expressionStringEvaluations");
-          if (!this.instrumentedExpressionStrings.has(expression)) {
-            this.instrumentedExpressionStrings.add(expression);
-            incrementInternalCounter("expressionUniqueStringEvaluations");
-            if (this.isPureExpressionNode(parseExpressionNode(expression))) {
-              this.instrumentedPureExpressionStrings.add(expression);
-              incrementInternalCounter("pureStringExpressionUniqueValues");
-            }
-          }
-          if (this.instrumentedPureExpressionStrings.has(expression)) {
-            incrementInternalCounter("pureStringExpressionEvaluations");
-          }
-          return;
-        }
-        incrementInternalCounter("expressionNodeEvaluations");
-        if (!this.instrumentedExpressionNodes.has(expression)) {
-          this.instrumentedExpressionNodes.add(expression);
-          incrementInternalCounter("expressionUniqueNodeEvaluations");
-        }
-        if (!this.isPureExpressionNode(expression)) {
-          return;
-        }
-        incrementInternalCounter("pureExpressionEvaluations");
-        if (!this.instrumentedPureExpressionNodes.has(expression)) {
-          this.instrumentedPureExpressionNodes.add(expression);
-          incrementInternalCounter("pureExpressionUniqueNodes");
-        }
-      }
-      /**
-       * Determines whether an expression depends only on literal operators.
-       * @param {ExpressionNode} expression The expression to classify.
-       * @returns {boolean} Whether the result is independent of assembler state.
-       */
-      isPureExpressionNode(expression) {
-        switch (expression.type) {
-          case "literal":
-            return true;
-          case "unary":
-            return this.isPureExpressionNode(expression.argument);
-          case "binary":
-            return this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right);
-          default:
-            return false;
-        }
-      }
-      /**
-       * Evaluates a string expression using the legacy parser.
-       * @param {string} expression The expression to evaluate.
-       * @returns {number} The result of the expression.
-       */
-      evaluateStringExpression(expression) {
-        this.str = expression.trim();
-        const rval = this.evalMath(0);
-        if (rval === void 0) {
-          throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
-        }
-        this.skipWhitespace();
-        if (this.scanIndex < this.scanSource.length) {
-          if (this.remainingStartsWith(",")) {
-            throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
-          }
-          throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
-        }
-        return rval;
-      }
-      /**
-       * Evaluates an expression node using typed dispatch before falling back to string parsing.
-       * @param {ExpressionNode} expression The expression node to evaluate.
-       * @returns {number} The numeric result.
-       */
-      evaluateExpressionNode(expression) {
-        if (isReferenceExpressionNode(expression)) {
-          return this.evaluateReferenceExpressionNode(expression);
-        }
-        switch (expression.type) {
-          case "literal":
-            return this.parseLiteralNode(expression.value);
-          case "string":
-            throw new AssemblyError(
-              "MATH_STRING_NOT_NUMERIC",
-              `String expression is not directly numeric: ${expression.value}`
-            );
-          case "call":
-            return this.callFunction(
-              expression.callee.name,
-              expression.arguments.map(
-                (argument, index2) => this.evaluateCallArgument(expression.callee.name, index2, argument)
-              )
-            );
-          case "unary":
-            return this.evaluateUnaryExpressionNode(expression.operator, expression.argument);
-          case "binary":
-            return this.evaluateBinaryExpressionNode(
-              expression.operator,
-              expression.left,
-              expression.right
-            );
-          case "range":
-            throw new AssemblyError(
-              "MATH_RANGE_NOT_NUMERIC",
-              `Range expression is not directly numeric: ${renderExpressionNode(expression)}`
-            );
-          case "raw":
-          default:
-            return this.evaluateStringExpression(expression.value);
-        }
-      }
-      /**
-       * Evaluates call argument.
-       * @param {string} functionName The function name.
-       * @param {number} argumentIndex The argument index.
-       * @param {ExpressionNode} argument The argument.
-       * @returns {number | string} The result.
-       */
-      evaluateCallArgument(functionName, argumentIndex, argument) {
-        if (this.isStringArgument(functionName, argumentIndex)) {
-          switch (argument.type) {
-            case "identifier":
-              return argument.name;
-            case "string":
-              return argument.value;
-            case "raw":
-              return argument.value.replace(/^["']|["']$/g, "");
-            default:
-              return renderExpressionNode(argument);
-          }
-        }
-        switch (argument.type) {
-          case "string":
-            return argument.value;
-          case "range":
-            return renderExpressionNode(argument);
-          case "raw":
-            return this.evaluateStringExpression(argument.value);
-          default:
-            if (isReferenceExpressionNode(argument)) {
-              return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
-                renderReferenceExpressionNode(argument, {
-                  renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-                })
-              );
-            }
-            return this.evaluateExpressionNode(argument);
-        }
-      }
-      /**
-       * Evaluates unary expression node.
-       * @param {UnaryOperator} operator The operator.
-       * @param {ExpressionNode} argument The argument.
-       * @returns {number} The result.
-       */
-      evaluateUnaryExpressionNode(operator, argument) {
-        const value = this.evaluateExpressionNode(argument);
-        switch (operator) {
-          case "<:":
-            return value >>> 16;
-          case "<":
-            return value & 255;
-          case ">":
-            return value >> 8 & 255;
-          case "^":
-            return value >> 16 & 255;
-          case "~":
-            return ~value;
-          case "-":
-            return -value;
-          case "+":
-          default:
-            return value;
-        }
-      }
-      /**
-       * Evaluates binary expression node.
-       * @param {BinaryOperator} operator The operator.
-       * @param {ExpressionNode} left The left.
-       * @param {ExpressionNode} right The right.
-       * @returns {number} The result.
-       */
-      evaluateBinaryExpressionNode(operator, left, right) {
-        const spec = this.operators[operator];
-        return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
-      }
-      /**
-       * Resolves numeric identifier argument.
-       * @param {string} identifier The identifier.
-       * @returns {number | string} The result.
-       */
-      resolveNumericIdentifierArgument(identifier) {
-        try {
-          const resolved = this.getHost().resolveLabel(identifier);
-          return typeof resolved === "number" ? resolved : identifier;
-        } catch {
-          return identifier;
-        }
-      }
-      /**
-       * Evaluates reference expression node.
-       * @param {ReferenceExpressionNode} expression The expression.
-       * @returns {number} The result.
-       */
-      evaluateReferenceExpressionNode(expression) {
-        if (expression.type === "defineReference") {
-          throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
-        }
-        const reference = renderReferenceExpressionNode(expression, {
-          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-        });
-        const resolved = this.getHost().resolveLabel(reference);
-        if (typeof resolved === "number") {
-          return resolved;
-        }
-        throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
-      }
-      /**
-       * Resolves leading local label reference.
-       * @param {string} input The input.
-       * @returns {{ label: string; length: number } | undefined} The result.
-       */
-      resolveLeadingLocalLabelReference(input) {
-        const match = input.match(/^(\.+\w+)/);
-        if (!match) {
-          return void 0;
-        }
-        return { label: match[1], length: match[1].length };
-      }
-      /**
-       * Checks whether string argument.
-       * @param {string} functionName The function name.
-       * @param {number} argumentIndex The argument index.
-       * @returns {boolean} The result.
-       */
-      isStringArgument(functionName, argumentIndex) {
-        if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
-          return argumentIndex === 0;
-        }
-        if (STRING_TWO_ARG_FUNCTIONS.has(functionName)) {
-          return argumentIndex < 2;
-        }
-        if (FILE_STRING_FUNCTION.test(functionName)) {
-          return argumentIndex === 0;
-        }
-        return false;
-      }
-      /**
-       * Parses literal node.
-       * @param {string} value The value.
-       * @returns {number} The result.
-       */
-      parseLiteralNode(value) {
-        if (/^-?\d+$/.test(value)) {
-          return Number.parseInt(value, 10);
-        }
-        if (/^\$[\dA-Fa-f]+$/.test(value)) {
-          return Number.parseInt(value.slice(1), 16);
-        }
-        if (/^0x[\da-f]+$/i.test(value)) {
-          return Number.parseInt(value.slice(2), 16);
-        }
-        if (/^%[01]+$/.test(value)) {
-          return Number.parseInt(value.slice(1), 2);
-        }
-        throw new Error(`Unsupported literal expression: ${value}`);
-      }
-      /**
-       * Evaluates a mathematical expression.
-       * This replaces the C++ `eval` function.
-       * @param {number} depth The current depth of nested expressions.
-       * @param {string} [stopChar] The character to stop the evaluation at.
-       * @returns {number | undefined} The result of the evaluated expression, or
-       * `undefined` when an inline function definition consumes the expression.
-       */
-      evalMath(depth = 0, stopChar) {
-        let left;
-        if (this.remainingStartsWith("function")) {
-          this.parseFunctionDefinition();
-          left = this.evalMath(depth, stopChar);
-        } else if (this.scanIndex < this.scanSource.length) {
-          left = this.getnum();
-        }
-        if (left === void 0) {
-          return void 0;
-        }
-        if (Number.isNaN(left)) {
-          throw new Error(`Invalid number: ${left}`);
-        }
-        this.skipWhitespace();
-        while (this.scanIndex < this.scanSource.length) {
-          this.skipWhitespace();
-          if (stopChar && this.remainingStartsWith(stopChar)) {
-            break;
-          }
-          const nextChar = this.scanSource[this.scanIndex];
-          if (nextChar === "," || nextChar === ")" || nextChar === "]") {
-            break;
-          }
-          const op2 = this.peekNextOperator(this.operators, depth);
-          if (!op2) break;
-          this.advance(op2.length);
-          this.skipWhitespace();
-          const right = this.evalMath(this.operators[op2].priority + 1, stopChar);
-          if (right === void 0) {
-            throw new Error(`Missing right operand for operator '${op2}'.`);
-          }
-          left = this.operators[op2].operation(left, right);
-        }
-        if (this.math_round) {
-          left = Math.trunc(left);
-        }
-        if (Number.isNaN(left)) {
-          throw new Error(`Invalid number: ${left}`);
-        }
-        return left;
-      }
-      /**
-       * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
-       * @param {OperatorTable} operators The operators to check.
-       * @param {number} depth The current depth of nested expressions.
-       * @returns {BinaryOperator | null} The matching operator or null if no match.
-       */
-      peekNextOperator(operators, depth) {
-        this.skipWhitespace();
-        if (this.scanIndex >= this.scanSource.length) {
-          return null;
-        }
-        const remaining = this.scanSource.length - this.scanIndex;
-        if (remaining >= 2) {
-          const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
-          const twoOp = getOperator(operators, twoChars);
-          if (twoOp) {
-            if (twoOp.priority >= depth) {
-              return twoChars;
-            }
-            return null;
-          }
-        }
-        const oneChar = this.scanSource[this.scanIndex];
-        const oneOp = getOperator(operators, oneChar);
-        if (oneOp && oneOp.priority >= depth) {
-          return oneChar;
-        }
-        return null;
-      }
-      /**
-       * Parses numbers from a string while consuming valid characters.
-       * @param {RegExp} regex The regular expression to test against the string.
-       * @returns {string} The substring of the string that matches the regular expression.
-       */
-      consumeWhile(regex) {
-        const source = this.scanSource;
-        const start = this.scanIndex;
-        let index2 = start;
-        while (index2 < source.length && regex.test(source[index2])) {
-          index2++;
-        }
-        const result = source.slice(start, index2);
-        this.scanIndex = index2;
-        return result;
-      }
-      /**
-       * Retrieves a number from the string.
-       * This implements `getnumcore` and `getnum`.
-       * @returns {number} The number from the string.
-       */
-      getnum = () => {
-        this.skipWhitespace();
-        let applyBitshift = false;
-        let sign = 1;
-        while (true) {
-          if (this.remainingStartsWith("<:")) {
-            this.advance(2);
-            this.skipWhitespace();
-            applyBitshift = true;
-          } else if (this.remainingStartsWith("<") && !this.remainingStartsWith("<<") && !this.remainingStartsWith("<=")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return sign * (this.getnum() & 255) | 0;
-          } else if (this.remainingStartsWith(">") && !this.remainingStartsWith(">>") && !this.remainingStartsWith(">=")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return sign * (this.getnum() >> 8 & 255) | 0;
-          } else if (this.remainingStartsWith("^")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return sign * (this.getnum() >> 16 & 255) | 0;
-          } else if (this.remainingStartsWith("~")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return ~this.getnum();
-          } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
-            const after = this.scanSource[this.scanIndex + 1];
-            let isDefineLike = after === "{";
-            if (after !== void 0) {
-              const code = after.charCodeAt(0);
-              if (code >= 65 && code <= 90 || code >= 97 && code <= 122 || code === 95) {
-                isDefineLike = true;
-              }
-            }
-            if (!isDefineLike) {
-              this.advance(1);
-              this.skipWhitespace();
-              return ~this.getnum();
-            }
-            break;
-          } else if (this.remainingStartsWith("-")) {
-            this.advance(1);
-            this.skipWhitespace();
-            sign *= -1;
-          } else if (this.remainingStartsWith("+")) {
-            this.advance(1);
-            this.skipWhitespace();
-          } else {
-            break;
-          }
-        }
-        const fnName = this.scanFunctionCallName();
-        if (fnName !== void 0) {
-          const args = [];
-          if (this.scanSource[this.scanIndex] === "(") {
-            this.advance(1);
-            this.skipWhitespace();
-            if (!this.remainingStartsWith(")")) {
-              while (true) {
-                this.skipWhitespace();
-                if (this.remainingStartsWith(",")) {
-                  this.advance(1);
-                  this.skipWhitespace();
-                }
-                if (this.remainingStartsWith(")")) {
-                  break;
-                }
-                if (this.remainingStartsWith('"')) {
-                  args.push(this.parseStringLiteral());
-                } else if (this.isStringArgument(fnName, args.length)) {
-                  args.push(this.parseUnquotedStringArgument(fnName));
-                } else {
-                  const val = this.evalMath(0, ")");
-                  if (val === void 0) {
-                    throw new Error(`Missing function argument for '${fnName}'.`);
-                  }
-                  args.push(val);
-                }
-                this.skipWhitespace();
-                if (this.remainingStartsWith(")")) {
-                  break;
-                }
-                if (this.remainingStartsWith(",")) {
-                  this.advance(1);
-                  this.skipWhitespace();
-                  continue;
-                }
-                throw new Error(`Expected ',' or ')' in function call arguments: ${this.str}`);
-              }
-            }
-            const outerSource = this.scanSource;
-            const afterCall = this.scanIndex + 1;
-            const result = this.callFunction(fnName, args);
-            this.scanSource = outerSource;
-            this.scanIndex = afterCall;
-            this.skipWhitespace();
-            let value2 = sign * result;
-            if (applyBitshift) {
-              value2 = value2 >>> 16;
-            }
-            return value2;
-          }
-        }
-        let value;
-        if (this.remainingStartsWith("(")) {
-          this.advance(1);
-          this.skipWhitespace();
-          const nestedValue = this.evalMath(0, ")");
-          if (nestedValue === void 0) {
-            throw new Error("Empty parenthesized expression.");
-          }
-          value = nestedValue;
-          if (!this.remainingStartsWith(")")) {
-            throw new Error("Mismatched parentheses.");
-          }
-          this.advance(1);
-          this.skipWhitespace();
-        } else if (this.remainingStartsWith("$")) {
-          this.advance(1);
-          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
-        } else if (this.remainingStartsWith("0x")) {
-          this.advance(2);
-          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
-        } else if (this.remainingStartsWith("%")) {
-          this.advance(1);
-          value = parseInt(this.consumeWhile(/[01]/), 2);
-        } else if (/\d/.test(this.scanSource[this.scanIndex] ?? "")) {
-          value = parseFloat(this.consumeWhile(/[\d.]/));
-        } else {
-          const remaining = this.str;
-          const unnamedMatch = remaining.match(/^(:(\++|-+))/);
-          if (unnamedMatch) {
-            this.advance(unnamedMatch[1].length);
-            this.skipWhitespace();
-            const resolved = this.getHost().resolveLabel(unnamedMatch[1]);
-            if (typeof resolved !== "number") {
-              throw new Error(`Reference '${unnamedMatch[1]}' did not resolve to a numeric value.`);
-            }
-            value = resolved;
-          } else {
-            const reference = parseLeadingReferenceExpression(remaining);
-            if (reference) {
-              this.advance(reference.length);
-              this.skipWhitespace();
-              const renderedReference = renderReferenceExpressionNode(reference.node, {
-                renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-              });
-              const resolved = this.getHost().resolveLabel(renderedReference);
-              if (typeof resolved !== "number") {
-                throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
-              }
-              value = resolved;
-            } else {
-              const localReference = this.resolveLeadingLocalLabelReference(remaining);
-              if (localReference) {
-                this.advance(localReference.length);
-                this.skipWhitespace();
-                const resolved = this.getHost().resolveLabel(localReference.label);
-                if (typeof resolved !== "number") {
-                  throw new Error(
-                    `Reference '${localReference.label}' did not resolve to a numeric value.`
-                  );
-                }
-                value = resolved;
-              } else {
-                const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
-                if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
-                  throw new Error("Mismatched brackets in struct index");
-                }
-                throw new Error(`Invalid number: ${remaining}`);
-              }
-            }
-          }
-        }
-        value = sign * value;
-        if (applyBitshift) {
-          value = value >>> 16;
-        }
-        return value;
-      };
-      /**
-       * Scans a function-call name if the next token is `name(`.
-       * Leaves the cursor on `(`.
-       * @returns {string | undefined} The function name, if a call starts here.
-       */
-      scanFunctionCallName() {
-        const source = this.scanSource;
-        let index2 = this.scanIndex;
-        if (index2 >= source.length || !isWordChar(source.charCodeAt(index2))) {
-          return void 0;
-        }
-        index2++;
-        while (index2 < source.length && isWordChar(source.charCodeAt(index2))) {
-          index2++;
-        }
-        const name = source.slice(this.scanIndex, index2);
-        while (index2 < source.length && isScanWhitespace(source.charCodeAt(index2))) {
-          index2++;
-        }
-        if (source[index2] !== "(") {
-          return void 0;
-        }
-        this.scanIndex = index2;
-        return name;
-      }
-      /**
-       * Parses a string literal from the current string with support for quotes.
-       * @returns {string} The parsed string literal.
-       */
-      parseStringLiteral = () => {
-        const source = this.scanSource;
-        const start = this.scanIndex + 1;
-        let index2 = start;
-        while (index2 < source.length && source[index2] !== '"') {
-          index2++;
-        }
-        if (index2 >= source.length) {
-          throw new Error("Unterminated string literal in function call.");
-        }
-        const result = source.slice(start, index2);
-        this.scanIndex = index2 + 1;
-        this.skipWhitespace();
-        return result;
-      };
-      /**
-       * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
-       * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
-       * @param {string} functionName The function being called.
-       * @returns {string} The raw argument text.
-       */
-      parseUnquotedStringArgument(functionName) {
-        this.skipWhitespace();
-        const source = this.scanSource;
-        const start = this.scanIndex;
-        let depth = 0;
-        let index2 = start;
-        while (index2 < source.length) {
-          const character = source[index2];
-          if (character === "(" || character === "[") {
-            depth++;
-          } else if (character === ")" || character === "]") {
-            if (depth === 0) {
-              break;
-            }
-            depth--;
-          } else if (character === "," && depth === 0) {
-            break;
-          }
-          index2++;
-        }
-        const argument = source.slice(start, index2).trim();
-        this.scanIndex = index2;
-        if (!argument) {
-          throw new Error(`Missing function argument for '${functionName}'.`);
-        }
-        return argument;
-      }
-      /**
-       * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
-       * @param {string} name The name of the function to call.
-       * @param {Array<number | string>} args The arguments to pass to the function.
-       * @returns {number} The result of the function call.
-       */
-      callFunction = (name, args) => {
-        if (this.userFunctions.has(name)) {
-          return this.callUserFunction(name, args);
-        }
-        const expressionFunction = this.expressionFunctions.get(name.toLowerCase());
-        if (expressionFunction) {
-          if (args.length < expressionFunction.minimumArguments || args.length > expressionFunction.maximumArguments) {
-            const expected = expressionFunction.minimumArguments === expressionFunction.maximumArguments ? `exactly ${expressionFunction.minimumArguments}` : `between ${expressionFunction.minimumArguments} and ${expressionFunction.maximumArguments}`;
-            throw new Error(`${name}() expects ${expected} argument(s).`);
-          }
-          const result = expressionFunction.evaluate(args);
-          if (typeof result !== "number") {
-            throw new Error(`${name}() returned a non-numeric value.`);
-          }
-          return result;
-        }
-        return this.callBuiltInFunction(name, args);
-      };
-      /**
-       * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
-       * @param {string} name The name of the function to call.
-       * @param {Array<number | string>} args The arguments to pass to the function.
-       * @returns {number} The result of the function call.
-       */
-      callUserFunction = (name, args) => {
-        const func = this.userFunctions.get(name);
-        if (!func) {
-          throw new Error(`User function '${name}' not found.`);
-        }
-        if (args.length < func.args.length) {
-          throw new Error(`Function '${name}' expects at least ${func.args.length} argument(s).`);
-        }
-        let content = func.content;
-        for (let i = 0; i < func.args.length; i++) {
-          const paramName = func.args[i];
-          const argValue = args[i];
-          const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-          const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
-          const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
-          content = content.replace(regex, replacement);
-        }
-        const result = this.math(content);
-        return result;
-      };
-      /**
-       * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
-       * @param {string} name The name of the function to call.
-       * @param {Array<number | string>} args The arguments to pass to the function.
-       * @returns {number} The result of the function call.
-       */
-      callBuiltInFunction = (name, args) => {
-        switch (name) {
-          // --- Trigonometric & Logarithmic functions ---
-          case "sqrt":
-          case "sin":
-          case "cos":
-          case "tan":
-          case "asin":
-          case "acos":
-          case "atan":
-          // Aliases for inverse trig functions
-          case "arcsin":
-          case "arccos":
-          case "arctan":
-          case "log":
-          case "log10":
-          case "log2":
-          case "ceil":
-          case "floor": {
-            if (args.length !== 1) {
-              throw new Error(`${name} expects exactly 1 numeric argument.`);
-            }
-            const builtinName = NUMERIC_UNARY_ALIASES[name] ?? name;
-            const mathFunction = BUILTIN_NUMERIC_UNARY[builtinName];
-            const val = this.numArg(name, args[0]);
-            const result = mathFunction(val);
-            if (Number.isNaN(result)) {
-              throw new Error(`${name} returned NaN for argument ${val}`);
-            }
-            return result;
-          }
-          // Min, Max, Clamp
-          case "min": {
-            if (args.length < 2) throw new Error("min() expects at least 2 numeric arguments.");
-            const numArgs = args.map((arg) => this.numArg(name, arg));
-            return Math.min(...numArgs);
-          }
-          case "max": {
-            if (args.length < 2) throw new Error("max() expects at least 2 numeric arguments.");
-            const numArgs = args.map((arg) => this.numArg(name, arg));
-            return Math.max(...numArgs);
-          }
-          case "clamp": {
-            if (args.length !== 3) throw new Error("clamp() expects exactly 3 numeric arguments.");
-            const value = this.numArg(name, args[0]);
-            const minVal = this.numArg(name, args[1]);
-            const maxVal = this.numArg(name, args[2]);
-            return Math.max(minVal, Math.min(maxVal, value));
-          }
-          // --- Safe Division and Conditional Selection ---
-          case "safediv": {
-            if (args.length !== 3) throw new Error("safediv() expects exactly 3 numeric arguments.");
-            const dividend = this.numArg(name, args[0]);
-            const divisor = this.numArg(name, args[1]);
-            const defaultValue = this.numArg(name, args[2]);
-            return divisor === 0 ? defaultValue : dividend / divisor;
-          }
-          case "select": {
-            if (args.length !== 3) throw new Error("select() expects exactly 3 numeric arguments.");
-            const statement = this.numArg(name, args[0]);
-            const trueVal = this.numArg(name, args[1]);
-            const falseVal = this.numArg(name, args[2]);
-            return statement !== 0 ? trueVal : falseVal;
-          }
-          // --- Logical Operations ---
-          case "not": {
-            if (args.length !== 1) throw new Error("not() expects exactly 1 numeric argument.");
-            const value = this.numArg(name, args[0]);
-            return value === 0 ? 1 : 0;
-          }
-          case "bank": {
-            if (args.length !== 1) throw new Error("bank() expects exactly 1 numeric argument.");
-            return this.numArg(name, args[0]) >> 16 & 255;
-          }
-          case "offset": {
-            if (args.length !== 2) throw new Error("offset() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[1]) - this.numArg(name, args[0]);
-          }
-          // --- Comparison Functions ---
-          case "equal": {
-            if (args.length !== 2) throw new Error("equal() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) === this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "notequal": {
-            if (args.length !== 2) throw new Error("notequal() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) !== this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "less": {
-            if (args.length !== 2) throw new Error("less() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) < this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "lessequal": {
-            if (args.length !== 2) throw new Error("lessequal() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) <= this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "greater": {
-            if (args.length !== 2) throw new Error("greater() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "greaterequal": {
-            if (args.length !== 2)
-              throw new Error("greaterequal() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
-          }
-          // --- Logical Bitwise Operations ---
-          case "and": {
-            if (args.length !== 2) throw new Error("and() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "or": {
-            if (args.length !== 2) throw new Error("or() expects exactly 2 numeric arguments.");
-            return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "nand": {
-            if (args.length !== 2) throw new Error("nand() expects exactly 2 numeric arguments.");
-            return !(this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
-          }
-          case "nor": {
-            if (args.length !== 2) throw new Error("nor() expects exactly 2 numeric arguments.");
-            return !(this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
-          }
-          case "xor": {
-            if (args.length !== 2) throw new Error("xor() expects exactly 2 numeric arguments.");
-            const a = this.numArg(name, args[0]);
-            const b = this.numArg(name, args[1]);
-            return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
-          }
-          // --- Rounding ---
-          case "round": {
-            if (args.length !== 2) throw new Error("round() expects exactly 2 numeric arguments.");
-            const number = this.numArg(name, args[0]);
-            const precision = this.numArg(name, args[1]);
-            return parseFloat(number.toFixed(precision));
-          }
-          // --- String Comparisons ---
-          case "stringsequal": {
-            if (args.length !== 2)
-              throw new Error("stringsequal() expects exactly 2 string arguments.");
-            const str1 = this.strArg(name, args[0]);
-            const str2 = this.strArg(name, args[1]);
-            return str1 === str2 ? 1 : 0;
-          }
-          case "stringsequalnocase": {
-            if (args.length !== 2)
-              throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
-            const str1 = this.strArg(name, args[0]);
-            const str2 = this.strArg(name, args[1]);
-            return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
-          }
-          // --- Filesize & File Status ---
-          case "filesize":
-          case "getfilestatus": {
-            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
-            const value = this.strArg(name, args[0]);
-            return name === "filesize" ? this.getHost().getFileSize(value) : this.getHost().getFileStatus(value);
-          }
-          // --- Preprocessor/Struct & Data Size Functions ---
-          case "defined":
-          case "sizeof":
-          case "objectsize":
-          case "datasize": {
-            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
-            const value = this.strArg(name, args[0]);
-            if (name === "defined") {
-              return this.getHost().isDefined(value);
-            }
-            return this.getHost().getExpressionObjectSize(value, name === "sizeof");
-          }
-          // --- File Can-Read functions ---
-          case "canreadfile1":
-          case "canreadfile2":
-          case "canreadfile3":
-          case "canreadfile4": {
-            if (args.length !== 2) throw new Error(`${name}() expects exactly 2 arguments.`);
-            const filename = this.strArg(name, args[0]);
-            const pos = this.numArg(name, args[1]);
-            return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
-          }
-          case "canreadfile": {
-            if (args.length !== 3)
-              throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
-            const filename = this.strArg(name, args[0]);
-            const pos = this.numArg(name, args[1]);
-            const num = this.numArg(name, args[2]);
-            return this.getHost().canReadFile(filename, pos, num);
-          }
-          // --- File Reading functions ---
-          case "readfile1":
-          case "readfile2":
-          case "readfile3":
-          case "readfile4": {
-            if (args.length < 2 || args.length > 3)
-              throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
-            const filename = this.strArg(name, args[0]);
-            const pos = this.numArg(name, args[1]);
-            const size = parseInt(name.slice(-1), 10);
-            if (args.length === 3) {
-              const defVal = this.numArg(name, args[2]);
-              return this.getHost().readFile(filename, pos, size, defVal);
-            } else {
-              return this.getHost().readFile(filename, pos, size);
-            }
-          }
-          // --- PC/Realbase ---
-          case "pc":
-          case "realbase": {
-            if (args.length !== 0) throw new Error(`${name}() expects no arguments.`);
-            return name === "pc" ? this.getHost().getCurrentAddress() : this.getHost().getCurrentBaseAddress();
-          }
-          default: {
-            throw new Error(`Unknown built-in function '${name}'`);
-          }
-        }
-      };
-      /**
-       * Validates an argument as a number.
-       * @param {string} funcName The name of the function.
-       * @param {number | string} arg The argument to validate.
-       * @returns {number} The validated number.
-       */
-      numArg = (funcName, arg) => {
-        if (typeof arg === "string") {
-          throw new Error(
-            `Function '${funcName}' expected a numeric argument but got a string: ${arg}`
-          );
-        }
-        return arg;
-      };
-      /**
-       * Validates an argument as a string.
-       * @param {string} funcName The name of the function.
-       * @param {number | string} arg The argument to validate.
-       * @returns {string} The validated string.
-       */
-      strArg = (funcName, arg) => {
-        if (typeof arg === "number") {
-          throw new Error(`Function '${funcName}' expected a string argument but got a number: ${arg}`);
-        }
-        return arg;
-      };
-      /**
-       * Parses a function definition.
-       */
-      parseFunctionDefinition = () => {
-        const cleanDef = this.str.replace(/\\\s*\n/g, "");
-        const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
-        const match = cleanDef.match(regex);
-        if (!match || !match[1] || !match[3]) {
-          throw new Error("Invalid function definition syntax.");
-        }
-        const name = match[1];
-        const paramsStr = match[2] || "";
-        const content = match[3].trim();
-        const params = paramsStr ? paramsStr.split(",").map((p) => p.trim()).filter((p) => p.length > 0) : [];
-        this.str = this.str.substring(match[0].length).trim();
-        this.userFunctions.set(name, { args: params, content });
-      };
-      /**
-       * Gets host.
-       * @returns {ExpressionHost} The result.
-       */
-      getHost() {
-        if (!this.host) {
-          throw new Error("ExpressionHost not set.");
-        }
-        return this.host;
-      }
-    };
-  }
-});
-
-// packages/core/src/operand-syntax.ts
-function parseOperandSyntax(operand) {
-  const raw = operand;
-  const trimmed = operand.trim();
-  const normalizedUpper = trimmed.toUpperCase();
-  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
-  const indexRegister = indexMatch?.[1].toLowerCase();
-  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
-  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
-  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
-  return {
-    raw,
-    trimmed,
-    normalizedUpper,
-    immediate: trimmed.startsWith("#"),
-    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
-    indexRegister,
-    explicitWidth,
-    numericSpelling: /^[\d#$%]/.test(trimmed)
-  };
-}
-var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/operand-resolver.ts
-var OperandResolver;
-var init_operand_resolver = __esm({
-  "packages/core/src/operand-resolver.ts"() {
-    "use strict";
-    init_expression_node();
-    init_operand_syntax();
-    OperandResolver = class {
-      constructor(deps) {
-        this.deps = deps;
-      }
-      deps;
-      /**
-       * Normalizes numeric base member.
-       * @param {string} operand The operand.
-       * @returns {string} The result.
-       */
-      normalizeNumericBaseMember(operand) {
-        const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
-        if (!match) {
-          return operand;
-        }
-        const [, immediatePrefix, literal, indexSuffix = ""] = match;
-        return `${immediatePrefix}${literal}${indexSuffix}`;
-      }
-      /**
-       * Splits math operand suffix.
-       * @param {string} operand The operand.
-       * @returns {{ expression: string; suffix: string }} The result.
-       */
-      splitMathOperandSuffix(operand) {
-        const trimmed = operand.trim();
-        const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
-        if (!indexedMatch) {
-          return { expression: trimmed, suffix: "" };
-        }
-        return {
-          expression: indexedMatch[1].trim(),
-          suffix: indexedMatch[2]
-        };
-      }
-      /**
-       * Checks whether numeric token.
-       * @param {string} token The token.
-       * @returns {boolean} The result.
-       */
-      isNumericToken(token) {
-        return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
-      }
-      /**
-       * Resolves arithmetic token.
-       * @param {string} token The token.
-       * @returns {number} The result.
-       */
-      resolveArithmeticToken(token) {
-        if (this.isNumericToken(token)) {
-          return this.getnum(token);
-        }
-        if (token.includes(".") && this.deps.isStructReference(token)) {
-          return this.deps.resolveStructLabel(token);
-        }
-        return this.deps.resolveLabel(token, false);
-      }
-      /**
-       * Attempts to resolve simple arithmetic.
-       * @param {string} operand The operand.
-       * @returns {number | null} The result.
-       */
-      tryResolveSimpleArithmetic(operand) {
-        const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
-        const match = operand.match(
-          new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`)
-        );
-        if (!match) {
-          return null;
-        }
-        const [, leftToken, operator, rightToken] = match;
-        if (this.isNumericToken(leftToken) && this.isNumericToken(rightToken)) {
-          return null;
-        }
-        const leftValue = this.resolveArithmeticToken(leftToken);
-        const rightValue = this.resolveArithmeticToken(rightToken);
-        switch (operator) {
-          case "+":
-            return leftValue + rightValue;
-          case "-":
-            return leftValue - rightValue;
-          case "<<":
-            return leftValue << rightValue;
-          case ">>":
-            return leftValue >> rightValue;
-          default:
-            return null;
-        }
-      }
-      /**
-       * Determines value length.
-       * @param {string | number} value The value.
-       * @returns {number} The result.
-       */
-      determineValueLength(value) {
-        if (typeof value !== "string" && typeof value !== "number") {
-          throw new Error(`Invalid value type for length determination: ${typeof value}`);
-        }
-        if (Number.isNaN(value)) {
-          throw new Error(`Invalid value for length determination: ${value}`);
-        }
-        if (typeof value === "string" && value.trim() === "") {
-          return 1;
-        }
-        let hexString;
-        if (typeof value === "number") {
-          hexString = value.toString(16).toUpperCase();
-        } else if (value.startsWith("$")) {
-          hexString = value.substring(1);
-        } else {
-          hexString = value;
-        }
-        return Math.max(1, Math.ceil(hexString.length / 2));
-      }
-      /**
-       * Checks whether math expression.
-       * @param {string} expression The expression.
-       * @returns {boolean} The result.
-       */
-      isMathExpression(expression) {
-        if (!expression || typeof expression !== "string") {
-          return false;
-        }
-        if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
-          return true;
-        }
-        return expression.includes("+") || expression.includes("-") || expression.includes("*") || expression.includes("/") || expression.includes("&") || expression.includes("|") || expression.includes("^") || expression.includes("<<") || expression.includes(">>");
-      }
-      /**
-       * Attempts to resolve label in operand.
-       * @param {string} operand The operand.
-       * @returns {string} The result.
-       */
-      tryResolveLabelInOperand(operand) {
-        if (operand.startsWith("#")) {
-          const inner = operand.substring(1).trim();
-          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-            const labelValue = this.deps.tryResolveLabel(inner, false);
-            if (labelValue !== void 0) {
-              return "#$" + labelValue.toString(16).toUpperCase();
-            }
-          }
-          return operand;
-        }
-        if (operand.startsWith("[") && operand.endsWith("]")) {
-          const inner = operand.substring(1, operand.length - 1).trim();
-          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-            const labelValue = this.deps.tryResolveLabel(inner, false);
-            if (labelValue !== void 0) {
-              return "[$" + labelValue.toString(16).toUpperCase() + "]";
-            }
-          }
-          return operand;
-        }
-        if (operand.includes(",")) {
-          const lastCommaIndex = operand.lastIndexOf(",");
-          const basePart = operand.substring(0, lastCommaIndex).trim();
-          const indexPart = operand.substring(lastCommaIndex).trim();
-          if (!basePart.match(/^[\d$%(]/)) {
-            const labelValue = this.deps.tryResolveLabel(basePart, false);
-            if (labelValue !== void 0) {
-              return "$" + labelValue.toString(16).toUpperCase() + indexPart;
-            }
-          }
-          return operand;
-        }
-        if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
-          const labelValue = this.deps.tryResolveLabel(operand, false);
-          if (labelValue !== void 0) {
-            return "$" + labelValue.toString(16).toUpperCase();
-          }
-        }
-        return operand;
-      }
-      /**
-       * Gets num.
-       * @param {string | ExpressionNode} operand The operand.
-       * @returns {number} The result.
-       */
-      getnum(operand) {
-        if (typeof operand !== "string") {
-          return this.getnumFromNode(operand);
-        }
-        operand = operand.trim();
-        operand = this.normalizeNumericBaseMember(operand);
-        if (/^-?\d+$/.test(operand)) {
-          return parseInt(operand, 10);
-        }
-        if (/^\$[\dA-Fa-f]+$/.test(operand)) {
-          return parseInt(operand.substring(1), 16);
-        }
-        if (/^%[01]+$/.test(operand)) {
-          return parseInt(operand.substring(1), 2);
-        }
-        operand = this.deps.resolveDefines(operand);
-        if (operand.startsWith("#")) {
-          operand = operand.substring(1).trim();
-        }
-        operand = this.normalizeNumericBaseMember(operand);
-        if (/^[A-Z_a-z]\w*\s*\(/.test(operand)) {
-          try {
-            return this.deps.evaluateMath(operand);
-          } catch (error) {
-            if (this.deps.shouldDeferExpressionEvaluation()) {
-              return 0;
-            }
-            throw error;
-          }
-        }
-        const simpleArithmetic = this.tryResolveSimpleArithmetic(operand);
-        if (simpleArithmetic !== null) {
-          return simpleArithmetic;
-        }
-        if (!operand.match(/^[\d$%]/)) {
-          if (operand.indexOf(".") !== -1 || operand.indexOf("[") !== -1) {
-            if (this.deps.isStructReference(operand)) {
-              return this.deps.resolveStructLabel(operand);
-            }
-            if (!this.isMathExpression(operand)) {
-              return this.deps.resolveLabel(operand, false);
-            }
-          }
-          if (/^\w+$/.test(operand) && this.deps.isStructReference(operand)) {
-            return this.deps.resolveStructLabel(operand);
-          }
-          if (/^\w+$/.test(operand)) {
-            return this.deps.resolveLabel(operand, false);
-          }
-        }
-        try {
-          return this.deps.evaluateMath(operand);
-        } catch (error) {
-          if (this.deps.shouldDeferExpressionEvaluation()) {
-            return 0;
-          }
-          throw error;
-        }
-      }
-      /**
-       * Gets num from node.
-       * @param {ExpressionNode} operand The operand.
-       * @returns {number} The result.
-       */
-      getnumFromNode(operand) {
-        if (isReferenceExpressionNode(operand)) {
-          if (operand.type === "defineReference") {
-            return this.getnum(this.deps.resolveDefines(renderExpressionNode(operand)));
-          }
-          const reference = renderReferenceExpressionNode(operand, {
-            renderIndex: (node) => this.getnum(node).toString()
-          });
-          return this.resolveReferenceValue(reference);
-        }
-        switch (operand.type) {
-          case "range":
-            throw new Error(
-              `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
-            );
-          default:
-            try {
-              return this.deps.evaluateMath(operand);
-            } catch (error) {
-              if (this.deps.shouldDeferExpressionEvaluation()) {
-                return 0;
-              }
-              throw error;
-            }
-        }
-      }
-      /**
-       * Resolves reference value.
-       * @param {string} reference The reference.
-       * @returns {number} The result.
-       */
-      resolveReferenceValue(reference) {
-        if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
-          if (this.deps.isStructReference(reference)) {
-            return this.deps.resolveStructLabel(reference);
-          }
-          if (!this.isMathExpression(reference)) {
-            return this.deps.resolveLabel(reference, false);
-          }
-        }
-        if (/^\w+$/.test(reference)) {
-          return this.deps.resolveLabel(reference, false);
-        }
-        return this.getnum(reference);
-      }
-      /**
-       * Expands operand.
-       * @param {string} operand The operand.
-       * @returns {ExpandedOperand} The result.
-       */
-      expandOperand(operand) {
-        const raw = operand.trim();
-        const syntax2 = parseOperandSyntax(raw);
-        if (!operand) {
-          return { raw, expanded: "", length: 2, syntax: syntax2 };
-        }
-        let expanded = raw;
-        let expectedLength = 2;
-        if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-" || /^:(\++|-+)$/.test(expanded)) {
-          return { raw, expanded, length: 2, syntax: syntax2 };
-        }
-        expanded = this.tryResolveLabelInOperand(expanded);
-        try {
-          expanded = this.deps.resolveDefines(expanded);
-        } catch (error) {
-        }
-        if (this.deps.isStructReference(expanded)) {
-          expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
-        }
-        expanded = this.normalizeNumericBaseMember(expanded);
-        if (expanded.startsWith("#")) {
-          const inner = expanded.substring(1).trim();
-          if (this.isMathExpression(inner)) {
-            try {
-              const value = this.getnum(inner);
-              expectedLength = this.determineValueLength(value);
-              expanded = "#$" + value.toString(16).toUpperCase();
-            } catch (error) {
-            }
-          } else if (inner.startsWith("$")) {
-            expectedLength = this.determineValueLength(inner.substring(1));
-          } else {
-            try {
-              const value = this.getnum(inner);
-              expectedLength = this.determineValueLength(value);
-              expanded = "#$" + value.toString(16).toUpperCase();
-            } catch (error) {
-            }
-          }
-        } else if (expanded.includes(",")) {
-          if (expanded.startsWith("$")) {
-            const hexPart = expanded.substring(1, expanded.indexOf(","));
-            expectedLength = this.determineValueLength(hexPart);
-          }
-        } else if (expanded.startsWith("[") && expanded.endsWith("]")) {
-          expectedLength = 2;
-        } else if (expanded.startsWith("$")) {
-          expectedLength = this.determineValueLength(expanded.substring(1));
-        } else {
-          expectedLength = 2;
-        }
-        const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded) || /^:(\++|-+)$/.test(expanded);
-        if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
-          try {
-            const { expression, suffix } = this.splitMathOperandSuffix(expanded);
-            const resolvedValue = this.deps.resolveDefines(expression);
-            const result = this.deps.evaluateMath(resolvedValue);
-            if (!Number.isNaN(result)) {
-              expanded = "$" + result.toString(16).toUpperCase() + suffix;
-              expectedLength = this.determineValueLength(result);
-            }
-          } catch (error) {
-          }
-        }
-        return { raw, expanded, length: expectedLength, syntax: syntax2 };
-      }
-      /**
-       * Lowers operand.
-       * @param {string} operand The operand.
-       * @returns {LoweredOperand} The result.
-       */
-      lowerOperand(operand) {
-        const raw = operand.trim();
-        const expandedOperand = this.expandOperand(raw);
-        const { expanded, length } = expandedOperand;
-        const syntax2 = expandedOperand.syntax ?? parseOperandSyntax(raw);
-        return {
-          mode: "unknown",
-          baseExpression: expanded,
-          raw,
-          expanded,
-          length,
-          indexRegister: syntax2.indexRegister,
-          immediate: syntax2.immediate,
-          indirect: syntax2.indirect
-        };
-      }
-      /**
-       * Returns the current logical address without applying architecture policy.
-       * @returns {number} Current logical address.
-       */
-      getCurrentAddress() {
-        return this.deps.getCurrentAddress();
-      }
-    };
-  }
-});
-
-// packages/core/src/architecture-registry.ts
-var ArchitectureRegistry;
-var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
-    "use strict";
-    ArchitectureRegistry = class {
-      definitions = /* @__PURE__ */ new Map();
-      aliases = /* @__PURE__ */ new Map();
-      /**
-       * Registers the value.
-       * @param {ArchitectureDefinition} definition The definition.
-       * @param {string[]} [aliases] The aliases.
-       */
-      register(definition, aliases2 = []) {
-        const canonical2 = definition.name.toLowerCase();
-        this.definitions.set(canonical2, { ...definition, name: canonical2 });
-        this.aliases.set(canonical2, canonical2);
-        for (const alias of aliases2) {
-          this.aliases.set(alias.toLowerCase(), canonical2);
-        }
-      }
-      /**
-       * Gets canonical name.
-       * @param {string} name The name.
-       * @returns {string | undefined} The result.
-       */
-      getCanonicalName(name) {
-        return this.aliases.get(name.toLowerCase());
-      }
-      /**
-       * Gets definition.
-       * @param {string} name The name.
-       * @returns {ArchitectureDefinition | undefined} The result.
-       */
-      getDefinition(name) {
-        const canonical2 = this.getCanonicalName(name);
-        if (!canonical2) {
-          return void 0;
-        }
-        return this.definitions.get(canonical2);
-      }
-      /**
-       * Returns editor metadata from the same registered encoder used for builds.
-       * @param {string} name Architecture name or alias.
-       * @returns {InstructionDescriptor[]} Registered instruction descriptors.
-       */
-      getInstructionCatalog(name) {
-        const definition = this.getDefinition(name);
-        return [...definition?.instructions ?? definition?.encoder.getInstructionCatalog?.() ?? []];
-      }
-    };
-  }
-});
-
-// packages/core/src/directives/data.ts
-var handleDataDirective, registerDataDirectives;
-var init_data = __esm({
-  "packages/core/src/directives/data.ts"() {
-    "use strict";
-    handleDataDirective = ({ runtime }, words) => {
-      runtime.handleDataDirective(words[0], words.slice(1));
-    };
-    registerDataDirectives = (registry, context) => {
-      registry.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
-    };
-  }
-});
-
-// packages/core/src/directives/fill-pad.ts
-var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
-var init_fill_pad = __esm({
-  "packages/core/src/directives/fill-pad.ts"() {
-    "use strict";
-    FILL_PATTERN_SIZE = 12;
-    PATTERN_WIDTH = {
-      fillbyte: 1,
-      fillword: 2,
-      filllong: 3,
-      filldword: 4,
-      padbyte: 1,
-      padword: 2,
-      padlong: 3,
-      paddword: 4
-    };
-    patternWidth = (keyword, kind) => {
-      if (!keyword.startsWith(kind)) {
-        throw new Error(`Unrecognized ${kind} directive.`);
-      }
-      const width = PATTERN_WIDTH[keyword];
-      if (width === void 0) {
-        throw new Error(`Unrecognized ${kind} directive.`);
-      }
-      return width;
-    };
-    writeLittleEndianRepeats = (value, width, dest, length) => {
-      const unit = value >>> 0;
-      const bytes = [unit & 255, unit >>> 8 & 255, unit >>> 16 & 255, unit >>> 24 & 255];
-      for (let i = 0; i < length; i++) {
-        dest[i] = bytes[i % width];
-      }
-    };
-    resolvePatternValue = ({ session, operandResolver }, words, kind) => {
-      const keyword = words[0];
-      const width = patternWidth(keyword, kind);
-      if (words.length !== 2) {
-        throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
-      }
-      return {
-        width,
-        value: operandResolver.getnum(session.resolvedefines(words[1]))
-      };
-    };
-    handleFillPattern = (ctx, words) => {
-      const { width, value } = resolvePatternValue(ctx, words, "fill");
-      writeLittleEndianRepeats(value, width, ctx.session.fillbyte, FILL_PATTERN_SIZE);
-    };
-    handleFill = ({ session, operandResolver }, words) => {
-      if (words.length !== 2) {
-        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
-      }
-      const count = operandResolver.getnum(session.resolvedefines(words[1]));
-      for (let i = 0; i < count; i++) {
-        session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
-      }
-    };
-    handlePadPattern = (ctx, words) => {
-      const { session } = ctx;
-      const { width, value } = resolvePatternValue(ctx, words, "pad");
-      session.padUnit = width;
-      writeLittleEndianRepeats(value, width, session.padbyte, width);
-    };
-    handlePad = ({ session, operandResolver }, words) => {
-      let gap;
-      if (words.length === 1) {
-        gap = 65536 - (session.currentTargetAddress & 65535);
-      } else if (words.length === 2) {
-        const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
-        const targetPC = session.outputWriter.toOutputOffset(targetAddress);
-        if (targetPC < 0) {
-          throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
-        }
-        const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
-        if (targetPC <= currentPC) {
-          return;
-        }
-        gap = targetPC - currentPC;
-      } else {
-        throw new Error("PAD directive accepts zero or one parameter.");
-      }
-      for (let i = 0; i < gap; i++) {
-        session.write1(session.padbyte[i % session.padUnit]);
-      }
-    };
-    registerFillPadDirectives = (registry, context) => {
-      registry.registerLowered(
-        ["fillbyte", "fillword", "filllong", "filldword"],
-        context,
-        handleFillPattern
-      );
-      registry.registerLowered("fill", context, handleFill);
-      registry.registerLowered(
-        ["padbyte", "padword", "padlong", "paddword"],
-        context,
-        handlePadPattern
-      );
-      registry.registerLowered("pad", context, handlePad);
-    };
-  }
-});
-
-// packages/core/src/directives/flow-control.ts
-var handleRelativeLabel, registerFlowControlDirectives;
-var init_flow_control = __esm({
-  "packages/core/src/directives/flow-control.ts"() {
-    "use strict";
-    handleRelativeLabel = ({ session }, _words, raw) => {
-      session.symbolScope.handleRelativeLabel(raw);
-    };
-    registerFlowControlDirectives = (registry, context) => {
-      registry.register(["+", "-"], context, handleRelativeLabel);
     };
   }
 });
@@ -4311,3822 +2344,6 @@ var init_registry = __esm({
   }
 });
 
-// packages/core/src/services/define-engine.ts
-var DefineEngine;
-var init_define_engine = __esm({
-  "packages/core/src/services/define-engine.ts"() {
-    "use strict";
-    init_normalized_command();
-    DefineEngine = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      /**
-       * Checks whether pure math expression.
-       * @param {string} value The value.
-       * @returns {boolean} The result.
-       */
-      isPureMathExpression(value) {
-        return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
-      }
-      /**
-       * Handles a define command.
-       * @param {NormalizedCommand} commandNode The command node to handle.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      handleCommand(commandNode) {
-        const command = commandNode.command;
-        const trimmedCommand = command.trim();
-        if (commandNode.keyword.toLowerCase() === "undef") {
-          this.handleDefineCommand(trimmedCommand);
-          setCommandKind(commandNode, "defineCommand");
-          return true;
-        }
-        if (!trimmedCommand.startsWith("!")) {
-          return false;
-        }
-        if (command.includes("=")) {
-          this.handleDefineCommand(command);
-          setCommandKind(commandNode, "defineCommand");
-          return true;
-        }
-        if (trimmedCommand.startsWith("!{")) {
-          const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
-          this.host.processCommand(processedCommand);
-          setCommandKind(commandNode, "defineCommand");
-          return true;
-        }
-        const defineName = trimmedCommand.substring(1);
-        if (!this.host.defines.has(defineName)) {
-          throw new Error(`Error: Define '${defineName}' not found.`);
-        }
-        this.host.processCommand(this.host.defines.get(defineName) ?? "");
-        setCommandKind(commandNode, "defineCommand");
-        return true;
-      }
-      /**
-       * Handles a define command.
-       * @param {string} command The command to handle.
-       * @example
-       * !identifier = value // Basic assignment
-       * !identifier += value // Append to existing value
-       * !identifier := value // Resolve defines in the value
-       * !identifier #= value // Evaluate as math expression
-       * !identifier ?= value // Only assign if not already defined
-       * undef identifier // Remove a define
-       * undef "identifier" // Remove a define
-       */
-      handleDefineCommand(command) {
-        const trimmedCommand = command.trim();
-        if (trimmedCommand.toLowerCase().startsWith("undef")) {
-          this.applyUndefOperation(trimmedCommand);
-          return;
-        }
-        const line = command.substring(1).trim();
-        if (line.startsWith("{")) {
-          let braceLevel = 1;
-          let closingBraceIndex = 1;
-          while (braceLevel > 0 && closingBraceIndex < line.length) {
-            if (line[closingBraceIndex] === "{") braceLevel++;
-            if (line[closingBraceIndex] === "}") braceLevel--;
-            closingBraceIndex++;
-          }
-          if (braceLevel !== 0) {
-            throw new Error(`Mismatched braces in define: ${command}`);
-          }
-          const nestedContent = line.substring(1, closingBraceIndex - 1);
-          const resolvedIdentifier = this.processNestedDefines(nestedContent);
-          const restOfLine = line.substring(closingBraceIndex).trim();
-          const operatorMatch = restOfLine.match(/^\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-          if (!operatorMatch) {
-            throw new Error(`Invalid define syntax after braces: ${command}`);
-          }
-          this.applyDefineOperation(resolvedIdentifier, operatorMatch[1], operatorMatch[2].trim());
-          return;
-        }
-        const match = line.match(/^(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-        if (!match) {
-          throw new Error(`Invalid define syntax: ${command}`);
-        }
-        this.applyDefineOperation(match[1], match[2], match[3].trim());
-      }
-      /**
-       * Resolves nested defines in a string.
-       * @param {string} content The content to process.
-       * @returns {string} The processed content with nested defines resolved.
-       */
-      processNestedDefines(content) {
-        if (!content.includes("!")) {
-          return content;
-        }
-        let prevResult = "";
-        let result = content;
-        let iterations = 0;
-        const maxIterations = 10;
-        while (prevResult !== result && iterations < maxIterations) {
-          iterations++;
-          prevResult = result;
-          result = this.resolveOneLevelOfDefines(result);
-        }
-        return result;
-      }
-      /**
-       * Resolves one level of defines in a string.
-       * @param {string} content The content to process.
-       * @returns {string} The processed content with one level of defines resolved.
-       */
-      resolveOneLevelOfDefines(content) {
-        const openBracePositions = [];
-        for (let i = 0; i < content.length - 1; i++) {
-          if (content.substring(i, i + 2) === "!{") {
-            openBracePositions.push(i);
-            i++;
-          }
-        }
-        if (openBracePositions.length === 0) {
-          return this.resolveRegularDefines(content);
-        }
-        const lastOpenBracePos = openBracePositions[openBracePositions.length - 1];
-        let nestLevel = 1;
-        let closingBracePos = -1;
-        for (let i = lastOpenBracePos + 2; i < content.length; i++) {
-          if (i < content.length - 1 && content.substring(i, i + 2) === "!{") {
-            nestLevel++;
-            i++;
-          } else if (content[i] === "}") {
-            nestLevel--;
-            if (nestLevel === 0) {
-              closingBracePos = i;
-              break;
-            }
-          }
-        }
-        if (closingBracePos === -1) {
-          throw new Error(`Mismatched braces in content: ${content}`);
-        }
-        const braceContent = content.substring(lastOpenBracePos + 2, closingBracePos);
-        if (braceContent.includes("!{")) {
-          const resolvedInnerContent = this.resolveOneLevelOfDefines(braceContent);
-          return content.substring(0, lastOpenBracePos + 2) + resolvedInnerContent + content.substring(closingBracePos);
-        }
-        const replacement = this.host.defines.has(braceContent) ? this.host.defines.get(braceContent) ?? braceContent : braceContent;
-        return content.substring(0, lastOpenBracePos) + replacement + content.substring(closingBracePos + 1);
-      }
-      /**
-       * Resolves regular defines in a string.
-       * @param {string} content The content to process.
-       * @returns {string} The processed content with regular defines resolved.
-       */
-      resolveRegularDefines(content) {
-        let result = "";
-        let index2 = 0;
-        let foundDefine = false;
-        while (index2 < content.length) {
-          if (content.substring(index2).startsWith("!") && index2 + 1 < content.length && /\w/.test(content[index2 + 1])) {
-            index2++;
-            let defineName = "";
-            while (index2 < content.length && /\w/.test(content[index2])) {
-              defineName += content[index2++];
-            }
-            if (this.host.defines.has(defineName)) {
-              result += this.host.defines.get(defineName);
-              foundDefine = true;
-            } else {
-              throw new Error(`Define '${defineName}' not found.`);
-            }
-          } else {
-            result += content[index2++];
-          }
-        }
-        return foundDefine ? result : content;
-      }
-      /**
-       * Resolves defines in a string literal.
-       * @param {string} content The content to process.
-       * @returns {string} The processed content with defines in string literal resolved.
-       */
-      resolveDefinesInStringLiteral(content) {
-        let result = "";
-        let index2 = 0;
-        while (index2 < content.length) {
-          const char = content[index2];
-          if (char === "\\") {
-            const next = content[index2 + 1];
-            if (next === void 0) {
-              result += "\\";
-              index2++;
-              continue;
-            }
-            if (next === "!") {
-              result += "!";
-              index2 += 2;
-              while (index2 < content.length && /\w/.test(content[index2])) {
-                result += content[index2];
-                index2++;
-              }
-              continue;
-            }
-            if (next === "\\") {
-              result += "\\";
-              index2 += 2;
-              continue;
-            }
-            result += next;
-            index2 += 2;
-            continue;
-          }
-          if (char === "!" && index2 + 1 < content.length && /\w/.test(content[index2 + 1])) {
-            index2++;
-            let defineName = "";
-            while (index2 < content.length && /\w/.test(content[index2])) {
-              defineName += content[index2];
-              index2++;
-            }
-            if (!this.host.defines.has(defineName)) {
-              throw new Error(`Define '${defineName}' not found.`);
-            }
-            result += this.host.defines.get(defineName);
-            continue;
-          }
-          result += char;
-          index2++;
-        }
-        return result;
-      }
-      /**
-       * Processes a value with braced defines.
-       * @param {string} value The value to process.
-       * @returns {string} The processed value with braced defines resolved.
-       */
-      processValueWithBracedDefines(value) {
-        let result = "";
-        let index2 = 0;
-        while (index2 < value.length) {
-          if (value.substring(index2).startsWith("!{")) {
-            let braceContent = "";
-            index2 += 2;
-            let braceLevel = 1;
-            while (index2 < value.length && braceLevel > 0) {
-              if (value[index2] === "{") braceLevel++;
-              else if (value[index2] === "}") braceLevel--;
-              if (braceLevel === 0) break;
-              braceContent += value[index2];
-              index2++;
-            }
-            if (braceLevel !== 0) {
-              throw new Error(`Mismatched braces in value: ${value}`);
-            }
-            index2++;
-            const resolvedIdentifier = this.processNestedDefines(braceContent);
-            result += `!{${resolvedIdentifier}}`;
-          } else {
-            result += value[index2++];
-          }
-        }
-        return result;
-      }
-      /**
-       * Applies a define operation.
-       * @param {string} identifier The identifier to apply the operation to.
-       * @param {string} operator The operator to apply.
-       * @param {string} initialValue The initial value to apply the operation to.
-       */
-      applyDefineOperation(identifier, operator, initialValue) {
-        let value = initialValue;
-        if (value.includes("!{")) {
-          if (!value.includes("FF") && !value.includes("$")) {
-            value = this.processNestedDefines(value);
-          } else {
-            value = this.processValueWithBracedDefines(value);
-          }
-        }
-        if (value.startsWith('"') && value.endsWith('"')) {
-          value = value.substring(1, value.length - 1);
-        }
-        if (operator === ":=") {
-          value = this.host.resolvedefines(value);
-        }
-        if (operator === "#=") {
-          value = this.host.resolvedefines(value);
-          const result = this.host.mathCore.math(value);
-          if (Number.isNaN(result)) {
-            throw new Error(`Math evaluation failed in define "#=" for expression: ${value}`);
-          }
-          value = result.toString();
-        }
-        if (operator === "?=" && this.host.defines.has(identifier)) {
-          return;
-        }
-        if (operator === "+=") {
-          value = (this.host.defines.get(identifier) || "") + value;
-        }
-        if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") || value.includes("&") || value.includes("|") || value.includes("^") || value.includes("<<") || value.includes(">>") || value.includes("("))) {
-          try {
-            const resolvedValue = this.host.resolvedefines(value);
-            if (this.isPureMathExpression(resolvedValue)) {
-              const result = this.host.mathCore.math(resolvedValue);
-              if (!Number.isNaN(result)) {
-                value = `$${result.toString(16).toUpperCase()}`;
-              }
-            }
-          } catch {
-          }
-        }
-        this.host.defines.set(identifier, value);
-        this.host.recordSymbolDefinition("define", identifier, {
-          value,
-          containerName: this.host.currentNamespace || void 0
-        });
-      }
-      /**
-       * Applies an `undef` operation.
-       * @param {string} command The normalized undef command.
-       */
-      applyUndefOperation(command) {
-        const match = command.match(/^undef\s+(.+)$/i);
-        if (!match) {
-          throw new Error("undef requires exactly one identifier parameter");
-        }
-        const raw = match[1].trim();
-        const unquoted = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
-        const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
-        if (!identifier) {
-          throw new Error("undef requires a non-empty identifier");
-        }
-        this.host.defines.delete(identifier);
-      }
-    };
-  }
-});
-
-// packages/core/src/services/directive-runtime-service.ts
-var DirectiveRuntimeService;
-var init_directive_runtime_service = __esm({
-  "packages/core/src/services/directive-runtime-service.ts"() {
-    "use strict";
-    init_address_width();
-    init_command_text_service();
-    DirectiveRuntimeService = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      /**
-       * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
-       * @param {string[]} words The character mapping command words.
-       * @throws {Error} If the format is incorrect.
-       */
-      handleCharacterMapping(words) {
-        if (words.length !== 3) {
-          throw new Error("Character mapping requires format: 'char' = value");
-        }
-        const token = words[0];
-        const quoted = /^'([\S\s])'$/.exec(token) ?? /^"([\S\s])"$/.exec(token);
-        const char = quoted ? quoted[1] : token.replace(/["']/g, "");
-        if (char.length !== 1) {
-          throw new Error("Character mapping requires format: 'char' = value");
-        }
-        const value = this.host.operandResolver.getnum(words[2]);
-        this.host.characterMappings.set(char, value);
-      }
-      /**
-       * Processes a string and maps characters to their corresponding values in `characterMappings`.
-       * If a character is not found in `characterMappings`, its charCode is used instead.
-       * @param {string} input The string to process.
-       * @returns {number[]} An array of numbers representing the mapped characters.
-       */
-      processStringWithMapping(input) {
-        return Array.from(input).map(
-          (char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0)
-        );
-      }
-      /**
-       * Handles `org`.
-       * @param {string[]} params The directive parameters.
-       */
-      handleOrg(params) {
-        if (params.length !== 1) {
-          throw new Error("ORG requires a single address parameter.");
-        }
-        const addressStr = params[0].trim();
-        let addr;
-        if (/^\$[\da-f]+$/i.test(addressStr)) {
-          addr = parseInt(addressStr.substring(1), 16);
-        } else if (/^-?\d+$/.test(addressStr)) {
-          addr = parseInt(addressStr, 10);
-        } else {
-          try {
-            addr = this.host.operandResolver.deps.evaluateMath(this.host.resolvedefines(addressStr));
-          } catch {
-            throw new Error(`Invalid ORG address: ${params[0]}`);
-          }
-        }
-        const maxAddress = 2 ** this.host.addressWidth - 1;
-        if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
-          throw new Error(`Invalid ORG address: ${params[0]}`);
-        }
-        this.host.setWritePosition(addr);
-      }
-      /**
-       * Handles data directives.
-       * @param {string} type The data directive keyword.
-       * @param {string[]} params The directive parameters.
-       */
-      handleDataDirective(type, params) {
-        if (!Array.isArray(params) || params.length === 0) {
-          throw new Error(`${type.toUpperCase()} directive requires at least one parameter.`);
-        }
-        if (type.toLowerCase() === "dc.b") {
-          type = "db";
-        } else if (type.toLowerCase() === "dc.w") {
-          type = "dw";
-        } else if (type.toLowerCase() === "dc.l") {
-          type = "dl";
-        }
-        const lengthMap = {
-          db: 1,
-          dw: 2,
-          dl: 3,
-          dd: 4
-        };
-        const len = lengthMap[type.toLowerCase()];
-        if (!len) {
-          throw new Error(`Invalid data directive: ${type}`);
-        }
-        if (this.host.isDefinitionCollectionStage) {
-          this.estimateDataDirectiveSize(len, params);
-          return;
-        }
-        const pendingValues = splitRespectingFunctions(params.join(" "));
-        while (pendingValues.length > 0) {
-          let value = (pendingValues.shift() ?? "").trim();
-          if (value.startsWith('"') || value.startsWith("'")) {
-            const unquoted = value.slice(1, -1);
-            const expandedString = this.host.defineEngine.resolveDefinesInStringLiteral(unquoted);
-            const mappedChars = this.processStringWithMapping(expandedString);
-            for (const charValue of mappedChars) {
-              this.writeDataByLength(len, charValue);
-            }
-            continue;
-          }
-          if (value.startsWith("#")) {
-            value = value.substring(1);
-          }
-          let resolved = value;
-          let previousResolved = "";
-          while (resolved !== previousResolved) {
-            previousResolved = resolved;
-            resolved = this.host.resolvedefines(resolved);
-          }
-          const expandedValues = splitRespectingFunctions(resolved);
-          if (expandedValues.length > 1) {
-            pendingValues.unshift(...expandedValues);
-            continue;
-          }
-          let num;
-          if (this.host.structEngine.hasStructReference(resolved)) {
-            const structValue = this.host.structEngine.resolveStructLabel(resolved);
-            if (typeof structValue === "number" && !Number.isNaN(structValue)) {
-              this.writeDataByLength(len, structValue);
-              continue;
-            }
-            num = structValue;
-          } else {
-            num = this.host.operandResolver.getnum(resolved);
-          }
-          if (Number.isNaN(num)) {
-            num = this.host.symbolScope.getLabelValue(resolved, true);
-          }
-          if (Number.isNaN(num)) {
-            throw new Error("Unable to determine value:");
-          }
-          this.writeDataByLength(len, num);
-        }
-        if (this.host.collectSourceMetadata) {
-          this.host.addAddressToLine(
-            normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth)
-          );
-        }
-      }
-      /**
-       * Writes a value using the data directive byte width.
-       * @param {number} len The byte width.
-       * @param {number} value The value to write.
-       */
-      writeDataByLength(len, value) {
-        if (typeof len !== "number") {
-          len = Number.parseInt(len, 10);
-          if (Number.isNaN(len)) {
-            throw new Error("writeDataByLength: len is NaN");
-          }
-        }
-        switch (len) {
-          case 1:
-            this.host.write1(value);
-            break;
-          case 2:
-            this.host.write2(value);
-            break;
-          case 3:
-            this.host.write3(value);
-            break;
-          case 4:
-            this.host.write4(value);
-            break;
-          default:
-            throw new Error(`Unsupported data length ${len}`);
-        }
-      }
-      /**
-       * Estimates data directive size.
-       * @param {number} len The len.
-       * @param {string[]} params The params.
-       */
-      estimateDataDirectiveSize(len, params) {
-        const pendingValues = [...splitRespectingFunctions(params.join(" "))];
-        let estimatedItems = 0;
-        while (pendingValues.length > 0) {
-          let value = (pendingValues.shift() ?? "").trim();
-          if (!value) {
-            continue;
-          }
-          if (value.startsWith('"') || value.startsWith("'")) {
-            const unquoted = value.slice(1, -1);
-            try {
-              estimatedItems += this.host.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
-            } catch {
-              estimatedItems += unquoted.length;
-            }
-            continue;
-          }
-          if (value.startsWith("#")) {
-            value = value.substring(1);
-          }
-          let resolved = value;
-          let previousResolved = "";
-          try {
-            while (resolved !== previousResolved) {
-              previousResolved = resolved;
-              resolved = this.host.resolvedefines(resolved);
-            }
-          } catch {
-          }
-          const expandedValues = splitRespectingFunctions(resolved);
-          if (expandedValues.length > 1) {
-            pendingValues.unshift(...expandedValues);
-            continue;
-          }
-          estimatedItems += 1;
-        }
-        this.host.step(estimatedItems * len);
-        if (this.host.collectSourceMetadata) {
-          this.host.addAddressToLine(
-            normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth)
-          );
-        }
-      }
-      /**
-       * Pushes the current PC state.
-       */
-      handlePushPC() {
-        if (this.host.pushpcnum >= 256) {
-          throw new Error("PushPC stack overflow.");
-        }
-        this.host.pushpcStack.push({
-          currentTargetAddress: this.host.currentTargetAddress,
-          currentTargetStartAddress: this.host.currentTargetStartAddress,
-          currentTargetBaseAddress: this.host.currentTargetBaseAddress,
-          currentTargetBaseStartAddress: this.host.currentTargetBaseStartAddress
-        });
-        this.host.pushpcnum++;
-      }
-      /**
-       * Restores the previous PC state.
-       */
-      handlePullPC() {
-        if (this.host.pushpcnum === 0) {
-          throw new Error("PullPC without PushPC.");
-        }
-        const state = this.host.pushpcStack.pop();
-        if (state) {
-          this.host.currentTargetAddress = state.currentTargetAddress;
-          this.host.currentTargetStartAddress = state.currentTargetStartAddress;
-          this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
-          this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
-        }
-        this.host.pushpcnum--;
-      }
-    };
-  }
-});
-
-// packages/core/src/services/program-model-builder.ts
-var ProgramModelBuilder;
-var init_program_model_builder = __esm({
-  "packages/core/src/services/program-model-builder.ts"() {
-    "use strict";
-    init_normalized_command();
-    init_internal_instrumentation();
-    ProgramModelBuilder = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      /**
-       * Creates an incremental parser state for line-by-line assembly.
-       * @returns {IncrementalProgramParseState} The parser state.
-       */
-      createIncrementalParseState() {
-        return {
-          roots: [],
-          loopStack: [],
-          ifStack: [],
-          branchStack: [],
-          inMacroDefinition: false,
-          inFunctionDefinition: false
-        };
-      }
-      /**
-       * Resets an incremental parser state in place.
-       * @param {IncrementalProgramParseState} state The parser state.
-       */
-      resetIncrementalParseState(state) {
-        state.roots.length = 0;
-        state.loopStack.length = 0;
-        state.ifStack.length = 0;
-        state.branchStack.length = 0;
-        state.inMacroDefinition = false;
-        state.inFunctionDefinition = false;
-        state.inDataStructs = false;
-      }
-      /**
-       * Builds a program model from raw source text.
-       * @param {string} source The source block to parse.
-       * @param {string} [sourceFile] Optional source file override.
-       * @param {number} [startLine] Optional starting line number.
-       * @returns {ProgramModel} The parsed program model.
-       */
-      buildProgramModel(source, sourceFile = this.host.currentFile, startLine = 0) {
-        const commands = this.host.splitSourcedInlineCommands(
-          this.host.preprocessSourcedBlockCommands(source)
-        );
-        return {
-          sourceFile,
-          startLine,
-          nodes: this.getOrBuildPassProgram(commands, sourceFile, startLine)
-        };
-      }
-      /**
-       * Creates a typed include node from a source file body.
-       * @param {string} file The include file name.
-       * @param {string} source The include source content.
-       * @returns {IncludeProgramNode} The include node.
-       */
-      createIncludeNode(file, source) {
-        const commands = this.host.splitSourcedInlineCommands(
-          this.host.preprocessSourcedBlockCommands(source)
-        );
-        return {
-          type: "include",
-          file,
-          commands: this.getOrBuildPassProgram(commands, file, 0)
-        };
-      }
-      /**
-       * Returns cached executable nodes for a command stream.
-       * @param {Array<string | SourcedCommand>} commands The command stream.
-       * @param {string} [sourceFile] Optional source file override.
-       * @param {number} [startLine] Optional starting line number.
-       * @returns {ExecutableNode[]} The cached or parsed nodes.
-       */
-      getOrBuildPassProgram(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
-        const commandStream = commands.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
-        const cacheKey = `${sourceFile}::${startLine}::${commandStream}`;
-        const cached = this.host.passProgramCache.get(cacheKey);
-        if (cached) {
-          incrementInternalCounter("passProgramCacheHits");
-          return cached;
-        }
-        incrementInternalCounter("passProgramCacheMisses");
-        const nodes = this.parseCommandStreamToNodes(commands, sourceFile, startLine);
-        this.host.passProgramCache.set(cacheKey, nodes);
-        recordInternalCounterPeak("passProgramCachePeakSize", this.host.passProgramCache.size);
-        return nodes;
-      }
-      /**
-       * Consumes one raw command into an incremental parse state and returns newly
-       * completed top-level executable nodes.
-       * @param {IncrementalProgramParseState} state The parser state.
-       * @param {string} rawCommand The raw command to consume.
-       * @param {string} [sourceFile] Optional source file override.
-       * @param {number} [sourceLine] Optional source line override.
-       * @returns {ExecutableNode[]} Newly completed top-level nodes.
-       */
-      consumeIncrementalCommand(state, rawCommand, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine) {
-        this.consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine);
-        return this.drainCompletedRoots(state);
-      }
-      /**
-       * Parses a flat command stream into nested executable nodes.
-       * @param {Array<string | SourcedCommand>} commands The command stream.
-       * @param {string} [sourceFile] Optional source file override.
-       * @param {number} [startLine] Optional starting line number.
-       * @returns {ExecutableNode[]} The executable nodes.
-       */
-      parseCommandStreamToNodes(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
-        const state = this.createIncrementalParseState();
-        for (let index2 = 0; index2 < commands.length; index2++) {
-          const command = commands[index2];
-          const text = typeof command === "string" ? command : command.text;
-          const sourceLine = typeof command === "string" ? startLine + index2 : startLine + command.line;
-          this.consumeCommandIntoState(state, text, sourceFile, sourceLine);
-        }
-        return state.roots;
-      }
-      /**
-       * Pushes to current.
-       * @param {IncrementalProgramParseState} state The state.
-       * @param {ExecutableNode} node The node.
-       */
-      pushToCurrent(state, node) {
-        const currentBranch = state.branchStack[state.branchStack.length - 1];
-        const currentLoop = state.loopStack[state.loopStack.length - 1];
-        if (currentBranch && currentLoop) {
-          if (currentLoop.startLine >= currentBranch.startLine) {
-            currentLoop.commands.push(node);
-          } else {
-            currentBranch.commands.push(node);
-          }
-          return;
-        }
-        if (currentBranch) {
-          currentBranch.commands.push(node);
-          return;
-        }
-        if (currentLoop) {
-          currentLoop.commands.push(node);
-          return;
-        }
-        state.roots.push(node);
-      }
-      /**
-       * Consumes command into state.
-       * @param {IncrementalProgramParseState} state The state.
-       * @param {string} rawCommand The raw command.
-       * @param {string} sourceFile The source file.
-       * @param {number} sourceLine The source line.
-       */
-      consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine) {
-        const command = this.host.createLoopCommandNode(rawCommand, sourceFile, sourceLine);
-        const keyword = command.keyword.toLowerCase();
-        if (keyword === "macro") {
-          state.inMacroDefinition = true;
-          this.pushToCurrent(state, command);
-          return;
-        }
-        if (state.inMacroDefinition) {
-          setCommandKind(command, "macroDefinitionOrInvoke");
-          this.pushToCurrent(state, command);
-          if (keyword === "endmacro") {
-            state.inMacroDefinition = false;
-          }
-          return;
-        }
-        if (state.inDataStructs || keyword === "datastructs") {
-          state.inDataStructs = keyword !== "enddatastructs";
-          setCommandKind(command, "structCommand");
-          this.pushToCurrent(state, command);
-          return;
-        }
-        if (state.inFunctionDefinition) {
-          setCommandKind(command, "functionDefinition");
-          this.pushToCurrent(state, command);
-          state.inFunctionDefinition = command.command.trimEnd().endsWith("\\");
-          return;
-        }
-        const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
-        if (functionSource.toLowerCase().startsWith("function")) {
-          setCommandKind(command, "functionDefinition");
-          this.pushToCurrent(state, command);
-          state.inFunctionDefinition = functionSource.trimEnd().endsWith("\\");
-          return;
-        }
-        if (keyword === "for" || keyword === "while") {
-          const loopNode = {
-            type: keyword,
-            header: command,
-            conditionNode: keyword === "while" ? command.parsed.condition?.expression : command.parsed.forLoop?.range,
-            variable: command.parsed.forLoop?.variable,
-            rangeNode: command.parsed.forLoop?.range,
-            startExpression: command.parsed.forLoop?.start,
-            endExpression: command.parsed.forLoop?.end,
-            commands: [],
-            startLine: command.source.line
-          };
-          this.pushToCurrent(state, loopNode);
-          state.loopStack.push(loopNode);
-          return;
-        }
-        if (keyword === "endfor" || keyword === "endwhile") {
-          const loopNode = state.loopStack.pop();
-          if (loopNode) {
-            loopNode.endLine = command.source.line;
-          }
-          return;
-        }
-        if (keyword === "if") {
-          const branch = {
-            kind: "if",
-            header: command,
-            conditionNode: command.parsed.condition?.expression,
-            commands: [],
-            startLine: command.source.line
-          };
-          const conditionalNode = {
-            type: "if",
-            header: command,
-            branches: [branch],
-            startLine: command.source.line
-          };
-          this.pushToCurrent(state, conditionalNode);
-          state.ifStack.push(conditionalNode);
-          state.branchStack.push(branch);
-          return;
-        }
-        if (keyword === "elseif" || keyword === "else") {
-          const currentIf = state.ifStack[state.ifStack.length - 1];
-          if (!currentIf) {
-            this.pushToCurrent(state, command);
-            return;
-          }
-          if (state.branchStack.length > 0) {
-            const closedBranch = state.branchStack.pop();
-            if (closedBranch) {
-              closedBranch.endLine = command.source.line;
-            }
-          }
-          const branch = {
-            kind: keyword,
-            header: command,
-            conditionNode: keyword === "elseif" ? command.parsed.condition?.expression : void 0,
-            commands: [],
-            startLine: command.source.line
-          };
-          currentIf.branches.push(branch);
-          state.branchStack.push(branch);
-          return;
-        }
-        if (keyword === "endif") {
-          const currentIf = state.ifStack[state.ifStack.length - 1];
-          const currentLoop = state.loopStack[state.loopStack.length - 1];
-          const whileIsInnermost = this.host.shouldEndifCloseInnermostWhile(
-            currentLoop?.type,
-            currentLoop?.startLine,
-            currentIf?.startLine
-          );
-          if (whileIsInnermost) {
-            const loopNode = state.loopStack.pop();
-            if (loopNode) {
-              loopNode.endLine = command.source.line;
-            }
-            return;
-          }
-          if (state.branchStack.length > 0) {
-            const closedBranch = state.branchStack.pop();
-            if (closedBranch) {
-              closedBranch.endLine = command.source.line;
-            }
-          }
-          if (currentIf) {
-            state.ifStack.pop();
-            currentIf.endLine = command.source.line;
-          }
-          return;
-        }
-        this.pushToCurrent(state, command);
-      }
-      /**
-       * Checks whether node complete.
-       * @param {ExecutableNode} node The node.
-       * @returns {boolean} The result.
-       */
-      isNodeComplete(node) {
-        if ("source" in node) {
-          return true;
-        }
-        return node.endLine !== void 0;
-      }
-      /**
-       * Drains completed roots.
-       * @param {IncrementalProgramParseState} state The state.
-       * @returns {ExecutableNode[]} The result.
-       */
-      drainCompletedRoots(state) {
-        let completedCount = 0;
-        while (completedCount < state.roots.length && this.isNodeComplete(state.roots[completedCount])) {
-          completedCount++;
-        }
-        const ready = state.roots.slice(0, completedCount);
-        state.roots = state.roots.slice(completedCount);
-        return ready;
-      }
-    };
-  }
-});
-
-// packages/core/src/services/assembly-front-end-service.ts
-var AssemblyFrontEndService;
-var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
-    "use strict";
-    init_command_text_service();
-    init_program_model_builder();
-    init_normalized_command();
-    init_struct_initializer();
-    AssemblyFrontEndService = class {
-      constructor(host) {
-        this.host = host;
-        this.programModelBuilder = new ProgramModelBuilder({
-          currentFile: this.host.currentFile,
-          currentLine: this.host.currentLine,
-          passProgramCache: this.host.passProgramCache,
-          preprocessBlockCommands: (source) => this.preprocessBlockCommands(source),
-          splitInlineCommands: (commands) => this.splitInlineCommands(commands),
-          preprocessSourcedBlockCommands: (source) => this.preprocessSourcedBlockCommands(source),
-          splitSourcedInlineCommands: (commands) => this.splitSourcedInlineCommands(commands),
-          createLoopCommandNode: (command, sourceFile, sourceLine) => this.createLoopCommandNode(command, sourceFile, sourceLine),
-          shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.host.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
-        });
-      }
-      host;
-      commandBuffer = "";
-      /** Opening physical line when processCommand receives a record one line at a time. */
-      structBufferStart;
-      programModelBuilder;
-      /**
-       * Preprocesses raw source blocks while preserving continued-line buffering.
-       * @param {string} block The raw source block.
-       * @returns {string[]} The normalized commands.
-       */
-      preprocessBlockCommands(block) {
-        return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
-      }
-      /**
-       * Preprocesses raw source blocks, tagging each command with its original line.
-       * @param {string} block The raw source block.
-       * @returns {SourcedCommand[]} The normalized sourced commands.
-       */
-      preprocessSourcedBlockCommands(block) {
-        const opening = this.structBufferStart;
-        if (opening && opening.file !== this.host.currentFile) {
-          throw new Error(`Unclosed dataStruct initializer in '${opening.file}'.`);
-        }
-        const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
-        if (opening && processed.sourcedCommands.length > 0) {
-          processed.sourcedCommands[0].line = opening.line - this.host.currentLine;
-        }
-        this.commandBuffer = processed.commandBuffer;
-        if (isOpenStructInitializer(this.commandBuffer)) {
-          if (!opening || processed.sourcedCommands.length > 0) {
-            const lines = block.split("\n");
-            const start = lines.findLastIndex((line) => /^(?:datastruct\b|\[)/i.test(line.trimStart()));
-            this.structBufferStart = {
-              file: this.host.currentFile,
-              line: this.host.currentLine + Math.max(0, start)
-            };
-          }
-        } else this.structBufferStart = void 0;
-        return processed.sourcedCommands;
-      }
-      /**
-       * Splits statements according to the active target's source grammar.
-       * @param {string[]} commands Commands to split.
-       * @returns {string[]} Profile-aware command statements.
-       */
-      splitInlineCommands(commands) {
-        return splitInlineCommands(commands, this.host.syntaxProfile);
-      }
-      /**
-       * Splits sourced statements according to the active target's source grammar.
-       * @param {SourcedCommand[]} commands Sourced commands to split.
-       * @returns {SourcedCommand[]} Profile-aware sourced command statements.
-       */
-      splitSourcedInlineCommands(commands) {
-        return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
-      }
-      /**
-       * Builds a normalized command from raw source text.
-       * @param {string} command The raw command text.
-       * @param {string} sourceFile The command source file.
-       * @param {number} sourceLine The source line number.
-       * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
-       * @returns {NormalizedCommand | null} The normalized command or null for empty input.
-       */
-      createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
-        let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
-        normalizedCommand = this.host.syntaxProfile.rewriteCommand?.(normalizedCommand, {
-          sourceFile,
-          sourceLine
-        }) ?? normalizedCommand;
-        if (this.host.inMacroExpansion && !this.host.isDefinitionCollectionStage && (normalizedCommand.includes("...") || normalizedCommand.includes("\u2026"))) {
-          normalizedCommand = this.host.resolveVariadicPlaceholders(normalizedCommand);
-        }
-        const words = splitCommandIntoWords(normalizedCommand);
-        if (!allowEmpty && words.length === 0) {
-          return null;
-        }
-        return createNormalizedCommand(
-          command,
-          normalizedCommand,
-          words,
-          sourceFile,
-          sourceLine,
-          this.host.collectSourceMetadata
-        );
-      }
-      /**
-       * Creates a loop-aware normalized command node for the typed parser.
-       * @param {string} command The raw command text.
-       * @param {string} [sourceFile] Optional source file.
-       * @param {number} [sourceLine] Optional source line.
-       * @returns {NormalizedCommand} The normalized node.
-       */
-      createLoopCommandNode(command, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine) {
-        return this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ?? createNormalizedCommand(
-          command,
-          "",
-          [],
-          sourceFile,
-          sourceLine,
-          this.host.collectSourceMetadata
-        );
-      }
-    };
-  }
-});
-
-// packages/core/src/services/command-lowering-service.ts
-var CommandLoweringService;
-var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
-    "use strict";
-    init_internal_instrumentation();
-    CommandLoweringService = class {
-      host;
-      constructor(host) {
-        this.host = host;
-      }
-      /**
-       * Lowers a normalized command into the execution-layer representation.
-       * @param {NormalizedCommand} command The normalized command node.
-       * @returns {LoweredCommand} The lowered execution work unit.
-       */
-      lowerCommand(command) {
-        const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
-        if (this.host.directiveRegistry.has(keyword)) {
-          let directiveWords = command.words;
-          if (command.parsed.includeTarget && command.parsed.includeTarget.directive !== "incbin") {
-            directiveWords = [
-              command.parsed.includeTarget.directive,
-              command.parsed.includeTarget.target
-            ];
-          }
-          return {
-            kind: "directive",
-            keyword,
-            words: directiveWords,
-            source: command.source,
-            command
-          };
-        }
-        const architecture = this.host.resolveActiveArchitecture();
-        const parsedOperands = command.parsed.opcodeOperands;
-        const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
-        const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
-        const operands = parsedOperands?.operands ?? architecture.definition?.splitOperands(operandText) ?? (operandText ? [operandText] : []);
-        const loweredOperands = operands.map(
-          (operand) => this.host.classifyOperandForActiveArchitecture(operand)
-        );
-        const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
-        return {
-          kind: "instruction",
-          command,
-          mnemonic,
-          operandText,
-          operands,
-          loweredOperands,
-          loweredOperand,
-          words: command.words,
-          sourceFile: command.source.file,
-          sourceLine: command.source.line,
-          sourceRaw: command.source.raw
-        };
-      }
-      /**
-       * Lowers an executable tree node into a durable execution-layer node.
-       * Commands retain their immutable front-end snapshots. Legacy preprocessing
-       * creates its mutable execution copy at dispatch time, avoiding a redundant
-       * clone for every stage-owned lowered node.
-       * @param {ExecutableNode} node The node to lower.
-       * @returns {LoweredExecutableNode} The lowered node.
-       */
-      lowerExecutableNode(node) {
-        incrementInternalCounter("runtimeNodesLowered");
-        if ("source" in node) {
-          if (this.shouldPreserveCommand(node)) {
-            return {
-              kind: "command",
-              command: node,
-              source: node.source,
-              passthroughReason: this.getPassthroughReason(node) ?? "unknown"
-            };
-          }
-          return this.lowerCommand(node);
-        }
-        if (node.type === "for" || node.type === "while") {
-          return {
-            kind: "loop",
-            loopType: node.type,
-            header: node.header,
-            conditionNode: node.conditionNode,
-            rangeNode: node.rangeNode,
-            variable: node.variable,
-            start: node.start,
-            end: node.end,
-            startExpression: node.startExpression,
-            endExpression: node.endExpression,
-            commands: node.commands.map((command) => this.lowerExecutableNode(command)),
-            startLine: node.startLine,
-            endLine: node.endLine
-          };
-        }
-        if (node.type !== "if") {
-          throw new Error(`Unknown executable node type: ${String(node.type)}`);
-        }
-        const conditionalNode = node;
-        return {
-          kind: "conditional",
-          header: conditionalNode.header,
-          branches: conditionalNode.branches.map((branch) => ({
-            kind: branch.kind,
-            header: branch.header,
-            conditionNode: branch.conditionNode,
-            commands: branch.commands.map((command) => this.lowerExecutableNode(command)),
-            startLine: branch.startLine,
-            endLine: branch.endLine
-          })),
-          startLine: conditionalNode.startLine,
-          endLine: conditionalNode.endLine
-        };
-      }
-      /**
-       * Lowers a full program model into a stage-owned execution program.
-       * @param {ProgramModel} program The program to lower.
-       * @returns {LoweredProgram} The lowered program.
-       */
-      lowerProgram(program) {
-        incrementInternalCounter("loweredProgramBuilds");
-        return {
-          sourceFile: program.sourceFile,
-          startLine: program.startLine,
-          nodes: program.nodes.map((node) => this.lowerExecutableNode(node))
-        };
-      }
-      /**
-       * Commands that still require legacy preprocess / control handlers must remain
-       * as command snapshots rather than direct lowered directives. Dispatch clones
-       * these snapshots before running the mutable legacy preprocessing pipeline.
-       * @param {NormalizedCommand} command The command to inspect.
-       * @returns {boolean} True when the command should stay in passthrough form.
-       */
-      shouldPreserveCommand(command) {
-        return this.getPassthroughReason(command) !== void 0;
-      }
-      /**
-       * Names the ordered preprocessing requirement that prevents direct lowering.
-       * @param {NormalizedCommand} command The command to inspect.
-       * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
-       */
-      getPassthroughReason(command) {
-        const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
-        if (/<[^>]+>/.test(command.command) || /\\[A-Z_a-z]/.test(command.command)) {
-          return "macroPlaceholder";
-        }
-        if (command.keyword.startsWith(".") && this.host.directiveRegistry.has(keyword)) {
-          if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
-            return void 0;
-          }
-          if (command.parsed.dataDirective) {
-            return "dataDirective";
-          }
-          return "registeredPreprocessDirective";
-        }
-        if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
-          return command.kind;
-        }
-        if (this.host.syntaxProfile.bareMacroInvocations && command.kind === "opcodeCandidate") {
-          return "bareMacroCandidate";
-        }
-        if (this.host.directiveRegistry.has(keyword)) {
-          if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
-            return void 0;
-          }
-          if (command.parsed.dataDirective) {
-            return "dataDirective";
-          }
-          return "registeredPreprocessDirective";
-        }
-        return command.kind === "opcodeCandidate" ? void 0 : "unknown";
-      }
-    };
-  }
-});
-
-// packages/core/src/services/front-end-command-service.ts
-var FrontEndCommandService;
-var init_front_end_command_service = __esm({
-  "packages/core/src/services/front-end-command-service.ts"() {
-    "use strict";
-    init_expression_node();
-    init_normalized_command();
-    FrontEndCommandService = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      /**
-       * Continues a function definition.
-       * @param {string} command The command to continue.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      continueFunctionDefinition(command) {
-        if (!this.host.inFunctionDefinition) {
-          return false;
-        }
-        if (command.trimEnd().endsWith("\\")) {
-          this.host.functionDefinitionLines.push(command.trimEnd().slice(0, -1));
-        } else {
-          this.host.functionDefinitionLines.push(command.trim());
-          const fullDefinition = this.host.functionDefinitionLines.join(" ");
-          this.host.functionDefinitionLines = [];
-          this.host.inFunctionDefinition = false;
-          this.host.parseFunctionDefinition(fullDefinition);
-        }
-        return true;
-      }
-      /**
-       * Starts a function definition.
-       * @param {NormalizedCommand} command The command to start.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      startFunctionDefinition(command) {
-        const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
-        if (!functionSource || !functionSource.toLowerCase().startsWith("function")) {
-          return false;
-        }
-        if (functionSource.trimEnd().endsWith("\\")) {
-          this.host.inFunctionDefinition = true;
-          this.host.functionDefinitionLines.push(functionSource.trimEnd().slice(0, -1));
-        } else {
-          this.host.parseFunctionDefinition(functionSource.trim());
-        }
-        setCommandKind(command, "directive");
-        return true;
-      }
-      /**
-       * Handles a relative label definition.
-       * @param {NormalizedCommand} command The command to handle.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      handleRelativeLabelDefinition(command) {
-        const { keyword } = command;
-        const isUnnamedLabelDefinition = keyword === ":";
-        const isRelativeLabelDefinition = isUnnamedLabelDefinition || /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
-        if (!isRelativeLabelDefinition) {
-          return false;
-        }
-        let relativeLabel = keyword;
-        if (isUnnamedLabelDefinition) {
-          relativeLabel = ":";
-        } else if (keyword.endsWith(":")) {
-          relativeLabel = keyword.slice(0, -1);
-        }
-        if (isUnnamedLabelDefinition) {
-          this.host.symbolScope.handleUnnamedLabel();
-        } else {
-          this.host.symbolScope.handleRelativeLabel(relativeLabel);
-        }
-        this.host.recordCurrentAddress();
-        this.host.recordSymbolDefinition("label", relativeLabel, {
-          span: command.source.tokenSpans[0] ?? command.source.normalizedSpan
-        });
-        command.labelName = relativeLabel;
-        setCommandKind(command, "labelDefinition");
-        if (isUnnamedLabelDefinition && command.words.length > 1) {
-          this.host.processCommand(command.words.slice(1).join(" "));
-        }
-        return true;
-      }
-      /**
-       * Handles a global label definition.
-       * @param {NormalizedCommand} command The command to handle.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      handleGlobalLabel(command) {
-        const { words } = command;
-        const directiveArgs = command.parsed.directiveArgs;
-        if ((directiveArgs?.name ?? words[0] ?? "").toLowerCase() !== "global") {
-          return false;
-        }
-        const payload = directiveArgs?.args?.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
-        if (payload.length < 1) {
-          throw new Error("global requires a label name");
-        }
-        const labelDecl = payload[0];
-        const modifiesHierarchy = labelDecl.startsWith("#");
-        const labelName = modifiesHierarchy ? labelDecl.substring(1) : labelDecl;
-        const hasColon = labelName.endsWith(":");
-        const cleanName = hasColon ? labelName.slice(0, -1) : labelName;
-        this.host.symbolScope.setLabel(cleanName, void 0, false, false, true, !modifiesHierarchy);
-        if (!modifiesHierarchy) {
-          this.host.currentParentLabel = cleanName;
-          this.host.currentParentIsGlobal = true;
-          this.host.currentGlobalParentLabel = cleanName;
-        }
-        if (payload.length > 1) {
-          this.host.processCommand(payload.slice(1).join(" "));
-        }
-        this.host.recordSymbolDefinition("label", cleanName, {
-          span: command.source.tokenSpans[0] ?? command.source.normalizedSpan
-        });
-        command.labelName = cleanName;
-        setCommandKind(command, "labelDefinition");
-        return true;
-      }
-      /**
-       * Consumes named label definitions.
-       * @param {NormalizedCommand} command The command to consume.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      consumeNamedLabelDefinitions(command) {
-        const remainingWords = [...command.words];
-        let keyword = remainingWords[0] ?? command.keyword;
-        let consumed = false;
-        let consumedCount = 0;
-        while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
-          const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-          const namespace = this.host.currentNamespace;
-          const dotCount = labelName.startsWith(".") ? labelName.match(/^\.*/)?.[0]?.length ?? 1 : 0;
-          const containerName = dotCount > 0 ? this.host.symbolScope.getScopedParentLabel(dotCount) || void 0 : namespace || void 0;
-          this.host.symbolScope.handleLabelDefinition(labelName);
-          this.host.recordSymbolDefinition("label", labelName, {
-            span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
-            containerName
-          });
-          remainingWords.shift();
-          consumedCount++;
-          keyword = remainingWords[0] ?? "";
-          consumed = true;
-        }
-        setCommandWords(command, remainingWords);
-        if (consumed && remainingWords.length === 0) {
-          setCommandKind(command, "labelDefinition");
-        }
-        return remainingWords.length === 0;
-      }
-      /**
-       * Handles a static label assignment.
-       * @param {NormalizedCommand} command The command to handle.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      handleStaticLabelAssignment(command) {
-        const { words, keyword } = command;
-        if (words.length !== 3 || words[1] !== "=" && words[1] !== ":=") {
-          return false;
-        }
-        const assignment = command.parsed.assignment;
-        const labelName = assignment?.target ?? keyword;
-        const expr = assignment ? renderExpressionNode(assignment.expression) : words[2];
-        const resolvedExpr = this.host.resolvedefines(expr);
-        let value = this.host.mathCore.math(assignment?.expression ?? resolvedExpr);
-        if (Number.isNaN(value)) {
-          value = this.host.symbolScope.getLabelValue(resolvedExpr, true);
-        }
-        const assignedName = this.host.symbolScope.qualifySymbolName(labelName);
-        this.host.symbolScope.setLabel(assignedName, value, true);
-        this.host.recordCurrentAddress();
-        this.host.recordSymbolDefinition("label", assignedName, {
-          span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
-          value,
-          containerName: this.host.currentNamespace || void 0
-        });
-        command.assignmentTarget = assignedName;
-        setCommandKind(command, "staticAssignment");
-        return true;
-      }
-    };
-  }
-});
-
-// packages/core/src/services/include-source-service.ts
-var IncludeSourceService;
-var init_include_source_service = __esm({
-  "packages/core/src/services/include-source-service.ts"() {
-    "use strict";
-    init_internal_instrumentation();
-    IncludeSourceService = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      resolvedPathCache = /* @__PURE__ */ new Map();
-      textCache = /* @__PURE__ */ new Map();
-      /**
-       * Starts a new assembly file snapshot and drops content retained by an older build.
-       */
-      beginAssemblySnapshot() {
-        this.resolvedPathCache.clear();
-        this.textCache.clear();
-      }
-      /**
-       * Releases source text retained for the completed assembly.
-       */
-      endAssemblySnapshot() {
-        this.beginAssemblySnapshot();
-      }
-      /**
-       * Reads a source-relative binary or text file.
-       * @param {string} filePath The path to read.
-       * @param {BufferEncoding} [encoding] Optional text encoding.
-       * @returns {Uint8Array | string} The file contents.
-       */
-      readFile(filePath, encoding) {
-        try {
-          const fullPath = this.resolvePath(filePath);
-          if (!fullPath) {
-            throw new Error(`Error reading file: ${filePath}`);
-          }
-          if (encoding) {
-            return this.readTextFile(fullPath, encoding);
-          }
-          return this.host.fileProvider.readFile(fullPath);
-        } catch {
-          throw new Error(`Error reading file: ${filePath}`);
-        }
-      }
-      /**
-       * Resolves a source include target.
-       * @param {string} filename The target filename.
-       * @returns {string} The resolved provider path.
-       */
-      resolveIncludePath(filename) {
-        if (filename == null) {
-          throw new Error("Invalid or missing filename");
-        }
-        const resolved = this.resolvePath(filename);
-        if (!resolved) {
-          throw new Error(`Could not find file: ${filename}`);
-        }
-        return resolved;
-      }
-      /**
-       * Marks and assembles an `include` target.
-       * @param {string} filename The target filename.
-       */
-      includeFile(filename) {
-        const resolvedPath = this.resolveIncludePath(filename);
-        if (!this.host.includedFiles.has(resolvedPath)) {
-          this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
-        }
-        this.assembleFile(filename);
-      }
-      /**
-       * Guards the active source file against later includes in this pass.
-       */
-      guardCurrentFile() {
-        const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? {
-          included: true,
-          guarded: false
-        };
-        fileInfo.guarded = true;
-        this.host.includedFiles.set(this.host.currentFile, fileInfo);
-      }
-      /**
-       * Clears pass-local include guards.
-       */
-      resetGuards() {
-        for (const [filePath, fileInfo] of this.host.includedFiles.entries()) {
-          fileInfo.guarded = false;
-          this.host.includedFiles.set(filePath, fileInfo);
-        }
-      }
-      /**
-       * Resolves, parses, lowers, and executes one source file.
-       * @param {string} filename The target filename.
-       */
-      assembleFile(filename) {
-        const resolvedPath = this.resolveIncludePath(filename);
-        const fileInfo = this.host.includedFiles.get(resolvedPath);
-        if (fileInfo?.guarded) {
-          return;
-        }
-        if (this.host.includeStack.length >= 512) {
-          throw new Error("Recursion limit exceeded (512 levels)");
-        }
-        if (resolvedPath === this.host.currentFile || this.host.includeStack.includes(resolvedPath)) {
-          throw new Error(`Recursive include detected for '${resolvedPath}'`);
-        }
-        const previousFile = this.host.currentFile;
-        this.host.includeStack.push(previousFile);
-        this.host.recordIncludeEdge(previousFile, resolvedPath);
-        if (this.host.followIncludes === false) {
-          this.host.includeStack.pop();
-          return;
-        }
-        try {
-          const content = this.readTextFile(resolvedPath, "utf8");
-          this.host.currentFile = resolvedPath;
-          const includedFile = this.host.includedFiles.get(resolvedPath);
-          if (includedFile) {
-            includedFile.included = true;
-            this.host.includedFiles.set(resolvedPath, includedFile);
-          } else {
-            this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
-          }
-          measureInternalPhase("includeParseLowerExecute", () => {
-            const includeNode = this.host.programModelBuilder.createIncludeNode(resolvedPath, content);
-            this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
-          });
-        } catch (error) {
-          const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
-          throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
-        } finally {
-          this.host.currentFile = this.host.includeStack.pop() ?? "";
-        }
-      }
-      get resolutionOptions() {
-        return {
-          currentFile: this.host.currentFile,
-          includePaths: this.host.includePaths,
-          macroSourceFile: this.host.currentMacroSourceFile
-        };
-      }
-      /**
-       * Resolves a path once for the active source and include-path context.
-       * @param {string} filePath The source-relative path to resolve.
-       * @returns {string | undefined} The resolved provider path.
-       */
-      resolvePath(filePath) {
-        const options = this.resolutionOptions;
-        const key = [
-          options.currentFile,
-          options.macroSourceFile ?? "",
-          options.includePaths.join("\0"),
-          filePath
-        ].join("");
-        const cached = this.resolvedPathCache.get(key);
-        if (cached !== void 0) {
-          incrementInternalCounter("includeResolutionCacheHits");
-          return cached;
-        }
-        const resolved = this.host.fileProvider.resolvePath(filePath, options);
-        if (resolved !== void 0) {
-          this.resolvedPathCache.set(key, resolved);
-        }
-        return resolved;
-      }
-      /**
-       * Reads source text once per assembly snapshot.
-       * @param {string} resolvedPath The resolved provider path.
-       * @param {BufferEncoding} encoding The requested text encoding.
-       * @returns {string} The cached or newly read text.
-       */
-      readTextFile(resolvedPath, encoding) {
-        const key = `${encoding}\0${resolvedPath}`;
-        const cached = this.textCache.get(key);
-        if (cached !== void 0) {
-          incrementInternalCounter("includeTextCacheHits");
-          return cached;
-        }
-        incrementInternalCounter("includeReads");
-        const content = measureInternalPhase(
-          "includeRead",
-          () => this.host.fileProvider.readTextFile(resolvedPath, encoding)
-        );
-        incrementInternalCounter("includeBytesRead", content.length);
-        this.textCache.set(key, content);
-        return content;
-      }
-    };
-  }
-});
-
-// packages/core/src/services/macro-engine.ts
-var MacroEngine;
-var init_macro_engine = __esm({
-  "packages/core/src/services/macro-engine.ts"() {
-    "use strict";
-    init_normalized_command();
-    init_command_text_service();
-    init_internal_instrumentation();
-    MacroEngine = class {
-      host;
-      macroExpansionControlStack = [];
-      pendingMacroSourceFile = "";
-      pendingMacroSourceLine = 0;
-      constructor(host) {
-        this.host = host;
-      }
-      /**
-       * Checks whether the current macro expansion line is in an active branch.
-       * @returns {boolean} `true` when the current expansion path is active.
-       */
-      isMacroExpansionActive() {
-        return this.macroExpansionControlStack.every((entry) => entry.active);
-      }
-      /**
-       * Checks whether the current macro expansion line is inside a deferred loop body.
-       * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
-       */
-      isMacroExpansionLoopActive() {
-        return this.macroExpansionControlStack.some(
-          (entry) => entry.active && (entry.type === "for" || entry.type === "while")
-        );
-      }
-      /**
-       * Evaluates a macro control-flow condition using the assembler expression engine.
-       * @param {string} expression The expression text to evaluate.
-       * @returns {boolean} The boolean result.
-       */
-      evaluateMacroControlExpression(expression) {
-        const trimmed = removeInlineComment(expression).trim();
-        if (!trimmed) {
-          return false;
-        }
-        return this.host.evaluateExpression(trimmed);
-      }
-      /**
-       * Updates macro expansion control state after dispatching a control-flow line.
-       * @param {string} line The fully expanded line text.
-       */
-      updateMacroExpansionControlState(line) {
-        const trimmed = removeInlineComment(line).trim();
-        if (!trimmed) {
-          return;
-        }
-        const [keyword, ...rest] = trimmed.split(/\s+/);
-        const normalizedKeyword = keyword.toLowerCase();
-        const current = this.macroExpansionControlStack[this.macroExpansionControlStack.length - 1];
-        const parentActive = this.isMacroExpansionActive();
-        const enclosingActive = this.macroExpansionControlStack.slice(0, -1).every((entry) => entry.active);
-        const expression = rest.join(" ").trim();
-        switch (normalizedKeyword) {
-          case "if": {
-            const active = parentActive && this.evaluateMacroControlExpression(expression);
-            this.macroExpansionControlStack.push({
-              type: "if",
-              active,
-              branchTaken: active
-            });
-            return;
-          }
-          case "elseif": {
-            if (!current || current.type !== "if") {
-              return;
-            }
-            if (!enclosingActive || current.branchTaken) {
-              current.active = false;
-              return;
-            }
-            const active = this.evaluateMacroControlExpression(expression);
-            current.active = active;
-            if (active) {
-              current.branchTaken = true;
-            }
-            return;
-          }
-          case "else": {
-            if (!current || current.type !== "if") {
-              return;
-            }
-            current.active = enclosingActive && !current.branchTaken;
-            current.branchTaken = true;
-            return;
-          }
-          case "while": {
-            const active = parentActive && this.evaluateMacroControlExpression(expression);
-            this.macroExpansionControlStack.push({ type: "while", active });
-            return;
-          }
-          case "for": {
-            this.macroExpansionControlStack.push({ type: "for", active: parentActive });
-            return;
-          }
-          case "endif": {
-            if (current && (current.type === "if" || current.type === "while")) {
-              this.macroExpansionControlStack.pop();
-            }
-            return;
-          }
-          case "endwhile": {
-            if (current?.type === "while") {
-              this.macroExpansionControlStack.pop();
-            }
-            return;
-          }
-          case "endfor": {
-            if (current?.type === "for") {
-              this.macroExpansionControlStack.pop();
-            }
-            return;
-          }
-          default:
-            return;
-        }
-      }
-      /**
-       * Handles a macro definition command.
-       * @param {NormalizedCommand} commandNode The command node to handle.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      handleDefinitionCommand(commandNode) {
-        const command = commandNode.command;
-        const { keyword, words } = commandNode;
-        if (this.host.inMacroDefinition) {
-          if (command.trim().toLowerCase() === "endmacro") {
-            if (this.host.isDefinitionCollectionStage) {
-              let variadic = false;
-              if (this.host.currentMacroParams.length > 0 && (this.host.currentMacroParams[this.host.currentMacroParams.length - 1] === "..." || this.host.currentMacroParams[this.host.currentMacroParams.length - 1] === "\u2026")) {
-                variadic = true;
-                this.host.currentMacroParams.pop();
-              }
-              const macroDef = {
-                name: this.host.currentMacroName,
-                params: this.host.currentMacroParams,
-                variadic,
-                body: this.host.currentMacroBody,
-                sourceFile: this.pendingMacroSourceFile || this.host.currentMacroBody[0]?.source.file || this.host.currentFile
-              };
-              if (this.host.macros.has(macroDef.name)) {
-                throw new Error(`Macro '${macroDef.name}' is already defined.`);
-              }
-              this.host.macros.set(macroDef.name, macroDef);
-              this.host.recordSymbolDefinition("macro", macroDef.name, {
-                file: this.pendingMacroSourceFile || macroDef.sourceFile || this.host.currentFile,
-                line: this.pendingMacroSourceLine
-              });
-            }
-            this.host.inMacroDefinition = false;
-            this.host.currentMacroName = "";
-            this.host.currentMacroParams = [];
-            this.host.currentMacroBody = [];
-            this.pendingMacroSourceFile = "";
-            this.pendingMacroSourceLine = 0;
-            setCommandKind(commandNode, "macroDefinitionOrInvoke");
-            return true;
-          }
-          if (this.host.isDefinitionCollectionStage) {
-            this.host.currentMacroBody.push(commandNode);
-          }
-          setCommandKind(commandNode, "macroDefinitionOrInvoke");
-          return true;
-        }
-        if (keyword.toLowerCase() === "macro" || command.trim().toLowerCase().startsWith("macro ")) {
-          const match = command.trim().match(/^macro\s+(\w+)\((.*)\)$/i);
-          if (!match) {
-            throw new Error(`Invalid macro header: ${command.trim()}`);
-          }
-          this.host.currentMacroName = match[1].trim();
-          const paramsStr = match[2].trim();
-          this.host.currentMacroParams = paramsStr ? paramsStr.split(",").map((entry) => entry.trim()) : [];
-          this.host.inMacroDefinition = true;
-          this.host.currentMacroBody = [];
-          this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
-          this.pendingMacroSourceLine = commandNode.source.line;
-          setCommandKind(commandNode, "macroDefinitionOrInvoke");
-          return true;
-        }
-        if (keyword.startsWith("%")) {
-          const parsedInvocation = commandNode.parsed.macroInvocation;
-          let invocation = words.join(" ").substring(1);
-          if (parsedInvocation) {
-            invocation = parsedInvocation.name;
-            if (parsedInvocation.args.length > 0) {
-              invocation = `${parsedInvocation.name}(${parsedInvocation.args.join(", ")})`;
-            }
-          }
-          this.callMacro(invocation);
-          setCommandKind(commandNode, "macroDefinitionOrInvoke");
-          return true;
-        }
-        if (this.host.syntaxProfile.bareMacroInvocations && this.host.macros.has(keyword)) {
-          const argumentText = command.slice(keyword.length).trim();
-          this.callMacro(argumentText ? `${keyword}(${argumentText})` : keyword);
-          setCommandKind(commandNode, "macroDefinitionOrInvoke");
-          return true;
-        }
-        return false;
-      }
-      /**
-       * Rewrites macro label references.
-       * @param {string} command The command to rewrite.
-       * @returns {string} The rewritten command.
-       */
-      rewriteMacroLabelReferences(command) {
-        if (!this.host.inMacroExpansion || !command.includes("?") && !command.includes("#")) {
-          return command;
-        }
-        let modifiedCommand = command;
-        if (modifiedCommand.includes("?+") || modifiedCommand.includes("?-")) {
-          if (modifiedCommand.includes("?+")) {
-            const currentMacroInstance = this.host.macroLabelInstance;
-            const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
-            let nextAddr = null;
-            if (!modifiedCommand.trim().startsWith("?+:")) {
-              for (const [key, info] of this.host.labelTable.entries()) {
-                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}+` || key.endsWith("_+") || key === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
-                  if (nextAddr === null || info.value < nextAddr) {
-                    nextAddr = info.value;
-                  }
-                }
-              }
-              if (nextAddr === null) {
-                nextAddr = this.host.symbolScope.findNextLabel("?+");
-              }
-              modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
-            }
-          }
-          if (modifiedCommand.includes("?-")) {
-            const currentMacroInstance = this.host.macroLabelInstance;
-            const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
-            let prevAddr = null;
-            if (!modifiedCommand.trim().startsWith("?-:")) {
-              for (const [key, info] of this.host.labelTable.entries()) {
-                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}-` || key.endsWith("_-") || key === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
-                  if (prevAddr === null || info.value > prevAddr) {
-                    prevAddr = info.value;
-                  }
-                }
-              }
-              if (prevAddr === null) {
-                prevAddr = this.host.symbolScope.findPreviousLabel("?-");
-              }
-              modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
-            }
-          }
-        }
-        if (modifiedCommand.includes("?")) {
-          modifiedCommand = modifiedCommand.replace(
-            /(?<!\w)(\?[\w+.-]+_[\w+.-]+)(?!:)/g,
-            (match, labelRef) => {
-              if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
-                return match;
-              }
-              try {
-                const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
-                return `$${labelValue.toString(16)}`;
-              } catch (error) {
-                if (this.host.isDefinitionCollectionStage) {
-                  return "$0000";
-                }
-                throw error;
-              }
-            }
-          );
-          modifiedCommand = modifiedCommand.replace(
-            /(?<!\w)(\?[\w+.-]+)(?!:)/g,
-            (match, labelRef) => {
-              if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
-                return match;
-              }
-              try {
-                const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
-                return `$${labelValue.toString(16)}`;
-              } catch (error) {
-                if (this.host.isDefinitionCollectionStage) {
-                  return "$0000";
-                }
-                throw error;
-              }
-            }
-          );
-        }
-        return modifiedCommand;
-      }
-      /**
-       * Calls a macro.
-       * @param {string} invocation The invocation to call.
-       */
-      callMacro(invocation) {
-        incrementInternalCounter("macroExpansions");
-        this.host.macroLabelInstance++;
-        const previousMacroExpansionState = this.host.inMacroExpansion;
-        const previousVariadicCount = this.host.currentVariadicCount;
-        const previousVariadicArgs = this.host.currentVariadicArgs;
-        const previousMacroName = this.host.currentMacroName;
-        const previousParentLabel = this.host.currentParentLabel;
-        const previousParentIsGlobal = this.host.currentParentIsGlobal;
-        const previousFile = this.host.currentFile;
-        const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({
-          ...entry
-        }));
-        this.host.inMacroExpansion = true;
-        this.macroExpansionControlStack = [];
-        try {
-          const invocationRegex = /^(\w+)\((.*)\)$/;
-          const match = invocation.match(invocationRegex);
-          if (!match) {
-            const macroName2 = invocation.startsWith("%") ? invocation.substring(1) : invocation;
-            const macro2 = this.host.macros.get(macroName2);
-            if (!macro2) {
-              throw new Error(`Error: Macro '${macroName2}' not defined.`);
-            }
-            this.host.currentMacroName = macroName2;
-            if (macro2.sourceFile) {
-              this.host.currentFile = macro2.sourceFile;
-            }
-            if (macro2.params.length > 0) {
-              const fixedArgs2 = /* @__PURE__ */ new Map();
-              for (const param of macro2.params) {
-                fixedArgs2.set(param, "");
-              }
-              this.host.currentVariadicCount = 0;
-              this.host.currentVariadicArgs = [];
-              for (const lineNode of macro2.body) {
-                const expandedLine = this.expandMacroLine(lineNode.command, fixedArgs2, [], 0);
-                this.processMacroLine(expandedLine);
-              }
-            } else {
-              for (const lineNode of macro2.body) {
-                this.processMacroLine(lineNode.command);
-              }
-            }
-            return;
-          }
-          const macroName = match[1];
-          const args = match[2].trim();
-          const macro = this.host.macros.get(macroName);
-          if (!macro) {
-            throw new Error(`Error: Macro '${macroName}' not defined.`);
-          }
-          this.host.currentMacroName = macroName;
-          if (macro.sourceFile) {
-            this.host.currentFile = macro.sourceFile;
-          }
-          const argValues = [];
-          let currentArg = "";
-          let inQuotes = false;
-          let escapeNext = false;
-          for (let i = 0; i < args.length; i++) {
-            const char = args[i];
-            if (escapeNext) {
-              currentArg += char;
-              escapeNext = false;
-              continue;
-            }
-            if (char === "\\") {
-              escapeNext = true;
-              continue;
-            }
-            if (char === '"') {
-              if (inQuotes && i + 1 < args.length && args[i + 1] === '"') {
-                currentArg += '"';
-                i++;
-                continue;
-              }
-              inQuotes = !inQuotes;
-              continue;
-            }
-            if (char === "," && !inQuotes) {
-              argValues.push(currentArg.trim());
-              currentArg = "";
-              continue;
-            }
-            currentArg += char;
-          }
-          if (currentArg.length > 0) {
-            argValues.push(currentArg.trim());
-          }
-          const fixedArgs = /* @__PURE__ */ new Map();
-          for (let i = 0; i < macro.params.length; i++) {
-            fixedArgs.set(macro.params[i], i < argValues.length ? argValues[i] : "");
-          }
-          const variadicArgs = [];
-          let variadicCount = 0;
-          if (macro.variadic && argValues.length > macro.params.length) {
-            variadicCount = argValues.length - macro.params.length;
-            for (let i = macro.params.length; i < argValues.length; i++) {
-              variadicArgs.push(argValues[i]);
-            }
-          }
-          this.host.currentVariadicCount = variadicCount;
-          this.host.currentVariadicArgs = variadicArgs;
-          for (const lineNode of macro.body) {
-            const expandedLine = this.expandMacroLine(
-              lineNode.command,
-              fixedArgs,
-              variadicArgs,
-              variadicCount
-            );
-            this.processMacroLine(expandedLine);
-          }
-        } finally {
-          this.host.currentMacroName = previousMacroName;
-          this.host.currentParentLabel = previousParentLabel;
-          this.host.currentParentIsGlobal = previousParentIsGlobal;
-          this.host.currentVariadicCount = previousVariadicCount;
-          this.host.currentVariadicArgs = previousVariadicArgs;
-          this.host.inMacroExpansion = previousMacroExpansionState;
-          this.host.currentFile = previousFile;
-          this.macroExpansionControlStack = previousMacroExpansionControlStack;
-        }
-      }
-      /**
-       * Expands a macro line.
-       * @param {string} line The line to expand.
-       * @param {Map<string, string>} fixedArgs The fixed arguments.
-       * @param {string[]} variadicArgs The variadic arguments.
-       * @param {number} variadicCount The variadic count.
-       * @returns {string} The expanded line.
-       */
-      expandMacroLine(line, fixedArgs, variadicArgs, variadicCount) {
-        line = line.replace(/!<(\w+)>/g, (match, paramName) => {
-          if (!fixedArgs.has(paramName)) {
-            return match;
-          }
-          let name = (fixedArgs.get(paramName) ?? "").trim();
-          if (name.startsWith("!")) {
-            name = name.slice(1);
-          }
-          return `!${name}`;
-        });
-        const substituteParamValue = (raw) => {
-          const value = raw.trim();
-          if (!value.includes("!")) {
-            return value;
-          }
-          return this.host.resolvedefines(value);
-        };
-        const resolveDeprecatedBangAngle = (match, name) => {
-          if (fixedArgs.has(name)) {
-            const fixedValue = fixedArgs.get(name);
-            return fixedValue !== void 0 ? this.host.resolvedefines(fixedValue) : match;
-          }
-          if (/^[A-Za-z]$/.test(name)) {
-            const index2 = name.toLowerCase().charCodeAt(0) - 97;
-            if (index2 >= 0 && index2 < variadicCount) {
-              return variadicArgs[index2];
-            }
-          }
-          const defineValue = this.host.defines.get(name);
-          return defineValue !== void 0 ? defineValue : match;
-        };
-        if (line.trim().startsWith("!") && line.includes("=")) {
-          const defineMatch = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
-          if (defineMatch) {
-            const varName = defineMatch[1];
-            const operator = defineMatch[2];
-            const value = defineMatch[3];
-            let expandedValue = value;
-            expandedValue = expandedValue.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
-            expandedValue = expandedValue.replace(/<(\w+)>/g, (match, paramName) => {
-              if (fixedArgs.has(paramName)) {
-                return substituteParamValue(fixedArgs.get(paramName) ?? "");
-              }
-              return match;
-            });
-            expandedValue = expandedValue.replace(
-              /<(?:\.{3}|…)\[([^\]]+)]>/g,
-              (match, expr) => {
-                if (this.isMacroExpansionLoopActive()) {
-                  return match;
-                }
-                const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
-                  if (this.host.defines.has(defName)) {
-                    return this.host.defines.get(defName) ?? defMatch;
-                  }
-                  return defMatch;
-                });
-                const resolvedExpr = this.host.resolvedefines(processedExpr);
-                let index2 = this.host.mathCore.math(resolvedExpr);
-                if (Number.isNaN(index2)) {
-                  throw new Error(
-                    `Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`
-                  );
-                }
-                index2 = Math.floor(index2);
-                if (index2 < 0 || index2 >= variadicCount) {
-                  throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
-                }
-                return variadicArgs[index2];
-              }
-            );
-            expandedValue = expandedValue.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-            return `!${varName} ${operator} ${expandedValue}`;
-          }
-        }
-        if (line.match(/^\s*[#?][\w+.-]+:/) || line.match(/^\s*[#?][\w+.-]+\s*=/)) {
-          return line;
-        }
-        let expanded = line;
-        expanded = expanded.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
-        expanded = expanded.replace(/<(\w+)>/g, (match, paramName) => {
-          if (fixedArgs.has(paramName)) {
-            return substituteParamValue(fixedArgs.get(paramName) ?? "");
-          }
-          return match;
-        });
-        if (this.host.syntaxProfile.macroParameterPrefix === "\\") {
-          expanded = expanded.replace(/\\([A-Z_a-z]\w*)/g, (match, paramName) => {
-            if (fixedArgs.has(paramName)) {
-              return substituteParamValue(fixedArgs.get(paramName) ?? "");
-            }
-            return match;
-          });
-        }
-        const currentCond = this.isMacroExpansionActive();
-        if (!currentCond) {
-          return expanded;
-        }
-        expanded = expanded.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
-          if (this.isMacroExpansionLoopActive()) {
-            return match;
-          }
-          const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
-            if (this.host.defines.has(defName)) {
-              return this.host.defines.get(defName) ?? defMatch;
-            }
-            return defMatch;
-          });
-          const resolvedExpr = this.host.resolvedefines(processedExpr);
-          let index2 = this.host.mathCore.math(resolvedExpr);
-          if (Number.isNaN(index2)) {
-            throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
-          }
-          index2 = Math.floor(index2);
-          if (index2 < 0 || index2 >= variadicCount) {
-            throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
-          }
-          return variadicArgs[index2];
-        });
-        expanded = expanded.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-        return expanded;
-      }
-      /**
-       * Resolves variadic placeholders.
-       * @param {string} command The command to resolve.
-       * @returns {string} The resolved command.
-       */
-      resolveVariadicPlaceholders(command) {
-        if (!command.includes("...") && !command.includes("\u2026")) {
-          return command;
-        }
-        const variadicCount = this.host.currentVariadicArgs.length;
-        let resolved = command.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
-        resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
-          const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
-            const defineValue = this.host.defines.get(defName);
-            return defineValue !== void 0 ? defineValue : defMatch;
-          });
-          const resolvedExpr = this.host.resolvedefines(processedExpr);
-          let index2 = this.host.mathCore.math(resolvedExpr);
-          if (Number.isNaN(index2)) {
-            throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
-          }
-          index2 = Math.floor(index2);
-          if (index2 < 0 || index2 >= variadicCount) {
-            throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
-          }
-          return this.host.currentVariadicArgs[index2];
-        });
-        return resolved;
-      }
-      /**
-       * Processes a macro line.
-       * @param {string} line The line to process.
-       */
-      processMacroLine(line) {
-        incrementInternalCounter("macroLinesProcessed");
-        const preprocessedLine = removeInlineComment(line);
-        const trimmed = preprocessedLine.trim();
-        const commandLine = preprocessedLine === line.trim() ? line : preprocessedLine;
-        let keyword = trimmed.toLowerCase();
-        const keywordEnd = keyword.search(/\s/);
-        if (keywordEnd >= 0) {
-          keyword = keyword.slice(0, keywordEnd);
-        }
-        const isControlDirective = keyword === "if" || keyword === "elseif" || keyword === "else" || keyword === "endif" || keyword === "while" || keyword === "endwhile" || keyword === "for" || keyword === "endfor";
-        if (!this.isMacroExpansionActive() && !isControlDirective) {
-          return;
-        }
-        if (/^[#?][\w+.-]+:/.test(trimmed)) {
-          if (trimmed.startsWith("?+:") || trimmed.startsWith("?-:")) {
-            const labelChar = trimmed;
-            const remainder = trimmed.substring(3).trim();
-            this.host.symbolScope.handleRelativeLabel(labelChar);
-            if (remainder) {
-              this.host.processCommand(remainder, true);
-              this.updateMacroExpansionControlState(remainder);
-            }
-            return;
-          }
-          const match = trimmed.match(/^([#?][\w+.-]+):/);
-          if (match) {
-            const labelName = match[1];
-            const remainder = trimmed.substring(match[0].length).trim();
-            this.host.symbolScope.setLabel(labelName, void 0, false, true);
-            if (remainder) {
-              this.host.processCommand(remainder, true);
-              this.updateMacroExpansionControlState(remainder);
-            }
-            return;
-          }
-        }
-        if (/^\?[\w+.-]+ *=/.test(trimmed)) {
-          const match = trimmed.match(/^(\?[\w+.-]+) *=\s*(.*)/);
-          if (match) {
-            const labelName = match[1];
-            const expression = match[2].trim();
-            const value = this.host.mathCore.math(expression);
-            this.host.symbolScope.setLabel(labelName, value, true, true);
-            return;
-          }
-        }
-        const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);
-        if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
-          this.host.applyDefineAssignment(commandLine);
-        } else {
-          this.host.processCommand(commandLine, true);
-        }
-        this.updateMacroExpansionControlState(trimmed);
-      }
-    };
-  }
-});
-
-// packages/core/src/services/output-writer-service.ts
-var OutputWriterService;
-var init_output_writer_service = __esm({
-  "packages/core/src/services/output-writer-service.ts"() {
-    "use strict";
-    init_address_width();
-    OutputWriterService = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      /**
-       * Advances the logical write position.
-       * @param {number} num The number of bytes to step.
-       */
-      step(num) {
-        if (num === 0) {
-          return;
-        }
-        if (num < 0) {
-          throw new Error("step num is negative");
-        }
-        this.host.currentTargetAddress = this.host.pluginAddressSpace.advance(
-          this.host.currentTargetAddress,
-          num
-        );
-        this.host.currentTargetBaseAddress = this.host.pluginAddressSpace.advance(
-          this.host.currentTargetBaseAddress,
-          num
-        );
-        this.host.syncWriteStarts();
-        this.host.incrementBytesWritten(num);
-      }
-      /**
-       * Writes a single byte at the current logical position.
-       * @param {number} num The value to write.
-       */
-      write1(num) {
-        if (Number.isNaN(num)) {
-          throw new Error("write1 value is NaN");
-        }
-        this.verifyLogicalPosition();
-        const newPos = this.host.pluginAddressSpace.normalizeForWrite(
-          this.host.currentTargetBaseAddress
-        );
-        const logicalAddress = normalizeAddressForWidth(
-          newPos,
-          this.host.pluginAddressSpace.addressWidth
-        );
-        this.host.beforeWrite?.(logicalAddress, 1);
-        const outputOffset = this.toOutputOffset(logicalAddress);
-        if (this.host.canEmitBytes) {
-          this.host.recordSourceWrite?.(logicalAddress, outputOffset);
-        }
-        if (this.host.isTracing) {
-          this.host.traceWrite?.({
-            stage: this.host.traceStage,
-            arch: this.host.arch,
-            file: "",
-            line: 0,
-            raw: "",
-            normalized: "",
-            logicalAddress,
-            addressWidth: this.host.pluginAddressSpace.addressWidth,
-            outputOffset,
-            value: num & 255
-          });
-        }
-        if (outputOffset < 0) {
-          this.step(1);
-          return;
-        }
-        if (this.host.canEmitBytes) {
-          if (outputOffset >= this.host.outputBytes.length && outputOffset - this.host.outputBytes.length > 0) {
-            this.host.fillOutputBytes(
-              this.host.outputBytes.length,
-              this.host.outputFillByte,
-              outputOffset - this.host.outputBytes.length
-            );
-          }
-          this.host.outputBytes[outputOffset] = num & 255;
-        }
-        this.step(1);
-      }
-      /**
-       * Writes a 16-bit value to output.
-       * @param {number} num The value to write.
-       */
-      write2(num) {
-        this.validateWrite(2);
-        this.write1(num & 255);
-        this.write1(num >> 8 & 255);
-      }
-      /**
-       * Writes a 24-bit value to output.
-       * @param {number} num The value to write.
-       */
-      write3(num) {
-        this.validateWrite(3);
-        this.write1(num & 255);
-        this.write1(num >> 8 & 255);
-        this.write1(num >> 16 & 255);
-      }
-      /**
-       * Writes a 32-bit value to output.
-       * @param {number} num The value to write.
-       */
-      write4(num) {
-        this.validateWrite(4);
-        this.write1(num & 255);
-        this.write1(num >> 8 & 255);
-        this.write1(num >> 16 & 255);
-        this.write1(num >> 24 & 255);
-      }
-      /**
-       * Writes an arbitrary-width value for architecture extensions.
-       * @param {number} num Value to write.
-       * @param {number} width Width in bytes.
-       * @param {"little" | "big"} endianness Byte order.
-       */
-      writeValue(num, width, endianness = "little") {
-        if (!Number.isInteger(width) || width < 1) {
-          throw new Error(`Invalid write width: ${width}`);
-        }
-        this.validateWrite(width);
-        for (let index2 = 0; index2 < width; index2++) {
-          const shift = endianness === "little" ? index2 : width - index2 - 1;
-          this.write1(num >> shift * 8 & 255);
-        }
-      }
-      /**
-       * Writes a sequence of already encoded bytes.
-       * @param {readonly number[]} values Bytes to write.
-       */
-      writeBytes(values) {
-        this.validateWrite(values.length);
-        for (const value of values) {
-          this.write1(value);
-        }
-      }
-      /**
-       * Runs active address-space and lifecycle validation for a write.
-       * @param {number} length The length of the value to write.
-       */
-      validateWrite(length) {
-        this.host.beforeWrite?.(this.host.currentTargetBaseAddress, length);
-      }
-      /**
-       * Finishes the pass.
-       */
-      finishPass() {
-        if (this.host.canFinalize) {
-          this.host.pluginOutputFormat.finalize({
-            state: this.host.pluginState,
-            outputBytes: this.host.outputBytes
-          });
-        }
-      }
-      /**
-       * Converts a logical address to an output offset.
-       * @param {number} addr The logical address.
-       * @returns {number} The mapped output offset.
-       */
-      toOutputOffset(addr) {
-        return this.host.pluginAddressSpace.toOutputOffset(addr);
-      }
-      /**
-       * Converts an output offset to a logical address.
-       * @param {number} addr The output offset.
-       * @returns {number} The mapped logical address.
-       */
-      fromOutputOffset(addr) {
-        return this.host.pluginAddressSpace.fromOutputOffset(addr);
-      }
-      /**
-       * Verifies the logical position.
-       */
-      verifyLogicalPosition() {
-        if (this.host.currentTargetAddress < 0 || this.host.currentTargetBaseAddress < 0) {
-          this.host.setWritePosition(this.host.pluginAddressSpace.defaultOrigin);
-        }
-      }
-      /**
-       * Advances and normalizes a logical position.
-       * @param {number} inaddr The logical address to advance.
-       * @param {number} step The number of bytes to step.
-       * @returns {number} The fixed address.
-       */
-      advanceLogicalAddress(inaddr, step = 0) {
-        return this.host.pluginAddressSpace.advance(inaddr, step);
-      }
-    };
-  }
-});
-
-// packages/core/src/services/data-struct-engine.ts
-var DataStructEngine;
-var init_data_struct_engine = __esm({
-  "packages/core/src/services/data-struct-engine.ts"() {
-    "use strict";
-    init_normalized_command();
-    init_command_text_service();
-    init_struct_initializer();
-    DataStructEngine = class {
-      constructor(host, structs) {
-        this.host = host;
-        this.structs = structs;
-      }
-      host;
-      structs;
-      table;
-      get inTable() {
-        return this.table !== void 0;
-      }
-      reset() {
-        this.table = void 0;
-      }
-      finish() {
-        if (this.table) throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
-      }
-      /**
-       * Rewrite a row into a normal directive so it retains source/trace ownership.
-       * @param {NormalizedCommand} command Per-dispatch mutable command, never the cached node.
-       */
-      prepareRow(command) {
-        const text = command.command.trim();
-        if (/^enddatastructs\b/i.test(text)) return;
-        const match = text.match(/^\[([^\]]+)]\s*=\s*({.*})$/s);
-        if (!this.table || !match) {
-          throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
-        }
-        const rewritten = `dataStruct ${this.table.name}[${match[1]}], ${match[2]}`;
-        setCommandWords(command, splitCommandIntoWords(rewritten), rewritten);
-      }
-      begin(words) {
-        if (this.table) throw new Error("Nested dataStructs blocks are not supported.");
-        if (words.length !== 2 || !this.host.structs.has(words[1])) {
-          throw new Error("dataStructs requires one previously defined struct name.");
-        }
-        this.table = { name: words[1], rows: 0 };
-      }
-      end(words) {
-        if (!this.table) throw new Error("endDataStructs without dataStructs.");
-        if (words.length !== 1) throw new Error("endDataStructs takes no arguments.");
-        if (this.table.rows === 0) throw new Error("dataStructs must contain at least one record.");
-        this.table = void 0;
-      }
-      /**
-       * Resolve an addressed record, keeping the established Asar index/stride rules.
-       * @param {string} reference Previously declared name with an optional logical index.
-       * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
-       */
-      resolveRecord(reference) {
-        const match = reference.match(/^([A-Z_a-z][\w.]*)(?:\[([^\]]+)])?$/);
-        const definition = match && this.host.structs.get(match[1]);
-        if (!match || !definition) throw new Error(`Unknown dataStruct record '${reference}'.`);
-        const index2 = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
-        if (!Number.isSafeInteger(index2) || index2 < 0)
-          throw new Error(`Invalid record index '${reference}'.`);
-        if (definition.indexRange) {
-          const { first, count } = definition.indexRange;
-          if (index2 < first || index2 >= first + count)
-            throw new Error(`Record index out of bounds: '${reference}'.`);
-        }
-        return { definition, index: index2 };
-      }
-      fieldsFor(definition) {
-        if (definition.parent || definition.extensionSize > 0) {
-          throw new Error(
-            `dataStruct does not initialize extended layouts ('${definition.name}'); use raw data directives.`
-          );
-        }
-        const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
-        let end = 0;
-        for (const field of fields) {
-          if (field.offset !== end)
-            throw new Error(
-              `Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`
-            );
-          end += field.width * field.count;
-        }
-        if (definition.align && end === definition.offset && end < definition.size) {
-          if (definition.labels.has("__padding"))
-            throw new Error("The alignment padding name '__padding' is reserved.");
-          fields.push({
-            name: "__padding",
-            offset: end,
-            width: 1,
-            count: definition.size - end,
-            array: true
-          });
-          end = definition.size;
-        }
-        if (end !== definition.size || end < 1 || end > 65536) {
-          throw new Error(
-            `Layout '${definition.name}' must describe every byte and be between 1 and 65536 bytes.`
-          );
-        }
-        return fields;
-      }
-      emit(words) {
-        const args = splitInitializerList(words.slice(1).join(" "));
-        if (args.length !== 2)
-          throw new Error("dataStruct syntax: dataStruct Record[index], { field = value }.");
-        const [reference, literal] = args;
-        const { definition, index: index2 } = this.resolveRecord(reference);
-        if (this.table?.next !== void 0 && index2 !== this.table.next) {
-          throw new Error(
-            `Non-contiguous dataStructs index: expected ${this.table.next}, received ${index2}.`
-          );
-        }
-        const layout = this.fieldsFor(definition);
-        const values = parseStructInitializer(literal);
-        const names = new Set(layout.map((field) => field.name));
-        for (const name of values.keys()) {
-          if (!names.has(name))
-            throw new Error(`Unknown initializer field '${definition.name}.${name}'.`);
-        }
-        const bytes = [];
-        for (const field of layout) {
-          const value = values.get(field.name);
-          const name = `${reference}.${field.name}`;
-          if (value === void 0) throw new Error(`Missing initializer field '${name}'.`);
-          if (field.array !== Array.isArray(value))
-            throw new Error(`Field '${name}' requires ${field.array ? "an array" : "a scalar"}.`);
-          const items = typeof value === "string" ? [value] : value;
-          if (items.length !== field.count)
-            throw new Error(
-              `Field '${name}' requires ${field.count} value(s), received ${items.length}.`
-            );
-          if (!this.host.canEmitBytes) continue;
-          for (const expression of items) {
-            const number = this.host.operandResolver.getnum(expression);
-            if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
-              throw new Error(
-                `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`
-              );
-            }
-            for (let byte = 0; byte < field.width; byte++)
-              bytes.push(Math.floor(number / 2 ** (8 * byte)) & 255);
-          }
-        }
-        if (this.host.canEmitBytes) {
-          const expected = this.structs.resolveStructLabel(reference);
-          if (this.host.currentTargetBaseAddress !== expected) {
-            throw new Error(
-              `dataStruct '${reference}' requires pc() == $${expected.toString(16).toUpperCase()}, received $${this.host.currentTargetBaseAddress.toString(16).toUpperCase()}.`
-            );
-          }
-          this.host.outputWriter.writeBytes(bytes);
-        } else this.host.outputWriter.step(definition.size);
-        if (this.table) {
-          this.table.next = index2 + 1;
-          this.table.rows++;
-        }
-      }
-    };
-  }
-});
-
-// packages/core/src/services/struct-engine.ts
-var StructEngine;
-var init_struct_engine = __esm({
-  "packages/core/src/services/struct-engine.ts"() {
-    "use strict";
-    init_normalized_command();
-    init_address_width();
-    init_data_struct_engine();
-    StructEngine = class {
-      constructor(host) {
-        this.host = host;
-        this.data = new DataStructEngine(host, this);
-      }
-      host;
-      data;
-      /**
-       * Handles a struct mode command.
-       * @param {NormalizedCommand} command The command to handle.
-       * @returns {boolean} `true` if the command was handled, `false` otherwise.
-       */
-      handleStructMode(command) {
-        const currentStruct = this.host.currentStruct;
-        if (!currentStruct) {
-          return false;
-        }
-        const { words } = command;
-        const keyword = words[0] ?? "";
-        if (keyword.startsWith(".")) {
-          const hasColon = keyword.endsWith(":");
-          const labelName = keyword.replace(/:$/, "").substring(1);
-          const declaration = words.slice(1).join(" ");
-          const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
-          if (typed) {
-            const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
-            const count = typed[2] === void 0 ? 1 : this.host.operandResolver.getnum(typed[2]);
-            if (!Number.isSafeInteger(count) || count < 1 || count * width > 65536) {
-              throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
-            }
-            if (currentStruct.labels.has(labelName)) {
-              throw new Error(`Duplicate typed field '${currentStruct.name}.${labelName}'.`);
-            }
-            (currentStruct.fields ??= /* @__PURE__ */ new Map()).set(labelName, {
-              name: labelName,
-              offset: currentStruct.offset,
-              width,
-              count,
-              array: typed[2] !== void 0
-            });
-          } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
-            throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
-          }
-          currentStruct.labels.set(labelName, currentStruct.offset);
-          this.host.recordSymbolDefinition("structMember", labelName, {
-            value: currentStruct.offset,
-            containerName: currentStruct.name
-          });
-          if (typed) {
-            const field = currentStruct.fields.get(labelName);
-            currentStruct.offset += field.width * field.count;
-          } else if (words[1]?.toLowerCase() === "skip") {
-            if (words.length !== 3) {
-              throw new Error(
-                `skip directive in struct requires exactly one parameter: ${words.length}`
-              );
-            }
-            const skipAmount = this.host.operandResolver.getnum(words[2]);
-            if (Number.isSafeInteger(skipAmount) && skipAmount > 0) {
-              currentStruct.fields?.set(labelName, {
-                name: labelName,
-                offset: currentStruct.offset,
-                width: 1,
-                count: skipAmount,
-                array: true
-              });
-            }
-            currentStruct.offset += skipAmount;
-          }
-          void hasColon;
-          setCommandKind(command, "structCommand");
-          return true;
-        }
-        if (keyword.toLowerCase() === "endstruct") {
-          this.handleEndStruct(words);
-          setCommandKind(command, "structCommand");
-          return true;
-        }
-        setCommandKind(command, "structCommand");
-        return true;
-      }
-      /**
-       * Handles a struct command.
-       * @param {string[]} words The words of the command.
-       */
-      handleStruct(words) {
-        if (words.length < 2) {
-          throw new Error("Struct definition requires at least two parameters.");
-        }
-        const structName = words[1];
-        let base;
-        let parent;
-        if (words.length === 2) {
-          base = 0;
-        } else if (words[2].toLowerCase() === "extends") {
-          if (words.length < 4) {
-            throw new Error("Struct extension must specify a parent struct.");
-          }
-          parent = words[3];
-          const parentStruct = this.host.structs.get(parent);
-          if (!parentStruct) {
-            throw new Error(`Parent struct '${parent}' not defined.`);
-          }
-          base = parentStruct.base;
-        } else {
-          base = this.host.operandResolver.getnum(words[2]);
-          if (base < 0 || base > maximumAddressForWidth(this.host.addressWidth)) {
-            throw new Error(`Invalid logical address for struct: ${words[2]}`);
-          }
-        }
-        this.host.enterStructDefinition(base);
-        this.host.currentStruct = {
-          name: structName,
-          base,
-          offset: 0,
-          size: 0,
-          labels: /* @__PURE__ */ new Map(),
-          fields: /* @__PURE__ */ new Map(),
-          parent,
-          extensionSize: 0
-        };
-        this.host.recordSymbolDefinition("struct", structName, { value: base });
-      }
-      /**
-       * Handles an endstruct command.
-       * @param {string[]} words The words of the command.
-       */
-      handleEndStruct(words) {
-        const currentStruct = this.host.currentStruct;
-        if (!currentStruct) {
-          throw new Error("endstruct encountered but not inside a struct definition.");
-        }
-        let align;
-        let count;
-        let first = 0;
-        const seen = /* @__PURE__ */ new Set();
-        for (let index2 = 1; index2 < words.length; index2 += 2) {
-          const option = words[index2].toLowerCase();
-          if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index2 + 1] === void 0) {
-            if (words[1]?.toLowerCase() === "align")
-              throw new Error("endstruct align requires a single alignment parameter.");
-            throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
-          }
-          seen.add(option);
-          const value = this.host.operandResolver.getnum(words[index2 + 1]);
-          if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
-            throw new Error(
-              option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
-            );
-          }
-          if (option === "align") align = value;
-          else if (option === "count") count = value;
-          else first = value;
-        }
-        if (seen.has("firstindex") && count === void 0)
-          throw new Error("endstruct firstindex requires count.");
-        if (count !== void 0) {
-          if (!Number.isSafeInteger(first + count))
-            throw new Error("Struct index range exceeds integer precision.");
-          currentStruct.indexRange = { first, count };
-        }
-        let finalSize = currentStruct.offset;
-        if (align !== void 0) {
-          finalSize = Math.ceil(finalSize / align) * align;
-          currentStruct.align = align;
-        }
-        currentStruct.size = finalSize;
-        if (currentStruct.parent) {
-          const parentName = currentStruct.parent;
-          const parentStruct = this.host.structs.get(parentName);
-          if (!parentStruct) {
-            throw new Error(`Parent struct '${parentName}' not defined.`);
-          }
-          const extSize = currentStruct.size;
-          if (extSize > parentStruct.extensionSize) {
-            parentStruct.extensionSize = extSize;
-          }
-          this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
-          this.host.structs.set(currentStruct.name, currentStruct);
-        } else {
-          this.host.structs.set(currentStruct.name, currentStruct);
-        }
-        this.host.restoreStructDefinition();
-        this.host.currentStruct = null;
-      }
-      /**
-       * Checks whether a reference starts with a known struct name.
-       * @param {string} labelRef The reference to inspect.
-       * @returns {boolean} Whether the reference belongs to a known struct.
-       */
-      hasStructReference(labelRef) {
-        if (!/^[A-Z_a-z]\w*(?:\[[^\]]+])?(?:\.[A-Z_a-z]\w*(?:\[[^\]]+])?)*$/.test(labelRef)) {
-          return false;
-        }
-        if (this.host.structs.has(labelRef)) {
-          return true;
-        }
-        const dotIndex = labelRef.indexOf(".");
-        const bracketIndex = labelRef.indexOf("[");
-        let rootEnd = Math.min(dotIndex, bracketIndex);
-        if (dotIndex === -1) {
-          rootEnd = bracketIndex;
-        } else if (bracketIndex === -1) {
-          rootEnd = dotIndex;
-        }
-        const root = rootEnd === -1 ? labelRef : labelRef.slice(0, rootEnd);
-        return root.length > 0 && this.host.structs.has(root);
-      }
-      /**
-       * Resolves a struct label.
-       * @param {string} labelRef The label to resolve.
-       * @returns {number} The resolved address.
-       */
-      resolveStructLabel(labelRef) {
-        const refParts = labelRef.split(".");
-        if (refParts.length === 2 && !labelRef.includes("[")) {
-          const parentName = refParts[0];
-          const parentDef = this.host.structs.get(parentName);
-          if (parentDef) {
-            const extensionDef = this.host.structs.get(labelRef);
-            if (extensionDef?.parent === parentName) {
-              return parentDef.base + parentDef.size;
-            }
-          }
-        }
-        const directStruct = this.host.structs.get(labelRef);
-        if (directStruct) {
-          return directStruct.base;
-        }
-        let arrayIndex = 0;
-        let candidate = labelRef;
-        let extraMember = "";
-        const arrayMatch = candidate.match(/^(.*?)\[([^\]]+)](.*)$/);
-        if (arrayMatch) {
-          candidate = arrayMatch[1];
-          arrayIndex = this.host.operandResolver.getnum(arrayMatch[2]);
-          extraMember = arrayMatch[3];
-          if (extraMember.startsWith(".")) {
-            extraMember = extraMember.substring(1);
-          }
-        }
-        const parts = candidate.split(".");
-        for (let i = parts.length; i >= 1; i--) {
-          const potential = parts.slice(0, i).join(".");
-          if (!this.host.structs.has(potential)) {
-            continue;
-          }
-          const def = this.host.structs.get(potential);
-          if (!def) {
-            continue;
-          }
-          const memberPart = parts.slice(i).join(".");
-          const memberName = memberPart + (extraMember ? (memberPart ? "." : "") + extraMember : "");
-          const baseStructSize = def.size;
-          let effectiveSize = baseStructSize;
-          if (def.align) {
-            effectiveSize = Math.ceil(baseStructSize / def.align) * def.align;
-          }
-          const maxExtensionSize = def.extensionSize;
-          if (maxExtensionSize > 0) {
-            effectiveSize += maxExtensionSize;
-          }
-          if (memberName.trim() === "") {
-            if (arrayIndex !== 0) {
-              return def.base + arrayIndex * effectiveSize;
-            }
-            return def.base;
-          }
-          const memberParts = memberName.split(".");
-          const topLevelMember = memberParts[0];
-          if (!def.labels.has(topLevelMember)) {
-            const childStruct = this.host.structs.get(topLevelMember);
-            if (childStruct && childStruct.parent === potential) {
-              const childMemberName = memberParts.slice(1).join(".");
-              const childReference = `${topLevelMember}${childMemberName ? `.${childMemberName}` : ""}`;
-              const childOffset = this.resolveStructLabel(childReference) - childStruct.base;
-              return def.base + arrayIndex * effectiveSize + childOffset;
-            }
-            throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
-          }
-          const offset = def.labels.get(topLevelMember);
-          if (offset === void 0) {
-            throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
-          }
-          let finalAddress;
-          if (def.parent) {
-            const parentDef = this.host.structs.get(def.parent);
-            if (!parentDef) {
-              throw new Error(
-                `Parent struct '${def.parent}' not defined for extension '${potential}'.`
-              );
-            }
-            let parentSize = parentDef.size;
-            if (parentDef.align) {
-              parentSize = Math.ceil(parentSize / parentDef.align) * parentDef.align;
-            }
-            if (arrayIndex === 0) {
-              finalAddress = parentDef.base + parentSize + offset;
-            } else {
-              finalAddress = parentDef.base + parentSize + arrayIndex * def.size + offset;
-            }
-          } else {
-            finalAddress = def.base + arrayIndex * effectiveSize + offset;
-          }
-          return finalAddress;
-        }
-        throw new Error(`Struct not defined in reference: ${labelRef}`);
-      }
-    };
-  }
-});
-
-// packages/core/src/services/symbol-scope-service.ts
-function fileBasename(file) {
-  const normalized = file.replaceAll("\\", "/");
-  const slash = normalized.lastIndexOf("/");
-  return slash === -1 ? normalized : normalized.slice(slash + 1);
-}
-function parseUnnamedLabelReference(token) {
-  const match = token.trim().match(/^:(\++|-+)$/);
-  if (!match) {
-    return void 0;
-  }
-  const signs = match[1];
-  return {
-    direction: signs[0] === "+" ? 1 : -1,
-    count: signs.length
-  };
-}
-var SymbolScopeService;
-var init_symbol_scope_service = __esm({
-  "packages/core/src/services/symbol-scope-service.ts"() {
-    "use strict";
-    init_syntax_profile();
-    SymbolScopeService = class {
-      constructor(host) {
-        this.host = host;
-      }
-      host;
-      /**
-       * Returns the current ca65-style object file name (last `.asm` on the include stack).
-       * @returns {string} The object-file basename, or empty when unknown.
-       */
-      objectFileKey() {
-        const chain = [...this.host.includeStack, this.host.currentFile];
-        for (let index2 = chain.length - 1; index2 >= 0; index2--) {
-          const base = fileBasename(chain[index2] ?? "");
-          if (base.toLowerCase().endsWith(".asm")) {
-            return base;
-          }
-        }
-        return fileBasename(this.host.currentFile);
-      }
-      /**
-       * Qualifies a symbol for the active syntax profile's file-local rule.
-       * Exported/imported names and cheap/sublabels stay unqualified.
-       * @param {string} name The source symbol name.
-       * @returns {string} The storage key.
-       */
-      qualifySymbolName(name) {
-        const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
-        if (!profile.fileLocalSymbols) {
-          return name;
-        }
-        if (this.host.globalSymbols.has(name)) {
-          return name;
-        }
-        if (name.startsWith(".") || name.startsWith("@") || name.includes("::")) {
-          return name;
-        }
-        const unit = this.objectFileKey();
-        return unit ? `${unit}::${name}` : name;
-      }
-      /**
-       * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
-       * @param {string} namespacePrefix The flattened namespace prefix.
-       * @param {string} label The already-qualified or plain label.
-       * @returns {string} The namespace-qualified storage key.
-       */
-      qualifyNamespaceAlias(namespacePrefix, label) {
-        if (this.host.syntaxProfile.fileLocalSymbols) {
-          const separator = label.indexOf("::");
-          if (separator !== -1) {
-            return `${label.slice(0, separator + 2)}${namespacePrefix}_${label.slice(separator + 2)}`;
-          }
-        }
-        return `${namespacePrefix}_${label}`;
-      }
-      /**
-       * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
-       * @param {string} name The label token, without a trailing colon.
-       * @returns {string} The rewritten name.
-       */
-      toCheapDotLabel(name) {
-        const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
-        if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
-          return `.${name.slice(prefix.length)}`;
-        }
-        return name;
-      }
-      /**
-       * Finds nearest hierarchy ancestor.
-       * @param {string} label The label.
-       * @returns {string | null} The result.
-       */
-      findNearestHierarchyAncestor(label) {
-        for (let i = label.length - 1; i >= 0; i--) {
-          if (label[i] !== "_") {
-            continue;
-          }
-          const candidate = label.slice(0, i);
-          if (!candidate) {
-            continue;
-          }
-          const entry = this.host.labelTable.get(candidate);
-          if (entry?.modifiesHierarchy) {
-            return candidate;
-          }
-        }
-        return null;
-      }
-      /**
-       * Gets hierarchy chain.
-       * @param {string} label The label.
-       * @returns {string[]} The result.
-       */
-      getHierarchyChain(label) {
-        const rootLabel = this.host.currentGlobalParentLabel;
-        const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
-        const chain = [label];
-        let cursor = label;
-        while (true) {
-          const explicitParent = this.host.labelParents.get(cursor);
-          const parent = explicitParent === void 0 ? this.findNearestHierarchyAncestor(cursor) : explicitParent;
-          if (!parent) {
-            break;
-          }
-          chain.unshift(parent);
-          if (rootApplies && parent === rootLabel) {
-            break;
-          }
-          cursor = parent;
-        }
-        return chain;
-      }
-      /**
-       * Gets ancestor prefixes.
-       * @param {string} label The label.
-       * @returns {string[]} The result.
-       */
-      getAncestorPrefixes(label) {
-        const prefixes = [];
-        for (let i = label.length - 1; i >= 0; i--) {
-          if (label[i] !== "_") {
-            continue;
-          }
-          const candidate = label.slice(0, i);
-          if (candidate) {
-            prefixes.push(candidate);
-          }
-        }
-        return prefixes;
-      }
-      /**
-       * Gets scoped parent label.
-       * @param {number} dotCount The dot count.
-       * @returns {string} The result.
-       */
-      getScopedParentLabel(dotCount) {
-        const current = this.host.currentParentLabel;
-        if (dotCount === 1) {
-          if (this.host.currentGlobalParentLabel) {
-            return this.host.currentGlobalParentLabel;
-          }
-          if (this.host.currentParentIsGlobal) {
-            return current;
-          }
-          const chain2 = this.getHierarchyChain(current);
-          return chain2[0] ?? current;
-        }
-        if (this.host.currentParentIsGlobal) {
-          return current;
-        }
-        const chain = this.getHierarchyChain(current);
-        const targetDepth = dotCount - 1;
-        return chain[targetDepth] ?? current;
-      }
-      /**
-       * Checks if a label is in scope.
-       * @param {string} identifier The label to check.
-       * @returns {boolean} `true` if the label is in scope, `false` otherwise.
-       */
-      hasLabelInScope(identifier) {
-        const qualified = this.qualifySymbolName(identifier);
-        return this.host.labelTable.has(identifier) || qualified !== identifier && this.host.labelTable.has(qualified) || (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
-      }
-      /**
-       * Handles a relative label.
-       * @param {string} label The label to handle.
-       * @returns {number} The address of the label.
-       */
-      handleRelativeLabel(label) {
-        const isPositive = label.includes("+");
-        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-        const targetAddress = this.host.currentTargetAddress;
-        const isMacroLocal = label.startsWith("?");
-        if (this.host.enforceResolvedLabels) {
-          if (isPositive) {
-            if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
-              throw new Error(`Error: Undefined forward label '${label}'.`);
-            }
-          } else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
-            throw new Error(`Error: Undefined backward label '${label}'.`);
-          }
-          return targetAddress;
-        }
-        if (isPositive) {
-          if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
-          if (isMacroLocal && this.host.inMacroExpansion) {
-            this.host.forwardLabels[depth].push({
-              addr: targetAddress,
-              macroInstance: this.host.macroLabelInstance
-            });
-          } else {
-            this.host.forwardLabels[depth].push({ addr: targetAddress });
-          }
-        } else {
-          if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
-          if (isMacroLocal && this.host.inMacroExpansion) {
-            this.host.backwardLabels[depth].push({
-              addr: targetAddress,
-              macroInstance: this.host.macroLabelInstance
-            });
-          } else {
-            this.host.backwardLabels[depth].push({ addr: targetAddress });
-          }
-        }
-        return targetAddress;
-      }
-      /**
-       * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
-       * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
-       * @returns {number} The address of the unnamed label.
-       */
-      handleUnnamedLabel() {
-        const targetAddress = this.host.currentTargetAddress;
-        if (this.host.enforceResolvedLabels) {
-          if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
-            throw new Error("Error: Undefined unnamed label ':'.");
-          }
-          return targetAddress;
-        }
-        if (!this.host.forwardLabels[0]) this.host.forwardLabels[0] = [];
-        if (!this.host.backwardLabels[0]) this.host.backwardLabels[0] = [];
-        const entry = { addr: targetAddress, unit: this.objectFileKey() };
-        this.host.forwardLabels[0].push(entry);
-        this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
-        return targetAddress;
-      }
-      /**
-       * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
-       * @param {string} label The reference token.
-       * @param {number} [currentAddressOverride] PC to search from.
-       * @returns {number} The target address.
-       */
-      findUnnamedLabel(label, currentAddressOverride) {
-        const parsed = parseUnnamedLabelReference(label);
-        if (!parsed) {
-          throw new Error(`Error: Invalid unnamed label '${label}'.`);
-        }
-        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
-        if (!this.host.enforceResolvedLabels) {
-          return 0;
-        }
-        const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
-        if (!table || table.length === 0) {
-          throw new Error(
-            `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
-          );
-        }
-        const unit = this.objectFileKey();
-        const ordered = table.filter((entry) => !entry.unit || entry.unit === unit).filter(
-          (entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress
-        ).map((entry) => entry.addr).sort((left, right) => parsed.direction === 1 ? left - right : right - left);
-        if (ordered.length < parsed.count) {
-          throw new Error(
-            `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
-          );
-        }
-        return ordered[parsed.count - 1];
-      }
-      /**
-       * Finds the next label.
-       * @param {string} label The label to find.
-       * @param {number} currentAddressOverride The current address to override.
-       * @returns {number} The address of the next label.
-       */
-      findNextLabel(label, currentAddressOverride) {
-        const isPositive = label.includes("+");
-        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
-        const isMacroLocal = label.startsWith("?");
-        if (!this.host.enforceResolvedLabels) {
-          return 0;
-        }
-        if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
-          throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
-        }
-        const possibleTargets = this.host.forwardLabels[depth].filter((entry) => {
-          if (isMacroLocal && this.host.inMacroExpansion) {
-            return entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance;
-          }
-          return entry.addr >= currentAddress && !entry.macroInstance;
-        }).map((entry) => entry.addr);
-        if (possibleTargets.length === 0) {
-          throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
-        }
-        return Math.min(...possibleTargets);
-      }
-      /**
-       * Finds the previous label.
-       * @param {string} label The label to find.
-       * @param {number} currentAddressOverride The current address to override.
-       * @returns {number} The address of the previous label.
-       */
-      findPreviousLabel(label, currentAddressOverride) {
-        const isPositive = label.includes("+");
-        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
-        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
-        const isMacroLocal = label.startsWith("?");
-        if (this.host.isDefinitionCollectionStage) {
-          return 0;
-        }
-        if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
-          throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
-        }
-        const possibleTargets = this.host.backwardLabels[depth].filter((entry) => {
-          if (isMacroLocal && this.host.inMacroExpansion) {
-            return entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance;
-          }
-          return entry.addr < currentAddress && !entry.macroInstance;
-        }).map((entry) => entry.addr);
-        if (possibleTargets.length === 0) {
-          throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
-        }
-        return Math.max(...possibleTargets);
-      }
-      /**
-       * Sets a label.
-       * @param {string} label The label to set.
-       * @param {number} value The value of the label.
-       * @param {boolean} isStatic Whether the label is static.
-       * @param {boolean} isMacroLabel Whether the label is a macro label.
-       * @param {boolean} isGlobal Whether the label is global.
-       * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
-       */
-      setLabel(label, value, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true) {
-        let fullLabel = label;
-        let directScopeLabel = null;
-        if (isMacroLabel && (label.startsWith("?") || label.startsWith("#"))) {
-          const prefix = label.charAt(0);
-          const labelName = label.substring(1);
-          const macroModifiesHierarchy = prefix !== "#";
-          if (prefix === "?") {
-            if (labelName.startsWith(".")) {
-              let recentMainLabel = "";
-              for (const [key, entry] of this.host.labelTable.entries()) {
-                if (entry.isMacroLabel && key.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key.includes("_SubLabel_")) {
-                  const labelPart = key.substring(`:macro_${this.host.macroLabelInstance}_`.length);
-                  if (!labelPart.startsWith(".")) {
-                    recentMainLabel = labelPart;
-                  }
-                }
-              }
-              fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-              if (recentMainLabel) {
-                const subLabelWithoutDot = labelName.substring(1);
-                const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
-                const subAddr = value !== void 0 ? value : this.host.currentTargetAddress;
-                this.host.labelTable.set(parentChildLabel, {
-                  value: subAddr,
-                  isStatic,
-                  isMacroLabel: true,
-                  macroInstance: this.host.macroLabelInstance,
-                  modifiesHierarchy: macroModifiesHierarchy
-                });
-              }
-            } else {
-              fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-            }
-          } else {
-            fullLabel = this.host.currentNamespace && !isGlobal ? `${this.host.currentNamespace}_${labelName}` : labelName;
-          }
-        } else if (!label.includes(":")) {
-          const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
-          if (this.host.currentNamespace && !isGlobal) {
-            if (!label.startsWith(`${namespacePrefix}_`)) {
-              fullLabel = `${namespacePrefix}_${label}`;
-              if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0 && modifiesHierarchy) {
-                const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
-                const leafLabel = `${leafNamespace}_${label}`;
-                const addr2 = value !== void 0 ? value : this.host.currentTargetAddress;
-                this.host.labelTable.set(leafLabel, {
-                  value: addr2,
-                  isStatic,
-                  isMacroLabel,
-                  macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
-                  modifiesHierarchy
-                });
-                for (let i = this.host.namespaceNestingPath.length - 2; i >= 0; i--) {
-                  const partialPath = this.host.namespaceNestingPath.slice(i);
-                  const partialLabel = `${partialPath.join("_")}_${label}`;
-                  this.host.labelTable.set(partialLabel, {
-                    value: addr2,
-                    isStatic,
-                    isMacroLabel,
-                    macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
-                    modifiesHierarchy
-                  });
-                }
-              }
-            }
-            if (label.includes("_") && !label.startsWith(`${namespacePrefix}_`)) {
-              directScopeLabel = label;
-            }
-          } else {
-            fullLabel = label;
-          }
-        }
-        const addr = value !== void 0 ? value : this.host.currentTargetAddress;
-        if (this.host.isDefinitionCollectionStage) {
-          if (modifiesHierarchy && !label.startsWith(".")) {
-            this.host.currentParentLabel = fullLabel;
-            this.host.currentParentIsGlobal = isGlobal;
-          }
-          this.host.labelTable.set(fullLabel, {
-            value: addr,
-            isStatic,
-            isMacroLabel,
-            macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
-            modifiesHierarchy
-          });
-          this.host.recordSymbolDefinition("label", fullLabel, {
-            value: addr,
-            containerName: this.symbolContainerName(fullLabel, isGlobal)
-          });
-          if (directScopeLabel) {
-            this.host.labelTable.set(directScopeLabel, {
-              value: addr,
-              isStatic,
-              isMacroLabel,
-              macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
-              modifiesHierarchy: false
-            });
-          }
-          return;
-        }
-        if (this.host.enforceResolvedLabels) {
-          const existingEntry = this.host.labelTable.get(fullLabel);
-          if (existingEntry) {
-            if (existingEntry.isStatic !== isStatic) {
-              throw new Error(`Label '${fullLabel}' is not static and cannot be used in conditionals.`);
-            }
-            if (!isStatic && existingEntry.value !== addr && !isMacroLabel) {
-              throw new Error(
-                `Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`
-              );
-            }
-          }
-        }
-        if (modifiesHierarchy && !label.startsWith(".")) {
-          this.host.currentParentLabel = fullLabel;
-          this.host.currentParentIsGlobal = isGlobal;
-        }
-        this.host.labelTable.set(fullLabel, {
-          value: addr,
-          isStatic,
-          isMacroLabel,
-          macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
-          modifiesHierarchy
-        });
-        this.host.recordSymbolDefinition("label", fullLabel, {
-          value: addr,
-          containerName: this.symbolContainerName(fullLabel, isGlobal)
-        });
-        if (directScopeLabel) {
-          this.host.labelTable.set(directScopeLabel, {
-            value: addr,
-            isStatic,
-            isMacroLabel,
-            macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
-            modifiesHierarchy: false
-          });
-        }
-      }
-      /**
-       * Resolves a struct member.
-       * @param {string} compoundId The compound ID of the struct member.
-       * @returns {number} The address of the struct member.
-       */
-      resolveStructMember(compoundId) {
-        const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
-        if (!firstId || !this.host.structs.has(firstId))
-          throw new Error(`Struct not found: ${compoundId}`);
-        let rest = compoundId.substring(firstId.length).trim();
-        let base = 0;
-        let currentStruct = this.host.structs.get(firstId);
-        if (!currentStruct) {
-          throw new Error(`Struct not found: ${compoundId}`);
-        }
-        while (rest.length > 0) {
-          if (rest.startsWith(".")) {
-            rest = rest.substring(1).trim();
-            const memberMatch = rest.match(/^([A-Z_a-z]\w*)/);
-            if (!memberMatch) throw new Error(`Invalid struct member: ${compoundId}`);
-            const memberName = memberMatch[1];
-            rest = rest.substring(memberName.length).trim();
-            const memberOffset = currentStruct.labels.get(memberName);
-            if (memberOffset !== void 0) {
-              return base + memberOffset;
-            }
-            const childStruct = this.host.structs.get(memberName);
-            if (childStruct && childStruct.parent === currentStruct.name) {
-              currentStruct = childStruct;
-            } else {
-              throw new Error(`Struct member not found: ${currentStruct.name}.${memberName}`);
-            }
-          } else if (rest.startsWith("[")) {
-            const bracketEnd = rest.indexOf("]");
-            if (bracketEnd === -1) throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
-            const indexStr = rest.substring(1, bracketEnd).trim();
-            const index2 = Number.parseInt(indexStr, 10);
-            if (Number.isNaN(index2)) throw new Error(`Invalid struct index: ${indexStr}`);
-            rest = rest.substring(bracketEnd + 1).trim();
-            base += index2 * currentStruct.size;
-          } else {
-            break;
-          }
-        }
-        return base;
-      }
-      /**
-       * Gets the value of a label.
-       * @param {string} label The label to get the value of.
-       * @param {boolean} requireStatic Whether the label must be static.
-       * @returns {number} The value of the label.
-       */
-      getLabelValue(label, requireStatic) {
-        const value = this.tryGetLabelValue(label, requireStatic);
-        if (value !== void 0) {
-          return value;
-        }
-        if (this.host.isDefinitionCollectionStage) {
-          return 0;
-        }
-        throw new Error(`Error: Label '${label}' not found.`);
-      }
-      /**
-       * Tries to get a scoped label value without allocating an Error for a miss.
-       * @param {string} label The label to get the value of.
-       * @param {boolean} requireStatic Whether the label must be static.
-       * @returns {number | undefined} The value, or undefined when not found.
-       */
-      tryGetLabelValue(label, requireStatic) {
-        if (parseUnnamedLabelReference(label)) {
-          if (!this.host.enforceResolvedLabels) {
-            return void 0;
-          }
-          return this.findUnnamedLabel(label);
-        }
-        const cheap = this.toCheapDotLabel(label);
-        if (cheap !== label) {
-          return this.tryGetLabelValue(cheap, requireStatic);
-        }
-        if (label.startsWith(".") && this.host.currentParentLabel) {
-          let dotCount = 0;
-          while (label[dotCount] === ".") {
-            dotCount++;
-          }
-          const localName = label.substring(dotCount);
-          const candidates = /* @__PURE__ */ new Set();
-          const nestedLocalParts = localName.split("_").filter(Boolean);
-          const hierarchyChain = this.getHierarchyChain(this.host.currentParentLabel);
-          let currentLocalName;
-          if (hierarchyChain.length >= 2) {
-            const parentPrefix = `${hierarchyChain[hierarchyChain.length - 2]}_`;
-            if (this.host.currentParentLabel.startsWith(parentPrefix)) {
-              currentLocalName = this.host.currentParentLabel.slice(parentPrefix.length);
-            }
-          }
-          const addCandidate = (candidate) => {
-            if (candidate === this.host.currentParentLabel && currentLocalName !== localName) {
-              return;
-            }
-            candidates.add(candidate);
-          };
-          const addExactLocalCandidate = (parentPrefix) => {
-            addCandidate(`${parentPrefix}_${localName}`);
-          };
-          const addShortenedLocalCandidates = (parentPrefix) => {
-            for (let i = 1; i < nestedLocalParts.length; i++) {
-              addCandidate(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
-            }
-          };
-          addExactLocalCandidate(this.host.currentParentLabel);
-          for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
-            addExactLocalCandidate(ancestorPrefix);
-          }
-          for (let i = hierarchyChain.length - 2; i >= 0; i--) {
-            addExactLocalCandidate(hierarchyChain[i]);
-          }
-          addShortenedLocalCandidates(this.host.currentParentLabel);
-          for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
-            addShortenedLocalCandidates(ancestorPrefix);
-          }
-          for (let i = hierarchyChain.length - 2; i >= 0; i--) {
-            addShortenedLocalCandidates(hierarchyChain[i]);
-          }
-          for (const candidate of candidates) {
-            const value = this.tryGetLabelValueDirect(candidate, requireStatic);
-            if (value !== void 0) {
-              return value;
-            }
-          }
-        }
-        const qualified = this.qualifySymbolName(label);
-        if (qualified !== label) {
-          const scoped = this.tryGetLabelValueDirect(qualified, requireStatic);
-          if (scoped !== void 0) {
-            return scoped;
-          }
-        }
-        const isMacroLabelRef = label.startsWith("?");
-        if (isMacroLabelRef && this.host.inMacroExpansion) {
-          const labelName = label.substring(1);
-          if (labelName.includes("_")) {
-            const [parentPart, subPart] = labelName.split("_", 2);
-            const childLabel = `:macro_${this.host.macroLabelInstance}_.${subPart}`;
-            const childEntry = this.host.labelTable.get(childLabel);
-            if (childEntry) {
-              if (requireStatic && !childEntry.isStatic) {
-                throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
-              }
-              return childEntry.value;
-            }
-            const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
-            const parentChildEntry = this.host.labelTable.get(parentChildLabel);
-            if (parentChildEntry) {
-              if (requireStatic && !parentChildEntry.isStatic) {
-                throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
-              }
-              return parentChildEntry.value;
-            }
-          }
-          const macroLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-          const macroEntry = this.host.labelTable.get(macroLabel);
-          if (macroEntry) {
-            if (requireStatic && !macroEntry.isStatic) {
-              throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
-            }
-            return macroEntry.value;
-          }
-          if (labelName.startsWith(".")) {
-            const macroLabelNoDot = `:macro_${this.host.macroLabelInstance}_${labelName}`;
-            const macroNoDotEntry = this.host.labelTable.get(macroLabelNoDot);
-            if (macroNoDotEntry) {
-              if (requireStatic && !macroNoDotEntry.isStatic) {
-                throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
-              }
-              return macroNoDotEntry.value;
-            }
-          }
-        }
-        if (label.includes(":") || label.includes("_")) {
-          return this.tryGetLabelValueDirect(label, requireStatic);
-        }
-        if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0) {
-          for (let i = this.host.namespaceNestingPath.length; i >= 0; i--) {
-            const namespacePath = this.host.namespaceNestingPath.slice(0, i);
-            const namespacePrefix = namespacePath.join("_");
-            const fullLabel = namespacePrefix ? `${namespacePrefix}_${label}` : label;
-            const value = this.tryGetLabelValueDirect(fullLabel, requireStatic);
-            if (value !== void 0) {
-              return value;
-            }
-          }
-        }
-        if (this.host.currentNamespace) {
-          const value = this.tryGetLabelValueDirect(
-            `${this.host.currentNamespace}_${label}`,
-            requireStatic
-          );
-          if (value !== void 0) {
-            return value;
-          }
-        }
-        return this.tryGetLabelValueDirect(label, requireStatic);
-      }
-      /**
-       * Gets the value of a label directly.
-       * @param {string} label The label to get the value of.
-       * @param {boolean} requireStatic Whether the label must be static.
-       * @returns {number} The value of the label.
-       */
-      getLabelValueDirect(label, requireStatic) {
-        const value = this.tryGetLabelValueDirect(label, requireStatic);
-        if (value !== void 0) {
-          return value;
-        }
-        if (this.host.isDefinitionCollectionStage) {
-          return 0;
-        }
-        throw new Error(`Error: Label '${label}' not found.`);
-      }
-      /**
-       * Tries a direct label lookup without allocating an Error for ordinary misses.
-       * @param {string} label The label to get the value of.
-       * @param {boolean} requireStatic Whether the label must be static.
-       * @returns {number | undefined} The value, or undefined when not found.
-       */
-      tryGetLabelValueDirect(label, requireStatic) {
-        if (label.includes("_") && !label.includes(":")) {
-          const parts = label.split("_");
-          if (parts.length === 2) {
-            const parentLabel = parts[0];
-            const localLabel = `.${parts[1]}`;
-            const combinedLabel = `${parentLabel}_${localLabel.replace(/^\./, "")}`;
-            const combinedEntry = this.host.labelTable.get(combinedLabel);
-            if (combinedEntry) {
-              if (requireStatic && !combinedEntry.isStatic) {
-                throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
-              }
-              return combinedEntry.value;
-            }
-            const localEntry = this.host.labelTable.get(localLabel);
-            if (localEntry) {
-              if (requireStatic && !localEntry.isStatic) {
-                throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
-              }
-              return localEntry.value;
-            }
-          }
-        }
-        const entry = this.host.labelTable.get(label);
-        if (!entry) {
-          return void 0;
-        }
-        if (requireStatic && !entry.isStatic) {
-          throw new Error(`Error: Non-static label '${label}' used in conditional.`);
-        }
-        return entry.value;
-      }
-      /**
-       * Gets the size of a struct or extension.
-       * @param {string} identifier The identifier of the struct or extension.
-       * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
-       * @returns {number} The size of the struct or extension.
-       * @throws {Error} If the struct or extension doesn't exist.
-       */
-      getObjectSize(identifier, baseOnly = false) {
-        let workingIdentifier = identifier;
-        if (workingIdentifier.startsWith('"') && workingIdentifier.endsWith('"')) {
-          workingIdentifier = workingIdentifier.substring(1, workingIdentifier.length - 1);
-        }
-        const directDef = this.host.structs.get(workingIdentifier);
-        if (directDef) {
-          if (baseOnly) {
-            return directDef.size;
-          }
-          return !directDef.parent ? directDef.size + directDef.extensionSize : directDef.size;
-        }
-        if (workingIdentifier.includes(".")) {
-          const parts = workingIdentifier.split(".").filter(Boolean);
-          let current = parts[0];
-          if (!this.host.structs.has(current)) {
-            throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
-          }
-          for (let i = 1; i < parts.length; i++) {
-            const child = parts[i];
-            const childDef = this.host.structs.get(child);
-            if (!childDef || childDef.parent !== current) {
-              throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
-            }
-            current = child;
-          }
-          workingIdentifier = current;
-        }
-        if (!this.host.structs.has(workingIdentifier)) {
-          throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
-        }
-        const def = this.host.structs.get(workingIdentifier);
-        if (!def) {
-          throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
-        }
-        if (baseOnly) {
-          return def.size;
-        }
-        return !def.parent ? def.size + def.extensionSize : def.size;
-      }
-      /**
-       * Returns the outline container for a stored label name.
-       * Sublabels nest under their parent; namespaced labels nest under the namespace.
-       * @param {string} fullLabel The stored label name.
-       * @param {boolean} isGlobal Whether the label is global.
-       * @returns {string | undefined} The container name, if any.
-       */
-      symbolContainerName(fullLabel, isGlobal) {
-        const parent = this.host.labelParents.get(fullLabel);
-        if (parent) {
-          return parent;
-        }
-        if (!isGlobal && this.host.currentNamespace && fullLabel.startsWith(`${this.host.currentNamespace}_`)) {
-          return this.host.currentNamespace;
-        }
-        return void 0;
-      }
-      /**
-       * Handles a label definition.
-       * @param {string} labelName The name of the label.
-       */
-      handleLabelDefinition(labelName) {
-        labelName = this.toCheapDotLabel(labelName);
-        if (!(labelName.startsWith(".") || labelName.startsWith("#."))) {
-          labelName = this.qualifySymbolName(labelName);
-        }
-        if (labelName.startsWith(".") || labelName.startsWith("#.")) {
-          if (!this.host.currentParentLabel) {
-            throw new Error("Sublabel without parent label");
-          }
-          const isHashLabel2 = labelName.startsWith("#");
-          const modifiesHierarchy2 = !isHashLabel2;
-          let dotCount = 0;
-          while (labelName[dotCount] === ".") {
-            dotCount++;
-          }
-          const subLabelName = labelName.substring(dotCount);
-          const parentLabel = this.getScopedParentLabel(dotCount);
-          const directScopeLabel = `${parentLabel}_${subLabelName}`;
-          this.host.labelParents.set(directScopeLabel, parentLabel);
-          if (this.host.currentNamespace) {
-            const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
-            if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-              const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
-              const qualifiedParent = this.qualifyNamespaceAlias(namespacePrefix, parentLabel);
-              this.host.labelParents.set(namespacedLabel, qualifiedParent);
-              this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
-              if (modifiesHierarchy2) {
-                this.host.currentParentLabel = directScopeLabel;
-                this.host.currentParentIsGlobal = dotCount === 1;
-              }
-              this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy2);
-              return;
-            }
-          }
-          this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
-          if (modifiesHierarchy2) {
-            this.host.currentParentLabel = directScopeLabel;
-            this.host.currentParentIsGlobal = dotCount === 1;
-          }
-          if (this.host.currentNamespace) {
-            const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
-            if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
-              const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
-              this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy2);
-            }
-          }
-          return;
-        }
-        const isHashLabel = labelName.startsWith("#");
-        const modifiesHierarchy = !isHashLabel;
-        if (modifiesHierarchy) {
-          this.host.currentParentLabel = labelName;
-          this.host.currentParentIsGlobal = true;
-          this.host.currentGlobalParentLabel = labelName;
-        }
-        this.host.labelParents.set(labelName, null);
-        this.setLabel(labelName, void 0, false, false, false, modifiesHierarchy);
-        if (modifiesHierarchy) {
-          this.host.currentParentLabel = labelName;
-          this.host.currentParentIsGlobal = true;
-          this.host.currentGlobalParentLabel = labelName;
-        }
-        if (this.host.currentNamespace) {
-          const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
-          if (!labelName.startsWith(`${namespacePrefix}_`)) {
-            const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, labelName);
-            this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy);
-          }
-        }
-      }
-    };
-  }
-});
-
 // packages/core/src/file-provider.ts
 import fs2 from "node:fs";
 import path from "node:path";
@@ -8207,6 +2424,1973 @@ var init_file_provider = __esm({
        */
       readTextFile(filePath, encoding = "utf8") {
         return fs2.readFileSync(filePath, encoding);
+      }
+    };
+  }
+});
+
+// packages/core/src/internal-instrumentation.ts
+import { performance } from "node:perf_hooks";
+function sampleMemory(metrics) {
+  const memory = process.memoryUsage();
+  metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
+  metrics.peakHeapUsedBytes = Math.max(metrics.peakHeapUsedBytes, memory.heapUsed);
+}
+function incrementInternalCounter(name, amount = 1) {
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.counters[name] += amount;
+  }
+}
+function isInternalInstrumentationActive() {
+  return activeInstrumentation !== void 0;
+}
+function recordInternalCounterPeak(name, value) {
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.counters[name] = Math.max(metrics.counters[name], value);
+  }
+}
+function measureInternalPhase(name, callback) {
+  const metrics = activeInstrumentation;
+  if (!metrics) {
+    return callback();
+  }
+  const start = performance.now();
+  try {
+    return callback();
+  } finally {
+    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance.now() - start;
+    sampleMemory(metrics);
+  }
+}
+var activeInstrumentation;
+var init_internal_instrumentation = __esm({
+  "packages/core/src/internal-instrumentation.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/ir/normalized-command.ts
+function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
+  if (!collectSourceMetadata) {
+    return {
+      file,
+      line,
+      raw,
+      normalized,
+      span: EMPTY_COMMAND_SPAN,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS
+    };
+  }
+  return {
+    file,
+    line,
+    raw,
+    normalized,
+    span: createLineSpan(raw, line),
+    normalizedSpan: createLineSpan(normalized, line),
+    tokenSpans: deriveTokenSpans(raw, words, line)
+  };
+}
+function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
+  const command = normalized.trim();
+  const keyword = words[0] ?? "";
+  return {
+    kind: classifyCommand(command, words),
+    source: createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata),
+    command,
+    words,
+    keyword,
+    labelName: deriveLabelName(keyword),
+    assignmentTarget: deriveAssignmentTarget(words),
+    parsed: deriveCommandSemantics(command, words)
+  };
+}
+function cloneNormalizedCommand(command) {
+  incrementInternalCounter("normalizedCommandClones");
+  return { ...command };
+}
+function setCommandWords(command, words, normalized) {
+  command.words = words;
+  command.keyword = words[0] ?? "";
+  command.command = (normalized ?? words.join(" ")).trim();
+  const normalizedSource = normalized ?? command.command;
+  if (command.source.tokenSpans === EMPTY_TOKEN_SPANS) {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS
+    };
+  } else {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: createLineSpan(normalizedSource, command.source.line),
+      tokenSpans: deriveTokenSpans(command.source.raw, words, command.source.line)
+    };
+  }
+  command.labelName = deriveLabelName(command.keyword);
+  command.assignmentTarget = deriveAssignmentTarget(words);
+  command.parsed = deriveCommandSemantics(command.command, words);
+  command.kind = classifyCommand(command.command, words);
+  return command;
+}
+function setCommandKind(command, kind) {
+  command.kind = kind;
+  return command;
+}
+function classifyCommand(command, words) {
+  const trimmed = command.trim();
+  const keyword = (words[0] ?? "").toLowerCase();
+  if (!trimmed || trimmed.startsWith(";")) {
+    return "commentOrEmpty";
+  }
+  if (words.length === 3 && words[1] === "=" && (words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
+    return "characterMapping";
+  }
+  if (trimmed.startsWith("!")) {
+    return "defineCommand";
+  }
+  if (keyword === "macro" || keyword === "endmacro" || keyword.startsWith("%")) {
+    return "macroDefinitionOrInvoke";
+  }
+  if (keyword === "undef") {
+    return "defineCommand";
+  }
+  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip" || keyword === "datastruct" || keyword === "datastructs" || keyword === "enddatastructs" || /^\[[^\]]+]\s*=/.test(trimmed)) {
+    return "structCommand";
+  }
+  if (keyword === "function") {
+    return "functionDefinition";
+  }
+  if (keyword === "global") {
+    return "labelDefinition";
+  }
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
+    return "staticAssignment";
+  }
+  if (deriveLabelName(words[0] ?? "")) {
+    return "labelDefinition";
+  }
+  return keyword ? "opcodeCandidate" : "unknown";
+}
+function deriveLabelName(keyword) {
+  if (!keyword) {
+    return void 0;
+  }
+  if (keyword === ":") {
+    return ":";
+  }
+  if (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword)) {
+    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+  }
+  if (keyword.endsWith(":") || keyword.startsWith(".")) {
+    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+  }
+  return void 0;
+}
+function deriveAssignmentTarget(words) {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
+    return words[0];
+  }
+  return void 0;
+}
+function deriveCommandSemantics(command, words) {
+  const keyword = (words[0] ?? "").toLowerCase();
+  const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
+  const semantics = {};
+  if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
+    semantics.condition = {
+      expression: parseExpressionNode(words.slice(1).join(" "))
+    };
+  }
+  if (keyword === "for" && words.length >= 4 && words[2] === "=") {
+    const variable = words[1];
+    const parsedRange = parseExpressionNode(words.slice(3).join(" "));
+    if (parsedRange.type === "range") {
+      semantics.forLoop = {
+        variable,
+        range: parsedRange,
+        start: parsedRange.start,
+        end: parsedRange.end
+      };
+    }
+  }
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=") && !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
+    semantics.assignment = {
+      target: words[0],
+      expression: parseExpressionNode(words[2])
+    };
+  }
+  if (bareKeyword === "incbin" && words.length >= 2) {
+    const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
+    const colonIndex = incbinSource.indexOf(":");
+    const rangeCandidate = colonIndex === -1 ? void 0 : incbinSource.slice(colonIndex + 1);
+    if (rangeCandidate) {
+      const parsedRange = parseExpressionNode(rangeCandidate);
+      if (parsedRange.type === "range") {
+        semantics.incbinRange = {
+          range: parsedRange,
+          start: parsedRange.start,
+          end: parsedRange.end
+        };
+      }
+    }
+    const includePath = extractIncludePath(incbinSource);
+    if (includePath) {
+      semantics.includeTarget = { directive: "incbin", target: includePath };
+    }
+  }
+  if (keyword.startsWith("%")) {
+    const invocationText = command.trim().slice(1);
+    const openParen = invocationText.indexOf("(");
+    if (openParen !== -1 && invocationText.endsWith(")")) {
+      const name = invocationText.slice(0, openParen).trim();
+      const argsText = invocationText.slice(openParen + 1, -1);
+      const args = splitCommaArguments(argsText);
+      semantics.macroInvocation = { name, args };
+    } else if (invocationText) {
+      semantics.macroInvocation = { name: invocationText.trim(), args: [] };
+    }
+  }
+  if ((bareKeyword === "include" || bareKeyword === "incsrc") && words.length >= 2) {
+    semantics.includeTarget = {
+      directive: bareKeyword,
+      target: words.slice(1).join(" ").trim()
+    };
+  }
+  const labelSplit = extractLabelSplit(command);
+  if (labelSplit) {
+    semantics.labelSplit = labelSplit;
+  }
+  if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword) && words.length >= 2) {
+    const payload = command.slice((words[0] ?? "").length).trim();
+    semantics.dataDirective = {
+      directive: keyword,
+      operands: splitCommaArguments(payload)
+    };
+  }
+  if (keyword && !keyword.startsWith("%") && !keyword.startsWith("!")) {
+    const payload = command.slice((words[0] ?? "").length).trim();
+    const args = semantics.dataDirective?.operands ?? (payload ? splitCommaArguments(payload) : []);
+    semantics.directiveArgs = {
+      name: keyword,
+      args
+    };
+    if (!deriveLabelName(words[0] ?? "") && payload) {
+      semantics.opcodeOperands = {
+        mnemonic: words[0] ?? "",
+        operandText: payload,
+        operands: args
+      };
+    }
+  }
+  return semantics;
+}
+function extractIncludePath(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (quote === '"' || quote === "'" || quote === "`") {
+    const end = trimmed.indexOf(quote, 1);
+    if (end !== -1) {
+      return trimmed.slice(1, end);
+    }
+  }
+  const colonIndex = trimmed.indexOf(":");
+  const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
+  return pathToken.replace(/^["'`]+|["'`]+$/g, "");
+}
+function extractLabelSplit(command) {
+  const trimmed = command.trim();
+  const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
+  if (!labelMatch) {
+    return void 0;
+  }
+  const trailing = labelMatch[2].trim();
+  return {
+    label: labelMatch[1],
+    trailing: trailing || void 0
+  };
+}
+function splitCommaArguments(input) {
+  const values = [];
+  let current = "";
+  let depth = 0;
+  let inQuote = false;
+  let quoteChar = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      if (!inQuote) {
+        inQuote = true;
+        quoteChar = char;
+      } else if (quoteChar === char) {
+        inQuote = false;
+      }
+      current += char;
+      continue;
+    }
+    if (!inQuote && char === "(") {
+      depth++;
+      current += char;
+      continue;
+    }
+    if (!inQuote && char === ")") {
+      depth = Math.max(0, depth - 1);
+      current += char;
+      continue;
+    }
+    if (!inQuote && depth === 0 && char === ",") {
+      const normalized = current.trim();
+      if (normalized) {
+        values.push(normalized);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const tail = current.trim();
+  if (tail) {
+    values.push(tail);
+  }
+  return values;
+}
+var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
+var init_normalized_command = __esm({
+  "packages/core/src/ir/normalized-command.ts"() {
+    "use strict";
+    init_internal_instrumentation();
+    init_source_location();
+    init_expression_node();
+    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
+    EMPTY_TOKEN_SPANS = Object.freeze([]);
+  }
+});
+
+// packages/core/src/mathcore.ts
+function throwMathError(message) {
+  throw new AssemblyError("MATH_EVALUATION_ERROR", message);
+}
+function getOperator(operators, token) {
+  if (!Object.hasOwn(operators, token)) {
+    return void 0;
+  }
+  return operators[token];
+}
+function isScanWhitespace(code) {
+  if (code === 32 || code === 9 || code === 10 || code === 13) {
+    return true;
+  }
+  if (code === 11 || code === 12 || code === 160 || code === 65279) {
+    return true;
+  }
+  return false;
+}
+function isWordChar(code) {
+  if (code >= 48 && code <= 57) {
+    return true;
+  }
+  if (code >= 65 && code <= 90) {
+    return true;
+  }
+  if (code >= 97 && code <= 122) {
+    return true;
+  }
+  return code === 95;
+}
+var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
+var init_mathcore = __esm({
+  "packages/core/src/mathcore.ts"() {
+    "use strict";
+    init_diagnostics();
+    init_internal_instrumentation();
+    init_expression_node();
+    OPERATORS = {
+      // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
+      "**": { priority: 6, operation: (left, right) => Math.pow(left, right) },
+      "*": { priority: 5, operation: (left, right) => left * right },
+      "/": {
+        priority: 5,
+        operation: (left, right) => right !== 0 ? left / right : throwMathError("Division by zero")
+      },
+      "%": {
+        priority: 5,
+        operation: (left, right) => right !== 0 ? left % right : throwMathError("Modulo by zero")
+      },
+      "+": { priority: 4, operation: (left, right) => left + right },
+      "-": { priority: 4, operation: (left, right) => left - right },
+      "<<": { priority: 3, operation: (left, right) => left << right },
+      ">>": { priority: 3, operation: (left, right) => left >> right },
+      "&": { priority: 3, operation: (left, right) => left & right },
+      "|": { priority: 3, operation: (left, right) => left | right },
+      "^": { priority: 3, operation: (left, right) => left ^ right },
+      "<": { priority: 2, operation: (left, right) => left < right ? 1 : 0 },
+      ">": { priority: 2, operation: (left, right) => left > right ? 1 : 0 },
+      "<=": { priority: 2, operation: (left, right) => left <= right ? 1 : 0 },
+      ">=": { priority: 2, operation: (left, right) => left >= right ? 1 : 0 },
+      "==": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
+      "=": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
+      "!=": { priority: 2, operation: (left, right) => left !== right ? 1 : 0 },
+      "&&": { priority: 1, operation: (left, right) => left && right ? 1 : 0 },
+      "||": { priority: 0, operation: (left, right) => left || right ? 1 : 0 }
+    };
+    BUILTIN_NUMERIC_UNARY = {
+      sqrt: Math.sqrt,
+      sin: Math.sin,
+      cos: Math.cos,
+      tan: Math.tan,
+      asin: Math.asin,
+      acos: Math.acos,
+      atan: Math.atan,
+      log: Math.log,
+      log10: Math.log10,
+      log2: Math.log2,
+      ceil: Math.ceil,
+      floor: Math.floor
+    };
+    NUMERIC_UNARY_ALIASES = {
+      arcsin: "asin",
+      arccos: "acos",
+      arctan: "atan"
+    };
+    STRING_FIRST_ARG_FUNCTIONS = /* @__PURE__ */ new Set([
+      "defined",
+      "sizeof",
+      "objectsize",
+      "datasize",
+      "filesize",
+      "getfilestatus"
+    ]);
+    STRING_TWO_ARG_FUNCTIONS = /* @__PURE__ */ new Set(["stringsequal", "stringsequalnocase"]);
+    FILE_STRING_FUNCTION = /^(?:canreadfile|readfile)\d?$/;
+    MathCore = class {
+      pureStringExpressionCache = /* @__PURE__ */ new Map();
+      roundedPureStringExpressionCache = /* @__PURE__ */ new Map();
+      pureStringClassification = /* @__PURE__ */ new Map();
+      instrumentedExpressionStrings = /* @__PURE__ */ new Set();
+      instrumentedPureExpressionStrings = /* @__PURE__ */ new Set();
+      instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
+      instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
+      host;
+      math_round = false;
+      userFunctions = /* @__PURE__ */ new Map();
+      expressionFunctions = /* @__PURE__ */ new Map();
+      operators = OPERATORS;
+      /** Full expression currently being scanned. */
+      scanSource = "";
+      /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+      scanIndex = 0;
+      /**
+       * Remaining unconsumed expression text.
+       * @returns {string} The unconsumed source from the scan cursor.
+       */
+      get str() {
+        return this.scanSource.slice(this.scanIndex);
+      }
+      /**
+       * Replaces the expression being scanned.
+       * @param {string} value The new expression source.
+       */
+      set str(value) {
+        this.scanSource = value;
+        this.scanIndex = 0;
+      }
+      /**
+       * Advances the scan cursor past ASCII / trim whitespace.
+       */
+      skipWhitespace() {
+        const source = this.scanSource;
+        let index2 = this.scanIndex;
+        while (index2 < source.length && isScanWhitespace(source.charCodeAt(index2))) {
+          index2++;
+        }
+        this.scanIndex = index2;
+      }
+      /**
+       * Returns whether the remaining source starts with a literal.
+       * @param {string} text The literal to match.
+       * @returns {boolean} Whether the literal is present at the cursor.
+       */
+      remainingStartsWith(text) {
+        return this.scanSource.startsWith(text, this.scanIndex);
+      }
+      /**
+       * Consumes a fixed number of characters from the scan cursor.
+       * @param {number} count The number of characters to consume.
+       */
+      advance(count) {
+        this.scanIndex += count;
+      }
+      /**
+       * Initialize the math core.
+       */
+      reset() {
+        this.math_round = false;
+        this.userFunctions.clear();
+        this.clearExpressionCaches();
+      }
+      /**
+       * Installs a target-provided expression function for this session.
+       * @param {string | readonly string[]} names The canonical name and aliases.
+       * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+       */
+      registerExpressionFunction(names, expressionFunction) {
+        for (const name of typeof names === "string" ? [names] : names) {
+          this.expressionFunctions.set(name.toLowerCase(), expressionFunction);
+        }
+      }
+      /**
+       * Starts a new expression-cache snapshot for an assembly.
+       */
+      beginAssemblySnapshot() {
+        this.clearExpressionCaches();
+      }
+      /**
+       * Releases expression values retained for a completed assembly.
+       */
+      endAssemblySnapshot() {
+        this.clearExpressionCaches();
+      }
+      /**
+       * Clears expression caches retained for the current assembly.
+       */
+      clearExpressionCaches() {
+        this.pureStringExpressionCache.clear();
+        this.roundedPureStringExpressionCache.clear();
+        this.pureStringClassification.clear();
+        this.instrumentedExpressionStrings.clear();
+        this.instrumentedPureExpressionStrings.clear();
+        this.instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
+        this.instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
+      }
+      /**
+       * Evaluates an expression.
+       * This is a direct conversion of `math` in `asar_math.cpp`.
+       * @param {string} expression The expression to evaluate.
+       * @returns {number} The result of the expression.
+       */
+      math = (expression) => {
+        if (isInternalInstrumentationActive()) {
+          return measureInternalPhase("expressionEvaluation", () => {
+            this.recordExpressionEvaluation(expression);
+            return this.evaluateMathInput(expression);
+          });
+        }
+        return this.evaluateMathInput(expression);
+      };
+      /**
+       * Evaluates a string or typed expression without instrumentation dispatch.
+       * @param {string | ExpressionNode} expression The expression to evaluate.
+       * @returns {number} The expression result.
+       */
+      evaluateMathInput(expression) {
+        if (typeof expression !== "string") {
+          return this.evaluateExpressionNode(expression);
+        }
+        return this.evaluateCachedStringExpression(expression);
+      }
+      /**
+       * Reuses successful results only for strings proven to contain literal operators.
+       * @param {string} expression The legacy expression source.
+       * @returns {number} The expression result.
+       */
+      evaluateCachedStringExpression(expression) {
+        let isPure = this.pureStringClassification.get(expression);
+        if (isPure === void 0) {
+          isPure = this.isPureExpressionNode(parseExpressionNode(expression));
+          this.pureStringClassification.set(expression, isPure);
+        }
+        if (!isPure) {
+          return this.evaluateStringExpression(expression);
+        }
+        const cache = this.math_round ? this.roundedPureStringExpressionCache : this.pureStringExpressionCache;
+        const cached = cache.get(expression);
+        if (cached !== void 0) {
+          incrementInternalCounter("pureStringExpressionCacheHits");
+          return cached;
+        }
+        incrementInternalCounter("pureStringExpressionCacheMisses");
+        const result = this.evaluateStringExpression(expression);
+        cache.set(expression, result);
+        return result;
+      }
+      /**
+       * Records the shape and reuse of a top-level expression evaluation.
+       * @param {string | ExpressionNode} expression The evaluated expression.
+       */
+      recordExpressionEvaluation(expression) {
+        incrementInternalCounter("expressionEvaluations");
+        if (typeof expression === "string") {
+          incrementInternalCounter("expressionStringEvaluations");
+          if (!this.instrumentedExpressionStrings.has(expression)) {
+            this.instrumentedExpressionStrings.add(expression);
+            incrementInternalCounter("expressionUniqueStringEvaluations");
+            if (this.isPureExpressionNode(parseExpressionNode(expression))) {
+              this.instrumentedPureExpressionStrings.add(expression);
+              incrementInternalCounter("pureStringExpressionUniqueValues");
+            }
+          }
+          if (this.instrumentedPureExpressionStrings.has(expression)) {
+            incrementInternalCounter("pureStringExpressionEvaluations");
+          }
+          return;
+        }
+        incrementInternalCounter("expressionNodeEvaluations");
+        if (!this.instrumentedExpressionNodes.has(expression)) {
+          this.instrumentedExpressionNodes.add(expression);
+          incrementInternalCounter("expressionUniqueNodeEvaluations");
+        }
+        if (!this.isPureExpressionNode(expression)) {
+          return;
+        }
+        incrementInternalCounter("pureExpressionEvaluations");
+        if (!this.instrumentedPureExpressionNodes.has(expression)) {
+          this.instrumentedPureExpressionNodes.add(expression);
+          incrementInternalCounter("pureExpressionUniqueNodes");
+        }
+      }
+      /**
+       * Determines whether an expression depends only on literal operators.
+       * @param {ExpressionNode} expression The expression to classify.
+       * @returns {boolean} Whether the result is independent of assembler state.
+       */
+      isPureExpressionNode(expression) {
+        switch (expression.type) {
+          case "literal":
+            return true;
+          case "unary":
+            return this.isPureExpressionNode(expression.argument);
+          case "binary":
+            return this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right);
+          default:
+            return false;
+        }
+      }
+      /**
+       * Evaluates a string expression using the legacy parser.
+       * @param {string} expression The expression to evaluate.
+       * @returns {number} The result of the expression.
+       */
+      evaluateStringExpression(expression) {
+        this.str = expression.trim();
+        const rval = this.evalMath(0);
+        if (rval === void 0) {
+          throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
+        }
+        this.skipWhitespace();
+        if (this.scanIndex < this.scanSource.length) {
+          if (this.remainingStartsWith(",")) {
+            throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
+          }
+          throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
+        }
+        return rval;
+      }
+      /**
+       * Evaluates an expression node using typed dispatch before falling back to string parsing.
+       * @param {ExpressionNode} expression The expression node to evaluate.
+       * @returns {number} The numeric result.
+       */
+      evaluateExpressionNode(expression) {
+        if (isReferenceExpressionNode(expression)) {
+          return this.evaluateReferenceExpressionNode(expression);
+        }
+        switch (expression.type) {
+          case "literal":
+            return this.parseLiteralNode(expression.value);
+          case "string":
+            throw new AssemblyError(
+              "MATH_STRING_NOT_NUMERIC",
+              `String expression is not directly numeric: ${expression.value}`
+            );
+          case "call":
+            return this.callFunction(
+              expression.callee.name,
+              expression.arguments.map(
+                (argument, index2) => this.evaluateCallArgument(expression.callee.name, index2, argument)
+              )
+            );
+          case "unary":
+            return this.evaluateUnaryExpressionNode(expression.operator, expression.argument);
+          case "binary":
+            return this.evaluateBinaryExpressionNode(
+              expression.operator,
+              expression.left,
+              expression.right
+            );
+          case "range":
+            throw new AssemblyError(
+              "MATH_RANGE_NOT_NUMERIC",
+              `Range expression is not directly numeric: ${renderExpressionNode(expression)}`
+            );
+          case "raw":
+          default:
+            return this.evaluateStringExpression(expression.value);
+        }
+      }
+      /**
+       * Evaluates call argument.
+       * @param {string} functionName The function name.
+       * @param {number} argumentIndex The argument index.
+       * @param {ExpressionNode} argument The argument.
+       * @returns {number | string} The result.
+       */
+      evaluateCallArgument(functionName, argumentIndex, argument) {
+        if (this.isStringArgument(functionName, argumentIndex)) {
+          switch (argument.type) {
+            case "identifier":
+              return argument.name;
+            case "string":
+              return argument.value;
+            case "raw":
+              return argument.value.replace(/^["']|["']$/g, "");
+            default:
+              return renderExpressionNode(argument);
+          }
+        }
+        switch (argument.type) {
+          case "string":
+            return argument.value;
+          case "range":
+            return renderExpressionNode(argument);
+          case "raw":
+            return this.evaluateStringExpression(argument.value);
+          default:
+            if (isReferenceExpressionNode(argument)) {
+              return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
+                renderReferenceExpressionNode(argument, {
+                  renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+                })
+              );
+            }
+            return this.evaluateExpressionNode(argument);
+        }
+      }
+      /**
+       * Evaluates unary expression node.
+       * @param {UnaryOperator} operator The operator.
+       * @param {ExpressionNode} argument The argument.
+       * @returns {number} The result.
+       */
+      evaluateUnaryExpressionNode(operator, argument) {
+        const value = this.evaluateExpressionNode(argument);
+        switch (operator) {
+          case "<:":
+            return value >>> 16;
+          case "<":
+            return value & 255;
+          case ">":
+            return value >> 8 & 255;
+          case "^":
+            return value >> 16 & 255;
+          case "~":
+            return ~value;
+          case "-":
+            return -value;
+          case "+":
+          default:
+            return value;
+        }
+      }
+      /**
+       * Evaluates binary expression node.
+       * @param {BinaryOperator} operator The operator.
+       * @param {ExpressionNode} left The left.
+       * @param {ExpressionNode} right The right.
+       * @returns {number} The result.
+       */
+      evaluateBinaryExpressionNode(operator, left, right) {
+        const spec = this.operators[operator];
+        return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
+      }
+      /**
+       * Resolves numeric identifier argument.
+       * @param {string} identifier The identifier.
+       * @returns {number | string} The result.
+       */
+      resolveNumericIdentifierArgument(identifier) {
+        try {
+          const resolved = this.getHost().resolveLabel(identifier);
+          return typeof resolved === "number" ? resolved : identifier;
+        } catch {
+          return identifier;
+        }
+      }
+      /**
+       * Evaluates reference expression node.
+       * @param {ReferenceExpressionNode} expression The expression.
+       * @returns {number} The result.
+       */
+      evaluateReferenceExpressionNode(expression) {
+        if (expression.type === "defineReference") {
+          throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
+        }
+        const reference = renderReferenceExpressionNode(expression, {
+          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+        });
+        const resolved = this.getHost().resolveLabel(reference);
+        if (typeof resolved === "number") {
+          return resolved;
+        }
+        throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
+      }
+      /**
+       * Resolves leading local label reference.
+       * @param {string} input The input.
+       * @returns {{ label: string; length: number } | undefined} The result.
+       */
+      resolveLeadingLocalLabelReference(input) {
+        const match = input.match(/^(\.+\w+)/);
+        if (!match) {
+          return void 0;
+        }
+        return { label: match[1], length: match[1].length };
+      }
+      /**
+       * Checks whether string argument.
+       * @param {string} functionName The function name.
+       * @param {number} argumentIndex The argument index.
+       * @returns {boolean} The result.
+       */
+      isStringArgument(functionName, argumentIndex) {
+        if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
+          return argumentIndex === 0;
+        }
+        if (STRING_TWO_ARG_FUNCTIONS.has(functionName)) {
+          return argumentIndex < 2;
+        }
+        if (FILE_STRING_FUNCTION.test(functionName)) {
+          return argumentIndex === 0;
+        }
+        return false;
+      }
+      /**
+       * Parses literal node.
+       * @param {string} value The value.
+       * @returns {number} The result.
+       */
+      parseLiteralNode(value) {
+        if (/^-?\d+$/.test(value)) {
+          return Number.parseInt(value, 10);
+        }
+        if (/^\$[\dA-Fa-f]+$/.test(value)) {
+          return Number.parseInt(value.slice(1), 16);
+        }
+        if (/^0x[\da-f]+$/i.test(value)) {
+          return Number.parseInt(value.slice(2), 16);
+        }
+        if (/^%[01]+$/.test(value)) {
+          return Number.parseInt(value.slice(1), 2);
+        }
+        throw new Error(`Unsupported literal expression: ${value}`);
+      }
+      /**
+       * Evaluates a mathematical expression.
+       * This replaces the C++ `eval` function.
+       * @param {number} depth The current depth of nested expressions.
+       * @param {string} [stopChar] The character to stop the evaluation at.
+       * @returns {number | undefined} The result of the evaluated expression, or
+       * `undefined` when an inline function definition consumes the expression.
+       */
+      evalMath(depth = 0, stopChar) {
+        let left;
+        if (this.remainingStartsWith("function")) {
+          this.parseFunctionDefinition();
+          left = this.evalMath(depth, stopChar);
+        } else if (this.scanIndex < this.scanSource.length) {
+          left = this.getnum();
+        }
+        if (left === void 0) {
+          return void 0;
+        }
+        if (Number.isNaN(left)) {
+          throw new Error(`Invalid number: ${left}`);
+        }
+        this.skipWhitespace();
+        while (this.scanIndex < this.scanSource.length) {
+          this.skipWhitespace();
+          if (stopChar && this.remainingStartsWith(stopChar)) {
+            break;
+          }
+          const nextChar = this.scanSource[this.scanIndex];
+          if (nextChar === "," || nextChar === ")" || nextChar === "]") {
+            break;
+          }
+          const op2 = this.peekNextOperator(this.operators, depth);
+          if (!op2) break;
+          this.advance(op2.length);
+          this.skipWhitespace();
+          const right = this.evalMath(this.operators[op2].priority + 1, stopChar);
+          if (right === void 0) {
+            throw new Error(`Missing right operand for operator '${op2}'.`);
+          }
+          left = this.operators[op2].operation(left, right);
+        }
+        if (this.math_round) {
+          left = Math.trunc(left);
+        }
+        if (Number.isNaN(left)) {
+          throw new Error(`Invalid number: ${left}`);
+        }
+        return left;
+      }
+      /**
+       * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
+       * @param {OperatorTable} operators The operators to check.
+       * @param {number} depth The current depth of nested expressions.
+       * @returns {BinaryOperator | null} The matching operator or null if no match.
+       */
+      peekNextOperator(operators, depth) {
+        this.skipWhitespace();
+        if (this.scanIndex >= this.scanSource.length) {
+          return null;
+        }
+        const remaining = this.scanSource.length - this.scanIndex;
+        if (remaining >= 2) {
+          const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
+          const twoOp = getOperator(operators, twoChars);
+          if (twoOp) {
+            if (twoOp.priority >= depth) {
+              return twoChars;
+            }
+            return null;
+          }
+        }
+        const oneChar = this.scanSource[this.scanIndex];
+        const oneOp = getOperator(operators, oneChar);
+        if (oneOp && oneOp.priority >= depth) {
+          return oneChar;
+        }
+        return null;
+      }
+      /**
+       * Parses numbers from a string while consuming valid characters.
+       * @param {RegExp} regex The regular expression to test against the string.
+       * @returns {string} The substring of the string that matches the regular expression.
+       */
+      consumeWhile(regex) {
+        const source = this.scanSource;
+        const start = this.scanIndex;
+        let index2 = start;
+        while (index2 < source.length && regex.test(source[index2])) {
+          index2++;
+        }
+        const result = source.slice(start, index2);
+        this.scanIndex = index2;
+        return result;
+      }
+      /**
+       * Retrieves a number from the string.
+       * This implements `getnumcore` and `getnum`.
+       * @returns {number} The number from the string.
+       */
+      getnum = () => {
+        this.skipWhitespace();
+        let applyBitshift = false;
+        let sign = 1;
+        while (true) {
+          if (this.remainingStartsWith("<:")) {
+            this.advance(2);
+            this.skipWhitespace();
+            applyBitshift = true;
+          } else if (this.remainingStartsWith("<") && !this.remainingStartsWith("<<") && !this.remainingStartsWith("<=")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return sign * (this.getnum() & 255) | 0;
+          } else if (this.remainingStartsWith(">") && !this.remainingStartsWith(">>") && !this.remainingStartsWith(">=")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return sign * (this.getnum() >> 8 & 255) | 0;
+          } else if (this.remainingStartsWith("^")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return sign * (this.getnum() >> 16 & 255) | 0;
+          } else if (this.remainingStartsWith("~")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return ~this.getnum();
+          } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
+            const after = this.scanSource[this.scanIndex + 1];
+            let isDefineLike = after === "{";
+            if (after !== void 0) {
+              const code = after.charCodeAt(0);
+              if (code >= 65 && code <= 90 || code >= 97 && code <= 122 || code === 95) {
+                isDefineLike = true;
+              }
+            }
+            if (!isDefineLike) {
+              this.advance(1);
+              this.skipWhitespace();
+              return ~this.getnum();
+            }
+            break;
+          } else if (this.remainingStartsWith("-")) {
+            this.advance(1);
+            this.skipWhitespace();
+            sign *= -1;
+          } else if (this.remainingStartsWith("+")) {
+            this.advance(1);
+            this.skipWhitespace();
+          } else {
+            break;
+          }
+        }
+        const fnName = this.scanFunctionCallName();
+        if (fnName !== void 0) {
+          const args = [];
+          if (this.scanSource[this.scanIndex] === "(") {
+            this.advance(1);
+            this.skipWhitespace();
+            if (!this.remainingStartsWith(")")) {
+              while (true) {
+                this.skipWhitespace();
+                if (this.remainingStartsWith(",")) {
+                  this.advance(1);
+                  this.skipWhitespace();
+                }
+                if (this.remainingStartsWith(")")) {
+                  break;
+                }
+                if (this.remainingStartsWith('"')) {
+                  args.push(this.parseStringLiteral());
+                } else if (this.isStringArgument(fnName, args.length)) {
+                  args.push(this.parseUnquotedStringArgument(fnName));
+                } else {
+                  const val = this.evalMath(0, ")");
+                  if (val === void 0) {
+                    throw new Error(`Missing function argument for '${fnName}'.`);
+                  }
+                  args.push(val);
+                }
+                this.skipWhitespace();
+                if (this.remainingStartsWith(")")) {
+                  break;
+                }
+                if (this.remainingStartsWith(",")) {
+                  this.advance(1);
+                  this.skipWhitespace();
+                  continue;
+                }
+                throw new Error(`Expected ',' or ')' in function call arguments: ${this.str}`);
+              }
+            }
+            const outerSource = this.scanSource;
+            const afterCall = this.scanIndex + 1;
+            const result = this.callFunction(fnName, args);
+            this.scanSource = outerSource;
+            this.scanIndex = afterCall;
+            this.skipWhitespace();
+            let value2 = sign * result;
+            if (applyBitshift) {
+              value2 = value2 >>> 16;
+            }
+            return value2;
+          }
+        }
+        let value;
+        if (this.remainingStartsWith("(")) {
+          this.advance(1);
+          this.skipWhitespace();
+          const nestedValue = this.evalMath(0, ")");
+          if (nestedValue === void 0) {
+            throw new Error("Empty parenthesized expression.");
+          }
+          value = nestedValue;
+          if (!this.remainingStartsWith(")")) {
+            throw new Error("Mismatched parentheses.");
+          }
+          this.advance(1);
+          this.skipWhitespace();
+        } else if (this.remainingStartsWith("$")) {
+          this.advance(1);
+          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
+        } else if (this.remainingStartsWith("0x")) {
+          this.advance(2);
+          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
+        } else if (this.remainingStartsWith("%")) {
+          this.advance(1);
+          value = parseInt(this.consumeWhile(/[01]/), 2);
+        } else if (/\d/.test(this.scanSource[this.scanIndex] ?? "")) {
+          value = parseFloat(this.consumeWhile(/[\d.]/));
+        } else {
+          const remaining = this.str;
+          const unnamedMatch = remaining.match(/^(:(\++|-+))/);
+          if (unnamedMatch) {
+            this.advance(unnamedMatch[1].length);
+            this.skipWhitespace();
+            const resolved = this.getHost().resolveLabel(unnamedMatch[1]);
+            if (typeof resolved !== "number") {
+              throw new Error(`Reference '${unnamedMatch[1]}' did not resolve to a numeric value.`);
+            }
+            value = resolved;
+          } else {
+            const reference = parseLeadingReferenceExpression(remaining);
+            if (reference) {
+              this.advance(reference.length);
+              this.skipWhitespace();
+              const renderedReference = renderReferenceExpressionNode(reference.node, {
+                renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+              });
+              const resolved = this.getHost().resolveLabel(renderedReference);
+              if (typeof resolved !== "number") {
+                throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
+              }
+              value = resolved;
+            } else {
+              const localReference = this.resolveLeadingLocalLabelReference(remaining);
+              if (localReference) {
+                this.advance(localReference.length);
+                this.skipWhitespace();
+                const resolved = this.getHost().resolveLabel(localReference.label);
+                if (typeof resolved !== "number") {
+                  throw new Error(
+                    `Reference '${localReference.label}' did not resolve to a numeric value.`
+                  );
+                }
+                value = resolved;
+              } else {
+                const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
+                if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+                  throw new Error("Mismatched brackets in struct index");
+                }
+                throw new Error(`Invalid number: ${remaining}`);
+              }
+            }
+          }
+        }
+        value = sign * value;
+        if (applyBitshift) {
+          value = value >>> 16;
+        }
+        return value;
+      };
+      /**
+       * Scans a function-call name if the next token is `name(`.
+       * Leaves the cursor on `(`.
+       * @returns {string | undefined} The function name, if a call starts here.
+       */
+      scanFunctionCallName() {
+        const source = this.scanSource;
+        let index2 = this.scanIndex;
+        if (index2 >= source.length || !isWordChar(source.charCodeAt(index2))) {
+          return void 0;
+        }
+        index2++;
+        while (index2 < source.length && isWordChar(source.charCodeAt(index2))) {
+          index2++;
+        }
+        const name = source.slice(this.scanIndex, index2);
+        while (index2 < source.length && isScanWhitespace(source.charCodeAt(index2))) {
+          index2++;
+        }
+        if (source[index2] !== "(") {
+          return void 0;
+        }
+        this.scanIndex = index2;
+        return name;
+      }
+      /**
+       * Parses a string literal from the current string with support for quotes.
+       * @returns {string} The parsed string literal.
+       */
+      parseStringLiteral = () => {
+        const source = this.scanSource;
+        const start = this.scanIndex + 1;
+        let index2 = start;
+        while (index2 < source.length && source[index2] !== '"') {
+          index2++;
+        }
+        if (index2 >= source.length) {
+          throw new Error("Unterminated string literal in function call.");
+        }
+        const result = source.slice(start, index2);
+        this.scanIndex = index2 + 1;
+        this.skipWhitespace();
+        return result;
+      };
+      /**
+       * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
+       * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
+       * @param {string} functionName The function being called.
+       * @returns {string} The raw argument text.
+       */
+      parseUnquotedStringArgument(functionName) {
+        this.skipWhitespace();
+        const source = this.scanSource;
+        const start = this.scanIndex;
+        let depth = 0;
+        let index2 = start;
+        while (index2 < source.length) {
+          const character = source[index2];
+          if (character === "(" || character === "[") {
+            depth++;
+          } else if (character === ")" || character === "]") {
+            if (depth === 0) {
+              break;
+            }
+            depth--;
+          } else if (character === "," && depth === 0) {
+            break;
+          }
+          index2++;
+        }
+        const argument = source.slice(start, index2).trim();
+        this.scanIndex = index2;
+        if (!argument) {
+          throw new Error(`Missing function argument for '${functionName}'.`);
+        }
+        return argument;
+      }
+      /**
+       * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
+       * @param {string} name The name of the function to call.
+       * @param {Array<number | string>} args The arguments to pass to the function.
+       * @returns {number} The result of the function call.
+       */
+      callFunction = (name, args) => {
+        if (this.userFunctions.has(name)) {
+          return this.callUserFunction(name, args);
+        }
+        const expressionFunction = this.expressionFunctions.get(name.toLowerCase());
+        if (expressionFunction) {
+          if (args.length < expressionFunction.minimumArguments || args.length > expressionFunction.maximumArguments) {
+            const expected = expressionFunction.minimumArguments === expressionFunction.maximumArguments ? `exactly ${expressionFunction.minimumArguments}` : `between ${expressionFunction.minimumArguments} and ${expressionFunction.maximumArguments}`;
+            throw new Error(`${name}() expects ${expected} argument(s).`);
+          }
+          const result = expressionFunction.evaluate(args);
+          if (typeof result !== "number") {
+            throw new Error(`${name}() returned a non-numeric value.`);
+          }
+          return result;
+        }
+        return this.callBuiltInFunction(name, args);
+      };
+      /**
+       * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
+       * @param {string} name The name of the function to call.
+       * @param {Array<number | string>} args The arguments to pass to the function.
+       * @returns {number} The result of the function call.
+       */
+      callUserFunction = (name, args) => {
+        const func = this.userFunctions.get(name);
+        if (!func) {
+          throw new Error(`User function '${name}' not found.`);
+        }
+        if (args.length < func.args.length) {
+          throw new Error(`Function '${name}' expects at least ${func.args.length} argument(s).`);
+        }
+        let content = func.content;
+        for (let i = 0; i < func.args.length; i++) {
+          const paramName = func.args[i];
+          const argValue = args[i];
+          const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
+          const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
+          const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
+          content = content.replace(regex, replacement);
+        }
+        const result = this.math(content);
+        return result;
+      };
+      /**
+       * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
+       * @param {string} name The name of the function to call.
+       * @param {Array<number | string>} args The arguments to pass to the function.
+       * @returns {number} The result of the function call.
+       */
+      callBuiltInFunction = (name, args) => {
+        switch (name) {
+          // --- Trigonometric & Logarithmic functions ---
+          case "sqrt":
+          case "sin":
+          case "cos":
+          case "tan":
+          case "asin":
+          case "acos":
+          case "atan":
+          // Aliases for inverse trig functions
+          case "arcsin":
+          case "arccos":
+          case "arctan":
+          case "log":
+          case "log10":
+          case "log2":
+          case "ceil":
+          case "floor": {
+            if (args.length !== 1) {
+              throw new Error(`${name} expects exactly 1 numeric argument.`);
+            }
+            const builtinName = NUMERIC_UNARY_ALIASES[name] ?? name;
+            const mathFunction = BUILTIN_NUMERIC_UNARY[builtinName];
+            const val = this.numArg(name, args[0]);
+            const result = mathFunction(val);
+            if (Number.isNaN(result)) {
+              throw new Error(`${name} returned NaN for argument ${val}`);
+            }
+            return result;
+          }
+          // Min, Max, Clamp
+          case "min": {
+            if (args.length < 2) throw new Error("min() expects at least 2 numeric arguments.");
+            const numArgs = args.map((arg) => this.numArg(name, arg));
+            return numArgs.reduce((minimum, value) => Math.min(minimum, value), Infinity);
+          }
+          case "max": {
+            if (args.length < 2) throw new Error("max() expects at least 2 numeric arguments.");
+            const numArgs = args.map((arg) => this.numArg(name, arg));
+            return numArgs.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
+          }
+          case "clamp": {
+            if (args.length !== 3) throw new Error("clamp() expects exactly 3 numeric arguments.");
+            const value = this.numArg(name, args[0]);
+            const minVal = this.numArg(name, args[1]);
+            const maxVal = this.numArg(name, args[2]);
+            return Math.max(minVal, Math.min(maxVal, value));
+          }
+          // --- Safe Division and Conditional Selection ---
+          case "safediv": {
+            if (args.length !== 3) throw new Error("safediv() expects exactly 3 numeric arguments.");
+            const dividend = this.numArg(name, args[0]);
+            const divisor = this.numArg(name, args[1]);
+            const defaultValue = this.numArg(name, args[2]);
+            return divisor === 0 ? defaultValue : dividend / divisor;
+          }
+          case "select": {
+            if (args.length !== 3) throw new Error("select() expects exactly 3 numeric arguments.");
+            const statement = this.numArg(name, args[0]);
+            const trueVal = this.numArg(name, args[1]);
+            const falseVal = this.numArg(name, args[2]);
+            return statement !== 0 ? trueVal : falseVal;
+          }
+          // --- Logical Operations ---
+          case "not": {
+            if (args.length !== 1) throw new Error("not() expects exactly 1 numeric argument.");
+            const value = this.numArg(name, args[0]);
+            return value === 0 ? 1 : 0;
+          }
+          case "bank": {
+            if (args.length !== 1) throw new Error("bank() expects exactly 1 numeric argument.");
+            return this.numArg(name, args[0]) >> 16 & 255;
+          }
+          case "offset": {
+            if (args.length !== 2) throw new Error("offset() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[1]) - this.numArg(name, args[0]);
+          }
+          // --- Comparison Functions ---
+          case "equal": {
+            if (args.length !== 2) throw new Error("equal() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) === this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "notequal": {
+            if (args.length !== 2) throw new Error("notequal() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) !== this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "less": {
+            if (args.length !== 2) throw new Error("less() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) < this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "lessequal": {
+            if (args.length !== 2) throw new Error("lessequal() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) <= this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "greater": {
+            if (args.length !== 2) throw new Error("greater() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "greaterequal": {
+            if (args.length !== 2)
+              throw new Error("greaterequal() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
+          }
+          // --- Logical Bitwise Operations ---
+          case "and": {
+            if (args.length !== 2) throw new Error("and() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "or": {
+            if (args.length !== 2) throw new Error("or() expects exactly 2 numeric arguments.");
+            return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "nand": {
+            if (args.length !== 2) throw new Error("nand() expects exactly 2 numeric arguments.");
+            return !(this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
+          }
+          case "nor": {
+            if (args.length !== 2) throw new Error("nor() expects exactly 2 numeric arguments.");
+            return !(this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
+          }
+          case "xor": {
+            if (args.length !== 2) throw new Error("xor() expects exactly 2 numeric arguments.");
+            const a = this.numArg(name, args[0]);
+            const b = this.numArg(name, args[1]);
+            return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
+          }
+          // --- Rounding ---
+          case "round": {
+            if (args.length !== 2) throw new Error("round() expects exactly 2 numeric arguments.");
+            const number = this.numArg(name, args[0]);
+            const precision = this.numArg(name, args[1]);
+            return parseFloat(number.toFixed(precision));
+          }
+          // --- String Comparisons ---
+          case "stringsequal": {
+            if (args.length !== 2)
+              throw new Error("stringsequal() expects exactly 2 string arguments.");
+            const str1 = this.strArg(name, args[0]);
+            const str2 = this.strArg(name, args[1]);
+            return str1 === str2 ? 1 : 0;
+          }
+          case "stringsequalnocase": {
+            if (args.length !== 2)
+              throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
+            const str1 = this.strArg(name, args[0]);
+            const str2 = this.strArg(name, args[1]);
+            return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
+          }
+          // --- Filesize & File Status ---
+          case "filesize":
+          case "getfilestatus": {
+            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+            const value = this.strArg(name, args[0]);
+            return name === "filesize" ? this.getHost().getFileSize(value) : this.getHost().getFileStatus(value);
+          }
+          // --- Preprocessor/Struct & Data Size Functions ---
+          case "defined":
+          case "sizeof":
+          case "objectsize":
+          case "datasize": {
+            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+            const value = this.strArg(name, args[0]);
+            if (name === "defined") {
+              return this.getHost().isDefined(value);
+            }
+            return this.getHost().getExpressionObjectSize(value, name === "sizeof");
+          }
+          // --- File Can-Read functions ---
+          case "canreadfile1":
+          case "canreadfile2":
+          case "canreadfile3":
+          case "canreadfile4": {
+            if (args.length !== 2) throw new Error(`${name}() expects exactly 2 arguments.`);
+            const filename = this.strArg(name, args[0]);
+            const pos = this.numArg(name, args[1]);
+            return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
+          }
+          case "canreadfile": {
+            if (args.length !== 3)
+              throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
+            const filename = this.strArg(name, args[0]);
+            const pos = this.numArg(name, args[1]);
+            const num = this.numArg(name, args[2]);
+            return this.getHost().canReadFile(filename, pos, num);
+          }
+          // --- File Reading functions ---
+          case "readfile1":
+          case "readfile2":
+          case "readfile3":
+          case "readfile4": {
+            if (args.length < 2 || args.length > 3)
+              throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
+            const filename = this.strArg(name, args[0]);
+            const pos = this.numArg(name, args[1]);
+            const size = parseInt(name.slice(-1), 10);
+            if (args.length === 3) {
+              const defVal = this.numArg(name, args[2]);
+              return this.getHost().readFile(filename, pos, size, defVal);
+            } else {
+              return this.getHost().readFile(filename, pos, size);
+            }
+          }
+          // --- PC/Realbase ---
+          case "pc":
+          case "realbase": {
+            if (args.length !== 0) throw new Error(`${name}() expects no arguments.`);
+            return name === "pc" ? this.getHost().getCurrentAddress() : this.getHost().getCurrentBaseAddress();
+          }
+          default: {
+            throw new Error(`Unknown built-in function '${name}'`);
+          }
+        }
+      };
+      /**
+       * Validates an argument as a number.
+       * @param {string} funcName The name of the function.
+       * @param {number | string} arg The argument to validate.
+       * @returns {number} The validated number.
+       */
+      numArg = (funcName, arg) => {
+        if (typeof arg === "string") {
+          throw new Error(
+            `Function '${funcName}' expected a numeric argument but got a string: ${arg}`
+          );
+        }
+        return arg;
+      };
+      /**
+       * Validates an argument as a string.
+       * @param {string} funcName The name of the function.
+       * @param {number | string} arg The argument to validate.
+       * @returns {string} The validated string.
+       */
+      strArg = (funcName, arg) => {
+        if (typeof arg === "number") {
+          throw new Error(`Function '${funcName}' expected a string argument but got a number: ${arg}`);
+        }
+        return arg;
+      };
+      /**
+       * Parses a function definition.
+       */
+      parseFunctionDefinition = () => {
+        const cleanDef = this.str.replace(/\\\s*\n/g, "");
+        const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
+        const match = cleanDef.match(regex);
+        if (!match || !match[1] || !match[3]) {
+          throw new Error("Invalid function definition syntax.");
+        }
+        const name = match[1];
+        const paramsStr = match[2] || "";
+        const content = match[3].trim();
+        const params = paramsStr ? paramsStr.split(",").map((p) => p.trim()).filter((p) => p.length > 0) : [];
+        this.str = this.str.substring(match[0].length).trim();
+        this.userFunctions.set(name, { args: params, content });
+      };
+      /**
+       * Gets host.
+       * @returns {ExpressionHost} The result.
+       */
+      getHost() {
+        if (!this.host) {
+          throw new Error("ExpressionHost not set.");
+        }
+        return this.host;
+      }
+    };
+  }
+});
+
+// packages/core/src/operand-syntax.ts
+function parseOperandSyntax(operand) {
+  const raw = operand;
+  const trimmed = operand.trim();
+  const normalizedUpper = trimmed.toUpperCase();
+  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
+  const indexRegister = indexMatch?.[1].toLowerCase();
+  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
+  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
+  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
+  return {
+    raw,
+    trimmed,
+    normalizedUpper,
+    immediate: trimmed.startsWith("#"),
+    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
+    indexRegister,
+    explicitWidth,
+    numericSpelling: /^[\d#$%]/.test(trimmed)
+  };
+}
+var init_operand_syntax = __esm({
+  "packages/core/src/operand-syntax.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/operand-resolver.ts
+var OperandResolver;
+var init_operand_resolver = __esm({
+  "packages/core/src/operand-resolver.ts"() {
+    "use strict";
+    init_expression_node();
+    init_operand_syntax();
+    OperandResolver = class {
+      constructor(deps) {
+        this.deps = deps;
+      }
+      deps;
+      /**
+       * Normalizes numeric base member.
+       * @param {string} operand The operand.
+       * @returns {string} The result.
+       */
+      normalizeNumericBaseMember(operand) {
+        const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
+        if (!match) {
+          return operand;
+        }
+        const [, immediatePrefix, literal, indexSuffix = ""] = match;
+        return `${immediatePrefix}${literal}${indexSuffix}`;
+      }
+      /**
+       * Splits math operand suffix.
+       * @param {string} operand The operand.
+       * @returns {{ expression: string; suffix: string }} The result.
+       */
+      splitMathOperandSuffix(operand) {
+        const trimmed = operand.trim();
+        const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
+        if (!indexedMatch) {
+          return { expression: trimmed, suffix: "" };
+        }
+        return {
+          expression: indexedMatch[1].trim(),
+          suffix: indexedMatch[2]
+        };
+      }
+      /**
+       * Checks whether numeric token.
+       * @param {string} token The token.
+       * @returns {boolean} The result.
+       */
+      isNumericToken(token) {
+        return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
+      }
+      /**
+       * Resolves arithmetic token.
+       * @param {string} token The token.
+       * @returns {number} The result.
+       */
+      resolveArithmeticToken(token) {
+        if (this.isNumericToken(token)) {
+          return this.getnum(token);
+        }
+        if (token.includes(".") && this.deps.isStructReference(token)) {
+          return this.deps.resolveStructLabel(token);
+        }
+        return this.deps.resolveLabel(token, false);
+      }
+      /**
+       * Attempts to resolve simple arithmetic.
+       * @param {string} operand The operand.
+       * @returns {number | null} The result.
+       */
+      tryResolveSimpleArithmetic(operand) {
+        const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
+        const match = operand.match(
+          new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`)
+        );
+        if (!match) {
+          return null;
+        }
+        const [, leftToken, operator, rightToken] = match;
+        if (this.isNumericToken(leftToken) && this.isNumericToken(rightToken)) {
+          return null;
+        }
+        const leftValue = this.resolveArithmeticToken(leftToken);
+        const rightValue = this.resolveArithmeticToken(rightToken);
+        switch (operator) {
+          case "+":
+            return leftValue + rightValue;
+          case "-":
+            return leftValue - rightValue;
+          case "<<":
+            return leftValue << rightValue;
+          case ">>":
+            return leftValue >> rightValue;
+          default:
+            return null;
+        }
+      }
+      /**
+       * Determines value length.
+       * @param {string | number} value The value.
+       * @returns {number} The result.
+       */
+      determineValueLength(value) {
+        if (typeof value !== "string" && typeof value !== "number") {
+          throw new Error(`Invalid value type for length determination: ${typeof value}`);
+        }
+        if (Number.isNaN(value)) {
+          throw new Error(`Invalid value for length determination: ${value}`);
+        }
+        if (typeof value === "string" && value.trim() === "") {
+          return 1;
+        }
+        let hexString;
+        if (typeof value === "number") {
+          hexString = value.toString(16).toUpperCase();
+        } else if (value.startsWith("$")) {
+          hexString = value.substring(1);
+        } else {
+          hexString = value;
+        }
+        return Math.max(1, Math.ceil(hexString.length / 2));
+      }
+      /**
+       * Checks whether math expression.
+       * @param {string} expression The expression.
+       * @returns {boolean} The result.
+       */
+      isMathExpression(expression) {
+        if (!expression || typeof expression !== "string") {
+          return false;
+        }
+        if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
+          return true;
+        }
+        return expression.includes("+") || expression.includes("-") || expression.includes("*") || expression.includes("/") || expression.includes("&") || expression.includes("|") || expression.includes("^") || expression.includes("<<") || expression.includes(">>");
+      }
+      /**
+       * Attempts to resolve label in operand.
+       * @param {string} operand The operand.
+       * @returns {string} The result.
+       */
+      tryResolveLabelInOperand(operand) {
+        if (operand.startsWith("#")) {
+          const inner = operand.substring(1).trim();
+          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
+            const labelValue = this.deps.tryResolveLabel(inner, false);
+            if (labelValue !== void 0) {
+              return "#$" + labelValue.toString(16).toUpperCase();
+            }
+          }
+          return operand;
+        }
+        if (operand.startsWith("[") && operand.endsWith("]")) {
+          const inner = operand.substring(1, operand.length - 1).trim();
+          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
+            const labelValue = this.deps.tryResolveLabel(inner, false);
+            if (labelValue !== void 0) {
+              return "[$" + labelValue.toString(16).toUpperCase() + "]";
+            }
+          }
+          return operand;
+        }
+        if (operand.includes(",")) {
+          const lastCommaIndex = operand.lastIndexOf(",");
+          const basePart = operand.substring(0, lastCommaIndex).trim();
+          const indexPart = operand.substring(lastCommaIndex).trim();
+          if (!basePart.match(/^[\d$%(]/)) {
+            const labelValue = this.deps.tryResolveLabel(basePart, false);
+            if (labelValue !== void 0) {
+              return "$" + labelValue.toString(16).toUpperCase() + indexPart;
+            }
+          }
+          return operand;
+        }
+        if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
+          const labelValue = this.deps.tryResolveLabel(operand, false);
+          if (labelValue !== void 0) {
+            return "$" + labelValue.toString(16).toUpperCase();
+          }
+        }
+        return operand;
+      }
+      /**
+       * Gets num.
+       * @param {string | ExpressionNode} operand The operand.
+       * @returns {number} The result.
+       */
+      getnum(operand) {
+        if (typeof operand !== "string") {
+          return this.getnumFromNode(operand);
+        }
+        operand = operand.trim();
+        operand = this.normalizeNumericBaseMember(operand);
+        if (/^-?\d+$/.test(operand)) {
+          return parseInt(operand, 10);
+        }
+        if (/^\$[\dA-Fa-f]+$/.test(operand)) {
+          return parseInt(operand.substring(1), 16);
+        }
+        if (/^%[01]+$/.test(operand)) {
+          return parseInt(operand.substring(1), 2);
+        }
+        operand = this.deps.resolveDefines(operand);
+        if (operand.startsWith("#")) {
+          operand = operand.substring(1).trim();
+        }
+        operand = this.normalizeNumericBaseMember(operand);
+        if (/^[A-Z_a-z]\w*\s*\(/.test(operand)) {
+          try {
+            return this.deps.evaluateMath(operand);
+          } catch (error) {
+            if (this.deps.shouldDeferExpressionEvaluation()) {
+              return 0;
+            }
+            throw error;
+          }
+        }
+        const simpleArithmetic = this.tryResolveSimpleArithmetic(operand);
+        if (simpleArithmetic !== null) {
+          return simpleArithmetic;
+        }
+        if (!operand.match(/^[\d$%]/)) {
+          if (operand.indexOf(".") !== -1 || operand.indexOf("[") !== -1) {
+            if (this.deps.isStructReference(operand)) {
+              return this.deps.resolveStructLabel(operand);
+            }
+            if (!this.isMathExpression(operand)) {
+              return this.deps.resolveLabel(operand, false);
+            }
+          }
+          if (/^\w+$/.test(operand) && this.deps.isStructReference(operand)) {
+            return this.deps.resolveStructLabel(operand);
+          }
+          if (/^\w+$/.test(operand)) {
+            return this.deps.resolveLabel(operand, false);
+          }
+        }
+        try {
+          return this.deps.evaluateMath(operand);
+        } catch (error) {
+          if (this.deps.shouldDeferExpressionEvaluation()) {
+            return 0;
+          }
+          throw error;
+        }
+      }
+      /**
+       * Gets num from node.
+       * @param {ExpressionNode} operand The operand.
+       * @returns {number} The result.
+       */
+      getnumFromNode(operand) {
+        if (isReferenceExpressionNode(operand)) {
+          if (operand.type === "defineReference") {
+            return this.getnum(this.deps.resolveDefines(renderExpressionNode(operand)));
+          }
+          const reference = renderReferenceExpressionNode(operand, {
+            renderIndex: (node) => this.getnum(node).toString()
+          });
+          return this.resolveReferenceValue(reference);
+        }
+        switch (operand.type) {
+          case "range":
+            throw new Error(
+              `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
+            );
+          default:
+            try {
+              return this.deps.evaluateMath(operand);
+            } catch (error) {
+              if (this.deps.shouldDeferExpressionEvaluation()) {
+                return 0;
+              }
+              throw error;
+            }
+        }
+      }
+      /**
+       * Resolves reference value.
+       * @param {string} reference The reference.
+       * @returns {number} The result.
+       */
+      resolveReferenceValue(reference) {
+        if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
+          if (this.deps.isStructReference(reference)) {
+            return this.deps.resolveStructLabel(reference);
+          }
+          if (!this.isMathExpression(reference)) {
+            return this.deps.resolveLabel(reference, false);
+          }
+        }
+        if (/^\w+$/.test(reference)) {
+          return this.deps.resolveLabel(reference, false);
+        }
+        return this.getnum(reference);
+      }
+      /**
+       * Expands operand.
+       * @param {string} operand The operand.
+       * @returns {ExpandedOperand} The result.
+       */
+      expandOperand(operand) {
+        const raw = operand.trim();
+        const syntax2 = parseOperandSyntax(raw);
+        if (!operand) {
+          return { raw, expanded: "", length: 2, syntax: syntax2 };
+        }
+        let expanded = raw;
+        let expectedLength = 2;
+        if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-" || /^:(\++|-+)$/.test(expanded)) {
+          return { raw, expanded, length: 2, syntax: syntax2 };
+        }
+        expanded = this.tryResolveLabelInOperand(expanded);
+        try {
+          expanded = this.deps.resolveDefines(expanded);
+        } catch (error) {
+        }
+        if (this.deps.isStructReference(expanded)) {
+          expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
+        }
+        expanded = this.normalizeNumericBaseMember(expanded);
+        if (expanded.startsWith("#")) {
+          const inner = expanded.substring(1).trim();
+          if (this.isMathExpression(inner)) {
+            try {
+              const value = this.getnum(inner);
+              expectedLength = this.determineValueLength(value);
+              expanded = "#$" + value.toString(16).toUpperCase();
+            } catch (error) {
+            }
+          } else if (inner.startsWith("$")) {
+            expectedLength = this.determineValueLength(inner.substring(1));
+          } else {
+            try {
+              const value = this.getnum(inner);
+              expectedLength = this.determineValueLength(value);
+              expanded = "#$" + value.toString(16).toUpperCase();
+            } catch (error) {
+            }
+          }
+        } else if (expanded.includes(",")) {
+          if (expanded.startsWith("$")) {
+            const hexPart = expanded.substring(1, expanded.indexOf(","));
+            expectedLength = this.determineValueLength(hexPart);
+          }
+        } else if (expanded.startsWith("[") && expanded.endsWith("]")) {
+          expectedLength = 2;
+        } else if (expanded.startsWith("$")) {
+          expectedLength = this.determineValueLength(expanded.substring(1));
+        } else {
+          expectedLength = 2;
+        }
+        const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded) || /^:(\++|-+)$/.test(expanded);
+        if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
+          try {
+            const { expression, suffix } = this.splitMathOperandSuffix(expanded);
+            const resolvedValue = this.deps.resolveDefines(expression);
+            const result = this.deps.evaluateMath(resolvedValue);
+            if (!Number.isNaN(result)) {
+              expanded = "$" + result.toString(16).toUpperCase() + suffix;
+              expectedLength = this.determineValueLength(result);
+            }
+          } catch (error) {
+          }
+        }
+        return { raw, expanded, length: expectedLength, syntax: syntax2 };
+      }
+      /**
+       * Lowers operand.
+       * @param {string} operand The operand.
+       * @returns {LoweredOperand} The result.
+       */
+      lowerOperand(operand) {
+        const raw = operand.trim();
+        const expandedOperand = this.expandOperand(raw);
+        const { expanded, length } = expandedOperand;
+        const syntax2 = expandedOperand.syntax ?? parseOperandSyntax(raw);
+        return {
+          mode: "unknown",
+          baseExpression: expanded,
+          raw,
+          expanded,
+          length,
+          indexRegister: syntax2.indexRegister,
+          immediate: syntax2.immediate,
+          indirect: syntax2.indirect
+        };
+      }
+      /**
+       * Returns the current logical address without applying architecture policy.
+       * @returns {number} Current logical address.
+       */
+      getCurrentAddress() {
+        return this.deps.getCurrentAddress();
       }
     };
   }
@@ -8438,8 +4622,8 @@ var canonical, toMap, targetInvalid, ResolvedToolingCatalog, AssemblerEnvironmen
 var init_environment = __esm({
   "packages/core/src/plugin/environment.ts"() {
     "use strict";
-    init_directive_catalog();
     init_directive_groups();
+    init_directive_catalog();
     init_diagnostics2();
     canonical = (value) => value.toLowerCase();
     toMap = (records) => new Map(records.map((record) => [canonical(record.contributionId), record]));
@@ -10849,8 +7033,8 @@ var init_manager = __esm({
   "packages/core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
-    init_contracts();
     init_directive_groups();
+    init_contracts();
     init_diagnostics2();
     init_environment();
     noopLogger = {
@@ -11361,14 +7545,14 @@ var init_manager = __esm({
             this.#contributionOwners.set(directive3.id.toLowerCase(), set.pluginId);
           }
         }
-        this.#sessionStates.push(...transaction.sessionStates);
-        this.#architectures.push(...transaction.architectures);
-        this.#addressSpaces.push(...transaction.addressSpaces);
-        this.#outputFormats.push(...transaction.outputFormats);
-        this.#directiveSets.push(...transaction.directiveSets);
-        this.#expressionSets.push(...transaction.expressionSets);
-        this.#lifecycles.push(...transaction.lifecycles);
-        this.#targets.push(...transaction.targets);
+        for (const record of transaction.sessionStates) this.#sessionStates.push(record);
+        for (const record of transaction.architectures) this.#architectures.push(record);
+        for (const record of transaction.addressSpaces) this.#addressSpaces.push(record);
+        for (const record of transaction.outputFormats) this.#outputFormats.push(record);
+        for (const record of transaction.directiveSets) this.#directiveSets.push(record);
+        for (const record of transaction.expressionSets) this.#expressionSets.push(record);
+        for (const record of transaction.lifecycles) this.#lifecycles.push(record);
+        for (const record of transaction.targets) this.#targets.push(record);
       }
       freeze() {
         if (this.#disposed) {
@@ -11558,25 +7742,3847 @@ var init_plugin = __esm({
   }
 });
 
+// packages/core/src/services/program-model-builder.ts
+var ProgramModelBuilder;
+var init_program_model_builder = __esm({
+  "packages/core/src/services/program-model-builder.ts"() {
+    "use strict";
+    init_internal_instrumentation();
+    init_normalized_command();
+    ProgramModelBuilder = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      /**
+       * Creates an incremental parser state for line-by-line assembly.
+       * @returns {IncrementalProgramParseState} The parser state.
+       */
+      createIncrementalParseState() {
+        return {
+          roots: [],
+          loopStack: [],
+          ifStack: [],
+          branchStack: [],
+          inMacroDefinition: false,
+          inFunctionDefinition: false
+        };
+      }
+      /**
+       * Resets an incremental parser state in place.
+       * @param {IncrementalProgramParseState} state The parser state.
+       */
+      resetIncrementalParseState(state) {
+        state.roots.length = 0;
+        state.loopStack.length = 0;
+        state.ifStack.length = 0;
+        state.branchStack.length = 0;
+        state.inMacroDefinition = false;
+        state.inFunctionDefinition = false;
+        state.inDataStructs = false;
+      }
+      /**
+       * Builds a program model from raw source text.
+       * @param {string} source The source block to parse.
+       * @param {string} [sourceFile] Optional source file override.
+       * @param {number} [startLine] Optional starting line number.
+       * @returns {ProgramModel} The parsed program model.
+       */
+      buildProgramModel(source, sourceFile = this.host.currentFile, startLine = 0) {
+        const commands = this.host.splitSourcedInlineCommands(
+          this.host.preprocessSourcedBlockCommands(source)
+        );
+        return {
+          sourceFile,
+          startLine,
+          nodes: this.getOrBuildPassProgram(commands, sourceFile, startLine)
+        };
+      }
+      /**
+       * Creates a typed include node from a source file body.
+       * @param {string} file The include file name.
+       * @param {string} source The include source content.
+       * @returns {IncludeProgramNode} The include node.
+       */
+      createIncludeNode(file, source) {
+        const commands = this.host.splitSourcedInlineCommands(
+          this.host.preprocessSourcedBlockCommands(source)
+        );
+        return {
+          type: "include",
+          file,
+          commands: this.getOrBuildPassProgram(commands, file, 0)
+        };
+      }
+      /**
+       * Returns cached executable nodes for a command stream.
+       * @param {Array<string | SourcedCommand>} commands The command stream.
+       * @param {string} [sourceFile] Optional source file override.
+       * @param {number} [startLine] Optional starting line number.
+       * @returns {ExecutableNode[]} The cached or parsed nodes.
+       */
+      getOrBuildPassProgram(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
+        const commandStream = commands.map((command) => typeof command === "string" ? command : `${command.line}:${command.text}`).join("\n");
+        const cacheKey = `${sourceFile}::${startLine}::${commandStream}`;
+        const cached = this.host.passProgramCache.get(cacheKey);
+        if (cached) {
+          incrementInternalCounter("passProgramCacheHits");
+          return cached;
+        }
+        incrementInternalCounter("passProgramCacheMisses");
+        const nodes = this.parseCommandStreamToNodes(commands, sourceFile, startLine);
+        this.host.passProgramCache.set(cacheKey, nodes);
+        recordInternalCounterPeak("passProgramCachePeakSize", this.host.passProgramCache.size);
+        return nodes;
+      }
+      /**
+       * Consumes one raw command into an incremental parse state and returns newly
+       * completed top-level executable nodes.
+       * @param {IncrementalProgramParseState} state The parser state.
+       * @param {string} rawCommand The raw command to consume.
+       * @param {string} [sourceFile] Optional source file override.
+       * @param {number} [sourceLine] Optional source line override.
+       * @returns {ExecutableNode[]} Newly completed top-level nodes.
+       */
+      consumeIncrementalCommand(state, rawCommand, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine) {
+        this.consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine);
+        return this.drainCompletedRoots(state);
+      }
+      /**
+       * Parses a flat command stream into nested executable nodes.
+       * @param {Array<string | SourcedCommand>} commands The command stream.
+       * @param {string} [sourceFile] Optional source file override.
+       * @param {number} [startLine] Optional starting line number.
+       * @returns {ExecutableNode[]} The executable nodes.
+       */
+      parseCommandStreamToNodes(commands, sourceFile = this.host.currentFile, startLine = this.host.currentLine) {
+        const state = this.createIncrementalParseState();
+        for (let index2 = 0; index2 < commands.length; index2++) {
+          const command = commands[index2];
+          const text = typeof command === "string" ? command : command.text;
+          const sourceLine = typeof command === "string" ? startLine + index2 : startLine + command.line;
+          this.consumeCommandIntoState(state, text, sourceFile, sourceLine);
+        }
+        return state.roots;
+      }
+      /**
+       * Pushes to current.
+       * @param {IncrementalProgramParseState} state The state.
+       * @param {ExecutableNode} node The node.
+       */
+      pushToCurrent(state, node) {
+        const currentBranch = state.branchStack[state.branchStack.length - 1];
+        const currentLoop = state.loopStack[state.loopStack.length - 1];
+        if (currentBranch && currentLoop) {
+          if (currentLoop.startLine >= currentBranch.startLine) {
+            currentLoop.commands.push(node);
+          } else {
+            currentBranch.commands.push(node);
+          }
+          return;
+        }
+        if (currentBranch) {
+          currentBranch.commands.push(node);
+          return;
+        }
+        if (currentLoop) {
+          currentLoop.commands.push(node);
+          return;
+        }
+        state.roots.push(node);
+      }
+      /**
+       * Consumes command into state.
+       * @param {IncrementalProgramParseState} state The state.
+       * @param {string} rawCommand The raw command.
+       * @param {string} sourceFile The source file.
+       * @param {number} sourceLine The source line.
+       */
+      consumeCommandIntoState(state, rawCommand, sourceFile, sourceLine) {
+        const command = this.host.createLoopCommandNode(rawCommand, sourceFile, sourceLine);
+        const keyword = command.keyword.toLowerCase();
+        if (keyword === "macro") {
+          state.inMacroDefinition = true;
+          this.pushToCurrent(state, command);
+          return;
+        }
+        if (state.inMacroDefinition) {
+          setCommandKind(command, "macroDefinitionOrInvoke");
+          this.pushToCurrent(state, command);
+          if (keyword === "endmacro") {
+            state.inMacroDefinition = false;
+          }
+          return;
+        }
+        if (state.inDataStructs || keyword === "datastructs") {
+          state.inDataStructs = keyword !== "enddatastructs";
+          setCommandKind(command, "structCommand");
+          this.pushToCurrent(state, command);
+          return;
+        }
+        if (state.inFunctionDefinition) {
+          setCommandKind(command, "functionDefinition");
+          this.pushToCurrent(state, command);
+          state.inFunctionDefinition = command.command.trimEnd().endsWith("\\");
+          return;
+        }
+        const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
+        if (functionSource.toLowerCase().startsWith("function")) {
+          setCommandKind(command, "functionDefinition");
+          this.pushToCurrent(state, command);
+          state.inFunctionDefinition = functionSource.trimEnd().endsWith("\\");
+          return;
+        }
+        if (keyword === "for" || keyword === "while") {
+          const loopNode = {
+            type: keyword,
+            header: command,
+            conditionNode: keyword === "while" ? command.parsed.condition?.expression : command.parsed.forLoop?.range,
+            variable: command.parsed.forLoop?.variable,
+            rangeNode: command.parsed.forLoop?.range,
+            startExpression: command.parsed.forLoop?.start,
+            endExpression: command.parsed.forLoop?.end,
+            commands: [],
+            startLine: command.source.line
+          };
+          this.pushToCurrent(state, loopNode);
+          state.loopStack.push(loopNode);
+          return;
+        }
+        if (keyword === "endfor" || keyword === "endwhile") {
+          const loopNode = state.loopStack.pop();
+          if (loopNode) {
+            loopNode.endLine = command.source.line;
+          }
+          return;
+        }
+        if (keyword === "if") {
+          const branch = {
+            kind: "if",
+            header: command,
+            conditionNode: command.parsed.condition?.expression,
+            commands: [],
+            startLine: command.source.line
+          };
+          const conditionalNode = {
+            type: "if",
+            header: command,
+            branches: [branch],
+            startLine: command.source.line
+          };
+          this.pushToCurrent(state, conditionalNode);
+          state.ifStack.push(conditionalNode);
+          state.branchStack.push(branch);
+          return;
+        }
+        if (keyword === "elseif" || keyword === "else") {
+          const currentIf = state.ifStack[state.ifStack.length - 1];
+          if (!currentIf) {
+            this.pushToCurrent(state, command);
+            return;
+          }
+          if (state.branchStack.length > 0) {
+            const closedBranch = state.branchStack.pop();
+            if (closedBranch) {
+              closedBranch.endLine = command.source.line;
+            }
+          }
+          const branch = {
+            kind: keyword,
+            header: command,
+            conditionNode: keyword === "elseif" ? command.parsed.condition?.expression : void 0,
+            commands: [],
+            startLine: command.source.line
+          };
+          currentIf.branches.push(branch);
+          state.branchStack.push(branch);
+          return;
+        }
+        if (keyword === "endif") {
+          const currentIf = state.ifStack[state.ifStack.length - 1];
+          const currentLoop = state.loopStack[state.loopStack.length - 1];
+          const whileIsInnermost = this.host.shouldEndifCloseInnermostWhile(
+            currentLoop?.type,
+            currentLoop?.startLine,
+            currentIf?.startLine
+          );
+          if (whileIsInnermost) {
+            const loopNode = state.loopStack.pop();
+            if (loopNode) {
+              loopNode.endLine = command.source.line;
+            }
+            return;
+          }
+          if (state.branchStack.length > 0) {
+            const closedBranch = state.branchStack.pop();
+            if (closedBranch) {
+              closedBranch.endLine = command.source.line;
+            }
+          }
+          if (currentIf) {
+            state.ifStack.pop();
+            currentIf.endLine = command.source.line;
+          }
+          return;
+        }
+        this.pushToCurrent(state, command);
+      }
+      /**
+       * Checks whether node complete.
+       * @param {ExecutableNode} node The node.
+       * @returns {boolean} The result.
+       */
+      isNodeComplete(node) {
+        if ("source" in node) {
+          return true;
+        }
+        return node.endLine !== void 0;
+      }
+      /**
+       * Drains completed roots.
+       * @param {IncrementalProgramParseState} state The state.
+       * @returns {ExecutableNode[]} The result.
+       */
+      drainCompletedRoots(state) {
+        let completedCount = 0;
+        while (completedCount < state.roots.length && this.isNodeComplete(state.roots[completedCount])) {
+          completedCount++;
+        }
+        const ready = state.roots.slice(0, completedCount);
+        state.roots = state.roots.slice(completedCount);
+        return ready;
+      }
+    };
+  }
+});
+
+// packages/core/src/services/assembly-front-end-service.ts
+var AssemblyFrontEndService;
+var init_assembly_front_end_service = __esm({
+  "packages/core/src/services/assembly-front-end-service.ts"() {
+    "use strict";
+    init_normalized_command();
+    init_command_text_service();
+    init_program_model_builder();
+    init_struct_initializer();
+    AssemblyFrontEndService = class {
+      constructor(host) {
+        this.host = host;
+        this.programModelBuilder = new ProgramModelBuilder({
+          currentFile: this.host.currentFile,
+          currentLine: this.host.currentLine,
+          passProgramCache: this.host.passProgramCache,
+          preprocessBlockCommands: (source) => this.preprocessBlockCommands(source),
+          splitInlineCommands: (commands) => this.splitInlineCommands(commands),
+          preprocessSourcedBlockCommands: (source) => this.preprocessSourcedBlockCommands(source),
+          splitSourcedInlineCommands: (commands) => this.splitSourcedInlineCommands(commands),
+          createLoopCommandNode: (command, sourceFile, sourceLine) => this.createLoopCommandNode(command, sourceFile, sourceLine),
+          shouldEndifCloseInnermostWhile: (loopType, loopStartLine, ifStartLine) => this.host.shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine)
+        });
+      }
+      host;
+      commandBuffer = "";
+      /** Opening physical line when processCommand receives a record one line at a time. */
+      structBufferStart;
+      programModelBuilder;
+      /**
+       * Preprocesses raw source blocks while preserving continued-line buffering.
+       * @param {string} block The raw source block.
+       * @returns {string[]} The normalized commands.
+       */
+      preprocessBlockCommands(block) {
+        return this.preprocessSourcedBlockCommands(block).map((command) => command.text);
+      }
+      /**
+       * Preprocesses raw source blocks, tagging each command with its original line.
+       * @param {string} block The raw source block.
+       * @returns {SourcedCommand[]} The normalized sourced commands.
+       */
+      preprocessSourcedBlockCommands(block) {
+        const opening = this.structBufferStart;
+        if (opening && opening.file !== this.host.currentFile) {
+          throw new Error(`Unclosed dataStruct initializer in '${opening.file}'.`);
+        }
+        const processed = preprocessBlockCommands(block, this.commandBuffer, this.host.syntaxProfile);
+        if (opening && processed.sourcedCommands.length > 0) {
+          processed.sourcedCommands[0].line = opening.line - this.host.currentLine;
+        }
+        this.commandBuffer = processed.commandBuffer;
+        if (isOpenStructInitializer(this.commandBuffer)) {
+          if (!opening || processed.sourcedCommands.length > 0) {
+            const lines = block.split("\n");
+            const start = lines.findLastIndex((line) => /^(?:datastruct\b|\[)/i.test(line.trimStart()));
+            this.structBufferStart = {
+              file: this.host.currentFile,
+              line: this.host.currentLine + Math.max(0, start)
+            };
+          }
+        } else this.structBufferStart = void 0;
+        return processed.sourcedCommands;
+      }
+      /**
+       * Splits statements according to the active target's source grammar.
+       * @param {string[]} commands Commands to split.
+       * @returns {string[]} Profile-aware command statements.
+       */
+      splitInlineCommands(commands) {
+        return splitInlineCommands(commands, this.host.syntaxProfile);
+      }
+      /**
+       * Splits sourced statements according to the active target's source grammar.
+       * @param {SourcedCommand[]} commands Sourced commands to split.
+       * @returns {SourcedCommand[]} Profile-aware sourced command statements.
+       */
+      splitSourcedInlineCommands(commands) {
+        return splitSourcedInlineCommands(commands, this.host.syntaxProfile);
+      }
+      /**
+       * Builds a normalized command from raw source text.
+       * @param {string} command The raw command text.
+       * @param {string} sourceFile The command source file.
+       * @param {number} sourceLine The source line number.
+       * @param {boolean} [allowEmpty] When true, empty commands still produce nodes.
+       * @returns {NormalizedCommand | null} The normalized command or null for empty input.
+       */
+      createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
+        let normalizedCommand = removeInlineComment(command, this.host.syntaxProfile);
+        normalizedCommand = this.host.syntaxProfile.rewriteCommand?.(normalizedCommand, {
+          sourceFile,
+          sourceLine
+        }) ?? normalizedCommand;
+        if (this.host.inMacroExpansion && !this.host.isDefinitionCollectionStage && (normalizedCommand.includes("...") || normalizedCommand.includes("\u2026"))) {
+          normalizedCommand = this.host.resolveVariadicPlaceholders(normalizedCommand);
+        }
+        const words = splitCommandIntoWords(normalizedCommand);
+        if (!allowEmpty && words.length === 0) {
+          return null;
+        }
+        return createNormalizedCommand(
+          command,
+          normalizedCommand,
+          words,
+          sourceFile,
+          sourceLine,
+          this.host.collectSourceMetadata
+        );
+      }
+      /**
+       * Creates a loop-aware normalized command node for the typed parser.
+       * @param {string} command The raw command text.
+       * @param {string} [sourceFile] Optional source file.
+       * @param {number} [sourceLine] Optional source line.
+       * @returns {NormalizedCommand} The normalized node.
+       */
+      createLoopCommandNode(command, sourceFile = this.host.currentFile, sourceLine = this.host.currentLine) {
+        return this.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, true) ?? createNormalizedCommand(
+          command,
+          "",
+          [],
+          sourceFile,
+          sourceLine,
+          this.host.collectSourceMetadata
+        );
+      }
+    };
+  }
+});
+
+// packages/core/src/services/command-lowering-service.ts
+var CommandLoweringService;
+var init_command_lowering_service = __esm({
+  "packages/core/src/services/command-lowering-service.ts"() {
+    "use strict";
+    init_internal_instrumentation();
+    CommandLoweringService = class {
+      host;
+      constructor(host) {
+        this.host = host;
+      }
+      /**
+       * Lowers a normalized command into the execution-layer representation.
+       * @param {NormalizedCommand} command The normalized command node.
+       * @returns {LoweredCommand} The lowered execution work unit.
+       */
+      lowerCommand(command) {
+        const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
+        if (this.host.directiveRegistry.has(keyword)) {
+          let directiveWords = command.words;
+          if (command.parsed.includeTarget && command.parsed.includeTarget.directive !== "incbin") {
+            directiveWords = [
+              command.parsed.includeTarget.directive,
+              command.parsed.includeTarget.target
+            ];
+          }
+          return {
+            kind: "directive",
+            keyword,
+            words: directiveWords,
+            source: command.source,
+            command
+          };
+        }
+        const architecture = this.host.resolveActiveArchitecture();
+        const parsedOperands = command.parsed.opcodeOperands;
+        const mnemonic = parsedOperands?.mnemonic ?? command.keyword;
+        const operandText = parsedOperands?.operandText ?? command.words.slice(1).join(" ");
+        const operands = parsedOperands?.operands ?? architecture.definition?.splitOperands(operandText) ?? (operandText ? [operandText] : []);
+        const loweredOperands = operands.map(
+          (operand) => this.host.classifyOperandForActiveArchitecture(operand)
+        );
+        const loweredOperand = this.host.classifyOperandForActiveArchitecture(operandText);
+        return {
+          kind: "instruction",
+          command,
+          mnemonic,
+          operandText,
+          operands,
+          loweredOperands,
+          loweredOperand,
+          words: command.words,
+          sourceFile: command.source.file,
+          sourceLine: command.source.line,
+          sourceRaw: command.source.raw
+        };
+      }
+      /**
+       * Lowers an executable tree node into a durable execution-layer node.
+       * Commands retain their immutable front-end snapshots. Legacy preprocessing
+       * creates its mutable execution copy at dispatch time, avoiding a redundant
+       * clone for every stage-owned lowered node.
+       * @param {ExecutableNode} node The node to lower.
+       * @returns {LoweredExecutableNode} The lowered node.
+       */
+      lowerExecutableNode(node) {
+        incrementInternalCounter("runtimeNodesLowered");
+        if ("source" in node) {
+          if (this.shouldPreserveCommand(node)) {
+            return {
+              kind: "command",
+              command: node,
+              source: node.source,
+              passthroughReason: this.getPassthroughReason(node) ?? "unknown"
+            };
+          }
+          return this.lowerCommand(node);
+        }
+        if (node.type === "for" || node.type === "while") {
+          return {
+            kind: "loop",
+            loopType: node.type,
+            header: node.header,
+            conditionNode: node.conditionNode,
+            rangeNode: node.rangeNode,
+            variable: node.variable,
+            start: node.start,
+            end: node.end,
+            startExpression: node.startExpression,
+            endExpression: node.endExpression,
+            commands: node.commands.map((command) => this.lowerExecutableNode(command)),
+            startLine: node.startLine,
+            endLine: node.endLine
+          };
+        }
+        if (node.type !== "if") {
+          throw new Error(`Unknown executable node type: ${String(node.type)}`);
+        }
+        const conditionalNode = node;
+        return {
+          kind: "conditional",
+          header: conditionalNode.header,
+          branches: conditionalNode.branches.map((branch) => ({
+            kind: branch.kind,
+            header: branch.header,
+            conditionNode: branch.conditionNode,
+            commands: branch.commands.map((command) => this.lowerExecutableNode(command)),
+            startLine: branch.startLine,
+            endLine: branch.endLine
+          })),
+          startLine: conditionalNode.startLine,
+          endLine: conditionalNode.endLine
+        };
+      }
+      /**
+       * Lowers a full program model into a stage-owned execution program.
+       * @param {ProgramModel} program The program to lower.
+       * @returns {LoweredProgram} The lowered program.
+       */
+      lowerProgram(program) {
+        incrementInternalCounter("loweredProgramBuilds");
+        return {
+          sourceFile: program.sourceFile,
+          startLine: program.startLine,
+          nodes: program.nodes.map((node) => this.lowerExecutableNode(node))
+        };
+      }
+      /**
+       * Commands that still require legacy preprocess / control handlers must remain
+       * as command snapshots rather than direct lowered directives. Dispatch clones
+       * these snapshots before running the mutable legacy preprocessing pipeline.
+       * @param {NormalizedCommand} command The command to inspect.
+       * @returns {boolean} True when the command should stay in passthrough form.
+       */
+      shouldPreserveCommand(command) {
+        return this.getPassthroughReason(command) !== void 0;
+      }
+      /**
+       * Names the ordered preprocessing requirement that prevents direct lowering.
+       * @param {NormalizedCommand} command The command to inspect.
+       * @returns {PassthroughReason | undefined} The reason, or undefined when direct lowering is safe.
+       */
+      getPassthroughReason(command) {
+        const keyword = this.host.canonicalizeDirectiveKeyword(command.keyword);
+        if (/<[^>]+>/.test(command.command) || /\\[A-Z_a-z]/.test(command.command)) {
+          return "macroPlaceholder";
+        }
+        if (command.keyword.startsWith(".") && this.host.directiveRegistry.has(keyword)) {
+          if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
+            return void 0;
+          }
+          if (command.parsed.dataDirective) {
+            return "dataDirective";
+          }
+          return "registeredPreprocessDirective";
+        }
+        if (command.kind !== "unknown" && command.kind !== "opcodeCandidate" && command.kind !== "directive") {
+          return command.kind;
+        }
+        if (this.host.syntaxProfile.bareMacroInvocations && command.kind === "opcodeCandidate") {
+          return "bareMacroCandidate";
+        }
+        if (this.host.directiveRegistry.has(keyword)) {
+          if (this.host.directiveRegistry.getPhase(keyword) === "lowered") {
+            return void 0;
+          }
+          if (command.parsed.dataDirective) {
+            return "dataDirective";
+          }
+          return "registeredPreprocessDirective";
+        }
+        return command.kind === "opcodeCandidate" ? void 0 : "unknown";
+      }
+    };
+  }
+});
+
+// packages/core/src/services/define-engine.ts
+var DefineEngine;
+var init_define_engine = __esm({
+  "packages/core/src/services/define-engine.ts"() {
+    "use strict";
+    init_normalized_command();
+    DefineEngine = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      /**
+       * Checks whether pure math expression.
+       * @param {string} value The value.
+       * @returns {boolean} The result.
+       */
+      isPureMathExpression(value) {
+        return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
+      }
+      /**
+       * Handles a define command.
+       * @param {NormalizedCommand} commandNode The command node to handle.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      handleCommand(commandNode) {
+        const command = commandNode.command;
+        const trimmedCommand = command.trim();
+        if (commandNode.keyword.toLowerCase() === "undef") {
+          this.handleDefineCommand(trimmedCommand);
+          setCommandKind(commandNode, "defineCommand");
+          return true;
+        }
+        if (!trimmedCommand.startsWith("!")) {
+          return false;
+        }
+        if (command.includes("=")) {
+          this.handleDefineCommand(command);
+          setCommandKind(commandNode, "defineCommand");
+          return true;
+        }
+        if (trimmedCommand.startsWith("!{")) {
+          const processedCommand = this.processValueWithBracedDefines(trimmedCommand);
+          this.host.processCommand(processedCommand);
+          setCommandKind(commandNode, "defineCommand");
+          return true;
+        }
+        const defineName = trimmedCommand.substring(1);
+        if (!this.host.defines.has(defineName)) {
+          throw new Error(`Error: Define '${defineName}' not found.`);
+        }
+        this.host.processCommand(this.host.defines.get(defineName) ?? "");
+        setCommandKind(commandNode, "defineCommand");
+        return true;
+      }
+      /**
+       * Handles a define command.
+       * @param {string} command The command to handle.
+       * @example
+       * !identifier = value // Basic assignment
+       * !identifier += value // Append to existing value
+       * !identifier := value // Resolve defines in the value
+       * !identifier #= value // Evaluate as math expression
+       * !identifier ?= value // Only assign if not already defined
+       * undef identifier // Remove a define
+       * undef "identifier" // Remove a define
+       */
+      handleDefineCommand(command) {
+        const trimmedCommand = command.trim();
+        if (trimmedCommand.toLowerCase().startsWith("undef")) {
+          this.applyUndefOperation(trimmedCommand);
+          return;
+        }
+        const line = command.substring(1).trim();
+        if (line.startsWith("{")) {
+          let braceLevel = 1;
+          let closingBraceIndex = 1;
+          while (braceLevel > 0 && closingBraceIndex < line.length) {
+            if (line[closingBraceIndex] === "{") braceLevel++;
+            if (line[closingBraceIndex] === "}") braceLevel--;
+            closingBraceIndex++;
+          }
+          if (braceLevel !== 0) {
+            throw new Error(`Mismatched braces in define: ${command}`);
+          }
+          const nestedContent = line.substring(1, closingBraceIndex - 1);
+          const resolvedIdentifier = this.processNestedDefines(nestedContent);
+          const restOfLine = line.substring(closingBraceIndex).trim();
+          const operatorMatch = restOfLine.match(/^\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
+          if (!operatorMatch) {
+            throw new Error(`Invalid define syntax after braces: ${command}`);
+          }
+          this.applyDefineOperation(resolvedIdentifier, operatorMatch[1], operatorMatch[2].trim());
+          return;
+        }
+        const match = line.match(/^(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
+        if (!match) {
+          throw new Error(`Invalid define syntax: ${command}`);
+        }
+        this.applyDefineOperation(match[1], match[2], match[3].trim());
+      }
+      /**
+       * Resolves nested defines in a string.
+       * @param {string} content The content to process.
+       * @returns {string} The processed content with nested defines resolved.
+       */
+      processNestedDefines(content) {
+        if (!content.includes("!")) {
+          return content;
+        }
+        let prevResult = "";
+        let result = content;
+        let iterations = 0;
+        const maxIterations = 10;
+        while (prevResult !== result && iterations < maxIterations) {
+          iterations++;
+          prevResult = result;
+          result = this.resolveOneLevelOfDefines(result);
+        }
+        return result;
+      }
+      /**
+       * Resolves one level of defines in a string.
+       * @param {string} content The content to process.
+       * @returns {string} The processed content with one level of defines resolved.
+       */
+      resolveOneLevelOfDefines(content) {
+        const openBracePositions = [];
+        for (let i = 0; i < content.length - 1; i++) {
+          if (content.substring(i, i + 2) === "!{") {
+            openBracePositions.push(i);
+            i++;
+          }
+        }
+        if (openBracePositions.length === 0) {
+          return this.resolveRegularDefines(content);
+        }
+        const lastOpenBracePos = openBracePositions[openBracePositions.length - 1];
+        let nestLevel = 1;
+        let closingBracePos = -1;
+        for (let i = lastOpenBracePos + 2; i < content.length; i++) {
+          if (i < content.length - 1 && content.substring(i, i + 2) === "!{") {
+            nestLevel++;
+            i++;
+          } else if (content[i] === "}") {
+            nestLevel--;
+            if (nestLevel === 0) {
+              closingBracePos = i;
+              break;
+            }
+          }
+        }
+        if (closingBracePos === -1) {
+          throw new Error(`Mismatched braces in content: ${content}`);
+        }
+        const braceContent = content.substring(lastOpenBracePos + 2, closingBracePos);
+        if (braceContent.includes("!{")) {
+          const resolvedInnerContent = this.resolveOneLevelOfDefines(braceContent);
+          return content.substring(0, lastOpenBracePos + 2) + resolvedInnerContent + content.substring(closingBracePos);
+        }
+        const replacement = this.host.defines.has(braceContent) ? this.host.defines.get(braceContent) ?? braceContent : braceContent;
+        return content.substring(0, lastOpenBracePos) + replacement + content.substring(closingBracePos + 1);
+      }
+      /**
+       * Resolves regular defines in a string.
+       * @param {string} content The content to process.
+       * @returns {string} The processed content with regular defines resolved.
+       */
+      resolveRegularDefines(content) {
+        let result = "";
+        let index2 = 0;
+        let foundDefine = false;
+        while (index2 < content.length) {
+          if (content.substring(index2).startsWith("!") && index2 + 1 < content.length && /\w/.test(content[index2 + 1])) {
+            index2++;
+            let defineName = "";
+            while (index2 < content.length && /\w/.test(content[index2])) {
+              defineName += content[index2++];
+            }
+            if (this.host.defines.has(defineName)) {
+              result += this.host.defines.get(defineName);
+              foundDefine = true;
+            } else {
+              throw new Error(`Define '${defineName}' not found.`);
+            }
+          } else {
+            result += content[index2++];
+          }
+        }
+        return foundDefine ? result : content;
+      }
+      /**
+       * Resolves defines in a string literal.
+       * @param {string} content The content to process.
+       * @returns {string} The processed content with defines in string literal resolved.
+       */
+      resolveDefinesInStringLiteral(content) {
+        let result = "";
+        let index2 = 0;
+        while (index2 < content.length) {
+          const char = content[index2];
+          if (char === "\\") {
+            const next = content[index2 + 1];
+            if (next === void 0) {
+              result += "\\";
+              index2++;
+              continue;
+            }
+            if (next === "!") {
+              result += "!";
+              index2 += 2;
+              while (index2 < content.length && /\w/.test(content[index2])) {
+                result += content[index2];
+                index2++;
+              }
+              continue;
+            }
+            if (next === "\\") {
+              result += "\\";
+              index2 += 2;
+              continue;
+            }
+            result += next;
+            index2 += 2;
+            continue;
+          }
+          if (char === "!" && index2 + 1 < content.length && /\w/.test(content[index2 + 1])) {
+            index2++;
+            let defineName = "";
+            while (index2 < content.length && /\w/.test(content[index2])) {
+              defineName += content[index2];
+              index2++;
+            }
+            if (!this.host.defines.has(defineName)) {
+              throw new Error(`Define '${defineName}' not found.`);
+            }
+            result += this.host.defines.get(defineName);
+            continue;
+          }
+          result += char;
+          index2++;
+        }
+        return result;
+      }
+      /**
+       * Processes a value with braced defines.
+       * @param {string} value The value to process.
+       * @returns {string} The processed value with braced defines resolved.
+       */
+      processValueWithBracedDefines(value) {
+        let result = "";
+        let index2 = 0;
+        while (index2 < value.length) {
+          if (value.substring(index2).startsWith("!{")) {
+            let braceContent = "";
+            index2 += 2;
+            let braceLevel = 1;
+            while (index2 < value.length && braceLevel > 0) {
+              if (value[index2] === "{") braceLevel++;
+              else if (value[index2] === "}") braceLevel--;
+              if (braceLevel === 0) break;
+              braceContent += value[index2];
+              index2++;
+            }
+            if (braceLevel !== 0) {
+              throw new Error(`Mismatched braces in value: ${value}`);
+            }
+            index2++;
+            const resolvedIdentifier = this.processNestedDefines(braceContent);
+            result += `!{${resolvedIdentifier}}`;
+          } else {
+            result += value[index2++];
+          }
+        }
+        return result;
+      }
+      /**
+       * Applies a define operation.
+       * @param {string} identifier The identifier to apply the operation to.
+       * @param {string} operator The operator to apply.
+       * @param {string} initialValue The initial value to apply the operation to.
+       */
+      applyDefineOperation(identifier, operator, initialValue) {
+        let value = initialValue;
+        if (value.includes("!{")) {
+          if (!value.includes("FF") && !value.includes("$")) {
+            value = this.processNestedDefines(value);
+          } else {
+            value = this.processValueWithBracedDefines(value);
+          }
+        }
+        if (value.startsWith('"') && value.endsWith('"')) {
+          value = value.substring(1, value.length - 1);
+        }
+        if (operator === ":=") {
+          value = this.host.resolvedefines(value);
+        }
+        if (operator === "#=") {
+          value = this.host.resolvedefines(value);
+          const result = this.host.mathCore.math(value);
+          if (Number.isNaN(result)) {
+            throw new Error(`Math evaluation failed in define "#=" for expression: ${value}`);
+          }
+          value = result.toString();
+        }
+        if (operator === "?=" && this.host.defines.has(identifier)) {
+          return;
+        }
+        if (operator === "+=") {
+          value = (this.host.defines.get(identifier) || "") + value;
+        }
+        if (operator !== "#=" && (value.includes("+") || value.includes("-") || value.includes("*") || value.includes("/") || value.includes("&") || value.includes("|") || value.includes("^") || value.includes("<<") || value.includes(">>") || value.includes("("))) {
+          try {
+            const resolvedValue = this.host.resolvedefines(value);
+            if (this.isPureMathExpression(resolvedValue)) {
+              const result = this.host.mathCore.math(resolvedValue);
+              if (!Number.isNaN(result)) {
+                value = `$${result.toString(16).toUpperCase()}`;
+              }
+            }
+          } catch {
+          }
+        }
+        this.host.defines.set(identifier, value);
+        this.host.recordSymbolDefinition("define", identifier, {
+          value,
+          containerName: this.host.currentNamespace || void 0
+        });
+      }
+      /**
+       * Applies an `undef` operation.
+       * @param {string} command The normalized undef command.
+       */
+      applyUndefOperation(command) {
+        const match = command.match(/^undef\s+(.+)$/i);
+        if (!match) {
+          throw new Error("undef requires exactly one identifier parameter");
+        }
+        const raw = match[1].trim();
+        const unquoted = raw.startsWith('"') && raw.endsWith('"') ? raw.slice(1, -1) : raw;
+        const identifier = unquoted.startsWith("!") ? unquoted.slice(1) : unquoted;
+        if (!identifier) {
+          throw new Error("undef requires a non-empty identifier");
+        }
+        this.host.defines.delete(identifier);
+      }
+    };
+  }
+});
+
+// packages/core/src/services/directive-runtime-service.ts
+var DirectiveRuntimeService;
+var init_directive_runtime_service = __esm({
+  "packages/core/src/services/directive-runtime-service.ts"() {
+    "use strict";
+    init_address_width();
+    init_command_text_service();
+    DirectiveRuntimeService = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      /**
+       * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
+       * @param {string[]} words The character mapping command words.
+       * @throws {Error} If the format is incorrect.
+       */
+      handleCharacterMapping(words) {
+        if (words.length !== 3) {
+          throw new Error("Character mapping requires format: 'char' = value");
+        }
+        const token = words[0];
+        const quoted = /^'([\S\s])'$/.exec(token) ?? /^"([\S\s])"$/.exec(token);
+        const char = quoted ? quoted[1] : token.replace(/["']/g, "");
+        if (char.length !== 1) {
+          throw new Error("Character mapping requires format: 'char' = value");
+        }
+        const value = this.host.operandResolver.getnum(words[2]);
+        this.host.characterMappings.set(char, value);
+      }
+      /**
+       * Processes a string and maps characters to their corresponding values in `characterMappings`.
+       * If a character is not found in `characterMappings`, its charCode is used instead.
+       * @param {string} input The string to process.
+       * @returns {number[]} An array of numbers representing the mapped characters.
+       */
+      processStringWithMapping(input) {
+        return Array.from(input).map(
+          (char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0)
+        );
+      }
+      /**
+       * Handles `org`.
+       * @param {string[]} params The directive parameters.
+       */
+      handleOrg(params) {
+        if (params.length !== 1) {
+          throw new Error("ORG requires a single address parameter.");
+        }
+        const addressStr = params[0].trim();
+        let addr;
+        if (/^\$[\da-f]+$/i.test(addressStr)) {
+          addr = parseInt(addressStr.substring(1), 16);
+        } else if (/^-?\d+$/.test(addressStr)) {
+          addr = parseInt(addressStr, 10);
+        } else {
+          try {
+            addr = this.host.operandResolver.deps.evaluateMath(this.host.resolvedefines(addressStr));
+          } catch {
+            throw new Error(`Invalid ORG address: ${params[0]}`);
+          }
+        }
+        const maxAddress = 2 ** this.host.addressWidth - 1;
+        if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
+          throw new Error(`Invalid ORG address: ${params[0]}`);
+        }
+        this.host.setWritePosition(addr);
+      }
+      /**
+       * Handles data directives.
+       * @param {string} type The data directive keyword.
+       * @param {string[]} params The directive parameters.
+       */
+      handleDataDirective(type, params) {
+        if (!Array.isArray(params) || params.length === 0) {
+          throw new Error(`${type.toUpperCase()} directive requires at least one parameter.`);
+        }
+        if (type.toLowerCase() === "dc.b") {
+          type = "db";
+        } else if (type.toLowerCase() === "dc.w") {
+          type = "dw";
+        } else if (type.toLowerCase() === "dc.l") {
+          type = "dl";
+        }
+        const lengthMap = {
+          db: 1,
+          dw: 2,
+          dl: 3,
+          dd: 4
+        };
+        const len = lengthMap[type.toLowerCase()];
+        if (!len) {
+          throw new Error(`Invalid data directive: ${type}`);
+        }
+        if (this.host.isDefinitionCollectionStage) {
+          this.estimateDataDirectiveSize(len, params);
+          return;
+        }
+        const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+        while (pendingValues.length > 0) {
+          let value = (pendingValues.pop() ?? "").trim();
+          if (value.startsWith('"') || value.startsWith("'")) {
+            const unquoted = value.slice(1, -1);
+            const expandedString = this.host.defineEngine.resolveDefinesInStringLiteral(unquoted);
+            const mappedChars = this.processStringWithMapping(expandedString);
+            for (const charValue of mappedChars) {
+              this.writeDataByLength(len, charValue);
+            }
+            continue;
+          }
+          if (value.startsWith("#")) {
+            value = value.substring(1);
+          }
+          let resolved = value;
+          let previousResolved = "";
+          while (resolved !== previousResolved) {
+            previousResolved = resolved;
+            resolved = this.host.resolvedefines(resolved);
+          }
+          const expandedValues = splitRespectingFunctions(resolved);
+          if (expandedValues.length > 1) {
+            for (let index2 = expandedValues.length - 1; index2 >= 0; index2--)
+              pendingValues.push(expandedValues[index2]);
+            continue;
+          }
+          let num;
+          if (this.host.structEngine.hasStructReference(resolved)) {
+            const structValue = this.host.structEngine.resolveStructLabel(resolved);
+            if (typeof structValue === "number" && !Number.isNaN(structValue)) {
+              this.writeDataByLength(len, structValue);
+              continue;
+            }
+            num = structValue;
+          } else {
+            num = this.host.operandResolver.getnum(resolved);
+          }
+          if (Number.isNaN(num)) {
+            num = this.host.symbolScope.getLabelValue(resolved, true);
+          }
+          if (Number.isNaN(num)) {
+            throw new Error("Unable to determine value:");
+          }
+          this.writeDataByLength(len, num);
+        }
+        if (this.host.collectSourceMetadata) {
+          this.host.addAddressToLine(
+            normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth)
+          );
+        }
+      }
+      /**
+       * Writes a value using the data directive byte width.
+       * @param {number} len The byte width.
+       * @param {number} value The value to write.
+       */
+      writeDataByLength(len, value) {
+        if (typeof len !== "number") {
+          len = Number.parseInt(len, 10);
+          if (Number.isNaN(len)) {
+            throw new Error("writeDataByLength: len is NaN");
+          }
+        }
+        switch (len) {
+          case 1:
+            this.host.write1(value);
+            break;
+          case 2:
+            this.host.write2(value);
+            break;
+          case 3:
+            this.host.write3(value);
+            break;
+          case 4:
+            this.host.write4(value);
+            break;
+          default:
+            throw new Error(`Unsupported data length ${len}`);
+        }
+      }
+      /**
+       * Estimates data size with the same expansion order as emission, without resolving final values.
+       * @param {number} len Bytes per numeric item (1–4); string characters each occupy one item.
+       * @param {string[]} params Source operands, including defines that may expand to data lists.
+       */
+      estimateDataDirectiveSize(len, params) {
+        const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+        let estimatedItems = 0;
+        while (pendingValues.length > 0) {
+          let value = (pendingValues.pop() ?? "").trim();
+          if (!value) {
+            continue;
+          }
+          if (value.startsWith('"') || value.startsWith("'")) {
+            const unquoted = value.slice(1, -1);
+            try {
+              estimatedItems += this.host.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
+            } catch {
+              estimatedItems += unquoted.length;
+            }
+            continue;
+          }
+          if (value.startsWith("#")) {
+            value = value.substring(1);
+          }
+          let resolved = value;
+          let previousResolved = "";
+          try {
+            while (resolved !== previousResolved) {
+              previousResolved = resolved;
+              resolved = this.host.resolvedefines(resolved);
+            }
+          } catch {
+          }
+          const expandedValues = splitRespectingFunctions(resolved);
+          if (expandedValues.length > 1) {
+            for (let index2 = expandedValues.length - 1; index2 >= 0; index2--)
+              pendingValues.push(expandedValues[index2]);
+            continue;
+          }
+          estimatedItems += 1;
+        }
+        this.host.step(estimatedItems * len);
+        if (this.host.collectSourceMetadata) {
+          this.host.addAddressToLine(
+            normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth)
+          );
+        }
+      }
+      /**
+       * Pushes the current PC state.
+       */
+      handlePushPC() {
+        if (this.host.pushpcnum >= 256) {
+          throw new Error("PushPC stack overflow.");
+        }
+        this.host.pushpcStack.push({
+          currentTargetAddress: this.host.currentTargetAddress,
+          currentTargetStartAddress: this.host.currentTargetStartAddress,
+          currentTargetBaseAddress: this.host.currentTargetBaseAddress,
+          currentTargetBaseStartAddress: this.host.currentTargetBaseStartAddress
+        });
+        this.host.pushpcnum++;
+      }
+      /**
+       * Restores the previous PC state.
+       */
+      handlePullPC() {
+        if (this.host.pushpcnum === 0) {
+          throw new Error("PullPC without PushPC.");
+        }
+        const state = this.host.pushpcStack.pop();
+        if (state) {
+          this.host.currentTargetAddress = state.currentTargetAddress;
+          this.host.currentTargetStartAddress = state.currentTargetStartAddress;
+          this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
+          this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
+        }
+        this.host.pushpcnum--;
+      }
+    };
+  }
+});
+
+// packages/core/src/services/front-end-command-service.ts
+var FrontEndCommandService;
+var init_front_end_command_service = __esm({
+  "packages/core/src/services/front-end-command-service.ts"() {
+    "use strict";
+    init_expression_node();
+    init_normalized_command();
+    FrontEndCommandService = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      /**
+       * Continues a function definition.
+       * @param {string} command The command to continue.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      continueFunctionDefinition(command) {
+        if (!this.host.inFunctionDefinition) {
+          return false;
+        }
+        if (command.trimEnd().endsWith("\\")) {
+          this.host.functionDefinitionLines.push(command.trimEnd().slice(0, -1));
+        } else {
+          this.host.functionDefinitionLines.push(command.trim());
+          const fullDefinition = this.host.functionDefinitionLines.join(" ");
+          this.host.functionDefinitionLines = [];
+          this.host.inFunctionDefinition = false;
+          this.host.parseFunctionDefinition(fullDefinition);
+        }
+        return true;
+      }
+      /**
+       * Starts a function definition.
+       * @param {NormalizedCommand} command The command to start.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      startFunctionDefinition(command) {
+        const functionSource = command.parsed.labelSplit?.trailing ?? command.command;
+        if (!functionSource || !functionSource.toLowerCase().startsWith("function")) {
+          return false;
+        }
+        if (functionSource.trimEnd().endsWith("\\")) {
+          this.host.inFunctionDefinition = true;
+          this.host.functionDefinitionLines.push(functionSource.trimEnd().slice(0, -1));
+        } else {
+          this.host.parseFunctionDefinition(functionSource.trim());
+        }
+        setCommandKind(command, "directive");
+        return true;
+      }
+      /**
+       * Handles a relative label definition.
+       * @param {NormalizedCommand} command The command to handle.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      handleRelativeLabelDefinition(command) {
+        const { keyword } = command;
+        const isUnnamedLabelDefinition = keyword === ":";
+        const isRelativeLabelDefinition = isUnnamedLabelDefinition || /^\++:?$/.test(keyword) || /^-+:?$/.test(keyword);
+        if (!isRelativeLabelDefinition) {
+          return false;
+        }
+        let relativeLabel = keyword;
+        if (isUnnamedLabelDefinition) {
+          relativeLabel = ":";
+        } else if (keyword.endsWith(":")) {
+          relativeLabel = keyword.slice(0, -1);
+        }
+        if (isUnnamedLabelDefinition) {
+          this.host.symbolScope.handleUnnamedLabel();
+        } else {
+          this.host.symbolScope.handleRelativeLabel(relativeLabel);
+        }
+        this.host.recordCurrentAddress();
+        this.host.recordSymbolDefinition("label", relativeLabel, {
+          span: command.source.tokenSpans[0] ?? command.source.normalizedSpan
+        });
+        command.labelName = relativeLabel;
+        setCommandKind(command, "labelDefinition");
+        if (isUnnamedLabelDefinition && command.words.length > 1) {
+          this.host.processCommand(command.words.slice(1).join(" "));
+        }
+        return true;
+      }
+      /**
+       * Handles a global label definition.
+       * @param {NormalizedCommand} command The command to handle.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      handleGlobalLabel(command) {
+        const { words } = command;
+        const directiveArgs = command.parsed.directiveArgs;
+        if ((directiveArgs?.name ?? words[0] ?? "").toLowerCase() !== "global") {
+          return false;
+        }
+        const payload = directiveArgs?.args?.join(",").split(/\s+/).filter(Boolean) ?? words.slice(1);
+        if (payload.length < 1) {
+          throw new Error("global requires a label name");
+        }
+        const labelDecl = payload[0];
+        const modifiesHierarchy = labelDecl.startsWith("#");
+        const labelName = modifiesHierarchy ? labelDecl.substring(1) : labelDecl;
+        const hasColon = labelName.endsWith(":");
+        const cleanName = hasColon ? labelName.slice(0, -1) : labelName;
+        this.host.symbolScope.setLabel(cleanName, void 0, false, false, true, !modifiesHierarchy);
+        if (!modifiesHierarchy) {
+          this.host.currentParentLabel = cleanName;
+          this.host.currentParentIsGlobal = true;
+          this.host.currentGlobalParentLabel = cleanName;
+        }
+        if (payload.length > 1) {
+          this.host.processCommand(payload.slice(1).join(" "));
+        }
+        this.host.recordSymbolDefinition("label", cleanName, {
+          span: command.source.tokenSpans[0] ?? command.source.normalizedSpan
+        });
+        command.labelName = cleanName;
+        setCommandKind(command, "labelDefinition");
+        return true;
+      }
+      /**
+       * Consumes named label definitions.
+       * @param {NormalizedCommand} command The command to consume.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      consumeNamedLabelDefinitions(command) {
+        const remainingWords = [...command.words];
+        let keyword = remainingWords[0] ?? command.keyword;
+        let consumed = false;
+        let consumedCount = 0;
+        while (remainingWords.length > 0 && this.host.isNamedLabelToken(keyword)) {
+          const labelName = keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+          const namespace = this.host.currentNamespace;
+          const dotCount = labelName.startsWith(".") ? labelName.match(/^\.*/)?.[0]?.length ?? 1 : 0;
+          const containerName = dotCount > 0 ? this.host.symbolScope.getScopedParentLabel(dotCount) || void 0 : namespace || void 0;
+          this.host.symbolScope.handleLabelDefinition(labelName);
+          this.host.recordSymbolDefinition("label", labelName, {
+            span: command.source.tokenSpans[consumedCount] ?? command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+            containerName
+          });
+          remainingWords.shift();
+          consumedCount++;
+          keyword = remainingWords[0] ?? "";
+          consumed = true;
+        }
+        setCommandWords(command, remainingWords);
+        if (consumed && remainingWords.length === 0) {
+          setCommandKind(command, "labelDefinition");
+        }
+        return remainingWords.length === 0;
+      }
+      /**
+       * Handles a static label assignment.
+       * @param {NormalizedCommand} command The command to handle.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      handleStaticLabelAssignment(command) {
+        const { words, keyword } = command;
+        if (words.length !== 3 || words[1] !== "=" && words[1] !== ":=") {
+          return false;
+        }
+        const assignment = command.parsed.assignment;
+        const labelName = assignment?.target ?? keyword;
+        const expr = assignment ? renderExpressionNode(assignment.expression) : words[2];
+        const resolvedExpr = this.host.resolvedefines(expr);
+        let value = this.host.mathCore.math(assignment?.expression ?? resolvedExpr);
+        if (Number.isNaN(value)) {
+          value = this.host.symbolScope.getLabelValue(resolvedExpr, true);
+        }
+        const assignedName = this.host.symbolScope.qualifySymbolName(labelName);
+        this.host.symbolScope.setLabel(assignedName, value, true);
+        this.host.recordCurrentAddress();
+        this.host.recordSymbolDefinition("label", assignedName, {
+          span: command.source.tokenSpans[0] ?? command.source.normalizedSpan,
+          value,
+          containerName: this.host.currentNamespace || void 0
+        });
+        command.assignmentTarget = assignedName;
+        setCommandKind(command, "staticAssignment");
+        return true;
+      }
+    };
+  }
+});
+
+// packages/core/src/services/include-source-service.ts
+var IncludeSourceService;
+var init_include_source_service = __esm({
+  "packages/core/src/services/include-source-service.ts"() {
+    "use strict";
+    init_internal_instrumentation();
+    IncludeSourceService = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      resolvedPathCache = /* @__PURE__ */ new Map();
+      textCache = /* @__PURE__ */ new Map();
+      /**
+       * Starts a new assembly file snapshot and drops content retained by an older build.
+       */
+      beginAssemblySnapshot() {
+        this.resolvedPathCache.clear();
+        this.textCache.clear();
+      }
+      /**
+       * Releases source text retained for the completed assembly.
+       */
+      endAssemblySnapshot() {
+        this.beginAssemblySnapshot();
+      }
+      /**
+       * Reads a source-relative binary or text file.
+       * @param {string} filePath The path to read.
+       * @param {BufferEncoding} [encoding] Optional text encoding.
+       * @returns {Uint8Array | string} The file contents.
+       */
+      readFile(filePath, encoding) {
+        try {
+          const fullPath = this.resolvePath(filePath);
+          if (!fullPath) {
+            throw new Error(`Error reading file: ${filePath}`);
+          }
+          if (encoding) {
+            return this.readTextFile(fullPath, encoding);
+          }
+          return this.host.fileProvider.readFile(fullPath);
+        } catch {
+          throw new Error(`Error reading file: ${filePath}`);
+        }
+      }
+      /**
+       * Resolves a source include target.
+       * @param {string} filename The target filename.
+       * @returns {string} The resolved provider path.
+       */
+      resolveIncludePath(filename) {
+        if (filename == null) {
+          throw new Error("Invalid or missing filename");
+        }
+        const resolved = this.resolvePath(filename);
+        if (!resolved) {
+          throw new Error(`Could not find file: ${filename}`);
+        }
+        return resolved;
+      }
+      /**
+       * Marks and assembles an `include` target.
+       * @param {string} filename The target filename.
+       */
+      includeFile(filename) {
+        const resolvedPath = this.resolveIncludePath(filename);
+        if (!this.host.includedFiles.has(resolvedPath)) {
+          this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
+        }
+        this.assembleFile(filename);
+      }
+      /**
+       * Guards the active source file against later includes in this pass.
+       */
+      guardCurrentFile() {
+        const fileInfo = this.host.includedFiles.get(this.host.currentFile) ?? {
+          included: true,
+          guarded: false
+        };
+        fileInfo.guarded = true;
+        this.host.includedFiles.set(this.host.currentFile, fileInfo);
+      }
+      /**
+       * Clears pass-local include guards.
+       */
+      resetGuards() {
+        for (const [filePath, fileInfo] of this.host.includedFiles.entries()) {
+          fileInfo.guarded = false;
+          this.host.includedFiles.set(filePath, fileInfo);
+        }
+      }
+      /**
+       * Resolves, parses, lowers, and executes one source file.
+       * @param {string} filename The target filename.
+       */
+      assembleFile(filename) {
+        const resolvedPath = this.resolveIncludePath(filename);
+        const fileInfo = this.host.includedFiles.get(resolvedPath);
+        if (fileInfo?.guarded) {
+          return;
+        }
+        if (this.host.includeStack.length >= 512) {
+          throw new Error("Recursion limit exceeded (512 levels)");
+        }
+        if (resolvedPath === this.host.currentFile || this.host.includeStack.includes(resolvedPath)) {
+          throw new Error(`Recursive include detected for '${resolvedPath}'`);
+        }
+        const previousFile = this.host.currentFile;
+        this.host.includeStack.push(previousFile);
+        this.host.recordIncludeEdge(previousFile, resolvedPath);
+        if (this.host.followIncludes === false) {
+          this.host.includeStack.pop();
+          return;
+        }
+        try {
+          const content = this.readTextFile(resolvedPath, "utf8");
+          this.host.currentFile = resolvedPath;
+          const includedFile = this.host.includedFiles.get(resolvedPath);
+          if (includedFile) {
+            includedFile.included = true;
+            this.host.includedFiles.set(resolvedPath, includedFile);
+          } else {
+            this.host.includedFiles.set(resolvedPath, { included: true, guarded: false });
+          }
+          measureInternalPhase("includeParseLowerExecute", () => {
+            const includeNode = this.host.programModelBuilder.createIncludeNode(resolvedPath, content);
+            this.host.lowerAndExecuteRuntimeNodes(includeNode.commands);
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : JSON.stringify(error) ?? "Unknown error";
+          throw new Error(`Failed to assemble include '${resolvedPath}': ${message}`);
+        } finally {
+          this.host.currentFile = this.host.includeStack.pop() ?? "";
+        }
+      }
+      get resolutionOptions() {
+        return {
+          currentFile: this.host.currentFile,
+          includePaths: this.host.includePaths,
+          macroSourceFile: this.host.currentMacroSourceFile
+        };
+      }
+      /**
+       * Resolves a path once for the active source and include-path context.
+       * @param {string} filePath The source-relative path to resolve.
+       * @returns {string | undefined} The resolved provider path.
+       */
+      resolvePath(filePath) {
+        const options = this.resolutionOptions;
+        const key = [
+          options.currentFile,
+          options.macroSourceFile ?? "",
+          options.includePaths.join("\0"),
+          filePath
+        ].join("");
+        const cached = this.resolvedPathCache.get(key);
+        if (cached !== void 0) {
+          incrementInternalCounter("includeResolutionCacheHits");
+          return cached;
+        }
+        const resolved = this.host.fileProvider.resolvePath(filePath, options);
+        if (resolved !== void 0) {
+          this.resolvedPathCache.set(key, resolved);
+        }
+        return resolved;
+      }
+      /**
+       * Reads source text once per assembly snapshot.
+       * @param {string} resolvedPath The resolved provider path.
+       * @param {BufferEncoding} encoding The requested text encoding.
+       * @returns {string} The cached or newly read text.
+       */
+      readTextFile(resolvedPath, encoding) {
+        const key = `${encoding}\0${resolvedPath}`;
+        const cached = this.textCache.get(key);
+        if (cached !== void 0) {
+          incrementInternalCounter("includeTextCacheHits");
+          return cached;
+        }
+        incrementInternalCounter("includeReads");
+        const content = measureInternalPhase(
+          "includeRead",
+          () => this.host.fileProvider.readTextFile(resolvedPath, encoding)
+        );
+        incrementInternalCounter("includeBytesRead", content.length);
+        this.textCache.set(key, content);
+        return content;
+      }
+    };
+  }
+});
+
+// packages/core/src/services/macro-engine.ts
+var MacroEngine;
+var init_macro_engine = __esm({
+  "packages/core/src/services/macro-engine.ts"() {
+    "use strict";
+    init_internal_instrumentation();
+    init_normalized_command();
+    init_command_text_service();
+    MacroEngine = class {
+      host;
+      macroExpansionControlStack = [];
+      pendingMacroSourceFile = "";
+      pendingMacroSourceLine = 0;
+      constructor(host) {
+        this.host = host;
+      }
+      /**
+       * Checks whether the current macro expansion line is in an active branch.
+       * @returns {boolean} `true` when the current expansion path is active.
+       */
+      isMacroExpansionActive() {
+        return this.macroExpansionControlStack.every((entry) => entry.active);
+      }
+      /**
+       * Checks whether the current macro expansion line is inside a deferred loop body.
+       * @returns {boolean} `true` when loop-body commands should defer placeholder resolution.
+       */
+      isMacroExpansionLoopActive() {
+        return this.macroExpansionControlStack.some(
+          (entry) => entry.active && (entry.type === "for" || entry.type === "while")
+        );
+      }
+      /**
+       * Evaluates a macro control-flow condition using the assembler expression engine.
+       * @param {string} expression The expression text to evaluate.
+       * @returns {boolean} The boolean result.
+       */
+      evaluateMacroControlExpression(expression) {
+        const trimmed = removeInlineComment(expression).trim();
+        if (!trimmed) {
+          return false;
+        }
+        return this.host.evaluateExpression(trimmed);
+      }
+      /**
+       * Updates macro expansion control state after dispatching a control-flow line.
+       * @param {string} line The fully expanded line text.
+       */
+      updateMacroExpansionControlState(line) {
+        const trimmed = removeInlineComment(line).trim();
+        if (!trimmed) {
+          return;
+        }
+        const [keyword, ...rest] = trimmed.split(/\s+/);
+        const normalizedKeyword = keyword.toLowerCase();
+        const current = this.macroExpansionControlStack[this.macroExpansionControlStack.length - 1];
+        const parentActive = this.isMacroExpansionActive();
+        const enclosingActive = this.macroExpansionControlStack.slice(0, -1).every((entry) => entry.active);
+        const expression = rest.join(" ").trim();
+        switch (normalizedKeyword) {
+          case "if": {
+            const active = parentActive && this.evaluateMacroControlExpression(expression);
+            this.macroExpansionControlStack.push({
+              type: "if",
+              active,
+              branchTaken: active
+            });
+            return;
+          }
+          case "elseif": {
+            if (!current || current.type !== "if") {
+              return;
+            }
+            if (!enclosingActive || current.branchTaken) {
+              current.active = false;
+              return;
+            }
+            const active = this.evaluateMacroControlExpression(expression);
+            current.active = active;
+            if (active) {
+              current.branchTaken = true;
+            }
+            return;
+          }
+          case "else": {
+            if (!current || current.type !== "if") {
+              return;
+            }
+            current.active = enclosingActive && !current.branchTaken;
+            current.branchTaken = true;
+            return;
+          }
+          case "while": {
+            const active = parentActive && this.evaluateMacroControlExpression(expression);
+            this.macroExpansionControlStack.push({ type: "while", active });
+            return;
+          }
+          case "for": {
+            this.macroExpansionControlStack.push({ type: "for", active: parentActive });
+            return;
+          }
+          case "endif": {
+            if (current && (current.type === "if" || current.type === "while")) {
+              this.macroExpansionControlStack.pop();
+            }
+            return;
+          }
+          case "endwhile": {
+            if (current?.type === "while") {
+              this.macroExpansionControlStack.pop();
+            }
+            return;
+          }
+          case "endfor": {
+            if (current?.type === "for") {
+              this.macroExpansionControlStack.pop();
+            }
+            return;
+          }
+          default:
+            return;
+        }
+      }
+      /**
+       * Handles a macro definition command.
+       * @param {NormalizedCommand} commandNode The command node to handle.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      handleDefinitionCommand(commandNode) {
+        const command = commandNode.command;
+        const { keyword, words } = commandNode;
+        if (this.host.inMacroDefinition) {
+          if (command.trim().toLowerCase() === "endmacro") {
+            if (this.host.isDefinitionCollectionStage) {
+              let variadic = false;
+              if (this.host.currentMacroParams.length > 0 && (this.host.currentMacroParams[this.host.currentMacroParams.length - 1] === "..." || this.host.currentMacroParams[this.host.currentMacroParams.length - 1] === "\u2026")) {
+                variadic = true;
+                this.host.currentMacroParams.pop();
+              }
+              const macroDef = {
+                name: this.host.currentMacroName,
+                params: this.host.currentMacroParams,
+                variadic,
+                body: this.host.currentMacroBody,
+                sourceFile: this.pendingMacroSourceFile || this.host.currentMacroBody[0]?.source.file || this.host.currentFile
+              };
+              if (this.host.macros.has(macroDef.name)) {
+                throw new Error(`Macro '${macroDef.name}' is already defined.`);
+              }
+              this.host.macros.set(macroDef.name, macroDef);
+              this.host.recordSymbolDefinition("macro", macroDef.name, {
+                file: this.pendingMacroSourceFile || macroDef.sourceFile || this.host.currentFile,
+                line: this.pendingMacroSourceLine
+              });
+            }
+            this.host.inMacroDefinition = false;
+            this.host.currentMacroName = "";
+            this.host.currentMacroParams = [];
+            this.host.currentMacroBody = [];
+            this.pendingMacroSourceFile = "";
+            this.pendingMacroSourceLine = 0;
+            setCommandKind(commandNode, "macroDefinitionOrInvoke");
+            return true;
+          }
+          if (this.host.isDefinitionCollectionStage) {
+            this.host.currentMacroBody.push(commandNode);
+          }
+          setCommandKind(commandNode, "macroDefinitionOrInvoke");
+          return true;
+        }
+        if (keyword.toLowerCase() === "macro" || command.trim().toLowerCase().startsWith("macro ")) {
+          const match = command.trim().match(/^macro\s+(\w+)\((.*)\)$/i);
+          if (!match) {
+            throw new Error(`Invalid macro header: ${command.trim()}`);
+          }
+          this.host.currentMacroName = match[1].trim();
+          const paramsStr = match[2].trim();
+          this.host.currentMacroParams = paramsStr ? paramsStr.split(",").map((entry) => entry.trim()) : [];
+          this.host.inMacroDefinition = true;
+          this.host.currentMacroBody = [];
+          this.pendingMacroSourceFile = commandNode.source.file || this.host.currentFile;
+          this.pendingMacroSourceLine = commandNode.source.line;
+          setCommandKind(commandNode, "macroDefinitionOrInvoke");
+          return true;
+        }
+        if (keyword.startsWith("%")) {
+          const parsedInvocation = commandNode.parsed.macroInvocation;
+          let invocation = words.join(" ").substring(1);
+          if (parsedInvocation) {
+            invocation = parsedInvocation.name;
+            if (parsedInvocation.args.length > 0) {
+              invocation = `${parsedInvocation.name}(${parsedInvocation.args.join(", ")})`;
+            }
+          }
+          this.callMacro(invocation);
+          setCommandKind(commandNode, "macroDefinitionOrInvoke");
+          return true;
+        }
+        if (this.host.syntaxProfile.bareMacroInvocations && this.host.macros.has(keyword)) {
+          const argumentText = command.slice(keyword.length).trim();
+          this.callMacro(argumentText ? `${keyword}(${argumentText})` : keyword);
+          setCommandKind(commandNode, "macroDefinitionOrInvoke");
+          return true;
+        }
+        return false;
+      }
+      /**
+       * Rewrites macro label references.
+       * @param {string} command The command to rewrite.
+       * @returns {string} The rewritten command.
+       */
+      rewriteMacroLabelReferences(command) {
+        if (!this.host.inMacroExpansion || !command.includes("?") && !command.includes("#")) {
+          return command;
+        }
+        let modifiedCommand = command;
+        if (modifiedCommand.includes("?+") || modifiedCommand.includes("?-")) {
+          if (modifiedCommand.includes("?+")) {
+            const currentMacroInstance = this.host.macroLabelInstance;
+            const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
+            let nextAddr = null;
+            if (!modifiedCommand.trim().startsWith("?+:")) {
+              for (const [key, info] of this.host.labelTable.entries()) {
+                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}+` || key.endsWith("_+") || key === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
+                  if (nextAddr === null || info.value < nextAddr) {
+                    nextAddr = info.value;
+                  }
+                }
+              }
+              if (nextAddr === null) {
+                nextAddr = this.host.symbolScope.findNextLabel("?+");
+              }
+              modifiedCommand = modifiedCommand.replace(/\?\+/g, `$${nextAddr.toString(16)}`);
+            }
+          }
+          if (modifiedCommand.includes("?-")) {
+            const currentMacroInstance = this.host.macroLabelInstance;
+            const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
+            let prevAddr = null;
+            if (!modifiedCommand.trim().startsWith("?-:")) {
+              for (const [key, info] of this.host.labelTable.entries()) {
+                if (key.startsWith(macroLabelPrefix) && (key === `${macroLabelPrefix}-` || key.endsWith("_-") || key === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
+                  if (prevAddr === null || info.value > prevAddr) {
+                    prevAddr = info.value;
+                  }
+                }
+              }
+              if (prevAddr === null) {
+                prevAddr = this.host.symbolScope.findPreviousLabel("?-");
+              }
+              modifiedCommand = modifiedCommand.replace(/\?-/g, `$${prevAddr.toString(16)}`);
+            }
+          }
+        }
+        if (modifiedCommand.includes("?")) {
+          modifiedCommand = modifiedCommand.replace(
+            /(?<!\w)(\?[\w+.-]+_[\w+.-]+)(?!:)/g,
+            (match, labelRef) => {
+              if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
+                return match;
+              }
+              try {
+                const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
+                return `$${labelValue.toString(16)}`;
+              } catch (error) {
+                if (this.host.isDefinitionCollectionStage) {
+                  return "$0000";
+                }
+                throw error;
+              }
+            }
+          );
+          modifiedCommand = modifiedCommand.replace(
+            /(?<!\w)(\?[\w+.-]+)(?!:)/g,
+            (match, labelRef) => {
+              if (modifiedCommand.trim().startsWith(match) && (modifiedCommand.includes(":") || modifiedCommand.includes("="))) {
+                return match;
+              }
+              try {
+                const labelValue = this.host.symbolScope.getLabelValue(labelRef, false);
+                return `$${labelValue.toString(16)}`;
+              } catch (error) {
+                if (this.host.isDefinitionCollectionStage) {
+                  return "$0000";
+                }
+                throw error;
+              }
+            }
+          );
+        }
+        return modifiedCommand;
+      }
+      /**
+       * Calls a macro.
+       * @param {string} invocation The invocation to call.
+       */
+      callMacro(invocation) {
+        incrementInternalCounter("macroExpansions");
+        this.host.macroLabelInstance++;
+        const previousMacroExpansionState = this.host.inMacroExpansion;
+        const previousVariadicCount = this.host.currentVariadicCount;
+        const previousVariadicArgs = this.host.currentVariadicArgs;
+        const previousMacroName = this.host.currentMacroName;
+        const previousParentLabel = this.host.currentParentLabel;
+        const previousParentIsGlobal = this.host.currentParentIsGlobal;
+        const previousFile = this.host.currentFile;
+        const previousMacroExpansionControlStack = this.macroExpansionControlStack.map((entry) => ({
+          ...entry
+        }));
+        this.host.inMacroExpansion = true;
+        this.macroExpansionControlStack = [];
+        try {
+          const invocationRegex = /^(\w+)\((.*)\)$/;
+          const match = invocation.match(invocationRegex);
+          if (!match) {
+            const macroName2 = invocation.startsWith("%") ? invocation.substring(1) : invocation;
+            const macro2 = this.host.macros.get(macroName2);
+            if (!macro2) {
+              throw new Error(`Error: Macro '${macroName2}' not defined.`);
+            }
+            this.host.currentMacroName = macroName2;
+            if (macro2.sourceFile) {
+              this.host.currentFile = macro2.sourceFile;
+            }
+            if (macro2.params.length > 0) {
+              const fixedArgs2 = /* @__PURE__ */ new Map();
+              for (const param of macro2.params) {
+                fixedArgs2.set(param, "");
+              }
+              this.host.currentVariadicCount = 0;
+              this.host.currentVariadicArgs = [];
+              for (const lineNode of macro2.body) {
+                const expandedLine = this.expandMacroLine(lineNode.command, fixedArgs2, [], 0);
+                this.processMacroLine(expandedLine);
+              }
+            } else {
+              for (const lineNode of macro2.body) {
+                this.processMacroLine(lineNode.command);
+              }
+            }
+            return;
+          }
+          const macroName = match[1];
+          const args = match[2].trim();
+          const macro = this.host.macros.get(macroName);
+          if (!macro) {
+            throw new Error(`Error: Macro '${macroName}' not defined.`);
+          }
+          this.host.currentMacroName = macroName;
+          if (macro.sourceFile) {
+            this.host.currentFile = macro.sourceFile;
+          }
+          const argValues = [];
+          let currentArg = "";
+          let inQuotes = false;
+          let escapeNext = false;
+          for (let i = 0; i < args.length; i++) {
+            const char = args[i];
+            if (escapeNext) {
+              currentArg += char;
+              escapeNext = false;
+              continue;
+            }
+            if (char === "\\") {
+              escapeNext = true;
+              continue;
+            }
+            if (char === '"') {
+              if (inQuotes && i + 1 < args.length && args[i + 1] === '"') {
+                currentArg += '"';
+                i++;
+                continue;
+              }
+              inQuotes = !inQuotes;
+              continue;
+            }
+            if (char === "," && !inQuotes) {
+              argValues.push(currentArg.trim());
+              currentArg = "";
+              continue;
+            }
+            currentArg += char;
+          }
+          if (currentArg.length > 0) {
+            argValues.push(currentArg.trim());
+          }
+          const fixedArgs = /* @__PURE__ */ new Map();
+          for (let i = 0; i < macro.params.length; i++) {
+            fixedArgs.set(macro.params[i], i < argValues.length ? argValues[i] : "");
+          }
+          const variadicArgs = [];
+          let variadicCount = 0;
+          if (macro.variadic && argValues.length > macro.params.length) {
+            variadicCount = argValues.length - macro.params.length;
+            for (let i = macro.params.length; i < argValues.length; i++) {
+              variadicArgs.push(argValues[i]);
+            }
+          }
+          this.host.currentVariadicCount = variadicCount;
+          this.host.currentVariadicArgs = variadicArgs;
+          for (const lineNode of macro.body) {
+            const expandedLine = this.expandMacroLine(
+              lineNode.command,
+              fixedArgs,
+              variadicArgs,
+              variadicCount
+            );
+            this.processMacroLine(expandedLine);
+          }
+        } finally {
+          this.host.currentMacroName = previousMacroName;
+          this.host.currentParentLabel = previousParentLabel;
+          this.host.currentParentIsGlobal = previousParentIsGlobal;
+          this.host.currentVariadicCount = previousVariadicCount;
+          this.host.currentVariadicArgs = previousVariadicArgs;
+          this.host.inMacroExpansion = previousMacroExpansionState;
+          this.host.currentFile = previousFile;
+          this.macroExpansionControlStack = previousMacroExpansionControlStack;
+        }
+      }
+      /**
+       * Expands a macro line.
+       * @param {string} line The line to expand.
+       * @param {Map<string, string>} fixedArgs The fixed arguments.
+       * @param {string[]} variadicArgs The variadic arguments.
+       * @param {number} variadicCount The variadic count.
+       * @returns {string} The expanded line.
+       */
+      expandMacroLine(line, fixedArgs, variadicArgs, variadicCount) {
+        line = line.replace(/!<(\w+)>/g, (match, paramName) => {
+          if (!fixedArgs.has(paramName)) {
+            return match;
+          }
+          let name = (fixedArgs.get(paramName) ?? "").trim();
+          if (name.startsWith("!")) {
+            name = name.slice(1);
+          }
+          return `!${name}`;
+        });
+        const substituteParamValue = (raw) => {
+          const value = raw.trim();
+          if (!value.includes("!")) {
+            return value;
+          }
+          return this.host.resolvedefines(value);
+        };
+        const resolveDeprecatedBangAngle = (match, name) => {
+          if (fixedArgs.has(name)) {
+            const fixedValue = fixedArgs.get(name);
+            return fixedValue !== void 0 ? this.host.resolvedefines(fixedValue) : match;
+          }
+          if (/^[A-Za-z]$/.test(name)) {
+            const index2 = name.toLowerCase().charCodeAt(0) - 97;
+            if (index2 >= 0 && index2 < variadicCount) {
+              return variadicArgs[index2];
+            }
+          }
+          const defineValue = this.host.defines.get(name);
+          return defineValue !== void 0 ? defineValue : match;
+        };
+        if (line.trim().startsWith("!") && line.includes("=")) {
+          const defineMatch = line.trim().match(/^!(\w+)\s*(=|\+=|:=|#=|\?=)\s*(.*)$/);
+          if (defineMatch) {
+            const varName = defineMatch[1];
+            const operator = defineMatch[2];
+            const value = defineMatch[3];
+            let expandedValue = value;
+            expandedValue = expandedValue.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
+            expandedValue = expandedValue.replace(/<(\w+)>/g, (match, paramName) => {
+              if (fixedArgs.has(paramName)) {
+                return substituteParamValue(fixedArgs.get(paramName) ?? "");
+              }
+              return match;
+            });
+            expandedValue = expandedValue.replace(
+              /<(?:\.{3}|…)\[([^\]]+)]>/g,
+              (match, expr) => {
+                if (this.isMacroExpansionLoopActive()) {
+                  return match;
+                }
+                const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
+                  if (this.host.defines.has(defName)) {
+                    return this.host.defines.get(defName) ?? defMatch;
+                  }
+                  return defMatch;
+                });
+                const resolvedExpr = this.host.resolvedefines(processedExpr);
+                let index2 = this.host.mathCore.math(resolvedExpr);
+                if (Number.isNaN(index2)) {
+                  throw new Error(
+                    `Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`
+                  );
+                }
+                index2 = Math.floor(index2);
+                if (index2 < 0 || index2 >= variadicCount) {
+                  throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
+                }
+                return variadicArgs[index2];
+              }
+            );
+            expandedValue = expandedValue.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
+            return `!${varName} ${operator} ${expandedValue}`;
+          }
+        }
+        if (line.match(/^\s*[#?][\w+.-]+:/) || line.match(/^\s*[#?][\w+.-]+\s*=/)) {
+          return line;
+        }
+        let expanded = line;
+        expanded = expanded.replace(/<!(\w+)>/g, resolveDeprecatedBangAngle);
+        expanded = expanded.replace(/<(\w+)>/g, (match, paramName) => {
+          if (fixedArgs.has(paramName)) {
+            return substituteParamValue(fixedArgs.get(paramName) ?? "");
+          }
+          return match;
+        });
+        if (this.host.syntaxProfile.macroParameterPrefix === "\\") {
+          expanded = expanded.replace(/\\([A-Z_a-z]\w*)/g, (match, paramName) => {
+            if (fixedArgs.has(paramName)) {
+              return substituteParamValue(fixedArgs.get(paramName) ?? "");
+            }
+            return match;
+          });
+        }
+        const currentCond = this.isMacroExpansionActive();
+        if (!currentCond) {
+          return expanded;
+        }
+        expanded = expanded.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
+          if (this.isMacroExpansionLoopActive()) {
+            return match;
+          }
+          const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
+            if (this.host.defines.has(defName)) {
+              return this.host.defines.get(defName) ?? defMatch;
+            }
+            return defMatch;
+          });
+          const resolvedExpr = this.host.resolvedefines(processedExpr);
+          let index2 = this.host.mathCore.math(resolvedExpr);
+          if (Number.isNaN(index2)) {
+            throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
+          }
+          index2 = Math.floor(index2);
+          if (index2 < 0 || index2 >= variadicCount) {
+            throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
+          }
+          return variadicArgs[index2];
+        });
+        expanded = expanded.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
+        return expanded;
+      }
+      /**
+       * Resolves variadic placeholders.
+       * @param {string} command The command to resolve.
+       * @returns {string} The resolved command.
+       */
+      resolveVariadicPlaceholders(command) {
+        if (!command.includes("...") && !command.includes("\u2026")) {
+          return command;
+        }
+        const variadicCount = this.host.currentVariadicArgs.length;
+        let resolved = command.replace(/sizeof\((?:\.{3}|…)\)/g, variadicCount.toString());
+        resolved = resolved.replace(/<(?:\.{3}|…)\[([^\]]+)]>/g, (match, expr) => {
+          const processedExpr = expr.replace(/!(\w+)/g, (defMatch, defName) => {
+            const defineValue = this.host.defines.get(defName);
+            return defineValue !== void 0 ? defineValue : defMatch;
+          });
+          const resolvedExpr = this.host.resolvedefines(processedExpr);
+          let index2 = this.host.mathCore.math(resolvedExpr);
+          if (Number.isNaN(index2)) {
+            throw new Error(`Invalid variadic index expression: ${expr} (resolved to ${resolvedExpr})`);
+          }
+          index2 = Math.floor(index2);
+          if (index2 < 0 || index2 >= variadicCount) {
+            throw new Error(`Variadic index ${index2} out of range (0..${variadicCount - 1}).`);
+          }
+          return this.host.currentVariadicArgs[index2];
+        });
+        return resolved;
+      }
+      /**
+       * Processes a macro line.
+       * @param {string} line The line to process.
+       */
+      processMacroLine(line) {
+        incrementInternalCounter("macroLinesProcessed");
+        const preprocessedLine = removeInlineComment(line);
+        const trimmed = preprocessedLine.trim();
+        const commandLine = preprocessedLine === line.trim() ? line : preprocessedLine;
+        let keyword = trimmed.toLowerCase();
+        const keywordEnd = keyword.search(/\s/);
+        if (keywordEnd >= 0) {
+          keyword = keyword.slice(0, keywordEnd);
+        }
+        const isControlDirective = keyword === "if" || keyword === "elseif" || keyword === "else" || keyword === "endif" || keyword === "while" || keyword === "endwhile" || keyword === "for" || keyword === "endfor";
+        if (!this.isMacroExpansionActive() && !isControlDirective) {
+          return;
+        }
+        if (/^[#?][\w+.-]+:/.test(trimmed)) {
+          if (trimmed.startsWith("?+:") || trimmed.startsWith("?-:")) {
+            const labelChar = trimmed;
+            const remainder = trimmed.substring(3).trim();
+            this.host.symbolScope.handleRelativeLabel(labelChar);
+            if (remainder) {
+              this.host.processCommand(remainder, true);
+              this.updateMacroExpansionControlState(remainder);
+            }
+            return;
+          }
+          const match = trimmed.match(/^([#?][\w+.-]+):/);
+          if (match) {
+            const labelName = match[1];
+            const remainder = trimmed.substring(match[0].length).trim();
+            this.host.symbolScope.setLabel(labelName, void 0, false, true);
+            if (remainder) {
+              this.host.processCommand(remainder, true);
+              this.updateMacroExpansionControlState(remainder);
+            }
+            return;
+          }
+        }
+        if (/^\?[\w+.-]+ *=/.test(trimmed)) {
+          const match = trimmed.match(/^(\?[\w+.-]+) *=\s*(.*)/);
+          if (match) {
+            const labelName = match[1];
+            const expression = match[2].trim();
+            const value = this.host.mathCore.math(expression);
+            this.host.symbolScope.setLabel(labelName, value, true, true);
+            return;
+          }
+        }
+        const isDefineAssignment = /^!\w+\s*(?:#=|\+=|:=|\?=|=(?!=))/.test(trimmed);
+        if (isDefineAssignment && !this.isMacroExpansionLoopActive()) {
+          this.host.applyDefineAssignment(commandLine);
+        } else {
+          this.host.processCommand(commandLine, true);
+        }
+        this.updateMacroExpansionControlState(trimmed);
+      }
+    };
+  }
+});
+
+// packages/core/src/services/output-writer-service.ts
+var OutputWriterService;
+var init_output_writer_service = __esm({
+  "packages/core/src/services/output-writer-service.ts"() {
+    "use strict";
+    init_address_width();
+    OutputWriterService = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      /**
+       * Advances the logical write position.
+       * @param {number} num The number of bytes to step.
+       */
+      step(num) {
+        if (num === 0) {
+          return;
+        }
+        if (num < 0) {
+          throw new Error("step num is negative");
+        }
+        this.host.currentTargetAddress = this.host.pluginAddressSpace.advance(
+          this.host.currentTargetAddress,
+          num
+        );
+        this.host.currentTargetBaseAddress = this.host.pluginAddressSpace.advance(
+          this.host.currentTargetBaseAddress,
+          num
+        );
+        this.host.syncWriteStarts();
+        this.host.incrementBytesWritten(num);
+      }
+      /**
+       * Writes a single byte at the current logical position.
+       * @param {number} num The value to write.
+       */
+      write1(num) {
+        if (Number.isNaN(num)) {
+          throw new Error("write1 value is NaN");
+        }
+        this.verifyLogicalPosition();
+        const newPos = this.host.pluginAddressSpace.normalizeForWrite(
+          this.host.currentTargetBaseAddress
+        );
+        const logicalAddress = normalizeAddressForWidth(
+          newPos,
+          this.host.pluginAddressSpace.addressWidth
+        );
+        this.host.beforeWrite?.(logicalAddress, 1);
+        const outputOffset = this.toOutputOffset(logicalAddress);
+        if (this.host.canEmitBytes) {
+          this.host.recordSourceWrite?.(logicalAddress, outputOffset);
+        }
+        if (this.host.isTracing) {
+          this.host.traceWrite?.({
+            stage: this.host.traceStage,
+            arch: this.host.arch,
+            file: "",
+            line: 0,
+            raw: "",
+            normalized: "",
+            logicalAddress,
+            addressWidth: this.host.pluginAddressSpace.addressWidth,
+            outputOffset,
+            value: num & 255
+          });
+        }
+        if (outputOffset < 0) {
+          this.step(1);
+          return;
+        }
+        if (this.host.canEmitBytes) {
+          if (outputOffset >= this.host.outputBytes.length && outputOffset - this.host.outputBytes.length > 0) {
+            this.host.fillOutputBytes(
+              this.host.outputBytes.length,
+              this.host.outputFillByte,
+              outputOffset - this.host.outputBytes.length
+            );
+          }
+          this.host.outputBytes[outputOffset] = num & 255;
+        }
+        this.step(1);
+      }
+      /**
+       * Writes a 16-bit value to output.
+       * @param {number} num The value to write.
+       */
+      write2(num) {
+        this.validateWrite(2);
+        this.write1(num & 255);
+        this.write1(num >> 8 & 255);
+      }
+      /**
+       * Writes a 24-bit value to output.
+       * @param {number} num The value to write.
+       */
+      write3(num) {
+        this.validateWrite(3);
+        this.write1(num & 255);
+        this.write1(num >> 8 & 255);
+        this.write1(num >> 16 & 255);
+      }
+      /**
+       * Writes a 32-bit value to output.
+       * @param {number} num The value to write.
+       */
+      write4(num) {
+        this.validateWrite(4);
+        this.write1(num & 255);
+        this.write1(num >> 8 & 255);
+        this.write1(num >> 16 & 255);
+        this.write1(num >> 24 & 255);
+      }
+      /**
+       * Writes an arbitrary-width value for architecture extensions.
+       * @param {number} num Value to write.
+       * @param {number} width Width in bytes.
+       * @param {"little" | "big"} endianness Byte order.
+       */
+      writeValue(num, width, endianness = "little") {
+        if (!Number.isInteger(width) || width < 1) {
+          throw new Error(`Invalid write width: ${width}`);
+        }
+        this.validateWrite(width);
+        for (let index2 = 0; index2 < width; index2++) {
+          const shift = endianness === "little" ? index2 : width - index2 - 1;
+          this.write1(num >> shift * 8 & 255);
+        }
+      }
+      /**
+       * Writes a sequence of already encoded bytes.
+       * @param {readonly number[]} values Bytes to write.
+       */
+      writeBytes(values) {
+        this.validateWrite(values.length);
+        for (const value of values) {
+          this.write1(value);
+        }
+      }
+      /**
+       * Runs active address-space and lifecycle validation for a write.
+       * @param {number} length The length of the value to write.
+       */
+      validateWrite(length) {
+        this.host.beforeWrite?.(this.host.currentTargetBaseAddress, length);
+      }
+      /**
+       * Finishes the pass.
+       */
+      finishPass() {
+        if (this.host.canFinalize) {
+          this.host.pluginOutputFormat.finalize({
+            state: this.host.pluginState,
+            outputBytes: this.host.outputBytes
+          });
+        }
+      }
+      /**
+       * Converts a logical address to an output offset.
+       * @param {number} addr The logical address.
+       * @returns {number} The mapped output offset.
+       */
+      toOutputOffset(addr) {
+        return this.host.pluginAddressSpace.toOutputOffset(addr);
+      }
+      /**
+       * Converts an output offset to a logical address.
+       * @param {number} addr The output offset.
+       * @returns {number} The mapped logical address.
+       */
+      fromOutputOffset(addr) {
+        return this.host.pluginAddressSpace.fromOutputOffset(addr);
+      }
+      /**
+       * Verifies the logical position.
+       */
+      verifyLogicalPosition() {
+        if (this.host.currentTargetAddress < 0 || this.host.currentTargetBaseAddress < 0) {
+          this.host.setWritePosition(this.host.pluginAddressSpace.defaultOrigin);
+        }
+      }
+      /**
+       * Advances and normalizes a logical position.
+       * @param {number} inaddr The logical address to advance.
+       * @param {number} step The number of bytes to step.
+       * @returns {number} The fixed address.
+       */
+      advanceLogicalAddress(inaddr, step = 0) {
+        return this.host.pluginAddressSpace.advance(inaddr, step);
+      }
+    };
+  }
+});
+
+// packages/core/src/services/data-struct-engine.ts
+var DataStructEngine;
+var init_data_struct_engine = __esm({
+  "packages/core/src/services/data-struct-engine.ts"() {
+    "use strict";
+    init_normalized_command();
+    init_command_text_service();
+    init_struct_initializer();
+    DataStructEngine = class {
+      constructor(host, structs) {
+        this.host = host;
+        this.structs = structs;
+      }
+      host;
+      structs;
+      table;
+      get inTable() {
+        return this.table !== void 0;
+      }
+      reset() {
+        this.table = void 0;
+      }
+      finish() {
+        if (this.table) throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
+      }
+      /**
+       * Rewrite a row into a normal directive so it retains source/trace ownership.
+       * @param {NormalizedCommand} command Per-dispatch mutable command, never the cached node.
+       */
+      prepareRow(command) {
+        const text = command.command.trim();
+        if (/^enddatastructs\b/i.test(text)) return;
+        const match = text.match(/^\[([^\]]+)]\s*=\s*({.*})$/s);
+        if (!this.table || !match) {
+          throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
+        }
+        const rewritten = `dataStruct ${this.table.name}[${match[1]}], ${match[2]}`;
+        setCommandWords(command, splitCommandIntoWords(rewritten), rewritten);
+      }
+      begin(words) {
+        if (this.table) throw new Error("Nested dataStructs blocks are not supported.");
+        if (words.length !== 2 || !this.host.structs.has(words[1])) {
+          throw new Error("dataStructs requires one previously defined struct name.");
+        }
+        this.table = { name: words[1], rows: 0 };
+      }
+      end(words) {
+        if (!this.table) throw new Error("endDataStructs without dataStructs.");
+        if (words.length !== 1) throw new Error("endDataStructs takes no arguments.");
+        if (this.table.rows === 0) throw new Error("dataStructs must contain at least one record.");
+        this.table = void 0;
+      }
+      /**
+       * Resolve an addressed record, keeping the established Asar index/stride rules.
+       * @param {string} reference Previously declared name with an optional logical index.
+       * @returns {{ definition: StructDefinition; index: number }} Layout and checked index.
+       */
+      resolveRecord(reference) {
+        const match = reference.match(/^([A-Z_a-z][\w.]*)(?:\[([^\]]+)])?$/);
+        const definition = match && this.host.structs.get(match[1]);
+        if (!match || !definition) throw new Error(`Unknown dataStruct record '${reference}'.`);
+        const index2 = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
+        if (!Number.isSafeInteger(index2) || index2 < 0)
+          throw new Error(`Invalid record index '${reference}'.`);
+        if (definition.indexRange) {
+          const { first, count } = definition.indexRange;
+          if (index2 < first || index2 >= first + count)
+            throw new Error(`Record index out of bounds: '${reference}'.`);
+        }
+        return { definition, index: index2 };
+      }
+      fieldsFor(definition) {
+        if (definition.parent || definition.extensionSize > 0) {
+          throw new Error(
+            `dataStruct does not initialize extended layouts ('${definition.name}'); use raw data directives.`
+          );
+        }
+        const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
+        let end = 0;
+        for (const field of fields) {
+          if (field.offset !== end)
+            throw new Error(
+              `Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`
+            );
+          end += field.width * field.count;
+        }
+        if (definition.align && end === definition.offset && end < definition.size) {
+          if (definition.labels.has("__padding"))
+            throw new Error("The alignment padding name '__padding' is reserved.");
+          fields.push({
+            name: "__padding",
+            offset: end,
+            width: 1,
+            count: definition.size - end,
+            array: true
+          });
+          end = definition.size;
+        }
+        if (end !== definition.size || end < 1 || end > 65536) {
+          throw new Error(
+            `Layout '${definition.name}' must describe every byte and be between 1 and 65536 bytes.`
+          );
+        }
+        return fields;
+      }
+      emit(words) {
+        const args = splitInitializerList(words.slice(1).join(" "));
+        if (args.length !== 2)
+          throw new Error("dataStruct syntax: dataStruct Record[index], { field = value }.");
+        const [reference, literal] = args;
+        const { definition, index: index2 } = this.resolveRecord(reference);
+        if (this.table?.next !== void 0 && index2 !== this.table.next) {
+          throw new Error(
+            `Non-contiguous dataStructs index: expected ${this.table.next}, received ${index2}.`
+          );
+        }
+        const layout = this.fieldsFor(definition);
+        const values = parseStructInitializer(literal);
+        const names = new Set(layout.map((field) => field.name));
+        for (const name of values.keys()) {
+          if (!names.has(name))
+            throw new Error(`Unknown initializer field '${definition.name}.${name}'.`);
+        }
+        const bytes = [];
+        for (const field of layout) {
+          const value = values.get(field.name);
+          const name = `${reference}.${field.name}`;
+          if (value === void 0) throw new Error(`Missing initializer field '${name}'.`);
+          if (field.array !== Array.isArray(value))
+            throw new Error(`Field '${name}' requires ${field.array ? "an array" : "a scalar"}.`);
+          const items = typeof value === "string" ? [value] : value;
+          if (items.length !== field.count)
+            throw new Error(
+              `Field '${name}' requires ${field.count} value(s), received ${items.length}.`
+            );
+          if (!this.host.canEmitBytes) continue;
+          for (const expression of items) {
+            const number = this.host.operandResolver.getnum(expression);
+            if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
+              throw new Error(
+                `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`
+              );
+            }
+            for (let byte = 0; byte < field.width; byte++)
+              bytes.push(Math.floor(number / 2 ** (8 * byte)) & 255);
+          }
+        }
+        if (this.host.canEmitBytes) {
+          const expected = this.structs.resolveStructLabel(reference);
+          if (this.host.currentTargetBaseAddress !== expected) {
+            throw new Error(
+              `dataStruct '${reference}' requires pc() == $${expected.toString(16).toUpperCase()}, received $${this.host.currentTargetBaseAddress.toString(16).toUpperCase()}.`
+            );
+          }
+          this.host.outputWriter.writeBytes(bytes);
+        } else this.host.outputWriter.step(definition.size);
+        if (this.table) {
+          this.table.next = index2 + 1;
+          this.table.rows++;
+        }
+      }
+    };
+  }
+});
+
+// packages/core/src/services/struct-engine.ts
+var StructEngine;
+var init_struct_engine = __esm({
+  "packages/core/src/services/struct-engine.ts"() {
+    "use strict";
+    init_address_width();
+    init_normalized_command();
+    init_data_struct_engine();
+    StructEngine = class {
+      constructor(host) {
+        this.host = host;
+        this.data = new DataStructEngine(host, this);
+      }
+      host;
+      data;
+      /**
+       * Handles a struct mode command.
+       * @param {NormalizedCommand} command The command to handle.
+       * @returns {boolean} `true` if the command was handled, `false` otherwise.
+       */
+      handleStructMode(command) {
+        const currentStruct = this.host.currentStruct;
+        if (!currentStruct) {
+          return false;
+        }
+        const { words } = command;
+        const keyword = words[0] ?? "";
+        if (keyword.startsWith(".")) {
+          const hasColon = keyword.endsWith(":");
+          const labelName = keyword.replace(/:$/, "").substring(1);
+          const declaration = words.slice(1).join(" ");
+          const typed = declaration.match(/^(db|dw|dl|dd)(?:\s*\[([^\]]+)])?$/i);
+          if (typed) {
+            const width = ["db", "dw", "dl", "dd"].indexOf(typed[1].toLowerCase()) + 1;
+            const count = typed[2] === void 0 ? 1 : this.host.operandResolver.getnum(typed[2]);
+            if (!Number.isSafeInteger(count) || count < 1 || count * width > 65536) {
+              throw new Error(`Invalid array length for '${currentStruct.name}.${labelName}'.`);
+            }
+            if (currentStruct.labels.has(labelName)) {
+              throw new Error(`Duplicate typed field '${currentStruct.name}.${labelName}'.`);
+            }
+            (currentStruct.fields ??= /* @__PURE__ */ new Map()).set(labelName, {
+              name: labelName,
+              offset: currentStruct.offset,
+              width,
+              count,
+              array: typed[2] !== void 0
+            });
+          } else if (/^(db|dw|dl|dd)\b/i.test(declaration)) {
+            throw new Error(`Invalid typed field '${currentStruct.name}.${labelName}': ${declaration}`);
+          }
+          currentStruct.labels.set(labelName, currentStruct.offset);
+          this.host.recordSymbolDefinition("structMember", labelName, {
+            value: currentStruct.offset,
+            containerName: currentStruct.name
+          });
+          if (typed) {
+            const field = currentStruct.fields.get(labelName);
+            currentStruct.offset += field.width * field.count;
+          } else if (words[1]?.toLowerCase() === "skip") {
+            if (words.length !== 3) {
+              throw new Error(
+                `skip directive in struct requires exactly one parameter: ${words.length}`
+              );
+            }
+            const skipAmount = this.host.operandResolver.getnum(words[2]);
+            if (Number.isSafeInteger(skipAmount) && skipAmount > 0) {
+              currentStruct.fields?.set(labelName, {
+                name: labelName,
+                offset: currentStruct.offset,
+                width: 1,
+                count: skipAmount,
+                array: true
+              });
+            }
+            currentStruct.offset += skipAmount;
+          }
+          void hasColon;
+          setCommandKind(command, "structCommand");
+          return true;
+        }
+        if (keyword.toLowerCase() === "endstruct") {
+          this.handleEndStruct(words);
+          setCommandKind(command, "structCommand");
+          return true;
+        }
+        setCommandKind(command, "structCommand");
+        return true;
+      }
+      /**
+       * Handles a struct command.
+       * @param {string[]} words The words of the command.
+       */
+      handleStruct(words) {
+        if (words.length < 2) {
+          throw new Error("Struct definition requires at least two parameters.");
+        }
+        const structName = words[1];
+        let base;
+        let parent;
+        if (words.length === 2) {
+          base = 0;
+        } else if (words[2].toLowerCase() === "extends") {
+          if (words.length < 4) {
+            throw new Error("Struct extension must specify a parent struct.");
+          }
+          parent = words[3];
+          const parentStruct = this.host.structs.get(parent);
+          if (!parentStruct) {
+            throw new Error(`Parent struct '${parent}' not defined.`);
+          }
+          base = parentStruct.base;
+        } else {
+          base = this.host.operandResolver.getnum(words[2]);
+          if (base < 0 || base > maximumAddressForWidth(this.host.addressWidth)) {
+            throw new Error(`Invalid logical address for struct: ${words[2]}`);
+          }
+        }
+        this.host.enterStructDefinition(base);
+        this.host.currentStruct = {
+          name: structName,
+          base,
+          offset: 0,
+          size: 0,
+          labels: /* @__PURE__ */ new Map(),
+          fields: /* @__PURE__ */ new Map(),
+          parent,
+          extensionSize: 0
+        };
+        this.host.recordSymbolDefinition("struct", structName, { value: base });
+      }
+      /**
+       * Handles an endstruct command.
+       * @param {string[]} words The words of the command.
+       */
+      handleEndStruct(words) {
+        const currentStruct = this.host.currentStruct;
+        if (!currentStruct) {
+          throw new Error("endstruct encountered but not inside a struct definition.");
+        }
+        let align;
+        let count;
+        let first = 0;
+        const seen = /* @__PURE__ */ new Set();
+        for (let index2 = 1; index2 < words.length; index2 += 2) {
+          const option = words[index2].toLowerCase();
+          if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index2 + 1] === void 0) {
+            if (words[1]?.toLowerCase() === "align")
+              throw new Error("endstruct align requires a single alignment parameter.");
+            throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
+          }
+          seen.add(option);
+          const value = this.host.operandResolver.getnum(words[index2 + 1]);
+          if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
+            throw new Error(
+              option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
+            );
+          }
+          if (option === "align") align = value;
+          else if (option === "count") count = value;
+          else first = value;
+        }
+        if (seen.has("firstindex") && count === void 0)
+          throw new Error("endstruct firstindex requires count.");
+        if (count !== void 0) {
+          if (!Number.isSafeInteger(first + count))
+            throw new Error("Struct index range exceeds integer precision.");
+          currentStruct.indexRange = { first, count };
+        }
+        let finalSize = currentStruct.offset;
+        if (align !== void 0) {
+          finalSize = Math.ceil(finalSize / align) * align;
+          currentStruct.align = align;
+        }
+        currentStruct.size = finalSize;
+        if (currentStruct.parent) {
+          const parentName = currentStruct.parent;
+          const parentStruct = this.host.structs.get(parentName);
+          if (!parentStruct) {
+            throw new Error(`Parent struct '${parentName}' not defined.`);
+          }
+          const extSize = currentStruct.size;
+          if (extSize > parentStruct.extensionSize) {
+            parentStruct.extensionSize = extSize;
+          }
+          this.host.structs.set(`${parentName}.${currentStruct.name}`, currentStruct);
+          this.host.structs.set(currentStruct.name, currentStruct);
+        } else {
+          this.host.structs.set(currentStruct.name, currentStruct);
+        }
+        this.host.restoreStructDefinition();
+        this.host.currentStruct = null;
+      }
+      /**
+       * Checks whether a reference starts with a known struct name.
+       * @param {string} labelRef The reference to inspect.
+       * @returns {boolean} Whether the reference belongs to a known struct.
+       */
+      hasStructReference(labelRef) {
+        if (!/^[A-Z_a-z]\w*(?:\[[^\]]+])?(?:\.[A-Z_a-z]\w*(?:\[[^\]]+])?)*$/.test(labelRef)) {
+          return false;
+        }
+        if (this.host.structs.has(labelRef)) {
+          return true;
+        }
+        const dotIndex = labelRef.indexOf(".");
+        const bracketIndex = labelRef.indexOf("[");
+        let rootEnd = Math.min(dotIndex, bracketIndex);
+        if (dotIndex === -1) {
+          rootEnd = bracketIndex;
+        } else if (bracketIndex === -1) {
+          rootEnd = dotIndex;
+        }
+        const root = rootEnd === -1 ? labelRef : labelRef.slice(0, rootEnd);
+        return root.length > 0 && this.host.structs.has(root);
+      }
+      /**
+       * Resolves a struct label.
+       * @param {string} labelRef The label to resolve.
+       * @returns {number} The resolved address.
+       */
+      resolveStructLabel(labelRef) {
+        const refParts = labelRef.split(".");
+        if (refParts.length === 2 && !labelRef.includes("[")) {
+          const parentName = refParts[0];
+          const parentDef = this.host.structs.get(parentName);
+          if (parentDef) {
+            const extensionDef = this.host.structs.get(labelRef);
+            if (extensionDef?.parent === parentName) {
+              return parentDef.base + parentDef.size;
+            }
+          }
+        }
+        const directStruct = this.host.structs.get(labelRef);
+        if (directStruct) {
+          return directStruct.base;
+        }
+        let arrayIndex = 0;
+        let candidate = labelRef;
+        let extraMember = "";
+        const arrayMatch = candidate.match(/^(.*?)\[([^\]]+)](.*)$/);
+        if (arrayMatch) {
+          candidate = arrayMatch[1];
+          arrayIndex = this.host.operandResolver.getnum(arrayMatch[2]);
+          extraMember = arrayMatch[3];
+          if (extraMember.startsWith(".")) {
+            extraMember = extraMember.substring(1);
+          }
+        }
+        const parts = candidate.split(".");
+        for (let i = parts.length; i >= 1; i--) {
+          const potential = parts.slice(0, i).join(".");
+          if (!this.host.structs.has(potential)) {
+            continue;
+          }
+          const def = this.host.structs.get(potential);
+          if (!def) {
+            continue;
+          }
+          const memberPart = parts.slice(i).join(".");
+          const memberName = memberPart + (extraMember ? (memberPart ? "." : "") + extraMember : "");
+          const baseStructSize = def.size;
+          let effectiveSize = baseStructSize;
+          if (def.align) {
+            effectiveSize = Math.ceil(baseStructSize / def.align) * def.align;
+          }
+          const maxExtensionSize = def.extensionSize;
+          if (maxExtensionSize > 0) {
+            effectiveSize += maxExtensionSize;
+          }
+          if (memberName.trim() === "") {
+            if (arrayIndex !== 0) {
+              return def.base + arrayIndex * effectiveSize;
+            }
+            return def.base;
+          }
+          const memberParts = memberName.split(".");
+          const topLevelMember = memberParts[0];
+          if (!def.labels.has(topLevelMember)) {
+            const childStruct = this.host.structs.get(topLevelMember);
+            if (childStruct && childStruct.parent === potential) {
+              const childMemberName = memberParts.slice(1).join(".");
+              const childReference = `${topLevelMember}${childMemberName ? `.${childMemberName}` : ""}`;
+              const childOffset = this.resolveStructLabel(childReference) - childStruct.base;
+              return def.base + arrayIndex * effectiveSize + childOffset;
+            }
+            throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
+          }
+          const offset = def.labels.get(topLevelMember);
+          if (offset === void 0) {
+            throw new Error(`Member '${topLevelMember}' not defined in struct '${potential}'.`);
+          }
+          let finalAddress;
+          if (def.parent) {
+            const parentDef = this.host.structs.get(def.parent);
+            if (!parentDef) {
+              throw new Error(
+                `Parent struct '${def.parent}' not defined for extension '${potential}'.`
+              );
+            }
+            let parentSize = parentDef.size;
+            if (parentDef.align) {
+              parentSize = Math.ceil(parentSize / parentDef.align) * parentDef.align;
+            }
+            if (arrayIndex === 0) {
+              finalAddress = parentDef.base + parentSize + offset;
+            } else {
+              finalAddress = parentDef.base + parentSize + arrayIndex * def.size + offset;
+            }
+          } else {
+            finalAddress = def.base + arrayIndex * effectiveSize + offset;
+          }
+          return finalAddress;
+        }
+        throw new Error(`Struct not defined in reference: ${labelRef}`);
+      }
+    };
+  }
+});
+
+// packages/core/src/services/symbol-scope-service.ts
+function fileBasename(file) {
+  const normalized = file.replaceAll("\\", "/");
+  const slash = normalized.lastIndexOf("/");
+  return slash === -1 ? normalized : normalized.slice(slash + 1);
+}
+function parseUnnamedLabelReference(token) {
+  const match = token.trim().match(/^:(\++|-+)$/);
+  if (!match) {
+    return void 0;
+  }
+  const signs = match[1];
+  return {
+    direction: signs[0] === "+" ? 1 : -1,
+    count: signs.length
+  };
+}
+var SymbolScopeService;
+var init_symbol_scope_service = __esm({
+  "packages/core/src/services/symbol-scope-service.ts"() {
+    "use strict";
+    init_syntax_profile();
+    SymbolScopeService = class {
+      constructor(host) {
+        this.host = host;
+      }
+      host;
+      /**
+       * Returns the current ca65-style object file name (last `.asm` on the include stack).
+       * @returns {string} The object-file basename, or empty when unknown.
+       */
+      objectFileKey() {
+        const chain = [...this.host.includeStack, this.host.currentFile];
+        for (let index2 = chain.length - 1; index2 >= 0; index2--) {
+          const base = fileBasename(chain[index2] ?? "");
+          if (base.toLowerCase().endsWith(".asm")) {
+            return base;
+          }
+        }
+        return fileBasename(this.host.currentFile);
+      }
+      /**
+       * Qualifies a symbol for the active syntax profile's file-local rule.
+       * Exported/imported names and cheap/sublabels stay unqualified.
+       * @param {string} name The source symbol name.
+       * @returns {string} The storage key.
+       */
+      qualifySymbolName(name) {
+        const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
+        if (!profile.fileLocalSymbols) {
+          return name;
+        }
+        if (this.host.globalSymbols.has(name)) {
+          return name;
+        }
+        if (name.startsWith(".") || name.startsWith("@") || name.includes("::")) {
+          return name;
+        }
+        const unit = this.objectFileKey();
+        return unit ? `${unit}::${name}` : name;
+      }
+      /**
+       * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
+       * @param {string} namespacePrefix The flattened namespace prefix.
+       * @param {string} label The already-qualified or plain label.
+       * @returns {string} The namespace-qualified storage key.
+       */
+      qualifyNamespaceAlias(namespacePrefix, label) {
+        if (this.host.syntaxProfile.fileLocalSymbols) {
+          const separator = label.indexOf("::");
+          if (separator !== -1) {
+            return `${label.slice(0, separator + 2)}${namespacePrefix}_${label.slice(separator + 2)}`;
+          }
+        }
+        return `${namespacePrefix}_${label}`;
+      }
+      /**
+       * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
+       * @param {string} name The label token, without a trailing colon.
+       * @returns {string} The rewritten name.
+       */
+      toCheapDotLabel(name) {
+        const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+        if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
+          return `.${name.slice(prefix.length)}`;
+        }
+        return name;
+      }
+      /**
+       * Finds nearest hierarchy ancestor.
+       * @param {string} label The label.
+       * @returns {string | null} The result.
+       */
+      findNearestHierarchyAncestor(label) {
+        for (let i = label.length - 1; i >= 0; i--) {
+          if (label[i] !== "_") {
+            continue;
+          }
+          const candidate = label.slice(0, i);
+          if (!candidate) {
+            continue;
+          }
+          const entry = this.host.labelTable.get(candidate);
+          if (entry?.modifiesHierarchy) {
+            return candidate;
+          }
+        }
+        return null;
+      }
+      /**
+       * Gets hierarchy chain.
+       * @param {string} label The label.
+       * @returns {string[]} The result.
+       */
+      getHierarchyChain(label) {
+        const rootLabel = this.host.currentGlobalParentLabel;
+        const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
+        const chain = [label];
+        let cursor = label;
+        while (true) {
+          const explicitParent = this.host.labelParents.get(cursor);
+          const parent = explicitParent === void 0 ? this.findNearestHierarchyAncestor(cursor) : explicitParent;
+          if (!parent) {
+            break;
+          }
+          chain.unshift(parent);
+          if (rootApplies && parent === rootLabel) {
+            break;
+          }
+          cursor = parent;
+        }
+        return chain;
+      }
+      /**
+       * Gets ancestor prefixes.
+       * @param {string} label The label.
+       * @returns {string[]} The result.
+       */
+      getAncestorPrefixes(label) {
+        const prefixes = [];
+        for (let i = label.length - 1; i >= 0; i--) {
+          if (label[i] !== "_") {
+            continue;
+          }
+          const candidate = label.slice(0, i);
+          if (candidate) {
+            prefixes.push(candidate);
+          }
+        }
+        return prefixes;
+      }
+      /**
+       * Gets scoped parent label.
+       * @param {number} dotCount The dot count.
+       * @returns {string} The result.
+       */
+      getScopedParentLabel(dotCount) {
+        const current = this.host.currentParentLabel;
+        if (dotCount === 1) {
+          if (this.host.currentGlobalParentLabel) {
+            return this.host.currentGlobalParentLabel;
+          }
+          if (this.host.currentParentIsGlobal) {
+            return current;
+          }
+          const chain2 = this.getHierarchyChain(current);
+          return chain2[0] ?? current;
+        }
+        if (this.host.currentParentIsGlobal) {
+          return current;
+        }
+        const chain = this.getHierarchyChain(current);
+        const targetDepth = dotCount - 1;
+        return chain[targetDepth] ?? current;
+      }
+      /**
+       * Checks if a label is in scope.
+       * @param {string} identifier The label to check.
+       * @returns {boolean} `true` if the label is in scope, `false` otherwise.
+       */
+      hasLabelInScope(identifier) {
+        const qualified = this.qualifySymbolName(identifier);
+        return this.host.labelTable.has(identifier) || qualified !== identifier && this.host.labelTable.has(qualified) || (this.host.currentNamespace ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`) : false);
+      }
+      /**
+       * Handles a relative label.
+       * @param {string} label The label to handle.
+       * @returns {number} The address of the label.
+       */
+      handleRelativeLabel(label) {
+        const isPositive = label.includes("+");
+        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const targetAddress = this.host.currentTargetAddress;
+        const isMacroLocal = label.startsWith("?");
+        if (this.host.enforceResolvedLabels) {
+          if (isPositive) {
+            if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+              throw new Error(`Error: Undefined forward label '${label}'.`);
+            }
+          } else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+            throw new Error(`Error: Undefined backward label '${label}'.`);
+          }
+          return targetAddress;
+        }
+        if (isPositive) {
+          if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
+          if (isMacroLocal && this.host.inMacroExpansion) {
+            this.host.forwardLabels[depth].push({
+              addr: targetAddress,
+              macroInstance: this.host.macroLabelInstance
+            });
+          } else {
+            this.host.forwardLabels[depth].push({ addr: targetAddress });
+          }
+        } else {
+          if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
+          if (isMacroLocal && this.host.inMacroExpansion) {
+            this.host.backwardLabels[depth].push({
+              addr: targetAddress,
+              macroInstance: this.host.macroLabelInstance
+            });
+          } else {
+            this.host.backwardLabels[depth].push({ addr: targetAddress });
+          }
+        }
+        return targetAddress;
+      }
+      /**
+       * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
+       * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
+       * @returns {number} The address of the unnamed label.
+       */
+      handleUnnamedLabel() {
+        const targetAddress = this.host.currentTargetAddress;
+        if (this.host.enforceResolvedLabels) {
+          if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+            throw new Error("Error: Undefined unnamed label ':'.");
+          }
+          return targetAddress;
+        }
+        if (!this.host.forwardLabels[0]) this.host.forwardLabels[0] = [];
+        if (!this.host.backwardLabels[0]) this.host.backwardLabels[0] = [];
+        const entry = { addr: targetAddress, unit: this.objectFileKey() };
+        this.host.forwardLabels[0].push(entry);
+        this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
+        return targetAddress;
+      }
+      /**
+       * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
+       * @param {string} label The reference token.
+       * @param {number} [currentAddressOverride] PC to search from.
+       * @returns {number} The target address.
+       */
+      findUnnamedLabel(label, currentAddressOverride) {
+        const parsed = parseUnnamedLabelReference(label);
+        if (!parsed) {
+          throw new Error(`Error: Invalid unnamed label '${label}'.`);
+        }
+        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+        if (!this.host.enforceResolvedLabels) {
+          return 0;
+        }
+        const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+        if (!table || table.length === 0) {
+          throw new Error(
+            `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
+          );
+        }
+        const unit = this.objectFileKey();
+        const ordered = table.filter((entry) => !entry.unit || entry.unit === unit).filter(
+          (entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress
+        ).map((entry) => entry.addr).sort((left, right) => parsed.direction === 1 ? left - right : right - left);
+        if (ordered.length < parsed.count) {
+          throw new Error(
+            `Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`
+          );
+        }
+        return ordered[parsed.count - 1];
+      }
+      /**
+       * Finds the next label.
+       * @param {string} label The label to find.
+       * @param {number} currentAddressOverride The current address to override.
+       * @returns {number} The address of the next label.
+       */
+      findNextLabel(label, currentAddressOverride) {
+        const isPositive = label.includes("+");
+        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+        const isMacroLocal = label.startsWith("?");
+        if (!this.host.enforceResolvedLabels) {
+          return 0;
+        }
+        if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+          throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
+        }
+        const possibleTargets = this.host.forwardLabels[depth].filter((entry) => {
+          if (isMacroLocal && this.host.inMacroExpansion) {
+            return entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance;
+          }
+          return entry.addr >= currentAddress && !entry.macroInstance;
+        }).map((entry) => entry.addr);
+        if (possibleTargets.length === 0) {
+          throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
+        }
+        return possibleTargets.reduce((nearest, address3) => Math.min(nearest, address3), Infinity);
+      }
+      /**
+       * Finds the previous label.
+       * @param {string} label The label to find.
+       * @param {number} currentAddressOverride The current address to override.
+       * @returns {number} The address of the previous label.
+       */
+      findPreviousLabel(label, currentAddressOverride) {
+        const isPositive = label.includes("+");
+        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+        const isMacroLocal = label.startsWith("?");
+        if (this.host.isDefinitionCollectionStage) {
+          return 0;
+        }
+        if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+          throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
+        }
+        const possibleTargets = this.host.backwardLabels[depth].filter((entry) => {
+          if (isMacroLocal && this.host.inMacroExpansion) {
+            return entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance;
+          }
+          return entry.addr < currentAddress && !entry.macroInstance;
+        }).map((entry) => entry.addr);
+        if (possibleTargets.length === 0) {
+          throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
+        }
+        return possibleTargets.reduce((nearest, address3) => Math.max(nearest, address3), -Infinity);
+      }
+      /**
+       * Sets a label.
+       * @param {string} label The label to set.
+       * @param {number} value The value of the label.
+       * @param {boolean} isStatic Whether the label is static.
+       * @param {boolean} isMacroLabel Whether the label is a macro label.
+       * @param {boolean} isGlobal Whether the label is global.
+       * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
+       */
+      setLabel(label, value, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true) {
+        let fullLabel = label;
+        let directScopeLabel = null;
+        if (isMacroLabel && (label.startsWith("?") || label.startsWith("#"))) {
+          const prefix = label.charAt(0);
+          const labelName = label.substring(1);
+          const macroModifiesHierarchy = prefix !== "#";
+          if (prefix === "?") {
+            if (labelName.startsWith(".")) {
+              let recentMainLabel = "";
+              for (const [key, entry] of this.host.labelTable.entries()) {
+                if (entry.isMacroLabel && key.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key.includes("_SubLabel_")) {
+                  const labelPart = key.substring(`:macro_${this.host.macroLabelInstance}_`.length);
+                  if (!labelPart.startsWith(".")) {
+                    recentMainLabel = labelPart;
+                  }
+                }
+              }
+              fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+              if (recentMainLabel) {
+                const subLabelWithoutDot = labelName.substring(1);
+                const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
+                const subAddr = value !== void 0 ? value : this.host.currentTargetAddress;
+                this.host.labelTable.set(parentChildLabel, {
+                  value: subAddr,
+                  isStatic,
+                  isMacroLabel: true,
+                  macroInstance: this.host.macroLabelInstance,
+                  modifiesHierarchy: macroModifiesHierarchy
+                });
+              }
+            } else {
+              fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+            }
+          } else {
+            fullLabel = this.host.currentNamespace && !isGlobal ? `${this.host.currentNamespace}_${labelName}` : labelName;
+          }
+        } else if (!label.includes(":")) {
+          const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+          if (this.host.currentNamespace && !isGlobal) {
+            if (!label.startsWith(`${namespacePrefix}_`)) {
+              fullLabel = `${namespacePrefix}_${label}`;
+              if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0 && modifiesHierarchy) {
+                const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
+                const leafLabel = `${leafNamespace}_${label}`;
+                const addr2 = value !== void 0 ? value : this.host.currentTargetAddress;
+                this.host.labelTable.set(leafLabel, {
+                  value: addr2,
+                  isStatic,
+                  isMacroLabel,
+                  macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
+                  modifiesHierarchy
+                });
+                for (let i = this.host.namespaceNestingPath.length - 2; i >= 0; i--) {
+                  const partialPath = this.host.namespaceNestingPath.slice(i);
+                  const partialLabel = `${partialPath.join("_")}_${label}`;
+                  this.host.labelTable.set(partialLabel, {
+                    value: addr2,
+                    isStatic,
+                    isMacroLabel,
+                    macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
+                    modifiesHierarchy
+                  });
+                }
+              }
+            }
+            if (label.includes("_") && !label.startsWith(`${namespacePrefix}_`)) {
+              directScopeLabel = label;
+            }
+          } else {
+            fullLabel = label;
+          }
+        }
+        const addr = value !== void 0 ? value : this.host.currentTargetAddress;
+        if (this.host.isDefinitionCollectionStage) {
+          if (modifiesHierarchy && !label.startsWith(".")) {
+            this.host.currentParentLabel = fullLabel;
+            this.host.currentParentIsGlobal = isGlobal;
+          }
+          this.host.labelTable.set(fullLabel, {
+            value: addr,
+            isStatic,
+            isMacroLabel,
+            macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
+            modifiesHierarchy
+          });
+          this.host.recordSymbolDefinition("label", fullLabel, {
+            value: addr,
+            containerName: this.symbolContainerName(fullLabel, isGlobal)
+          });
+          if (directScopeLabel) {
+            this.host.labelTable.set(directScopeLabel, {
+              value: addr,
+              isStatic,
+              isMacroLabel,
+              macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
+              modifiesHierarchy: false
+            });
+          }
+          return;
+        }
+        if (this.host.enforceResolvedLabels) {
+          const existingEntry = this.host.labelTable.get(fullLabel);
+          if (existingEntry) {
+            if (existingEntry.isStatic !== isStatic) {
+              throw new Error(`Label '${fullLabel}' is not static and cannot be used in conditionals.`);
+            }
+            if (!isStatic && existingEntry.value !== addr && !isMacroLabel) {
+              throw new Error(
+                `Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`
+              );
+            }
+          }
+        }
+        if (modifiesHierarchy && !label.startsWith(".")) {
+          this.host.currentParentLabel = fullLabel;
+          this.host.currentParentIsGlobal = isGlobal;
+        }
+        this.host.labelTable.set(fullLabel, {
+          value: addr,
+          isStatic,
+          isMacroLabel,
+          macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
+          modifiesHierarchy
+        });
+        this.host.recordSymbolDefinition("label", fullLabel, {
+          value: addr,
+          containerName: this.symbolContainerName(fullLabel, isGlobal)
+        });
+        if (directScopeLabel) {
+          this.host.labelTable.set(directScopeLabel, {
+            value: addr,
+            isStatic,
+            isMacroLabel,
+            macroInstance: isMacroLabel ? this.host.macroLabelInstance : void 0,
+            modifiesHierarchy: false
+          });
+        }
+      }
+      /**
+       * Resolves a struct member.
+       * @param {string} compoundId The compound ID of the struct member.
+       * @returns {number} The address of the struct member.
+       */
+      resolveStructMember(compoundId) {
+        const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
+        if (!firstId || !this.host.structs.has(firstId))
+          throw new Error(`Struct not found: ${compoundId}`);
+        let rest = compoundId.substring(firstId.length).trim();
+        let base = 0;
+        let currentStruct = this.host.structs.get(firstId);
+        if (!currentStruct) {
+          throw new Error(`Struct not found: ${compoundId}`);
+        }
+        while (rest.length > 0) {
+          if (rest.startsWith(".")) {
+            rest = rest.substring(1).trim();
+            const memberMatch = rest.match(/^([A-Z_a-z]\w*)/);
+            if (!memberMatch) throw new Error(`Invalid struct member: ${compoundId}`);
+            const memberName = memberMatch[1];
+            rest = rest.substring(memberName.length).trim();
+            const memberOffset = currentStruct.labels.get(memberName);
+            if (memberOffset !== void 0) {
+              return base + memberOffset;
+            }
+            const childStruct = this.host.structs.get(memberName);
+            if (childStruct && childStruct.parent === currentStruct.name) {
+              currentStruct = childStruct;
+            } else {
+              throw new Error(`Struct member not found: ${currentStruct.name}.${memberName}`);
+            }
+          } else if (rest.startsWith("[")) {
+            const bracketEnd = rest.indexOf("]");
+            if (bracketEnd === -1) throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+            const indexStr = rest.substring(1, bracketEnd).trim();
+            const index2 = Number.parseInt(indexStr, 10);
+            if (Number.isNaN(index2)) throw new Error(`Invalid struct index: ${indexStr}`);
+            rest = rest.substring(bracketEnd + 1).trim();
+            base += index2 * currentStruct.size;
+          } else {
+            break;
+          }
+        }
+        return base;
+      }
+      /**
+       * Gets the value of a label.
+       * @param {string} label The label to get the value of.
+       * @param {boolean} requireStatic Whether the label must be static.
+       * @returns {number} The value of the label.
+       */
+      getLabelValue(label, requireStatic) {
+        const value = this.tryGetLabelValue(label, requireStatic);
+        if (value !== void 0) {
+          return value;
+        }
+        if (this.host.isDefinitionCollectionStage) {
+          return 0;
+        }
+        throw new Error(`Error: Label '${label}' not found.`);
+      }
+      /**
+       * Tries to get a scoped label value without allocating an Error for a miss.
+       * @param {string} label The label to get the value of.
+       * @param {boolean} requireStatic Whether the label must be static.
+       * @returns {number | undefined} The value, or undefined when not found.
+       */
+      tryGetLabelValue(label, requireStatic) {
+        if (parseUnnamedLabelReference(label)) {
+          if (!this.host.enforceResolvedLabels) {
+            return void 0;
+          }
+          return this.findUnnamedLabel(label);
+        }
+        const cheap = this.toCheapDotLabel(label);
+        if (cheap !== label) {
+          return this.tryGetLabelValue(cheap, requireStatic);
+        }
+        if (label.startsWith(".") && this.host.currentParentLabel) {
+          let dotCount = 0;
+          while (label[dotCount] === ".") {
+            dotCount++;
+          }
+          const localName = label.substring(dotCount);
+          const candidates = /* @__PURE__ */ new Set();
+          const nestedLocalParts = localName.split("_").filter(Boolean);
+          const hierarchyChain = this.getHierarchyChain(this.host.currentParentLabel);
+          let currentLocalName;
+          if (hierarchyChain.length >= 2) {
+            const parentPrefix = `${hierarchyChain[hierarchyChain.length - 2]}_`;
+            if (this.host.currentParentLabel.startsWith(parentPrefix)) {
+              currentLocalName = this.host.currentParentLabel.slice(parentPrefix.length);
+            }
+          }
+          const addCandidate = (candidate) => {
+            if (candidate === this.host.currentParentLabel && currentLocalName !== localName) {
+              return;
+            }
+            candidates.add(candidate);
+          };
+          const addExactLocalCandidate = (parentPrefix) => {
+            addCandidate(`${parentPrefix}_${localName}`);
+          };
+          const addShortenedLocalCandidates = (parentPrefix) => {
+            for (let i = 1; i < nestedLocalParts.length; i++) {
+              addCandidate(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
+            }
+          };
+          addExactLocalCandidate(this.host.currentParentLabel);
+          for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
+            addExactLocalCandidate(ancestorPrefix);
+          }
+          for (let i = hierarchyChain.length - 2; i >= 0; i--) {
+            addExactLocalCandidate(hierarchyChain[i]);
+          }
+          addShortenedLocalCandidates(this.host.currentParentLabel);
+          for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
+            addShortenedLocalCandidates(ancestorPrefix);
+          }
+          for (let i = hierarchyChain.length - 2; i >= 0; i--) {
+            addShortenedLocalCandidates(hierarchyChain[i]);
+          }
+          for (const candidate of candidates) {
+            const value = this.tryGetLabelValueDirect(candidate, requireStatic);
+            if (value !== void 0) {
+              return value;
+            }
+          }
+        }
+        const qualified = this.qualifySymbolName(label);
+        if (qualified !== label) {
+          const scoped = this.tryGetLabelValueDirect(qualified, requireStatic);
+          if (scoped !== void 0) {
+            return scoped;
+          }
+        }
+        const isMacroLabelRef = label.startsWith("?");
+        if (isMacroLabelRef && this.host.inMacroExpansion) {
+          const labelName = label.substring(1);
+          if (labelName.includes("_")) {
+            const [parentPart, subPart] = labelName.split("_", 2);
+            const childLabel = `:macro_${this.host.macroLabelInstance}_.${subPart}`;
+            const childEntry = this.host.labelTable.get(childLabel);
+            if (childEntry) {
+              if (requireStatic && !childEntry.isStatic) {
+                throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+              }
+              return childEntry.value;
+            }
+            const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
+            const parentChildEntry = this.host.labelTable.get(parentChildLabel);
+            if (parentChildEntry) {
+              if (requireStatic && !parentChildEntry.isStatic) {
+                throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+              }
+              return parentChildEntry.value;
+            }
+          }
+          const macroLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+          const macroEntry = this.host.labelTable.get(macroLabel);
+          if (macroEntry) {
+            if (requireStatic && !macroEntry.isStatic) {
+              throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+            }
+            return macroEntry.value;
+          }
+          if (labelName.startsWith(".")) {
+            const macroLabelNoDot = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+            const macroNoDotEntry = this.host.labelTable.get(macroLabelNoDot);
+            if (macroNoDotEntry) {
+              if (requireStatic && !macroNoDotEntry.isStatic) {
+                throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+              }
+              return macroNoDotEntry.value;
+            }
+          }
+        }
+        if (label.includes(":") || label.includes("_")) {
+          return this.tryGetLabelValueDirect(label, requireStatic);
+        }
+        if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0) {
+          for (let i = this.host.namespaceNestingPath.length; i >= 0; i--) {
+            const namespacePath = this.host.namespaceNestingPath.slice(0, i);
+            const namespacePrefix = namespacePath.join("_");
+            const fullLabel = namespacePrefix ? `${namespacePrefix}_${label}` : label;
+            const value = this.tryGetLabelValueDirect(fullLabel, requireStatic);
+            if (value !== void 0) {
+              return value;
+            }
+          }
+        }
+        if (this.host.currentNamespace) {
+          const value = this.tryGetLabelValueDirect(
+            `${this.host.currentNamespace}_${label}`,
+            requireStatic
+          );
+          if (value !== void 0) {
+            return value;
+          }
+        }
+        return this.tryGetLabelValueDirect(label, requireStatic);
+      }
+      /**
+       * Gets the value of a label directly.
+       * @param {string} label The label to get the value of.
+       * @param {boolean} requireStatic Whether the label must be static.
+       * @returns {number} The value of the label.
+       */
+      getLabelValueDirect(label, requireStatic) {
+        const value = this.tryGetLabelValueDirect(label, requireStatic);
+        if (value !== void 0) {
+          return value;
+        }
+        if (this.host.isDefinitionCollectionStage) {
+          return 0;
+        }
+        throw new Error(`Error: Label '${label}' not found.`);
+      }
+      /**
+       * Tries a direct label lookup without allocating an Error for ordinary misses.
+       * @param {string} label The label to get the value of.
+       * @param {boolean} requireStatic Whether the label must be static.
+       * @returns {number | undefined} The value, or undefined when not found.
+       */
+      tryGetLabelValueDirect(label, requireStatic) {
+        if (label.includes("_") && !label.includes(":")) {
+          const parts = label.split("_");
+          if (parts.length === 2) {
+            const parentLabel = parts[0];
+            const localLabel = `.${parts[1]}`;
+            const combinedLabel = `${parentLabel}_${localLabel.replace(/^\./, "")}`;
+            const combinedEntry = this.host.labelTable.get(combinedLabel);
+            if (combinedEntry) {
+              if (requireStatic && !combinedEntry.isStatic) {
+                throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
+              }
+              return combinedEntry.value;
+            }
+            const localEntry = this.host.labelTable.get(localLabel);
+            if (localEntry) {
+              if (requireStatic && !localEntry.isStatic) {
+                throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
+              }
+              return localEntry.value;
+            }
+          }
+        }
+        const entry = this.host.labelTable.get(label);
+        if (!entry) {
+          return void 0;
+        }
+        if (requireStatic && !entry.isStatic) {
+          throw new Error(`Error: Non-static label '${label}' used in conditional.`);
+        }
+        return entry.value;
+      }
+      /**
+       * Gets the size of a struct or extension.
+       * @param {string} identifier The identifier of the struct or extension.
+       * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
+       * @returns {number} The size of the struct or extension.
+       * @throws {Error} If the struct or extension doesn't exist.
+       */
+      getObjectSize(identifier, baseOnly = false) {
+        let workingIdentifier = identifier;
+        if (workingIdentifier.startsWith('"') && workingIdentifier.endsWith('"')) {
+          workingIdentifier = workingIdentifier.substring(1, workingIdentifier.length - 1);
+        }
+        const directDef = this.host.structs.get(workingIdentifier);
+        if (directDef) {
+          if (baseOnly) {
+            return directDef.size;
+          }
+          return !directDef.parent ? directDef.size + directDef.extensionSize : directDef.size;
+        }
+        if (workingIdentifier.includes(".")) {
+          const parts = workingIdentifier.split(".").filter(Boolean);
+          let current = parts[0];
+          if (!this.host.structs.has(current)) {
+            throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+          }
+          for (let i = 1; i < parts.length; i++) {
+            const child = parts[i];
+            const childDef = this.host.structs.get(child);
+            if (!childDef || childDef.parent !== current) {
+              throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+            }
+            current = child;
+          }
+          workingIdentifier = current;
+        }
+        if (!this.host.structs.has(workingIdentifier)) {
+          throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+        }
+        const def = this.host.structs.get(workingIdentifier);
+        if (!def) {
+          throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+        }
+        if (baseOnly) {
+          return def.size;
+        }
+        return !def.parent ? def.size + def.extensionSize : def.size;
+      }
+      /**
+       * Returns the outline container for a stored label name.
+       * Sublabels nest under their parent; namespaced labels nest under the namespace.
+       * @param {string} fullLabel The stored label name.
+       * @param {boolean} isGlobal Whether the label is global.
+       * @returns {string | undefined} The container name, if any.
+       */
+      symbolContainerName(fullLabel, isGlobal) {
+        const parent = this.host.labelParents.get(fullLabel);
+        if (parent) {
+          return parent;
+        }
+        if (!isGlobal && this.host.currentNamespace && fullLabel.startsWith(`${this.host.currentNamespace}_`)) {
+          return this.host.currentNamespace;
+        }
+        return void 0;
+      }
+      /**
+       * Handles a label definition.
+       * @param {string} labelName The name of the label.
+       */
+      handleLabelDefinition(labelName) {
+        labelName = this.toCheapDotLabel(labelName);
+        if (!(labelName.startsWith(".") || labelName.startsWith("#."))) {
+          labelName = this.qualifySymbolName(labelName);
+        }
+        if (labelName.startsWith(".") || labelName.startsWith("#.")) {
+          if (!this.host.currentParentLabel) {
+            throw new Error("Sublabel without parent label");
+          }
+          const isHashLabel2 = labelName.startsWith("#");
+          const modifiesHierarchy2 = !isHashLabel2;
+          let dotCount = 0;
+          while (labelName[dotCount] === ".") {
+            dotCount++;
+          }
+          const subLabelName = labelName.substring(dotCount);
+          const parentLabel = this.getScopedParentLabel(dotCount);
+          const directScopeLabel = `${parentLabel}_${subLabelName}`;
+          this.host.labelParents.set(directScopeLabel, parentLabel);
+          if (this.host.currentNamespace) {
+            const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+            if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+              const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
+              const qualifiedParent = this.qualifyNamespaceAlias(namespacePrefix, parentLabel);
+              this.host.labelParents.set(namespacedLabel, qualifiedParent);
+              this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
+              if (modifiesHierarchy2) {
+                this.host.currentParentLabel = directScopeLabel;
+                this.host.currentParentIsGlobal = dotCount === 1;
+              }
+              this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy2);
+              return;
+            }
+          }
+          this.setLabel(directScopeLabel, void 0, false, false, false, modifiesHierarchy2);
+          if (modifiesHierarchy2) {
+            this.host.currentParentLabel = directScopeLabel;
+            this.host.currentParentIsGlobal = dotCount === 1;
+          }
+          if (this.host.currentNamespace) {
+            const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+            if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+              const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
+              this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy2);
+            }
+          }
+          return;
+        }
+        const isHashLabel = labelName.startsWith("#");
+        const modifiesHierarchy = !isHashLabel;
+        if (modifiesHierarchy) {
+          this.host.currentParentLabel = labelName;
+          this.host.currentParentIsGlobal = true;
+          this.host.currentGlobalParentLabel = labelName;
+        }
+        this.host.labelParents.set(labelName, null);
+        this.setLabel(labelName, void 0, false, false, false, modifiesHierarchy);
+        if (modifiesHierarchy) {
+          this.host.currentParentLabel = labelName;
+          this.host.currentParentIsGlobal = true;
+          this.host.currentGlobalParentLabel = labelName;
+        }
+        if (this.host.currentNamespace) {
+          const namespacePrefix = this.host.namespaceNestingEnabled ? this.host.namespaceNestingPath.join("_") : this.host.currentNamespace;
+          if (!labelName.startsWith(`${namespacePrefix}_`)) {
+            const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, labelName);
+            this.setLabel(namespacedLabel, void 0, false, false, false, modifiesHierarchy);
+          }
+        }
+      }
+    };
+  }
+});
+
 // packages/core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES, Assembler;
 var init_assembler = __esm({
   "packages/core/src/assembler.ts"() {
     "use strict";
-    init_addressToLine();
     init_address_width();
-    init_directive_groups();
+    init_addressToLine();
+    init_architecture_registry();
     init_diagnostics();
+    init_directive_groups();
+    init_registry();
+    init_file_provider();
+    init_internal_instrumentation();
     init_expression_node();
     init_normalized_command();
     init_mathcore();
     init_operand_resolver();
-    init_architecture_registry();
-    init_registry();
-    init_define_engine();
-    init_directive_runtime_service();
+    init_plugin();
     init_assembly_front_end_service();
     init_command_lowering_service();
+    init_command_text_service();
+    init_define_engine();
+    init_directive_runtime_service();
     init_front_end_command_service();
     init_include_source_service();
     init_macro_engine();
@@ -11584,11 +11590,7 @@ var init_assembler = __esm({
     init_struct_engine();
     init_struct_initializer();
     init_symbol_scope_service();
-    init_command_text_service();
     init_syntax_profile();
-    init_file_provider();
-    init_internal_instrumentation();
-    init_plugin();
     TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
     Assembler = class _Assembler {
       /** The current logical target address. */
@@ -15125,10 +15127,10 @@ var init_workspace_index = __esm({
   "packages/core/src/lsp/workspace-index.ts"() {
     "use strict";
     init_assembler();
+    init_internal_instrumentation();
     init_syntax_profile();
     init_overlay_file_provider();
     init_root_analysis_cache();
-    init_internal_instrumentation();
     WorkspaceIndex = class {
       /** Open editor buffers keyed by absolute path. */
       overlay = /* @__PURE__ */ new Map();
@@ -16395,6 +16397,286 @@ var init_spec = __esm({
   }
 });
 
+// packages/plugin-snes/src/architectures/65816-decoder.ts
+var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder;
+var init_decoder = __esm({
+  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+    "use strict";
+    init_spec();
+    flagValue = (value) => {
+      if (value === true || value === 1) return 1;
+      if (value === false || value === 0) return 0;
+      return "unknown";
+    };
+    resolvedWidthFlag = (state, flag) => {
+      const emulation = flagValue(state.e);
+      if (emulation === 1) return 1;
+      const width = flagValue(state[flag]);
+      if (width === 1) return 1;
+      if (width === 0 && emulation === 0) return 0;
+      return "unknown";
+    };
+    readLittleEndian = (bytes, offset, width) => {
+      let value = 0;
+      for (let index2 = 0; index2 < width; index2++) value |= (bytes[offset + index2] ?? 0) << index2 * 8;
+      return value >>> 0;
+    };
+    signed = (value, width) => {
+      const signBit = 1 << width * 8 - 1;
+      const modulus = 2 ** (width * 8);
+      return value & signBit ? value - modulus : value;
+    };
+    bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
+    addressOperand = (value, width) => ({
+      kind: "address",
+      value,
+      width
+    });
+    operandsFor = (specification2, bytes, logicalAddress) => {
+      const value8 = bytes[1] ?? 0;
+      const value16 = readLittleEndian(bytes, 1, 2);
+      const value24 = readLittleEndian(bytes, 1, 3);
+      switch (specification2.mode) {
+        case "implied":
+          return [];
+        case "accumulator":
+          return [{ kind: "accumulator", register: "a" }];
+        case "signature":
+          return [{ kind: "signature", value: value8, width: 1 }];
+        case "immediate":
+          return [
+            {
+              kind: "immediate",
+              value: bytes.length === 2 ? value8 : value16,
+              width: bytes.length - 1
+            }
+          ];
+        case "immediate16":
+          return [{ kind: "immediate", value: value16, width: 2 }];
+        case "direct":
+        case "directIndexedX":
+        case "directIndexedY":
+        case "directIndirect":
+        case "directIndirectLong":
+        case "directIndexedXIndirect":
+        case "directIndirectIndexedY":
+        case "directIndirectLongIndexedY":
+        case "stackRelative":
+        case "stackRelativeIndirectIndexedY":
+          return [addressOperand(value8, 1)];
+        case "absolute":
+        case "absoluteIndexedX":
+        case "absoluteIndexedY":
+        case "absoluteIndirect":
+        case "absoluteIndexedXIndirect":
+        case "absoluteIndirectLong":
+          return [addressOperand(value16, 2)];
+        case "absoluteLong":
+        case "absoluteLongIndexedX":
+          return [addressOperand(value24, 3)];
+        case "relative": {
+          const displacement = signed(value8, 1);
+          return [
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 1,
+              signed: true,
+              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+            }
+          ];
+        }
+        case "relativeLong": {
+          const displacement = signed(value16, 2);
+          return [
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 2,
+              signed: true,
+              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+            }
+          ];
+        }
+        case "blockMove":
+          return [
+            { kind: "bank", value: value8, width: 1 },
+            { kind: "bank", value: bytes[2] ?? 0, width: 1 }
+          ];
+        default:
+          return [];
+      }
+    };
+    targetFor = (specification2, operands, state, logicalAddress) => {
+      const operand = operands[0];
+      if (!operand) return void 0;
+      if (operand.targetAddress !== void 0) return operand.targetAddress;
+      if (operand.value === void 0) return void 0;
+      if (specification2.mode === "absoluteLong") return operand.value;
+      if (specification2.mode === "absolute") {
+        const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
+        return bank << 16 | operand.value;
+      }
+      return void 0;
+    };
+    referencesFor = (specification2, operands, state, logicalAddress) => {
+      const { mnemonic, mode: mode3 } = specification2;
+      const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
+      const isCall = mnemonic === "JSR" || mnemonic === "JSL";
+      const isJump = mnemonic === "JMP" || mnemonic === "JML";
+      if (isBranch || isCall || isJump) {
+        const target = targetFor(specification2, operands, state, logicalAddress);
+        let kind = "jump";
+        if (isBranch) kind = "branch";
+        else if (isCall) kind = "call";
+        return [
+          {
+            kind,
+            operandIndex: 0,
+            ...target === void 0 ? {} : { address: target },
+            ...mode3.includes("Indirect") ? { indirect: true } : {}
+          }
+        ];
+      }
+      if (mode3.includes("Indirect")) {
+        const value = operands[0]?.value;
+        return [
+          {
+            kind: "pointer",
+            operandIndex: 0,
+            ...value === void 0 ? {} : { address: value },
+            indirect: true
+          }
+        ];
+      }
+      const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
+      if (!memoryMode || operands[0]?.value === void 0) return [];
+      if (mode3.startsWith("direct")) {
+        return [
+          {
+            kind: "data",
+            operandIndex: 0,
+            ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
+          }
+        ];
+      }
+      if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
+        return [
+          {
+            kind: "data",
+            operandIndex: 0,
+            ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
+          }
+        ];
+      }
+      return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+    };
+    effectsFor = (specification2, operands) => {
+      const mask = operands[0]?.value;
+      if (specification2.operandStatusEffect && mask !== void 0) {
+        return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
+      }
+      return specification2.effects;
+    };
+    buildInstruction = (specification2, bytes, context, state) => {
+      const operands = operandsFor(specification2, bytes, context.logicalAddress);
+      return {
+        architecture: "snes.65816",
+        specificationId: specification2.id,
+        opcode: specification2.opcode[0],
+        mnemonic: specification2.mnemonic,
+        mode: specification2.mode,
+        offset: context.offset,
+        logicalAddress: context.logicalAddress & 16777215,
+        bytes,
+        size: bytes.length,
+        operands,
+        references: referencesFor(specification2, operands, state, context.logicalAddress),
+        flow: specification2.flow,
+        effects: effectsFor(specification2, operands)
+      };
+    };
+    Cpu65816Decoder = class {
+      /**
+       * Decodes a 65816 instruction.
+       * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
+       * @returns {ArchitectureDecodeResult} The decode result.
+       */
+      decode(context) {
+        const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+        const opcode = context.source.readByte(context.offset);
+        if (opcode === void 0) {
+          return {
+            kind: "error",
+            code: "outOfBounds",
+            message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+            offset: context.offset,
+            requiredBytes: 1,
+            availableBytes
+          };
+        }
+        const specification2 = cpu65816Specifications[opcode];
+        if (!specification2) {
+          return {
+            kind: "error",
+            code: "invalidOpcode",
+            message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+            offset: context.offset
+          };
+        }
+        const state = context.state ?? {};
+        let sizes = [specification2.minimumSize];
+        if (specification2.widthFlag) {
+          const width = resolvedWidthFlag(state, specification2.widthFlag);
+          sizes = width === "unknown" ? [2, 3] : [width === 1 ? 2 : 3];
+        }
+        const minimumSize = Math.min(...sizes);
+        const maximumSize = Math.max(...sizes);
+        if (availableBytes < minimumSize) {
+          return {
+            kind: "error",
+            code: "truncated",
+            message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+            offset: context.offset,
+            requiredBytes: minimumSize,
+            availableBytes
+          };
+        }
+        if (sizes.length === 1 && availableBytes < maximumSize) {
+          return {
+            kind: "error",
+            code: "truncated",
+            message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
+            offset: context.offset,
+            requiredBytes: maximumSize,
+            availableBytes
+          };
+        }
+        const availableSizes = sizes.filter((size) => size <= availableBytes);
+        const alternatives = availableSizes.map((size) => {
+          const bytes = context.source.readBytes(context.offset, size);
+          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+          return buildInstruction(specification2, bytes, context, state);
+        });
+        if (sizes.length === 2) {
+          return {
+            kind: "ambiguous",
+            reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
+            requiredState: [specification2.widthFlag ?? "m"],
+            alternatives,
+            ...availableSizes.length === sizes.length ? {} : {
+              unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
+            },
+            minimumSize: 2,
+            maximumSize: 3
+          };
+        }
+        return { kind: "instruction", instruction: alternatives[0] };
+      }
+    };
+  }
+});
+
 // packages/plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
@@ -16722,7 +17004,7 @@ function buildSuperFxCatalog() {
   for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
   return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
-var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
+var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
   "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
@@ -16916,7 +17198,7 @@ var init_superfx_spec = __esm({
         return { kind: "jump", fallthrough: false, indirect: true };
       return { kind: "fallthrough", fallthrough: true };
     };
-    effectsFor = (definition) => {
+    effectsFor2 = (definition) => {
       if (definition.mnemonic === "ALT1" || definition.mnemonic === "ALT2" || definition.mnemonic === "ALT3") {
         return [
           {
@@ -16996,7 +17278,7 @@ var init_superfx_spec = __esm({
         ...definition.register === void 0 ? {} : { register: definition.register },
         summary: summaryFor(definition.mnemonic),
         flow: flowFor3(definition, opcode),
-        effects: effectsFor(definition),
+        effects: effectsFor2(definition),
         ...definition.writesDestination ? { writesDestination: true } : {},
         alteredByAlt
       });
@@ -19277,211 +19559,232 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
-var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor2, buildInstruction, Cpu65816Decoder;
-var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
+var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
+var init_spc700_decoder = __esm({
+  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
-    init_spec();
-    flagValue = (value) => {
-      if (value === true || value === 1) return 1;
-      if (value === false || value === 0) return 0;
-      return "unknown";
-    };
-    resolvedWidthFlag = (state, flag) => {
-      const emulation = flagValue(state.e);
-      if (emulation === 1) return 1;
-      const width = flagValue(state[flag]);
-      if (width === 1) return 1;
-      if (width === 0 && emulation === 0) return 0;
-      return "unknown";
-    };
-    readLittleEndian = (bytes, offset, width) => {
+    init_spc700_spec();
+    readLittleEndian2 = (bytes, offset, width) => {
       let value = 0;
       for (let index2 = 0; index2 < width; index2++) value |= (bytes[offset + index2] ?? 0) << index2 * 8;
       return value >>> 0;
     };
-    signed = (value, width) => {
-      const signBit = 1 << width * 8 - 1;
-      const modulus = 2 ** (width * 8);
-      return value & signBit ? value - modulus : value;
-    };
-    bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
-    addressOperand = (value, width) => ({
+    signedByte = (value) => value & 128 ? value - 256 : value;
+    register2 = (name) => ({ kind: "register", register: name });
+    address = (value, width) => ({
       kind: "address",
       value,
       width
     });
-    operandsFor = (specification2, bytes, logicalAddress) => {
-      const value8 = bytes[1] ?? 0;
-      const value16 = readLittleEndian(bytes, 1, 2);
-      const value24 = readLittleEndian(bytes, 1, 3);
+    immediate = (value) => ({ kind: "immediate", value, width: 1 });
+    bit = (value) => ({ kind: "bit", value, width: 1 });
+    relative = (value, logicalAddress, size) => ({
+      kind: "displacement",
+      value: signedByte(value),
+      width: 1,
+      signed: true,
+      targetAddress: logicalAddress + size + signedByte(value) & 65535
+    });
+    bitAddress = (bytes) => {
+      const encoded = readLittleEndian2(bytes, 1, 2);
+      return [address(encoded & 8191, 2), bit(encoded >>> 13)];
+    };
+    fixedRegisters = {
+      registerA: ["A"],
+      registerX: ["X"],
+      registerY: ["Y"],
+      registerP: ["P"],
+      registerYA: ["YA"],
+      registerYAX: ["YA", "X"],
+      registerXA: ["X", "A"],
+      registerAX: ["A", "X"],
+      registerXSP: ["X", "SP"],
+      registerSPX: ["SP", "X"],
+      registerAY: ["A", "Y"],
+      registerYA2: ["Y", "A"],
+      registerPostIncrementXA: ["X", "A"],
+      registerAPostIncrementX: ["A", "X"],
+      registerIndirectXA: ["X", "A"],
+      registerAIndirectX: ["A", "X"],
+      indirectXY: ["X", "Y"]
+    };
+    operandsFor2 = (specification2, bytes, logicalAddress) => {
+      const byte = bytes[1] ?? 0;
+      const word2 = readLittleEndian2(bytes, 1, 2);
+      const fixed = fixedRegisters[specification2.mode];
+      if (fixed) return fixed.map(register2);
       switch (specification2.mode) {
         case "implied":
           return [];
-        case "accumulator":
-          return [{ kind: "accumulator", register: "a" }];
-        case "signature":
-          return [{ kind: "signature", value: value8, width: 1 }];
-        case "immediate":
+        case "tableCall":
+          return [immediate(specification2.opcode[0] >>> 4)];
+        case "directBit":
+          return [address(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
+        case "directBitRelative":
           return [
-            {
-              kind: "immediate",
-              value: bytes.length === 2 ? value8 : value16,
-              width: bytes.length - 1
-            }
+            address(byte, 1),
+            bit(Number(specification2.mnemonic.at(-1))),
+            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
           ];
-        case "immediate16":
-          return [{ kind: "immediate", value: value16, width: 2 }];
+        case "accumulatorDirect":
+        case "accumulatorDirectIndexedX":
+        case "accumulatorDirectIndexedXIndirect":
+        case "accumulatorDirectIndirectIndexedY":
+          return [register2("A"), address(byte, 1)];
+        case "accumulatorAbsolute":
+        case "accumulatorAbsoluteIndexedX":
+        case "accumulatorAbsoluteIndexedY":
+          return [register2("A"), address(word2, 2)];
+        case "accumulatorIndirectX":
+          return [register2("A"), register2("X")];
+        case "accumulatorImmediate":
+          return [register2("A"), immediate(byte)];
+        case "directDirect":
+          return [address(bytes[2] ?? 0, 1), address(byte, 1)];
+        case "carryMemoryBit":
+        case "carryInvertedMemoryBit": {
+          const [memory, bit2] = bitAddress(bytes);
+          return [register2("C"), memory, bit2];
+        }
+        case "memoryBitCarry": {
+          const [memory, bit2] = bitAddress(bytes);
+          return [memory, bit2, register2("C")];
+        }
+        case "memoryBit":
+          return bitAddress(bytes);
         case "direct":
         case "directIndexedX":
-        case "directIndexedY":
-        case "directIndirect":
-        case "directIndirectLong":
-        case "directIndexedXIndirect":
-        case "directIndirectIndexedY":
-        case "directIndirectLongIndexedY":
-        case "stackRelative":
-        case "stackRelativeIndirectIndexedY":
-          return [addressOperand(value8, 1)];
+        case "directWord":
+          return [address(byte, 1)];
         case "absolute":
-        case "absoluteIndexedX":
-        case "absoluteIndexedY":
-        case "absoluteIndirect":
         case "absoluteIndexedXIndirect":
-        case "absoluteIndirectLong":
-          return [addressOperand(value16, 2)];
-        case "absoluteLong":
-        case "absoluteLongIndexedX":
-          return [addressOperand(value24, 3)];
-        case "relative": {
-          const displacement = signed(value8, 1);
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 1,
-              signed: true,
-              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
-            }
-          ];
-        }
-        case "relativeLong": {
-          const displacement = signed(value16, 2);
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 2,
-              signed: true,
-              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
-            }
-          ];
-        }
-        case "blockMove":
-          return [
-            { kind: "bank", value: value8, width: 1 },
-            { kind: "bank", value: bytes[2] ?? 0, width: 1 }
-          ];
+          return [address(word2, 2)];
+        case "relative":
+          return [relative(byte, logicalAddress, bytes.length)];
+        case "absoluteAccumulator":
+          return [address(word2, 2), register2("A")];
+        case "directImmediate":
+          return [address(bytes[2] ?? 0, 1), immediate(byte)];
+        case "registerXAbsolute":
+          return [register2("X"), address(word2, 2)];
+        case "registerXDirect":
+        case "registerXDirectIndexedY":
+          return [register2("X"), address(byte, 1)];
+        case "registerYAbsolute":
+          return [register2("Y"), address(word2, 2)];
+        case "registerYDirect":
+        case "registerYDirectIndexedX":
+          return [register2("Y"), address(byte, 1)];
+        case "registerXImmediate":
+          return [register2("X"), immediate(byte)];
+        case "registerYImmediate":
+          return [register2("Y"), immediate(byte)];
+        case "directRelative":
+        case "directIndexedXRelative":
+          return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+        case "registerYRelative":
+          return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
+        case "registerYADirect":
+          return [register2("YA"), address(byte, 1)];
+        case "directRegisterYA":
+          return [address(byte, 1), register2("YA")];
+        case "upperPageCall":
+          return [address(65280 | byte, 2)];
+        case "directRegisterA":
+        case "directIndexedXRegisterA":
+        case "directIndirectIndexedYRegisterA":
+        case "directIndexedXIndirectRegisterA":
+          return [address(byte, 1), register2("A")];
+        case "absoluteRegisterA":
+        case "absoluteIndexedXRegisterA":
+        case "absoluteIndexedYRegisterA":
+          return [address(word2, 2), register2("A")];
+        case "indirectXRegisterA":
+          return [register2("X"), register2("A")];
+        case "directRegisterX":
+        case "directIndexedYRegisterX":
+          return [address(byte, 1), register2("X")];
+        case "absoluteRegisterX":
+          return [address(word2, 2), register2("X")];
+        case "directRegisterY":
+        case "directIndexedXRegisterY":
+          return [address(byte, 1), register2("Y")];
+        case "absoluteRegisterY":
+          return [address(word2, 2), register2("Y")];
         default:
-          return [];
+          throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
       }
     };
-    targetFor = (specification2, operands, state, logicalAddress) => {
-      const operand = operands[0];
-      if (!operand) return void 0;
-      if (operand.targetAddress !== void 0) return operand.targetAddress;
-      if (operand.value === void 0) return void 0;
-      if (specification2.mode === "absoluteLong") return operand.value;
-      if (specification2.mode === "absolute") {
-        const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
-        return bank << 16 | operand.value;
-      }
-      return void 0;
-    };
-    referencesFor = (specification2, operands, state, logicalAddress) => {
-      const { mnemonic, mode: mode3 } = specification2;
-      const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
-      const isCall = mnemonic === "JSR" || mnemonic === "JSL";
-      const isJump = mnemonic === "JMP" || mnemonic === "JML";
-      if (isBranch || isCall || isJump) {
-        const target = targetFor(specification2, operands, state, logicalAddress);
-        let kind = "jump";
-        if (isBranch) kind = "branch";
-        else if (isCall) kind = "call";
-        return [
-          {
-            kind,
-            operandIndex: 0,
-            ...target === void 0 ? {} : { address: target },
-            ...mode3.includes("Indirect") ? { indirect: true } : {}
-          }
-        ];
-      }
-      if (mode3.includes("Indirect")) {
-        const value = operands[0]?.value;
-        return [
-          {
+    referencesFor2 = (specification2, operands, state) => {
+      const references = [];
+      const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
+      if (branchIndex >= 0) {
+        references.push({
+          kind: "branch",
+          operandIndex: branchIndex,
+          address: operands[branchIndex].targetAddress
+        });
+      } else if (specification2.mnemonic === "TCALL") {
+        const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
+        references.push({ kind: "call", operandIndex: 0, indirect: true });
+        references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
+      } else if (specification2.mnemonic === "PCALL") {
+        references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
+      } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
+        if (specification2.flow.indirect) {
+          references.push({ kind: "jump", operandIndex: 0, indirect: true });
+          references.push({
             kind: "pointer",
             operandIndex: 0,
-            ...value === void 0 ? {} : { address: value },
+            address: operands[0]?.value,
             indirect: true
-          }
-        ];
-      }
-      const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
-      if (!memoryMode || operands[0]?.value === void 0) return [];
-      if (mode3.startsWith("direct")) {
-        return [
-          {
-            kind: "data",
+          });
+        } else {
+          references.push({
+            kind: specification2.mnemonic === "CALL" ? "call" : "jump",
             operandIndex: 0,
-            ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
-          }
-        ];
+            address: operands[0]?.value
+          });
+        }
       }
-      if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
-        return [
-          {
-            kind: "data",
-            operandIndex: 0,
-            ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
-          }
-        ];
+      for (let index2 = 0; index2 < operands.length; index2++) {
+        const operand = operands[index2];
+        if (operand.kind !== "address" || operand.value === void 0) continue;
+        if (references.some((reference) => reference.operandIndex === index2)) continue;
+        const isDirect = operand.width === 1;
+        let resolved = operand.value;
+        if (isDirect) {
+          resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+        }
+        references.push({
+          kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
+          operandIndex: index2,
+          ...resolved === void 0 ? {} : { address: resolved },
+          ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
+        });
       }
-      return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+      return references;
     };
-    effectsFor2 = (specification2, operands) => {
-      const mask = operands[0]?.value;
-      if (specification2.operandStatusEffect && mask !== void 0) {
-        return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
-      }
-      return specification2.effects;
-    };
-    buildInstruction = (specification2, bytes, context, state) => {
-      const operands = operandsFor(specification2, bytes, context.logicalAddress);
+    buildInstruction2 = (specification2, bytes, context) => {
+      const operands = operandsFor2(specification2, bytes, context.logicalAddress);
       return {
-        architecture: "snes.65816",
+        architecture: "snes.spc700",
         specificationId: specification2.id,
         opcode: specification2.opcode[0],
         mnemonic: specification2.mnemonic,
         mode: specification2.mode,
         offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
+        logicalAddress: context.logicalAddress & 65535,
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor(specification2, operands, state, context.logicalAddress),
+        references: referencesFor2(specification2, operands, context.state ?? {}),
         flow: specification2.flow,
-        effects: effectsFor2(specification2, operands)
+        effects: specification2.effects
       };
     };
-    Cpu65816Decoder = class {
-      /**
-       * Decodes a 65816 instruction.
-       * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
-       * @returns {ArchitectureDecodeResult} The decode result.
-       */
+    Spc700Decoder = class {
       decode(context) {
         const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
         const opcode = context.source.readByte(context.offset);
@@ -19489,69 +19792,35 @@ var init_decoder = __esm({
           return {
             kind: "error",
             code: "outOfBounds",
-            message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+            message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
             offset: context.offset,
             requiredBytes: 1,
             availableBytes
           };
         }
-        const specification2 = cpu65816Specifications[opcode];
+        const specification2 = spc700Specifications[opcode];
         if (!specification2) {
           return {
             kind: "error",
             code: "invalidOpcode",
-            message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+            message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
             offset: context.offset
           };
         }
-        const state = context.state ?? {};
-        let sizes = [specification2.minimumSize];
-        if (specification2.widthFlag) {
-          const width = resolvedWidthFlag(state, specification2.widthFlag);
-          sizes = width === "unknown" ? [2, 3] : [width === 1 ? 2 : 3];
-        }
-        const minimumSize = Math.min(...sizes);
-        const maximumSize = Math.max(...sizes);
-        if (availableBytes < minimumSize) {
+        const size = specification2.minimumSize;
+        if (availableBytes < size) {
           return {
             kind: "error",
             code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+            message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
             offset: context.offset,
-            requiredBytes: minimumSize,
+            requiredBytes: size,
             availableBytes
           };
         }
-        if (sizes.length === 1 && availableBytes < maximumSize) {
-          return {
-            kind: "error",
-            code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
-            offset: context.offset,
-            requiredBytes: maximumSize,
-            availableBytes
-          };
-        }
-        const availableSizes = sizes.filter((size) => size <= availableBytes);
-        const alternatives = availableSizes.map((size) => {
-          const bytes = context.source.readBytes(context.offset, size);
-          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
-          return buildInstruction(specification2, bytes, context, state);
-        });
-        if (sizes.length === 2) {
-          return {
-            kind: "ambiguous",
-            reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
-            requiredState: [specification2.widthFlag ?? "m"],
-            alternatives,
-            ...availableSizes.length === sizes.length ? {} : {
-              unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
-            },
-            minimumSize: 2,
-            maximumSize: 3
-          };
-        }
-        return { kind: "instruction", instruction: alternatives[0] };
+        const bytes = context.source.readBytes(context.offset, size);
+        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+        return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
       }
     };
   }
@@ -21581,268 +21850,291 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
-var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
-var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
+var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
+var init_superfx_decoder = __esm({
+  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
-    init_spc700_spec();
-    readLittleEndian2 = (bytes, offset, width) => {
-      let value = 0;
-      for (let index2 = 0; index2 < width; index2++) value |= (bytes[offset + index2] ?? 0) << index2 * 8;
-      return value >>> 0;
-    };
-    signedByte = (value) => value & 128 ? value - 256 : value;
-    register2 = (name) => ({ kind: "register", register: name });
-    address = (value, width) => ({
+    init_superfx_spec();
+    word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
+    register3 = (value) => ({ kind: "register", register: `R${value}` });
+    immediate2 = (value, width, signed2 = false) => ({
+      kind: "immediate",
+      value,
+      width,
+      ...signed2 ? { signed: true } : {}
+    });
+    address2 = (value, width) => ({
       kind: "address",
       value,
       width
     });
-    immediate = (value) => ({ kind: "immediate", value, width: 1 });
-    bit = (value) => ({ kind: "bit", value, width: 1 });
-    relative = (value, logicalAddress, size) => ({
-      kind: "displacement",
-      value: signedByte(value),
-      width: 1,
-      signed: true,
-      targetAddress: logicalAddress + size + signedByte(value) & 65535
-    });
-    bitAddress = (bytes) => {
-      const encoded = readLittleEndian2(bytes, 1, 2);
-      return [address(encoded & 8191, 2), bit(encoded >>> 13)];
-    };
-    fixedRegisters = {
-      registerA: ["A"],
-      registerX: ["X"],
-      registerY: ["Y"],
-      registerP: ["P"],
-      registerYA: ["YA"],
-      registerYAX: ["YA", "X"],
-      registerXA: ["X", "A"],
-      registerAX: ["A", "X"],
-      registerXSP: ["X", "SP"],
-      registerSPX: ["SP", "X"],
-      registerAY: ["A", "Y"],
-      registerYA2: ["Y", "A"],
-      registerPostIncrementXA: ["X", "A"],
-      registerAPostIncrementX: ["A", "X"],
-      registerIndirectXA: ["X", "A"],
-      registerAIndirectX: ["A", "X"],
-      indirectXY: ["X", "Y"]
-    };
-    operandsFor2 = (specification2, bytes, logicalAddress) => {
-      const byte = bytes[1] ?? 0;
-      const word2 = readLittleEndian2(bytes, 1, 2);
-      const fixed = fixedRegisters[specification2.mode];
-      if (fixed) return fixed.map(register2);
-      switch (specification2.mode) {
+    operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
+      const operandOffset = prefixLength + 1;
+      const registerNumber = specification2.register ?? 0;
+      switch (specification2.operandEncoding) {
         case "implied":
           return [];
-        case "tableCall":
-          return [immediate(specification2.opcode[0] >>> 4)];
-        case "directBit":
-          return [address(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
-        case "directBitRelative":
+        case "relative": {
+          const raw = bytes[operandOffset] ?? 0;
+          const displacement = raw & 128 ? raw - 256 : raw;
           return [
-            address(byte, 1),
-            bit(Number(specification2.mnemonic.at(-1))),
-            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 1,
+              signed: true,
+              targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
+            }
           ];
-        case "accumulatorDirect":
-        case "accumulatorDirectIndexedX":
-        case "accumulatorDirectIndexedXIndirect":
-        case "accumulatorDirectIndirectIndexedY":
-          return [register2("A"), address(byte, 1)];
-        case "accumulatorAbsolute":
-        case "accumulatorAbsoluteIndexedX":
-        case "accumulatorAbsoluteIndexedY":
-          return [register2("A"), address(word2, 2)];
-        case "accumulatorIndirectX":
-          return [register2("A"), register2("X")];
-        case "accumulatorImmediate":
-          return [register2("A"), immediate(byte)];
-        case "directDirect":
-          return [address(bytes[2] ?? 0, 1), address(byte, 1)];
-        case "carryMemoryBit":
-        case "carryInvertedMemoryBit": {
-          const [memory, bit2] = bitAddress(bytes);
-          return [register2("C"), memory, bit2];
         }
-        case "memoryBitCarry": {
-          const [memory, bit2] = bitAddress(bytes);
-          return [memory, bit2, register2("C")];
-        }
-        case "memoryBit":
-          return bitAddress(bytes);
-        case "direct":
-        case "directIndexedX":
-        case "directWord":
-          return [address(byte, 1)];
-        case "absolute":
-        case "absoluteIndexedXIndirect":
-          return [address(word2, 2)];
-        case "relative":
-          return [relative(byte, logicalAddress, bytes.length)];
-        case "absoluteAccumulator":
-          return [address(word2, 2), register2("A")];
-        case "directImmediate":
-          return [address(bytes[2] ?? 0, 1), immediate(byte)];
-        case "registerXAbsolute":
-          return [register2("X"), address(word2, 2)];
-        case "registerXDirect":
-        case "registerXDirectIndexedY":
-          return [register2("X"), address(byte, 1)];
-        case "registerYAbsolute":
-          return [register2("Y"), address(word2, 2)];
-        case "registerYDirect":
-        case "registerYDirectIndexedX":
-          return [register2("Y"), address(byte, 1)];
-        case "registerXImmediate":
-          return [register2("X"), immediate(byte)];
-        case "registerYImmediate":
-          return [register2("Y"), immediate(byte)];
-        case "directRelative":
-        case "directIndexedXRelative":
-          return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
-        case "registerYRelative":
-          return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
-        case "registerYADirect":
-          return [register2("YA"), address(byte, 1)];
-        case "directRegisterYA":
-          return [address(byte, 1), register2("YA")];
-        case "upperPageCall":
-          return [address(65280 | byte, 2)];
-        case "directRegisterA":
-        case "directIndexedXRegisterA":
-        case "directIndirectIndexedYRegisterA":
-        case "directIndexedXIndirectRegisterA":
-          return [address(byte, 1), register2("A")];
-        case "absoluteRegisterA":
-        case "absoluteIndexedXRegisterA":
-        case "absoluteIndexedYRegisterA":
-          return [address(word2, 2), register2("A")];
-        case "indirectXRegisterA":
-          return [register2("X"), register2("A")];
-        case "directRegisterX":
-        case "directIndexedYRegisterX":
-          return [address(byte, 1), register2("X")];
-        case "absoluteRegisterX":
-          return [address(word2, 2), register2("X")];
-        case "directRegisterY":
-        case "directIndexedXRegisterY":
-          return [address(byte, 1), register2("Y")];
-        case "absoluteRegisterY":
-          return [address(word2, 2), register2("Y")];
-        default:
-          throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
+        case "register":
+        case "registerIndirect":
+          return [register3(registerNumber)];
+        case "immediateNibble":
+          return [immediate2(registerNumber, 1)];
+        case "registerImmediate8":
+          return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
+        case "registerImmediate16":
+          return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
+        case "registerRamShort":
+          return [register3(registerNumber), address2((bytes[operandOffset] ?? 0) << 1, 2)];
+        case "ramShortRegister":
+          return [address2((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
+        case "registerRamAbsolute":
+          return [register3(registerNumber), address2(word(bytes, operandOffset), 2)];
+        case "ramAbsoluteRegister":
+          return [address2(word(bytes, operandOffset), 2), register3(registerNumber)];
       }
+      throw new Error("Unsupported SuperFX operand encoding.");
     };
-    referencesFor2 = (specification2, operands, state) => {
-      const references = [];
-      const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
-      if (branchIndex >= 0) {
-        references.push({
-          kind: "branch",
-          operandIndex: branchIndex,
-          address: operands[branchIndex].targetAddress
-        });
-      } else if (specification2.mnemonic === "TCALL") {
-        const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
-        references.push({ kind: "call", operandIndex: 0, indirect: true });
-        references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
-      } else if (specification2.mnemonic === "PCALL") {
-        references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
-      } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
-        if (specification2.flow.indirect) {
-          references.push({ kind: "jump", operandIndex: 0, indirect: true });
-          references.push({
-            kind: "pointer",
-            operandIndex: 0,
-            address: operands[0]?.value,
-            indirect: true
-          });
-        } else {
-          references.push({
-            kind: specification2.mnemonic === "CALL" ? "call" : "jump",
-            operandIndex: 0,
-            address: operands[0]?.value
-          });
+    r15Target = (specification2, operands, state, logicalAddress) => {
+      if (specification2.register === 15) {
+        if (specification2.mnemonic === "IWT") {
+          return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
         }
-      }
-      for (let index2 = 0; index2 < operands.length; index2++) {
-        const operand = operands[index2];
-        if (operand.kind !== "address" || operand.value === void 0) continue;
-        if (references.some((reference) => reference.operandIndex === index2)) continue;
-        const isDirect = operand.width === 1;
-        let resolved = operand.value;
-        if (isDirect) {
-          resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+        if (specification2.mnemonic === "IBT") {
+          const raw = operands[1]?.value ?? 0;
+          const target = raw & 128 ? 65280 | raw : raw;
+          const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
+          return (bank & 255) << 16 | target;
         }
-        references.push({
-          kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
-          operandIndex: index2,
-          ...resolved === void 0 ? {} : { address: resolved },
-          ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
-        });
+        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
       }
-      return references;
+      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
+      return void 0;
     };
-    buildInstruction2 = (specification2, bytes, context) => {
-      const operands = operandsFor2(specification2, bytes, context.logicalAddress);
+    controlsFor = (specification2, operands, state, logicalAddress) => {
+      const r15 = r15Target(specification2, operands, state, logicalAddress);
+      if (typeof r15 === "number") {
+        return {
+          flow: { kind: "jump", fallthrough: false },
+          references: [{ kind: "jump", operandIndex: 1, address: r15 }]
+        };
+      }
+      if (r15 === "indirect") {
+        return {
+          flow: { kind: "jump", fallthrough: false, indirect: true },
+          references: [{ kind: "jump", indirect: true }]
+        };
+      }
+      if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
+        };
+      }
+      if (specification2.mnemonic === "LOOP") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "branch", indirect: true }]
+        };
+      }
+      if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "jump", operandIndex: 0, indirect: true }]
+        };
+      }
+      let memoryIndex;
+      if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
+        memoryIndex = 1;
+      } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
+        memoryIndex = 0;
+      }
+      if (memoryIndex !== void 0) {
+        return {
+          flow: specification2.flow,
+          references: [
+            { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
+          ]
+        };
+      }
+      if (specification2.operandEncoding === "registerIndirect") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
+        };
+      }
+      return { flow: specification2.flow, references: [] };
+    };
+    buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
+      const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
+      const controls = controlsFor(specification2, operands, state, context.logicalAddress);
       return {
-        architecture: "snes.spc700",
+        architecture: "snes.superfx",
         specificationId: specification2.id,
         opcode: specification2.opcode[0],
         mnemonic: specification2.mnemonic,
         mode: specification2.mode,
         offset: context.offset,
-        logicalAddress: context.logicalAddress & 65535,
+        logicalAddress: context.logicalAddress & 16777215,
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor2(specification2, operands, context.state ?? {}),
+        references: controls.references,
+        flow: controls.flow,
+        effects: specification2.effects
+      };
+    };
+    buildFusedInstruction = (specification2, bytes, context) => {
+      let operands;
+      if (specification2.mode === "registerRegister") {
+        operands = [
+          register3(specification2.destinationRegister),
+          register3(specification2.sourceRegister ?? 0)
+        ];
+      } else if (specification2.mode === "registerRegisterIndirect") {
+        operands = [
+          register3(specification2.destinationRegister),
+          register3(specification2.pointerRegister ?? 0)
+        ];
+      } else {
+        operands = [
+          register3(specification2.sourceRegister ?? 0),
+          register3(specification2.pointerRegister ?? 0)
+        ];
+      }
+      return {
+        architecture: "snes.superfx",
+        specificationId: specification2.id,
+        opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
+        mnemonic: specification2.mnemonic,
+        mode: specification2.mode,
+        offset: context.offset,
+        logicalAddress: context.logicalAddress & 16777215,
+        bytes,
+        size: bytes.length,
+        operands,
+        references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
         flow: specification2.flow,
         effects: specification2.effects
       };
     };
-    Spc700Decoder = class {
+    matchFused = (context) => superFxFusedSpecifications.find(
+      (entry) => entry.opcode.every((value, index2) => context.source.readByte(context.offset + index2) === value)
+    );
+    availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+    truncated = (context, requiredBytes) => ({
+      kind: "error",
+      code: "truncated",
+      message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
+      offset: context.offset,
+      requiredBytes,
+      availableBytes: availableAt(context)
+    });
+    prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
+    SuperFxDecoder = class {
       decode(context) {
-        const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
         const opcode = context.source.readByte(context.offset);
         if (opcode === void 0) {
           return {
             kind: "error",
             code: "outOfBounds",
-            message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
+            message: `No SuperFX opcode exists at offset ${context.offset}.`,
             offset: context.offset,
-            requiredBytes: 1,
-            availableBytes
+            availableBytes: availableAt(context)
           };
         }
-        const specification2 = spc700Specifications[opcode];
-        if (!specification2) {
+        const state = context.state ?? {};
+        const requestedAlt = state.alt ?? 0;
+        if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
           return {
             kind: "error",
-            code: "invalidOpcode",
-            message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
-            offset: context.offset
-          };
-        }
-        const size = specification2.minimumSize;
-        if (availableBytes < size) {
-          return {
-            kind: "error",
-            code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
+            code: "invalidState",
+            message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
             offset: context.offset,
-            requiredBytes: size,
-            availableBytes
+            availableBytes: availableAt(context)
           };
         }
-        const bytes = context.source.readBytes(context.offset, size);
-        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
-        return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
+        if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
+          const fused2 = matchFused(context);
+          if (fused2) {
+            const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
+            if (!bytes2) return truncated(context, fused2.minimumSize);
+            return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
+          }
+        }
+        const prefix = prefixAlt(opcode);
+        if (prefix !== void 0) {
+          const next = context.source.readByte(context.offset + 1);
+          const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
+          if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
+            const effective = superFxOpcodeMatrix[prefix][next];
+            if (effective.alteredByAlt) {
+              const required = effective.minimumSize + 1;
+              const bytes3 = context.source.readBytes(context.offset, required);
+              if (!bytes3) return truncated(context, required);
+              return {
+                kind: "instruction",
+                instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
+              };
+            }
+          }
+          const specification3 = superFxOpcodeMatrix[0][opcode];
+          const bytes2 = context.source.readBytes(context.offset, 1);
+          return {
+            kind: "instruction",
+            instruction: buildInstruction3(specification3, bytes2, context, state, 0)
+          };
+        }
+        if (requestedAlt === "unknown") {
+          const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
+          const unique = [
+            ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
+          ];
+          if (unique.length > 1) {
+            const alternatives = unique.flatMap((entry) => {
+              const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
+              return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
+            });
+            return {
+              kind: "ambiguous",
+              reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
+              requiredState: ["alt"],
+              alternatives,
+              minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
+              maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
+              ...alternatives.length === unique.length ? {} : {
+                unavailableAlternatives: unique.filter(
+                  (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
+                ).map((entry) => ({
+                  code: "truncated",
+                  size: entry.minimumSize,
+                  availableBytes: availableAt(context)
+                }))
+              }
+            };
+          }
+        }
+        const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
+        const specification2 = superFxOpcodeMatrix[alt][opcode];
+        const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
+        if (!bytes) return truncated(context, specification2.minimumSize);
+        return {
+          kind: "instruction",
+          instruction: buildInstruction3(specification2, bytes, context, state, 0)
+        };
       }
     };
   }
@@ -22710,296 +23002,6 @@ var init_superfx = __esm({
         } catch {
           return void 0;
         }
-      }
-    };
-  }
-});
-
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
-var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
-var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
-    "use strict";
-    init_superfx_spec();
-    word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
-    register3 = (value) => ({ kind: "register", register: `R${value}` });
-    immediate2 = (value, width, signed2 = false) => ({
-      kind: "immediate",
-      value,
-      width,
-      ...signed2 ? { signed: true } : {}
-    });
-    address2 = (value, width) => ({
-      kind: "address",
-      value,
-      width
-    });
-    operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
-      const operandOffset = prefixLength + 1;
-      const registerNumber = specification2.register ?? 0;
-      switch (specification2.operandEncoding) {
-        case "implied":
-          return [];
-        case "relative": {
-          const raw = bytes[operandOffset] ?? 0;
-          const displacement = raw & 128 ? raw - 256 : raw;
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 1,
-              signed: true,
-              targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
-            }
-          ];
-        }
-        case "register":
-        case "registerIndirect":
-          return [register3(registerNumber)];
-        case "immediateNibble":
-          return [immediate2(registerNumber, 1)];
-        case "registerImmediate8":
-          return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
-        case "registerImmediate16":
-          return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
-        case "registerRamShort":
-          return [register3(registerNumber), address2((bytes[operandOffset] ?? 0) << 1, 2)];
-        case "ramShortRegister":
-          return [address2((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
-        case "registerRamAbsolute":
-          return [register3(registerNumber), address2(word(bytes, operandOffset), 2)];
-        case "ramAbsoluteRegister":
-          return [address2(word(bytes, operandOffset), 2), register3(registerNumber)];
-      }
-      throw new Error("Unsupported SuperFX operand encoding.");
-    };
-    r15Target = (specification2, operands, state, logicalAddress) => {
-      if (specification2.register === 15) {
-        if (specification2.mnemonic === "IWT") {
-          return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
-        }
-        if (specification2.mnemonic === "IBT") {
-          const raw = operands[1]?.value ?? 0;
-          const target = raw & 128 ? 65280 | raw : raw;
-          const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
-          return (bank & 255) << 16 | target;
-        }
-        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
-      }
-      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
-      return void 0;
-    };
-    controlsFor = (specification2, operands, state, logicalAddress) => {
-      const r15 = r15Target(specification2, operands, state, logicalAddress);
-      if (typeof r15 === "number") {
-        return {
-          flow: { kind: "jump", fallthrough: false },
-          references: [{ kind: "jump", operandIndex: 1, address: r15 }]
-        };
-      }
-      if (r15 === "indirect") {
-        return {
-          flow: { kind: "jump", fallthrough: false, indirect: true },
-          references: [{ kind: "jump", indirect: true }]
-        };
-      }
-      if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
-        };
-      }
-      if (specification2.mnemonic === "LOOP") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "branch", indirect: true }]
-        };
-      }
-      if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "jump", operandIndex: 0, indirect: true }]
-        };
-      }
-      let memoryIndex;
-      if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
-        memoryIndex = 1;
-      } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
-        memoryIndex = 0;
-      }
-      if (memoryIndex !== void 0) {
-        return {
-          flow: specification2.flow,
-          references: [
-            { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
-          ]
-        };
-      }
-      if (specification2.operandEncoding === "registerIndirect") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
-        };
-      }
-      return { flow: specification2.flow, references: [] };
-    };
-    buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
-      const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
-      const controls = controlsFor(specification2, operands, state, context.logicalAddress);
-      return {
-        architecture: "snes.superfx",
-        specificationId: specification2.id,
-        opcode: specification2.opcode[0],
-        mnemonic: specification2.mnemonic,
-        mode: specification2.mode,
-        offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
-        bytes,
-        size: bytes.length,
-        operands,
-        references: controls.references,
-        flow: controls.flow,
-        effects: specification2.effects
-      };
-    };
-    buildFusedInstruction = (specification2, bytes, context) => {
-      let operands;
-      if (specification2.mode === "registerRegister") {
-        operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.sourceRegister ?? 0)
-        ];
-      } else if (specification2.mode === "registerRegisterIndirect") {
-        operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.pointerRegister ?? 0)
-        ];
-      } else {
-        operands = [
-          register3(specification2.sourceRegister ?? 0),
-          register3(specification2.pointerRegister ?? 0)
-        ];
-      }
-      return {
-        architecture: "snes.superfx",
-        specificationId: specification2.id,
-        opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
-        mnemonic: specification2.mnemonic,
-        mode: specification2.mode,
-        offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
-        bytes,
-        size: bytes.length,
-        operands,
-        references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
-        flow: specification2.flow,
-        effects: specification2.effects
-      };
-    };
-    matchFused = (context) => superFxFusedSpecifications.find(
-      (entry) => entry.opcode.every((value, index2) => context.source.readByte(context.offset + index2) === value)
-    );
-    availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
-    truncated = (context, requiredBytes) => ({
-      kind: "error",
-      code: "truncated",
-      message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
-      offset: context.offset,
-      requiredBytes,
-      availableBytes: availableAt(context)
-    });
-    prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
-    SuperFxDecoder = class {
-      decode(context) {
-        const opcode = context.source.readByte(context.offset);
-        if (opcode === void 0) {
-          return {
-            kind: "error",
-            code: "outOfBounds",
-            message: `No SuperFX opcode exists at offset ${context.offset}.`,
-            offset: context.offset,
-            availableBytes: availableAt(context)
-          };
-        }
-        const state = context.state ?? {};
-        const requestedAlt = state.alt ?? 0;
-        if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
-          return {
-            kind: "error",
-            code: "invalidState",
-            message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
-            offset: context.offset,
-            availableBytes: availableAt(context)
-          };
-        }
-        if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
-          const fused2 = matchFused(context);
-          if (fused2) {
-            const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
-            if (!bytes2) return truncated(context, fused2.minimumSize);
-            return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
-          }
-        }
-        const prefix = prefixAlt(opcode);
-        if (prefix !== void 0) {
-          const next = context.source.readByte(context.offset + 1);
-          const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
-          if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
-            const effective = superFxOpcodeMatrix[prefix][next];
-            if (effective.alteredByAlt) {
-              const required = effective.minimumSize + 1;
-              const bytes3 = context.source.readBytes(context.offset, required);
-              if (!bytes3) return truncated(context, required);
-              return {
-                kind: "instruction",
-                instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
-              };
-            }
-          }
-          const specification3 = superFxOpcodeMatrix[0][opcode];
-          const bytes2 = context.source.readBytes(context.offset, 1);
-          return {
-            kind: "instruction",
-            instruction: buildInstruction3(specification3, bytes2, context, state, 0)
-          };
-        }
-        if (requestedAlt === "unknown") {
-          const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
-          const unique = [
-            ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
-          ];
-          if (unique.length > 1) {
-            const alternatives = unique.flatMap((entry) => {
-              const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
-              return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
-            });
-            return {
-              kind: "ambiguous",
-              reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
-              requiredState: ["alt"],
-              alternatives,
-              minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
-              maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
-              ...alternatives.length === unique.length ? {} : {
-                unavailableAlternatives: unique.filter(
-                  (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
-                ).map((entry) => ({
-                  code: "truncated",
-                  size: entry.minimumSize,
-                  availableBytes: availableAt(context)
-                }))
-              }
-            };
-          }
-        }
-        const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
-        const specification2 = superFxOpcodeMatrix[alt][opcode];
-        const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
-        if (!bytes) return truncated(context, specification2.minimumSize);
-        return {
-          kind: "instruction",
-          instruction: buildInstruction3(specification2, bytes, context, state, 0)
-        };
       }
     };
   }
@@ -24707,13 +24709,6 @@ var init_processor_source_export = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
-var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
-    "use strict";
-  }
-});
-
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
 var builtins, SNES_HEURISTIC_RULE_IDS;
 var init_function_heuristics = __esm({
@@ -24775,6 +24770,13 @@ var init_function_heuristics = __esm({
       "block-copy",
       "wrapper"
     ];
+  }
+});
+
+// packages/plugin-snes/src/disassembler/runtime-code.ts
+var init_runtime_code = __esm({
+  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+    "use strict";
   }
 });
 
@@ -25560,17 +25562,17 @@ var init_src2 = __esm({
   "packages/plugin-snes/src/index.ts"() {
     "use strict";
     init_src();
-    init__();
     init_decoder();
     init_spec();
-    init_spc700();
+    init__();
+    init_operand_classifiers();
     init_spc700_decoder();
     init_spc700_spec();
-    init_superfx();
+    init_spc700();
+    init_split_operands();
     init_superfx_decoder();
     init_superfx_spec();
-    init_operand_classifiers();
-    init_split_operands();
+    init_superfx();
     init_compatibility();
     init_ca65_compat();
     init_freespace();
@@ -29366,7 +29368,7 @@ __export(main_exports, {
   SymbolInformation: () => SymbolInformation,
   SymbolKind: () => SymbolKind,
   SymbolTag: () => SymbolTag,
-  TextDocument: () => TextDocument,
+  TextDocument: () => TextDocument2,
   TextDocumentEdit: () => TextDocumentEdit,
   TextDocumentIdentifier: () => TextDocumentIdentifier,
   TextDocumentItem: () => TextDocumentItem,
@@ -29380,7 +29382,7 @@ __export(main_exports, {
   integer: () => integer,
   uinteger: () => uinteger
 });
-var DocumentUri, URI, integer, uinteger, Position, Range, Location, LocationLink, Color, ColorInformation, ColorPresentation, FoldingRangeKind, FoldingRange, DiagnosticRelatedInformation, DiagnosticSeverity, DiagnosticTag, CodeDescription, Diagnostic, Command, TextEdit, ChangeAnnotation, ChangeAnnotationIdentifier, AnnotatedTextEdit, TextDocumentEdit, CreateFile, RenameFile, DeleteFile, WorkspaceEdit, TextEditChangeImpl, SnippetTextEdit, ChangeAnnotations, WorkspaceChange, TextDocumentIdentifier, VersionedTextDocumentIdentifier, OptionalVersionedTextDocumentIdentifier, LanguageKind, TextDocumentItem, MarkupKind, MarkupContent, CompletionItemKind, InsertTextFormat, CompletionItemTag, InsertReplaceEdit, InsertTextMode, ApplyKind, CompletionItemLabelDetails, CompletionItem, CompletionList, MarkedString, Hover, ParameterInformation, SignatureInformation, DocumentHighlightKind, DocumentHighlight, SymbolKind, SymbolTag, SymbolInformation, WorkspaceSymbol, DocumentSymbol, CodeActionKind, CodeActionTriggerKind, CodeActionContext, CodeActionTag, CodeAction, CodeLens, FormattingOptions, DocumentLink, SelectionRange, SemanticTokenTypes, SemanticTokenModifiers, SemanticTokens, InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression, InlineValueContext, InlayHintKind, InlayHintLabelPart, InlayHint, StringValue, InlineCompletionItem, InlineCompletionList, InlineCompletionTriggerKind, SelectedCompletionInfo, InlineCompletionContext, WorkspaceFolder, EOL, TextDocument, FullTextDocument, Is;
+var DocumentUri, URI, integer, uinteger, Position, Range, Location, LocationLink, Color, ColorInformation, ColorPresentation, FoldingRangeKind, FoldingRange, DiagnosticRelatedInformation, DiagnosticSeverity, DiagnosticTag, CodeDescription, Diagnostic, Command, TextEdit, ChangeAnnotation, ChangeAnnotationIdentifier, AnnotatedTextEdit, TextDocumentEdit, CreateFile, RenameFile, DeleteFile, WorkspaceEdit, TextEditChangeImpl, SnippetTextEdit, ChangeAnnotations, WorkspaceChange, TextDocumentIdentifier, VersionedTextDocumentIdentifier, OptionalVersionedTextDocumentIdentifier, LanguageKind, TextDocumentItem, MarkupKind, MarkupContent, CompletionItemKind, InsertTextFormat, CompletionItemTag, InsertReplaceEdit, InsertTextMode, ApplyKind, CompletionItemLabelDetails, CompletionItem, CompletionList, MarkedString, Hover, ParameterInformation, SignatureInformation, DocumentHighlightKind, DocumentHighlight, SymbolKind, SymbolTag, SymbolInformation, WorkspaceSymbol, DocumentSymbol, CodeActionKind, CodeActionTriggerKind, CodeActionContext, CodeActionTag, CodeAction, CodeLens, FormattingOptions, DocumentLink, SelectionRange, SemanticTokenTypes, SemanticTokenModifiers, SemanticTokens, InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression, InlineValueContext, InlayHintKind, InlayHintLabelPart, InlayHint, StringValue, InlineCompletionItem, InlineCompletionList, InlineCompletionTriggerKind, SelectedCompletionInfo, InlineCompletionContext, WorkspaceFolder, EOL, TextDocument2, FullTextDocument2, Is;
 var init_main = __esm({
   "node_modules/vscode-languageserver-types/lib/esm/main.js"() {
     "use strict";
@@ -30663,7 +30665,7 @@ var init_main = __esm({
     EOL = ["\n", "\r\n", "\r"];
     (function(TextDocument3) {
       function create(uri, languageId, version, content) {
-        return new FullTextDocument(uri, languageId, version, content);
+        return new FullTextDocument2(uri, languageId, version, content);
       }
       TextDocument3.create = create;
       function is(value) {
@@ -30723,8 +30725,8 @@ var init_main = __esm({
         }
         return data;
       }
-    })(TextDocument || (TextDocument = {}));
-    FullTextDocument = class {
+    })(TextDocument2 || (TextDocument2 = {}));
+    FullTextDocument2 = class {
       constructor(uri, languageId, version, content) {
         this._uri = uri;
         this._languageId = languageId;
@@ -35889,6 +35891,8 @@ ${stack}`);
 });
 
 // packages/language-server/src/server.ts
+init_src();
+init_debug_map();
 import { createHash as createHash4 } from "node:crypto";
 import fs6 from "node:fs";
 import path11 from "node:path";
@@ -38592,144 +38596,6 @@ var Arch65xx = class {
   }
 };
 
-// packages/plugin-65xx/src/operands/classifier.ts
-function classify65xxOperand(resolver, operand) {
-  const raw = operand.trim();
-  const sizePrefix = parseCa65AddressSizePrefix(raw);
-  const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
-  let length = inferredLength;
-  if (sizePrefix.force === 1) length = 1;
-  else if (sizePrefix.force === 2) length = Math.max(2, inferredLength);
-  else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
-  const normalized = expanded.trim();
-  const normalizedUpper = normalized.toUpperCase();
-  const compound = splitTopLevelOperands2(normalized);
-  let mode3 = "unknown";
-  let baseExpression = normalized;
-  let registerName;
-  if (normalized === "") {
-    mode3 = "implied";
-  } else if (normalizedUpper === "A") {
-    mode3 = "accumulator";
-    registerName = "a";
-  } else if (normalizedUpper === "Q") {
-    mode3 = "quadAccumulator";
-    registerName = "q";
-  } else if (compound.length >= 2 && compound[0]?.startsWith("#")) {
-    const indexedX = compound.length === 3 && compound[2]?.toUpperCase() === "X";
-    const address3 = compound[1] ?? "";
-    const addressLength = resolver.expandOperand(address3).length;
-    mode3 = `${addressLength <= 1 ? "immediateZeroPage" : "immediateAbsolute"}${indexedX ? "IndexedX" : ""}`;
-    baseExpression = normalized;
-  } else if (normalized.startsWith("#")) {
-    mode3 = "immediate";
-    baseExpression = normalized.slice(1).trim();
-  } else {
-    const indexedIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*x\s*\)$/i);
-    const stackRelativeIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i);
-    const indirectIndexed = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*y$/i);
-    const indirectIndexedZ = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*z$/i);
-    const indirect = normalized.match(/^\(\s*(.+?)\s*\)$/i);
-    const basePageIndirectZ = normalized.match(/^\[\s*(.+?)\s*]\s*,\s*z$/i);
-    const indirectLong = normalized.match(/^\[\s*(.+?)\s*]$/i);
-    const indexed = normalized.match(/^(.+?)\s*,\s*([sx-z])$/i);
-    const topLevelComma = findTopLevelComma(normalized);
-    if (stackRelativeIndirect) {
-      mode3 = "stackRelativeIndirectIndexedY";
-      baseExpression = stackRelativeIndirect[1].trim();
-    } else if (indexedIndirect) {
-      mode3 = resolver.expandOperand(indexedIndirect[1].trim()).length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
-      baseExpression = indexedIndirect[1].trim();
-    } else if (indirectIndexed && !indirectIndexed[1].includes(",")) {
-      mode3 = "indirectIndexedY";
-      baseExpression = indirectIndexed[1].trim();
-    } else if (indirectIndexedZ && !indirectIndexedZ[1].includes(",")) {
-      mode3 = "zeroPageIndirectIndexedZ";
-      baseExpression = indirectIndexedZ[1].trim();
-    } else if (basePageIndirectZ) {
-      mode3 = "basePageIndirectIndexedZ";
-      baseExpression = basePageIndirectZ[1].trim();
-    } else if (indirectLong) {
-      mode3 = "zeroPageIndirectLong";
-      baseExpression = indirectLong[1].trim();
-    } else if (indirect) {
-      mode3 = resolver.expandOperand(indirect[1].trim()).length <= 1 ? "zeroPageIndirect" : "indirect";
-      baseExpression = indirect[1].trim();
-    } else if (indexed) {
-      const register4 = indexed[2].toLowerCase();
-      if (register4 === "s") mode3 = "stackRelative";
-      else if (register4 === "z") mode3 = "unknown";
-      else if (length > 2 && register4 === "x") mode3 = "absoluteLongIndexedX";
-      else mode3 = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register4.toUpperCase()}`;
-      baseExpression = indexed[1].trim();
-    } else if (topLevelComma >= 0) {
-      if (compound.length === 3) {
-        mode3 = "blockTransfer";
-      } else if (compound[0]?.toUpperCase() === "A") {
-        mode3 = "accumulatorRelative";
-      } else if (compound[1]?.startsWith("#")) {
-        mode3 = "zeroPageImmediate";
-      } else {
-        mode3 = "zeroPageRelative";
-      }
-      baseExpression = normalized;
-    } else {
-      mode3 = length <= 1 ? "zeroPage" : "absolute";
-    }
-  }
-  return {
-    // Unused
-    immediate: false,
-    // Unused
-    indirect: false,
-    mode: mode3,
-    baseExpression,
-    registerName,
-    raw,
-    expanded,
-    length,
-    // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
-    metadata: length > 2 ? { addressOutOfRange: true } : void 0
-  };
-}
-function splitTopLevelOperands2(value) {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  for (let index2 = 0; index2 < value.length; index2++) {
-    const character = value[index2];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
-      parts.push(value.slice(start, index2).trim());
-      start = index2 + 1;
-    }
-  }
-  parts.push(value.slice(start).trim());
-  return parts.filter(Boolean);
-}
-function findTopLevelComma(value) {
-  let depth = 0;
-  for (let index2 = 0; index2 < value.length; index2++) {
-    const character = value[index2];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) return index2;
-  }
-  return -1;
-}
-function parseCa65AddressSizePrefix(operand) {
-  const match = operand.match(/^([afz]):(.*)$/i);
-  if (!match) {
-    return { rest: operand, force: void 0 };
-  }
-  const rest = match[2].trim();
-  const key = match[1].toLowerCase();
-  if (key === "z") return { rest, force: 1 };
-  if (key === "a") return { rest, force: 2 };
-  return { rest, force: 3 };
-}
-
 // packages/plugin-65xx/src/ca65-profile.ts
 init_src();
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
@@ -39178,6 +39044,144 @@ function handleUnsupportedCa65(words) {
   throw new Error(
     `.${keyword.replace(/^\./, "")} requires relocatable ca65 object/linker semantics, which the flat-image compatibility profile does not implement.`
   );
+}
+
+// packages/plugin-65xx/src/operands/classifier.ts
+function classify65xxOperand(resolver, operand) {
+  const raw = operand.trim();
+  const sizePrefix = parseCa65AddressSizePrefix(raw);
+  const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
+  let length = inferredLength;
+  if (sizePrefix.force === 1) length = 1;
+  else if (sizePrefix.force === 2) length = Math.max(2, inferredLength);
+  else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
+  const normalized = expanded.trim();
+  const normalizedUpper = normalized.toUpperCase();
+  const compound = splitTopLevelOperands2(normalized);
+  let mode3 = "unknown";
+  let baseExpression = normalized;
+  let registerName;
+  if (normalized === "") {
+    mode3 = "implied";
+  } else if (normalizedUpper === "A") {
+    mode3 = "accumulator";
+    registerName = "a";
+  } else if (normalizedUpper === "Q") {
+    mode3 = "quadAccumulator";
+    registerName = "q";
+  } else if (compound.length >= 2 && compound[0]?.startsWith("#")) {
+    const indexedX = compound.length === 3 && compound[2]?.toUpperCase() === "X";
+    const address3 = compound[1] ?? "";
+    const addressLength = resolver.expandOperand(address3).length;
+    mode3 = `${addressLength <= 1 ? "immediateZeroPage" : "immediateAbsolute"}${indexedX ? "IndexedX" : ""}`;
+    baseExpression = normalized;
+  } else if (normalized.startsWith("#")) {
+    mode3 = "immediate";
+    baseExpression = normalized.slice(1).trim();
+  } else {
+    const indexedIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*x\s*\)$/i);
+    const stackRelativeIndirect = normalized.match(/^\(\s*(.+?)\s*,\s*s\s*\)\s*,\s*y$/i);
+    const indirectIndexed = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*y$/i);
+    const indirectIndexedZ = normalized.match(/^\(\s*(.+?)\s*\)\s*,\s*z$/i);
+    const indirect = normalized.match(/^\(\s*(.+?)\s*\)$/i);
+    const basePageIndirectZ = normalized.match(/^\[\s*(.+?)\s*]\s*,\s*z$/i);
+    const indirectLong = normalized.match(/^\[\s*(.+?)\s*]$/i);
+    const indexed = normalized.match(/^(.+?)\s*,\s*([sx-z])$/i);
+    const topLevelComma = findTopLevelComma(normalized);
+    if (stackRelativeIndirect) {
+      mode3 = "stackRelativeIndirectIndexedY";
+      baseExpression = stackRelativeIndirect[1].trim();
+    } else if (indexedIndirect) {
+      mode3 = resolver.expandOperand(indexedIndirect[1].trim()).length <= 1 ? "indexedIndirectX" : "absoluteIndexedIndirect";
+      baseExpression = indexedIndirect[1].trim();
+    } else if (indirectIndexed && !indirectIndexed[1].includes(",")) {
+      mode3 = "indirectIndexedY";
+      baseExpression = indirectIndexed[1].trim();
+    } else if (indirectIndexedZ && !indirectIndexedZ[1].includes(",")) {
+      mode3 = "zeroPageIndirectIndexedZ";
+      baseExpression = indirectIndexedZ[1].trim();
+    } else if (basePageIndirectZ) {
+      mode3 = "basePageIndirectIndexedZ";
+      baseExpression = basePageIndirectZ[1].trim();
+    } else if (indirectLong) {
+      mode3 = "zeroPageIndirectLong";
+      baseExpression = indirectLong[1].trim();
+    } else if (indirect) {
+      mode3 = resolver.expandOperand(indirect[1].trim()).length <= 1 ? "zeroPageIndirect" : "indirect";
+      baseExpression = indirect[1].trim();
+    } else if (indexed) {
+      const register4 = indexed[2].toLowerCase();
+      if (register4 === "s") mode3 = "stackRelative";
+      else if (register4 === "z") mode3 = "unknown";
+      else if (length > 2 && register4 === "x") mode3 = "absoluteLongIndexedX";
+      else mode3 = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register4.toUpperCase()}`;
+      baseExpression = indexed[1].trim();
+    } else if (topLevelComma >= 0) {
+      if (compound.length === 3) {
+        mode3 = "blockTransfer";
+      } else if (compound[0]?.toUpperCase() === "A") {
+        mode3 = "accumulatorRelative";
+      } else if (compound[1]?.startsWith("#")) {
+        mode3 = "zeroPageImmediate";
+      } else {
+        mode3 = "zeroPageRelative";
+      }
+      baseExpression = normalized;
+    } else {
+      mode3 = length <= 1 ? "zeroPage" : "absolute";
+    }
+  }
+  return {
+    // Unused
+    immediate: false,
+    // Unused
+    indirect: false,
+    mode: mode3,
+    baseExpression,
+    registerName,
+    raw,
+    expanded,
+    length,
+    // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
+    metadata: length > 2 ? { addressOutOfRange: true } : void 0
+  };
+}
+function splitTopLevelOperands2(value) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) {
+      parts.push(value.slice(start, index2).trim());
+      start = index2 + 1;
+    }
+  }
+  parts.push(value.slice(start).trim());
+  return parts.filter(Boolean);
+}
+function findTopLevelComma(value) {
+  let depth = 0;
+  for (let index2 = 0; index2 < value.length; index2++) {
+    const character = value[index2];
+    if (character === "(" || character === "[") depth++;
+    else if (character === ")" || character === "]") depth--;
+    else if (character === "," && depth === 0) return index2;
+  }
+  return -1;
+}
+function parseCa65AddressSizePrefix(operand) {
+  const match = operand.match(/^([afz]):(.*)$/i);
+  if (!match) {
+    return { rest: operand, force: void 0 };
+  }
+  const rest = match[2].trim();
+  const key = match[1].toLowerCase();
+  if (key === "z") return { rest, force: 1 };
+  if (key === "a") return { rest, force: 2 };
+  return { rest, force: 3 };
 }
 
 // packages/plugin-65xx/src/session-state.ts
@@ -39946,9 +39950,6 @@ var plugin = definePlugin({
 });
 var src_default = plugin;
 
-// packages/language-server/src/server.ts
-init_src2();
-
 // packages/plugin-loader-node/src/configuration.ts
 init_plugin();
 import { existsSync as existsSync2, promises as fs3 } from "node:fs";
@@ -40392,12 +40393,10 @@ var NodePluginLoader = class {
 };
 
 // packages/language-server/src/server.ts
-init_src();
-init_debug_map();
-var import_node = __toESM(require_main3(), 1);
+init_src2();
 
 // node_modules/vscode-languageserver-textdocument/lib/esm/main.js
-var FullTextDocument2 = class _FullTextDocument {
+var FullTextDocument = class _FullTextDocument {
   constructor(uri, languageId, version, content) {
     this._uri = uri;
     this._languageId = languageId;
@@ -40541,14 +40540,14 @@ var FullTextDocument2 = class _FullTextDocument {
     return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range === void 0 && candidate.rangeLength === void 0;
   }
 };
-var TextDocument2;
+var TextDocument;
 (function(TextDocument3) {
   function create(uri, languageId, version, content) {
-    return new FullTextDocument2(uri, languageId, version, content);
+    return new FullTextDocument(uri, languageId, version, content);
   }
   TextDocument3.create = create;
   function update(document, changes, version) {
-    if (document instanceof FullTextDocument2) {
+    if (document instanceof FullTextDocument) {
       document.update(changes, version);
       return document;
     } else {
@@ -40583,7 +40582,7 @@ var TextDocument2;
     return spans.join("");
   }
   TextDocument3.applyEdits = applyEdits;
-})(TextDocument2 || (TextDocument2 = {}));
+})(TextDocument || (TextDocument = {}));
 function mergeSort(data, compare) {
   if (data.length <= 1) {
     return data;
@@ -40644,8 +40643,8 @@ function getWellformedEdit(textEdit) {
   return textEdit;
 }
 
-// packages/language-server/src/core.ts
-init_src();
+// packages/language-server/src/server.ts
+var import_node = __toESM(require_main3(), 1);
 
 // packages/language-server/src/build.ts
 import fs4 from "node:fs";
@@ -40756,6 +40755,9 @@ function formatElapsed(startedAt) {
   return `${Date.now() - startedAt}ms`;
 }
 
+// packages/language-server/src/core.ts
+init_src();
+
 // packages/language-server/src/project-environment.ts
 init_src();
 import { existsSync as existsSync3 } from "node:fs";
@@ -40861,9 +40863,9 @@ var ProjectEnvironmentController = class {
 
 // packages/language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
-import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
-import path10 from "node:path";
 import fs5 from "node:fs";
+import path10 from "node:path";
+import { pathToFileURL as pathToFileURL2, fileURLToPath as fileURLToPath2 } from "node:url";
 var semanticTokensLegend = {
   tokenTypes: [
     import_vscode_languageserver.SemanticTokenTypes.keyword,
@@ -42016,7 +42018,7 @@ function referenceTokenType(kind) {
 
 // packages/language-server/src/server.ts
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
-var documents = new import_node.TextDocuments(TextDocument2);
+var documents = new import_node.TextDocuments(TextDocument);
 var environmentController = new ProjectEnvironmentController({
   bundledPlugins: /* @__PURE__ */ new Map([
     ["@uttori/asm-plugin-snes", src_default2],

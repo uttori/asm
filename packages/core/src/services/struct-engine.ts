@@ -1,5 +1,5 @@
-import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 import { maximumAddressForWidth } from "../address-width.js";
+import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
 import { DataStructEngine, type DataStructHost } from "./data-struct-engine.js";
 
 /** Encoding information is separate from Asar's address-only member labels. */

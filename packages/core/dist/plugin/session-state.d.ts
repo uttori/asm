@@ -1,5 +1,5 @@
-import type { OwnedContribution } from "./environment.js";
 import type { AssemblyStageName, SessionCreationContext, SessionStateContribution, SessionStateKey, SessionStateStore } from "./contracts.js";
+import type { OwnedContribution } from "./environment.js";
 /**
  * Per-slot plugin values for one assembler session (or a cloned stage snapshot).
  * Keys are contribution ids; values are whatever each plugin's `create`/`clone` returned.

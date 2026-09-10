@@ -2,7 +2,7 @@ import path from "node:path";
 
 import test from "ava";
 
-import { parseAresRuntimeManifest } from "../src/ares-process-host.js";
+import { AresProcessHost, parseAresRuntimeManifest } from "../src/ares-process-host.js";
 import { parseAresSidecarArguments } from "../src/sidecar.js";
 import { aresLiveManifest } from "./fixtures/ares-live-manifest.js";
 
@@ -132,4 +132,17 @@ test("ares runtime manifest parser normalizes, freezes, and rejects untrusted sh
       }),
     { message: /normalized and relative/ },
   );
+});
+
+import { testSidecarLifecycle } from "../../../tests/helpers/sidecar-lifecycle-contract.js";
+import * as aresHostModule from "../src/ares-process-host.js";
+import * as aresBackendModule from "../src/ares-rsp-backend.js";
+
+testSidecarLifecycle({
+  runExport: "runAresSidecar",
+  imports: { "./ares-process-host.js": aresHostModule, "./ares-rsp-backend.js": aresBackendModule },
+  host: AresProcessHost.prototype,
+  manifest: aresLiveManifest,
+  executableOption: "--ares",
+  entryPoint: "packages/debug-sidecar-ares/src/sidecar.ts",
 });

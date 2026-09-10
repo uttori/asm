@@ -1,3 +1,4 @@
+import type { ProjectOutlineKind, ProjectOutlineNode } from "@uttori/asm-core";
 /**
  * Native TreeView of the workspace include graph and per-file outline.
  * @see https://code.visualstudio.com/api/extension-guides/tree-view
@@ -12,9 +13,8 @@ import {
   type Event,
   type TreeDataProvider,
 } from "vscode";
-import type { ProjectOutlineKind, ProjectOutlineNode } from "@uttori/asm-core";
-import type { DocumentSymbol, LanguageClient } from "vscode-languageclient/node";
 import { SymbolKind } from "vscode-languageclient";
+import type { DocumentSymbol, LanguageClient } from "vscode-languageclient/node";
 
 type OutlineItem = {
   id: string;

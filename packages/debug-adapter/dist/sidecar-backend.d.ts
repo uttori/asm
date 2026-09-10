@@ -41,6 +41,7 @@ export declare class SidecarDebugBackend implements DebugBackend {
     /** @inheritdoc */
     disassemble(requestedAddress: DebugAddress, count: number): Promise<readonly DebugInstruction[]>;
     /** @inheritdoc */
+    capture(request: CaptureRequestV2): Promise<CaptureResultV2>;
     startTrace(options: DebugTraceStartOptions): Promise<void>;
     /** @inheritdoc */
     readTrace(maxEvents: number): Promise<DebugTraceBatch>;
@@ -49,4 +50,5 @@ export declare class SidecarDebugBackend implements DebugBackend {
     /** @inheritdoc */
     onEvent(listener: (event: DebugBackendEvent) => void): DebugSubscription;
 }
+import { type CaptureRequestV2, type CaptureResultV2 } from "./capture-v2.js";
 //# sourceMappingURL=sidecar-backend.d.ts.map

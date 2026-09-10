@@ -1,3 +1,4 @@
+import { test } from "../../../tests/ava-helper.js";
 import {
   DEBUG_BACKEND_PROTOCOL_VERSION,
   ReplayDebugBackend,
@@ -5,7 +6,6 @@ import {
   type DebugBackendEvent,
   type ReplaySnapshot,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 
 const cpu = (address: number, accumulator: string): ReplaySnapshot => ({
   threads: [

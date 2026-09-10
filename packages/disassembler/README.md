@@ -6,49 +6,44 @@ The package intentionally stores hashes and annotations, never ROM bytes. Target
 
 ## Project Layout
 
-An analysis directory contains a canonical `analysis.json` manifest and independently hash-checked JSON shards under `analysis/`:
+An analysis directory contains the SQLite working store and a small watcher pointer:
 
 ```text
-analysis.json
-analysis/control-flow.json
-analysis/annotations.json
-analysis/comments.json
-analysis/evidence.json
-analysis/imports.json
-analysis/labels.json
-analysis/regions.json
-analysis/runtime.json
+analysis.json       project identity, db: "analysis.sqlite", and revision
+analysis.sqlite     metadata and columnar runtime tables (WAL mode)
 ```
 
-The direct writer uses those fixed shard paths for initial project creation. Conflict-safe edits use
-immutable content-addressed generations under `analysis/generations/<sha256>/` and publish the new
-generation by replacing only `analysis.json` after every shard has been written, hash-checked, and
-synced. Older generations remain valid inputs for the previous manifest rather than being rewritten
-in place.
+SQLite owns the authoritative manifest and monotonic revision. `analysis.json` is refreshed by atomic
+rename after commit so existing file watchers fire; readers use the database revision even if that
+refresh was interrupted. SchemaVersion remains 3. Legacy JSON arrays, gzip shards, generation
+folders, lock files, and manifest migrations are no longer supported. User configuration, debug maps,
+source-export manifests, and capture/trace interchange formats remain JSON.
 
-The manifest records the format and schema versions, full-file and headerless SHA-256 identities, copier-header size, mapping decision and scored candidates, named address spaces, and the SHA-256 and record count for every shard. ROM bytes are forbidden in all shards.
-
-All JSON objects use sorted keys, record arrays have stable semantic ordering, ranges are half-open, and paths are project-relative. Address-space ids are unique, and every addressed record must name a declared space and fit its width. Regions can name a `parentRegion`; same-address-space children must be contained by their parent, while cross-address-space children represent a mapped projection such as ROM payload bytes loaded into a CPU-owned memory space. Missing parents and cycles are rejected. Rewriting a valid project is byte-stable. Readers migrate older schemas only through explicit forward migrations and reject newer schemas rather than silently downgrading them.
+The semantic collections retain the in-memory `AnalysisProjectShards` shape. Database reads use
+stable ordering; rewrites preserve logical records rather than promising identical SQLite bytes.
+Address ranges are half-open, every address must fit its declared space, evidence references must
+exist, and region parents must be acyclic and contain their same-space children. ROM bytes are
+forbidden in project records.
 
 ## Conflict-safe edits and recovery
 
-`loadAnalysisProjectSnapshot()` returns a validated project plus a versioned optimistic revision that
-contains the exact manifest hash and observed shard hashes. `prepareAnalysisProjectTransaction()`
-writes an immutable generation without changing the active project;
-`commitPreparedAnalysisProjectTransaction()` then acquires the cooperative project lock, reloads the
-active revision, rejects stale callers, revalidates the prepared shards, and atomically replaces the
-manifest last. `commitAnalysisProjectTransaction()` is the one-call form. A live lock is never
-stolen. A lock older than five minutes is recovered only when its recorded process is no longer
-alive, with at most three recovery attempts by default; hosts can supply a stricter policy.
+`loadAnalysisProjectSnapshot()` reads validated records and their revision in one SQLite read
+transaction. `commitAnalysisProjectTransaction()` acquires `BEGIN IMMEDIATE`, checks that revision
+under the writer lock, and commits rows, provenance, manifest and revision together.
+`prepareAnalysisProjectTransaction()` only validates an in-memory replacement; it creates no files.
+A failed write or interrupted process leaves the previous commit readable. If SQLite automatically
+rolls back, cleanup preserves the original failure instead of hiding it behind a rollback error.
 
-An interrupted preparation can leave an unreferenced directory under `analysis/generations/` or
-`analysis/.transactions/`, and an interrupted manifest replacement can leave a hidden
-`.analysis.json.*.tmp` file. None is loaded because `analysis.json` remains the sole commit pointer.
-After all writers are closed, first verify that `loadAnalysisProject()` succeeds; unreferenced
-generations and temporary files may then be archived or removed. Never delete the generation named
-by the active manifest. For backups, copy `analysis.json` and every shard path it names as one set;
-the hashes and record counts make an incomplete backup fail closed. Do not manually remove the lock
-unless the owner process is known to be gone.
+`loadAnalysisProjectViewSnapshot()` loads metadata only by default. An explicit reducer streams and
+validates runtime rows in the same snapshot without retaining the full history. Use
+`commitAnalysisProjectViewUpdate()` for these views: it replaces only supplied metadata tables and
+preserves runtime history. Complete-project writers deliberately replace runtime too. Unchanged
+rows are retained, and removal of evidence checks references from retained runtime facts.
+
+`compactAnalysisProject()` and `uttori-asm project-compact` checkpoint and VACUUM SQLite during
+explicit maintenance. They do not convert other storage formats. For backups, use SQLite's backup
+facilities or close every connection before copying the database and pointer; copying a live database
+without its WAL can omit committed data.
 
 The reversible edit primitives add certain manual evidence and return exact inverse records for
 safe undo. `applyRangeClassificationEdit()` adds a classification without deleting prior
@@ -108,11 +103,19 @@ the model suitable for large runtime-coverage shards without an annotation-by-in
 
 The runtime shard is emulator-neutral. Its discriminated records describe aggregated instruction execution, memory reads/writes, CPU state at an instruction address, half-open executed/operand/read/written coverage, and observed control targets. Emulator-specific formats stop at target-plugin importers.
 
-Runtime `EvidenceRecord` entries can pin an artifact's format/version, SHA-256, ROM content SHA-256, and mapper. Project validation rejects malformed identities, foreign ROM hashes, foreign mappers, invalid counts or widths, and out-of-range addresses before writing any shard.
+Runtime `EvidenceRecord` entries can pin an artifact's format/version, SHA-256, ROM content SHA-256, and mapper. Project validation rejects malformed identities, foreign ROM hashes, foreign mappers, invalid counts or widths, and out-of-range addresses before publishing records.
 
 `mergeRuntimeEvidence()` only adds stable-id facts. Exact reimport is a no-op; a reused id with different content is rejected. Runtime-derived indirect target overrides are the one compositional exception: later captures union their targets and provenance without discarding earlier observations. `inspectRuntimeEvidence()` reports differing CPU-state, opcode, and instruction-size observations and explains the runtime provenance behind derived annotations and target overrides.
 
 `uttori-asm-instruction-trace` is the native versioned artifact for explicit live instruction recordings. It stores a ROM content identity, producer revision, architecture/address-space identity, and ordered bounded-pull chunks with cumulative loss metadata. `importRuntimeInstructionTrace()` verifies that identity and ordering, applies only caller-declared recorder-to-project address-space aliases, aggregates addresses into stable execution records, and returns a `RuntimeEvidenceBatch`; its source identity always hashes the unchanged artifact and it never mutates or persists a project. Callers must separately invoke `mergeRuntimeEvidence()` as an explicit user action or configured recording workflow.
+
+For large native captures, `importRuntimeTraceIntoProject()` aggregates chunks in connection-local
+SQLite temporary counters, then writes final columnar runtime rows directly into the project. There
+is no second runtime scratch database, external sort, or shard serialization. Parsing and integrity
+checks complete before the write transaction; ROM mismatch, cancellation, stale revisions, conflicting
+stable IDs and storage failures roll back the whole publication. Exact reimport is a no-op and
+missing facts are repaired. Only imports and evidence metadata are touched. Both index profiles
+preserve their source identities, counts and contents. The runtime requires built-in `node:sqlite`.
 
 The package also owns the architecture-neutral `uttori-asm-source-export` manifest contract. It
 records generated file hashes, source/asset roles, half-open byte-ownership spans, source-project

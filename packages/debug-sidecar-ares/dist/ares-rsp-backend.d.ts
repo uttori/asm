@@ -1,4 +1,4 @@
-import { type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions } from "@uttori/asm-debug-adapter";
+import { type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions, type CaptureRequestV2, type CaptureResultV2 } from "@uttori/asm-debug-adapter";
 import type { GdbRspClient, GdbRspStop } from "./gdb-rsp-client.js";
 import { ARES_RSP_CAPABILITIES } from "./profile.js";
 export * from "./profile.js";
@@ -53,6 +53,7 @@ export declare class AresRspDebugBackend implements DebugBackend {
     /** @inheritdoc */
     disassemble(address: DebugAddress, count: number): Promise<readonly DebugInstruction[]>;
     /** @inheritdoc */
+    capture(request: CaptureRequestV2): Promise<CaptureResultV2>;
     startTrace(options: DebugTraceStartOptions): Promise<void>;
     /** @inheritdoc */
     readTrace(maxEvents: number): Promise<DebugTraceBatch>;

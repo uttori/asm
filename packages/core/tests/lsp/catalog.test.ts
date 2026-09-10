@@ -1,0 +1,238 @@
+import { promises as fs } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
+import { test } from "../../../../tests/ava-helper.js";
+import { Assembler, snesWorkspaceIndexOptions } from "../../../../tests/test-assembler.js";
+import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../../src/diagnostics.js";
+import { MemoryAssemblyFileProvider } from "../../src/file-provider.js";
+import {
+  findInstruction,
+  findDirectiveEntry,
+  findDirectiveOperand,
+  buildCompletionEntries,
+} from "../../src/lsp/catalog.js";
+import { OverlayFileProvider } from "../../src/lsp/overlay-file-provider.js";
+import {
+  positionInRange,
+  referenceAt,
+  symbolAt,
+  resolveDefinition,
+  findReferences,
+} from "../../src/lsp/position-lookup.js";
+import { WorkspaceIndex } from "../../src/lsp/workspace-index.js";
+
+const slideRoot = path.resolve(process.cwd(), "fixtures/integration/snes-slideshow/SLIDE.SRC");
+
+test("analyzeSource records include-graph edges and attributes included symbols", (t) => {
+  const fileProvider = new MemoryAssemblyFileProvider({
+    "/proj/a.asm": 'org $8000\nincsrc "b.asm"\naLabel:\n  nop\n',
+    "/proj/b.asm": "bLabel:\n  nop\n",
+  });
+  const assembler = new Assembler(undefined, { fileProvider });
+  assembler.includePaths = ["/proj"];
+
+  const result = assembler.analyzeSource(
+    'org $8000\nincsrc "b.asm"\naLabel:\n  nop\n',
+    "/proj/a.asm",
+    0,
+  );
+
+  const edge = result.includeEdges.find((entry) => entry.toFile === "/proj/b.asm");
+  t.truthy(edge, "expected an include edge to b.asm");
+  t.is(edge?.fromFile, "/proj/a.asm");
+
+  const includedSymbol = result.symbols.find((symbol) => symbol.name === "bLabel");
+  t.truthy(includedSymbol, "expected bLabel from the included file");
+  t.is(includedSymbol?.location.file, "/proj/b.asm");
+});
+
+test("overlay file provider prefers buffer content over the backing provider", (t) => {
+  const base = new MemoryAssemblyFileProvider({ "/proj/main.asm": "org $8000\n" });
+  const overlay = new Map<string, string>([["/proj/main.asm", "org $9000\n"]]);
+  const provider = new OverlayFileProvider(overlay, base);
+
+  t.is(provider.resolvePath("/proj/main.asm"), "/proj/main.asm");
+  t.is(provider.readTextFile("/proj/main.asm"), "org $9000\n");
+  t.true(provider.stat("/proj/main.asm").exists);
+});
+
+test("instruction and directive catalogs expose documented entries", (t) => {
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  const provider = {
+    getInstructionCatalog: (architecture: string) =>
+      index.toolingCatalog.getInstructions(architecture),
+  };
+  const lda = findInstruction("lda", "65816", provider);
+  t.truthy(lda);
+  t.is(lda?.mnemonic, "LDA");
+  t.true(lda!.modes.some((mode) => mode.mode === "immediate"));
+
+  t.truthy(findDirectiveEntry("org"));
+  t.truthy(findDirectiveEntry("incsrc"));
+
+  const check = index.directiveCatalog.find((entry) => entry.keyword === "check");
+  t.is(
+    findDirectiveOperand("check bankcross full", "bankcross", index.directiveCatalog)?.keyword,
+    "bankcross",
+  );
+  t.is(findDirectiveOperand("check bankcross off", "off", index.directiveCatalog)?.keyword, "off");
+  t.is(findDirectiveOperand("check title", "title", index.directiveCatalog)?.keyword, "title");
+  t.is(findDirectiveOperand("optimize dp ram", "dp", index.directiveCatalog)?.keyword, "dp");
+  t.is(
+    findDirectiveOperand("optimize dp always", "always", index.directiveCatalog)?.keyword,
+    "always",
+  );
+  t.is(
+    findDirectiveOperand("arch spc700-inline", "spc700-inline", index.directiveCatalog)?.keyword,
+    "spc700-inline",
+  );
+  t.is(
+    findDirectiveOperand("spcblock $5000 nspc", "nspc", index.directiveCatalog)?.keyword,
+    "nspc",
+  );
+  t.is(findDirectiveOperand('table "font.tbl",ltr', "ltr", index.directiveCatalog)?.keyword, "ltr");
+  t.is(findDirectiveOperand("lda #$00", "full", index.directiveCatalog), undefined);
+  t.truthy(check?.operands?.some((operand) => operand.keyword === "bankcross"));
+
+  const entries = buildCompletionEntries(
+    "65816",
+    provider,
+    index.directiveCatalog,
+    index.toolingCatalog.getExpressionFunctions(),
+  );
+  t.true(entries.some((entry) => entry.kind === "instruction" && entry.label === "JSR"));
+  t.true(entries.some((entry) => entry.kind === "directive" && entry.label === "db"));
+});
+
+test("architecture encoders expose instruction catalogs", (t) => {
+  const assembler = new Assembler();
+  const encoder = assembler.architectureRegistry.getDefinition("65816")?.encoder;
+  t.truthy(encoder?.getInstructionCatalog);
+  const catalog = encoder?.getInstructionCatalog?.() ?? [];
+  t.true(catalog.some((entry) => entry.mnemonic === "STA"));
+
+  const spc =
+    assembler.architectureRegistry.getDefinition("spc700")?.encoder.getInstructionCatalog?.() ?? [];
+  t.true(spc.some((entry) => entry.mnemonic === "MOV"));
+});
+
+test("position lookup resolves references to definitions across files", (t) => {
+  const definition: AssemblySymbolDefinition = {
+    name: "playerHealth",
+    kind: "label",
+    location: {
+      file: "/proj/a.asm",
+      line: 2,
+      range: { start: { line: 2, character: 0 }, end: { line: 2, character: 11 } },
+    },
+  };
+  const reference: AssemblySymbolReference = {
+    name: "playerHealth",
+    kind: "label",
+    location: {
+      file: "/proj/b.asm",
+      line: 5,
+      range: { start: { line: 5, character: 4 }, end: { line: 5, character: 15 } },
+    },
+  };
+
+  t.true(positionInRange({ line: 5, character: 8 }, reference.location.range!));
+  t.false(positionInRange({ line: 6, character: 0 }, reference.location.range!));
+
+  t.is(referenceAt([reference], { line: 5, character: 8 })?.name, "playerHealth");
+  t.is(symbolAt([definition], { line: 2, character: 2 })?.name, "playerHealth");
+
+  const resolved = resolveDefinition(reference, [definition]);
+  t.is(resolved.length, 1);
+  t.is(resolved[0].location.file, "/proj/a.asm");
+
+  t.is(findReferences("playerHealth", [reference]).length, 1);
+});
+
+test("workspace index analyses SLIDE.SRC and follows includes", (t) => {
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [slideRoot] }));
+  index.reindex();
+
+  const symbols = index.getSymbols(slideRoot);
+  t.true(
+    symbols.some((symbol) => symbol.name === "programStart"),
+    "expected programStart label",
+  );
+
+  const edgeTargets = index
+    .getIncludeEdges()
+    .filter((edge) => edge.fromFile === slideRoot)
+    .map((edge) => path.basename(edge.toFile).toLowerCase());
+  t.true(edgeTargets.includes("compress.src"));
+  t.true(edgeTargets.includes("frames.src"));
+  t.true(edgeTargets.includes("animate.src"));
+
+  const analyzedBasenames = index
+    .getAnalyzedFiles()
+    .map((file) => path.basename(file).toLowerCase());
+  t.true(
+    analyzedBasenames.includes("compress.src"),
+    "included file should have its own analysis bucket",
+  );
+
+  // Cross-file: every analysed file's symbols are part of the merged set.
+  t.true(index.getAllSymbols().length >= symbols.length);
+});
+
+test("workspace index serves open buffers and updates on change", (t) => {
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions());
+  const file = "/virtual/main.asm";
+
+  index.openDocument(file, "org $8000\nstart:\n  nop\n");
+  t.is(index.getText(file), "org $8000\nstart:\n  nop\n");
+  t.true(index.getSymbols(file).some((symbol) => symbol.name === "start"));
+
+  index.updateDocument(file, "org $8000\nbegin:\n  nop\n");
+  t.true(index.getSymbols(file).some((symbol) => symbol.name === "start"));
+  index.reindex();
+  t.true(index.getSymbols(file).some((symbol) => symbol.name === "begin"));
+  t.false(index.getSymbols(file).some((symbol) => symbol.name === "start"));
+
+  index.closeDocument(file);
+  t.is(index.getSymbols(file).length, 0);
+});
+
+test("workspace index utility paths handle disk, overlay, fallback locations, and unreadable files", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-workspace-index-"));
+  const file = path.join(directory, "main.asm");
+  const missing = path.join(directory, "missing.asm");
+  const messages: string[] = [];
+  try {
+    const source = "org $8000\nentry:\n  nop\n";
+    await fs.writeFile(file, source);
+    const index = new WorkspaceIndex(
+      snesWorkspaceIndexOptions({ logger: { info: (message) => messages.push(message) } }),
+    );
+
+    t.is(index.getStatus().lastReindexDurationMs, undefined);
+    t.is(index.getFileText("\0unreadable"), undefined);
+    t.is(index.readDiskRoot("\0unreadable"), undefined);
+    t.is(index.hashFile(missing), undefined);
+    t.truthy(index.hashFile(file));
+
+    index.openDocument(file, source);
+    t.false(index.dirtyFiles.has(file));
+    t.truthy(index.hashFile(file));
+    t.truthy(index.analyzeRoot(file));
+    t.true(messages.some((message) => message.startsWith("Analyzing main.asm")));
+
+    index.ingestArtifacts(
+      file,
+      [{ code: "fixture", message: "fixture", severity: "info", location: { file: "", line: 0 } }],
+      [{ name: "fixture", kind: "label", location: { file: "", line: 0 } }],
+      [{ name: "fixture", kind: "label", location: { file: "", line: 0 } }],
+    );
+    t.is(index.getDiagnostics(file).length, 1);
+    t.true(index.getSymbols(file).some((symbol) => symbol.name === "fixture"));
+    t.true(index.getReferences(file).some((reference) => reference.name === "fixture"));
+    t.is(index.collectFileHashes(file, [{ fromFile: file, toFile: missing }]), undefined);
+  } finally {
+    await fs.rm(directory, { recursive: true, force: true });
+  }
+});

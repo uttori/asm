@@ -1,5 +1,6 @@
-import type { RuntimeInstructionDetail } from "@uttori/asm-disassembler";
 import { open, type FileHandle } from "node:fs/promises";
+
+import type { RuntimeInstructionDetail } from "@uttori/asm-disassembler";
 
 /**
  * Honor the requested capture detail without silently losing execution evidence.

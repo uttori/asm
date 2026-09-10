@@ -1,7 +1,8 @@
-import { build } from "esbuild";
 import { chmodSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { build } from "esbuild";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outfile = path.join(here, "out/server.mjs");
@@ -15,9 +16,7 @@ await build({
   target: "node20",
   // Never emit a runnable bundle with plugin imports replaced by `undefined`.
   logOverride: { "import-is-undefined": "error" },
-  // `debug` is an optional dependency loaded via dynamic import inside the core;
-  // keep it external so the bundle works whether or not it is installed.
-  external: ["debug"],
+  external: [],
   // ESM output needs a shim so bundled CJS deps (vscode-languageserver) can use
   // require/__dirname.
   banner: {

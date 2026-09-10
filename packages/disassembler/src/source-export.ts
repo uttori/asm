@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import path from "node:path";
 
+import { canonicalJson } from "./canonical-json.js";
 import type { RomIdentity } from "./rom-image.js";
 
 /** Manifest `format` field for a generated source-export tree. */
@@ -99,26 +100,12 @@ export interface SourceExportManifest {
 export const sourceExportSha256 = (value: string | Uint8Array): string =>
   createHash("sha256").update(value).digest("hex");
 
-const canonicalize = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .filter(([, entry]) => entry !== undefined)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, entry]) => [key, canonicalize(entry)]),
-    );
-  }
-  return value;
-};
-
 /**
  * Deterministic JSON: sorted object keys, dropped `undefined`, trailing newline.
  * @param {unknown} value Manifest or config object.
  * @returns {string} Canonical JSON text.
  */
-export const canonicalSourceExportJson = (value: unknown): string =>
-  `${JSON.stringify(canonicalize(value), null, 2)}\n`;
+export const canonicalSourceExportJson = (value: unknown): string => canonicalJson(value);
 
 /**
  * Asserts that a path is safe for use in a source export manifest.

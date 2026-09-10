@@ -2,9 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import test from "ava";
-
 import { DEBUG_SIDECAR_SESSION_ENV, type DebugSubscription } from "@uttori/asm-debug-adapter";
+import test from "ava";
 
 import {
   ARES_RUNTIME_MANIFEST_VERSION,

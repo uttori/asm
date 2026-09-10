@@ -1,5 +1,5 @@
-import { evaluateDebugExpression, formatDebugExpressionValue } from "../src/index.js";
 import { test } from "../../../tests/ava-helper.js";
+import { evaluateDebugExpression, formatDebugExpressionValue } from "../src/index.js";
 
 const registers = [
   { name: "A", value: "1234", bits: 16 },

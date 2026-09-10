@@ -1,5 +1,6 @@
 /** Lazy, read-only source attribution and capture comparisons in the assembly sidebar. */
 import * as path from "node:path";
+
 import type {
   AnalysisEvidenceSource,
   AnalysisProjectManifest,
@@ -16,10 +17,11 @@ import {
   type TreeDataProvider,
   type Command,
 } from "vscode";
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
-import { analysisWorker } from "./analysis-worker-client.js";
-import type { AnalysisSourceCatalogProjection } from "./analysis-sources-data.js";
+
 import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
+import type { AnalysisSourceCatalogProjection } from "./analysis-sources-data.js";
+import { analysisWorker } from "./analysis-worker-client.js";
+import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 
 const count = (value: number): string => value.toLocaleString("en-US");
 const PAGE_SIZE = 200;

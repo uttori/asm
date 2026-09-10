@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import { buildAnalysisCallGraph } from "./analysis-graph.js";
 import { canonicalJson } from "./project-store.js";
 import type { AnalysisProject, AnalysisProjectShards } from "./project-types.js";

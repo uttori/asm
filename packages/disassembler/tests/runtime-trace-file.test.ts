@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { test } from "../../../tests/ava-helper.js";
 import {
   canonicalJson,
@@ -146,5 +147,47 @@ test("streamed import rejects truncated, malformed and inconsistent suffixes bef
       projectRomContentSha256: "b".repeat(64),
     }),
     { message: /ROM\/project mismatch/ },
+  );
+});
+
+test("streaming compact index validates the original rich capture before returning any import", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "uttori-trace-index-"));
+  t.teardown(() => rm(directory, { recursive: true, force: true }));
+  const file = path.join(directory, "trace.json");
+  const trace = {
+    ...artifact,
+    chunks: [
+      {
+        sequenceStart: 1,
+        addresses: [0x7e2000, 0x7e2000],
+        details: [
+          { bytes: [0xea], state: { p: 0x30, x: 1 } },
+          { bytes: [0xea], state: { p: 0x30, x: 2 } },
+        ],
+        droppedEvents: 0,
+        active: false,
+      },
+    ],
+  };
+  const indexedContext = {
+    ...context,
+    indexMode: "65816-disassembly" as const,
+    maxIndexRecords: 3,
+  };
+  await writeFile(file, JSON.stringify(trace));
+  t.deepEqual(
+    await importRuntimeInstructionTraceFile(file, indexedContext),
+    importRuntimeInstructionTrace(trace, indexedContext),
+  );
+  await writeFile(file, JSON.stringify(trace) + " garbage");
+  await t.throwsAsync(importRuntimeInstructionTraceFile(file, indexedContext));
+  const cancellation = new AbortController();
+  await writeFile(file, JSON.stringify(trace));
+  await t.throwsAsync(
+    importRuntimeInstructionTraceFile(file, indexedContext, {
+      signal: cancellation.signal,
+      onProgress: () => cancellation.abort(),
+    }),
+    { name: "AbortError" },
   );
 });

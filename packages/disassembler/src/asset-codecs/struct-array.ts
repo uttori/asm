@@ -94,9 +94,12 @@ const parseFields = (
       }
     }
   }
-  const requiredStride = Math.ceil(
-    Math.max(...fields.map((field) => field.bitStart + field.bitLength)) / 8,
+  // Schema field counts are not a safe function-argument bound, even for one small record.
+  const requiredBits = fields.reduce(
+    (maximum, field) => Math.max(maximum, field.bitStart + field.bitLength),
+    -Infinity,
   );
+  const requiredStride = Math.ceil(requiredBits / 8);
   const stride = integerOption(options, "stride", { minimum: requiredStride }) ?? requiredStride;
   return { fields, stride };
 };

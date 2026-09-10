@@ -1,16 +1,18 @@
 /** Source-first navigation for persisted analysis locations with conservative disassembly fallback. */
 import * as path from "node:path";
+
 import { formatDebugAddress } from "@uttori/asm-debug-adapter";
 import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
 import { Position, Selection, TextEditorRevealType, Uri, debug, window, workspace } from "vscode";
+
 import {
   analysisDebugMapRanges,
   currentAnalysisSourcePath,
   findAnalysisDebugMapCandidates,
 } from "./analysis-debug-maps.js";
-import { analysisWorker } from "./analysis-worker-client.js";
-import type { AnalysisNavigationProjection } from "./analysis-navigation-data.js";
 import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
+import type { AnalysisNavigationProjection } from "./analysis-navigation-data.js";
+import { analysisWorker } from "./analysis-worker-client.js";
 
 interface CurrentSourceLocation {
   readonly file: string;

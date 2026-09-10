@@ -1,7 +1,8 @@
-import { build } from "esbuild";
 import { chmodSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { build } from "esbuild";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outfile = path.join(here, "out/cli.mjs");

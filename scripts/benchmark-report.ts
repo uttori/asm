@@ -78,11 +78,13 @@ export function benchmarkStatistics(values: number[]): BenchmarkStatistics {
     return { min: 0, median: 0, p95: 0, max: 0, medianAbsoluteDeviation: 0 };
   }
   const median = percentile(values, 0.5);
+  // Sample counts are input-sized. Binary folds preserve Math's NaN/signed-zero behavior
+  // without converting every sample into a separate function argument.
   return {
-    min: Math.min(...values),
+    min: values.reduce((minimum, value) => Math.min(minimum, value), Infinity),
     median,
     p95: percentile(values, 0.95),
-    max: Math.max(...values),
+    max: values.reduce((maximum, value) => Math.max(maximum, value), -Infinity),
     medianAbsoluteDeviation: percentile(
       values.map((value) => Math.abs(value - median)),
       0.5,
@@ -128,8 +130,11 @@ export function aggregateSamples(samples: BenchmarkSample[]): BenchmarkAggregate
   >;
   return {
     wallMs: benchmarkStatistics(samples.map((sample) => sample.wallMs)),
-    peakRssBytes: Math.max(0, ...samples.map((sample) => sample.peakRssBytes)),
-    peakHeapUsedBytes: Math.max(0, ...samples.map((sample) => sample.peakHeapUsedBytes)),
+    peakRssBytes: samples.reduce((maximum, sample) => Math.max(maximum, sample.peakRssBytes), 0),
+    peakHeapUsedBytes: samples.reduce(
+      (maximum, sample) => Math.max(maximum, sample.peakHeapUsedBytes),
+      0,
+    ),
     phasesMs: Object.fromEntries(
       phaseNames.map((name) => [
         name,

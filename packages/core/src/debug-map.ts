@@ -145,16 +145,25 @@ export const debugMapRangesForAddress = (
   address: number,
   options: { readonly architecture?: string; readonly outputOffset?: number } = {},
 ): readonly DebugMapRange[] =>
-  map.ranges.filter(
-    (range) =>
-      (options.architecture === undefined || range.architecture === options.architecture) &&
-      ((range.addressSpace === addressSpace && range.start <= address && address < range.end) ||
-        (options.outputOffset !== undefined &&
-          range.outputStart !== undefined &&
-          range.outputEnd !== undefined &&
-          range.outputStart <= options.outputOffset &&
-          options.outputOffset < range.outputEnd)),
-  );
+  map.ranges.filter((range) => {
+    // Drop other CPUs when the caller names one (e.g. 65816 vs SPC700).
+    if (options.architecture !== undefined && range.architecture !== options.architecture) {
+      return false;
+    }
+    // Direct hit: logical address sits in this range's half-open [start, end) in the requested space.
+    if (range.addressSpace === addressSpace && range.start <= address && address < range.end) {
+      return true;
+    }
+    // Mirror fallback: same ROM bytes at a different bus address, matched by output offset
+    // (e.g. $008000 vs $808000 both mapping to file offset 0). Unmapped ranges have no output span.
+    return (
+      options.outputOffset !== undefined &&
+      range.outputStart !== undefined &&
+      range.outputEnd !== undefined &&
+      range.outputStart <= options.outputOffset &&
+      options.outputOffset < range.outputEnd
+    );
+  });
 
 /**
  * Resolves one-based source lines to all matching logical ranges.

@@ -1,12 +1,14 @@
-import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
 import { Assembler } from "@uttori/asm-core";
-import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import { create65xxAssemblerEnvironment, NES_65XX_TARGET_ID } from "@uttori/asm-plugin-65xx";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+
 import {
   EXTERNAL_FIXTURE_IDS,
   EXTERNAL_FIXTURES,

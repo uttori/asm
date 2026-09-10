@@ -1,16 +1,16 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { test } from "../../../tests/ava-helper.js";
-import { createEncoderTestHost } from "../../../tests/architecture/test-stubs.js";
 
-import { Arch65816 } from "../src/architectures/65816.js";
+import { createEncoderTestHost } from "../../../tests/architecture/test-stubs.js";
+import { test } from "../../../tests/ava-helper.js";
 import {
   Cpu65816Decoder,
   formatCpu65816Instruction,
   type Cpu65816DecodeState,
 } from "../src/architectures/65816-decoder.js";
 import { buildCpu65816Catalog, cpu65816Specifications } from "../src/architectures/65816-spec.js";
-import { formatSnes65816SourceInstruction } from "../src/disassembler/source-export.js";
+import { Arch65816 } from "../src/architectures/65816.js";
 import { indexSnesRamMap, validateSnesRamMap } from "../src/disassembler/ram-map.js";
+import { formatSnes65816SourceInstruction } from "../src/disassembler/source-export.js";
 
 const decoder = new Cpu65816Decoder();
 const logicalAddress = 0x808000;
@@ -142,8 +142,9 @@ test("65816 width predicates cover native, emulation, and unknown states for eve
       for (const m of [0, 1, "unknown"] as const) {
         for (const x of [0, 1, "unknown"] as const) {
           const result = decode(bytes, { e, m, x });
-          const selected =
-            specification.widthFlag === "m" ? m : specification.widthFlag === "x" ? x : 1;
+          let selected: 0 | 1 | "unknown" = 1;
+          if (specification.widthFlag === "m") selected = m;
+          else if (specification.widthFlag === "x") selected = x;
           const ambiguous =
             specification.widthFlag &&
             e !== 1 &&
@@ -152,11 +153,9 @@ test("65816 width predicates cover native, emulation, and unknown states for eve
           else {
             t.is(result.kind, "instruction", specification.id);
             if (result.kind === "instruction") {
-              const expected = specification.widthFlag
-                ? e === 1 || selected === 1
-                  ? 2
-                  : 3
-                : specification.minimumSize;
+              let expected = specification.minimumSize;
+              // Emulation forces an 8-bit operand even when the native width flag is clear.
+              if (specification.widthFlag) expected = e === 1 || selected === 1 ? 2 : 3;
               t.is(result.instruction.size, expected, specification.id);
             }
           }
@@ -219,7 +218,8 @@ test("65816 decode-format-encode round trips all 256 opcodes in every width", (t
   for (const specification of cpu65816Specifications) {
     const widths = specification.widthFlag ? ([1, 0] as const) : ([1] as const);
     for (const width of widths) {
-      const size = specification.widthFlag ? (width === 1 ? 2 : 3) : specification.minimumSize;
+      let size = specification.minimumSize;
+      if (specification.widthFlag) size = width === 1 ? 2 : 3;
       const bytes = [specification.opcode[0], 0x34, 0x12, 0x56].slice(0, size);
       const state: Cpu65816DecodeState = {
         e: 0,

@@ -1,5 +1,6 @@
 import semver from "semver";
 
+import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
 import type {
   AddressSpaceContribution,
   ArchitectureContribution,
@@ -17,7 +18,6 @@ import type {
   TargetContribution,
 } from "./contracts.js";
 import { PLUGIN_API_VERSION } from "./contracts.js";
-import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
 import { PluginError } from "./diagnostics.js";
 import {
   AssemblerEnvironment,
@@ -671,14 +671,16 @@ export class PluginManager implements PluginDisposable {
         this.#contributionOwners.set(directive.id.toLowerCase(), set.pluginId);
       }
     }
-    this.#sessionStates.push(...transaction.sessionStates);
-    this.#architectures.push(...transaction.architectures);
-    this.#addressSpaces.push(...transaction.addressSpaces);
-    this.#outputFormats.push(...transaction.outputFormats);
-    this.#directiveSets.push(...transaction.directiveSets);
-    this.#expressionSets.push(...transaction.expressionSets);
-    this.#lifecycles.push(...transaction.lifecycles);
-    this.#targets.push(...transaction.targets);
+    // Plugin contributions are input-sized. A spread could fail after earlier lists were committed,
+    // leaving a partially registered plugin; iterative appends preserve each list's order.
+    for (const record of transaction.sessionStates) this.#sessionStates.push(record);
+    for (const record of transaction.architectures) this.#architectures.push(record);
+    for (const record of transaction.addressSpaces) this.#addressSpaces.push(record);
+    for (const record of transaction.outputFormats) this.#outputFormats.push(record);
+    for (const record of transaction.directiveSets) this.#directiveSets.push(record);
+    for (const record of transaction.expressionSets) this.#expressionSets.push(record);
+    for (const record of transaction.lifecycles) this.#lifecycles.push(record);
+    for (const record of transaction.targets) this.#targets.push(record);
   }
 
   freeze(): AssemblerEnvironment {

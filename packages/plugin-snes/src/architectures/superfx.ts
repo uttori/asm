@@ -7,6 +7,7 @@ import {
   type LoweredInstruction,
   type LoweredOperand,
 } from "@uttori/asm-core";
+
 import {
   encodeSuperFxMoveShortAddress,
   type SuperFxMoveShortAddressMode,

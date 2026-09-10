@@ -3,16 +3,17 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
+import { CRC32 } from "@uttori/asm-core";
+import { canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core/debug-map";
+import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import plugin65xx from "@uttori/asm-plugin-65xx";
-import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import {
   discoverProjectConfigurationPath,
   PROJECT_CONFIG_FILENAME,
   validateProjectConfiguration,
 } from "@uttori/asm-plugin-loader-node";
-import { CRC32 } from "@uttori/asm-core";
-import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
-import { canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core/debug-map";
+import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   createConnection,
   Diagnostic,
@@ -27,15 +28,14 @@ import {
   type InitializeParams,
   type InitializeResult,
 } from "vscode-languageserver/node";
-import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { OverlayFileProvider, type WorkspaceIndex } from "./core.js";
 import {
   commitBuildArtifactPair,
   emptyOutputMessage,
   formatElapsed,
   resolveBuildEntry,
 } from "./build.js";
+import { OverlayFileProvider, type WorkspaceIndex } from "./core.js";
 import {
   ProjectEnvironmentController,
   type PluginModuleSetting,

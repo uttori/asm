@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
 import {
   canonicalJson,
@@ -7,12 +8,100 @@ import {
   type AnalysisControlFlowEdgeRecord,
   type AnalysisProjectShards,
   type RomImage,
+  type RuntimeInstructionRecord,
+  type RuntimeEvidenceRecord,
+  type RuntimeRecordProjection,
 } from "@uttori/asm-disassembler";
+
 import { Cpu65816Decoder, type Cpu65816DecodeState } from "../architectures/65816-decoder.js";
-import { createSnesAddressContext } from "./address-identities.js";
 import { snesRomAddressSpace } from "../target/address-space.js";
+import { createSnesAddressContext } from "./address-identities.js";
 import { identifySnesHardwareRegister } from "./hardware-registers.js";
 import type { SnesMapper } from "./rom-header.js";
+
+/**
+ * Extract only state used by the decoder; aliases, unknowns and emulation widths match analysis.
+ * @param {RuntimeInstructionRecord} sample Execution-time instruction and paired registers.
+ * @returns {Cpu65816DecodeState} Width and bank state actually consumed by decoding.
+ */
+const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeState => {
+  const value = (key: string, max: number): number | undefined => {
+    const entry = sample.state[key] ?? sample.state[key.toUpperCase()];
+    return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max
+      ? entry
+      : undefined;
+  };
+  const p = value("p", 255);
+  const e = value("e", 1) as 0 | 1 | undefined;
+  let widths: Pick<Cpu65816DecodeState, "m" | "x"> = {};
+  if (p !== undefined) widths = { m: ((p >> 5) & 1) as 0 | 1, x: ((p >> 4) & 1) as 0 | 1 };
+  if (e === 1) widths = { m: 1, x: 1 };
+  return {
+    ...(e === undefined ? {} : { e }),
+    ...widths,
+    programBank: sample.address >>> 16,
+    ...(value("db", 255) === undefined ? {} : { dataBank: value("db", 255) }),
+    ...(value("d", 65535) === undefined ? {} : { directPage: value("d", 65535) }),
+  };
+};
+
+/**
+ * Reduce full register history to distinct instruction decoding variants for regeneration.
+ * CPU-state records are redundant here. Bytes, decoding state and evidence remain paired; original
+ * records and all other registers stay in the untouched runtime shard, never in this derived view.
+ * @returns {RuntimeRecordProjection} One-use reducer preserving all distinct decoding variants.
+ */
+export const createSnesRuntimeAnalysisProjection = (): RuntimeRecordProjection => {
+  const records: RuntimeEvidenceRecord[] = [];
+  const variants = new Map<
+    string,
+    {
+      record: RuntimeInstructionRecord;
+      count: number;
+      evidence: Set<string>;
+    }
+  >();
+  return {
+    push: (record) => {
+      if (record.kind === "runtime-cpu-state") return;
+      if (record.kind !== "runtime-instruction") {
+        records.push(record);
+        return;
+      }
+      if (record.architecture !== "snes.65816" || record.addressSpace !== "snes.cpu") return;
+      const key = canonicalJson({
+        address: record.address,
+        bytes: record.bytes,
+        state: runtimeDecodeState(record),
+      });
+      const prior = variants.get(key);
+      if (prior) {
+        prior.count += record.count;
+        for (const id of record.evidence) prior.evidence.add(id);
+        return;
+      }
+      variants.set(key, {
+        record: {
+          ...record,
+          // Retain both aliases when present so lowercase precedence is unchanged on re-decode.
+          state: Object.fromEntries(
+            Object.entries(record.state).filter(([field]) =>
+              ["p", "e", "db", "d"].includes(field.toLowerCase()),
+            ),
+          ),
+        },
+        count: record.count,
+        evidence: new Set(record.evidence),
+      });
+    },
+    finish: () => {
+      for (const { record, count, evidence } of variants.values())
+        records.push({ ...record, count, evidence: [...evidence].sort() });
+      variants.clear();
+      return records;
+    },
+  };
+};
 
 /**
  * Decode captured code from any CPU bus location, including WRAM and cartridge RAM.
@@ -39,24 +128,7 @@ export const analyzeSnesRuntimeCode = (
       sample.addressSpace !== "snes.cpu"
     )
       continue;
-    const value = (key: string, max: number): number | undefined => {
-      const entry = sample.state[key] ?? sample.state[key.toUpperCase()];
-      return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max
-        ? entry
-        : undefined;
-    };
-    const p = value("p", 255);
-    const e = value("e", 1) as 0 | 1 | undefined;
-    let widths: Pick<Cpu65816DecodeState, "m" | "x"> = {};
-    if (p !== undefined) widths = { m: ((p >> 5) & 1) as 0 | 1, x: ((p >> 4) & 1) as 0 | 1 };
-    if (e === 1) widths = { m: 1, x: 1 };
-    const state: Cpu65816DecodeState = {
-      ...(e === undefined ? {} : { e }),
-      ...widths,
-      programBank: sample.address >>> 16,
-      ...(value("db", 255) === undefined ? {} : { dataBank: value("db", 255) }),
-      ...(value("d", 65535) === undefined ? {} : { directPage: value("d", 65535) }),
-    };
+    const state = runtimeDecodeState(sample);
     const variant = createHash("sha256")
       .update(canonicalJson({ address: sample.address, bytes: sample.bytes, state }))
       .digest("hex")
@@ -235,7 +307,9 @@ export const analyzeSnesRuntimeCode = (
       ...node,
       evidencePath: ownership.get(node.id)?.length ? ownership.get(node.id)! : [node.id],
     });
-  records.push(...edges);
+  // Large captures exceed V8's function-argument limit even when the arrays fit in memory.
+  // Append individually to retain every edge without spreading the graph onto the call stack.
+  for (const edge of edges) records.push(edge);
   for (const [address, variants] of byAddress) {
     // CPU state can legitimately differ between executions of the same instruction. Preserve
     // every state/evidence variant, but only incompatible instruction encodings are code conflicts.

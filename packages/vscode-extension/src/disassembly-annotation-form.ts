@@ -1,4 +1,5 @@
 import { Uri, ViewColumn, window, type WebviewPanel } from "vscode";
+
 import { renderWebviewTemplate } from "./webview-template.js";
 
 export interface DisassemblyAnnotationFields {

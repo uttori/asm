@@ -1,8 +1,8 @@
 import { setCommandWords, type NormalizedCommand } from "../ir/normalized-command.js";
-import type { OutputWriterService } from "./output-writer-service.js";
 import { splitCommandIntoWords } from "./command-text-service.js";
-import { parseStructInitializer, splitInitializerList } from "./struct-initializer.js";
+import type { OutputWriterService } from "./output-writer-service.js";
 import type { StructDefinition, StructEngine, StructField } from "./struct-engine.js";
+import { parseStructInitializer, splitInitializerList } from "./struct-initializer.js";
 
 export interface DataStructHost {
   structs: Map<string, StructDefinition>;

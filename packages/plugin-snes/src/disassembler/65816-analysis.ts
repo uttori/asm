@@ -509,11 +509,10 @@ export const analyzeSnes65816 = (
       .filter((annotation) => annotation.state)
       .map((annotation) => ({
         annotation,
-        rank: Math.max(
+        // One location can accumulate many captures; rank them without variadic arguments.
+        rank: annotation.evidence.reduce(
+          (rank, id) => Math.max(rank, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]),
           0,
-          ...annotation.evidence.map(
-            (id) => EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"],
-          ),
         ),
       }))
       .sort(
@@ -534,7 +533,8 @@ export const analyzeSnes65816 = (
       if (candidates.length > 0) {
         state = candidates.reduce((left, right) => joinCpu65816States(left, right));
       }
-      consumed.push(...ranked.flatMap(({ annotation }) => annotation.evidence));
+      // Retain all provenance without an intermediate flattened list or a giant push call.
+      for (const { annotation } of ranked) for (const id of annotation.evidence) consumed.push(id);
     }
     return { state, evidence: [...new Set(consumed)].sort() };
   };

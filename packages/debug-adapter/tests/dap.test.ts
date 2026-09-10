@@ -4,6 +4,7 @@ import * as path from "node:path";
 
 import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
 
+import { test } from "../../../tests/ava-helper.js";
 import {
   DapMessageParser,
   DebugAdapterSession,
@@ -19,7 +20,6 @@ import {
   type DebugAdapterSessionOptions,
   type ReplaySnapshot,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 
 const request = (seq: number, command: string, args: Record<string, unknown> = {}): DapRequest => ({
   seq,

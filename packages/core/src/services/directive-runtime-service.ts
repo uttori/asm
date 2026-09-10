@@ -1,9 +1,9 @@
-import type { OperandResolver } from "../operand-resolver.js";
 import { normalizeAddressForWidth } from "../address-width.js";
+import type { OperandResolver } from "../operand-resolver.js";
+import { splitRespectingFunctions } from "./command-text-service.js";
 import type { DefineEngine } from "./define-engine.js";
 import type { StructEngine } from "./struct-engine.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
-import { splitRespectingFunctions } from "./command-text-service.js";
 
 export type PushPcStackEntry = {
   currentTargetAddress: number;
@@ -144,11 +144,11 @@ export class DirectiveRuntimeService {
       return;
     }
 
-    // Defines can expand to comma-separated values, so process a queue and
-    // reinsert expanded tokens rather than doing a single flat pass.
-    const pendingValues = splitRespectingFunctions(params.join(" "));
+    // Reverse storage keeps source order when popping and avoids shifting a large data list.
+    // Expanded defines are pushed in reverse too, so they finish before the following operand.
+    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
     while (pendingValues.length > 0) {
-      let value = (pendingValues.shift() ?? "").trim();
+      let value = (pendingValues.pop() ?? "").trim();
       if (value.startsWith('"') || value.startsWith("'")) {
         // String literals go through define expansion first, then through the
         // active character mapping table one character at a time.
@@ -176,7 +176,9 @@ export class DirectiveRuntimeService {
 
       const expandedValues = splitRespectingFunctions(resolved);
       if (expandedValues.length > 1) {
-        pendingValues.unshift(...expandedValues);
+        // A define can expand beyond V8's argument limit; never spread its tokens into a call.
+        for (let index = expandedValues.length - 1; index >= 0; index--)
+          pendingValues.push(expandedValues[index]);
         continue;
       }
 
@@ -241,15 +243,16 @@ export class DirectiveRuntimeService {
   }
 
   /**
-   * Estimates data directive size.
-   * @param {number} len The len.
-   * @param {string[]} params The params.
+   * Estimates data size with the same expansion order as emission, without resolving final values.
+   * @param {number} len Bytes per numeric item (1–4); string characters each occupy one item.
+   * @param {string[]} params Source operands, including defines that may expand to data lists.
    */
   estimateDataDirectiveSize(len: number, params: string[]): void {
-    const pendingValues = [...splitRespectingFunctions(params.join(" "))];
+    // Match emission's reverse stack: expanded lists retain source order with constant-time pops.
+    const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
     let estimatedItems = 0;
     while (pendingValues.length > 0) {
-      let value = (pendingValues.shift() ?? "").trim();
+      let value = (pendingValues.pop() ?? "").trim();
       if (!value) {
         continue;
       }
@@ -284,9 +287,9 @@ export class DirectiveRuntimeService {
 
       const expandedValues = splitRespectingFunctions(resolved);
       if (expandedValues.length > 1) {
-        // A define may stand in for a whole data list, so count each expanded
-        // value independently.
-        pendingValues.unshift(...expandedValues);
+        // Count every expanded value without passing an input-sized list as call arguments.
+        for (let index = expandedValues.length - 1; index >= 0; index--)
+          pendingValues.push(expandedValues[index]);
         continue;
       }
 

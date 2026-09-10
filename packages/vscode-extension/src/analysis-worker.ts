@@ -1,32 +1,40 @@
 import { createHash } from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { parentPort } from "node:worker_threads";
+
+import type { DebugMapRange } from "@uttori/asm-core/debug-map";
+import {
+  ANALYSIS_PROJECT_SQLITE_FILE,
+  AnalysisSourceIndex,
+  SqliteAnalysisStore,
+  buildAnalysisCallGraph,
+  buildInstructionAnalysisAnnotations,
+  buildRomCoverageMap,
+  HalfOpenIntervalIndex,
+  loadAnalysisProjectViewSnapshot,
+  canonicalJson,
+  assertAnalysisProjectRevision,
+  openAnalysisProjectStore,
+  type AnalysisProjectSnapshot,
+  type AnalysisSourceGroup,
+  type InstructionAnalysisAnnotation,
+  type RomCoverageMap,
+} from "@uttori/asm-disassembler";
 import {
   analyzeSnesFunctionRoles,
   validateSnesHeuristicConfiguration,
 } from "@uttori/asm-plugin-snes";
-import { parentPort } from "node:worker_threads";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import {
-  loadAnalysisProjectSnapshot,
-  AnalysisSourceIndex,
-  type AnalysisSourceGroup,
-  migrateManifest,
-  buildRomCoverageMap,
-  buildAnalysisCallGraph,
-  buildInstructionAnalysisAnnotations,
-  HalfOpenIntervalIndex,
-  type AnalysisProjectSnapshot,
-  type RomCoverageMap,
-  type InstructionAnalysisAnnotation,
-} from "@uttori/asm-disassembler";
-import type { DebugMapRange } from "@uttori/asm-core/debug-map";
+
+import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
 import {
   createInstructionAnnotationIndex,
   instructionAnnotationsForDebugRange,
   type InstructionAnnotationIndex,
 } from "./analysis-annotation-index.js";
-import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
-
+import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
+import { projectAnalysisNavigation } from "./analysis-navigation-data.js";
+import { readAnalysisSourceCatalog } from "./analysis-sources-data.js";
 import {
   annotationFileSignature,
   lookupDisassemblyAnnotation,
@@ -34,10 +42,6 @@ import {
   type AnnotationLookup,
   type AnnotationSave,
 } from "./disassembly-annotation-data.js";
-
-import { projectAnalysisNavigation } from "./analysis-navigation-data.js";
-import type { AnalysisGraphNavigationTarget } from "./analysis-graph-tree.js";
-import { readAnalysisSourceCatalog } from "./analysis-sources-data.js";
 
 let current:
   | {
@@ -82,6 +86,68 @@ export interface AnalysisWorkerRequest {
 }
 
 /**
+ * Load sqlite metadata without the runtime table.
+ * @param {string} directory Project root.
+ * @param {string} revision Manifest file bytes used for the optimistic hash.
+ * @returns {AnalysisProjectSnapshot} View snapshot with empty runtime.
+ */
+const sqliteSnapshot = (directory: string): AnalysisProjectSnapshot => {
+  const loaded = loadAnalysisProjectViewSnapshot(directory);
+  return { manifest: loaded.manifest, shards: loaded.view, revision: loaded.revision };
+};
+
+/** The worker owns one connection until it switches projects or the database inode is replaced. */
+let database: { directory: string; identity: string; store: SqliteAnalysisStore } | undefined;
+const projectDatabase = (directory: string): SqliteAnalysisStore => {
+  const stat = fs.statSync(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
+  const identity = `${stat.dev}:${stat.ino}`;
+  if (database?.directory !== directory || database.identity !== identity) {
+    database?.store.close();
+    database = { directory, identity, store: openAnalysisProjectStore(directory) };
+  }
+  return database.store;
+};
+
+/**
+ * Reject a concurrent publication before combining cached metadata with streamed runtime rows.
+ * @param {SqliteAnalysisStore} store Worker-owned connection.
+ * @param {AnalysisProjectSnapshot} snapshot Metadata revision used by the projection.
+ * @param {Function} read Synchronous projection consuming all cursors inside this snapshot.
+ * @returns {T} Consistent projection, or a stale-revision error requesting a refresh.
+ */
+const readProjection = <T>(
+  store: SqliteAnalysisStore,
+  snapshot: AnalysisProjectSnapshot,
+  read: () => T,
+): T =>
+  store.transaction(() => {
+    assertAnalysisProjectRevision(store, snapshot.revision);
+    return read();
+  }, false);
+
+/**
+ * Build the existing coverage projection from streamed facts without a complete runtime array.
+ * @param {SqliteAnalysisStore} store Worker-owned database connection.
+ * @param {AnalysisProjectSnapshot} snapshot Cached metadata from the selected project revision.
+ * @returns {RomCoverageMap} Coverage projection without a retained runtime array.
+ */
+const sqliteCoverageMap = (
+  store: SqliteAnalysisStore,
+  snapshot: AnalysisProjectSnapshot,
+): RomCoverageMap =>
+  readProjection(store, snapshot, () =>
+    buildRomCoverageMap(
+      snapshot.manifest,
+      snapshot.shards,
+      store.runtimeRecordsByKinds([
+        "runtime-coverage",
+        "runtime-execution",
+        "runtime-memory-access",
+      ]),
+    ),
+  );
+
+/**
  * Runs only in a worker: full native shards never cross into the extension UI heap.
  * @param {AnalysisWorkerRequest} message Bounded projection request.
  * @returns {unknown} Compact result without persisted shards.
@@ -98,11 +164,22 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     return undefined;
   }
   if (message.operation === "sources") return readAnalysisSourceCatalog(message.directory);
-  const revision = fs.readFileSync(path.join(message.directory, "analysis.json"), "utf8");
-  if (message.operation === "manifest") return migrateManifest(JSON.parse(revision));
+  const store = projectDatabase(message.directory);
+  const manifest = store.transaction(() => store.manifest(), false);
+  const revision = canonicalJson(manifest);
+  if (message.operation === "manifest") return manifest;
   const shardSignature = (): string =>
-    current!.project.manifest.shards
-      .map(({ path: file }) => annotationFileSignature(path.join(message.directory, file)))
+    [ANALYSIS_PROJECT_SQLITE_FILE, `${ANALYSIS_PROJECT_SQLITE_FILE}-wal`]
+      .map((file) => {
+        try {
+          return annotationFileSignature(path.join(message.directory, file));
+        } catch (error) {
+          // SQLite removes WAL files after the last connection closes; their absence is a valid state.
+          if (file.endsWith("-wal") && (error as NodeJS.ErrnoException).code === "ENOENT")
+            return "absent";
+          throw error;
+        }
+      })
       .join("|");
   if (
     !current ||
@@ -110,12 +187,12 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     current.revision !== revision ||
     current.shardSignature !== shardSignature()
   ) {
-    // Release the previous project and projections before loading a new multi-gigabyte revision.
     current = undefined;
+    const project = sqliteSnapshot(message.directory);
     current = {
       directory: message.directory,
       revision,
-      project: loadAnalysisProjectSnapshot(message.directory),
+      project,
       shardSignature: "",
     };
     current.shardSignature = shardSignature();
@@ -123,11 +200,21 @@ const request = (message: AnalysisWorkerRequest): unknown => {
   const { project } = current;
   if (message.operation === "navigation") {
     if (!message.navigationTarget) throw new Error("Choose an analysis location.");
-    return projectAnalysisNavigation(project, message.navigationTarget);
+    return readProjection(store, project, () =>
+      projectAnalysisNavigation(project, message.navigationTarget!, (space, address) =>
+        store.runtimeAt(space, address),
+      ),
+    );
   }
   if (message.operation === "sourceSummary" || message.operation === "sourceEntries") {
     if (!message.sourceId) throw new Error("Choose a source to inspect.");
-    current.sources ??= new AnalysisSourceIndex(project.manifest, project.shards);
+    if (!current.sources) {
+      current.sources = readProjection(
+        store,
+        project,
+        () => new AnalysisSourceIndex(project.manifest, project.shards, store.runtimeRecords()),
+      );
+    }
     if (message.operation === "sourceSummary")
       return {
         manifest: project.manifest,
@@ -176,7 +263,13 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     const config = validateSnesHeuristicConfiguration(
       fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {},
     );
-    const result = analyzeSnesFunctionRoles(project.shards, config);
+    const result = readProjection(store, project, () =>
+      analyzeSnesFunctionRoles(
+        project.shards,
+        config,
+        store.runtimeRecordsByKinds(["runtime-memory-access"]),
+      ),
+    );
     return {
       enabled: config.enabled !== false,
       total: result.roles.length,
@@ -184,7 +277,7 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     };
   }
   if (["coverage", "segments", "details"].includes(message.operation)) {
-    const map = (current.coverage ??= buildRomCoverageMap(project.manifest, project.shards));
+    const map = (current.coverage ??= sqliteCoverageMap(store, project));
     if (message.operation === "coverage")
       return {
         ...map,
@@ -225,68 +318,71 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     return details;
   }
   if (message.operation === "graph") {
-    const graph = buildAnalysisCallGraph(project.shards);
-    const fileSpaces = new Set(
-      project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id),
-    );
-    const indexes = new Map(
-      project.manifest.addressSpaces.map(({ id }) => [
-        id,
-        new HalfOpenIntervalIndex(
-          project.shards.annotations.filter(({ addressSpace }) => addressSpace === id),
-        ),
-      ]),
-    );
-    const summaries = [
-      ...new Set(
-        project.shards.analysis.flatMap((record) =>
-          record.kind === "summary" ? [record.architecture] : [],
-        ),
-      ),
-    ];
-    const hints: Record<string, readonly string[]> = {};
-    for (const location of [
-      ...graph.functions,
-      ...graph.unresolved,
-      ...graph.calls.map((call) => ({
-        addressSpace: call.addressSpace,
-        address: call.fromAddress,
-        outputOffsets: call.fromOutputOffsets,
-      })),
-    ]) {
-      const key = `${location.addressSpace}:${location.address}`;
-      if (hints[key]) continue;
-      const annotations = [
-        ...(indexes.get(location.addressSpace)?.at(location.address) ?? []),
-        ...[...fileSpaces].flatMap((space) =>
-          location.outputOffsets.flatMap((offset) => indexes.get(space)?.at(offset) ?? []),
-        ),
-      ];
-      const runtime = project.shards.runtime.filter(
-        (record) =>
-          "addressSpace" in record &&
-          record.addressSpace === location.addressSpace &&
-          (("address" in record && record.address === location.address) ||
-            (record.kind === "runtime-coverage" &&
-              record.start <= location.address &&
-              location.address < record.end)),
+    return readProjection(store, project, () => {
+      const graph = buildAnalysisCallGraph(project.shards);
+      const fileSpaces = new Set(
+        project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id),
       );
-      const architectures = [
-        ...new Set([
-          ...annotations.map(({ architecture }) => architecture),
-          ...runtime.map(({ architecture }) => architecture),
+      const indexes = new Map(
+        project.manifest.addressSpaces.map(({ id }) => [
+          id,
+          new HalfOpenIntervalIndex(
+            project.shards.annotations.filter(({ addressSpace }) => addressSpace === id),
+          ),
         ]),
+      );
+      const summaries = [
+        ...new Set(
+          project.shards.analysis.flatMap((record) =>
+            record.kind === "summary" ? [record.architecture] : [],
+          ),
+        ),
       ];
-      const fallback = summaries.length === 1 ? summaries : [];
-      hints[key] = architectures.length ? architectures : fallback;
-    }
-    return { manifest: project.manifest, graph, hints };
+      const hints: Record<string, readonly string[]> = {};
+      for (const location of [
+        ...graph.functions,
+        ...graph.unresolved,
+        ...graph.calls.map((call) => ({
+          addressSpace: call.addressSpace,
+          address: call.fromAddress,
+          outputOffsets: call.fromOutputOffsets,
+        })),
+      ]) {
+        const key = `${location.addressSpace}:${location.address}`;
+        if (hints[key]) continue;
+        const annotations = [
+          ...(indexes.get(location.addressSpace)?.at(location.address) ?? []),
+          ...[...fileSpaces].flatMap((space) =>
+            location.outputOffsets.flatMap((offset) => indexes.get(space)?.at(offset) ?? []),
+          ),
+        ];
+        const runtime = store.runtimeAt(location.addressSpace, location.address);
+        const architectures = [
+          ...new Set([
+            ...annotations.map(({ architecture }) => architecture),
+            ...Array.from(runtime, ({ architecture }) => architecture),
+          ]),
+        ];
+        const fallback = summaries.length === 1 ? summaries : [];
+        hints[key] = architectures.length ? architectures : fallback;
+      }
+      return { manifest: project.manifest, graph, hints };
+    });
   }
   if (message.operation === "annotations" && !message.ranges?.length) return [];
-  current.instructions ??= buildInstructionAnalysisAnnotations(
-    project.manifest,
-    project.shards,
-  ).instructions;
+  current.instructions ??= readProjection(
+    store,
+    project,
+    () =>
+      buildInstructionAnalysisAnnotations(project.manifest, project.shards, () =>
+        store.runtimeRecordsByKinds([
+          "runtime-execution",
+          "runtime-cpu-state",
+          "runtime-memory-access",
+          "runtime-coverage",
+        ]),
+      ).instructions,
+  );
   if (message.operation === "debugAnnotations")
     return current.instructions
       .map((entry) => ({

@@ -1,3 +1,4 @@
+import { canonicalJson } from "./project-store.js";
 import {
   type AnalysisProjectShards,
   type AnalysisRecord,
@@ -10,7 +11,6 @@ import {
   type RuntimeEvidenceRecord,
   type RuntimeStateValue,
 } from "./project-types.js";
-import { canonicalJson } from "./project-store.js";
 
 /** Shard records produced by one offline runtime-evidence import. */
 export interface RuntimeEvidenceBatch {
@@ -56,7 +56,9 @@ export interface RuntimeEvidenceMergeResult {
   readonly added: Readonly<Record<keyof AnalysisProjectShards, number>>;
   readonly updated: Readonly<Record<keyof AnalysisProjectShards, number>>;
   readonly existing: Readonly<Record<keyof AnalysisProjectShards, number>>;
+  /** Computed and cached on first access; may expand millions of per-register observations. */
   readonly conflicts: readonly RuntimeEvidenceConflict[];
+  /** Computed and cached on first access; maintenance callers can merge without building this report. */
   readonly explanations: readonly RuntimeEvidenceExplanation[];
 }
 
@@ -259,7 +261,8 @@ const mergeRecords = <T extends { readonly id: string }>(
 /**
  * Merges an offline evidence batch by stable id. Existing claims are never removed or rewritten.
  * Reimporting an identical batch returns `changed: false`; differing observations remain separate
- * and are surfaced through `conflicts`.
+ * and are surfaced through `conflicts`. Diagnostic getters are lazy; reading or serializing
+ * them can require substantially more memory than merging the facts alone.
  * @param {AnalysisProjectShards} shards Existing native project shards.
  * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
  * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.
@@ -268,6 +271,20 @@ export const mergeRuntimeEvidence = (
   shards: AnalysisProjectShards,
   batch: RuntimeEvidenceBatch,
 ): RuntimeEvidenceMergeResult => {
+  // Profiles share a source hash and some record IDs. Reject mixing before merging any shards,
+  // or overlapping observations could be counted twice under different byte/state identities.
+  const traceProfiles = new Map<string, string | undefined>();
+  for (const report of [...shards.imports, ...(batch.imports ?? [])]) {
+    if (report.format !== "uttori-asm-instruction-trace") continue;
+    if (
+      traceProfiles.has(report.sourceSha256) &&
+      traceProfiles.get(report.sourceSha256) !== report.indexProfile
+    )
+      throw new Error(
+        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`,
+      );
+    traceProfiles.set(report.sourceSha256, report.indexProfile);
+  }
   const added = emptyCounts();
   const updated = emptyCounts();
   const existing = emptyCounts();
@@ -309,6 +326,11 @@ export const mergeRuntimeEvidence = (
     ),
     imports: mergeRecords("imports", shards.imports, batch.imports ?? [], added, updated, existing),
   };
+  // Maintenance imports only use the merged records and counts. Materializing
+  // per-register conflict reports for millions of prior snapshots can exceed
+  // the entire import working set even when nobody requested those reports.
+  let conflicts: readonly RuntimeEvidenceConflict[] | undefined;
+  let explanations: readonly RuntimeEvidenceExplanation[] | undefined;
   return {
     shards: merged,
     changed:
@@ -317,8 +339,12 @@ export const mergeRuntimeEvidence = (
     added,
     updated,
     existing,
-    conflicts: conflictReport(merged.runtime),
-    explanations: explanationReport(merged),
+    get conflicts() {
+      return (conflicts ??= conflictReport(merged.runtime));
+    },
+    get explanations() {
+      return (explanations ??= explanationReport(merged));
+    },
   };
 };
 

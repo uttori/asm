@@ -3,6 +3,7 @@
  * @see https://code.visualstudio.com/api/extension-guides/tree-view
  */
 import * as path from "node:path";
+
 import {
   ANALYSIS_PROJECT_MANIFEST,
   type AnalysisProjectManifest,
@@ -19,6 +20,7 @@ import {
   type Event,
   type TreeDataProvider,
 } from "vscode";
+
 import { analysisWorker } from "./analysis-worker-client.js";
 
 const PAGE_SIZE = 200;

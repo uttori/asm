@@ -43,7 +43,8 @@ export declare const validateSnesHeuristicConfiguration: (value: unknown) => Sne
  * Bounded structural matching; never renames symbols or changes code/data classifications.
  * @param {AnalysisProjectShards} shards Persisted analysis and observations.
  * @param {SnesHeuristicConfiguration} options Declarative rule configuration.
+ * @param {Iterable} [runtime] Optional streamed runtime observations.
  * @returns {SnesHeuristicResult} Findings and their comments/evidence.
  */
-export declare const analyzeSnesFunctionRoles: (shards: AnalysisProjectShards, options?: SnesHeuristicConfiguration) => SnesHeuristicResult;
+export declare const analyzeSnesFunctionRoles: (shards: AnalysisProjectShards, options?: SnesHeuristicConfiguration, runtime?: Iterable<AnalysisProjectShards["runtime"][number]>) => SnesHeuristicResult;
 //# sourceMappingURL=function-heuristics.d.ts.map

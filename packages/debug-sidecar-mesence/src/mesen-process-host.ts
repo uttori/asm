@@ -473,8 +473,9 @@ export class MesenProcessHost {
     await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
     await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
     for (const resource of this.#manifest.resources) {
+      // path.join already normalizes manifest separators; keep the path as one argument.
       await this.#verifyHash(
-        path.join(this.#runtimeDirectory, ...resource.path.split("/")),
+        path.join(this.#runtimeDirectory, resource.path),
         resource.sha256,
         `resource '${resource.path}'`,
       );

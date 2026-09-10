@@ -1,7 +1,7 @@
 import type { EvidenceRecord, ProjectRegion, RomImage } from "@uttori/asm-disassembler";
 
-import { SPC700_ARAM_ADDRESS_SPACE, Spc700AramImage } from "./spc700-address-space.js";
 import { SNES_FILE_ADDRESS_SPACE } from "./address-identities.js";
+import { SPC700_ARAM_ADDRESS_SPACE, Spc700AramImage } from "./spc700-address-space.js";
 
 /** One non-empty `{size, destination, payload}` record in an NSPC upload stream. */
 export interface Spc700UploadBlock {

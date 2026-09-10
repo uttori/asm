@@ -1,6 +1,6 @@
 import { type NormalizedCommand } from "../ir/normalized-command.js";
-import type { SourceSpan } from "../source-location.js";
 import type { MathCore } from "../mathcore.js";
+import type { SourceSpan } from "../source-location.js";
 import type { SymbolScopeService } from "./symbol-scope-service.js";
 export type FrontEndCommandHost = {
     inFunctionDefinition: boolean;

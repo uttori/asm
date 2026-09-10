@@ -1,7 +1,7 @@
-import type { MathCore } from "../mathcore.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
-import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
+import type { MathCore } from "../mathcore.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
+import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
 /** Represents a macro definition. */
 export type MacroDefinition = {
     /** The name of the macro. */

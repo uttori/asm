@@ -1,12 +1,14 @@
 import * as path from "node:path";
+
 import {
-  commitAnalysisProjectTransaction,
-  importRuntimeInstructionTraceFile,
-  loadAnalysisProjectSnapshot,
-  mergeRuntimeEvidence,
+  loadAnalysisProjectViewSnapshot,
+  importRuntimeTraceIntoProject,
+  type RuntimeRecordProjection,
+  type RuntimeEvidenceRecord,
   summarizeExecutionWindowFile,
   validateSourceExportFiles,
   type ExecutionWindowSummary,
+  type RuntimeTraceIndexMode,
 } from "@uttori/asm-disassembler";
 import {
   analyzeSnesProject,
@@ -18,6 +20,7 @@ import {
   type Snes65816EntryPoint,
   type VerifySnesProjectRoundTripResult,
 } from "@uttori/asm-plugin-snes";
+
 import {
   coverageFor,
   normalizedSeeds,
@@ -58,6 +61,7 @@ export interface MaintenanceJobs {
       maxBytes: number;
       architecture: string;
       addressSpace: string;
+      indexMode?: RuntimeTraceIndexMode;
     };
     output: TraceImportSummary;
   };
@@ -76,6 +80,20 @@ export interface MaintenanceProgress {
 }
 
 /**
+ * Coverage and seed validation need per-PC counts, not full register or instruction history.
+ * @returns {RuntimeRecordProjection} One-use reducer retaining every execution-count record.
+ */
+const createExecutionProjection = (): RuntimeRecordProjection => {
+  const records: RuntimeEvidenceRecord[] = [];
+  return {
+    push: (record) => {
+      if (record.kind === "runtime-execution") records.push(record);
+    },
+    finish: () => records,
+  };
+};
+
+/**
  * Each job runs in a fresh child process. Only compact results cross back to the editor.
  * @param {MaintenanceJob} job Phase and file paths, never loaded project shards.
  * @param {AbortSignal} signal Cooperative cancellation between safe steps.
@@ -92,24 +110,22 @@ export const runMaintenanceJob = async (
     case "prepare": {
       progress({ message: "Loading and validating analysis…" });
       const { target, seeds } = job.input;
-      const snapshot = loadAnalysisProjectSnapshot(target.projectDirectory);
+      const snapshot = loadAnalysisProjectViewSnapshot(
+        target.projectDirectory,
+        createExecutionProjection,
+      );
       validateSourceExportFiles(target.sourceDirectory, target.sourceManifest);
       return {
-        before: coverageFor(
-          snapshot.shards,
-          snapshot.revision.manifestSha256,
-          target.sourceManifest,
-        ),
-        entryPoints: normalizedSeeds(seeds, snapshot),
+        before: coverageFor(snapshot.view, snapshot.revision.manifestSha256, target.sourceManifest),
+        entryPoints: normalizedSeeds(seeds, { ...snapshot, shards: snapshot.view }),
       };
     }
     case "coverage": {
-      const snapshot = loadAnalysisProjectSnapshot(job.input.projectDirectory);
-      return coverageFor(
-        snapshot.shards,
-        snapshot.revision.manifestSha256,
-        job.input.sourceManifest,
+      const snapshot = loadAnalysisProjectViewSnapshot(
+        job.input.projectDirectory,
+        createExecutionProjection,
       );
+      return coverageFor(snapshot.view, snapshot.revision.manifestSha256, job.input.sourceManifest);
     }
     case "analyze":
       return analyzeSnesProject({
@@ -125,47 +141,40 @@ export const runMaintenanceJob = async (
       return verifySnesProjectRoundTrip({ ...job.input, signal });
     case "import": {
       const { target, traceFile, maxBytes, architecture, addressSpace } = job.input;
-      const imported = await importRuntimeInstructionTraceFile(
+      const imported = await importRuntimeTraceIntoProject(
         traceFile,
+        target.projectDirectory,
         {
           projectRomContentSha256: target.sourceManifest.rom.contentSha256,
           sourceName: path.basename(traceFile),
+          indexMode: job.input.indexMode,
         },
         {
           maxBytes,
           signal,
           onProgress: (bytesRead, totalBytes) => progress({ bytesRead, totalBytes }),
+          onStage: (message) => progress({ message }),
         },
       );
-      progress({ message: "Merging and saving trace evidence…" });
-      const snapshot = loadAnalysisProjectSnapshot(target.projectDirectory);
-      const merged = mergeRuntimeEvidence(snapshot.shards, imported.batch);
-      signal.throwIfAborted();
-      if (merged.changed)
-        commitAnalysisProjectTransaction(target.projectDirectory, snapshot.revision, {
-          manifest: snapshot.manifest,
-          shards: merged.shards,
-        });
       return {
         seeds:
           architecture === "snes.65816" && addressSpace === SNES_CPU_ADDRESS_SPACE
-            ? (imported.batch.runtime?.flatMap((record) =>
-                record.kind === "runtime-execution"
-                  ? [{ address: record.address, evidence: record.evidence }]
-                  : [],
-              ) ?? [])
+            ? imported.execution.map((record) => ({
+                address: record.address,
+                evidence: record.evidence,
+              }))
             : [],
         observedEvents: imported.observedEvents,
         droppedEvents: imported.droppedEvents,
         executionRecords: imported.report.imported.executionRecords ?? 0,
-        changed: merged.changed,
-        added: { runtime: merged.added.runtime, evidence: merged.added.evidence },
+        changed: imported.changed,
+        added: imported.added,
       } satisfies TraceImportSummary;
     }
     case "execution": {
       const { projectDirectory, traceFile, maxBytes } = job.input;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
-      return summarizeExecutionWindowFile(traceFile, snapshot.shards, {
+      const snapshot = loadAnalysisProjectViewSnapshot(projectDirectory);
+      return summarizeExecutionWindowFile(traceFile, snapshot.view, {
         maxBytes,
         signal,
         onProgress: (bytesRead, totalBytes) => progress({ bytesRead, totalBytes }),

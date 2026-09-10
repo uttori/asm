@@ -1,9 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["import", "jsdoc", "node", "promise", "typescript"],
-  "jsPlugins": [
-    "eslint-plugin-optimize-regex"
-  ],
+  "jsPlugins": ["eslint-plugin-optimize-regex"],
   "options": {
     "typeAware": true
   },
@@ -149,9 +147,7 @@
     "jsdoc/require-yields": "error",
     "jsdoc/require-yields-type": "error",
 
-    "optimize-regex/optimize-regex": [
-      "warn"
-    ],
+    "optimize-regex/optimize-regex": ["warn"],
 
     "node/no-exports-assign": "error",
 
@@ -204,9 +200,7 @@
   },
   "overrides": [
     {
-      "files": [
-        "**/*.{js,mjs,cjs,ts,mts,jsx,tsx}"
-      ],
+      "files": ["**/*.{js,mjs,cjs,ts,mts,jsx,tsx}"],
       "rules": {
         "security/detect-buffer-noassert": "warn",
         "security/detect-child-process": "warn",
@@ -222,42 +216,16 @@
         "security/detect-pseudoRandomBytes": "warn",
         "security/detect-unsafe-regex": "warn",
         "security/detect-bidi-characters": "warn",
-        "@stylistic/dot-location": [
-          "warn",
-          "property"
-        ],
+        "@stylistic/dot-location": ["warn", "property"],
         "@stylistic/new-parens": "warn",
         "@stylistic/no-mixed-operators": [
           "warn",
           {
             "groups": [
-              [
-                "&",
-                "|",
-                "^",
-                "~",
-                "<<",
-                ">>",
-                ">>>"
-              ],
-              [
-                "==",
-                "!=",
-                "===",
-                "!==",
-                ">",
-                ">=",
-                "<",
-                "<="
-              ],
-              [
-                "&&",
-                "||"
-              ],
-              [
-                "in",
-                "instanceof"
-              ]
+              ["&", "|", "^", "~", "<<", ">>", ">>>"],
+              ["==", "!=", "===", "!==", ">", ">=", "<", "<="],
+              ["&&", "||"],
+              ["in", "instanceof"]
             ],
             "allowSamePrecedence": false
           }
@@ -270,12 +238,9 @@
             "avoidEscape": true
           }
         ],
-        "@stylistic/rest-spread-spacing": [
-          "warn",
-          "never"
-        ],
+        "@stylistic/rest-spread-spacing": ["warn", "never"],
 
-        "anti-trojan-source/no-bidi": "error",
+        "anti-trojan-source/no-bidi": "error"
       },
       "jsPlugins": [
         "eslint-plugin-security",
@@ -285,6 +250,26 @@
       ],
       "env": {
         "es2026": true
+      }
+    },
+    {
+      // Test doubles and deliberately malformed inputs exercise runtime validation.
+      // Async doubles preserve real signatures even when resolving immediately; spies capture detached methods.
+      // Keep these rules enabled for production code and development scripts.
+      "files": ["tests/**", "packages/*/tests/**", "packages/*/tests-host/**"],
+      "rules": {
+        "import/no-named-as-default-member": "off",
+        "jsdoc/require-param": "off",
+        "jsdoc/require-returns": "off",
+        "typescript/no-explicit-any": "off",
+        "typescript/no-unnecessary-type-assertion": "off",
+        "typescript/no-unsafe-argument": "off",
+        "typescript/no-unsafe-assignment": "off",
+        "typescript/no-unsafe-call": "off",
+        "typescript/no-unsafe-member-access": "off",
+        "typescript/no-unsafe-return": "off",
+        "typescript/require-await": "off",
+        "typescript/unbound-method": "off"
       }
     }
   ]

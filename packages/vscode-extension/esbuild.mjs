@@ -1,7 +1,8 @@
-import { build } from "esbuild";
-import { fileURLToPath } from "node:url";
 import { cpSync, existsSync, mkdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { build } from "esbuild";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 await build({

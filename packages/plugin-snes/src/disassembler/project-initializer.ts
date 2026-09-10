@@ -1,10 +1,6 @@
-import { analyzeSnesRuntimeCode } from "./runtime-code.js";
-import {
-  analyzeSnesFunctionRoles,
-  validateSnesHeuristicConfiguration,
-  type SnesHeuristicConfiguration,
-} from "./function-heuristics.js";
-import { snesRomAddressSpace } from "../target/address-space.js";
+import * as fs from "node:fs";
+import path from "node:path";
+
 import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
 import {
   ANALYSIS_PROJECT_FORMAT,
@@ -13,9 +9,9 @@ import {
   SOURCE_EXPORT_MANIFEST,
   RomImage,
   compareByteImages,
-  loadAnalysisProject,
-  loadAnalysisProjectSnapshot,
-  commitAnalysisProjectTransaction,
+  loadAnalysisProjectView,
+  loadAnalysisProjectViewSnapshot,
+  commitAnalysisProjectViewUpdate,
   loadSourceExportManifest,
   sourceExportSha256,
   validateAnalysisProject,
@@ -35,11 +31,9 @@ import {
   type SourceExportManifest,
   type StaticAnalysisIncompleteReason,
 } from "@uttori/asm-disassembler";
-import * as fs from "node:fs";
-import path from "node:path";
 
+import { snesRomAddressSpace } from "../target/address-space.js";
 import { analyzeSnes65816, type Snes65816EntryPoint } from "./65816-analysis.js";
-import { lostCodeRanges } from "./code-preservation.js";
 import {
   createSnesAddressContext,
   SNES_CPU_ADDRESS_SPACE,
@@ -47,13 +41,20 @@ import {
   SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
   SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
 } from "./address-identities.js";
+import { lostCodeRanges } from "./code-preservation.js";
 import { importDizRaw } from "./dizraw-import.js";
+import {
+  analyzeSnesFunctionRoles,
+  validateSnesHeuristicConfiguration,
+  type SnesHeuristicConfiguration,
+} from "./function-heuristics.js";
 import {
   detectSnesRom,
   SNES_MAPPERS,
   type SnesMapper,
   type SnesRomDetection,
 } from "./rom-header.js";
+import { analyzeSnesRuntimeCode, createSnesRuntimeAnalysisProjection } from "./runtime-code.js";
 import { exportSnes65816Source } from "./source-export.js";
 import { SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR } from "./spc700-address-space.js";
 import { SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR } from "./superfx-address-space.js";
@@ -463,7 +464,11 @@ export const analyzeSnesProject = (
   throwIfCancelled(options.signal);
   report(options, "analyze", "Running bounded conservative 65816 analysis.");
   const projectDirectory = path.resolve(options.projectDirectory);
-  const loaded = loadAnalysisProjectSnapshot(projectDirectory);
+  const loaded = loadAnalysisProjectViewSnapshot(
+    projectDirectory,
+    createSnesRuntimeAnalysisProjection,
+  );
+  report(options, "analyze", "Building static analysis from the validated runtime view.");
   const rom = RomImage.load(path.resolve(options.romFile), {
     headerSize: loaded.manifest.rom.headerSize,
   });
@@ -477,7 +482,7 @@ export const analyzeSnesProject = (
       (fs.existsSync(heuristicFile) ? JSON.parse(fs.readFileSync(heuristicFile, "utf8")) : {}),
   );
   const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper as SnesMapper);
-  const editableRecords = loaded.shards.analysis.filter(
+  const editableRecords = loaded.view.analysis.filter(
     (record): record is AnalysisTargetOverrideRecord | AnalysisTargetSetRecord =>
       record.kind === "target-override" || record.kind === "target-set",
   );
@@ -507,7 +512,7 @@ export const analyzeSnesProject = (
     number,
     { readonly address: number; count: number; evidence: Set<string> }
   >();
-  for (const record of loaded.shards.runtime) {
+  for (const record of loaded.view.runtime) {
     if (
       record.kind !== "runtime-execution" ||
       record.architecture !== ARCHITECTURE_ID ||
@@ -549,9 +554,9 @@ export const analyzeSnesProject = (
   }
   const runtimeSeeds = rankedRuntime.filter(({ address }) => configured.has(address)).length;
   const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper as SnesMapper, {
-    annotations: loaded.shards.annotations,
-    labels: loaded.shards.labels,
-    evidence: loaded.shards.evidence,
+    annotations: loaded.view.annotations,
+    labels: loaded.view.labels,
+    evidence: loaded.view.evidence,
     entryPoints: [...configured.values()],
     targetOverrides,
     targetSets,
@@ -559,8 +564,9 @@ export const analyzeSnesProject = (
     ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
   });
   throwIfCancelled(options.signal);
+  report(options, "analyze", "Decoding captured instruction variants.");
   const capturedRecords = analyzeSnesRuntimeCode(
-    loaded.shards,
+    loaded.view,
     rom,
     loaded.manifest.mapping.mapper as SnesMapper,
   );
@@ -586,7 +592,7 @@ export const analyzeSnesProject = (
           ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
           : [],
       );
-    const lost = lostCodeRanges(codeRanges(loaded.shards.analysis), codeRanges(analysisRecords));
+    const lost = lostCodeRanges(codeRanges(loaded.view.analysis), codeRanges(analysisRecords));
     if (lost.length > 0) {
       const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
       throw new Error(
@@ -597,16 +603,17 @@ export const analyzeSnesProject = (
       );
     }
   }
+  report(options, "analyze", "Inferring function roles from static and captured code.");
   const heuristicResult = analyzeSnesFunctionRoles(
-    { ...loaded.shards, analysis: analysisRecords },
+    { ...loaded.view, analysis: analysisRecords },
     heuristicConfig,
   );
   const annotations = [
-    ...loaded.shards.annotations.filter((annotation) => !annotation.id.startsWith("static:65816:")),
+    ...loaded.view.annotations.filter((annotation) => !annotation.id.startsWith("static:65816:")),
     ...result.annotations,
   ];
   const evidence = [
-    ...loaded.shards.evidence.filter(
+    ...loaded.view.evidence.filter(
       (record) =>
         record.sourceId !== "snes.65816.static-v1" &&
         record.sourceId !== "snes.function-roles.v1" &&
@@ -615,22 +622,16 @@ export const analyzeSnesProject = (
     ...result.evidenceRecords,
     ...heuristicResult.evidence,
   ];
-  const { shards: ignoredShards, ...manifest } = loaded.manifest;
-  void ignoredShards;
   report(options, "commit", "Publishing analysis after checking for concurrent edits.");
   throwIfCancelled(options.signal);
-  const written = commitAnalysisProjectTransaction(projectDirectory, loaded.revision, {
-    manifest,
-    shards: {
-      ...loaded.shards,
-      analysis: analysisRecords,
-      comments: [
-        ...loaded.shards.comments.filter((comment) => !comment.id.startsWith("heuristic:snes:")),
-        ...heuristicResult.comments,
-      ],
-      annotations,
-      evidence,
-    },
+  const written = commitAnalysisProjectViewUpdate(projectDirectory, loaded, {
+    analysis: analysisRecords,
+    comments: [
+      ...loaded.view.comments.filter((comment) => !comment.id.startsWith("heuristic:snes:")),
+      ...heuristicResult.comments,
+    ],
+    annotations,
+    evidence,
   }).manifest;
   return {
     projectDirectory,
@@ -670,7 +671,9 @@ export const exportSnesProject = (options: ExportSnesProjectOptions): ExportSnes
   report(options, "export", "Exporting deterministic native 65816 source.");
   const projectDirectory = path.resolve(options.projectDirectory);
   const sourceDirectory = path.resolve(options.sourceDirectory);
-  const loaded = loadAnalysisProject(projectDirectory);
+  // Source export consumes regenerated metadata; full register history remains on disk.
+  const snapshot = loadAnalysisProjectView(projectDirectory);
+  const loaded = { manifest: snapshot.manifest, shards: snapshot.view };
   const rom = RomImage.load(path.resolve(options.romFile), {
     headerSize: loaded.manifest.rom.headerSize,
   });

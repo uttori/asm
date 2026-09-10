@@ -6,8 +6,8 @@
  * `.lobytes`, `.hibytes`, `.dbyt`.
  */
 import type { Assembler } from "@uttori/asm-core";
-import type { Nes65xxSessionState } from "../session-state.js";
 import { type Ca65SessionState } from "../ca65-profile.js";
+import type { Nes65xxSessionState } from "../session-state.js";
 /**
  * Closes the active ld65 segment: records the next load cursor and emits
  * `__NAME_LOAD__` / `__NAME_RUN__` / `__NAME_SIZE__` / `__NAME_RUN_END__`.

@@ -1,9 +1,9 @@
-import type { MathCore } from "../mathcore.js";
-import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
-import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
-import { removeInlineComment } from "./command-text-service.js";
 import { incrementInternalCounter } from "../internal-instrumentation.js";
+import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
+import type { MathCore } from "../mathcore.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
+import { removeInlineComment } from "./command-text-service.js";
+import type { LabelEntry, SymbolScopeService } from "./symbol-scope-service.js";
 
 /** Represents a macro definition. */
 export type MacroDefinition = {

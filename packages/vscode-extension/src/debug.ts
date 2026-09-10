@@ -15,11 +15,13 @@ import {
   type DapProtocolMessage,
   type DapRequest,
   type ReplayScript,
+  LosslessCaptureFileRecorder,
+  type CaptureResultV2,
 } from "@uttori/asm-debug-adapter";
-import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
-import { parseMesenRuntimeManifest } from "@uttori/asm-debug-sidecar-mesence/runtime-manifest";
+import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
 import { MESEN_BACKEND_ID, MESEN_CAPABILITIES } from "@uttori/asm-debug-sidecar-mesence/profile";
+import { parseMesenRuntimeManifest } from "@uttori/asm-debug-sidecar-mesence/runtime-manifest";
 import {
   DebugAdapterInlineImplementation,
   EventEmitter,
@@ -41,10 +43,10 @@ import {
   type WorkspaceFolder,
   type OutputChannel,
 } from "vscode";
+
+import { registerBehaviorCaptures, type BehaviorSessionContext } from "./behavior-capture.js";
 import { createDebugInstructionAnnotation } from "./debug-analysis-annotations.js";
 import { resolveDebugSourceRoot } from "./debug-source-root.js";
-import { registerBehaviorCaptures, type BehaviorSessionContext } from "./behavior-capture.js";
-import { acquireTraceLease } from "./trace-lease.js";
 import { runtimeBindingFromLaunch } from "./runtime-binding.js";
 import {
   RuntimeTraceFileRecorder,
@@ -52,6 +54,7 @@ import {
   type EditorTraceBatch,
   type EditorTraceMetadata,
 } from "./runtime-trace-recorder.js";
+import { acquireTraceLease } from "./trace-lease.js";
 
 /** Debugger type contributed by the extension manifest. */
 export const UTTORI_ASM_DEBUG_TYPE = "uttori-asm";
@@ -247,7 +250,7 @@ interface TraceCapability {
 
 interface ActiveTraceRecording {
   readonly session: DebugSession;
-  readonly recorder: RuntimeTraceFileRecorder;
+  readonly recorder: RuntimeTraceFileRecorder | LosslessCaptureFileRecorder;
 }
 
 let activeTraceRecording: ActiveTraceRecording | undefined;
@@ -334,12 +337,18 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     throw new Error("Start an Uttori ASM debug session before recording a trace.");
   const trace = await chooseTrace(session);
   if (!trace) return;
-  const detail = resolveEditorTraceDetail(
+  const lossless =
     workspace
       .getConfiguration("asm", session.workspaceFolder?.uri)
-      .get("debug.traceDetail", "full"),
-    trace.instructionDetails,
-  );
+      .get<string>("debug.traceMode", "live") === "lossless-instructions";
+  const detail = lossless
+    ? "full"
+    : resolveEditorTraceDetail(
+        workspace
+          .getConfiguration("asm", session.workspaceFolder?.uri)
+          .get("debug.traceDetail", "full"),
+        trace.instructionDetails,
+      );
   const destination = await window.showSaveDialog({
     defaultUri: defaultTraceUri(session),
     filters: { "Uttori ASM instruction trace": ["json"] },
@@ -349,6 +358,25 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
   if (destination.scheme !== "file")
     throw new Error("Live instruction traces must be written to a local file.");
   const metadata = traceMetadata(session, trace);
+  if (lossless) {
+    const recorder = await LosslessCaptureFileRecorder.create({
+      ...metadata,
+      file: destination.fsPath,
+      transport: async (request) =>
+        (await session.customRequest("uttori/capture", request)) as CaptureResultV2,
+    });
+    activeTraceRecording = { session, recorder };
+    void recorder.completion.catch((error: unknown) => {
+      if (activeTraceRecording?.recorder === recorder) activeTraceRecording = undefined;
+      void window.showErrorMessage(
+        `Assembly lossless capture failed: ${error instanceof Error ? error.message : String(error)}. The partial ACT2 archive retains committed evidence; emulation remains stopped on producer failure.`,
+      );
+    });
+    void window.showInformationMessage(
+      "Assembly: recording lossless 65816 instructions with fetched bytes and CPU state. Emulation slows when storage falls behind. Bus events are outside this capture scope.",
+    );
+    return;
+  }
   await session.customRequest("uttori/startTrace", {
     detail,
     architecture: trace.architecture,
@@ -408,7 +436,9 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   activeTraceRecording = undefined;
   const summary = await active.recorder.stop();
   const total = summary.observedEvents + summary.droppedEvents;
-  const counts = `${summary.observedEvents.toLocaleString()} instruction event(s) retained; ${summary.droppedEvents.toLocaleString()} dropped${total > 0 ? ` (${((summary.droppedEvents / total) * 100).toFixed(1)}%)` : ""}`;
+  const scope =
+    "archive" in summary ? "; lossless instruction archive saved (bus events excluded)" : "";
+  const counts = `${summary.observedEvents.toLocaleString()} instruction event(s) retained; ${summary.droppedEvents.toLocaleString()} dropped${total > 0 ? ` (${((summary.droppedEvents / total) * 100).toFixed(1)}%)` : ""}${scope}`;
   const notify =
     summary.droppedEvents > 0 ? window.showWarningMessage : window.showInformationMessage;
   if (analyze) {

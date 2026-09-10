@@ -1,4 +1,5 @@
 import * as path from "node:path";
+
 import type { EmulatorRuntimeBinding } from "./debug.js";
 
 /**

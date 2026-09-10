@@ -1,0 +1,23 @@
+{
+  "baseRevision": "be548251b537334f4f2054c7d86171da22fdc6ca",
+  "branch": "codex/ares-capture-v2",
+  "patchSha256": "e104c0b125e918ad320d50a308b6c8ca2806a2b042beac5de26480f1ad210f19",
+  "files": {
+    "CMakeLists.txt": "1adb0b43843f5562dca60dd581c7c518d8e3de3afdf6c13cbece161f62af9507",
+    "ares/sfc/cpu/cpu.cpp": "0c1dca652033ed2184175ce2e5f905893e460136490bd911373a808da4b417d9",
+    "ares/sfc/cpu/cpu.hpp": "4040b4d56054a6afe012129bf1aeb2e0b4a32f9e1a4656e4622aa82bec66b835",
+    "ares/sfc/cpu/memory.cpp": "bef6f1afa978bb5078376dcacdc65af74f9b548f7610723bab3bc7d92cbf689a",
+    "ares/sfc/cpu/timing.cpp": "028b00f5b08297f81506e448c8f4bd58d09852484542cda47d13781246a3b669",
+    "ares/sfc/system/serialization.cpp": "8690e13c7480df25fd73ff1226151429e7b0ea6b9db1ef46e11912e59894364c",
+    "ares/sfc/system/system.cpp": "9ce5888d046036929b859ebfd46be0935f489da9d85d61c7414fa2949de41480",
+    "nall/nall/gdb/server.cpp": "79e74a75aefc7f3b2eec4efc68cdef07b8d91c97bc33b38109934fc0f8842862",
+    "nall/nall/gdb/server.hpp": "9eb62a94dec33655c80b444273f58e6bca4d23a32bb1b52bdef9a12b1ae8d7dd",
+    "nall/nall/tcptext/tcp-socket.cpp": "c5bd502b7a68ce3895ac78857cc20f488cb3a79504fc9f518aab513b2281e81c",
+    "nall/nall/tcptext/tcp-socket.hpp": "ab8d2c53376f4a8334492967b86880adb0aaa27d73ea7f29f70af94435477fdc",
+    "nall/nall/gdb/capture.hpp": "336be63d375a65298a3a7876b2e34c45886c5ec05c15188a027f02cfe505adda",
+    "nall/nall/tcptext/send-all.hpp": "763940d994dc8df16b3dfd0695bbe376b4b7bfcab380d567863676893a41e826",
+    "tests/gdb-capture/CMakeLists.txt": "365d29c6a5dde7d72d207bdd6da6ebbff6600214fecf2297c3d0e6e145b8f480",
+    "tests/gdb-capture/core-test.cpp": "2f4d8430e039a1d6d056fa29bb56d9f06de862cb4a68e11a65cfdc31667705f6"
+  },
+  "queueTestSha256": "2979d729751f43fb57ad6ce113d7d213560706fc0d54b54c1469a3f3fc5c1b27"
+}

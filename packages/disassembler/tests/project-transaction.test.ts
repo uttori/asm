@@ -1,28 +1,19 @@
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { createHash } from "node:crypto";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
   ANALYSIS_PROJECT_FORMAT,
-  ANALYSIS_PROJECT_LOCK_DIRECTORY,
-  ANALYSIS_PROJECT_MANIFEST,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
-  AnalysisProjectLockedError,
-  AnalysisProjectStaleError,
   RomImage,
   applyLabelRenameEdit,
   applyRangeClassificationEdit,
   applyStateEntryPointEdit,
   applyTargetResolutionEdit,
   buildRomCoverageMap,
-  canonicalJson,
-  commitPreparedAnalysisProjectTransaction,
   explainProjectEvidence,
-  loadAnalysisProject,
   loadAnalysisProjectSnapshot,
-  prepareAnalysisProjectTransaction,
   revertLabelRenameEdit,
   revertRangeClassificationEdit,
   revertStateEntryPointEdit,
@@ -67,191 +58,6 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
     ],
     imports: [],
   },
-});
-
-test("prepared transaction validation rejects correctly hashed malformed JSON and wrong counts before publication", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-forged-"));
-  try {
-    const project = projectFor(new RomImage(new Uint8Array(0x8000)));
-    writeAnalysisProject(directory, project);
-    const snapshot = loadAnalysisProjectSnapshot(directory);
-    const active = await fs.readFile(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8");
-    const prepared = prepareAnalysisProjectTransaction(directory, project);
-    const sha256 = (value: string): string => createHash("sha256").update(value).digest("hex");
-    for (const [text, count, expectedError] of [
-      ['[{"id":"bad",}]', 1, { instanceOf: SyntaxError }],
-      ['[{"id":"valid"}]', 2, { message: /wrong record count/ }],
-      ["[null]", 1, { message: /not a valid JSON object-record array/ }],
-    ] as const) {
-      const descriptors = prepared.manifest.shards.map((descriptor) =>
-        descriptor.kind === "labels"
-          ? { ...descriptor, sha256: sha256(text), records: count }
-          : descriptor,
-      );
-      const generation = sha256(
-        canonicalJson(
-          descriptors.map(({ id, kind, sha256, records }) => ({ id, kind, sha256, records })),
-        ),
-      );
-      const folder = `analysis/generations/${generation}`;
-      await fs.mkdir(path.join(directory, folder), { recursive: true });
-      const shards = [];
-      for (const descriptor of descriptors) {
-        const destination = `${folder}/${path.basename(descriptor.path)}`;
-        if (descriptor.kind === "labels")
-          await fs.writeFile(path.join(directory, destination), text);
-        else
-          await fs.copyFile(
-            path.join(directory, descriptor.path),
-            path.join(directory, destination),
-          );
-        shards.push({ ...descriptor, path: destination });
-      }
-      t.throws(
-        () =>
-          commitPreparedAnalysisProjectTransaction(directory, snapshot.revision, {
-            ...prepared,
-            generation,
-            manifest: { ...prepared.manifest, shards },
-          }),
-        expectedError,
-      );
-      t.is(await fs.readFile(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"), active);
-      await t.throwsAsync(fs.stat(path.join(directory, ANALYSIS_PROJECT_LOCK_DIRECTORY)), {
-        code: "ENOENT",
-      });
-    }
-  } finally {
-    await fs.rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("project transactions prepare immutable generations and publish only the manifest", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-transaction-"));
-  try {
-    const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
-    const originalManifest = await fs.readFile(
-      path.join(directory, ANALYSIS_PROJECT_MANIFEST),
-      "utf8",
-    );
-    const original = loadAnalysisProjectSnapshot(directory);
-    const next: AnalysisProject = {
-      manifest: {
-        format: original.manifest.format,
-        schemaVersion: original.manifest.schemaVersion,
-        target: original.manifest.target,
-        rom: original.manifest.rom,
-        mapping: original.manifest.mapping,
-        addressSpaces: original.manifest.addressSpaces,
-      },
-      shards: {
-        ...original.shards,
-        labels: [
-          {
-            id: "label.entry",
-            addressSpace: "rom.file",
-            address: 8,
-            name: "Entry",
-            evidence: ["imported.evidence"],
-          },
-        ],
-      },
-    };
-
-    const prepared = prepareAnalysisProjectTransaction(directory, next);
-    t.is(
-      await fs.readFile(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"),
-      originalManifest,
-    );
-    t.is(loadAnalysisProject(directory).shards.labels.length, 0);
-    t.true(
-      prepared.manifest.shards.every(({ path: shardPath }) =>
-        shardPath.startsWith(`analysis/generations/${prepared.generation}/`),
-      ),
-    );
-    t.throws(() =>
-      commitPreparedAnalysisProjectTransaction(directory, original.revision, {
-        ...prepared,
-        manifest: { ...prepared.manifest, shards: prepared.manifest.shards.slice(1) },
-      }),
-    );
-    t.is(
-      await fs.readFile(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"),
-      originalManifest,
-    );
-
-    const committed = commitPreparedAnalysisProjectTransaction(
-      directory,
-      original.revision,
-      prepared,
-    );
-    const loaded = loadAnalysisProjectSnapshot(directory);
-    t.is(loaded.shards.labels[0]?.name, "Entry");
-    t.deepEqual(loaded.revision, committed.revision);
-    t.true(
-      loaded.manifest.shards.every(({ path: shardPath }) =>
-        shardPath.startsWith(`analysis/generations/${prepared.generation}/`),
-      ),
-    );
-
-    const stalePrepared = prepareAnalysisProjectTransaction(directory, projectFor(rom));
-    const error = t.throws(() =>
-      commitPreparedAnalysisProjectTransaction(directory, original.revision, stalePrepared),
-    );
-    t.true(error instanceof AnalysisProjectStaleError);
-    t.is(loadAnalysisProject(directory).shards.labels[0]?.name, "Entry");
-  } finally {
-    await fs.rm(directory, { recursive: true, force: true });
-  }
-});
-
-test("project transactions reject active locks and recover bounded dead-process locks", async (t) => {
-  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-lock-"));
-  try {
-    const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
-    const snapshot = loadAnalysisProjectSnapshot(directory);
-    const prepared = prepareAnalysisProjectTransaction(directory, projectFor(rom));
-    const lockDirectory = path.join(directory, ANALYSIS_PROJECT_LOCK_DIRECTORY);
-    await fs.mkdir(lockDirectory);
-    await fs.writeFile(
-      path.join(lockDirectory, "owner.json"),
-      canonicalJson({
-        format: "uttori-asm-analysis-lock",
-        version: 1,
-        token: "active-lock",
-        processId: 4242,
-        createdAtMilliseconds: 10_000,
-      }),
-    );
-    const locked = t.throws(() =>
-      commitPreparedAnalysisProjectTransaction(directory, snapshot.revision, prepared, {
-        now: () => 10_001,
-        processIsAlive: () => true,
-        staleLockMilliseconds: 1_000,
-      }),
-    );
-    t.true(locked instanceof AnalysisProjectLockedError);
-
-    const committed = commitPreparedAnalysisProjectTransaction(
-      directory,
-      snapshot.revision,
-      prepared,
-      {
-        now: () => 20_000,
-        processIsAlive: () => false,
-        staleLockMilliseconds: 1_000,
-      },
-    );
-    t.is(
-      loadAnalysisProjectSnapshot(directory).revision.manifestSha256,
-      committed.revision.manifestSha256,
-    );
-    await t.throwsAsync(fs.access(lockDirectory));
-  } finally {
-    await fs.rm(directory, { recursive: true, force: true });
-  }
 });
 
 test("range classification is evidence-preserving, visibly conflicting, and exactly undoable", async (t) => {

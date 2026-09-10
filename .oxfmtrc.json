@@ -10,6 +10,7 @@
     "packages/vscode-extension/server/**"
   ],
   "printWidth": 100,
+  "proseWrap": "preserve",
   "tabWidth": 2,
   "useTabs": false,
   "singleQuote": false,
@@ -17,5 +18,7 @@
   "arrowParens": "always",
   "bracketSpacing": true,
   "semi": true,
-  "endOfLine": "lf"
+  "endOfLine": "lf",
+  "bracketSameLine": true,
+  "sortImports": true
 }

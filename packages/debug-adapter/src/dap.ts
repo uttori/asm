@@ -1,5 +1,5 @@
-import path from "node:path";
 import { AsyncLocalStorage } from "node:async_hooks";
+import path from "node:path";
 
 import {
   debugMapRangesForAddress,
@@ -291,7 +291,11 @@ export class DebugAdapterSession {
       } catch (error) {
         if (request.command === "launch" || request.command === "attach") {
           // A cancelled/failed launch must not make the client show a stopped session.
-          pending.splice(0, pending.length, ...pending.filter(({ event }) => event === "output"));
+          // Compact in place so the active event context keeps its array and large output bursts
+          // cannot overflow the argument stack while we are already handling a launch failure.
+          let retained = 0;
+          for (const event of pending) if (event.event === "output") pending[retained++] = event;
+          pending.length = retained;
         }
         response = {
           seq: this.#nextSequence++,
@@ -419,6 +423,12 @@ export class DebugAdapterSession {
         return this.#source(numeric(args.sourceReference));
       case "uttori/traceCapabilities":
         return this.#traceCapabilities();
+      case "uttori/capture": {
+        const request = args as CaptureRequestV2;
+        validateCaptureRequest(request);
+        if (!this.#backend.capture) throw new Error("This backend does not support capture v2.");
+        return this.#backend.capture(request);
+      }
       case "uttori/startTrace":
         if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full")
           throw new Error("Unsupported trace detail mode.");
@@ -1207,3 +1217,4 @@ export class DapMessageParser {
     return messages;
   }
 }
+import { validateCaptureRequest, type CaptureRequestV2 } from "./capture-v2.js";

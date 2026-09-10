@@ -2,11 +2,12 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
 import { validateDebugMap, type DebugMap, type DebugMapSource } from "@uttori/asm-core/debug-map";
 import {
   applyDisassemblyAnnotationEdit,
   canonicalJson,
-  commitAnalysisProjectTransaction,
+  commitAnalysisProjectViewUpdate,
   type AnalysisProjectSnapshot,
   type AnalysisProjectRevision,
   type DisassemblyAnnotationEditRequest,
@@ -15,6 +16,7 @@ import {
   type ProjectLabel,
 } from "@uttori/asm-disassembler";
 import { loadSnesRamMap, snesSourceLabelNames, type SnesMapper } from "@uttori/asm-plugin-snes";
+
 import {
   annotationLocationsForSource,
   annotationReferenceAt,
@@ -140,18 +142,18 @@ export const lookupDisassemblyAnnotation = (
             if (resolved) texts.set(other.id, resolved.text);
           }
         }
-        found.push(
-          ...annotationLocationsForSource(
-            map,
-            source.id,
-            current.text,
-            input.source.line,
-            input.source.column,
-            snapshot.shards,
-            texts,
-            fileSpaces,
-          ),
-        );
+        // Preserve large macro/generated-source mappings without expanding call arguments.
+        for (const location of annotationLocationsForSource(
+          map,
+          source.id,
+          current.text,
+          input.source.line,
+          input.source.column,
+          snapshot.shards,
+          texts,
+          fileSpaces,
+        ))
+          found.push(location);
       }
     }
     locations = [
@@ -238,6 +240,11 @@ export const saveDisassemblyAnnotation = (
         ? loadSnesRamMap(input.sourceDirectory).variables.map(({ name }) => name)
         : [],
     );
-  const committed = commitAnalysisProjectTransaction(directory, snapshot.revision, applied.project);
+  const { runtime: _runtime, ...updates } = applied.project.shards;
+  const committed = commitAnalysisProjectViewUpdate(
+    directory,
+    { ...snapshot, view: snapshot.shards },
+    updates,
+  );
   return { inverse: applied.inverse, snapshot: { ...committed, shards: applied.project.shards } };
 };

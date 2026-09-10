@@ -7,6 +7,7 @@ import {
   type LoweredInstruction,
   type LoweredOperand,
 } from "@uttori/asm-core";
+
 import { spc700Catalog } from "../tooling/instruction-catalog.js";
 import { classifyGenericOperand } from "./operand-classifiers.js";
 import { splitTopLevelCommaOperands } from "./split-operands.js";

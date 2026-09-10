@@ -7,6 +7,7 @@ import {
   type LoweredInstruction,
   type LoweredOperand,
 } from "@uttori/asm-core";
+
 import { cpu65816Catalog } from "../tooling/instruction-catalog.js";
 import { classifyExpanded65816Operand } from "./operand-classifiers.js";
 

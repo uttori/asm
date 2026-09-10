@@ -2,13 +2,13 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 
-import { runTests } from "@vscode/test-electron";
 import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
   writeAnalysisProject,
 } from "@uttori/asm-disassembler";
+import { runTests } from "@vscode/test-electron";
 
 /** VS Code release matching the extension's declared minimum API and checked-in type definitions. */
 const VSCODE_TEST_VERSION = "1.128.0";

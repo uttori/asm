@@ -1,5 +1,5 @@
-import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 import { normalizeAddressForWidth } from "../address-width.js";
+import type { AssemblerTraceWriteEvent } from "../debug-tracing.js";
 import type {
   AssemblyStageName,
   TargetAddressSpace,

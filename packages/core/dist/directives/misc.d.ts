@@ -1,6 +1,6 @@
+import type { CoreDirectiveGroup } from "../directive-groups.js";
 import type { DirectiveRegistry } from "./registry.js";
 import type { DiagnosticDirectiveContext, TableDirectiveContext } from "./types.js";
-import type { CoreDirectiveGroup } from "../directive-groups.js";
 export type MiscDirectiveContexts = {
     table: TableDirectiveContext;
     diagnostic: DiagnosticDirectiveContext;

@@ -1,12 +1,14 @@
 import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { test } from "../../../tests/ava-helper.js";
+
 import {
   applyDisassemblyAnnotationEdit,
   commitAnalysisProjectTransaction,
   loadAnalysisProjectSnapshot,
 } from "@uttori/asm-disassembler";
+
+import { test } from "../../../tests/ava-helper.js";
 import { runCli } from "../src/index.js";
 
 test("friendly function names and all comment placements survive reanalysis and byte-identical regeneration", async (t) => {
@@ -90,7 +92,7 @@ test("friendly function names and all comment placements survive reanalysis and 
   t.is(await runCli(["export", project, source, "--rom", rom, "--allow-code-regression"]), 0);
   t.regex(
     fs.readFileSync(bankFile, "utf8"),
-    /; \[Instruction comment; instruction unavailable\] Save the data bank/,
+    /; \[Instruction comment; instruction unavailable] Save the data bank/,
   );
   const report = JSON.parse(
     fs.readFileSync(path.join(source, "annotation-report.json"), "utf8"),

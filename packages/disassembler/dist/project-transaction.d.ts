@@ -1,97 +1,112 @@
-import { type AnalysisProject, type AnalysisProjectManifest, type ShardKind } from "./project-types.js";
-import { type LoadedAnalysisProject } from "./project-store.js";
-/** Format marker for optimistic project revisions passed between readers and writers. */
+import { type LoadedAnalysisProject, type LoadedAnalysisProjectView, type RuntimeRecordProjection } from "./project-store.js";
+import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards } from "./project-types.js";
+import { SqliteAnalysisStore } from "./sqlite-store.js";
+/** Identity marker for optimistic project revision tokens. */
 export declare const ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
-/** Current optimistic revision contract. */
+/** Revision token contract; the hash now covers the authoritative database manifest and counter. */
 export declare const ANALYSIS_PROJECT_REVISION_VERSION = 1;
-/** Cooperative lock directory used by project-editing processes. */
-export declare const ANALYSIS_PROJECT_LOCK_DIRECTORY = ".uttori-asm-analysis.lock";
-/** Default age after which a lock owned by a dead process may be recovered. */
-export declare const DEFAULT_ANALYSIS_PROJECT_LOCK_STALE_MS: number;
-/** One shard identity included in an observed project revision. */
-export interface AnalysisProjectShardRevision {
-    readonly id: string;
-    readonly kind: ShardKind;
-    readonly path: string;
-    readonly sha256: string;
-    readonly records: number;
-}
-/**
- * Optimistic-concurrency token for one fully validated project snapshot.
- * The manifest hash detects every descriptor change; shard identities remain explicit for auditing.
- */
+/** A hash of the database manifest, including its monotonic publication counter. */
 export interface AnalysisProjectRevision {
     readonly format: typeof ANALYSIS_PROJECT_REVISION_FORMAT;
     readonly version: typeof ANALYSIS_PROJECT_REVISION_VERSION;
     readonly manifestSha256: string;
-    readonly shards: readonly AnalysisProjectShardRevision[];
 }
-/** A validated project and the exact manifest/shard revision observed while loading it. */
+/** Complete records and the revision read in the same SQLite snapshot. */
 export interface AnalysisProjectSnapshot extends LoadedAnalysisProject {
     readonly revision: AnalysisProjectRevision;
 }
-/** Immutable shard generation prepared without changing the active project manifest. */
-export interface PreparedAnalysisProjectTransaction {
-    readonly format: "uttori-asm-analysis-transaction";
-    readonly version: 1;
-    readonly generation: string;
-    readonly manifest: AnalysisProjectManifest;
+/** Projected records and the revision of their complete backing store. */
+export interface AnalysisProjectViewSnapshot extends LoadedAnalysisProjectView {
+    readonly revision: AnalysisProjectRevision;
 }
-/** Result of atomically publishing a prepared transaction. */
+/** Validation result held by its caller until commit; preparation creates no disk generations. */
+export interface PreparedAnalysisProjectTransaction {
+    readonly project: AnalysisProject;
+}
+/** Explicit SQLite maintenance result, in bytes. */
+export interface AnalysisProjectMaintenanceResult {
+    readonly removedBytes: number;
+    readonly warnings: readonly string[];
+}
+/** Manifest and revision published atomically with the changed records. */
 export interface CommittedAnalysisProjectTransaction {
     readonly manifest: AnalysisProjectManifest;
     readonly revision: AnalysisProjectRevision;
+    readonly maintenance: AnalysisProjectMaintenanceResult;
 }
-/** Lock tuning and deterministic seams used by hosts and crash-safety tests. */
-export interface AnalysisProjectLockOptions {
-    readonly staleLockMilliseconds?: number;
-    readonly recoveryAttempts?: number;
-    readonly now?: () => number;
-    readonly processIsAlive?: (processId: number) => boolean;
-}
-/** A cooperative writer already owns the project lock. */
-export declare class AnalysisProjectLockedError extends Error {
-    readonly ownerProcessId?: number;
-    constructor(directory: string, ownerProcessId?: number);
-}
-/** The active manifest changed after a caller loaded its project snapshot. */
+/** An editing client must reload before applying an edit based on an obsolete snapshot. */
 export declare class AnalysisProjectStaleError extends Error {
     readonly expected: AnalysisProjectRevision;
     readonly actual: AnalysisProjectRevision;
     constructor(expected: AnalysisProjectRevision, actual: AnalysisProjectRevision);
 }
 /**
- * Loads one stable project snapshot. A manifest changing during validation is retried rather than
- * pairing records from one generation with the revision of another.
- * @param {string} directory Native analysis-project directory.
- * @returns {AnalysisProjectSnapshot} Validated project plus its optimistic revision.
+ * Derive an optimistic identity from the database, never the potentially stale watcher file.
+ * @param {AnalysisProjectManifest} manifest Authoritative manifest read inside a SQLite transaction.
+ * @returns {AnalysisProjectRevision} Stable token including the publication counter.
+ */
+export declare const analysisProjectRevision: (manifest: AnalysisProjectManifest) => AnalysisProjectRevision;
+/**
+ * Check a caller's revision inside the transaction that will consume its snapshot.
+ * @param {SqliteAnalysisStore} store Connection holding a read or write transaction.
+ * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
+ */
+export declare const assertAnalysisProjectRevision: (store: SqliteAnalysisStore, expected: AnalysisProjectRevision) => void;
+/**
+ * Read complete validated records and their revision in one snapshot.
+ * @param {string} directory Existing project root.
+ * @returns {AnalysisProjectSnapshot} Complete validated records and their optimistic token.
  */
 export declare const loadAnalysisProjectSnapshot: (directory: string) => AnalysisProjectSnapshot;
 /**
- * Writes and fsyncs a canonical content-addressed shard generation. The active manifest is not
- * touched, so an interruption after this step leaves the previously committed project loadable.
- * @param {string} directory Native analysis-project directory.
- * @param {AnalysisProject} project Complete replacement project to prepare.
- * @returns {PreparedAnalysisProjectTransaction} Immutable generation ready for publication.
+ * Read metadata and an optional streamed runtime projection from one database snapshot.
+ * @param {string} directory Existing project root.
+ * @param {Function} [createProjection] Optional runtime reducer; the default omits runtime.
+ * @returns {AnalysisProjectViewSnapshot} Metadata or projection and its optimistic token.
  */
-export declare const prepareAnalysisProjectTransaction: (directory: string, project: AnalysisProject) => PreparedAnalysisProjectTransaction;
+export declare const loadAnalysisProjectViewSnapshot: (directory: string, createProjection?: () => RuntimeRecordProjection) => AnalysisProjectViewSnapshot;
 /**
- * Publishes a prepared generation under an exclusive cooperative lock. The observed revision is
- * checked only after acquiring the lock, and `analysis.json` is the sole atomic replacement.
- * @param {string} directory Native analysis-project directory.
- * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
- * @param {PreparedAnalysisProjectTransaction} prepared Immutable generation to publish.
- * @param {AnalysisProjectLockOptions} [options] Lock recovery policy and host seams.
- * @returns {CommittedAnalysisProjectTransaction} Published manifest and new revision.
+ * Validate a complete replacement without changing persistent state. Commit validates it again.
+ * @param {string} _directory Destination root, retained for the preparation API contract.
+ * @param {AnalysisProject} project Caller-owned complete replacement.
+ * @returns {PreparedAnalysisProjectTransaction} Validated replacement; the caller retains ownership.
  */
-export declare const commitPreparedAnalysisProjectTransaction: (directory: string, expected: AnalysisProjectRevision, prepared: PreparedAnalysisProjectTransaction, options?: AnalysisProjectLockOptions) => CommittedAnalysisProjectTransaction;
+export declare const prepareAnalysisProjectTransaction: (_directory: string, project: AnalysisProject) => PreparedAnalysisProjectTransaction;
 /**
- * Prepares and atomically commits a complete project replacement.
- * @param {string} directory Native analysis-project directory.
- * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
- * @param {AnalysisProject} project Complete replacement project.
- * @param {AnalysisProjectLockOptions} [options] Lock recovery policy and host seams.
- * @returns {CommittedAnalysisProjectTransaction} Published manifest and new revision.
+ * Commit a complete prepared replacement against the revision observed by its caller.
+ * @param {string} directory Destination project root.
+ * @param {AnalysisProjectRevision | undefined} expected Observed revision; undefined permits initial creation only.
+ * @param {PreparedAnalysisProjectTransaction} prepared Caller-owned replacement, revalidated at commit.
+ * @returns {CommittedAnalysisProjectTransaction} Committed manifest and revision.
  */
-export declare const commitAnalysisProjectTransaction: (directory: string, expected: AnalysisProjectRevision, project: AnalysisProject, options?: AnalysisProjectLockOptions) => CommittedAnalysisProjectTransaction;
+export declare const commitPreparedAnalysisProjectTransaction: (directory: string, expected: AnalysisProjectRevision | undefined, prepared: PreparedAnalysisProjectTransaction) => CommittedAnalysisProjectTransaction;
+/**
+ * Atomically replace all records after rejecting stale readers under the SQLite writer lock.
+ * @param {string} directory Existing project root.
+ * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
+ * @param {AnalysisProject} project Complete replacement; runtime is replaced too.
+ * @returns {CommittedAnalysisProjectTransaction} Committed manifest and revision.
+ */
+export declare const commitAnalysisProjectTransaction: (directory: string, expected: AnalysisProjectRevision, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
+/**
+ * Publish only changed metadata tables and preserve all runtime history, including omitted rows.
+ * @param {string} directory Existing project root.
+ * @param {AnalysisProjectViewSnapshot} snapshot Original metadata view and revision.
+ * @param {object} updates Metadata table replacements; any runtime property is rejected.
+ * @returns {CommittedAnalysisProjectTransaction} Committed identity with complete runtime preserved.
+ */
+export declare const commitAnalysisProjectViewUpdate: (directory: string, snapshot: AnalysisProjectViewSnapshot, updates: Partial<Omit<AnalysisProjectShards, "runtime">>) => CommittedAnalysisProjectTransaction;
+/**
+ * Create or replace a complete project; editing clients should use an explicit snapshot revision.
+ * @param {string} directory Destination project root.
+ * @param {AnalysisProject} project Complete replacement including runtime.
+ * @returns {CommittedAnalysisProjectTransaction} Committed identity and publication result.
+ */
+export declare const publishAnalysisProject: (directory: string, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
+/**
+ * Explicitly compact the current SQLite file; no legacy conversion or generation pruning remains.
+ * @param {string} directory Existing SQLite project root.
+ * @returns {CommittedAnalysisProjectTransaction} Unchanged logical identity and reclaimed byte count.
+ */
+export declare const compactAnalysisProject: (directory: string) => CommittedAnalysisProjectTransaction;
 //# sourceMappingURL=project-transaction.d.ts.map

@@ -1,4 +1,5 @@
 import test from "ava";
+
 import { parseAresTraceDetails } from "../src/trace-details.js";
 
 const state = [1, 2, 3, 0x1ff, 0, 0, 0x7e, 0x2000, 0x30, 0]

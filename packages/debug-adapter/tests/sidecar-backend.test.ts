@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 
+import { test } from "../../../tests/ava-helper.js";
 import {
   DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
   DebugSidecarClient,
@@ -10,7 +11,6 @@ import {
   runDebugBackendConformance,
   type DebugBackendEvent,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 import {
   debugConformanceFixture,
   debugConformanceScript,

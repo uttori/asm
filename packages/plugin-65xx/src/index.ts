@@ -4,6 +4,7 @@ import {
   PLUGIN_API_VERSION,
   PluginManager,
 } from "@uttori/asm-core";
+import type { DirectiveDescriptor } from "@uttori/asm-core";
 import type {
   AssemblerPlugin,
   DirectiveContribution,
@@ -11,18 +12,18 @@ import type {
   TargetAddressSpace,
   TargetFactoryContext,
 } from "@uttori/asm-core/plugin";
-import type { DirectiveDescriptor } from "@uttori/asm-core";
 
 import { Arch65xx } from "./architecture.js";
-import { buildInstructionCatalog } from "./instructions/catalog.js";
 import {
-  nmos6502Cpu,
-  nmos6502Forms,
-  nmos6502xCpu,
-  nmos6502xForms,
-} from "./instructions/opcodes.js";
-import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
-import { classify65xxOperand } from "./operands/classifier.js";
+  CA65_65XX_SESSION_STATE_ID,
+  CA65_65XX_SYNTAX_PROFILE,
+  ca65CpuPredicateByArchitecture,
+  ca65CpuShorthands,
+  ca65SessionStateKey,
+  cloneCa65SessionState,
+  createCa65SessionState,
+  resetCa65StageState,
+} from "./ca65-profile.js";
 import {
   handleAlign,
   handleAddr,
@@ -48,16 +49,15 @@ import {
   handleSetcpu,
   handleUnsupportedCa65,
 } from "./directives/ca65.js";
+import { buildInstructionCatalog } from "./instructions/catalog.js";
 import {
-  CA65_65XX_SESSION_STATE_ID,
-  CA65_65XX_SYNTAX_PROFILE,
-  ca65CpuPredicateByArchitecture,
-  ca65CpuShorthands,
-  ca65SessionStateKey,
-  cloneCa65SessionState,
-  createCa65SessionState,
-  resetCa65StageState,
-} from "./ca65-profile.js";
+  nmos6502Cpu,
+  nmos6502Forms,
+  nmos6502xCpu,
+  nmos6502xForms,
+} from "./instructions/opcodes.js";
+import { variantCpus, variantFormsByCpuId } from "./instructions/variants.js";
+import { classify65xxOperand } from "./operands/classifier.js";
 import {
   NES_65XX_SESSION_STATE_ID,
   cloneNes65xxSessionState,

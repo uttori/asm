@@ -50,7 +50,15 @@ An uncompressed DiztinGUIsh project can be imported while creating the project:
 uttori-asm disassemble game.sfc game.analysis --dizraw game.dizraw --mapper hirom
 ```
 
-The importer stores its deterministic loss report in `analysis/imports.json`. Compressed `.diz` input and `.dizraw` export are unsupported.
+The importer stores its deterministic loss report in the manifest-selected imports shard. Compressed `.diz` input and `.dizraw` export are unsupported.
+
+Analysis storage is compressed and automatically pruned after imports and analysis publication. The current and previous committed snapshots are retained, with identical files shared between them. No-op imports also run storage maintenance. To compact an existing project and reclaim legacy history:
+
+```sh
+uttori-asm project-compact game.analysis
+```
+
+Compaction verifies a lossless decoded round trip before switching the manifest and removing legacy snapshots. Existing record identities and evidence are preserved.
 
 Validate shard hashes and schema compatibility, optionally checking the exact ROM identity:
 
@@ -85,7 +93,9 @@ uttori-asm evidence-import game.analysis --rom game.sfc \
 
 Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata and use the same `snes.cpu` CPU-bus identity as native analysis projects. An identical reimport does not rewrite the project.
 
-Native trace files are read incrementally with a default 2 GiB file-size limit. Use `--trace-max-mib 4096` to permit a 4 GiB capture. This avoids JavaScript's single-string size limit; distinct instruction/state/memory observations still consume memory. The editor equivalent is the project setting `asm.trace.maxImportSizeMiB`.
+Native trace files are read incrementally with a default 2 GiB file-size limit. Use `--trace-max-mib 4096` to permit a 4 GiB capture. This avoids JavaScript's single-string size limit. Use `--trace-index 65816-disassembly` for large 65816 instruction captures: it preserves all PCs, fetched-byte and decoding-state variants, execution counts and bus observations in the analysis index, while full register history stays in the original capture. `--trace-index full` remains the default. The compact index stops at 2,000,000 records; full indexes allow up to 8,000,000 and require more memory. Budget overflow never commits a partial import. The editor equivalents are `asm.trace.maxImportSizeMiB` and `asm.trace.indexMode`.
+
+Compact imports defer the detailed conflict/explanation report to avoid expanding every saved register observation during import. Run `evidence-report` separately when those diagnostics are needed, with enough memory for the project's full set of observations.
 
 MesenCE trace text has no embedded ROM fingerprint, so its required identity sidecar is explicit:
 

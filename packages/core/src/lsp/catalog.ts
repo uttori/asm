@@ -1,5 +1,5 @@
 import type { InstructionDescriptor } from "../architecture-types.js";
-import type { InstructionCatalogProvider } from "./instruction-catalog.js";
+import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
 import {
   directiveCatalog,
   findDirective,
@@ -7,7 +7,7 @@ import {
   type DirectiveDocs,
   type DirectiveOperandDescriptor,
 } from "./directive-catalog.js";
-import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
+import type { InstructionCatalogProvider } from "./instruction-catalog.js";
 
 /**
  * A unified completion-friendly view over instructions and directives.

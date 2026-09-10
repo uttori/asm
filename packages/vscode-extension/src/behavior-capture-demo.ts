@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import { ReplayDebugBackend } from "@uttori/asm-debug-adapter";
 import {
   BEHAVIOR_CAPTURE_FORMAT,
@@ -28,7 +29,7 @@ export const runBehaviorCaptureDemo = async () => {
   const project: AnalysisProject = {
     manifest: {
       format: "uttori-asm-analysis",
-      schemaVersion: 2,
+      schemaVersion: 3,
       target: "snes",
       rom: rom.identity,
       mapping: { mapper: "synthetic-demo", source: "override", candidates: [] },

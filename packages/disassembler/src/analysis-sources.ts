@@ -1,3 +1,5 @@
+import { HalfOpenIntervalIndex } from "./interval-index.js";
+import { projectSourceLabelNames } from "./project-labels.js";
 import type {
   AnalysisControlFlowNodeRecord,
   AnalysisFunctionRecord,
@@ -6,8 +8,6 @@ import type {
   EvidenceRecord,
   ImportReport,
 } from "./project-types.js";
-import { HalfOpenIntervalIndex } from "./interval-index.js";
-import { projectSourceLabelNames } from "./project-labels.js";
 
 /** One immutable imported artifact, or one producer of evidence without an artifact identity. */
 export interface AnalysisEvidenceSource {
@@ -182,7 +182,12 @@ export class AnalysisSourceIndex {
   readonly #comparisons = new Map<string, ComparisonData>();
   readonly #manifest: AnalysisProjectManifest;
 
-  constructor(manifest: AnalysisProjectManifest, shards: AnalysisProjectShards) {
+  /** Build contribution indexes while streaming runtime rows; the input history is never retained. */
+  constructor(
+    manifest: AnalysisProjectManifest,
+    shards: AnalysisProjectShards,
+    runtime: Iterable<AnalysisProjectShards["runtime"][number]> = shards.runtime,
+  ) {
     this.#manifest = manifest;
     this.sources = buildAnalysisSourceCatalog(shards);
     this.#sourceById = new Map(this.sources.map((source) => [source.id, source]));
@@ -228,7 +233,7 @@ export class AnalysisSourceIndex {
       { start: number; end: number; sources: readonly string[] }[]
     >();
     // CFG evidence is intentionally NOT execution evidence: static traversal propagates a seed's provenance.
-    for (const record of shards.runtime) {
+    for (const record of runtime) {
       const ids = sourceIds(record.evidence);
       for (const id of ids) this.#runtimeSources.add(id);
       if (record.kind === "runtime-execution" || record.kind === "runtime-instruction") {

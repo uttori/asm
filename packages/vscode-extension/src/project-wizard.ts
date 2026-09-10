@@ -24,6 +24,7 @@ import {
   type LogOutputChannel,
   type QuickPickItem,
 } from "vscode";
+
 import { rememberSnesRom } from "./snes-rom-bindings.js";
 
 /** ROM-only project creation command. */

@@ -1,8 +1,8 @@
-import { type SourcedCommand } from "./command-text-service.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
-import { ProgramModelBuilder } from "./program-model-builder.js";
 import { type NormalizedCommand } from "../ir/normalized-command.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
+import { type SourcedCommand } from "./command-text-service.js";
+import { ProgramModelBuilder } from "./program-model-builder.js";
 export type AssemblyFrontEndHost = {
     currentFile: string;
     currentLine: number;

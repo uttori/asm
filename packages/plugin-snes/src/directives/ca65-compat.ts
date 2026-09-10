@@ -19,6 +19,7 @@
  */
 
 import type { Assembler } from "@uttori/asm-core";
+
 import { Arch65816 } from "../architectures/65816.js";
 import type { SnesSessionState } from "../session-state.js";
 

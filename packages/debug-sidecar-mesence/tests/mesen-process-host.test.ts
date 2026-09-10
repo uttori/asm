@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { DEBUG_SIDECAR_SESSION_ENV, type DebugSubscription } from "@uttori/asm-debug-adapter";
 
+import { test } from "../../../tests/ava-helper.js";
 import type { MesenDebugTransport } from "../src/mesen-debug-client.js";
 import {
   MESEN_NATIVE_TOKEN_ENV,
@@ -16,7 +17,6 @@ import {
   type MesenProcessRuntime,
   type MesenRuntimeManifest,
 } from "../src/mesen-process-host.js";
-import { test } from "../../../tests/ava-helper.js";
 
 const SHA_A = "a".repeat(64);
 const SHA_B = "b".repeat(64);

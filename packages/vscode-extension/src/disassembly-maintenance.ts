@@ -7,7 +7,7 @@ import {
   SOURCE_EXPORT_MANIFEST,
   readRuntimeTraceFileMetadata,
   loadSourceExportManifest,
-  migrateManifest,
+  parseAnalysisProjectManifest,
   validateSourceExportFiles,
   validateSourceExportInputs,
   type AnalysisProjectManifest,
@@ -194,7 +194,7 @@ const insideWorkspace = (directory: string): boolean => {
 };
 
 const readProjectChoice = (directory: string): ProjectChoice => {
-  const manifest = migrateManifest(
+  const manifest = parseAnalysisProjectManifest(
     JSON.parse(fs.readFileSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8")),
   );
   return { directory: path.resolve(directory), manifest };
@@ -752,6 +752,9 @@ export const registerDisassemblyMaintenance = (
                 maxBytes,
                 architecture: trace.architecture,
                 addressSpace: trace.addressSpace,
+                indexMode: workspace
+                  .getConfiguration("asm", Uri.file(resolved.sourceDirectory))
+                  .get("trace.indexMode", "full"),
               },
               options,
             ),

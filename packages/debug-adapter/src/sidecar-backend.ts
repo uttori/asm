@@ -18,8 +18,8 @@ import {
   type DebugTraceStartOptions,
 } from "./contracts.js";
 import { DebugSidecarClient } from "./sidecar-client.js";
-import { validateDebugTraceDetails } from "./trace-detail-validation.js";
 import type { DebugSidecarEvent } from "./sidecar-protocol.js";
+import { validateDebugTraceDetails } from "./trace-detail-validation.js";
 
 /** Construction settings for one typed sidecar-backed debugger. */
 export interface SidecarDebugBackendOptions {
@@ -564,6 +564,11 @@ export class SidecarDebugBackend implements DebugBackend {
   }
 
   /** @inheritdoc */
+  async capture(request: CaptureRequestV2): Promise<CaptureResultV2> {
+    validateCaptureRequest(request);
+    return (await this.#requireConnected().request("capture", { ...request })) as CaptureResultV2;
+  }
+
   async startTrace(options: DebugTraceStartOptions): Promise<void> {
     const architecture = string(options.architecture, "Trace architecture");
     const addressSpace = string(options.addressSpace, "Trace address space");
@@ -687,3 +692,8 @@ export class SidecarDebugBackend implements DebugBackend {
     for (const listener of this.#listeners) listener(event);
   }
 }
+import {
+  validateCaptureRequest,
+  type CaptureRequestV2,
+  type CaptureResultV2,
+} from "./capture-v2.js";

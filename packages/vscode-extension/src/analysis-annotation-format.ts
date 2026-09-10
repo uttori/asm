@@ -6,21 +6,10 @@ import type {
   InstructionStateObservationAnnotation,
   InstructionStateTransitionAnnotation,
 } from "@uttori/asm-disassembler";
+import { canonicalValue } from "@uttori/asm-disassembler/canonical-json";
 
 const hexadecimal = (value: number): string =>
   `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
-
-const canonicalValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalValue);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Readonly<Record<string, unknown>>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, entry]) => [key, canonicalValue(entry)]),
-    );
-  }
-  return value;
-};
 
 const valueText = (value: unknown, present = true): string => {
   if (!present) return "∅";
@@ -110,39 +99,31 @@ export const formatInstructionAnnotationDetails = (
       ({ text, evidence }) => `Comment: ${text}\nEvidence: ${evidence.join(", ")}`,
     ),
   ];
+  // Detail views retain all observations, unlike the clipped summary. Append one line at a time
+  // because a single hot instruction can have more observations than V8 allows call arguments.
   if (annotation.runtimeCoverage.length > 0) {
-    lines.push(
-      "Runtime coverage:",
-      ...annotation.runtimeCoverage.map(
-        ({ coverage, count, recordIds }) => `  ${coverage} ×${count} (${recordIds.join(", ")})`,
-      ),
-    );
+    lines.push("Runtime coverage:");
+    for (const { coverage, count, recordIds } of annotation.runtimeCoverage)
+      lines.push(`  ${coverage} ×${count} (${recordIds.join(", ")})`);
   }
   if (annotation.effectiveAddresses.length > 0) {
-    lines.push(
-      "Effective addresses:",
-      ...annotation.effectiveAddresses.map(
-        (address) => `  ${effectiveAddressText(address)} — ${address.explanation}`,
-      ),
-    );
+    lines.push("Effective addresses:");
+    for (const address of annotation.effectiveAddresses)
+      lines.push(`  ${effectiveAddressText(address)} — ${address.explanation}`);
   }
   if (annotation.memoryAccesses.length > 0) {
-    lines.push(
-      "Runtime memory:",
-      ...annotation.memoryAccesses.map((access) => `  ${accessText(access)}`),
-    );
+    lines.push("Runtime memory:");
+    for (const access of annotation.memoryAccesses) lines.push(`  ${accessText(access)}`);
   }
   if (annotation.stateTransitions.length > 0) {
-    lines.push(
-      "Static state transitions:",
-      ...annotation.stateTransitions.map((transition) => `  ${transitionText(transition)}`),
-    );
+    lines.push("Static state transitions:");
+    for (const transition of annotation.stateTransitions)
+      lines.push(`  ${transitionText(transition)}`);
   }
   if (annotation.stateObservations.length > 0) {
-    lines.push(
-      "Known/observed state:",
-      ...annotation.stateObservations.map((observation) => `  ${stateText(observation)}`),
-    );
+    lines.push("Known/observed state:");
+    for (const observation of annotation.stateObservations)
+      lines.push(`  ${stateText(observation)}`);
   }
   if (annotation.nodeIds.length > 0) lines.push(`CFG nodes: ${annotation.nodeIds.join(", ")}`);
   if (annotation.evidence.length > 0) lines.push(`Evidence: ${annotation.evidence.join(", ")}`);

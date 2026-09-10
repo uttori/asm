@@ -1,5 +1,3 @@
-import { PluginError } from "./diagnostics.js";
-import type { OwnedContribution } from "./environment.js";
 import type {
   AssemblyStageName,
   SessionCreationContext,
@@ -7,6 +5,8 @@ import type {
   SessionStateKey,
   SessionStateStore,
 } from "./contracts.js";
+import { PluginError } from "./diagnostics.js";
+import type { OwnedContribution } from "./environment.js";
 
 /**
  * Per-slot plugin values for one assembler session (or a cloned stage snapshot).

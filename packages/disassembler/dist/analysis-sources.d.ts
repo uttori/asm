@@ -50,7 +50,8 @@ export interface AnalysisSourceComparison {
 export declare class AnalysisSourceIndex {
     #private;
     readonly sources: readonly AnalysisEvidenceSource[];
-    constructor(manifest: AnalysisProjectManifest, shards: AnalysisProjectShards);
+    /** Build contribution indexes while streaming runtime rows; the input history is never retained. */
+    constructor(manifest: AnalysisProjectManifest, shards: AnalysisProjectShards, runtime?: Iterable<AnalysisProjectShards["runtime"][number]>);
     /**
      * Sources with recorded runtime facts; static/imported classifications are not capture baselines.
      * @returns {readonly AnalysisEvidenceSource[]} Sources contributing direct runtime facts.

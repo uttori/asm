@@ -2,8 +2,9 @@
 import type { DebugMap } from "@uttori/asm-core/debug-map";
 import type { DebugAddress } from "@uttori/asm-debug-adapter";
 import { type AnalysisProjectManifest } from "@uttori/asm-disassembler";
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+
 import { analysisWorker } from "./analysis-worker-client.js";
+import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 
 interface DebugAnnotation {
   readonly addressSpace: string;

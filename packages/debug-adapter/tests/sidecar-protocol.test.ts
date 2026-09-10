@@ -1,3 +1,4 @@
+import { test } from "../../../tests/ava-helper.js";
 import {
   DEBUG_SIDECAR_PROTOCOL,
   DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -11,7 +12,6 @@ import {
   type DebugSidecarProtocolLimits,
   type DebugSidecarRequest,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 
 const session = "a".repeat(43);
 

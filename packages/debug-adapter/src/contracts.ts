@@ -1,6 +1,8 @@
 /** Current emulator-neutral debugger backend protocol. */
 export const DEBUG_BACKEND_PROTOCOL_VERSION = 1 as const;
 
+import type { CaptureRequestV2, CaptureResultV2 } from "./capture-v2.js";
+
 /** Architecture-qualified address that cannot be confused with another processor's address. */
 export interface DebugAddress {
   readonly architecture: string;
@@ -179,6 +181,8 @@ export interface DebugSubscription {
  * No emulator- or editor-specific type may cross this boundary.
  */
 export interface DebugBackend {
+  /** Optional versioned, acknowledged capture transport. Unsupported requests fail. */
+  capture?(request: CaptureRequestV2): Promise<CaptureResultV2>;
   readonly protocolVersion: typeof DEBUG_BACKEND_PROTOCOL_VERSION;
   readonly capabilities: DebugBackendCapabilities;
   connect(options?: DebugBackendConnectOptions): Promise<void>;

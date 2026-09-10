@@ -1,12 +1,13 @@
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
-import { canonicalJson } from "./project-store.js";
-import type { AnalysisProjectShards } from "./project-types.js";
+
 import {
   createExecutionWindowAccumulator,
   type ExecutionWindowSummary,
 } from "./execution-window.js";
+import { canonicalJson } from "./project-store.js";
+import type { AnalysisProjectShards } from "./project-types.js";
 import {
   createRuntimeInstructionTraceImporter,
   createRuntimeTraceChunkValidator,
@@ -205,6 +206,8 @@ async function* traceEntries(
       if (tokenStart >= 0) append(text.slice(tokenStart));
       options.onProgress?.(bytesRead, before.size);
     }
+    // The final progress callback can cancel too; no next read exists to check that signal.
+    options.signal?.throwIfAborted();
     if (decoder.end() || String(mode) !== "end" || !keys.has("chunks")) fail();
     const after = await stat(file);
     if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs)

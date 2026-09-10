@@ -87,7 +87,8 @@ export interface InstructionAnalysisAnnotations {
  * leak into the public result or weaken exact logical/output identity deduplication.
  * @param {Pick<AnalysisProjectManifest, "addressSpaces">} manifest Validated project address spaces.
  * @param {AnalysisProjectShards} shards Validated native project shards.
+ * @param {Function} [runtime] Fresh iterator per pass: point facts establish locations before coverage is attached.
  * @returns {InstructionAnalysisAnnotations} Stable instruction annotations and malformed-metadata notes.
  */
-export declare const buildInstructionAnalysisAnnotations: (manifest: Pick<AnalysisProjectManifest, "addressSpaces">, shards: AnalysisProjectShards) => InstructionAnalysisAnnotations;
+export declare const buildInstructionAnalysisAnnotations: (manifest: Pick<AnalysisProjectManifest, "addressSpaces">, shards: AnalysisProjectShards, runtime?: () => Iterable<AnalysisProjectShards["runtime"][number]>) => InstructionAnalysisAnnotations;
 //# sourceMappingURL=instruction-annotations.d.ts.map

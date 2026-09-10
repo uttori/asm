@@ -18,7 +18,10 @@ import {
   mergeRuntimeEvidence,
   validateAnalysisProject,
   validateSourceExportFiles,
-  writeAnalysisProject,
+  compactAnalysisProject,
+  commitAnalysisProjectTransaction,
+  loadAnalysisProjectSnapshot,
+  validateProjectRom,
 } from "@uttori/asm-disassembler";
 import {
   loadProjectEnvironment,
@@ -50,6 +53,7 @@ export type CliCommand =
   | "evidence-report"
   | "export"
   | "mesen-labels-export"
+  | "project-compact"
   | "project-validate"
   | "verify-roundtrip";
 
@@ -76,6 +80,7 @@ export interface CliArguments {
   readonly mesenLabels?: string;
   readonly instructionTrace?: string;
   readonly traceMaxMiB?: number;
+  readonly traceIndex?: "full" | "65816-disassembly";
   readonly entryPoints: readonly number[];
   readonly maxWorkItems?: number;
   readonly maxCallDepth?: number;
@@ -95,6 +100,7 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm mesen-labels-export <project-directory> [labels.mlb] --rom <rom>
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
+  uttori-asm project-compact <project-directory>
 
 Project options:
   --mapper <${SNES_MAPPERS.join("|")}>
@@ -107,6 +113,7 @@ Project options:
   --mesen-labels <path>        Import MesenCE label text
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
+  --trace-index <mode>         full (default) or 65816-disassembly for large captures
   --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
   --max-work-items <count>     Deterministic analysis work limit
   --max-call-depth <count>     Bounded call-context depth
@@ -146,6 +153,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     argv[0] === "evidence-report" ||
     argv[0] === "export" ||
     argv[0] === "mesen-labels-export" ||
+    argv[0] === "project-compact" ||
     argv[0] === "project-validate" ||
     argv[0] === "verify-roundtrip"
   ) {
@@ -168,6 +176,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let mesenLabels: string | undefined;
   let instructionTrace: string | undefined;
   let traceMaxMiB: number | undefined;
+  let traceIndex: "full" | "65816-disassembly" | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let maxCallDepth: number | undefined;
@@ -285,10 +294,16 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
           !Number.isSafeInteger(traceMaxMiB) ||
           traceMaxMiB < 1 ||
           !Number.isSafeInteger(traceMaxMiB * 1024 * 1024)
-        )
+        ) {
           throw new Error(
             "--trace-max-mib must be a positive integer representing a safe byte limit.",
           );
+        }
+        break;
+      case "--trace-index":
+        if (value !== "full" && value !== "65816-disassembly")
+          throw new Error("--trace-index must be full or 65816-disassembly.");
+        traceIndex = value;
         break;
       case "--entry": {
         const normalized = value.startsWith("$") ? `0x${value.slice(1)}` : value;
@@ -363,6 +378,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     mesenLabels,
     instructionTrace,
     traceMaxMiB,
+    traceIndex,
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
     maxCallDepth,
@@ -490,11 +506,11 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
     return 1;
   }
   try {
-    const loaded = loadAnalysisProject(directory);
+    const loaded = loadAnalysisProjectSnapshot(directory);
     const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
       headerSize: loaded.manifest.rom.headerSize,
     });
-    validateAnalysisProject(directory, rom);
+    validateProjectRom(loaded.manifest, rom);
     if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
       throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
     }
@@ -503,6 +519,10 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
     let changed = false;
     let conflictCount = 0;
     let explanationCount = 0;
+    // Detailed reports expand prior register observations, even when the incoming index is compact.
+    // Keep that allocation out of large imports; evidence-report remains an explicit separate step.
+    const includeDiagnostics =
+      !parsed.instructionTrace || parsed.traceIndex !== "65816-disassembly";
     const reports: string[] = [];
     const merge = (
       result:
@@ -512,8 +532,10 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
       const merged = mergeRuntimeEvidence(shards, result.batch);
       shards = merged.shards;
       changed ||= merged.changed;
-      conflictCount = merged.conflicts.length;
-      explanationCount = merged.explanations.length;
+      if (includeDiagnostics) {
+        conflictCount = merged.conflicts.length;
+        explanationCount = merged.explanations.length;
+      }
       reports.push(
         `${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported`,
       );
@@ -568,6 +590,7 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
           {
             projectRomContentSha256: loaded.manifest.rom.contentSha256,
             sourceName: path.basename(filename),
+            indexMode: parsed.traceIndex,
           },
           { maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024 },
         ),
@@ -576,12 +599,18 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
     if (changed) {
       const { shards: ignoredShards, ...manifest } = loaded.manifest;
       void ignoredShards;
-      writeAnalysisProject(directory, { manifest, shards });
+      commitAnalysisProjectTransaction(directory, loaded.revision, { manifest, shards });
+    } else {
+      compactAnalysisProject(directory);
     }
-    console.log(
-      `Success: ${changed ? "updated" : "no-op reimport for"} '${directory}'; ${conflictCount} conflict(s), ${explanationCount} explanation(s).`,
-    );
-    for (const report of reports) console.log(`Import: ${report}.`);
+    const importAction = changed ? "updated" : "no-op reimport for";
+    let diagnosticSummary = "detailed diagnostics deferred for compact trace indexing.";
+    if (includeDiagnostics)
+      diagnosticSummary = `${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
+    console.log(`Success: ${importAction} '${directory}'; ${diagnosticSummary}`);
+    for (const report of reports) {
+      console.log(`Import: ${report}.`);
+    }
     return 0;
   } catch (error) {
     console.error(`Evidence import failed: ${formatFailure(error)}`);
@@ -882,7 +911,9 @@ const verifyRoundTrip = async (parsed: CliArguments, cwd: string): Promise<numbe
       "--config",
       path.join(directory, manifest.buildConfiguration),
     ]);
-    if (exitCode !== 0) throw new Error("Generated native source did not assemble successfully.");
+    if (exitCode !== 0) {
+      throw new Error("Generated native source did not assemble successfully.");
+    }
     const content = fs.readFileSync(contentOutput);
     const final =
       manifest.rom.headerSize === 0
@@ -950,14 +981,42 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
     return 1;
   }
   const cwd = process.cwd();
-  if (parsed.command === "disassemble") return createAnalysisProject(parsed, cwd);
-  if (parsed.command === "evidence-import") return importProjectEvidence(parsed, cwd);
-  if (parsed.command === "evidence-report") return reportProjectEvidence(parsed, cwd);
-  if (parsed.command === "analyze") return analyzeProject(parsed, cwd);
-  if (parsed.command === "export") return exportProjectSource(parsed, cwd);
-  if (parsed.command === "mesen-labels-export") return exportProjectMesenLabels(parsed, cwd);
-  if (parsed.command === "project-validate") return validateProject(parsed, cwd);
-  if (parsed.command === "verify-roundtrip") return verifyRoundTrip(parsed, cwd);
+  if (parsed.command === "disassemble") {
+    return createAnalysisProject(parsed, cwd);
+  }
+  if (parsed.command === "evidence-import") {
+    return importProjectEvidence(parsed, cwd);
+  }
+  if (parsed.command === "evidence-report") {
+    return reportProjectEvidence(parsed, cwd);
+  }
+  if (parsed.command === "analyze") {
+    return analyzeProject(parsed, cwd);
+  }
+  if (parsed.command === "export") {
+    return exportProjectSource(parsed, cwd);
+  }
+  if (parsed.command === "mesen-labels-export") {
+    return exportProjectMesenLabels(parsed, cwd);
+  }
+  if (parsed.command === "project-validate") {
+    return validateProject(parsed, cwd);
+  }
+  if (parsed.command === "project-compact") {
+    try {
+      const result = compactAnalysisProject(path.resolve(cwd, parsed.input));
+      console.log(
+        `Success: compacted analysis storage; freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`,
+      );
+      return result.maintenance.warnings.length ? 1 : 0;
+    } catch (error) {
+      console.error(`Project compaction failed: ${formatFailure(error)}`);
+      return 1;
+    }
+  }
+  if (parsed.command === "verify-roundtrip") {
+    return verifyRoundTrip(parsed, cwd);
+  }
   return assemble(parsed, cwd);
 };
 

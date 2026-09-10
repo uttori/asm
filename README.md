@@ -370,25 +370,25 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 
 ## Repository Layout
 
-| Path                              | Description                                                            |
-| --------------------------------- | ---------------------------------------------------------------------- |
-| `fixtures/`                       | focused and production integration projects                            |
-| `docs/`                           | architecture, performance, testing, and native-runtime guidance        |
-| `packages/cli/`                   | command-line host, executable bundle, and CLI tests                    |
-| `packages/core/`                  | architecture-neutral runtime and plugin API                            |
-| `packages/debug-adapter/`         | emulator-neutral backend, framing, replay, conformance, and DAP        |
-| `packages/debug-sidecar-ares/`    | MIT ares translator and separately managed process host                |
-| `packages/debug-sidecar-mesence/` | MIT MesenCE translator and separately managed process host             |
-| `packages/disassembler/`          | native project, evidence, analysis, edit, asset, and export primitives |
-| `packages/language-server/`       | LSP transport and environment controller                               |
-| `packages/plugin-65xx/`           | 65xx-family instruction models, encoders, and fixtures                 |
-| `packages/plugin-author/`         | runnable third-party plugin template                                   |
-| `packages/plugin-loader-node/`    | Node discovery, config loader, and JSON schema                         |
-| `packages/plugin-snes/`           | SNES implementation and parity tests                                   |
-| `packages/vscode-extension/`      | VS Code client and bundled artifacts                                   |
-| `scripts/`                        | boundary, package, fixture, smoke, and benchmark gates                 |
-| `tests/`                          | core, loader, LSP, and cross-package tests                             |
-| `.github/workflows/`              | portable, external-fixture, and release-candidate CI gates             |
+| Path                              | Description                                                                  |
+| --------------------------------- | ---------------------------------------------------------------------------- |
+| `fixtures/`                       | focused and production integration projects                                  |
+| `docs/`                           | architecture, performance, testing, and native-runtime guidance              |
+| `packages/cli/`                   | command-line host, executable bundle, and CLI tests                          |
+| `packages/core/`                  | architecture-neutral runtime and plugin API                                  |
+| `packages/debug-adapter/`         | emulator-neutral backend, framing, replay, conformance, and DAP              |
+| `packages/debug-sidecar-ares/`    | MIT ares translator and separately managed process host                      |
+| `packages/debug-sidecar-mesence/` | MIT MesenCE translator and separately managed process host                   |
+| `packages/disassembler/`          | native project, evidence, analysis, edit, asset, and export primitives       |
+| `packages/language-server/`       | LSP transport and environment controller                                     |
+| `packages/plugin-65xx/`           | 65xx-family instruction models, encoders, and fixtures                       |
+| `packages/plugin-author/`         | runnable third-party plugin template                                         |
+| `packages/plugin-loader-node/`    | Node discovery, config loader, and JSON schema                               |
+| `packages/plugin-snes/`           | SNES implementation and parity tests                                         |
+| `packages/vscode-extension/`      | VS Code client and bundled artifacts                                         |
+| `scripts/`                        | boundary, package, fixture, smoke, and benchmark gates                       |
+| `tests/`                          | repository checks, cross-package scenarios, script tests, and shared helpers |
+| `.github/workflows/`              | portable, external-fixture, and release-candidate CI gates                   |
 
 ## Contributing
 

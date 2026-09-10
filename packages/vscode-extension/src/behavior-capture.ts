@@ -1,6 +1,7 @@
+import { createHash, randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { createHash, randomUUID } from "node:crypto";
+
 import type { DebugMap } from "@uttori/asm-core/debug-map";
 import {
   BEHAVIOR_CAPTURE_FORMAT,
@@ -10,12 +11,13 @@ import {
   MAX_CAPTURE_TOTAL_EVENTS,
   MAX_CAPTURE_MILLISECONDS,
   canonicalJson,
-  migrateManifest,
+  parseAnalysisProjectManifest,
   validateBehaviorCapture,
   reviewBehaviorCapture,
   applyBehaviorCapture,
   loadAnalysisProjectSnapshot,
   commitAnalysisProjectTransaction,
+  compactAnalysisProject,
   type BehaviorCaptureArtifact,
   type BehaviorCaptureIdentity,
   type BehaviorCaptureStop,
@@ -31,12 +33,13 @@ import {
   type DebugSession,
   type Disposable,
 } from "vscode";
-import { findAnalysisProjectDirectories } from "./coverage-tree.js";
-import { acquireTraceLease } from "./trace-lease.js";
-import type { EditorTraceBatch, EditorTraceMetadata } from "./runtime-trace-recorder.js";
+
 import { runBehaviorCaptureDemo } from "./behavior-capture-demo.js";
 import { BEHAVIOR_CAPTURE_GUIDE } from "./behavior-capture-guide.js";
+import { findAnalysisProjectDirectories } from "./coverage-tree.js";
 import { REGENERATE_DISASSEMBLY_COMMAND, behaviorEntrySeeds } from "./disassembly-maintenance.js";
+import type { EditorTraceBatch, EditorTraceMetadata } from "./runtime-trace-recorder.js";
+import { acquireTraceLease } from "./trace-lease.js";
 
 export interface BehaviorSessionContext {
   readonly map: DebugMap;
@@ -99,7 +102,7 @@ const selectProject = async (
         .map(async (directory) => {
           try {
             const bytes = await fs.promises.readFile(path.join(directory, "analysis.json"));
-            const manifest = migrateManifest(JSON.parse(bytes.toString("utf8")));
+            const manifest = parseAnalysisProjectManifest(JSON.parse(bytes.toString("utf8")));
             return manifest.rom.contentSha256 === binarySha256 && manifest.target === target
               ? [
                   {
@@ -656,6 +659,7 @@ export const registerBehaviorCaptures = (host: CaptureHost): readonly Disposable
         manifest: project.snapshot.manifest,
         shards: merged.shards,
       });
+    else compactAnalysisProject(project.directory);
     host.refresh();
     const selectedAddresses = selected.map(({ address }) => address);
     const action = await window.showInformationMessage(

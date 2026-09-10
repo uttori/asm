@@ -1,9 +1,4 @@
 import {
-  ca65EaTable,
-  ca65VariantTables,
-  type Ca65InstructionRow,
-} from "./variant-tables.generated.js";
-import {
   getOperandCodec,
   getOperandFields,
   type AddressingMode,
@@ -12,6 +7,11 @@ import {
   type InstructionForm,
   type OperandCodecId,
 } from "./schema.js";
+import {
+  ca65EaTable,
+  ca65VariantTables,
+  type Ca65InstructionRow,
+} from "./variant-tables.generated.js";
 
 interface ModeDefinition {
   readonly mode: AddressingMode;

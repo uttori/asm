@@ -7,6 +7,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
+
 import { GdbRspClient } from "../../src/gdb-rsp-client.ts";
 import { NodeTcpGdbRspTransport } from "../../src/node-tcp-gdb-rsp-transport.ts";
 import { syntheticRom } from "./synthetic-rom.mjs";

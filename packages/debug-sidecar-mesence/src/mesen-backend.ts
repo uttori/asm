@@ -1,3 +1,6 @@
+import { Buffer } from "node:buffer";
+
+import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import {
   DEBUG_BACKEND_PROTOCOL_VERSION,
   type DebugAddress,
@@ -15,7 +18,6 @@ import {
   type DebugTraceBatch,
   type DebugTraceStartOptions,
 } from "@uttori/asm-debug-adapter";
-import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import {
   Cpu65816Decoder,
   Spc700Decoder,
@@ -30,7 +32,7 @@ import {
   type SuperFxAbstractState,
   type SuperFxAltState,
 } from "@uttori/asm-plugin-snes";
-import { Buffer } from "node:buffer";
+
 import {
   MESEN_65816_ADDRESS_SPACE,
   MESEN_65816_ARCHITECTURE,

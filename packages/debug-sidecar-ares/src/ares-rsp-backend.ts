@@ -1,4 +1,4 @@
-import { parseAresTraceDetails } from "./trace-details.js";
+import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import {
   DEBUG_BACKEND_PROTOCOL_VERSION,
   type DebugAddress,
@@ -15,8 +15,12 @@ import {
   type DebugThread,
   type DebugTraceBatch,
   type DebugTraceStartOptions,
+  validateCaptureRequest,
+  validateCapturePosition,
+  validateCaptureCapabilities,
+  type CaptureRequestV2,
+  type CaptureResultV2,
 } from "@uttori/asm-debug-adapter";
-import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import {
   Cpu65816Decoder,
   formatCpu65816Instruction,
@@ -34,6 +38,7 @@ import {
   ARES_RSP_CAPABILITIES,
   ARES_TRACE_BATCH_EVENTS,
 } from "./profile.js";
+import { parseAresTraceDetails } from "./trace-details.js";
 
 export * from "./profile.js";
 
@@ -179,6 +184,8 @@ const safeHexInteger = (value: string, context: string): number => {
 export class AresRspDebugBackend implements DebugBackend {
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #richTrace = false;
+  #captureV2 = false;
+  #captureSession: string | undefined;
   get capabilities(): typeof ARES_RSP_CAPABILITIES {
     if (!this.#richTrace) return ARES_RSP_CAPABILITIES;
     return {
@@ -266,6 +273,7 @@ export class AresRspDebugBackend implements DebugBackend {
     try {
       await client.start();
       const supported = await client.request("qSupported");
+      this.#captureV2 = supported.split(";").includes("uttoriCaptureV2+");
       if (
         !supported.includes("qXfer:features:read+") ||
         !supported.includes("xmlRegisters+") ||
@@ -299,6 +307,12 @@ export class AresRspDebugBackend implements DebugBackend {
   async disconnect(options: { readonly terminate?: boolean } = {}): Promise<void> {
     const client = this.#requireConnected();
     const terminate = options.terminate ?? true;
+    if (this.#captureSession) {
+      await this.capture({ operation: "abort", session: this.#captureSession }).catch(
+        () => undefined,
+      );
+      this.#captureSession = undefined;
+    }
     if (this.#trace?.active) await this.stopTrace();
     if (!terminate) {
       await this.setBreakpoints([]);
@@ -311,7 +325,10 @@ export class AresRspDebugBackend implements DebugBackend {
     try {
       expectOkay(await client.request("D"), "ares RSP detach");
     } catch (error) {
-      detachError = asError(error);
+      // Ares may close its socket before its queued detach OK is transmitted.
+      // That EOF fulfils this terminal request; other errors remain visible.
+      const failure = asError(error);
+      if (!client.closed || failure.message !== "RSP transport closed.") detachError = failure;
     }
     await client.close().catch((error: unknown) => {
       detachError ??= asError(error);
@@ -501,6 +518,41 @@ export class AresRspDebugBackend implements DebugBackend {
   }
 
   /** @inheritdoc */
+  async capture(request: CaptureRequestV2): Promise<CaptureResultV2> {
+    validateCaptureRequest(request);
+    const client = this.#requireConnected();
+    if (!this.#captureV2)
+      throw new Error(
+        "The active ares runtime does not support lossless capture v2. Install the capture-v2 runtime and restart debugging.",
+      );
+    const fields: (string | number)[] = ["qUttoriCapture", request.operation];
+    if (request.operation === "start") fields.push(request.bufferBytes);
+    else if (request.operation !== "capabilities") {
+      fields.push(request.session);
+      if (request.operation === "read" || request.operation === "ack") fields.push(request.chunk);
+      if (request.operation === "ack") fields.push(request.event);
+    }
+    const response = await client.request(fields.join(":"));
+    if (/^e[\da-f]{2}$/i.test(response))
+      throw new Error(`Capture ${request.operation} rejected (${response}).`);
+    if (request.operation === "read") {
+      if (response.length > 524288 || response.length % 2 || !/^[\da-f]*$/.test(response))
+        throw new Error("Malformed capture chunk response.");
+      return { hex: response };
+    }
+    if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
+      throw new Error("Malformed capture control response.");
+    const value: unknown = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
+    if (request.operation === "capabilities") return validateCaptureCapabilities(value);
+    const position = validateCapturePosition(
+      value,
+      request.operation === "start" ? undefined : request.session,
+    );
+    if (request.operation === "start") this.#captureSession = position.session;
+    if (position.state === "complete") this.#captureSession = undefined;
+    return position;
+  }
+
   async startTrace(options: DebugTraceStartOptions): Promise<void> {
     if (
       options.architecture !== ARES_65816_ARCHITECTURE ||

@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+
 import { test } from "../../../tests/ava-helper.js";
 import {
   BEHAVIOR_CAPTURE_FORMAT,
@@ -23,7 +24,7 @@ const rom = new RomImage(new Uint8Array(0x8000));
 const project = (): AnalysisProject => ({
   manifest: {
     format: "uttori-asm-analysis",
-    schemaVersion: 2,
+    schemaVersion: 3,
     target: "snes",
     rom: rom.identity,
     mapping: { mapper: "test", source: "override", candidates: [] },

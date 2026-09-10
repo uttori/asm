@@ -1,7 +1,7 @@
 import type { AssemblyFileProvider } from "../file-provider.js";
+import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
 import type { ExecutableNode } from "../ir/assembly-tree.js";
 import type { ProgramModelBuilder } from "./program-model-builder.js";
-import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
 
 export interface IncludedFileInfo {
   /** Whether the file has been included. */

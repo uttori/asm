@@ -1,5 +1,5 @@
-import type { NormalizedCommand } from "../ir/normalized-command.js";
 import { type CoreDirectiveGroup } from "../directive-groups.js";
+import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { AddressStackDirectiveContext, ArchitectureDirectiveContext, BaseLayoutDirectiveContext, DataDirectiveContext, FillPadDirectiveContext, FlowControlDirectiveContext, IncludeDirectiveContext, NarrowDirectiveHandler, NamespaceDirectiveContext, OrgDirectiveContext, RuntimeDirectiveContext, StructDirectiveContext, TableDirectiveContext, DiagnosticDirectiveContext } from "./types.js";
 type BoundDirectiveHandler = (words: readonly string[], raw: string, command?: NormalizedCommand) => void;
 export type DirectiveExecutionPhase = "preprocess" | "lowered";

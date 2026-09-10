@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+
 import {
   canonicalJson,
   type AnalysisControlFlowNodeRecord as Node,
@@ -7,6 +8,7 @@ import {
   type EvidenceRecord,
   type ProjectComment,
 } from "@uttori/asm-disassembler";
+
 import { identifySnesHardwareRegister } from "./hardware-registers.js";
 
 const isArray = (value: unknown): boolean => Array.isArray(value);
@@ -204,11 +206,13 @@ const immediate = (node: Node): number | undefined =>
  * Bounded structural matching; never renames symbols or changes code/data classifications.
  * @param {AnalysisProjectShards} shards Persisted analysis and observations.
  * @param {SnesHeuristicConfiguration} options Declarative rule configuration.
+ * @param {Iterable} [runtime] Optional streamed runtime observations.
  * @returns {SnesHeuristicResult} Findings and their comments/evidence.
  */
 export const analyzeSnesFunctionRoles = (
   shards: AnalysisProjectShards,
   options: SnesHeuristicConfiguration = {},
+  runtime: Iterable<AnalysisProjectShards["runtime"][number]> = shards.runtime,
 ): SnesHeuristicResult => {
   const config = validateSnesHeuristicConfiguration(options);
   if (config.enabled === false) return { roles: [], comments: [], evidence: [] };
@@ -505,7 +509,7 @@ export const analyzeSnesFunctionRoles = (
     list.push(node);
     atAddress.set(node.address, list);
   }
-  for (const access of shards.runtime) {
+  for (const access of runtime) {
     if (
       access.kind !== "runtime-memory-access" ||
       access.architecture !== "snes.65816" ||

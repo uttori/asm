@@ -4,7 +4,7 @@ import fs from "node:fs";
 
 import { Assembler } from "@uttori/asm-core";
 import plugin65xx, { create65xxAssemblerEnvironment, RAW_65XX_TARGET_ID } from "../src/index.js";
-import { PluginManager } from "../../../packages/core/src/plugin/manager.js";
+import { PluginManager } from "../../core/src/plugin/manager.js";
 
 const environment = await create65xxAssemblerEnvironment();
 
@@ -246,7 +246,7 @@ test("HuC6280 encodes memory-register, test, and block-transfer forms", (t) => {
     message: /power of two/i,
   });
   t.throws(() => assemble("tii $1000,$2000", { architecture: "huc6280" }), {
-    message: /blockTransfer/i,
+    message: /blocktransfer/i,
   });
 });
 

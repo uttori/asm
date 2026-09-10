@@ -1,10 +1,10 @@
+import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 import {
   assembleExternalFixture,
   assertAssembledMatchesManifest,
   assertSubmodulesClean,
   sha256,
 } from "./external-fixtures.ts";
-import { EXTERNAL_FIXTURES } from "../fixtures/fixture-manifest.ts";
 
 function main(): void {
   const spec = EXTERNAL_FIXTURES.chou;

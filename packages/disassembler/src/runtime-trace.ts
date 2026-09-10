@@ -1,12 +1,17 @@
 import { createHash } from "node:crypto";
 
-import type { EvidenceRecord, ImportReport, RuntimeEvidenceRecord } from "./project-types.js";
+import { canonicalJson } from "./project-store.js";
+import type {
+  EvidenceRecord,
+  ImportReport,
+  RuntimeEvidenceRecord,
+  RuntimeStateValue,
+} from "./project-types.js";
+import type { RuntimeEvidenceBatch } from "./runtime-evidence.js";
 import {
   validateRuntimeInstructionDetails,
   type RuntimeInstructionDetail,
 } from "./trace-detail.js";
-import { canonicalJson } from "./project-store.js";
-import type { RuntimeEvidenceBatch } from "./runtime-evidence.js";
 
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace" as const;
@@ -47,12 +52,32 @@ export interface RuntimeInstructionTraceArtifact {
 export interface RuntimeInstructionTraceImportContext {
   readonly projectRomContentSha256: string;
   readonly sourceName: string;
+  /** Defaults to full snapshots; compact mode changes only the index, never the capture or its hash. */
+  readonly indexMode?: RuntimeTraceIndexMode;
+  /**
+   * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
+   * Defaults to 2M in compact mode or 8M in full mode; accepts 1 through 8,000,000. Not a byte/heap limit.
+   */
+  readonly maxIndexRecords?: number;
 }
+
+/**
+ * Full keeps all supplied registers. Compact preserves the joint 65816 decoding state and
+ * execution counts; A/X/Y/S history remains in the capture and is unavailable from this index.
+ */
+export type RuntimeTraceIndexMode = "full" | "65816-disassembly";
+/** Compact-index default; full snapshots retain a larger compatibility budget. */
+export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2_000_000;
+const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
+// P/E control instruction widths; D/DB resolve direct-page and data-bank operands.
+// Preserve PB/PC observations with them so projection does not invent state combinations.
+const DISASSEMBLY_STATE_FIELDS = new Set(["p", "e", "d", "db", "pb", "pc"]);
 
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
 export interface RuntimeInstructionTraceImportResult {
   readonly batch: RuntimeEvidenceBatch;
   readonly report: ImportReport;
+  /** Canonical identity of all validated input, including registers omitted from a compact index. */
   readonly sourceSha256: string;
   readonly observedEvents: number;
   readonly droppedEvents: number;
@@ -220,21 +245,77 @@ export const importRuntimeInstructionTrace = (
   return importer.finish();
 };
 
-/** Incremental import state, retaining aggregated facts rather than the recording. */
+/** One distinct indexed fact; byte/state pairs expand into two persisted records at finalization. */
+export type RuntimeTraceIndexedFact =
+  | { readonly kind: "execution"; readonly address: number }
+  | {
+      readonly kind: "instruction";
+      readonly identity: string;
+      readonly address: number;
+      readonly bytes: readonly number[];
+      readonly state: Readonly<Record<string, RuntimeStateValue>>;
+    }
+  | { readonly kind: "memory"; readonly record: RuntimeEvidenceRecord };
+
+/** Counter storage owned by the caller; disk implementations keep distinct facts off the JS heap. */
+export interface RuntimeTraceFactIndex {
+  /** Increment a fact, constructing its payload only on first insertion; return whether it was new. */
+  add(key: string, create: () => RuntimeTraceIndexedFact): boolean;
+  /** Yield each distinct fact once, with its exact aggregate observation count. */
+  values(): Iterable<{ readonly fact: RuntimeTraceIndexedFact; readonly count: number }>;
+  /** Release indexed facts after completion or failure. */
+  clear(): void;
+}
+
+/** Optional external storage and record sink; sink output is provisional until finish returns. */
+export interface RuntimeTraceImporterStorage {
+  readonly index: RuntimeTraceFactIndex;
+  /** Final records are emitted individually; batch.runtime is omitted when this sink is supplied. */
+  readonly onRecord?: (record: RuntimeEvidenceRecord) => void;
+}
+
+/**
+ * Default index for callers explicitly requesting an in-memory evidence batch.
+ * @returns {RuntimeTraceFactIndex} Counter map released by importer completion or failure.
+ */
+const createMemoryFactIndex = (): RuntimeTraceFactIndex => {
+  const records = new Map<string, { fact: RuntimeTraceIndexedFact; count: number }>();
+  return {
+    add: (key, create) => {
+      const prior = records.get(key);
+      if (prior) {
+        prior.count++;
+        return false;
+      }
+      records.set(key, { fact: create(), count: 1 });
+      return true;
+    },
+    values: () => records.values(),
+    clear: () => records.clear(),
+  };
+};
+
+/** Incremental aggregation; any failed push permanently invalidates the pending import. */
 export interface RuntimeInstructionTraceImporter {
+  /** Accept the next ordered chunk; invalid data or an exceeded record budget prevents finalization. */
   push(value: unknown): void;
+  /** Consume the importer once, only after the caller has validated the entire file and its tail. */
   finish(): RuntimeInstructionTraceImportResult;
 }
 
 /**
  * Aggregate a trace one validated chunk at a time, preserving canonical import identities.
+ * The default memory index grows with distinct facts; callers can supply a disk index and sink.
+ * Paired code/state facts share one accumulator until finalization; record budgets do not bound bytes.
  * @param {RuntimeInstructionTraceMetadata} value Trace identity.
  * @param {RuntimeInstructionTraceImportContext} context Destination identity.
+ * @param {RuntimeTraceImporterStorage} [storage] Caller-owned counter index and optional bounded record sink.
  * @returns {RuntimeInstructionTraceImporter} Incremental importer; finish only after the file validates.
  */
 export const createRuntimeInstructionTraceImporter = (
   value: RuntimeInstructionTraceMetadata,
   context: RuntimeInstructionTraceImportContext,
+  storage?: RuntimeTraceImporterStorage,
 ): RuntimeInstructionTraceImporter => {
   const artifact = validateRuntimeInstructionTraceMetadata(value);
   const projectRomContentSha256 = sha256Identity(
@@ -247,29 +328,63 @@ export const createRuntimeInstructionTraceImporter = (
     );
   const sourceName = string(context.sourceName, "Instruction trace source name");
   const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
+  const indexMode = context.indexMode ?? "full";
+  if (!["full", "65816-disassembly"].includes(indexMode))
+    throw new Error("Unsupported runtime trace index mode.");
+  // This projection follows the 65816 decoder's inputs; another CPU may need the omitted registers.
+  if (
+    indexMode === "65816-disassembly" &&
+    (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")
+  )
+    throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
+  const maxIndexRecords = integer(
+    context.maxIndexRecords ??
+      (indexMode === "full"
+        ? MAX_RUNTIME_TRACE_INDEX_RECORDS
+        : DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS),
+    "Trace index record limit",
+    1,
+  );
+  if (maxIndexRecords > MAX_RUNTIME_TRACE_INDEX_RECORDS)
+    throw new Error(`Trace index record limit must not exceed ${MAX_RUNTIME_TRACE_INDEX_RECORDS}.`);
   // Match canonicalJson({...metadata, chunks}) exactly without making one huge string.
   const envelope = canonicalJson({ ...artifact, chunks: [] });
   const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
   const hash = createHash("sha256").update(envelope.slice(0, split));
   const suffix = envelope.slice(split + 2);
   const validateChunk = createRuntimeTraceChunkValidator();
-  const counts = new Map<number, number>();
-  const observations = new Map<string, RuntimeEvidenceRecord>();
+  const index = storage?.index ?? createMemoryFactIndex();
+  let executionRecords = 0;
+  let memoryRecords = 0;
+  let indexRecords = 0;
+  const reserve = (count: number): void => {
+    // Budget the eventual output before adding a new key, including paired code/state records.
+    // Reject the whole import rather than letting callers mistake a truncated index for success.
+    if (indexRecords + count > maxIndexRecords) {
+      let hint =
+        "The capture has too many distinct code/state/bus variants for this index budget. ";
+      if (indexMode === "full")
+        hint =
+          "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
+      throw new Error(
+        `Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged; no partial import was committed.`,
+      );
+    }
+    indexRecords += count;
+  };
   let observedEvents = 0;
   let droppedEvents = 0;
   let complete = false;
   let chunks = 0;
   let unattributed = 0;
   let finished = false;
+  let failure: Error | undefined;
   let detailedEvents = 0;
   let memoryLoss = 0;
-  const add = (record: RuntimeEvidenceRecord): void => {
-    const previous = observations.get(record.id);
-    observations.set(record.id, { ...record, count: (previous?.count ?? 0) + 1 });
-  };
-  const push = (value: unknown): void => {
+  const pushChunk = (value: unknown): void => {
     if (finished) throw new Error("Instruction trace import already finished.");
     const chunk = validateChunk(value);
+    // Hash the original chunk before projecting its registers so both index modes identify the same capture.
     hash.update(chunks++ === 0 ? "[\n" : ",\n");
     hash.update(
       canonicalJson(chunk)
@@ -282,53 +397,85 @@ export const createRuntimeInstructionTraceImporter = (
     complete = !chunk.active;
     unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
     for (const address of chunk.addresses) {
-      counts.set(address, (counts.get(address) ?? 0) + 1);
+      if (index.add(`pc:${hex(address)}`, () => ({ kind: "execution", address }))) {
+        reserve(1);
+        executionRecords++;
+      }
       observedEvents++;
     }
-    for (const [index, detail] of (chunk.details ?? []).entries()) {
+    for (const [offset, detail] of (chunk.details ?? []).entries()) {
       detailedEvents++;
       memoryLoss += detail.droppedMemoryAccesses ?? 0;
-      const address = chunk.addresses[index];
+      const address = chunk.addresses[offset];
       const base = { architecture: artifact.architecture, count: 1, evidence: [] };
-      const identity = sha256(canonicalJson({ address, bytes: detail.bytes, state: detail.state }));
-      add({
-        ...base,
-        id: `code:${identity}`,
-        kind: "runtime-instruction",
-        addressSpace,
-        address,
-        bytes: detail.bytes,
-        state: detail.state,
-      });
-      add({
-        ...base,
-        id: `state:${identity}`,
-        kind: "runtime-cpu-state",
-        addressSpace,
-        address,
-        state: detail.state,
-      });
+      // Keep bytes and decoding state together: independent sets could pair self-modified code
+      // with register values that were never observed when those bytes executed.
+      const state =
+        indexMode === "full"
+          ? detail.state
+          : Object.fromEntries(
+              Object.entries(detail.state).filter(([field]) =>
+                DISASSEMBLY_STATE_FIELDS.has(field.toLowerCase()),
+              ),
+            );
+      const content = canonicalJson({ address, bytes: detail.bytes, state });
+      // Full snapshots may contain large or mostly unique register objects.
+      // Keep their map keys fixed-size; compact states benefit from reusing the
+      // content key without hashing every repetition of a hot instruction.
+      const key = indexMode === "full" ? sha256(content) : content;
+      if (
+        index.add(`code:${key}`, () => ({
+          kind: "instruction",
+          identity: indexMode === "full" ? key : sha256(key),
+          address,
+          bytes: detail.bytes,
+          state,
+        }))
+      )
+        reserve(2);
       for (const access of detail.memoryAccesses ?? []) {
         if (access.access === "fetch") continue;
-        const accessIdentity = sha256(canonicalJson({ instructionAddress: address, ...access }));
-        add({
-          ...base,
-          id: `memory:${accessIdentity}`,
-          kind: "runtime-memory-access",
-          instructionAddressSpace: addressSpace,
-          instructionAddress: address,
-          accessedAddressSpace: access.addressSpace,
-          accessedAddress: access.address,
-          access: access.access,
-          width: access.width,
-          ...(access.value === undefined ? {} : { value: access.value }),
-          ...(access.actor === undefined ? {} : { actor: access.actor }),
-          ...(access.channel === undefined ? {} : { channel: access.channel }),
-        });
+        const accessKind = access.access;
+        const accessKey = canonicalJson({ instructionAddress: address, ...access });
+        if (
+          index.add(`memory:${sha256(accessKey)}`, () => ({
+            kind: "memory",
+            record: {
+              ...base,
+              id: `memory:${sha256(accessKey)}`,
+              kind: "runtime-memory-access",
+              instructionAddressSpace: addressSpace,
+              instructionAddress: address,
+              accessedAddressSpace: access.addressSpace,
+              accessedAddress: access.address,
+              access: accessKind,
+              width: access.width,
+              ...(access.value === undefined ? {} : { value: access.value }),
+              ...(access.actor === undefined ? {} : { actor: access.actor }),
+              ...(access.channel === undefined ? {} : { channel: access.channel }),
+            },
+          }))
+        ) {
+          reserve(1);
+          memoryRecords++;
+        }
       }
     }
   };
+  const push = (value: unknown): void => {
+    if (failure) throw failure;
+    try {
+      pushChunk(value);
+    } catch (error) {
+      // A failure can occur partway through a chunk. Latch it and release the working set so
+      // catching the error cannot turn a later finish() into a seemingly valid partial import.
+      failure = error instanceof Error ? error : new Error(String(error));
+      index.clear();
+      throw failure;
+    }
+  };
   const finish = (): RuntimeInstructionTraceImportResult => {
+    if (failure) throw failure;
     if (finished) throw new Error("Instruction trace import already finished.");
     finished = true;
     const sourceSha256 = hash
@@ -337,24 +484,59 @@ export const createRuntimeInstructionTraceImporter = (
       .digest("hex");
     const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
     const evidenceIds = [evidenceId];
-    const runtime: RuntimeEvidenceRecord[] = [...counts]
-      .sort(([left], [right]) => left - right)
-      .map(([address, count]) => ({
-        id: `${evidenceId}:${hex(address)}`,
-        kind: "runtime-execution",
-        architecture: artifact.architecture,
-        addressSpace,
-        address,
-        count,
-        evidence: evidenceIds,
-      }));
-    for (const observation of [...observations.values()].sort((a, b) => a.id.localeCompare(b.id)))
-      runtime.push({
-        ...observation,
-        id: `${evidenceId}:${observation.id}`,
-        evidence: evidenceIds,
-      });
-    observations.clear();
+    const executions: RuntimeEvidenceRecord[] = [];
+    const facts: RuntimeEvidenceRecord[] = [];
+    const emit = (record: RuntimeEvidenceRecord): void => {
+      if (storage?.onRecord) storage.onRecord(record);
+      else if (record.kind === "runtime-execution") executions.push(record);
+      else facts.push(record);
+    };
+    // A disk sink receives one final record at a time, so finalization cannot allocate a second
+    // full index while expanding byte/state pairs. Keep legacy ordering for in-memory callers.
+    try {
+      for (const { fact, count } of index.values()) {
+        if (fact.kind === "execution") {
+          emit({
+            id: `${evidenceId}:${hex(fact.address)}`,
+            kind: "runtime-execution",
+            architecture: artifact.architecture,
+            addressSpace,
+            address: fact.address,
+            count,
+            evidence: evidenceIds,
+          });
+        } else if (fact.kind === "instruction") {
+          const base = {
+            architecture: artifact.architecture,
+            addressSpace,
+            address: fact.address,
+            count,
+            evidence: evidenceIds,
+            state: fact.state,
+          };
+          emit({
+            ...base,
+            id: `${evidenceId}:code:${fact.identity}`,
+            kind: "runtime-instruction",
+            bytes: fact.bytes,
+          });
+          emit({ ...base, id: `${evidenceId}:state:${fact.identity}`, kind: "runtime-cpu-state" });
+        } else
+          emit({
+            ...fact.record,
+            id: `${evidenceId}:${fact.record.id}`,
+            count,
+            evidence: evidenceIds,
+          });
+      }
+    } finally {
+      index.clear();
+    }
+    const runtime = executions.sort((a, b) => {
+      if (a.kind !== "runtime-execution" || b.kind !== "runtime-execution") return 0;
+      return a.address - b.address;
+    });
+    for (const fact of facts.sort((a, b) => a.id.localeCompare(b.id))) runtime.push(fact);
     const evidence: EvidenceRecord = {
       id: evidenceId,
       source: "runtime",
@@ -372,16 +554,17 @@ export const createRuntimeInstructionTraceImporter = (
       },
     };
     const report: ImportReport = {
-      id: `import:instruction-trace:${sourceSha256}`,
+      id: `import:instruction-trace:${sourceSha256}${indexMode === "full" ? "" : ":65816-disassembly-v1"}`,
+      ...(indexMode === "full" ? {} : { indexProfile: "65816-disassembly-v1" }),
       format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
       sourceName,
       sourceSha256,
       sourceVersion: `v${RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION}@${artifact.producer.id}:${artifact.producer.revision}`,
       imported: {
-        executionRecords: counts.size,
+        executionRecords,
         executionEvents: observedEvents,
         detailedEvents,
-        memoryRecords: runtime.filter((entry) => entry.kind === "runtime-memory-access").length,
+        memoryRecords,
       },
       unsupported:
         droppedEvents === 0
@@ -394,6 +577,11 @@ export const createRuntimeInstructionTraceImporter = (
               },
             ],
       warnings: [
+        ...(indexMode === "full"
+          ? []
+          : [
+              "Disassembly index retains every PC/bytes/P/E/D/DB/PB/PC variant and exact execution counts. Other register snapshots remain in the original capture; this project index does not contain full register history. Captured bus observations are retained without projection.",
+            ]),
         ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
         ...(detailedEvents < observedEvents
           ? [
@@ -411,7 +599,7 @@ export const createRuntimeInstructionTraceImporter = (
       ],
     };
     return {
-      batch: { runtime, evidence: [evidence], imports: [report] },
+      batch: { ...(storage?.onRecord ? {} : { runtime }), evidence: [evidence], imports: [report] },
       report,
       sourceSha256,
       observedEvents,

@@ -1,5 +1,5 @@
-import type { AnalysisProjectShards } from "./project-types.js";
 import { type ExecutionWindowSummary } from "./execution-window.js";
+import type { AnalysisProjectShards } from "./project-types.js";
 import { type RuntimeInstructionTraceChunk, type RuntimeInstructionTraceImportContext, type RuntimeInstructionTraceImportResult, type RuntimeInstructionTraceMetadata } from "./runtime-trace.js";
 /** Default file-size budget, independent of static-analysis work. */
 export declare const DEFAULT_RUNTIME_TRACE_MAX_BYTES: number;

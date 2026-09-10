@@ -1,3 +1,4 @@
+import type { DebugSubscription } from "./contracts.js";
 import {
   DEFAULT_DEBUG_SIDECAR_LIMITS,
   DEBUG_SIDECAR_PROTOCOL,
@@ -9,7 +10,6 @@ import {
   type DebugSidecarProtocolLimits,
   type DebugSidecarRequest,
 } from "./sidecar-protocol.js";
-import type { DebugSubscription } from "./contracts.js";
 
 /** Byte-stream transport implemented by stdio or a loopback socket host. */
 export interface DebugSidecarTransport {

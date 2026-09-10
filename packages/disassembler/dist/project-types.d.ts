@@ -2,8 +2,8 @@ import type { AssetValue } from "./asset-codec.js";
 import type { RomIdentity } from "./rom-image.js";
 /** Manifest `format` field for a native analysis project. */
 export declare const ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
-/** Current analysis-project schema. Older versions migrate; newer versions are refused. */
-export declare const ANALYSIS_PROJECT_SCHEMA_VERSION = 2;
+/** Current analysis-project schema. Only the current SQLite container is supported. */
+export declare const ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 /** Filename of the project manifest written at the project root. */
 export declare const ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 /** Named address space advertised in the project (file offsets, CPU bus, or RAM). */
@@ -38,18 +38,8 @@ export interface ProjectMapping {
     readonly source: "detected" | "override" | "import";
     readonly candidates: readonly MappingCandidate[];
 }
-/** On-disk shard filename kind matching `analysis/*.json`. */
+/** Semantic record collection names, also used for SQLite tables. */
 export type ShardKind = "analysis" | "annotations" | "labels" | "comments" | "regions" | "runtime" | "evidence" | "imports";
-/** Manifest descriptor for one canonical JSON shard. */
-export interface ProjectShardDescriptor {
-    readonly id: string;
-    readonly kind: ShardKind;
-    /** Path relative to the project directory; must not contain `..`. */
-    readonly path: string;
-    /** SHA-256 of the shard file text; load fails if the file drifted. */
-    readonly sha256: string;
-    readonly records: number;
-}
 /** Root `analysis.json` for a native analysis project. ROM bytes are never stored here. */
 export interface AnalysisProjectManifest {
     readonly format: typeof ANALYSIS_PROJECT_FORMAT;
@@ -58,7 +48,14 @@ export interface AnalysisProjectManifest {
     readonly rom: RomIdentity;
     readonly mapping: ProjectMapping;
     readonly addressSpaces: readonly AddressSpaceDescriptor[];
-    readonly shards: readonly ProjectShardDescriptor[];
+    /** Always empty: records live in SQLite tables. */
+    readonly shards: readonly [];
+    /**
+     * SQLite working-store path, supplied automatically when creating a project.
+     */
+    readonly db?: string;
+    /** Monotonic SQLite publication counter, supplied by the store. */
+    readonly revision?: number;
 }
 /**
  * Justification for a fact in the project.
@@ -196,6 +193,8 @@ export interface ImportReport {
     readonly sourceName: string;
     readonly sourceSha256: string;
     readonly sourceVersion?: string;
+    /** Versioned index projection; omitted for full imports. The same source cannot mix profiles. */
+    readonly indexProfile?: string;
     readonly imported: Readonly<Record<string, number>>;
     readonly unsupported: readonly ImportLossItem[];
     readonly warnings: readonly string[];
@@ -381,7 +380,7 @@ export interface AnalysisProjectShards {
     readonly evidence: readonly EvidenceRecord[];
     readonly imports: readonly ImportReport[];
 }
-/** Project ready to write: manifest without shard descriptors, plus in-memory shards. */
+/** Project ready to write: semantic manifest fields plus in-memory record collections. */
 export interface AnalysisProject {
     readonly manifest: Omit<AnalysisProjectManifest, "shards">;
     readonly shards: AnalysisProjectShards;

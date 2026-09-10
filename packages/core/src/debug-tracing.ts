@@ -1,5 +1,5 @@
-import type { AssemblyStageName } from "./plugin/contracts.js";
 import { formatAddressForWidth } from "./address-width.js";
+import type { AssemblyStageName } from "./plugin/contracts.js";
 
 /**
  * Per-byte write emitted after the logical address has been mapped to output.

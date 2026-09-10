@@ -5,15 +5,71 @@ import {
   type DebugSubscription,
 } from "@uttori/asm-debug-adapter";
 
+import { test } from "../../../tests/ava-helper.js";
 import {
   ARES_TRACE_BUFFER_EVENTS,
   AresRspDebugBackend,
   type AresGdbRspClient,
   type GdbRspStop,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 
 const INITIAL_PC = 0x80_8000;
+
+test("terminal detach accepts native EOF before OK and still terminates the owned process", async (t) => {
+  const client = new FakeAresRspClient(fakeState());
+  const original = client.request.bind(client);
+  client.request = async (command) => {
+    if (command !== "D") return original(command);
+    await client.close();
+    throw new Error("RSP transport closed.");
+  };
+  let terminated = false;
+  const backend = new AresRspDebugBackend({
+    createClient: () => Promise.resolve(client),
+    terminate: () => {
+      terminated = true;
+      return Promise.resolve();
+    },
+  });
+  await backend.connect();
+  await backend.disconnect();
+  t.true(terminated);
+});
+
+test("capture v2 rejects legacy runtimes and preserves exact acknowledgement integers", async (t) => {
+  const legacyClient = new FakeAresRspClient(fakeState());
+  const legacy = new AresRspDebugBackend({ createClient: () => Promise.resolve(legacyClient) });
+  await legacy.connect();
+  await t.throwsAsync(legacy.capture({ operation: "start", bufferBytes: 4718656 }), {
+    message: /does not support lossless/,
+  });
+  t.false(legacyClient.commands.some((command) => command.startsWith("qUttoriCapture")));
+  await legacy.disconnect();
+  const client = new FakeAresRspClient(
+    fakeState(),
+    targetXml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const original = client.request.bind(client);
+  let sent = "";
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    sent = command;
+    if (command.includes(":read:")) return "";
+    return "E07";
+  };
+  const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
+  await backend.connect();
+  const session = "1".repeat(32),
+    exact = "9007199254740993";
+  t.deepEqual(await backend.capture({ operation: "read", session, chunk: exact }), { hex: "" });
+  t.is(sent, `qUttoriCapture:read:${session}:${exact}`);
+  await t.throwsAsync(backend.capture({ operation: "ack", session, chunk: exact, event: exact }), {
+    message: /rejected \(E07\)/,
+  });
+  t.is(sent, `qUttoriCapture:ack:${session}:${exact}:${exact}`);
+  await backend.disconnect();
+});
 
 interface FakeAresState {
   a: number;

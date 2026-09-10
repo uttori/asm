@@ -1,3 +1,7 @@
+import {
+  incrementInternalCounter,
+  recordInternalCounterPeak,
+} from "../internal-instrumentation.js";
 import type {
   ConditionalBranch,
   ConditionalBranchNode,
@@ -5,10 +9,6 @@ import type {
   LoopNode,
 } from "../ir/assembly-tree.js";
 import { setCommandKind, type NormalizedCommand } from "../ir/normalized-command.js";
-import {
-  incrementInternalCounter,
-  recordInternalCounterPeak,
-} from "../internal-instrumentation.js";
 import type { SourcedCommand } from "./command-text-service.js";
 
 export type ProgramModel = {

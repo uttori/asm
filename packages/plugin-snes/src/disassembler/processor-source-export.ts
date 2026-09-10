@@ -67,7 +67,9 @@ export const renderSpc700UploadSource = (rom: RomImage, stream: Spc700UploadStre
     const bytes = rom.read(block.payloadOffset, block.size);
     if (!bytes) throw new Error(`SPC700 upload block ${block.index} is outside the ROM image.`);
     lines.push("", `spcblock ${hex(block.destination, 4)} nspc`);
-    lines.push(...spc700Lines(bytes, block.destination));
+    // A valid upload can contain tens of thousands of instructions. Its 16-bit size bound
+    // is a file-format limit, not a guarantee that the resulting lines fit a native call.
+    for (const line of spc700Lines(bytes, block.destination)) lines.push(line);
     lines.push(
       block.index === stream.blocks.length - 1
         ? `endspcblock execute ${hex(stream.executeAddress, 4)}`

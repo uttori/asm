@@ -5,7 +5,6 @@ import type {
   LoweredInstruction,
   LoweredOperand,
 } from "@uttori/asm-core";
-
 /**
  * Table-driven 65xx encoder. Forms come from the NMOS grid or ca65-derived
  * variant tables; `.b`/`.w` force zp vs abs; branches use `+`/`-` unnamed labels.

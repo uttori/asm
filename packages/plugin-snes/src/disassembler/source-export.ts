@@ -1,3 +1,6 @@
+import * as fs from "node:fs";
+import path from "node:path";
+
 import { Uint8ArrayDecoderSource, type DecodedInstruction } from "@uttori/asm-core";
 import {
   SOURCE_EXPORT_FORMAT,
@@ -19,8 +22,6 @@ import {
   type SourceExportSpan,
   type SourceExportSpanRole,
 } from "@uttori/asm-disassembler";
-import * as fs from "node:fs";
-import path from "node:path";
 
 import {
   Cpu65816Decoder,
@@ -33,6 +34,7 @@ import {
   SNES_CPU_ADDRESS_SPACE,
   SNES_FILE_ADDRESS_SPACE,
 } from "./address-identities.js";
+import { lostCodeRanges } from "./code-preservation.js";
 import {
   identifySnesHardwareRegister,
   renderSnesHardwareDefines,
@@ -50,7 +52,6 @@ import {
   type SnesRamMapVariable,
 } from "./ram-map.js";
 import { parseSnesInternalRomHeader, type SnesMapper } from "./rom-header.js";
-import { lostCodeRanges } from "./code-preservation.js";
 import {
   indexSnesStructFields,
   loadSnesStructMap,
@@ -544,7 +545,8 @@ export const snesSourceLabelNames = (
   const reserved = [...renderSnesHardwareDefines().matchAll(/^([A-Z_a-z]\w*)\s*=/gm)].map(
     (match) => match[1],
   );
-  reserved.push(...ramNames);
+  // User RAM maps can reserve arbitrarily many names; none should be lost to a call-argument limit.
+  for (const name of ramNames) reserved.push(name);
   for (const fn of shards.analysis) {
     if (fn.kind !== "function") continue;
     const offset = toFileOffset(fn.addressSpace, fn.address, mapper, romSize);
@@ -653,6 +655,7 @@ const rejectedByAnnotation = (
  * Annotation and metadata indexes are constructed by the caller and reused for every candidate.
  * The function still re-decodes and checks each instruction against its recorded specification so
  * an optimization cannot turn uncertain/conflicting bytes into source text.
+ * Identical encodings use numeric operands when processor-state variants disagree on symbol names.
  * @param {RomImage} rom Immutable headerless ROM content.
  * @param {SnesMapper} mapper Selected mapper used for continuity checks.
  * @param {AnalysisProjectShards} shards Validated project evidence.
@@ -739,6 +742,7 @@ const planInstructions = (
         return {
           record,
           state,
+          instruction: result.instruction,
           source: formatSnes65816SourceInstruction(
             result.instruction,
             ramVariables,
@@ -751,19 +755,40 @@ const planInstructions = (
       });
     if (variants.some((entry) => entry === undefined)) continue;
     const resolved = variants as Array<NonNullable<(typeof variants)[number]>>;
+    const first = resolved[0];
+    // Every variant reads the same ROM offset; matching size and specification establish one encoding.
     if (
       resolved.some(
         (entry) =>
-          entry.record.size !== resolved[0].record.size || entry.source !== resolved[0].source,
+          entry.record.size !== first.record.size ||
+          entry.record.specificationId !== first.record.specificationId,
       )
     ) {
       continue;
     }
-    const first = resolved[0];
+    let renderedSource = first.source;
+    if (resolved.some((entry) => entry.source !== renderedSource)) {
+      // DBR/direct-page changes can give identical ROM instructions different RAM, struct, or
+      // hardware names. Keep the instruction with a numeric operand instead of inventing a conflict.
+      // Removing data references also disables hardware naming; control-flow labels remain usable.
+      const numericSources = resolved.map(({ instruction }) =>
+        formatSnes65816SourceInstruction(
+          {
+            ...instruction,
+            references: instruction.references.filter((reference) => reference.kind !== "data"),
+          },
+          undefined,
+          sourceAddress,
+          sourceLabels,
+        ),
+      );
+      if (numericSources.some((source) => source !== numericSources[0])) continue;
+      renderedSource = numericSources[0];
+    }
     candidates.set(offset, {
       start: offset,
       end: offset + first.record.size,
-      source: first.source,
+      source: renderedSource,
       state: first.state,
       nodeIds: resolved.map((entry) => entry.record.id),
     });
@@ -1139,7 +1164,11 @@ export const exportSnes65816Source = (
         lines.push("", `org ${hex(address)}`);
         previousState = undefined;
       }
-      if (named.length) lines.push("", ...named);
+      if (named.length) {
+        lines.push("");
+        // Multiple imports can attach an input-sized set of labels/comments to the same offset.
+        for (const line of named) lines.push(line);
+      }
       if (span.instruction) {
         const state = span.instruction.state;
         if (previousState?.m !== state.m) lines.push(...widthDirective(state.m, ".a16", ".a8"));
@@ -1224,6 +1253,7 @@ export const exportSnes65816Source = (
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
         });
       } else if (span.structField) {
+        // Each field always renders two lines: a placement assertion and one data directive.
         lines.push(
           ...renderSnesStructData(
             span.structField,

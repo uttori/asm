@@ -44,6 +44,13 @@ var init_debug_map = __esm({
   }
 });
 
+// packages/core/src/address-width.ts
+var init_address_width = __esm({
+  "packages/core/src/address-width.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
@@ -90,9 +97,23 @@ var init_addressToLine = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
-var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+// packages/core/src/architecture-registry.ts
+var init_architecture_registry = __esm({
+  "packages/core/src/architecture-registry.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/source-location.ts
+var init_source_location = __esm({
+  "packages/core/src/source-location.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/diagnostics.ts
+var init_diagnostics = __esm({
+  "packages/core/src/diagnostics.ts"() {
     "use strict";
   }
 });
@@ -117,67 +138,9 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/source-location.ts
-var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/diagnostics.ts
-var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
-    "use strict";
-  }
-});
-
 // packages/core/src/ir/expression-node.ts
 var init_expression_node = __esm({
   "packages/core/src/ir/expression-node.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/ir/normalized-command.ts
-var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
-var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
-    "use strict";
-    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
-    EMPTY_TOKEN_SPANS = Object.freeze([]);
-  }
-});
-
-// packages/core/src/operand-syntax.ts
-function parseOperandSyntax(operand) {
-  const raw = operand;
-  const trimmed = operand.trim();
-  const normalizedUpper = trimmed.toUpperCase();
-  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
-  const indexRegister = indexMatch?.[1].toLowerCase();
-  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
-  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
-  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
-  return {
-    raw,
-    trimmed,
-    normalizedUpper,
-    immediate: trimmed.startsWith("#"),
-    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
-    indexRegister,
-    explicitWidth,
-    numericSpelling: /^[\d#$%]/.test(trimmed)
-  };
-}
-var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/architecture-registry.ts
-var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
     "use strict";
   }
 });
@@ -220,23 +183,46 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
-var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/services/command-lowering-service.ts
-var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
-    "use strict";
-  }
-});
-
 // packages/core/src/file-provider.ts
 var init_file_provider = __esm({
   "packages/core/src/file-provider.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/ir/normalized-command.ts
+var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
+var init_normalized_command = __esm({
+  "packages/core/src/ir/normalized-command.ts"() {
+    "use strict";
+    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
+    EMPTY_TOKEN_SPANS = Object.freeze([]);
+  }
+});
+
+// packages/core/src/operand-syntax.ts
+function parseOperandSyntax(operand) {
+  const raw = operand;
+  const trimmed = operand.trim();
+  const normalizedUpper = trimmed.toUpperCase();
+  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
+  const indexRegister = indexMatch?.[1].toLowerCase();
+  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
+  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
+  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
+  return {
+    raw,
+    trimmed,
+    normalizedUpper,
+    immediate: trimmed.startsWith("#"),
+    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
+    indexRegister,
+    explicitWidth,
+    numericSpelling: /^[\d#$%]/.test(trimmed)
+  };
+}
+var init_operand_syntax = __esm({
+  "packages/core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
@@ -2472,6 +2458,20 @@ var init_plugin = __esm({
   }
 });
 
+// packages/core/src/services/assembly-front-end-service.ts
+var init_assembly_front_end_service = __esm({
+  "packages/core/src/services/assembly-front-end-service.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/services/command-lowering-service.ts
+var init_command_lowering_service = __esm({
+  "packages/core/src/services/command-lowering-service.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/assembler.ts
 var init_assembler = __esm({
   "packages/core/src/assembler.ts"() {
@@ -2942,6 +2942,377 @@ var init_spec = __esm({
   }
 });
 
+// packages/plugin-snes/src/architectures/65816-decoder.ts
+function formatCpu65816Instruction(instruction) {
+  if (instruction.architecture !== "snes.65816") {
+    throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
+  }
+  const operand = instruction.operands[0];
+  const value = operand?.value ?? 0;
+  let text = "";
+  switch (instruction.mode) {
+    case "implied":
+      break;
+    // The project encoder's native accumulator spelling omits the operand.
+    case "accumulator":
+      break;
+    case "signature":
+      text = `#${hex(value, 1)}`;
+      break;
+    case "immediate":
+      text = `#${hex(value, operand?.width ?? 1)}`;
+      break;
+    case "immediate16":
+      text = hex(value, 2);
+      break;
+    case "direct":
+      text = hex(value, 1);
+      break;
+    case "directIndexedX":
+      text = `${hex(value, 1)},x`;
+      break;
+    case "directIndexedY":
+      text = `${hex(value, 1)},y`;
+      break;
+    case "directIndirect":
+      text = instruction.mnemonic === "PEI" ? hex(value, 1) : `(${hex(value, 1)})`;
+      break;
+    case "directIndirectLong":
+      text = `[${hex(value, 1)}]`;
+      break;
+    case "directIndexedXIndirect":
+      text = `(${hex(value, 1)},x)`;
+      break;
+    case "directIndirectIndexedY":
+      text = `(${hex(value, 1)}),y`;
+      break;
+    case "directIndirectLongIndexedY":
+      text = `[${hex(value, 1)}],y`;
+      break;
+    case "stackRelative":
+      text = `${hex(value, 1)},s`;
+      break;
+    case "stackRelativeIndirectIndexedY":
+      text = `(${hex(value, 1)},s),y`;
+      break;
+    case "absolute":
+      text = hex(value, 2);
+      break;
+    case "absoluteIndexedX":
+      text = `${hex(value, 2)},x`;
+      break;
+    case "absoluteIndexedY":
+      text = `${hex(value, 2)},y`;
+      break;
+    case "absoluteLong":
+      text = hex(value, 3);
+      break;
+    case "absoluteLongIndexedX":
+      text = `${hex(value, 3)},x`;
+      break;
+    case "absoluteIndirect":
+      text = `(${hex(value, 2)})`;
+      break;
+    case "absoluteIndexedXIndirect":
+      text = `(${hex(value, 2)},x)`;
+      break;
+    case "absoluteIndirectLong":
+      text = `[${hex(value, 2)}]`;
+      break;
+    case "relative":
+      text = hex(operand?.targetAddress ?? 0, 3);
+      break;
+    case "relativeLong":
+      text = instruction.mnemonic === "PER" ? hex(value, 2) : hex(operand?.targetAddress ?? 0, 3);
+      break;
+    case "blockMove":
+      text = `${hex(instruction.operands[0]?.value ?? 0, 1)},${hex(instruction.operands[1]?.value ?? 0, 1)}`;
+      break;
+    default:
+      throw new Error(`Unsupported 65816 formatter mode '${instruction.mode}'.`);
+  }
+  return text ? `${instruction.mnemonic} ${text}` : instruction.mnemonic;
+}
+var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder, hex;
+var init_decoder = __esm({
+  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+    "use strict";
+    init_spec();
+    flagValue = (value) => {
+      if (value === true || value === 1) return 1;
+      if (value === false || value === 0) return 0;
+      return "unknown";
+    };
+    resolvedWidthFlag = (state, flag) => {
+      const emulation = flagValue(state.e);
+      if (emulation === 1) return 1;
+      const width = flagValue(state[flag]);
+      if (width === 1) return 1;
+      if (width === 0 && emulation === 0) return 0;
+      return "unknown";
+    };
+    readLittleEndian = (bytes, offset, width) => {
+      let value = 0;
+      for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
+      return value >>> 0;
+    };
+    signed = (value, width) => {
+      const signBit = 1 << width * 8 - 1;
+      const modulus = 2 ** (width * 8);
+      return value & signBit ? value - modulus : value;
+    };
+    bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
+    addressOperand = (value, width) => ({
+      kind: "address",
+      value,
+      width
+    });
+    operandsFor = (specification2, bytes, logicalAddress) => {
+      const value8 = bytes[1] ?? 0;
+      const value16 = readLittleEndian(bytes, 1, 2);
+      const value24 = readLittleEndian(bytes, 1, 3);
+      switch (specification2.mode) {
+        case "implied":
+          return [];
+        case "accumulator":
+          return [{ kind: "accumulator", register: "a" }];
+        case "signature":
+          return [{ kind: "signature", value: value8, width: 1 }];
+        case "immediate":
+          return [
+            {
+              kind: "immediate",
+              value: bytes.length === 2 ? value8 : value16,
+              width: bytes.length - 1
+            }
+          ];
+        case "immediate16":
+          return [{ kind: "immediate", value: value16, width: 2 }];
+        case "direct":
+        case "directIndexedX":
+        case "directIndexedY":
+        case "directIndirect":
+        case "directIndirectLong":
+        case "directIndexedXIndirect":
+        case "directIndirectIndexedY":
+        case "directIndirectLongIndexedY":
+        case "stackRelative":
+        case "stackRelativeIndirectIndexedY":
+          return [addressOperand(value8, 1)];
+        case "absolute":
+        case "absoluteIndexedX":
+        case "absoluteIndexedY":
+        case "absoluteIndirect":
+        case "absoluteIndexedXIndirect":
+        case "absoluteIndirectLong":
+          return [addressOperand(value16, 2)];
+        case "absoluteLong":
+        case "absoluteLongIndexedX":
+          return [addressOperand(value24, 3)];
+        case "relative": {
+          const displacement = signed(value8, 1);
+          return [
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 1,
+              signed: true,
+              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+            }
+          ];
+        }
+        case "relativeLong": {
+          const displacement = signed(value16, 2);
+          return [
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 2,
+              signed: true,
+              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+            }
+          ];
+        }
+        case "blockMove":
+          return [
+            { kind: "bank", value: value8, width: 1 },
+            { kind: "bank", value: bytes[2] ?? 0, width: 1 }
+          ];
+        default:
+          return [];
+      }
+    };
+    targetFor = (specification2, operands, state, logicalAddress) => {
+      const operand = operands[0];
+      if (!operand) return void 0;
+      if (operand.targetAddress !== void 0) return operand.targetAddress;
+      if (operand.value === void 0) return void 0;
+      if (specification2.mode === "absoluteLong") return operand.value;
+      if (specification2.mode === "absolute") {
+        const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
+        return bank << 16 | operand.value;
+      }
+      return void 0;
+    };
+    referencesFor = (specification2, operands, state, logicalAddress) => {
+      const { mnemonic, mode: mode3 } = specification2;
+      const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
+      const isCall = mnemonic === "JSR" || mnemonic === "JSL";
+      const isJump = mnemonic === "JMP" || mnemonic === "JML";
+      if (isBranch || isCall || isJump) {
+        const target = targetFor(specification2, operands, state, logicalAddress);
+        let kind = "jump";
+        if (isBranch) kind = "branch";
+        else if (isCall) kind = "call";
+        return [
+          {
+            kind,
+            operandIndex: 0,
+            ...target === void 0 ? {} : { address: target },
+            ...mode3.includes("Indirect") ? { indirect: true } : {}
+          }
+        ];
+      }
+      if (mode3.includes("Indirect")) {
+        const value = operands[0]?.value;
+        return [
+          {
+            kind: "pointer",
+            operandIndex: 0,
+            ...value === void 0 ? {} : { address: value },
+            indirect: true
+          }
+        ];
+      }
+      const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
+      if (!memoryMode || operands[0]?.value === void 0) return [];
+      if (mode3.startsWith("direct")) {
+        return [
+          {
+            kind: "data",
+            operandIndex: 0,
+            ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
+          }
+        ];
+      }
+      if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
+        return [
+          {
+            kind: "data",
+            operandIndex: 0,
+            ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
+          }
+        ];
+      }
+      return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+    };
+    effectsFor = (specification2, operands) => {
+      const mask = operands[0]?.value;
+      if (specification2.operandStatusEffect && mask !== void 0) {
+        return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
+      }
+      return specification2.effects;
+    };
+    buildInstruction = (specification2, bytes, context, state) => {
+      const operands = operandsFor(specification2, bytes, context.logicalAddress);
+      return {
+        architecture: "snes.65816",
+        specificationId: specification2.id,
+        opcode: specification2.opcode[0],
+        mnemonic: specification2.mnemonic,
+        mode: specification2.mode,
+        offset: context.offset,
+        logicalAddress: context.logicalAddress & 16777215,
+        bytes,
+        size: bytes.length,
+        operands,
+        references: referencesFor(specification2, operands, state, context.logicalAddress),
+        flow: specification2.flow,
+        effects: effectsFor(specification2, operands)
+      };
+    };
+    Cpu65816Decoder = class {
+      /**
+       * Decodes a 65816 instruction.
+       * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
+       * @returns {ArchitectureDecodeResult} The decode result.
+       */
+      decode(context) {
+        const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+        const opcode = context.source.readByte(context.offset);
+        if (opcode === void 0) {
+          return {
+            kind: "error",
+            code: "outOfBounds",
+            message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+            offset: context.offset,
+            requiredBytes: 1,
+            availableBytes
+          };
+        }
+        const specification2 = cpu65816Specifications[opcode];
+        if (!specification2) {
+          return {
+            kind: "error",
+            code: "invalidOpcode",
+            message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+            offset: context.offset
+          };
+        }
+        const state = context.state ?? {};
+        let sizes = [specification2.minimumSize];
+        if (specification2.widthFlag) {
+          const width = resolvedWidthFlag(state, specification2.widthFlag);
+          sizes = width === "unknown" ? [2, 3] : [width === 1 ? 2 : 3];
+        }
+        const minimumSize = Math.min(...sizes);
+        const maximumSize = Math.max(...sizes);
+        if (availableBytes < minimumSize) {
+          return {
+            kind: "error",
+            code: "truncated",
+            message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+            offset: context.offset,
+            requiredBytes: minimumSize,
+            availableBytes
+          };
+        }
+        if (sizes.length === 1 && availableBytes < maximumSize) {
+          return {
+            kind: "error",
+            code: "truncated",
+            message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
+            offset: context.offset,
+            requiredBytes: maximumSize,
+            availableBytes
+          };
+        }
+        const availableSizes = sizes.filter((size) => size <= availableBytes);
+        const alternatives = availableSizes.map((size) => {
+          const bytes = context.source.readBytes(context.offset, size);
+          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+          return buildInstruction(specification2, bytes, context, state);
+        });
+        if (sizes.length === 2) {
+          return {
+            kind: "ambiguous",
+            reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
+            requiredState: [specification2.widthFlag ?? "m"],
+            alternatives,
+            ...availableSizes.length === sizes.length ? {} : {
+              unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
+            },
+            minimumSize: 2,
+            maximumSize: 3
+          };
+        }
+        return { kind: "instruction", instruction: alternatives[0] };
+      }
+    };
+    hex = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
+  }
+});
+
 // packages/plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
@@ -3269,7 +3640,7 @@ function buildSuperFxCatalog() {
   for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
   return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
-var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
+var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
   "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
@@ -3463,7 +3834,7 @@ var init_superfx_spec = __esm({
         return { kind: "jump", fallthrough: false, indirect: true };
       return { kind: "fallthrough", fallthrough: true };
     };
-    effectsFor = (definition) => {
+    effectsFor2 = (definition) => {
       if (definition.mnemonic === "ALT1" || definition.mnemonic === "ALT2" || definition.mnemonic === "ALT3") {
         return [
           {
@@ -3543,7 +3914,7 @@ var init_superfx_spec = __esm({
         ...definition.register === void 0 ? {} : { register: definition.register },
         summary: summaryFor(definition.mnemonic),
         flow: flowFor3(definition, opcode),
-        effects: effectsFor(definition),
+        effects: effectsFor2(definition),
         ...definition.writesDestination ? { writesDestination: true } : {},
         alteredByAlt
       });
@@ -5824,301 +6195,239 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
-function formatCpu65816Instruction(instruction) {
-  if (instruction.architecture !== "snes.65816") {
-    throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
+function formatSpc700Instruction(instruction) {
+  if (instruction.architecture !== "snes.spc700") {
+    throw new Error(`Cannot format architecture '${instruction.architecture}' as SPC700.`);
   }
-  const operand = instruction.operands[0];
-  const value = operand?.value ?? 0;
-  let text = "";
-  switch (instruction.mode) {
-    case "implied":
-      break;
-    // The project encoder's native accumulator spelling omits the operand.
-    case "accumulator":
-      break;
-    case "signature":
-      text = `#${hex(value, 1)}`;
-      break;
-    case "immediate":
-      text = `#${hex(value, operand?.width ?? 1)}`;
-      break;
-    case "immediate16":
-      text = hex(value, 2);
-      break;
-    case "direct":
-      text = hex(value, 1);
-      break;
-    case "directIndexedX":
-      text = `${hex(value, 1)},x`;
-      break;
-    case "directIndexedY":
-      text = `${hex(value, 1)},y`;
-      break;
-    case "directIndirect":
-      text = instruction.mnemonic === "PEI" ? hex(value, 1) : `(${hex(value, 1)})`;
-      break;
-    case "directIndirectLong":
-      text = `[${hex(value, 1)}]`;
-      break;
-    case "directIndexedXIndirect":
-      text = `(${hex(value, 1)},x)`;
-      break;
-    case "directIndirectIndexedY":
-      text = `(${hex(value, 1)}),y`;
-      break;
-    case "directIndirectLongIndexedY":
-      text = `[${hex(value, 1)}],y`;
-      break;
-    case "stackRelative":
-      text = `${hex(value, 1)},s`;
-      break;
-    case "stackRelativeIndirectIndexedY":
-      text = `(${hex(value, 1)},s),y`;
-      break;
-    case "absolute":
-      text = hex(value, 2);
-      break;
-    case "absoluteIndexedX":
-      text = `${hex(value, 2)},x`;
-      break;
-    case "absoluteIndexedY":
-      text = `${hex(value, 2)},y`;
-      break;
-    case "absoluteLong":
-      text = hex(value, 3);
-      break;
-    case "absoluteLongIndexedX":
-      text = `${hex(value, 3)},x`;
-      break;
-    case "absoluteIndirect":
-      text = `(${hex(value, 2)})`;
-      break;
-    case "absoluteIndexedXIndirect":
-      text = `(${hex(value, 2)},x)`;
-      break;
-    case "absoluteIndirectLong":
-      text = `[${hex(value, 2)}]`;
-      break;
-    case "relative":
-      text = hex(operand?.targetAddress ?? 0, 3);
-      break;
-    case "relativeLong":
-      text = instruction.mnemonic === "PER" ? hex(value, 2) : hex(operand?.targetAddress ?? 0, 3);
-      break;
-    case "blockMove":
-      text = `${hex(instruction.operands[0]?.value ?? 0, 1)},${hex(instruction.operands[1]?.value ?? 0, 1)}`;
-      break;
-    default:
-      throw new Error(`Unsupported 65816 formatter mode '${instruction.mode}'.`);
-  }
-  return text ? `${instruction.mnemonic} ${text}` : instruction.mnemonic;
+  const operands = formatOperands(instruction);
+  return operands === "" ? instruction.mnemonic : `${instruction.mnemonic} ${operands}`;
 }
-var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor2, buildInstruction, Cpu65816Decoder, hex;
-var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+var readLittleEndian2, signedByte, register2, address2, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder, hex2, formatOperands;
+var init_spc700_decoder = __esm({
+  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
-    init_spec();
-    flagValue = (value) => {
-      if (value === true || value === 1) return 1;
-      if (value === false || value === 0) return 0;
-      return "unknown";
-    };
-    resolvedWidthFlag = (state, flag) => {
-      const emulation = flagValue(state.e);
-      if (emulation === 1) return 1;
-      const width = flagValue(state[flag]);
-      if (width === 1) return 1;
-      if (width === 0 && emulation === 0) return 0;
-      return "unknown";
-    };
-    readLittleEndian = (bytes, offset, width) => {
+    init_spc700_spec();
+    readLittleEndian2 = (bytes, offset, width) => {
       let value = 0;
       for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
       return value >>> 0;
     };
-    signed = (value, width) => {
-      const signBit = 1 << width * 8 - 1;
-      const modulus = 2 ** (width * 8);
-      return value & signBit ? value - modulus : value;
-    };
-    bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
-    addressOperand = (value, width) => ({
+    signedByte = (value) => value & 128 ? value - 256 : value;
+    register2 = (name) => ({ kind: "register", register: name });
+    address2 = (value, width) => ({
       kind: "address",
       value,
       width
     });
-    operandsFor = (specification2, bytes, logicalAddress) => {
-      const value8 = bytes[1] ?? 0;
-      const value16 = readLittleEndian(bytes, 1, 2);
-      const value24 = readLittleEndian(bytes, 1, 3);
+    immediate = (value) => ({ kind: "immediate", value, width: 1 });
+    bit = (value) => ({ kind: "bit", value, width: 1 });
+    relative = (value, logicalAddress, size) => ({
+      kind: "displacement",
+      value: signedByte(value),
+      width: 1,
+      signed: true,
+      targetAddress: logicalAddress + size + signedByte(value) & 65535
+    });
+    bitAddress = (bytes) => {
+      const encoded = readLittleEndian2(bytes, 1, 2);
+      return [address2(encoded & 8191, 2), bit(encoded >>> 13)];
+    };
+    fixedRegisters = {
+      registerA: ["A"],
+      registerX: ["X"],
+      registerY: ["Y"],
+      registerP: ["P"],
+      registerYA: ["YA"],
+      registerYAX: ["YA", "X"],
+      registerXA: ["X", "A"],
+      registerAX: ["A", "X"],
+      registerXSP: ["X", "SP"],
+      registerSPX: ["SP", "X"],
+      registerAY: ["A", "Y"],
+      registerYA2: ["Y", "A"],
+      registerPostIncrementXA: ["X", "A"],
+      registerAPostIncrementX: ["A", "X"],
+      registerIndirectXA: ["X", "A"],
+      registerAIndirectX: ["A", "X"],
+      indirectXY: ["X", "Y"]
+    };
+    operandsFor2 = (specification2, bytes, logicalAddress) => {
+      const byte = bytes[1] ?? 0;
+      const word2 = readLittleEndian2(bytes, 1, 2);
+      const fixed = fixedRegisters[specification2.mode];
+      if (fixed) return fixed.map(register2);
       switch (specification2.mode) {
         case "implied":
           return [];
-        case "accumulator":
-          return [{ kind: "accumulator", register: "a" }];
-        case "signature":
-          return [{ kind: "signature", value: value8, width: 1 }];
-        case "immediate":
+        case "tableCall":
+          return [immediate(specification2.opcode[0] >>> 4)];
+        case "directBit":
+          return [address2(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
+        case "directBitRelative":
           return [
-            {
-              kind: "immediate",
-              value: bytes.length === 2 ? value8 : value16,
-              width: bytes.length - 1
-            }
+            address2(byte, 1),
+            bit(Number(specification2.mnemonic.at(-1))),
+            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
           ];
-        case "immediate16":
-          return [{ kind: "immediate", value: value16, width: 2 }];
+        case "accumulatorDirect":
+        case "accumulatorDirectIndexedX":
+        case "accumulatorDirectIndexedXIndirect":
+        case "accumulatorDirectIndirectIndexedY":
+          return [register2("A"), address2(byte, 1)];
+        case "accumulatorAbsolute":
+        case "accumulatorAbsoluteIndexedX":
+        case "accumulatorAbsoluteIndexedY":
+          return [register2("A"), address2(word2, 2)];
+        case "accumulatorIndirectX":
+          return [register2("A"), register2("X")];
+        case "accumulatorImmediate":
+          return [register2("A"), immediate(byte)];
+        case "directDirect":
+          return [address2(bytes[2] ?? 0, 1), address2(byte, 1)];
+        case "carryMemoryBit":
+        case "carryInvertedMemoryBit": {
+          const [memory, bit2] = bitAddress(bytes);
+          return [register2("C"), memory, bit2];
+        }
+        case "memoryBitCarry": {
+          const [memory, bit2] = bitAddress(bytes);
+          return [memory, bit2, register2("C")];
+        }
+        case "memoryBit":
+          return bitAddress(bytes);
         case "direct":
         case "directIndexedX":
-        case "directIndexedY":
-        case "directIndirect":
-        case "directIndirectLong":
-        case "directIndexedXIndirect":
-        case "directIndirectIndexedY":
-        case "directIndirectLongIndexedY":
-        case "stackRelative":
-        case "stackRelativeIndirectIndexedY":
-          return [addressOperand(value8, 1)];
+        case "directWord":
+          return [address2(byte, 1)];
         case "absolute":
-        case "absoluteIndexedX":
-        case "absoluteIndexedY":
-        case "absoluteIndirect":
         case "absoluteIndexedXIndirect":
-        case "absoluteIndirectLong":
-          return [addressOperand(value16, 2)];
-        case "absoluteLong":
-        case "absoluteLongIndexedX":
-          return [addressOperand(value24, 3)];
-        case "relative": {
-          const displacement = signed(value8, 1);
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 1,
-              signed: true,
-              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
-            }
-          ];
-        }
-        case "relativeLong": {
-          const displacement = signed(value16, 2);
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 2,
-              signed: true,
-              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
-            }
-          ];
-        }
-        case "blockMove":
-          return [
-            { kind: "bank", value: value8, width: 1 },
-            { kind: "bank", value: bytes[2] ?? 0, width: 1 }
-          ];
+          return [address2(word2, 2)];
+        case "relative":
+          return [relative(byte, logicalAddress, bytes.length)];
+        case "absoluteAccumulator":
+          return [address2(word2, 2), register2("A")];
+        case "directImmediate":
+          return [address2(bytes[2] ?? 0, 1), immediate(byte)];
+        case "registerXAbsolute":
+          return [register2("X"), address2(word2, 2)];
+        case "registerXDirect":
+        case "registerXDirectIndexedY":
+          return [register2("X"), address2(byte, 1)];
+        case "registerYAbsolute":
+          return [register2("Y"), address2(word2, 2)];
+        case "registerYDirect":
+        case "registerYDirectIndexedX":
+          return [register2("Y"), address2(byte, 1)];
+        case "registerXImmediate":
+          return [register2("X"), immediate(byte)];
+        case "registerYImmediate":
+          return [register2("Y"), immediate(byte)];
+        case "directRelative":
+        case "directIndexedXRelative":
+          return [address2(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+        case "registerYRelative":
+          return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
+        case "registerYADirect":
+          return [register2("YA"), address2(byte, 1)];
+        case "directRegisterYA":
+          return [address2(byte, 1), register2("YA")];
+        case "upperPageCall":
+          return [address2(65280 | byte, 2)];
+        case "directRegisterA":
+        case "directIndexedXRegisterA":
+        case "directIndirectIndexedYRegisterA":
+        case "directIndexedXIndirectRegisterA":
+          return [address2(byte, 1), register2("A")];
+        case "absoluteRegisterA":
+        case "absoluteIndexedXRegisterA":
+        case "absoluteIndexedYRegisterA":
+          return [address2(word2, 2), register2("A")];
+        case "indirectXRegisterA":
+          return [register2("X"), register2("A")];
+        case "directRegisterX":
+        case "directIndexedYRegisterX":
+          return [address2(byte, 1), register2("X")];
+        case "absoluteRegisterX":
+          return [address2(word2, 2), register2("X")];
+        case "directRegisterY":
+        case "directIndexedXRegisterY":
+          return [address2(byte, 1), register2("Y")];
+        case "absoluteRegisterY":
+          return [address2(word2, 2), register2("Y")];
         default:
-          return [];
+          throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
       }
     };
-    targetFor = (specification2, operands, state, logicalAddress) => {
-      const operand = operands[0];
-      if (!operand) return void 0;
-      if (operand.targetAddress !== void 0) return operand.targetAddress;
-      if (operand.value === void 0) return void 0;
-      if (specification2.mode === "absoluteLong") return operand.value;
-      if (specification2.mode === "absolute") {
-        const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
-        return bank << 16 | operand.value;
-      }
-      return void 0;
-    };
-    referencesFor = (specification2, operands, state, logicalAddress) => {
-      const { mnemonic, mode: mode3 } = specification2;
-      const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
-      const isCall = mnemonic === "JSR" || mnemonic === "JSL";
-      const isJump = mnemonic === "JMP" || mnemonic === "JML";
-      if (isBranch || isCall || isJump) {
-        const target = targetFor(specification2, operands, state, logicalAddress);
-        let kind = "jump";
-        if (isBranch) kind = "branch";
-        else if (isCall) kind = "call";
-        return [
-          {
-            kind,
-            operandIndex: 0,
-            ...target === void 0 ? {} : { address: target },
-            ...mode3.includes("Indirect") ? { indirect: true } : {}
-          }
-        ];
-      }
-      if (mode3.includes("Indirect")) {
-        const value = operands[0]?.value;
-        return [
-          {
+    referencesFor2 = (specification2, operands, state) => {
+      const references = [];
+      const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
+      if (branchIndex >= 0) {
+        references.push({
+          kind: "branch",
+          operandIndex: branchIndex,
+          address: operands[branchIndex].targetAddress
+        });
+      } else if (specification2.mnemonic === "TCALL") {
+        const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
+        references.push({ kind: "call", operandIndex: 0, indirect: true });
+        references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
+      } else if (specification2.mnemonic === "PCALL") {
+        references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
+      } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
+        if (specification2.flow.indirect) {
+          references.push({ kind: "jump", operandIndex: 0, indirect: true });
+          references.push({
             kind: "pointer",
             operandIndex: 0,
-            ...value === void 0 ? {} : { address: value },
+            address: operands[0]?.value,
             indirect: true
-          }
-        ];
-      }
-      const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
-      if (!memoryMode || operands[0]?.value === void 0) return [];
-      if (mode3.startsWith("direct")) {
-        return [
-          {
-            kind: "data",
+          });
+        } else {
+          references.push({
+            kind: specification2.mnemonic === "CALL" ? "call" : "jump",
             operandIndex: 0,
-            ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
-          }
-        ];
+            address: operands[0]?.value
+          });
+        }
       }
-      if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
-        return [
-          {
-            kind: "data",
-            operandIndex: 0,
-            ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
-          }
-        ];
+      for (let index = 0; index < operands.length; index++) {
+        const operand = operands[index];
+        if (operand.kind !== "address" || operand.value === void 0) continue;
+        if (references.some((reference) => reference.operandIndex === index)) continue;
+        const isDirect = operand.width === 1;
+        let resolved = operand.value;
+        if (isDirect) {
+          resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+        }
+        references.push({
+          kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
+          operandIndex: index,
+          ...resolved === void 0 ? {} : { address: resolved },
+          ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
+        });
       }
-      return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+      return references;
     };
-    effectsFor2 = (specification2, operands) => {
-      const mask = operands[0]?.value;
-      if (specification2.operandStatusEffect && mask !== void 0) {
-        return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
-      }
-      return specification2.effects;
-    };
-    buildInstruction = (specification2, bytes, context, state) => {
-      const operands = operandsFor(specification2, bytes, context.logicalAddress);
+    buildInstruction2 = (specification2, bytes, context) => {
+      const operands = operandsFor2(specification2, bytes, context.logicalAddress);
       return {
-        architecture: "snes.65816",
+        architecture: "snes.spc700",
         specificationId: specification2.id,
         opcode: specification2.opcode[0],
         mnemonic: specification2.mnemonic,
         mode: specification2.mode,
         offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
+        logicalAddress: context.logicalAddress & 65535,
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor(specification2, operands, state, context.logicalAddress),
+        references: referencesFor2(specification2, operands, context.state ?? {}),
         flow: specification2.flow,
-        effects: effectsFor2(specification2, operands)
+        effects: specification2.effects
       };
     };
-    Cpu65816Decoder = class {
-      /**
-       * Decodes a 65816 instruction.
-       * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
-       * @returns {ArchitectureDecodeResult} The decode result.
-       */
+    Spc700Decoder = class {
       decode(context) {
         const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
         const opcode = context.source.readByte(context.offset);
@@ -6126,72 +6435,162 @@ var init_decoder = __esm({
           return {
             kind: "error",
             code: "outOfBounds",
-            message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+            message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
             offset: context.offset,
             requiredBytes: 1,
             availableBytes
           };
         }
-        const specification2 = cpu65816Specifications[opcode];
+        const specification2 = spc700Specifications[opcode];
         if (!specification2) {
           return {
             kind: "error",
             code: "invalidOpcode",
-            message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+            message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
             offset: context.offset
           };
         }
-        const state = context.state ?? {};
-        let sizes = [specification2.minimumSize];
-        if (specification2.widthFlag) {
-          const width = resolvedWidthFlag(state, specification2.widthFlag);
-          sizes = width === "unknown" ? [2, 3] : [width === 1 ? 2 : 3];
-        }
-        const minimumSize = Math.min(...sizes);
-        const maximumSize = Math.max(...sizes);
-        if (availableBytes < minimumSize) {
+        const size = specification2.minimumSize;
+        if (availableBytes < size) {
           return {
             kind: "error",
             code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+            message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
             offset: context.offset,
-            requiredBytes: minimumSize,
+            requiredBytes: size,
             availableBytes
           };
         }
-        if (sizes.length === 1 && availableBytes < maximumSize) {
-          return {
-            kind: "error",
-            code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
-            offset: context.offset,
-            requiredBytes: maximumSize,
-            availableBytes
-          };
-        }
-        const availableSizes = sizes.filter((size) => size <= availableBytes);
-        const alternatives = availableSizes.map((size) => {
-          const bytes = context.source.readBytes(context.offset, size);
-          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
-          return buildInstruction(specification2, bytes, context, state);
-        });
-        if (sizes.length === 2) {
-          return {
-            kind: "ambiguous",
-            reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
-            requiredState: [specification2.widthFlag ?? "m"],
-            alternatives,
-            ...availableSizes.length === sizes.length ? {} : {
-              unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
-            },
-            minimumSize: 2,
-            maximumSize: 3
-          };
-        }
-        return { kind: "instruction", instruction: alternatives[0] };
+        const bytes = context.source.readBytes(context.offset, size);
+        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+        return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
       }
     };
-    hex = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
+    hex2 = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
+    formatOperands = (instruction) => {
+      const values = instruction.operands.map((operand) => operand.value ?? 0);
+      const target = instruction.operands.find(
+        (operand) => operand.targetAddress !== void 0
+      )?.targetAddress;
+      const dp = () => hex2(values.find((_, index) => instruction.operands[index].kind === "address") ?? 0, 1);
+      const abs = () => hex2(values.find((_, index) => instruction.operands[index].kind === "address") ?? 0, 2);
+      const bit2 = () => values.find((_, index) => instruction.operands[index].kind === "bit") ?? 0;
+      const relativeTarget = () => hex2(target ?? 0, 2);
+      switch (instruction.mode) {
+        case "implied":
+          return "";
+        case "tableCall":
+          return String(values[0]);
+        case "directBit":
+          return dp();
+        case "directBitRelative":
+          return `${dp()},${relativeTarget()}`;
+        case "accumulatorDirect":
+          return `A,${dp()}`;
+        case "accumulatorAbsolute":
+          return `A,${abs()}`;
+        case "accumulatorIndirectX":
+        case "registerAIndirectX":
+          return "A,(X)";
+        case "accumulatorDirectIndexedXIndirect":
+          return `A,(${dp()}+X)`;
+        case "accumulatorImmediate":
+          return `A,#${hex2(values[1], 1)}`;
+        case "directDirect":
+          return `${hex2(values[0], 1)},${hex2(values[1], 1)}`;
+        case "carryMemoryBit":
+          return `C,${abs()}.${bit2()}`;
+        case "carryInvertedMemoryBit":
+          return `C,/${abs()}.${bit2()}`;
+        case "memoryBitCarry":
+          return `${abs()}.${bit2()},C`;
+        case "memoryBit":
+          return `${abs()}.${bit2()}`;
+        case "direct":
+        case "directWord":
+          return dp();
+        case "directIndexedX":
+          return `${dp()}+X`;
+        case "absolute":
+          return abs();
+        case "relative":
+          return relativeTarget();
+        case "absoluteAccumulator":
+          return `${abs()},A`;
+        case "accumulatorDirectIndexedX":
+          return `A,${dp()}+X`;
+        case "accumulatorAbsoluteIndexedX":
+          return `A,${abs()}+X`;
+        case "accumulatorAbsoluteIndexedY":
+          return `A,${abs()}+Y`;
+        case "accumulatorDirectIndirectIndexedY":
+          return `A,(${dp()})+Y`;
+        case "directImmediate":
+          return `${hex2(values[0], 1)},#${hex2(values[1], 1)}`;
+        case "indirectXY":
+          return "(X),(Y)";
+        case "registerXAbsolute":
+          return `X,${abs()}`;
+        case "registerXDirect":
+          return `X,${dp()}`;
+        case "registerXDirectIndexedY":
+          return `X,${dp()}+Y`;
+        case "registerYAbsolute":
+          return `Y,${abs()}`;
+        case "registerYDirect":
+          return `Y,${dp()}`;
+        case "registerYDirectIndexedX":
+          return `Y,${dp()}+X`;
+        case "registerXImmediate":
+          return `X,#${hex2(values[1], 1)}`;
+        case "registerYImmediate":
+          return `Y,#${hex2(values[1], 1)}`;
+        case "absoluteIndexedXIndirect":
+          return `(${abs()}+X)`;
+        case "directRelative":
+          return `${hex2(values[0], 1)},${relativeTarget()}`;
+        case "directIndexedXRelative":
+          return `${hex2(values[0], 1)}+X,${relativeTarget()}`;
+        case "registerYRelative":
+          return `Y,${relativeTarget()}`;
+        case "registerYADirect":
+          return `YA,${dp()}`;
+        case "directRegisterYA":
+          return `${dp()},YA`;
+        case "upperPageCall":
+          return hex2(values[0] & 255, 1);
+        case "directRegisterA":
+          return `${dp()},A`;
+        case "absoluteRegisterA":
+          return `${abs()},A`;
+        case "indirectXRegisterA":
+          return "(X),A";
+        case "directIndexedXIndirectRegisterA":
+          return `(${dp()}+X),A`;
+        case "directIndexedXRegisterA":
+          return `${dp()}+X,A`;
+        case "absoluteIndexedXRegisterA":
+          return `${abs()}+X,A`;
+        case "absoluteIndexedYRegisterA":
+          return `${abs()}+Y,A`;
+        case "directIndirectIndexedYRegisterA":
+          return `(${dp()})+Y,A`;
+        case "directRegisterX":
+          return `${dp()},X`;
+        case "directIndexedYRegisterX":
+          return `${dp()}+Y,X`;
+        case "absoluteRegisterX":
+          return `${abs()},X`;
+        case "directRegisterY":
+          return `${dp()},Y`;
+        case "directIndexedXRegisterY":
+          return `${dp()}+X,Y`;
+        case "absoluteRegisterY":
+          return `${abs()},Y`;
+        default:
+          return spc700Specifications[instruction.opcode]?.syntax ?? "";
+      }
+    };
   }
 });
 
@@ -8219,402 +8618,340 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
-function formatSpc700Instruction(instruction) {
-  if (instruction.architecture !== "snes.spc700") {
-    throw new Error(`Cannot format architecture '${instruction.architecture}' as SPC700.`);
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
+function formatSuperFxInstruction(instruction) {
+  if (instruction.architecture !== "snes.superfx") {
+    throw new Error(`Cannot format architecture '${instruction.architecture}' as SuperFX.`);
   }
-  const operands = formatOperands(instruction);
-  return operands === "" ? instruction.mnemonic : `${instruction.mnemonic} ${operands}`;
+  const values = instruction.operands.map((operand) => operand.value ?? 0);
+  const registers2 = instruction.operands.map((operand) => operand.register ?? "R0");
+  let operands = "";
+  switch (instruction.mode) {
+    case "relative":
+      operands = hex3(instruction.operands[0]?.targetAddress ?? 0, 3);
+      break;
+    case "register":
+      operands = registers2[0];
+      break;
+    case "registerIndirect":
+      operands = `(${registers2[0]})`;
+      break;
+    case "immediateNibble":
+      operands = `#${values[0]}`;
+      break;
+    case "registerImmediate8":
+      operands = `${registers2[0]},#${hex3(values[1], 1)}`;
+      break;
+    case "registerImmediate16":
+      operands = `${registers2[0]},#${hex3(values[1], 2)}`;
+      break;
+    case "registerRegister":
+      operands = `${registers2[0]},${registers2[1]}`;
+      break;
+    case "registerRegisterIndirect":
+      operands = `${registers2[0]},(${registers2[1]})`;
+      break;
+    case "registerIndirectRegister":
+      operands = `(${registers2[0]}),${registers2[1]}`;
+      break;
+    case "registerRamShort":
+    case "registerRamAbsolute":
+      operands = `${registers2[0]},(${hex3(values[1], 2)})`;
+      break;
+    case "ramShortRegister":
+    case "ramAbsoluteRegister":
+      operands = `(${hex3(values[0], 2)}),${registers2[1]}`;
+      break;
+  }
+  return operands ? `${instruction.mnemonic} ${operands}` : instruction.mnemonic;
 }
-var readLittleEndian2, signedByte, register2, address2, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder, hex2, formatOperands;
-var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+var word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex3;
+var init_superfx_decoder = __esm({
+  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
-    init_spc700_spec();
-    readLittleEndian2 = (bytes, offset, width) => {
-      let value = 0;
-      for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
-      return value >>> 0;
-    };
-    signedByte = (value) => value & 128 ? value - 256 : value;
-    register2 = (name) => ({ kind: "register", register: name });
-    address2 = (value, width) => ({
+    init_superfx_spec();
+    word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
+    register3 = (value) => ({ kind: "register", register: `R${value}` });
+    immediate2 = (value, width, signed2 = false) => ({
+      kind: "immediate",
+      value,
+      width,
+      ...signed2 ? { signed: true } : {}
+    });
+    address3 = (value, width) => ({
       kind: "address",
       value,
       width
     });
-    immediate = (value) => ({ kind: "immediate", value, width: 1 });
-    bit = (value) => ({ kind: "bit", value, width: 1 });
-    relative = (value, logicalAddress, size) => ({
-      kind: "displacement",
-      value: signedByte(value),
-      width: 1,
-      signed: true,
-      targetAddress: logicalAddress + size + signedByte(value) & 65535
-    });
-    bitAddress = (bytes) => {
-      const encoded = readLittleEndian2(bytes, 1, 2);
-      return [address2(encoded & 8191, 2), bit(encoded >>> 13)];
-    };
-    fixedRegisters = {
-      registerA: ["A"],
-      registerX: ["X"],
-      registerY: ["Y"],
-      registerP: ["P"],
-      registerYA: ["YA"],
-      registerYAX: ["YA", "X"],
-      registerXA: ["X", "A"],
-      registerAX: ["A", "X"],
-      registerXSP: ["X", "SP"],
-      registerSPX: ["SP", "X"],
-      registerAY: ["A", "Y"],
-      registerYA2: ["Y", "A"],
-      registerPostIncrementXA: ["X", "A"],
-      registerAPostIncrementX: ["A", "X"],
-      registerIndirectXA: ["X", "A"],
-      registerAIndirectX: ["A", "X"],
-      indirectXY: ["X", "Y"]
-    };
-    operandsFor2 = (specification2, bytes, logicalAddress) => {
-      const byte = bytes[1] ?? 0;
-      const word2 = readLittleEndian2(bytes, 1, 2);
-      const fixed = fixedRegisters[specification2.mode];
-      if (fixed) return fixed.map(register2);
-      switch (specification2.mode) {
+    operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
+      const operandOffset = prefixLength + 1;
+      const registerNumber = specification2.register ?? 0;
+      switch (specification2.operandEncoding) {
         case "implied":
           return [];
-        case "tableCall":
-          return [immediate(specification2.opcode[0] >>> 4)];
-        case "directBit":
-          return [address2(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
-        case "directBitRelative":
+        case "relative": {
+          const raw = bytes[operandOffset] ?? 0;
+          const displacement = raw & 128 ? raw - 256 : raw;
           return [
-            address2(byte, 1),
-            bit(Number(specification2.mnemonic.at(-1))),
-            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 1,
+              signed: true,
+              targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
+            }
           ];
-        case "accumulatorDirect":
-        case "accumulatorDirectIndexedX":
-        case "accumulatorDirectIndexedXIndirect":
-        case "accumulatorDirectIndirectIndexedY":
-          return [register2("A"), address2(byte, 1)];
-        case "accumulatorAbsolute":
-        case "accumulatorAbsoluteIndexedX":
-        case "accumulatorAbsoluteIndexedY":
-          return [register2("A"), address2(word2, 2)];
-        case "accumulatorIndirectX":
-          return [register2("A"), register2("X")];
-        case "accumulatorImmediate":
-          return [register2("A"), immediate(byte)];
-        case "directDirect":
-          return [address2(bytes[2] ?? 0, 1), address2(byte, 1)];
-        case "carryMemoryBit":
-        case "carryInvertedMemoryBit": {
-          const [memory, bit2] = bitAddress(bytes);
-          return [register2("C"), memory, bit2];
         }
-        case "memoryBitCarry": {
-          const [memory, bit2] = bitAddress(bytes);
-          return [memory, bit2, register2("C")];
-        }
-        case "memoryBit":
-          return bitAddress(bytes);
-        case "direct":
-        case "directIndexedX":
-        case "directWord":
-          return [address2(byte, 1)];
-        case "absolute":
-        case "absoluteIndexedXIndirect":
-          return [address2(word2, 2)];
-        case "relative":
-          return [relative(byte, logicalAddress, bytes.length)];
-        case "absoluteAccumulator":
-          return [address2(word2, 2), register2("A")];
-        case "directImmediate":
-          return [address2(bytes[2] ?? 0, 1), immediate(byte)];
-        case "registerXAbsolute":
-          return [register2("X"), address2(word2, 2)];
-        case "registerXDirect":
-        case "registerXDirectIndexedY":
-          return [register2("X"), address2(byte, 1)];
-        case "registerYAbsolute":
-          return [register2("Y"), address2(word2, 2)];
-        case "registerYDirect":
-        case "registerYDirectIndexedX":
-          return [register2("Y"), address2(byte, 1)];
-        case "registerXImmediate":
-          return [register2("X"), immediate(byte)];
-        case "registerYImmediate":
-          return [register2("Y"), immediate(byte)];
-        case "directRelative":
-        case "directIndexedXRelative":
-          return [address2(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
-        case "registerYRelative":
-          return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
-        case "registerYADirect":
-          return [register2("YA"), address2(byte, 1)];
-        case "directRegisterYA":
-          return [address2(byte, 1), register2("YA")];
-        case "upperPageCall":
-          return [address2(65280 | byte, 2)];
-        case "directRegisterA":
-        case "directIndexedXRegisterA":
-        case "directIndirectIndexedYRegisterA":
-        case "directIndexedXIndirectRegisterA":
-          return [address2(byte, 1), register2("A")];
-        case "absoluteRegisterA":
-        case "absoluteIndexedXRegisterA":
-        case "absoluteIndexedYRegisterA":
-          return [address2(word2, 2), register2("A")];
-        case "indirectXRegisterA":
-          return [register2("X"), register2("A")];
-        case "directRegisterX":
-        case "directIndexedYRegisterX":
-          return [address2(byte, 1), register2("X")];
-        case "absoluteRegisterX":
-          return [address2(word2, 2), register2("X")];
-        case "directRegisterY":
-        case "directIndexedXRegisterY":
-          return [address2(byte, 1), register2("Y")];
-        case "absoluteRegisterY":
-          return [address2(word2, 2), register2("Y")];
-        default:
-          throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
+        case "register":
+        case "registerIndirect":
+          return [register3(registerNumber)];
+        case "immediateNibble":
+          return [immediate2(registerNumber, 1)];
+        case "registerImmediate8":
+          return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
+        case "registerImmediate16":
+          return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
+        case "registerRamShort":
+          return [register3(registerNumber), address3((bytes[operandOffset] ?? 0) << 1, 2)];
+        case "ramShortRegister":
+          return [address3((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
+        case "registerRamAbsolute":
+          return [register3(registerNumber), address3(word(bytes, operandOffset), 2)];
+        case "ramAbsoluteRegister":
+          return [address3(word(bytes, operandOffset), 2), register3(registerNumber)];
       }
+      throw new Error("Unsupported SuperFX operand encoding.");
     };
-    referencesFor2 = (specification2, operands, state) => {
-      const references = [];
-      const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
-      if (branchIndex >= 0) {
-        references.push({
-          kind: "branch",
-          operandIndex: branchIndex,
-          address: operands[branchIndex].targetAddress
-        });
-      } else if (specification2.mnemonic === "TCALL") {
-        const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
-        references.push({ kind: "call", operandIndex: 0, indirect: true });
-        references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
-      } else if (specification2.mnemonic === "PCALL") {
-        references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
-      } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
-        if (specification2.flow.indirect) {
-          references.push({ kind: "jump", operandIndex: 0, indirect: true });
-          references.push({
-            kind: "pointer",
-            operandIndex: 0,
-            address: operands[0]?.value,
-            indirect: true
-          });
-        } else {
-          references.push({
-            kind: specification2.mnemonic === "CALL" ? "call" : "jump",
-            operandIndex: 0,
-            address: operands[0]?.value
-          });
+    r15Target = (specification2, operands, state, logicalAddress) => {
+      if (specification2.register === 15) {
+        if (specification2.mnemonic === "IWT") {
+          return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
         }
-      }
-      for (let index = 0; index < operands.length; index++) {
-        const operand = operands[index];
-        if (operand.kind !== "address" || operand.value === void 0) continue;
-        if (references.some((reference) => reference.operandIndex === index)) continue;
-        const isDirect = operand.width === 1;
-        let resolved = operand.value;
-        if (isDirect) {
-          resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+        if (specification2.mnemonic === "IBT") {
+          const raw = operands[1]?.value ?? 0;
+          const target = raw & 128 ? 65280 | raw : raw;
+          const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
+          return (bank & 255) << 16 | target;
         }
-        references.push({
-          kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
-          operandIndex: index,
-          ...resolved === void 0 ? {} : { address: resolved },
-          ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
-        });
+        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
       }
-      return references;
+      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
+      return void 0;
     };
-    buildInstruction2 = (specification2, bytes, context) => {
-      const operands = operandsFor2(specification2, bytes, context.logicalAddress);
+    controlsFor = (specification2, operands, state, logicalAddress) => {
+      const r15 = r15Target(specification2, operands, state, logicalAddress);
+      if (typeof r15 === "number") {
+        return {
+          flow: { kind: "jump", fallthrough: false },
+          references: [{ kind: "jump", operandIndex: 1, address: r15 }]
+        };
+      }
+      if (r15 === "indirect") {
+        return {
+          flow: { kind: "jump", fallthrough: false, indirect: true },
+          references: [{ kind: "jump", indirect: true }]
+        };
+      }
+      if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
+        };
+      }
+      if (specification2.mnemonic === "LOOP") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "branch", indirect: true }]
+        };
+      }
+      if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "jump", operandIndex: 0, indirect: true }]
+        };
+      }
+      let memoryIndex;
+      if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
+        memoryIndex = 1;
+      } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
+        memoryIndex = 0;
+      }
+      if (memoryIndex !== void 0) {
+        return {
+          flow: specification2.flow,
+          references: [
+            { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
+          ]
+        };
+      }
+      if (specification2.operandEncoding === "registerIndirect") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
+        };
+      }
+      return { flow: specification2.flow, references: [] };
+    };
+    buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
+      const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
+      const controls = controlsFor(specification2, operands, state, context.logicalAddress);
       return {
-        architecture: "snes.spc700",
+        architecture: "snes.superfx",
         specificationId: specification2.id,
         opcode: specification2.opcode[0],
         mnemonic: specification2.mnemonic,
         mode: specification2.mode,
         offset: context.offset,
-        logicalAddress: context.logicalAddress & 65535,
+        logicalAddress: context.logicalAddress & 16777215,
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor2(specification2, operands, context.state ?? {}),
+        references: controls.references,
+        flow: controls.flow,
+        effects: specification2.effects
+      };
+    };
+    buildFusedInstruction = (specification2, bytes, context) => {
+      let operands;
+      if (specification2.mode === "registerRegister") {
+        operands = [
+          register3(specification2.destinationRegister),
+          register3(specification2.sourceRegister ?? 0)
+        ];
+      } else if (specification2.mode === "registerRegisterIndirect") {
+        operands = [
+          register3(specification2.destinationRegister),
+          register3(specification2.pointerRegister ?? 0)
+        ];
+      } else {
+        operands = [
+          register3(specification2.sourceRegister ?? 0),
+          register3(specification2.pointerRegister ?? 0)
+        ];
+      }
+      return {
+        architecture: "snes.superfx",
+        specificationId: specification2.id,
+        opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
+        mnemonic: specification2.mnemonic,
+        mode: specification2.mode,
+        offset: context.offset,
+        logicalAddress: context.logicalAddress & 16777215,
+        bytes,
+        size: bytes.length,
+        operands,
+        references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
         flow: specification2.flow,
         effects: specification2.effects
       };
     };
-    Spc700Decoder = class {
+    matchFused = (context) => superFxFusedSpecifications.find(
+      (entry) => entry.opcode.every((value, index) => context.source.readByte(context.offset + index) === value)
+    );
+    availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+    truncated = (context, requiredBytes) => ({
+      kind: "error",
+      code: "truncated",
+      message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
+      offset: context.offset,
+      requiredBytes,
+      availableBytes: availableAt(context)
+    });
+    prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
+    SuperFxDecoder = class {
       decode(context) {
-        const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
         const opcode = context.source.readByte(context.offset);
         if (opcode === void 0) {
           return {
             kind: "error",
             code: "outOfBounds",
-            message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
+            message: `No SuperFX opcode exists at offset ${context.offset}.`,
             offset: context.offset,
-            requiredBytes: 1,
-            availableBytes
+            availableBytes: availableAt(context)
           };
         }
-        const specification2 = spc700Specifications[opcode];
-        if (!specification2) {
+        const state = context.state ?? {};
+        const requestedAlt = state.alt ?? 0;
+        if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
           return {
             kind: "error",
-            code: "invalidOpcode",
-            message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
-            offset: context.offset
-          };
-        }
-        const size = specification2.minimumSize;
-        if (availableBytes < size) {
-          return {
-            kind: "error",
-            code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
+            code: "invalidState",
+            message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
             offset: context.offset,
-            requiredBytes: size,
-            availableBytes
+            availableBytes: availableAt(context)
           };
         }
-        const bytes = context.source.readBytes(context.offset, size);
-        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
-        return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
+        if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
+          const fused2 = matchFused(context);
+          if (fused2) {
+            const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
+            if (!bytes2) return truncated(context, fused2.minimumSize);
+            return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
+          }
+        }
+        const prefix = prefixAlt(opcode);
+        if (prefix !== void 0) {
+          const next = context.source.readByte(context.offset + 1);
+          const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
+          if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
+            const effective = superFxOpcodeMatrix[prefix][next];
+            if (effective.alteredByAlt) {
+              const required = effective.minimumSize + 1;
+              const bytes3 = context.source.readBytes(context.offset, required);
+              if (!bytes3) return truncated(context, required);
+              return {
+                kind: "instruction",
+                instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
+              };
+            }
+          }
+          const specification3 = superFxOpcodeMatrix[0][opcode];
+          const bytes2 = context.source.readBytes(context.offset, 1);
+          return {
+            kind: "instruction",
+            instruction: buildInstruction3(specification3, bytes2, context, state, 0)
+          };
+        }
+        if (requestedAlt === "unknown") {
+          const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
+          const unique = [
+            ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
+          ];
+          if (unique.length > 1) {
+            const alternatives = unique.flatMap((entry) => {
+              const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
+              return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
+            });
+            return {
+              kind: "ambiguous",
+              reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
+              requiredState: ["alt"],
+              alternatives,
+              minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
+              maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
+              ...alternatives.length === unique.length ? {} : {
+                unavailableAlternatives: unique.filter(
+                  (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
+                ).map((entry) => ({
+                  code: "truncated",
+                  size: entry.minimumSize,
+                  availableBytes: availableAt(context)
+                }))
+              }
+            };
+          }
+        }
+        const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
+        const specification2 = superFxOpcodeMatrix[alt][opcode];
+        const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
+        if (!bytes) return truncated(context, specification2.minimumSize);
+        return {
+          kind: "instruction",
+          instruction: buildInstruction3(specification2, bytes, context, state, 0)
+        };
       }
     };
-    hex2 = (value, width) => `$${(value >>> 0).toString(16).toUpperCase().padStart(width * 2, "0").slice(-width * 2)}`;
-    formatOperands = (instruction) => {
-      const values = instruction.operands.map((operand) => operand.value ?? 0);
-      const target = instruction.operands.find(
-        (operand) => operand.targetAddress !== void 0
-      )?.targetAddress;
-      const dp = () => hex2(values.find((_, index) => instruction.operands[index].kind === "address") ?? 0, 1);
-      const abs = () => hex2(values.find((_, index) => instruction.operands[index].kind === "address") ?? 0, 2);
-      const bit2 = () => values.find((_, index) => instruction.operands[index].kind === "bit") ?? 0;
-      const relativeTarget = () => hex2(target ?? 0, 2);
-      switch (instruction.mode) {
-        case "implied":
-          return "";
-        case "tableCall":
-          return String(values[0]);
-        case "directBit":
-          return dp();
-        case "directBitRelative":
-          return `${dp()},${relativeTarget()}`;
-        case "accumulatorDirect":
-          return `A,${dp()}`;
-        case "accumulatorAbsolute":
-          return `A,${abs()}`;
-        case "accumulatorIndirectX":
-        case "registerAIndirectX":
-          return "A,(X)";
-        case "accumulatorDirectIndexedXIndirect":
-          return `A,(${dp()}+X)`;
-        case "accumulatorImmediate":
-          return `A,#${hex2(values[1], 1)}`;
-        case "directDirect":
-          return `${hex2(values[0], 1)},${hex2(values[1], 1)}`;
-        case "carryMemoryBit":
-          return `C,${abs()}.${bit2()}`;
-        case "carryInvertedMemoryBit":
-          return `C,/${abs()}.${bit2()}`;
-        case "memoryBitCarry":
-          return `${abs()}.${bit2()},C`;
-        case "memoryBit":
-          return `${abs()}.${bit2()}`;
-        case "direct":
-        case "directWord":
-          return dp();
-        case "directIndexedX":
-          return `${dp()}+X`;
-        case "absolute":
-          return abs();
-        case "relative":
-          return relativeTarget();
-        case "absoluteAccumulator":
-          return `${abs()},A`;
-        case "accumulatorDirectIndexedX":
-          return `A,${dp()}+X`;
-        case "accumulatorAbsoluteIndexedX":
-          return `A,${abs()}+X`;
-        case "accumulatorAbsoluteIndexedY":
-          return `A,${abs()}+Y`;
-        case "accumulatorDirectIndirectIndexedY":
-          return `A,(${dp()})+Y`;
-        case "directImmediate":
-          return `${hex2(values[0], 1)},#${hex2(values[1], 1)}`;
-        case "indirectXY":
-          return "(X),(Y)";
-        case "registerXAbsolute":
-          return `X,${abs()}`;
-        case "registerXDirect":
-          return `X,${dp()}`;
-        case "registerXDirectIndexedY":
-          return `X,${dp()}+Y`;
-        case "registerYAbsolute":
-          return `Y,${abs()}`;
-        case "registerYDirect":
-          return `Y,${dp()}`;
-        case "registerYDirectIndexedX":
-          return `Y,${dp()}+X`;
-        case "registerXImmediate":
-          return `X,#${hex2(values[1], 1)}`;
-        case "registerYImmediate":
-          return `Y,#${hex2(values[1], 1)}`;
-        case "absoluteIndexedXIndirect":
-          return `(${abs()}+X)`;
-        case "directRelative":
-          return `${hex2(values[0], 1)},${relativeTarget()}`;
-        case "directIndexedXRelative":
-          return `${hex2(values[0], 1)}+X,${relativeTarget()}`;
-        case "registerYRelative":
-          return `Y,${relativeTarget()}`;
-        case "registerYADirect":
-          return `YA,${dp()}`;
-        case "directRegisterYA":
-          return `${dp()},YA`;
-        case "upperPageCall":
-          return hex2(values[0] & 255, 1);
-        case "directRegisterA":
-          return `${dp()},A`;
-        case "absoluteRegisterA":
-          return `${abs()},A`;
-        case "indirectXRegisterA":
-          return "(X),A";
-        case "directIndexedXIndirectRegisterA":
-          return `(${dp()}+X),A`;
-        case "directIndexedXRegisterA":
-          return `${dp()}+X,A`;
-        case "absoluteIndexedXRegisterA":
-          return `${abs()}+X,A`;
-        case "absoluteIndexedYRegisterA":
-          return `${abs()}+Y,A`;
-        case "directIndirectIndexedYRegisterA":
-          return `(${dp()})+Y,A`;
-        case "directRegisterX":
-          return `${dp()},X`;
-        case "directIndexedYRegisterX":
-          return `${dp()}+Y,X`;
-        case "absoluteRegisterX":
-          return `${abs()},X`;
-        case "directRegisterY":
-          return `${dp()},Y`;
-        case "directIndexedXRegisterY":
-          return `${dp()}+X,Y`;
-        case "absoluteRegisterY":
-          return `${abs()},Y`;
-        default:
-          return spc700Specifications[instruction.opcode]?.syntax ?? "";
-      }
-    };
+    hex3 = (value, width) => `$${value.toString(16).toUpperCase().padStart(width * 2, "0")}`;
   }
 });
 
@@ -9482,343 +9819,6 @@ var init_superfx = __esm({
         }
       }
     };
-  }
-});
-
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
-function formatSuperFxInstruction(instruction) {
-  if (instruction.architecture !== "snes.superfx") {
-    throw new Error(`Cannot format architecture '${instruction.architecture}' as SuperFX.`);
-  }
-  const values = instruction.operands.map((operand) => operand.value ?? 0);
-  const registers2 = instruction.operands.map((operand) => operand.register ?? "R0");
-  let operands = "";
-  switch (instruction.mode) {
-    case "relative":
-      operands = hex3(instruction.operands[0]?.targetAddress ?? 0, 3);
-      break;
-    case "register":
-      operands = registers2[0];
-      break;
-    case "registerIndirect":
-      operands = `(${registers2[0]})`;
-      break;
-    case "immediateNibble":
-      operands = `#${values[0]}`;
-      break;
-    case "registerImmediate8":
-      operands = `${registers2[0]},#${hex3(values[1], 1)}`;
-      break;
-    case "registerImmediate16":
-      operands = `${registers2[0]},#${hex3(values[1], 2)}`;
-      break;
-    case "registerRegister":
-      operands = `${registers2[0]},${registers2[1]}`;
-      break;
-    case "registerRegisterIndirect":
-      operands = `${registers2[0]},(${registers2[1]})`;
-      break;
-    case "registerIndirectRegister":
-      operands = `(${registers2[0]}),${registers2[1]}`;
-      break;
-    case "registerRamShort":
-    case "registerRamAbsolute":
-      operands = `${registers2[0]},(${hex3(values[1], 2)})`;
-      break;
-    case "ramShortRegister":
-    case "ramAbsoluteRegister":
-      operands = `(${hex3(values[0], 2)}),${registers2[1]}`;
-      break;
-  }
-  return operands ? `${instruction.mnemonic} ${operands}` : instruction.mnemonic;
-}
-var word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex3;
-var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
-    "use strict";
-    init_superfx_spec();
-    word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
-    register3 = (value) => ({ kind: "register", register: `R${value}` });
-    immediate2 = (value, width, signed2 = false) => ({
-      kind: "immediate",
-      value,
-      width,
-      ...signed2 ? { signed: true } : {}
-    });
-    address3 = (value, width) => ({
-      kind: "address",
-      value,
-      width
-    });
-    operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
-      const operandOffset = prefixLength + 1;
-      const registerNumber = specification2.register ?? 0;
-      switch (specification2.operandEncoding) {
-        case "implied":
-          return [];
-        case "relative": {
-          const raw = bytes[operandOffset] ?? 0;
-          const displacement = raw & 128 ? raw - 256 : raw;
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 1,
-              signed: true,
-              targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
-            }
-          ];
-        }
-        case "register":
-        case "registerIndirect":
-          return [register3(registerNumber)];
-        case "immediateNibble":
-          return [immediate2(registerNumber, 1)];
-        case "registerImmediate8":
-          return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
-        case "registerImmediate16":
-          return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
-        case "registerRamShort":
-          return [register3(registerNumber), address3((bytes[operandOffset] ?? 0) << 1, 2)];
-        case "ramShortRegister":
-          return [address3((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
-        case "registerRamAbsolute":
-          return [register3(registerNumber), address3(word(bytes, operandOffset), 2)];
-        case "ramAbsoluteRegister":
-          return [address3(word(bytes, operandOffset), 2), register3(registerNumber)];
-      }
-      throw new Error("Unsupported SuperFX operand encoding.");
-    };
-    r15Target = (specification2, operands, state, logicalAddress) => {
-      if (specification2.register === 15) {
-        if (specification2.mnemonic === "IWT") {
-          return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
-        }
-        if (specification2.mnemonic === "IBT") {
-          const raw = operands[1]?.value ?? 0;
-          const target = raw & 128 ? 65280 | raw : raw;
-          const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
-          return (bank & 255) << 16 | target;
-        }
-        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
-      }
-      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
-      return void 0;
-    };
-    controlsFor = (specification2, operands, state, logicalAddress) => {
-      const r15 = r15Target(specification2, operands, state, logicalAddress);
-      if (typeof r15 === "number") {
-        return {
-          flow: { kind: "jump", fallthrough: false },
-          references: [{ kind: "jump", operandIndex: 1, address: r15 }]
-        };
-      }
-      if (r15 === "indirect") {
-        return {
-          flow: { kind: "jump", fallthrough: false, indirect: true },
-          references: [{ kind: "jump", indirect: true }]
-        };
-      }
-      if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
-        };
-      }
-      if (specification2.mnemonic === "LOOP") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "branch", indirect: true }]
-        };
-      }
-      if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "jump", operandIndex: 0, indirect: true }]
-        };
-      }
-      let memoryIndex;
-      if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
-        memoryIndex = 1;
-      } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
-        memoryIndex = 0;
-      }
-      if (memoryIndex !== void 0) {
-        return {
-          flow: specification2.flow,
-          references: [
-            { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
-          ]
-        };
-      }
-      if (specification2.operandEncoding === "registerIndirect") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
-        };
-      }
-      return { flow: specification2.flow, references: [] };
-    };
-    buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
-      const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
-      const controls = controlsFor(specification2, operands, state, context.logicalAddress);
-      return {
-        architecture: "snes.superfx",
-        specificationId: specification2.id,
-        opcode: specification2.opcode[0],
-        mnemonic: specification2.mnemonic,
-        mode: specification2.mode,
-        offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
-        bytes,
-        size: bytes.length,
-        operands,
-        references: controls.references,
-        flow: controls.flow,
-        effects: specification2.effects
-      };
-    };
-    buildFusedInstruction = (specification2, bytes, context) => {
-      let operands;
-      if (specification2.mode === "registerRegister") {
-        operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.sourceRegister ?? 0)
-        ];
-      } else if (specification2.mode === "registerRegisterIndirect") {
-        operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.pointerRegister ?? 0)
-        ];
-      } else {
-        operands = [
-          register3(specification2.sourceRegister ?? 0),
-          register3(specification2.pointerRegister ?? 0)
-        ];
-      }
-      return {
-        architecture: "snes.superfx",
-        specificationId: specification2.id,
-        opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
-        mnemonic: specification2.mnemonic,
-        mode: specification2.mode,
-        offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
-        bytes,
-        size: bytes.length,
-        operands,
-        references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
-        flow: specification2.flow,
-        effects: specification2.effects
-      };
-    };
-    matchFused = (context) => superFxFusedSpecifications.find(
-      (entry) => entry.opcode.every((value, index) => context.source.readByte(context.offset + index) === value)
-    );
-    availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
-    truncated = (context, requiredBytes) => ({
-      kind: "error",
-      code: "truncated",
-      message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
-      offset: context.offset,
-      requiredBytes,
-      availableBytes: availableAt(context)
-    });
-    prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
-    SuperFxDecoder = class {
-      decode(context) {
-        const opcode = context.source.readByte(context.offset);
-        if (opcode === void 0) {
-          return {
-            kind: "error",
-            code: "outOfBounds",
-            message: `No SuperFX opcode exists at offset ${context.offset}.`,
-            offset: context.offset,
-            availableBytes: availableAt(context)
-          };
-        }
-        const state = context.state ?? {};
-        const requestedAlt = state.alt ?? 0;
-        if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
-          return {
-            kind: "error",
-            code: "invalidState",
-            message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
-            offset: context.offset,
-            availableBytes: availableAt(context)
-          };
-        }
-        if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
-          const fused2 = matchFused(context);
-          if (fused2) {
-            const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
-            if (!bytes2) return truncated(context, fused2.minimumSize);
-            return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
-          }
-        }
-        const prefix = prefixAlt(opcode);
-        if (prefix !== void 0) {
-          const next = context.source.readByte(context.offset + 1);
-          const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
-          if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
-            const effective = superFxOpcodeMatrix[prefix][next];
-            if (effective.alteredByAlt) {
-              const required = effective.minimumSize + 1;
-              const bytes3 = context.source.readBytes(context.offset, required);
-              if (!bytes3) return truncated(context, required);
-              return {
-                kind: "instruction",
-                instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
-              };
-            }
-          }
-          const specification3 = superFxOpcodeMatrix[0][opcode];
-          const bytes2 = context.source.readBytes(context.offset, 1);
-          return {
-            kind: "instruction",
-            instruction: buildInstruction3(specification3, bytes2, context, state, 0)
-          };
-        }
-        if (requestedAlt === "unknown") {
-          const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
-          const unique = [
-            ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
-          ];
-          if (unique.length > 1) {
-            const alternatives = unique.flatMap((entry) => {
-              const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
-              return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
-            });
-            return {
-              kind: "ambiguous",
-              reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
-              requiredState: ["alt"],
-              alternatives,
-              minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
-              maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
-              ...alternatives.length === unique.length ? {} : {
-                unavailableAlternatives: unique.filter(
-                  (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
-                ).map((entry) => ({
-                  code: "truncated",
-                  size: entry.minimumSize,
-                  availableBytes: availableAt(context)
-                }))
-              }
-            };
-          }
-        }
-        const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
-        const specification2 = superFxOpcodeMatrix[alt][opcode];
-        const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
-        if (!bytes) return truncated(context, specification2.minimumSize);
-        return {
-          kind: "instruction",
-          instruction: buildInstruction3(specification2, bytes, context, state, 0)
-        };
-      }
-    };
-    hex3 = (value, width) => `$${value.toString(16).toUpperCase().padStart(width * 2, "0")}`;
   }
 });
 
@@ -11568,13 +11568,6 @@ var init_processor_source_export = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
-var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
-    "use strict";
-  }
-});
-
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
 var builtins, SNES_HEURISTIC_RULE_IDS;
 var init_function_heuristics = __esm({
@@ -11636,6 +11629,13 @@ var init_function_heuristics = __esm({
       "block-copy",
       "wrapper"
     ];
+  }
+});
+
+// packages/plugin-snes/src/disassembler/runtime-code.ts
+var init_runtime_code = __esm({
+  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+    "use strict";
   }
 });
 
@@ -12421,17 +12421,17 @@ var init_src2 = __esm({
   "packages/plugin-snes/src/index.ts"() {
     "use strict";
     init_src();
-    init__();
     init_decoder();
     init_spec();
-    init_spc700();
+    init__();
+    init_operand_classifiers();
     init_spc700_decoder();
     init_spc700_spec();
-    init_superfx();
+    init_spc700();
+    init_split_operands();
     init_superfx_decoder();
     init_superfx_spec();
-    init_operand_classifiers();
-    init_split_operands();
+    init_superfx();
     init_compatibility();
     init_ca65_compat();
     init_freespace();
@@ -12917,6 +12917,51 @@ import { fileURLToPath } from "node:url";
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
+// packages/debug-adapter/src/capture-v2.ts
+var maxU64 = (1n << 64n) - 1n;
+var captureU64 = (value) => {
+  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64)
+    throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
+  return BigInt(value);
+};
+var captureSession = (value) => {
+  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value))
+    throw new Error("Invalid capture session identity.");
+  return value;
+};
+var validateCaptureRequest = (value) => {
+  if (!value || typeof value !== "object") throw new Error("Invalid capture request.");
+  let fields = ["operation", "session"];
+  if (value.operation === "capabilities") fields = ["operation"];
+  if (value.operation === "start") fields = ["operation", "bufferBytes"];
+  if (value.operation === "read") fields = ["operation", "session", "chunk"];
+  if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
+  if (Object.keys(value).some((key) => !fields.includes(key)))
+    throw new Error(
+      "Unsupported capture negotiation field; this version supports only lossless 65816 instructions with durable ownership."
+    );
+  if (value.operation === "capabilities") return;
+  if (value.operation === "start") {
+    if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024)
+      throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+    return;
+  }
+  captureSession(value.session);
+  if (["status", "stop", "abort", "release"].includes(value.operation)) return;
+  if (value.operation === "read" || value.operation === "ack") {
+    if (!captureU64(value.chunk)) throw new Error("Capture chunk sequence starts at one.");
+    if (value.operation === "ack" && !captureU64(value.event))
+      throw new Error("Capture event sequence starts at one.");
+    return;
+  }
+  throw new Error("Unsupported capture operation.");
+};
+var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
+  let crc = byte;
+  for (let bit2 = 0; bit2 < 8; bit2++) crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+  return crc >>> 0;
+});
+
 // packages/debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
@@ -12936,6 +12981,7 @@ var DEBUG_SIDECAR_COMMANDS = Object.freeze([
   "startTrace",
   "readTrace",
   "stopTrace",
+  "capture",
   "ping",
   "shutdown"
 ]);
@@ -13340,6 +13386,13 @@ var DebugSidecarServer = class {
         address(args.address, "Disassembly address"),
         integer(args.count, "Disassembly count")
       );
+    if (request.command === "capture") {
+      const capture = args;
+      validateCaptureRequest(capture);
+      if (!this.#implementation.capture)
+        throw new Error("This backend does not support capture v2.");
+      return this.#implementation.capture(capture);
+    }
     if (request.command === "startTrace") {
       if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full")
         throw new Error("Trace detail must be pc or full.");
@@ -13429,8 +13482,8 @@ var DebugSidecarServer = class {
 
 // packages/debug-sidecar-mesence/src/mesen-backend.ts
 init_src();
-init_src2();
 import { Buffer as Buffer2 } from "node:buffer";
+init_src2();
 
 // packages/debug-sidecar-mesence/src/profile.ts
 var MESEN_BACKEND_ID = "mesence-debug-server";
@@ -14858,7 +14911,7 @@ var MesenProcessHost = class {
     await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
     for (const resource of this.#manifest.resources) {
       await this.#verifyHash(
-        path.join(this.#runtimeDirectory, ...resource.path.split("/")),
+        path.join(this.#runtimeDirectory, resource.path),
         resource.sha256,
         `resource '${resource.path}'`
       );

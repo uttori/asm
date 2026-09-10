@@ -103,19 +103,20 @@ export const annotationLocationsForSource = (
     // may have changed or been reused since the last export.
     for (const [id, source] of sources) {
       source.split(/\r?\n/).forEach((value, index) => {
-        if (value.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1] === reference)
-          locations.push(
-            ...annotationLocationsForSource(
-              map,
-              id,
-              source,
-              index + 1,
-              0,
-              shards,
-              sources,
-              fileAddressSpaces,
-            ),
-          );
+        if (value.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1] === reference) {
+          // A generated line may map to many addresses; preserve all matches without a variadic call.
+          for (const location of annotationLocationsForSource(
+            map,
+            id,
+            source,
+            index + 1,
+            0,
+            shards,
+            sources,
+            fileAddressSpaces,
+          ))
+            locations.push(location);
+        }
       });
     }
     return locations;

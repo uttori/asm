@@ -1,3 +1,4 @@
+import { test } from "../../../tests/ava-helper.js";
 import {
   DEBUG_SIDECAR_PROTOCOL,
   DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -10,7 +11,6 @@ import {
   type DebugSidecarTransport,
   type DebugSubscription,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 
 class MemoryTransport implements DebugSidecarTransport {
   readonly dataListeners = new Set<(data: Uint8Array) => void>();

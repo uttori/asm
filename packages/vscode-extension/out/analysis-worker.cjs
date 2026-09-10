@@ -38,6 +38,4027 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
+// packages/disassembler/src/asset-codec.ts
+var init_asset_codec = __esm({
+  "packages/disassembler/src/asset-codec.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/asset-codecs/common.ts
+var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
+var init_common = __esm({
+  "packages/disassembler/src/asset-codecs/common.ts"() {
+    "use strict";
+    objectValue = (value, label) => {
+      if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
+        if (value === void 0) return {};
+        throw new Error(`${label} must be an object.`);
+      }
+      return value;
+    };
+    optionsFor = (context) => objectValue(context.request.options, `Asset '${context.request.id}' options`);
+    stringOption = (options, key2, fallback) => {
+      const value = options[key2];
+      if (value === void 0) return fallback;
+      if (typeof value !== "string") throw new Error(`Asset option '${key2}' must be a string.`);
+      return value;
+    };
+    booleanOption = (options, key2, fallback = false) => {
+      const value = options[key2];
+      if (value === void 0) return fallback;
+      if (typeof value !== "boolean") throw new Error(`Asset option '${key2}' must be boolean.`);
+      return value;
+    };
+    integerOption = (options, key2, settings6 = {}) => {
+      const value = options[key2] ?? settings6.fallback;
+      if (value === void 0) return void 0;
+      if (typeof value !== "number" || !Number.isSafeInteger(value) || settings6.minimum !== void 0 && value < settings6.minimum || settings6.maximum !== void 0 && value > settings6.maximum) {
+        throw new Error(`Asset option '${key2}' is outside its integer bounds.`);
+      }
+      return value;
+    };
+    byteOrderOption = (options) => {
+      const value = stringOption(options, "endian", "little");
+      if (value !== "little" && value !== "big") {
+        throw new Error("Asset option 'endian' must be 'little' or 'big'.");
+      }
+      return value;
+    };
+    readExactAssetBytes = (context, size = context.inspection.size) => {
+      return readAssetBytes(context, size);
+    };
+    readAssetBytes = (context, size) => {
+      const bytes = context.source.read(context.request.sourceOffset, size);
+      if (!bytes) throw new Error(`Asset '${context.request.id}' source range is unreadable.`);
+      return bytes;
+    };
+    resolveCountAndSize = (context, unitSize, options = optionsFor(context)) => {
+      if (!Number.isSafeInteger(unitSize) || unitSize <= 0) {
+        throw new Error("Asset unit size must be a positive safe integer.");
+      }
+      const configuredCount = integerOption(options, "count", { minimum: 1 });
+      const requestedLength = context.request.length;
+      if (configuredCount === void 0 && requestedLength === void 0) {
+        throw new Error(`Asset '${context.request.id}' requires either length or option 'count'.`);
+      }
+      if (requestedLength !== void 0 && requestedLength % unitSize !== 0) {
+        throw new Error(
+          `Asset '${context.request.id}' length ${requestedLength} is not divisible by ${unitSize}.`
+        );
+      }
+      const count = configuredCount ?? requestedLength / unitSize;
+      const size = count * unitSize;
+      if (!Number.isSafeInteger(size))
+        throw new Error(`Asset '${context.request.id}' size overflowed.`);
+      if (requestedLength !== void 0 && requestedLength !== size) {
+        throw new Error(
+          `Asset '${context.request.id}' count ${count} requires ${size} bytes, not ${requestedLength}.`
+        );
+      }
+      return { count, size };
+    };
+    readInteger = (bytes, offset, width2, endian, signed2 = false) => {
+      let value = 0;
+      for (let index = 0; index < width2; index++) {
+        const byteIndex = endian === "little" ? offset + index : offset + width2 - index - 1;
+        value += (bytes[byteIndex] ?? 0) * 2 ** (index * 8);
+      }
+      const modulus = 2 ** (width2 * 8);
+      return signed2 && value >= modulus / 2 ? value - modulus : value;
+    };
+    writeInteger = (bytes, offset, width2, endian, value, signed2 = false) => {
+      const modulus = 2 ** (width2 * 8);
+      const minimum = signed2 ? -modulus / 2 : 0;
+      const maximum = signed2 ? modulus / 2 - 1 : modulus - 1;
+      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+        throw new Error(
+          `Integer ${String(value)} does not fit ${signed2 ? "signed" : "unsigned"} ${width2}-byte storage.`
+        );
+      }
+      let remaining = value < 0 ? value + modulus : value;
+      for (let index = 0; index < width2; index++) {
+        const byteIndex = endian === "little" ? offset + index : offset + width2 - index - 1;
+        bytes[byteIndex] = remaining % 256;
+        remaining = Math.floor(remaining / 256);
+      }
+    };
+    decodedObject = (value, owner) => objectValue(value, `Decoded asset '${owner}'`);
+    numberArray = (value, label) => {
+      if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
+      return value.map((entry) => {
+        if (typeof entry !== "number" || !Number.isSafeInteger(entry)) {
+          throw new Error(`${label} must contain only safe integers.`);
+        }
+        return entry;
+      });
+    };
+    byteArray = (value, label) => {
+      const values = numberArray(value, label);
+      if (values.some((entry) => entry < 0 || entry > 255)) {
+        throw new Error(`${label} must contain only bytes in the range 0..255.`);
+      }
+      return values;
+    };
+    defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
+    jsonFile = (path8, value) => ({
+      path: path8,
+      mediaType: "application/json",
+      bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
+`)
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/index-table.ts
+var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor, indexTableAssetCodec;
+var init_index_table = __esm({
+  "packages/disassembler/src/asset-codecs/index-table.ts"() {
+    "use strict";
+    init_common();
+    INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
+    settings = (context) => {
+      const options = optionsFor(context);
+      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
+      const endian = byteOrderOption(options);
+      const baseIndex = integerOption(options, "baseIndex", { fallback: 0 });
+      const nullValue = integerOption(options, "nullValue", {
+        minimum: 0,
+        maximum: 2 ** (width2 * 8) - 1
+      });
+      const { count, size } = resolveCountAndSize(context, width2, options);
+      if (!Array.isArray(options.targets)) {
+        throw new Error("Index-table option 'targets' must be an array.");
+      }
+      const indexes = /* @__PURE__ */ new Set();
+      const targets = options.targets.map((value, position) => {
+        const target = objectValue(value, `Index target ${position}`);
+        const index = integerOption(target, "index", { minimum: 0 });
+        const id = stringOption(target, "id");
+        const addressSpace = stringOption(target, "addressSpace");
+        const address3 = integerOption(target, "address", { minimum: 0 });
+        if (index === void 0 || !id || !addressSpace || address3 === void 0) {
+          throw new Error(`Index target ${position} is incomplete.`);
+        }
+        if (indexes.has(index)) throw new Error(`Index target ${index} is duplicated.`);
+        indexes.add(index);
+        return { index, id, addressSpace, address: address3 };
+      });
+      return { options, width: width2, endian, baseIndex, nullValue, count, size, targets };
+    };
+    indexesFor = (context) => {
+      const resolved = settings(context);
+      const bytes = readAssetBytes(context, resolved.size);
+      const indexes = Array.from({ length: resolved.count }, (_, index) => {
+        const raw = readInteger(bytes, index * resolved.width, resolved.width, resolved.endian);
+        return resolved.nullValue !== void 0 && raw === resolved.nullValue ? null : raw + resolved.baseIndex;
+      });
+      return { settings: resolved, indexes };
+    };
+    referencesFor = (entries3) => {
+      const targets = new Map(entries3.settings.targets.map((target) => [target.index, target]));
+      return entries3.indexes.flatMap((index, position) => {
+        if (index === null) return [];
+        const target = targets.get(index);
+        return target ? [
+          {
+            id: `entry-${position.toString().padStart(4, "0")}`,
+            kind: "index",
+            addressSpace: target.addressSpace,
+            address: target.address,
+            width: entries3.settings.width,
+            targetAssetId: target.id,
+            detail: `Index ${index}`
+          }
+        ] : [];
+      });
+    };
+    indexTableAssetCodec = Object.freeze({
+      id: INDEX_TABLE_ASSET_CODEC_ID,
+      version: "1.0.0",
+      sizeBounds: { minimum: 1 },
+      inspect: (context) => {
+        const entries3 = indexesFor(context);
+        return {
+          size: entries3.settings.size,
+          references: referencesFor(entries3),
+          metadata: {
+            count: entries3.settings.count,
+            width: entries3.settings.width,
+            endian: entries3.settings.endian,
+            baseIndex: entries3.settings.baseIndex,
+            unresolvedIndexes: entries3.indexes.filter(
+              (index) => index !== null && !entries3.settings.targets.some((target) => target.index === index)
+            )
+          }
+        };
+      },
+      decode: (context) => {
+        const entries3 = indexesFor(context);
+        const value = { kind: "index-table", indexes: entries3.indexes };
+        const path8 = stringOption(
+          entries3.settings.options,
+          "path",
+          defaultAssetPath(context.request.id, "json")
+        );
+        return { value, files: [jsonFile(path8, value)] };
+      },
+      encode: (context) => {
+        const resolved = settings(context);
+        const value = decodedObject(context.decoded.value, context.request.id);
+        if (!Array.isArray(value.indexes) || value.indexes.length !== resolved.count) {
+          throw new Error(`Index asset '${context.request.id}' requires ${resolved.count} indexes.`);
+        }
+        const bytes = new Uint8Array(resolved.size);
+        value.indexes.forEach((index, position) => {
+          let raw;
+          if (index === null) {
+            if (resolved.nullValue === void 0) {
+              throw new Error(`Index asset '${context.request.id}' has null without a nullValue.`);
+            }
+            raw = resolved.nullValue;
+          } else {
+            if (typeof index !== "number" || !Number.isSafeInteger(index)) {
+              throw new Error(`Index asset '${context.request.id}' indexes must be integers or null.`);
+            }
+            raw = index - resolved.baseIndex;
+          }
+          writeInteger(bytes, position * resolved.width, resolved.width, resolved.endian, raw);
+        });
+        return bytes;
+      }
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/pointer-table.ts
+var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor2, pointerTableAssetCodec;
+var init_pointer_table = __esm({
+  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
+    "use strict";
+    init_common();
+    POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
+    settings2 = (context) => {
+      const options = optionsFor(context);
+      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 2 });
+      const endian = byteOrderOption(options);
+      const base = integerOption(options, "base", { fallback: 0 });
+      const scale = integerOption(options, "scale", { minimum: 1, fallback: 1 });
+      const nullValue = integerOption(options, "nullValue", {
+        minimum: 0,
+        maximum: 2 ** (width2 * 8) - 1
+      });
+      const addressSpace = stringOption(options, "addressSpace", context.request.addressSpace);
+      if (addressSpace === "") throw new Error("Pointer target address space cannot be empty.");
+      const { count, size } = resolveCountAndSize(context, width2, options);
+      const targetIdsValue = options.targetAssetIds;
+      let targetAssetIds = [];
+      if (targetIdsValue !== void 0) {
+        if (!Array.isArray(targetIdsValue) || targetIdsValue.length !== count) {
+          throw new Error("Pointer option 'targetAssetIds' must match the pointer count.");
+        }
+        targetAssetIds = targetIdsValue.map((value) => {
+          if (value !== null && typeof value !== "string") {
+            throw new Error("Pointer target asset ids must be strings or null.");
+          }
+          return value;
+        });
+      }
+      return {
+        options,
+        width: width2,
+        endian,
+        base,
+        scale,
+        nullValue,
+        addressSpace,
+        count,
+        size,
+        targetAssetIds
+      };
+    };
+    entriesFor = (context) => {
+      const resolved = settings2(context);
+      const bytes = readAssetBytes(context, resolved.size);
+      const rawValues = Array.from(
+        { length: resolved.count },
+        (_, index) => readInteger(bytes, index * resolved.width, resolved.width, resolved.endian)
+      );
+      const addresses2 = rawValues.map((raw) => {
+        if (resolved.nullValue !== void 0 && raw === resolved.nullValue) return null;
+        const address3 = resolved.base + raw * resolved.scale;
+        if (!Number.isSafeInteger(address3) || address3 < 0) {
+          throw new Error(`Pointer asset '${context.request.id}' produced an invalid address.`);
+        }
+        return address3;
+      });
+      return { settings: resolved, rawValues, addresses: addresses2 };
+    };
+    referencesFor2 = (entries3) => entries3.addresses.flatMap(
+      (address3, index) => address3 === null ? [] : [
+        {
+          id: `entry-${index.toString().padStart(4, "0")}`,
+          kind: "pointer",
+          addressSpace: entries3.settings.addressSpace,
+          address: address3,
+          width: entries3.settings.width,
+          ...entries3.settings.targetAssetIds[index] ? { targetAssetId: entries3.settings.targetAssetIds[index] } : {}
+        }
+      ]
+    );
+    pointerTableAssetCodec = Object.freeze({
+      id: POINTER_TABLE_ASSET_CODEC_ID,
+      version: "1.0.0",
+      sizeBounds: { minimum: 1 },
+      inspect: (context) => {
+        const entries3 = entriesFor(context);
+        return {
+          size: entries3.settings.size,
+          references: referencesFor2(entries3),
+          metadata: {
+            count: entries3.settings.count,
+            width: entries3.settings.width,
+            endian: entries3.settings.endian,
+            base: entries3.settings.base,
+            scale: entries3.settings.scale,
+            ...entries3.settings.nullValue === void 0 ? {} : { nullValue: entries3.settings.nullValue }
+          }
+        };
+      },
+      decode: (context) => {
+        const entries3 = entriesFor(context);
+        const value = {
+          kind: "pointer-table",
+          addresses: entries3.addresses,
+          rawValues: entries3.rawValues
+        };
+        const path8 = stringOption(
+          entries3.settings.options,
+          "path",
+          defaultAssetPath(context.request.id, "json")
+        );
+        return { value, files: [jsonFile(path8, value)] };
+      },
+      encode: (context) => {
+        const resolved = settings2(context);
+        const value = decodedObject(context.decoded.value, context.request.id);
+        if (!Array.isArray(value.addresses) || value.addresses.length !== resolved.count) {
+          throw new Error(
+            `Pointer asset '${context.request.id}' requires ${resolved.count} addresses.`
+          );
+        }
+        const bytes = new Uint8Array(resolved.size);
+        value.addresses.forEach((address3, index) => {
+          let raw;
+          if (address3 === null) {
+            if (resolved.nullValue === void 0) {
+              throw new Error(`Pointer asset '${context.request.id}' has null without a nullValue.`);
+            }
+            raw = resolved.nullValue;
+          } else {
+            if (typeof address3 !== "number" || !Number.isSafeInteger(address3)) {
+              throw new Error(
+                `Pointer asset '${context.request.id}' addresses must be integers or null.`
+              );
+            }
+            const relative2 = address3 - resolved.base;
+            if (relative2 < 0 || relative2 % resolved.scale !== 0) {
+              throw new Error(`Pointer address ${address3} is not representable by its base and scale.`);
+            }
+            raw = relative2 / resolved.scale;
+          }
+          writeInteger(bytes, index * resolved.width, resolved.width, resolved.endian, raw);
+        });
+        return bytes;
+      }
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/raw.ts
+var import_node_crypto, RAW_ASSET_CODEC_ID, rawAssetCodec;
+var init_raw = __esm({
+  "packages/disassembler/src/asset-codecs/raw.ts"() {
+    "use strict";
+    import_node_crypto = require("node:crypto");
+    init_common();
+    RAW_ASSET_CODEC_ID = "uttori.asset.raw";
+    rawAssetCodec = Object.freeze({
+      id: RAW_ASSET_CODEC_ID,
+      version: "1.0.0",
+      sizeBounds: { minimum: 1 },
+      inspect: ({ request: request2 }) => {
+        if (request2.length === void 0) {
+          throw new Error(`Raw asset '${request2.id}' requires an exact length.`);
+        }
+        return { size: request2.length, metadata: { sourceForm: "incbin" } };
+      },
+      decode: (context) => {
+        const bytes = readExactAssetBytes(context);
+        const options = optionsFor(context);
+        const path8 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
+        const mediaType = stringOption(options, "mediaType", "application/octet-stream");
+        return {
+          value: {
+            kind: "raw",
+            bytes: [...bytes],
+            sha256: (0, import_node_crypto.createHash)("sha256").update(bytes).digest("hex")
+          },
+          files: [{ path: path8, mediaType, bytes }]
+        };
+      },
+      encode: ({ decoded, request: request2 }) => {
+        const value = decodedObject(decoded.value, request2.id);
+        return Uint8Array.from(byteArray(value.bytes, `Raw asset '${request2.id}' bytes`));
+      }
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/scalar-array.ts
+var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
+var init_scalar_array = __esm({
+  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
+    "use strict";
+    init_common();
+    SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
+    settings3 = (context) => {
+      const options = optionsFor(context);
+      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
+      const endian = byteOrderOption(options);
+      const signed2 = booleanOption(options, "signed");
+      const { count, size } = resolveCountAndSize(context, width2, options);
+      return { options, width: width2, endian, signed: signed2, count, size };
+    };
+    scalarArrayAssetCodec = Object.freeze({
+      id: SCALAR_ARRAY_ASSET_CODEC_ID,
+      version: "1.0.0",
+      sizeBounds: { minimum: 1 },
+      inspect: (context) => {
+        const { width: width2, endian, signed: signed2, count, size } = settings3(context);
+        return { size, metadata: { width: width2, endian, signed: signed2, count } };
+      },
+      decode: (context) => {
+        const { options, width: width2, endian, signed: signed2, count } = settings3(context);
+        const bytes = readExactAssetBytes(context);
+        const values = Array.from(
+          { length: count },
+          (_, index) => readInteger(bytes, index * width2, width2, endian, signed2)
+        );
+        const value = { kind: "scalar-array", width: width2, endian, signed: signed2, values };
+        const path8 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path8, value)] };
+      },
+      encode: (context) => {
+        const { width: width2, endian, signed: signed2, count, size } = settings3(context);
+        const value = decodedObject(context.decoded.value, context.request.id);
+        const values = numberArray(value.values, `Scalar asset '${context.request.id}' values`);
+        if (values.length !== count) {
+          throw new Error(`Scalar asset '${context.request.id}' requires exactly ${count} values.`);
+        }
+        const bytes = new Uint8Array(size);
+        values.forEach(
+          (entry, index) => writeInteger(bytes, index * width2, width2, endian, entry, signed2)
+        );
+        return bytes;
+      }
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/struct-array.ts
+var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
+var init_struct_array = __esm({
+  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
+    "use strict";
+    init_common();
+    STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
+    parseFields = (options) => {
+      const input = options.fields;
+      if (!Array.isArray(input) || input.length === 0) {
+        throw new Error("Struct asset option 'fields' must be a non-empty array.");
+      }
+      const defaultEndian = byteOrderOption(options);
+      const names = /* @__PURE__ */ new Set();
+      const fields = input.map((entry, index) => {
+        const definition = objectValue(entry, `Struct field ${index}`);
+        const name = stringOption(definition, "name");
+        if (!name) throw new Error(`Struct field ${index} requires a non-empty name.`);
+        if (names.has(name)) throw new Error(`Struct field name '${name}' is duplicated.`);
+        names.add(name);
+        const signed2 = booleanOption(definition, "signed");
+        const bitOffset = integerOption(definition, "bitOffset", { minimum: 0 });
+        const bits = integerOption(definition, "bits", { minimum: 1, maximum: 32 });
+        if (bitOffset !== void 0 || bits !== void 0) {
+          if (bitOffset === void 0 || bits === void 0) {
+            throw new Error(`Bitfield '${name}' requires both 'bitOffset' and 'bits'.`);
+          }
+          return { kind: "bitfield", name, bitStart: bitOffset, bitLength: bits, signed: signed2 };
+        }
+        const byteOffset = integerOption(definition, "offset", { minimum: 0 });
+        if (byteOffset === void 0) throw new Error(`Scalar field '${name}' requires 'offset'.`);
+        const width2 = integerOption(definition, "width", { minimum: 1, maximum: 4, fallback: 1 });
+        const endianValue = stringOption(definition, "endian", defaultEndian);
+        if (endianValue !== "little" && endianValue !== "big") {
+          throw new Error(`Scalar field '${name}' has an invalid byte order.`);
+        }
+        return {
+          kind: "scalar",
+          name,
+          bitStart: byteOffset * 8,
+          bitLength: width2 * 8,
+          byteOffset,
+          width: width2,
+          endian: endianValue,
+          signed: signed2
+        };
+      });
+      for (let left = 0; left < fields.length; left++) {
+        const leftEnd = fields[left].bitStart + fields[left].bitLength;
+        for (let right = left + 1; right < fields.length; right++) {
+          const rightEnd = fields[right].bitStart + fields[right].bitLength;
+          if (fields[left].bitStart < rightEnd && fields[right].bitStart < leftEnd) {
+            throw new Error(
+              `Struct fields '${fields[left].name}' and '${fields[right].name}' overlap.`
+            );
+          }
+        }
+      }
+      const requiredBits = fields.reduce(
+        (maximum, field) => Math.max(maximum, field.bitStart + field.bitLength),
+        -Infinity
+      );
+      const requiredStride = Math.ceil(requiredBits / 8);
+      const stride = integerOption(options, "stride", { minimum: requiredStride }) ?? requiredStride;
+      return { fields, stride };
+    };
+    settings4 = (context) => {
+      const options = optionsFor(context);
+      const { fields, stride } = parseFields(options);
+      const { count, size } = resolveCountAndSize(context, stride, options);
+      return { options, fields, stride, count, size };
+    };
+    readBits = (bytes, base, field) => {
+      let value = 0;
+      for (let index = 0; index < field.bitLength; index++) {
+        const bit2 = field.bitStart + index;
+        if (((bytes[base + Math.floor(bit2 / 8)] ?? 0) & 1 << bit2 % 8) !== 0) {
+          value += 2 ** index;
+        }
+      }
+      const modulus = 2 ** field.bitLength;
+      return field.signed && value >= modulus / 2 ? value - modulus : value;
+    };
+    writeBits = (bytes, base, field, value) => {
+      const modulus = 2 ** field.bitLength;
+      const minimum = field.signed ? -modulus / 2 : 0;
+      const maximum = field.signed ? modulus / 2 - 1 : modulus - 1;
+      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+        throw new Error(`Field '${field.name}' value does not fit ${field.bitLength} bits.`);
+      }
+      const encoded = value < 0 ? value + modulus : value;
+      for (let index = 0; index < field.bitLength; index++) {
+        const bit2 = field.bitStart + index;
+        const byteIndex = base + Math.floor(bit2 / 8);
+        const mask = 1 << bit2 % 8;
+        bytes[byteIndex] = (encoded & 2 ** index) === 0 ? bytes[byteIndex] & ~mask : bytes[byteIndex] | mask;
+      }
+    };
+    structArrayAssetCodec = Object.freeze({
+      id: STRUCT_ARRAY_ASSET_CODEC_ID,
+      version: "1.0.0",
+      sizeBounds: { minimum: 1 },
+      inspect: (context) => {
+        const { fields, stride, count, size } = settings4(context);
+        return {
+          size,
+          metadata: {
+            count,
+            stride,
+            bitOrder: "lsb0",
+            fields: fields.map((field) => ({ ...field }))
+          }
+        };
+      },
+      decode: (context) => {
+        const { options, fields, stride, count } = settings4(context);
+        const bytes = readExactAssetBytes(context);
+        const records = Array.from({ length: count }, (_, recordIndex) => {
+          const base = recordIndex * stride;
+          return Object.fromEntries(
+            fields.map((field) => [
+              field.name,
+              field.kind === "scalar" ? readInteger(bytes, base + field.byteOffset, field.width, field.endian, field.signed) : readBits(bytes, base, field)
+            ])
+          );
+        });
+        const value = {
+          kind: "struct-array",
+          raw: [...bytes],
+          records
+        };
+        const path8 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path8, value)] };
+      },
+      encode: (context) => {
+        const { fields, stride, count, size } = settings4(context);
+        const value = decodedObject(context.decoded.value, context.request.id);
+        const raw = byteArray(value.raw, `Struct asset '${context.request.id}' raw bytes`);
+        if (raw.length !== size) {
+          throw new Error(
+            `Struct asset '${context.request.id}' raw backing must remain ${size} bytes.`
+          );
+        }
+        if (!Array.isArray(value.records) || value.records.length !== count) {
+          throw new Error(`Struct asset '${context.request.id}' requires exactly ${count} records.`);
+        }
+        const bytes = Uint8Array.from(raw);
+        value.records.forEach((recordValue, recordIndex) => {
+          const record = objectValue(recordValue, `Struct record ${recordIndex}`);
+          const base = recordIndex * stride;
+          for (const field of fields) {
+            const fieldValue = record[field.name];
+            if (typeof fieldValue !== "number") {
+              throw new Error(`Struct field '${field.name}' requires an integer value.`);
+            }
+            if (field.kind === "scalar") {
+              writeInteger(
+                bytes,
+                base + field.byteOffset,
+                field.width,
+                field.endian,
+                fieldValue,
+                field.signed
+              );
+            } else {
+              writeBits(bytes, base, field, fieldValue);
+            }
+          }
+        });
+        return bytes;
+      }
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/text.ts
+var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
+var init_text = __esm({
+  "packages/disassembler/src/asset-codecs/text.ts"() {
+    "use strict";
+    init_common();
+    TEXT_ASSET_CODEC_ID = "uttori.asset.text";
+    parseByteKey = (key2) => {
+      const normalized = key2.startsWith("$") ? `0x${key2.slice(1)}` : key2;
+      let value = Number.NaN;
+      if (/^0x[\da-f]+$/i.test(normalized)) {
+        value = Number.parseInt(normalized.slice(2), 16);
+      } else if (/^\d+$/.test(normalized)) {
+        value = Number.parseInt(normalized, 10);
+      }
+      if (!Number.isSafeInteger(value) || value < 0 || value > 255) {
+        throw new Error(`Text table byte '${key2}' must be in the range 0..255.`);
+      }
+      return value;
+    };
+    settings5 = (context) => {
+      const options = optionsFor(context);
+      const byteToToken = /* @__PURE__ */ new Map();
+      if (booleanOption(options, "ascii", true)) {
+        byteToToken.set(9, "	");
+        byteToToken.set(10, "\n");
+        byteToToken.set(13, "\r");
+        for (let byte = 32; byte <= 126; byte++) {
+          if (byte !== 92) byteToToken.set(byte, String.fromCharCode(byte));
+        }
+      }
+      const table = objectValue(options.table, "Text asset option 'table'");
+      for (const [key2, tokenValue] of Object.entries(table)) {
+        if (typeof tokenValue !== "string" || tokenValue.length === 0 || tokenValue.includes("\\")) {
+          throw new Error(`Text table entry '${key2}' must be a non-empty string without backslashes.`);
+        }
+        byteToToken.set(parseByteKey(key2), tokenValue);
+      }
+      const tokenToByte = [...byteToToken.entries()].map(([byte, token]) => [token, byte]);
+      const tokens = /* @__PURE__ */ new Set();
+      for (const [token] of tokenToByte) {
+        if (tokens.has(token)) throw new Error(`Text table token '${token}' is duplicated.`);
+        tokens.add(token);
+      }
+      for (const [left] of tokenToByte) {
+        const ambiguous = tokenToByte.find(
+          ([right]) => left !== right && (left.startsWith(right) || right.startsWith(left))
+        );
+        if (ambiguous) {
+          throw new Error(`Text table tokens '${left}' and '${ambiguous[0]}' are not prefix-free.`);
+        }
+      }
+      tokenToByte.sort(([left], [right]) => right.length - left.length || left.localeCompare(right));
+      const terminator = integerOption(options, "terminator", { minimum: 0, maximum: 255 });
+      return { options, byteToToken, tokenToByte, terminator };
+    };
+    inspectedSize = (context, resolved) => {
+      if (context.request.length !== void 0) return context.request.length;
+      if (resolved.terminator === void 0) {
+        throw new Error(`Text asset '${context.request.id}' requires a length or terminator.`);
+      }
+      const maxLength = integerOption(resolved.options, "maxLength", { minimum: 1 });
+      if (maxLength === void 0) {
+        throw new Error(
+          `Text asset '${context.request.id}' requires 'maxLength' for terminator search.`
+        );
+      }
+      for (let size = 1; size <= maxLength; size++) {
+        const bytes = context.source.read(context.request.sourceOffset + size - 1, 1);
+        if (!bytes) break;
+        if (bytes[0] === resolved.terminator) return size;
+      }
+      throw new Error(
+        `Text asset '${context.request.id}' has no terminator within ${maxLength} bytes.`
+      );
+    };
+    textValue = (bytes, resolved) => [...bytes].map(
+      (byte) => resolved.byteToToken.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`
+    ).join("");
+    encodeText = (text, resolved, owner) => {
+      const bytes = [];
+      for (let offset = 0; offset < text.length; ) {
+        if (text[offset] === "\\" && /^\\x[\da-f]{2}/i.test(text.slice(offset, offset + 4))) {
+          bytes.push(Number.parseInt(text.slice(offset + 2, offset + 4), 16));
+          offset += 4;
+          continue;
+        }
+        const match = resolved.tokenToByte.find(([token]) => text.startsWith(token, offset));
+        if (!match) {
+          throw new Error(`Text asset '${owner}' cannot encode text at character ${offset}.`);
+        }
+        bytes.push(match[1]);
+        offset += match[0].length;
+      }
+      return Uint8Array.from(bytes);
+    };
+    textAssetCodec = Object.freeze({
+      id: TEXT_ASSET_CODEC_ID,
+      version: "1.0.0",
+      sizeBounds: { minimum: 1 },
+      inspect: (context) => {
+        const resolved = settings5(context);
+        const size = inspectedSize(context, resolved);
+        return {
+          size,
+          metadata: {
+            encoding: "single-byte-translation-table",
+            terminated: resolved.terminator !== void 0,
+            ...resolved.terminator === void 0 ? {} : { terminator: resolved.terminator }
+          }
+        };
+      },
+      decode: (context) => {
+        const resolved = settings5(context);
+        const bytes = readAssetBytes(context, context.inspection.size);
+        const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
+        const payload = terminated ? bytes.subarray(0, -1) : bytes;
+        const value = { kind: "text", text: textValue(payload, resolved), terminated };
+        const path8 = stringOption(
+          resolved.options,
+          "path",
+          defaultAssetPath(context.request.id, "txt")
+        );
+        return {
+          value,
+          files: [
+            {
+              path: path8,
+              mediaType: "text/plain; charset=utf-8",
+              bytes: new TextEncoder().encode(value.text)
+            }
+          ]
+        };
+      },
+      encode: (context) => {
+        const resolved = settings5(context);
+        const value = decodedObject(context.decoded.value, context.request.id);
+        const text = value.text;
+        const terminated = value.terminated;
+        if (typeof text !== "string" || typeof terminated !== "boolean") {
+          throw new Error(
+            `Text asset '${context.request.id}' requires string text and terminated flag.`
+          );
+        }
+        const payload = encodeText(text, resolved, context.request.id);
+        if (!terminated) return payload;
+        if (resolved.terminator === void 0) {
+          throw new Error(
+            `Text asset '${context.request.id}' cannot append an unconfigured terminator.`
+          );
+        }
+        const bytes = new Uint8Array(payload.length + 1);
+        bytes.set(payload);
+        bytes[bytes.length - 1] = resolved.terminator;
+        return bytes;
+      }
+    });
+  }
+});
+
+// packages/disassembler/src/asset-codecs/index.ts
+var builtinAssetCodecs;
+var init_asset_codecs = __esm({
+  "packages/disassembler/src/asset-codecs/index.ts"() {
+    "use strict";
+    init_index_table();
+    init_pointer_table();
+    init_raw();
+    init_scalar_array();
+    init_struct_array();
+    init_text();
+    init_index_table();
+    init_pointer_table();
+    init_raw();
+    init_scalar_array();
+    init_struct_array();
+    init_text();
+    builtinAssetCodecs = Object.freeze(
+      [
+        indexTableAssetCodec,
+        pointerTableAssetCodec,
+        rawAssetCodec,
+        scalarArrayAssetCodec,
+        structArrayAssetCodec,
+        textAssetCodec
+      ].sort((left, right) => left.id.localeCompare(right.id))
+    );
+  }
+});
+
+// packages/disassembler/src/asset-preview.ts
+var init_asset_preview = __esm({
+  "packages/disassembler/src/asset-preview.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/analysis-graph.ts
+var sortedUnique, sortedUniqueNumbers, addressKey, outputOffsetsFor, buildAnalysisCallGraph;
+var init_analysis_graph = __esm({
+  "packages/disassembler/src/analysis-graph.ts"() {
+    "use strict";
+    sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+    sortedUniqueNumbers = (values) => [...new Set(values)].sort((left, right) => left - right);
+    addressKey = (addressSpace, address3) => `${addressSpace}:${address3}`;
+    outputOffsetsFor = (nodeIds, nodesById) => sortedUniqueNumbers(
+      nodeIds.flatMap((id) => {
+        const node = nodesById.get(id);
+        return node?.fileOffset === void 0 ? [] : [node.fileOffset];
+      })
+    );
+    buildAnalysisCallGraph = (shards) => {
+      const nodes = shards.analysis.filter(
+        (record) => record.kind === "cfg-node"
+      );
+      const nodesById = new Map(nodes.map((node) => [node.id, node]));
+      const functionRecords = shards.analysis.filter(
+        (record) => record.kind === "function"
+      );
+      const functionsByAddress = /* @__PURE__ */ new Map();
+      for (const fn of functionRecords) {
+        const key2 = addressKey(fn.addressSpace, fn.address);
+        functionsByAddress.set(key2, [...functionsByAddress.get(key2) ?? [], fn]);
+      }
+      const ownersByNode = /* @__PURE__ */ new Map();
+      const ownerFunctionIds = (node) => {
+        if (!node) return [];
+        const cached = ownersByNode.get(node.id);
+        if (cached) return cached;
+        const path8 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
+        for (let index = path8.length - 1; index >= 0; index--) {
+          const candidate = nodesById.get(path8[index]);
+          if (!candidate) continue;
+          const matches = functionsByAddress.get(addressKey(candidate.addressSpace, candidate.address));
+          if (matches) {
+            const owners = sortedUnique(matches.map(({ id }) => id));
+            ownersByNode.set(node.id, owners);
+            return owners;
+          }
+        }
+        ownersByNode.set(node.id, []);
+        return [];
+      };
+      const callRecords = shards.analysis.filter(
+        (record) => record.kind === "cfg-edge" && (record.edgeKind === "call" || record.edgeKind === "interrupt") && record.toAddress !== void 0
+      );
+      const calls = callRecords.map((edge) => {
+        const fromNode = nodesById.get(edge.from);
+        const callerFunctionIds = ownerFunctionIds(fromNode);
+        const calleeFunctionIds = sortedUnique(
+          (functionsByAddress.get(addressKey(edge.addressSpace, edge.toAddress)) ?? []).map(
+            ({ id }) => id
+          )
+        );
+        const toNodeIds = edge.to ? [edge.to] : [];
+        return {
+          id: edge.id,
+          edgeKind: edge.edgeKind,
+          addressSpace: edge.addressSpace,
+          fromAddress: edge.fromAddress,
+          toAddress: edge.toAddress,
+          fromNodeId: edge.from,
+          ...edge.to ? { toNodeId: edge.to } : {},
+          callerFunctionIds,
+          calleeFunctionIds,
+          fromOutputOffsets: outputOffsetsFor([edge.from], nodesById),
+          toOutputOffsets: outputOffsetsFor(toNodeIds, nodesById),
+          indirect: edge.indirect,
+          ...edge.override ? { override: edge.override } : {},
+          ...edge.explanation ? { explanation: edge.explanation } : {},
+          evidence: edge.evidence
+        };
+      });
+      const unresolvedRecords = shards.analysis.filter(
+        (record) => record.kind === "unresolved"
+      );
+      const unresolvedEdges = shards.analysis.filter(
+        (record) => record.kind === "cfg-edge" && record.edgeKind === "unresolved"
+      );
+      const unresolved = unresolvedRecords.map((record) => {
+        const matchingNodes = sortedUnique(
+          unresolvedEdges.filter(
+            (edge) => edge.addressSpace === record.addressSpace && edge.fromAddress === record.address
+          ).map(({ from }) => from)
+        );
+        return {
+          id: record.id,
+          addressSpace: record.addressSpace,
+          address: record.address,
+          flowKind: record.flowKind,
+          indirect: record.indirect,
+          reason: record.reason,
+          nodeIds: matchingNodes,
+          ownerFunctionIds: sortedUnique(
+            matchingNodes.flatMap((id) => ownerFunctionIds(nodesById.get(id)))
+          ),
+          outputOffsets: outputOffsetsFor(matchingNodes, nodesById),
+          evidence: record.evidence
+        };
+      });
+      const nodeIdsByFunction = /* @__PURE__ */ new Map();
+      const append2 = (map, key2, id) => {
+        const entries3 = map.get(key2);
+        if (entries3) entries3.push(id);
+        else map.set(key2, [id]);
+      };
+      const incoming = /* @__PURE__ */ new Map();
+      const outgoing = /* @__PURE__ */ new Map();
+      const unresolvedByOwner = /* @__PURE__ */ new Map();
+      for (const call of calls) {
+        for (const id of call.calleeFunctionIds) append2(incoming, id, call.id);
+        for (const id of call.callerFunctionIds) append2(outgoing, id, call.id);
+      }
+      for (const record of unresolved) {
+        for (const id of record.ownerFunctionIds) append2(unresolvedByOwner, id, record.id);
+      }
+      for (const node of nodes) {
+        for (const owner of ownerFunctionIds(node)) {
+          append2(nodeIdsByFunction, owner, node.id);
+        }
+      }
+      const functions = functionRecords.map((fn) => {
+        const nodeIds = sortedUnique(nodeIdsByFunction.get(fn.id) ?? []);
+        return {
+          id: fn.id,
+          addressSpace: fn.addressSpace,
+          address: fn.address,
+          source: fn.source,
+          labels: shards.labels.filter((label) => label.addressSpace === fn.addressSpace && label.address === fn.address).map(({ id, name }) => ({ id, name })).sort((left, right) => left.id.localeCompare(right.id)),
+          nodeIds,
+          outputOffsets: outputOffsetsFor(
+            nodeIds.filter((id) => nodesById.get(id)?.address === fn.address),
+            nodesById
+          ),
+          incomingCallIds: sortedUnique(incoming.get(fn.id) ?? []),
+          outgoingCallIds: sortedUnique(outgoing.get(fn.id) ?? []),
+          unresolvedIds: sortedUnique(unresolvedByOwner.get(fn.id) ?? []),
+          evidence: fn.evidence
+        };
+      });
+      return {
+        functions: functions.sort(
+          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
+        ),
+        calls: calls.sort(
+          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.fromAddress - right.fromAddress || left.toAddress - right.toAddress || left.id.localeCompare(right.id)
+        ),
+        unresolved: unresolved.sort(
+          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
+        ),
+        orphanCallIds: sortedUnique(
+          calls.filter(
+            ({ callerFunctionIds, calleeFunctionIds }) => callerFunctionIds.length === 0 || calleeFunctionIds.length === 0
+          ).map(({ id }) => id)
+        ),
+        orphanUnresolvedIds: sortedUnique(
+          unresolved.filter(({ ownerFunctionIds: owners }) => owners.length === 0).map(({ id }) => id)
+        )
+      };
+    };
+  }
+});
+
+// packages/disassembler/src/compression-codec.ts
+var init_compression_codec = __esm({
+  "packages/disassembler/src/compression-codec.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/coverage-map.ts
+var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
+var init_coverage_map = __esm({
+  "packages/disassembler/src/coverage-map.ts"() {
+    "use strict";
+    CLASSIFICATION_ORDER = [
+      "opcode",
+      "operand",
+      "data",
+      "asset",
+      "unknown"
+    ];
+    RUNTIME_ORDER = ["executed", "operand", "read", "written"];
+    annotationClassification = (classification) => {
+      switch (classification) {
+        case "opcode":
+        case "operand":
+          return classification;
+        case "graphics":
+        case "music":
+        case "compressed":
+        case "asset":
+          return "asset";
+        case "unreached":
+          return void 0;
+        default:
+          return "data";
+      }
+    };
+    compareStrings = (left, right) => left.localeCompare(right);
+    arraysEqual = (left, right) => left.length === right.length && left.every((value, index) => value === right[index]);
+    segmentsEqual = (left, right) => left.status === right.status && arraysEqual(left.classifications, right.classifications) && arraysEqual(left.runtime, right.runtime) && arraysEqual(left.annotationIds, right.annotationIds) && arraysEqual(left.analysisIds, right.analysisIds) && arraysEqual(left.runtimeIds, right.runtimeIds) && arraysEqual(left.conflictIds, right.conflictIds) && arraysEqual(left.regionIds, right.regionIds);
+    coverageAddressSpace = (record) => {
+      if (record.kind === "runtime-coverage" || record.kind === "runtime-execution") {
+        return record.addressSpace;
+      }
+      if (record.kind === "runtime-memory-access") return record.accessedAddressSpace;
+      return void 0;
+    };
+    buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) => {
+      const contentSize = manifest.rom.contentSize;
+      if (!Number.isSafeInteger(contentSize) || contentSize < 0) {
+        throw new Error("ROM coverage requires a non-negative safe content size.");
+      }
+      const fileAddressSpaces = manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id).sort(compareStrings);
+      const fileAddressSpaceSet = new Set(fileAddressSpaces);
+      const events = /* @__PURE__ */ new Map();
+      const unprojected = [];
+      const diagnostics = [];
+      let nextToken = 0;
+      const eventAt = (offset) => {
+        let event = events.get(offset);
+        if (!event) {
+          event = { starts: [], ends: [] };
+          events.set(offset, event);
+        }
+        return event;
+      };
+      const addOverlay = (overlay, start, end, source) => {
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
+          unprojected.push({ ...source, reason: "invalid-range" });
+          return false;
+        }
+        if (start >= contentSize || end <= 0 || contentSize === 0) {
+          unprojected.push({ ...source, reason: "outside-rom" });
+          return false;
+        }
+        const clippedStart = Math.max(0, start);
+        const clippedEnd = Math.min(contentSize, end);
+        if (clippedStart !== start || clippedEnd !== end) {
+          diagnostics.push({
+            recordId: source.id,
+            message: `Clipped coverage range [${start}, ${end}) to ROM content [${clippedStart}, ${clippedEnd}).`
+          });
+        }
+        const value = {
+          ...overlay,
+          token: nextToken++,
+          start: clippedStart,
+          end: clippedEnd
+        };
+        eventAt(clippedStart).starts.push(value);
+        eventAt(clippedEnd).ends.push(value);
+        return true;
+      };
+      const addAddressSpaceOverlay = (overlay, start, end, source) => {
+        if (!source.addressSpace || !fileAddressSpaceSet.has(source.addressSpace)) {
+          unprojected.push({ ...source, reason: "non-file-address-space" });
+          return false;
+        }
+        return addOverlay(overlay, start, end, source);
+      };
+      for (const annotation of shards.annotations) {
+        const classification = annotationClassification(annotation.classification);
+        if (!classification) continue;
+        addAddressSpaceOverlay(
+          { classification, annotationId: annotation.id },
+          annotation.start,
+          annotation.end,
+          { kind: "annotation", id: annotation.id, addressSpace: annotation.addressSpace }
+        );
+      }
+      for (const region of shards.regions) {
+        addAddressSpaceOverlay({ regionId: region.id }, region.start, region.end, {
+          kind: "region",
+          id: region.id,
+          addressSpace: region.addressSpace
+        });
+      }
+      const controlFlowNodes = /* @__PURE__ */ new Map();
+      for (const record of shards.analysis) {
+        if (record.kind !== "cfg-node") continue;
+        controlFlowNodes.set(record.id, record);
+        if (record.fileOffset === void 0) {
+          unprojected.push({
+            kind: "analysis",
+            id: record.id,
+            addressSpace: record.addressSpace,
+            reason: "missing-file-offset"
+          });
+          continue;
+        }
+        addOverlay(
+          { classification: "opcode", analysisId: record.id },
+          record.fileOffset,
+          record.fileOffset + 1,
+          { kind: "analysis", id: record.id, addressSpace: record.addressSpace }
+        );
+        if (record.size > 1) {
+          addOverlay(
+            { classification: "operand", analysisId: record.id },
+            record.fileOffset + 1,
+            record.fileOffset + record.size,
+            { kind: "analysis", id: record.id, addressSpace: record.addressSpace }
+          );
+        }
+      }
+      const addConflict = (record) => {
+        if (fileAddressSpaceSet.has(record.addressSpace)) {
+          addOverlay({ conflictId: record.id }, record.address, record.end ?? record.address + 1, {
+            kind: "analysis",
+            id: record.id,
+            addressSpace: record.addressSpace
+          });
+          return;
+        }
+        let projected = false;
+        for (const nodeId of record.nodes) {
+          const node = controlFlowNodes.get(nodeId);
+          if (!node || node.fileOffset === void 0) continue;
+          projected = addOverlay(
+            { conflictId: record.id, analysisId: node.id },
+            node.fileOffset,
+            node.fileOffset + node.size,
+            { kind: "analysis", id: record.id, addressSpace: record.addressSpace }
+          ) || projected;
+        }
+        if (!projected) {
+          unprojected.push({
+            kind: "analysis",
+            id: record.id,
+            addressSpace: record.addressSpace,
+            reason: "missing-file-offset"
+          });
+        }
+      };
+      for (const record of shards.analysis) {
+        if (record.kind === "conflict") addConflict(record);
+      }
+      const addRuntimeAddressSpaceOverlay = (record, runtime2, start, end) => {
+        const addressSpace = coverageAddressSpace(record);
+        addAddressSpaceOverlay({ runtime: runtime2, runtimeId: record.id }, start, end, {
+          kind: "runtime",
+          id: record.id,
+          addressSpace
+        });
+      };
+      for (const record of runtime) {
+        if (record.kind === "runtime-coverage") {
+          addRuntimeAddressSpaceOverlay(record, record.coverage, record.start, record.end);
+          continue;
+        }
+        if (record.kind === "runtime-execution") {
+          if (record.fileOffset === void 0) {
+            unprojected.push({
+              kind: "runtime",
+              id: record.id,
+              addressSpace: record.addressSpace,
+              reason: "missing-file-offset"
+            });
+            continue;
+          }
+          const size = record.size ?? 1;
+          addOverlay(
+            { runtime: "executed", runtimeId: record.id },
+            record.fileOffset,
+            record.fileOffset + 1,
+            { kind: "runtime", id: record.id, addressSpace: record.addressSpace }
+          );
+          if (size > 1) {
+            addOverlay(
+              { runtime: "operand", runtimeId: record.id },
+              record.fileOffset + 1,
+              record.fileOffset + size,
+              { kind: "runtime", id: record.id, addressSpace: record.addressSpace }
+            );
+          }
+          continue;
+        }
+        if (record.kind === "runtime-memory-access") {
+          if (!fileAddressSpaceSet.has(record.accessedAddressSpace)) continue;
+          if (record.access === "read" || record.access === "read-write") {
+            addRuntimeAddressSpaceOverlay(
+              record,
+              "read",
+              record.accessedAddress,
+              record.accessedAddress + record.width
+            );
+          }
+          if (record.access === "write" || record.access === "read-write") {
+            addRuntimeAddressSpaceOverlay(
+              record,
+              "written",
+              record.accessedAddress,
+              record.accessedAddress + record.width
+            );
+          }
+        }
+      }
+      eventAt(0);
+      eventAt(contentSize);
+      const boundaries = [...events.keys()].sort((left, right) => left - right);
+      const active = /* @__PURE__ */ new Map();
+      const segments = [];
+      for (let index = 0; index + 1 < boundaries.length; index++) {
+        const start = boundaries[index];
+        const event = events.get(start);
+        for (const overlay of event.ends) active.delete(overlay.token);
+        for (const overlay of event.starts) active.set(overlay.token, overlay);
+        const end = boundaries[index + 1];
+        if (end <= start) continue;
+        const values = [...active.values()];
+        const classifications = /* @__PURE__ */ new Set();
+        for (const { classification } of values) {
+          if (classification) classifications.add(classification);
+        }
+        const sortedClassifications = classifications.size === 0 ? ["unknown"] : [...classifications];
+        sortedClassifications.sort(
+          (left, right) => CLASSIFICATION_ORDER.indexOf(left) - CLASSIFICATION_ORDER.indexOf(right)
+        );
+        const conflictIds = [
+          ...new Set(values.flatMap(({ conflictId }) => conflictId ? [conflictId] : []))
+        ].sort(compareStrings);
+        let status = "classified";
+        if (classifications.size === 0 && conflictIds.length === 0) status = "unknown";
+        else if (classifications.size > 1 || conflictIds.length > 0) status = "conflict";
+        const segment = {
+          start,
+          end,
+          status,
+          classifications: sortedClassifications,
+          runtime: [...new Set(values.flatMap(({ runtime: runtime2 }) => runtime2 ? [runtime2] : []))].sort(
+            (left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)
+          ),
+          annotationIds: [
+            ...new Set(values.flatMap(({ annotationId }) => annotationId ? [annotationId] : []))
+          ].sort(compareStrings),
+          analysisIds: [
+            ...new Set(values.flatMap(({ analysisId }) => analysisId ? [analysisId] : []))
+          ].sort(compareStrings),
+          runtimeIds: [
+            ...new Set(values.flatMap(({ runtimeId }) => runtimeId ? [runtimeId] : []))
+          ].sort(compareStrings),
+          conflictIds,
+          regionIds: [...new Set(values.flatMap(({ regionId }) => regionId ? [regionId] : []))].sort(
+            compareStrings
+          )
+        };
+        const previous = segments.at(-1);
+        if (previous && previous.end === segment.start && segmentsEqual(previous, segment)) {
+          segments[segments.length - 1] = { ...previous, end: segment.end };
+        } else {
+          segments.push(segment);
+        }
+      }
+      const bytesByClassification = {
+        opcode: 0,
+        operand: 0,
+        data: 0,
+        asset: 0,
+        unknown: 0
+      };
+      const bytesByRuntimeCoverage = {
+        executed: 0,
+        operand: 0,
+        read: 0,
+        written: 0
+      };
+      let classifiedBytes = 0;
+      let unknownBytes = 0;
+      let conflictBytes = 0;
+      for (const segment of segments) {
+        const size = segment.end - segment.start;
+        for (const classification of segment.classifications) {
+          bytesByClassification[classification] += size;
+        }
+        for (const runtime2 of segment.runtime) bytesByRuntimeCoverage[runtime2] += size;
+        if (segment.status === "classified") classifiedBytes += size;
+        else if (segment.status === "unknown") unknownBytes += size;
+        else conflictBytes += size;
+      }
+      return {
+        contentSize,
+        fileAddressSpaces,
+        segments,
+        summary: {
+          totalBytes: contentSize,
+          classifiedBytes,
+          unknownBytes,
+          conflictBytes,
+          segmentCount: segments.length,
+          bytesByClassification,
+          bytesByRuntimeCoverage
+        },
+        unprojected: unprojected.sort(
+          (left, right) => left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id) || left.reason.localeCompare(right.reason)
+        ),
+        diagnostics: diagnostics.sort(
+          (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
+        )
+      };
+    };
+  }
+});
+
+// packages/disassembler/src/canonical-json.ts
+var canonicalValue, canonicalJson;
+var init_canonical_json = __esm({
+  "packages/disassembler/src/canonical-json.ts"() {
+    "use strict";
+    canonicalValue = (value) => {
+      if (Array.isArray(value)) return value.map(canonicalValue);
+      if (value !== null && typeof value === "object")
+        return Object.fromEntries(
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([a], [b]) => a.localeCompare(b)).map(([key2, entry]) => [key2, canonicalValue(entry)])
+        );
+      return value;
+    };
+    canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
+`;
+  }
+});
+
+// packages/disassembler/src/project-types.ts
+var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
+var init_project_types = __esm({
+  "packages/disassembler/src/project-types.ts"() {
+    "use strict";
+    ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
+    ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
+    ANALYSIS_PROJECT_MANIFEST = "analysis.json";
+  }
+});
+
+// packages/disassembler/src/record-id-set.ts
+var import_node_fs, import_node_os, import_node_path, import_node_sqlite, RecordIdSet;
+var init_record_id_set = __esm({
+  "packages/disassembler/src/record-id-set.ts"() {
+    "use strict";
+    import_node_fs = __toESM(require("node:fs"), 1);
+    import_node_os = __toESM(require("node:os"), 1);
+    import_node_path = __toESM(require("node:path"), 1);
+    import_node_sqlite = require("node:sqlite");
+    RecordIdSet = class {
+      #ids = /* @__PURE__ */ new Set();
+      #characters = 0;
+      #directory;
+      #database;
+      #insert;
+      /**
+       * Claim an ID while keeping the in-memory prefix small.
+       * @param {string} id Complete record identity.
+       * @returns {boolean} False only for an exact duplicate.
+       */
+      add(id) {
+        if (this.#insert) return this.#insert.run(id).changes !== 0;
+        if (this.#ids.has(id)) return false;
+        this.#ids.add(id);
+        this.#characters += id.length;
+        if (this.#characters > 4 * 1024 * 1024) this.#spill();
+        return true;
+      }
+      #spill() {
+        this.#directory = import_node_fs.default.mkdtempSync(import_node_path.default.join(import_node_os.default.tmpdir(), "uttori-record-ids-"));
+        try {
+          this.#database = new import_node_sqlite.DatabaseSync(import_node_path.default.join(this.#directory, "ids.sqlite"));
+          this.#database.exec(
+            "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-4096; CREATE TABLE ids (id TEXT PRIMARY KEY) WITHOUT ROWID; BEGIN;"
+          );
+          this.#insert = this.#database.prepare("INSERT OR IGNORE INTO ids VALUES (?)");
+          for (const id of this.#ids) this.#insert.run(id);
+          this.#ids.clear();
+        } catch (error) {
+          this.close();
+          throw error;
+        }
+      }
+      /** Release both memory and any disposable database, including after a failed validation. */
+      close() {
+        try {
+          this.#database?.close();
+        } finally {
+          this.#database = void 0;
+          this.#insert = void 0;
+          this.#ids.clear();
+          if (this.#directory) import_node_fs.default.rmSync(this.#directory, { recursive: true, force: true });
+          this.#directory = void 0;
+        }
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/trace-detail.ts
+var isArray, validateRuntimeInstructionDetails;
+var init_trace_detail = __esm({
+  "packages/disassembler/src/trace-detail.ts"() {
+    "use strict";
+    isArray = (value) => Array.isArray(value);
+    validateRuntimeInstructionDetails = (value, count) => {
+      if (!Array.isArray(value) || value.length !== count)
+        throw new Error("Trace details must align one-to-one with instruction addresses.");
+      return value.map((detail) => {
+        if (!detail || !isArray(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255))
+          throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
+        if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
+          ([key2, entry]) => !key2 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
+        ))
+          throw new Error("Trace instruction state contains an invalid register value.");
+        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0))
+          throw new Error("Trace memory loss must be a non-negative safe integer.");
+        if (detail.memoryAccesses !== void 0 && (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256))
+          throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
+        const memoryAccesses = detail.memoryAccesses?.map((access) => {
+          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isSafeInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu")))
+            throw new Error("Trace contains an invalid bus operation.");
+          return { ...access };
+        });
+        return {
+          bytes: [...detail.bytes],
+          state: { ...detail.state },
+          ...memoryAccesses === void 0 ? {} : { memoryAccesses },
+          ...detail.droppedMemoryAccesses === void 0 ? {} : { droppedMemoryAccesses: detail.droppedMemoryAccesses }
+        };
+      });
+    };
+  }
+});
+
+// packages/disassembler/src/project-validation.ts
+var validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, validateLoadedShards;
+var init_project_validation = __esm({
+  "packages/disassembler/src/project-validation.ts"() {
+    "use strict";
+    init_project_types();
+    init_record_id_set();
+    init_trace_detail();
+    validateAnalysisProjectManifest = (manifest) => {
+      if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
+        throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
+      }
+      if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
+        throw new Error(
+          `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
+        );
+      }
+      if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) throw new Error("Invalid ROM SHA-256.");
+      if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
+        throw new Error("Invalid ROM content SHA-256.");
+      }
+      const addressSpaceIds = /* @__PURE__ */ new Set();
+      for (const addressSpace of manifest.addressSpaces) {
+        if (addressSpace.id === "" || addressSpace.name === "") {
+          throw new Error("Analysis address spaces require non-empty ids and names.");
+        }
+        if (addressSpaceIds.has(addressSpace.id)) {
+          throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
+        }
+        if (!Number.isSafeInteger(addressSpace.addressBits) || addressSpace.addressBits <= 0 || addressSpace.addressBits > 53) {
+          throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
+        }
+        addressSpaceIds.add(addressSpace.id);
+      }
+      if (manifest.db !== void 0 && manifest.db !== "analysis.sqlite")
+        throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
+      if (manifest.revision !== void 0 && (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0))
+        throw new Error("Invalid analysis sqlite revision.");
+      if (manifest.shards.length !== 0)
+        throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+    };
+    FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
+    assertNoRomPayload = (value, location) => {
+      if (Array.isArray(value)) {
+        for (let index = 0; index < value.length; index++) {
+          assertNoRomPayload(value[index], `${location}[${index}]`);
+        }
+        return;
+      }
+      if (!value || typeof value !== "object") return;
+      for (const [key2, entry] of Object.entries(value)) {
+        if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
+          throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
+        }
+        assertNoRomPayload(entry, `${location}.${key2}`);
+      }
+    };
+    isStableId = (id) => {
+      const isAlphaNumeric = (character) => {
+        const code = character.charCodeAt(0);
+        return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+      };
+      if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) return false;
+      for (let index = 0; index < id.length; index++) {
+        const character = id[index];
+        if (!isAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+      }
+      return true;
+    };
+    assertCodecReference = (reference, location) => {
+      if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
+        throw new Error(`${location} has an invalid codec id.`);
+      }
+      if (typeof reference.codecVersion !== "string" || reference.codecVersion.trim() === "") {
+        throw new Error(`${location} has no codec version.`);
+      }
+      if (reference.provider) {
+        if (typeof reference.provider.pluginId !== "string" || !isStableId(reference.provider.pluginId)) {
+          throw new Error(`${location} has an invalid provider plugin id.`);
+        }
+        if (typeof reference.provider.pluginVersion !== "string" || reference.provider.pluginVersion.trim() === "") {
+          throw new Error(`${location} has no provider plugin version.`);
+        }
+      }
+      const visitJson = (value, current2) => {
+        if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((entry, index) => visitJson(entry, `${current2}[${index}]`));
+          return;
+        }
+        if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
+          Object.entries(value).forEach(([key2, entry]) => visitJson(entry, `${current2}.${key2}`));
+          return;
+        }
+        throw new Error(`${current2} is not a JSON-safe codec option.`);
+      };
+      if (reference.options !== void 0) visitJson(reference.options, `${location} options`);
+    };
+    createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
+      const ids = checkDuplicateIds ? new RecordIdSet() : void 0;
+      const evidenceIds = new Set(evidence.map((record) => record.id));
+      const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
+      const validate = (record) => {
+        if (!record || typeof record.id !== "string" || record.id === "")
+          throw new Error("Analysis shard 'runtime' contains a record without an id.");
+        if (ids && !ids.add(record.id))
+          throw new Error(`Analysis shard 'runtime' contains duplicate id '${record.id}'.`);
+        for (const id of record.evidence ?? []) {
+          if (!evidenceIds.has(id))
+            throw new Error(`Analysis record '${record.id}' refers to missing evidence '${id}'.`);
+        }
+        if (!Number.isSafeInteger(record.count) || record.count <= 0) {
+          throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
+        }
+        if (record.kind === "runtime-coverage") {
+          if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
+            throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
+          }
+        }
+        if (record.kind === "runtime-memory-access") {
+          if (record.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record.actor) || record.channel !== void 0 && (!Number.isInteger(record.channel) || record.channel < 0 || record.channel > 7 || !["dma", "hdma"].includes(record.actor ?? "cpu")))
+            throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
+          if (!Number.isSafeInteger(record.width) || record.width <= 0) {
+            throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
+          }
+          if (record.value !== void 0 && (!Number.isSafeInteger(record.value) || record.value < 0)) {
+            throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
+          }
+        }
+        if (record.kind === "runtime-execution") {
+          if (record.size !== void 0 && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
+            throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
+          }
+          if (record.opcode !== void 0 && (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 255)) {
+            throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
+          }
+          if (record.fileOffset !== void 0 && (!Number.isSafeInteger(record.fileOffset) || record.fileOffset < 0 || record.fileOffset >= project.rom.contentSize)) {
+            throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
+          }
+        }
+        if (record.kind === "runtime-instruction") {
+          validateRuntimeInstructionDetails([{ bytes: record.bytes, state: record.state }], 1);
+        }
+        if (record.kind === "runtime-cpu-state") {
+          for (const [name, value] of Object.entries(record.state)) {
+            if (name === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
+              throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
+            }
+          }
+        }
+        if ("addressSpace" in record) {
+          const space = addressSpaceById.get(record.addressSpace);
+          if (!space)
+            throw new Error(
+              `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+            );
+          const addresses3 = record.kind === "runtime-coverage" ? [record.start, record.end - 1] : [record.address];
+          if (addresses3.some(
+            (address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** space.addressBits
+          ))
+            throw new Error(
+              `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+            );
+        }
+        let addresses2 = [];
+        if (record.kind === "runtime-memory-access") {
+          addresses2 = [
+            [record.instructionAddressSpace, record.instructionAddress],
+            [record.accessedAddressSpace, record.accessedAddress]
+          ];
+        } else if (record.kind === "runtime-control-target") {
+          addresses2 = [
+            [record.fromAddressSpace, record.fromAddress],
+            [record.toAddressSpace, record.toAddress]
+          ];
+        }
+        for (const [spaceId, address3] of addresses2) {
+          const addressSpace = addressSpaceById.get(spaceId);
+          if (!addressSpace) {
+            throw new Error(
+              `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`
+            );
+          }
+          if (!Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** addressSpace.addressBits) {
+            throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
+          }
+        }
+        assertNoRomPayload(record, `shards.runtime.${record.id}`);
+      };
+      return Object.assign(validate, { close: () => ids?.close() });
+    };
+    validateRuntimeRecords = (records, project, evidence) => {
+      const validate = createRuntimeRecordValidator(project, evidence);
+      try {
+        for (const record of records) validate(record);
+      } finally {
+        validate.close();
+      }
+    };
+    validateLoadedShards = (shards, project) => {
+      const { addressSpaces } = project;
+      const evidenceIds = new Set(shards.evidence.map((record) => record.id));
+      for (const [kind, records] of Object.entries(shards)) {
+        if (kind === "runtime") continue;
+        const ids = /* @__PURE__ */ new Set();
+        for (const record of records) {
+          if (!record || typeof record.id !== "string" || record.id === "") {
+            throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
+          }
+          if (ids.has(record.id)) {
+            throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
+          }
+          ids.add(record.id);
+          for (const evidence of record.evidence ?? []) {
+            if (!evidenceIds.has(evidence)) {
+              throw new Error(
+                `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
+              );
+            }
+          }
+        }
+      }
+      for (const evidence of shards.evidence) {
+        if (!evidence.artifact) continue;
+        if (evidence.artifact.format === "" || !/^[\da-f]{64}$/.test(evidence.artifact.sha256) || !/^[\da-f]{64}$/.test(evidence.artifact.romContentSha256)) {
+          throw new Error(`Evidence '${evidence.id}' has an invalid artifact identity.`);
+        }
+        if (evidence.artifact.romContentSha256 !== project.rom.contentSha256) {
+          throw new Error(`Evidence '${evidence.id}' belongs to a different ROM.`);
+        }
+        if (evidence.artifact.mapper && evidence.artifact.mapper !== project.mapping.mapper) {
+          throw new Error(`Evidence '${evidence.id}' belongs to a different mapper.`);
+        }
+      }
+      for (const interval of [...shards.annotations, ...shards.regions]) {
+        if (!Number.isSafeInteger(interval.start) || !Number.isSafeInteger(interval.end) || interval.start < 0 || interval.end <= interval.start) {
+          throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
+        }
+      }
+      for (const annotation of shards.annotations) {
+        if (!annotation.asset) continue;
+        if (!["asset", "compressed", "graphics", "music", "text"].includes(annotation.classification)) {
+          throw new Error(
+            `Analysis annotation '${annotation.id}' cannot attach an asset codec to '${annotation.classification}'.`
+          );
+        }
+        assertCodecReference(annotation.asset, `Analysis annotation '${annotation.id}' asset codec`);
+        const compression = annotation.asset.compression;
+        if (!compression) continue;
+        assertCodecReference(compression, `Analysis annotation '${annotation.id}' compression codec`);
+        const rangeSize = annotation.end - annotation.start;
+        const maximumSize = compression.maximumSize ?? rangeSize;
+        if (!Number.isSafeInteger(maximumSize) || maximumSize <= 0 || maximumSize > rangeSize) {
+          throw new Error(
+            `Analysis annotation '${annotation.id}' compression maximumSize must be within its range.`
+          );
+        }
+        const hasBankStart = compression.bankStart !== void 0;
+        const hasBankEnd = compression.bankEnd !== void 0;
+        if (hasBankStart !== hasBankEnd) {
+          throw new Error(
+            `Analysis annotation '${annotation.id}' compression bank bounds must be supplied together.`
+          );
+        }
+        const bankStart = compression.bankStart;
+        const bankEnd = compression.bankEnd;
+        if (hasBankStart && (typeof bankStart !== "number" || typeof bankEnd !== "number" || !Number.isSafeInteger(bankStart) || !Number.isSafeInteger(bankEnd) || bankStart < 0 || bankEnd <= bankStart || annotation.start < bankStart || annotation.end > bankEnd)) {
+          throw new Error(
+            `Analysis annotation '${annotation.id}' has invalid compression bank bounds.`
+          );
+        }
+        if (compression.fillByte !== void 0 && (!Number.isInteger(compression.fillByte) || compression.fillByte < 0 || compression.fillByte > 255)) {
+          throw new Error(
+            `Analysis annotation '${annotation.id}' has an invalid compression fillByte.`
+          );
+        }
+      }
+      for (const conflict of shards.analysis) {
+        if (conflict.kind !== "conflict" || conflict.end === void 0) continue;
+        if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
+          throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
+        }
+      }
+      const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
+      for (const region of shards.regions) {
+        if (!region.parentRegion) continue;
+        const parent = regionsById.get(region.parentRegion);
+        if (!parent) {
+          throw new Error(
+            `Analysis region '${region.id}' refers to missing parent region '${region.parentRegion}'.`
+          );
+        }
+        const visited = /* @__PURE__ */ new Set([region.id]);
+        let ancestor = parent;
+        while (ancestor.parentRegion) {
+          if (visited.has(ancestor.id)) {
+            throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
+          }
+          visited.add(ancestor.id);
+          const next = regionsById.get(ancestor.parentRegion);
+          if (!next) break;
+          ancestor = next;
+        }
+        if (visited.has(ancestor.id)) {
+          throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
+        }
+        if (parent.addressSpace === region.addressSpace && (region.start < parent.start || region.end > parent.end)) {
+          throw new Error(
+            `Analysis region '${region.id}' is not contained by parent region '${parent.id}'.`
+          );
+        }
+      }
+      for (const addressed of [...shards.labels, ...shards.comments]) {
+        if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
+          throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
+        }
+      }
+      for (const label of shards.labels) {
+        if (label.sourceName !== void 0 && (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName)))
+          throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
+        if (label.inlineComment !== void 0 && (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment)))
+          throw new Error(`Analysis label '${label.id}' requires a single-line inline comment.`);
+        if (label.analysisEntryPoint !== void 0 && typeof label.analysisEntryPoint !== "boolean")
+          throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
+      }
+      for (const comment of shards.comments) {
+        if (comment.placement !== void 0 && !["before", "inline-instruction"].includes(comment.placement))
+          throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
+        if (comment.placement === "inline-instruction" && (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text)))
+          throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
+      }
+      const addressSpaceById = new Map(
+        addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
+      );
+      const addressedRecords = [
+        ...shards.annotations,
+        ...shards.labels,
+        ...shards.comments,
+        ...shards.regions,
+        ...shards.analysis.filter(
+          (record) => "addressSpace" in record
+        )
+      ];
+      for (const record of addressedRecords) {
+        const addressSpace = addressSpaceById.get(record.addressSpace);
+        if (!addressSpace) {
+          throw new Error(
+            `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+          );
+        }
+        const maximum = 2 ** addressSpace.addressBits;
+        const addresses2 = [];
+        if ("start" in record) {
+          addresses2.push(record.start, record.end - 1);
+        } else if ("address" in record) {
+          addresses2.push(record.address);
+          if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
+            addresses2.push(record.end - 1);
+          }
+        } else {
+          if ("fromAddress" in record) addresses2.push(record.fromAddress);
+          if ("toAddress" in record && record.toAddress !== void 0) addresses2.push(record.toAddress);
+          if ("targets" in record) for (const target of record.targets) addresses2.push(target);
+        }
+        if (addresses2.some(
+          (address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= maximum
+        )) {
+          throw new Error(
+            `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+          );
+        }
+      }
+      validateRuntimeRecords(shards.runtime, project, shards.evidence);
+      assertNoRomPayload({ ...shards, runtime: [] }, "shards");
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-store.ts
+var import_node_crypto2, import_node_fs2, import_node_path2, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, SCHEMA, SCHEMA_INDEX_STATEMENTS, analysisProjectSqlitePath, parseRecord, runtimeColumns, runtimeFromRow, analysisAddress, SqliteAnalysisStore;
+var init_sqlite_store = __esm({
+  "packages/disassembler/src/sqlite-store.ts"() {
+    "use strict";
+    import_node_crypto2 = require("node:crypto");
+    import_node_fs2 = __toESM(require("node:fs"), 1);
+    import_node_path2 = __toESM(require("node:path"), 1);
+    import_node_sqlite2 = require("node:sqlite");
+    init_canonical_json();
+    init_project_types();
+    ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
+    SCHEMA = `
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA foreign_keys=ON;
+PRAGMA busy_timeout=5000;
+CREATE TABLE IF NOT EXISTS meta (
+  k TEXT PRIMARY KEY,
+  v TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS evidence (
+  id TEXT PRIMARY KEY,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS labels (
+  id TEXT PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS regions (
+  id TEXT PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS annotations (
+  id TEXT PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  classification TEXT NOT NULL,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS analysis (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS imports (
+  id TEXT PRIMARY KEY,
+  payload TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS runtime (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  architecture TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  start INTEGER,
+  "end" INTEGER,
+  from_address_space TEXT,
+  from_address INTEGER,
+  to_address_space TEXT,
+  to_address INTEGER,
+  instruction_address_space TEXT,
+  instruction_address INTEGER,
+  accessed_address_space TEXT,
+  accessed_address INTEGER,
+  coverage TEXT,
+  evidence TEXT NOT NULL,
+  payload TEXT
+) WITHOUT ROWID;
+`;
+    SCHEMA_INDEX_STATEMENTS = [
+      "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
+      "CREATE INDEX IF NOT EXISTS comments_addr ON comments (address_space, address)",
+      'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
+      'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
+      "CREATE INDEX IF NOT EXISTS analysis_addr ON analysis (address_space, address)",
+      "CREATE INDEX IF NOT EXISTS analysis_kind ON analysis (kind)",
+      "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime (kind, address_space, address, start)",
+      "CREATE INDEX IF NOT EXISTS runtime_from ON runtime (from_address_space, from_address)"
+    ];
+    analysisProjectSqlitePath = (directory, manifest) => {
+      const relative2 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
+      if (relative2 !== ANALYSIS_PROJECT_SQLITE_FILE)
+        throw new Error(`Unsupported analysis sqlite path '${relative2}'.`);
+      return import_node_path2.default.join(directory, relative2);
+    };
+    parseRecord = (payload) => JSON.parse(payload);
+    runtimeColumns = (record) => {
+      switch (record.kind) {
+        case "runtime-execution":
+          return {
+            addressSpace: record.addressSpace,
+            address: record.address,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: JSON.stringify({
+              ...record.fileOffset === void 0 ? {} : { fileOffset: record.fileOffset },
+              ...record.size === void 0 ? {} : { size: record.size },
+              ...record.opcode === void 0 ? {} : { opcode: record.opcode }
+            })
+          };
+        case "runtime-instruction":
+          return {
+            addressSpace: record.addressSpace,
+            address: record.address,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: JSON.stringify({ bytes: record.bytes, state: record.state })
+          };
+        case "runtime-memory-access":
+          return {
+            addressSpace: null,
+            address: null,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: record.instructionAddressSpace,
+            instructionAddress: record.instructionAddress,
+            accessedAddressSpace: record.accessedAddressSpace,
+            accessedAddress: record.accessedAddress,
+            coverage: null,
+            payload: JSON.stringify({
+              access: record.access,
+              width: record.width,
+              ...record.actor === void 0 ? {} : { actor: record.actor },
+              ...record.channel === void 0 ? {} : { channel: record.channel },
+              ...record.value === void 0 ? {} : { value: record.value }
+            })
+          };
+        case "runtime-cpu-state":
+          return {
+            addressSpace: record.addressSpace,
+            address: record.address,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: JSON.stringify({ state: record.state })
+          };
+        case "runtime-coverage":
+          return {
+            addressSpace: record.addressSpace,
+            address: null,
+            start: record.start,
+            end: record.end,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: record.coverage,
+            payload: null
+          };
+        case "runtime-control-target":
+          return {
+            addressSpace: null,
+            address: null,
+            start: null,
+            end: null,
+            fromAddressSpace: record.fromAddressSpace,
+            fromAddress: record.fromAddress,
+            toAddressSpace: record.toAddressSpace,
+            toAddress: record.toAddress,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: JSON.stringify({ flowKind: record.flowKind, indirect: record.indirect })
+          };
+      }
+      throw new Error("Unsupported runtime evidence kind.");
+    };
+    runtimeFromRow = (row) => {
+      const fields = row;
+      const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(fields.payload);
+      const evidence = JSON.parse(fields.evidence);
+      const kind = fields.kind;
+      const architecture = fields.architecture;
+      const count = Number(fields.count);
+      const id = fields.id;
+      if (kind === "runtime-execution") {
+        return {
+          id,
+          kind,
+          architecture,
+          count,
+          evidence,
+          addressSpace: fields.address_space,
+          address: Number(fields.address),
+          ...extra
+        };
+      }
+      if (kind === "runtime-instruction") {
+        return {
+          id,
+          kind,
+          architecture,
+          count,
+          evidence,
+          addressSpace: fields.address_space,
+          address: Number(fields.address),
+          bytes: extra.bytes,
+          state: extra.state
+        };
+      }
+      if (kind === "runtime-memory-access") {
+        return {
+          id,
+          kind,
+          architecture,
+          count,
+          evidence,
+          instructionAddressSpace: fields.instruction_address_space,
+          instructionAddress: Number(fields.instruction_address),
+          accessedAddressSpace: fields.accessed_address_space,
+          accessedAddress: Number(fields.accessed_address),
+          access: extra.access,
+          width: extra.width,
+          ...extra.actor === void 0 ? {} : { actor: extra.actor },
+          ...extra.channel === void 0 ? {} : { channel: extra.channel },
+          ...extra.value === void 0 ? {} : { value: extra.value }
+        };
+      }
+      if (kind === "runtime-cpu-state") {
+        return {
+          id,
+          kind,
+          architecture,
+          count,
+          evidence,
+          addressSpace: fields.address_space,
+          address: Number(fields.address),
+          state: extra.state
+        };
+      }
+      if (kind === "runtime-coverage") {
+        return {
+          id,
+          kind,
+          architecture,
+          count,
+          evidence,
+          addressSpace: fields.address_space,
+          start: Number(fields.start),
+          end: Number(fields.end),
+          coverage: fields.coverage
+        };
+      }
+      return {
+        id,
+        kind: "runtime-control-target",
+        architecture,
+        count,
+        evidence,
+        fromAddressSpace: fields.from_address_space,
+        fromAddress: Number(fields.from_address),
+        toAddressSpace: fields.to_address_space,
+        toAddress: Number(fields.to_address),
+        flowKind: extra.flowKind,
+        indirect: Boolean(extra.indirect)
+      };
+    };
+    analysisAddress = (record) => {
+      if ("addressSpace" in record && "address" in record)
+        return { addressSpace: record.addressSpace, address: record.address };
+      if ("addressSpace" in record && "fromAddress" in record)
+        return { addressSpace: record.addressSpace, address: record.fromAddress };
+      return { addressSpace: null, address: null };
+    };
+    SqliteAnalysisStore = class {
+      #database;
+      file;
+      #insertEvidence;
+      #insertLabel;
+      #insertComment;
+      #insertRegion;
+      #insertAnnotation;
+      #insertAnalysis;
+      #insertImport;
+      #insertRuntime;
+      #findRuntime;
+      /**
+       * Opens or creates a project database.
+       * @param {string} file Absolute sqlite path.
+       * @param {boolean} [createSchema] Whether to apply DDL.
+       */
+      constructor(file, createSchema = true) {
+        if (!createSchema && !import_node_fs2.default.existsSync(file))
+          throw new Error(`Analysis database does not exist: ${file}`);
+        this.file = file;
+        this.#database = new import_node_sqlite2.DatabaseSync(file, { open: true });
+        try {
+          if (createSchema) {
+            this.#database.exec(SCHEMA);
+            for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
+          }
+          this.#database.exec(
+            "PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE;"
+          );
+          this.#insertEvidence = this.#database.prepare(
+            "INSERT INTO evidence (id, payload) VALUES (?, ?)"
+          );
+          this.#insertLabel = this.#database.prepare(
+            "INSERT INTO labels (id, address_space, address, name, payload) VALUES (?, ?, ?, ?, ?)"
+          );
+          this.#insertComment = this.#database.prepare(
+            "INSERT INTO comments (id, address_space, address, payload) VALUES (?, ?, ?, ?)"
+          );
+          this.#insertRegion = this.#database.prepare(
+            'INSERT INTO regions (id, address_space, start, "end", payload) VALUES (?, ?, ?, ?, ?)'
+          );
+          this.#insertAnnotation = this.#database.prepare(
+            'INSERT INTO annotations (id, address_space, start, "end", classification, payload) VALUES (?, ?, ?, ?, ?, ?)'
+          );
+          this.#insertAnalysis = this.#database.prepare(
+            "INSERT INTO analysis (id, kind, address_space, address, payload) VALUES (?, ?, ?, ?, ?)"
+          );
+          this.#insertImport = this.#database.prepare(
+            "INSERT INTO imports (id, payload) VALUES (?, ?)"
+          );
+          this.#findRuntime = this.#database.prepare("SELECT * FROM runtime WHERE id=?");
+          this.#insertRuntime = this.#database.prepare(
+            `INSERT INTO runtime (
+          id, kind, architecture, count, address_space, address, start, "end",
+          from_address_space, from_address, to_address_space, to_address,
+          instruction_address_space, instruction_address, accessed_address_space, accessed_address,
+          coverage, evidence, payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          );
+        } catch (error) {
+          this.#database.close();
+          throw error;
+        }
+      }
+      /**
+       * Preserve the triggering error when SQLite has already aborted (for example SQLITE_FULL).
+       * A cleanup error must never replace the original failure reported to the user.
+       */
+      rollback() {
+        if (!this.#database.isTransaction) return;
+        try {
+          this.#database.exec("ROLLBACK");
+        } catch {
+        }
+      }
+      #insertRecord(kind, value) {
+        if (kind === "evidence") {
+          const record2 = value;
+          this.#insertEvidence.run(record2.id, JSON.stringify(record2));
+          return;
+        }
+        if (kind === "labels") {
+          const record2 = value;
+          this.#insertLabel.run(
+            record2.id,
+            record2.addressSpace,
+            record2.address,
+            record2.name,
+            JSON.stringify(record2)
+          );
+          return;
+        }
+        if (kind === "comments") {
+          const record2 = value;
+          this.#insertComment.run(
+            record2.id,
+            record2.addressSpace,
+            record2.address,
+            JSON.stringify(record2)
+          );
+          return;
+        }
+        if (kind === "regions") {
+          const record2 = value;
+          this.#insertRegion.run(
+            record2.id,
+            record2.addressSpace,
+            record2.start,
+            record2.end,
+            JSON.stringify(record2)
+          );
+          return;
+        }
+        if (kind === "annotations") {
+          const record2 = value;
+          this.#insertAnnotation.run(
+            record2.id,
+            record2.addressSpace,
+            record2.start,
+            record2.end,
+            record2.classification,
+            JSON.stringify(record2)
+          );
+          return;
+        }
+        if (kind === "analysis") {
+          const record2 = value;
+          const located = analysisAddress(record2);
+          this.#insertAnalysis.run(
+            record2.id,
+            record2.kind,
+            located.addressSpace,
+            located.address,
+            JSON.stringify(record2)
+          );
+          return;
+        }
+        if (kind === "imports") {
+          const record2 = value;
+          this.#insertImport.run(record2.id, JSON.stringify(record2));
+          return;
+        }
+        const record = value;
+        const columns = runtimeColumns(record);
+        this.#insertRuntime.run(
+          record.id,
+          record.kind,
+          record.architecture,
+          record.count,
+          columns.addressSpace,
+          columns.address,
+          columns.start,
+          columns.end,
+          columns.fromAddressSpace,
+          columns.fromAddress,
+          columns.toAddressSpace,
+          columns.toAddress,
+          columns.instructionAddressSpace,
+          columns.instructionAddress,
+          columns.accessedAddressSpace,
+          columns.accessedAddress,
+          columns.coverage,
+          JSON.stringify(record.evidence),
+          columns.payload
+        );
+      }
+      /**
+       * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
+       * the revision so a competing process cannot slip between the stale check and publication.
+       * @param {Function} action Synchronous work; cursors must be consumed before returning.
+       * @param {boolean} [write] Acquire the writer lock immediately; false creates a read snapshot.
+       * @returns {T} Callback result after a successful commit.
+       */
+      transaction(action, write = true) {
+        this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
+        try {
+          const result = action();
+          this.#database.exec("COMMIT");
+          return result;
+        } catch (error) {
+          this.rollback();
+          throw error;
+        }
+      }
+      /**
+       * Index trace chunks in a connection-local disk table. This transaction never reads or writes
+       * main, allowing other project writers to proceed during asynchronous capture parsing.
+       * @param {Function} action Async parser using only the supplied temporary counter index.
+       * @returns {Promise} Parser result after temporary counters commit; the index lives until connection close.
+       */
+      async indexTrace(action) {
+        this.#database.exec(`CREATE TEMP TABLE trace_facts (
+      id TEXT PRIMARY KEY, payload TEXT NOT NULL, count INTEGER NOT NULL
+    ) WITHOUT ROWID; BEGIN;`);
+        const increment = this.#database.prepare(
+          "UPDATE temp.trace_facts SET count=count+1 WHERE id=?"
+        );
+        const insert = this.#database.prepare("INSERT INTO temp.trace_facts VALUES (?, ?, 1)");
+        const values = this.#database.prepare("SELECT payload, count FROM temp.trace_facts");
+        const index = {
+          add: (key2, create) => {
+            if (increment.run(key2).changes !== 0) return false;
+            insert.run(key2, JSON.stringify(create()));
+            return true;
+          },
+          values: function* () {
+            for (const row of values.iterate())
+              yield {
+                fact: parseRecord(row.payload),
+                count: Number(row.count)
+              };
+          },
+          clear: () => this.#database.exec("DELETE FROM temp.trace_facts")
+        };
+        try {
+          const result = await action(index);
+          this.#database.exec("COMMIT");
+          return result;
+        } catch (error) {
+          this.rollback();
+          throw error;
+        }
+      }
+      /** Require mutations to belong to an explicitly owned atomic publication. */
+      #requireTransaction() {
+        if (!this.#database.isTransaction) throw new Error("Analysis mutation requires a transaction.");
+      }
+      /**
+       * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
+       * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
+       * Semantic validation belongs to the project publication API; this method must run in its transaction.
+       * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
+       */
+      replaceTables(shards) {
+        this.#requireTransaction();
+        this.#database.exec(
+          "CREATE TEMP TABLE IF NOT EXISTS replacement_ids (id TEXT PRIMARY KEY) WITHOUT ROWID"
+        );
+        const remember = this.#database.prepare("INSERT INTO temp.replacement_ids VALUES (?)");
+        const tables = /* @__PURE__ */ new Set([
+          "analysis",
+          "annotations",
+          "labels",
+          "comments",
+          "regions",
+          "runtime",
+          "evidence",
+          "imports"
+        ]);
+        for (const kind of Object.keys(shards)) {
+          if (!tables.has(kind)) throw new Error(`Unknown analysis table '${kind}'.`);
+          this.#database.exec("DELETE FROM temp.replacement_ids");
+          const find = this.#database.prepare(`SELECT * FROM ${kind} WHERE id=?`);
+          const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
+          for (const record of shards[kind] ?? []) {
+            remember.run(record.id);
+            const prior = find.get(record.id);
+            if (prior) {
+              const before = kind === "runtime" ? runtimeFromRow(prior) : parseRecord(prior.payload);
+              if (canonicalJson(before) === canonicalJson(record)) continue;
+              remove.run(record.id);
+            }
+            this.#insertRecord(kind, record);
+          }
+          this.#database.exec(
+            `DELETE FROM ${kind} WHERE id NOT IN (SELECT id FROM temp.replacement_ids)`
+          );
+        }
+      }
+      /**
+       * Insert a content-addressed runtime fact once; an ID collision with different content is an
+       * error, never a silent no-op. Count values are already aggregated within the source capture.
+       * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
+       * @returns {boolean} True when inserted; identical facts return false and conflicting facts throw.
+       */
+      insertRuntime(record) {
+        this.#requireTransaction();
+        const prior = this.#findRuntime.get(record.id);
+        if (prior) {
+          if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record))
+            throw new Error(
+              `Runtime record '${record.id}' has changed content for a stable imported ID.`
+            );
+          return false;
+        }
+        this.#insertRecord("runtime", record);
+        return true;
+      }
+      /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
+      validateRuntimeEvidence() {
+        const missing = this.#database.prepare(`
+      SELECT runtime.id, ref.value AS evidence FROM runtime, json_each(runtime.evidence) AS ref
+      LEFT JOIN evidence ON evidence.id=ref.value WHERE evidence.id IS NULL LIMIT 1
+    `).get();
+        if (missing)
+          throw new Error(
+            `Analysis record '${String(missing.id)}' refers to missing evidence '${String(missing.evidence)}'.`
+          );
+      }
+      /**
+       * Store manifest and counter in the same transaction as the changed records.
+       * @param {object} manifest Semantic project identity for this publication.
+       * @returns {AnalysisProjectManifest} Manifest containing the incremented counter.
+       */
+      publishManifest(manifest) {
+        this.#requireTransaction();
+        const revision = this.revision() + 1;
+        const pointer = {
+          ...manifest,
+          db: ANALYSIS_PROJECT_SQLITE_FILE,
+          revision,
+          shards: []
+        };
+        const insert = this.#database.prepare("INSERT OR REPLACE INTO meta (k, v) VALUES (?, ?)");
+        insert.run("revision", String(revision));
+        insert.run("manifest", canonicalJson(pointer));
+        return pointer;
+      }
+      /**
+       * Current publication counter.
+       * @returns {number} Stored revision.
+       */
+      revision() {
+        const row = this.#database.prepare("SELECT v FROM meta WHERE k='revision'").get();
+        return Number(row?.v ?? 0);
+      }
+      /**
+       * Manifest stored in meta, including sqlite pointer fields.
+       * @returns {AnalysisProjectManifest} Pointer manifest.
+       */
+      manifest() {
+        const row = this.#database.prepare("SELECT v FROM meta WHERE k='manifest'").get();
+        if (!row) throw new Error("Sqlite analysis project is missing its stored manifest.");
+        return { ...parseRecord(row.v), revision: this.revision() };
+      }
+      /**
+       * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
+       * @param {Array} kinds Runtime discriminators to include; empty selects nothing.
+       * @returns {IterableIterator} Cursor consumed within the owning read transaction.
+       * @yields {RuntimeEvidenceRecord} One matching decoded fact.
+       */
+      *runtimeRecordsByKinds(kinds) {
+        if (kinds.length === 0) return;
+        const statement = this.#database.prepare(
+          `SELECT * FROM runtime WHERE kind IN (${kinds.map(() => "?").join(", ")})`
+        );
+        for (const row of statement.iterate(...kinds)) yield runtimeFromRow(row);
+      }
+      /**
+       * Read runtime observations at a selected location, including containing coverage ranges.
+       * @param {string} addressSpace Logical address-space ID.
+       * @param {number} address Nonnegative address in that space.
+       * @returns {IterableIterator} Cursor over matching point and interval facts.
+       * @yields {RuntimeEvidenceRecord} A fact associated with the selected location.
+       */
+      *runtimeAt(addressSpace, address3) {
+        const query = this.#database.prepare(`
+      SELECT * FROM runtime WHERE kind IN ('runtime-execution', 'runtime-instruction', 'runtime-cpu-state')
+        AND address_space=? AND address=?
+      UNION ALL SELECT * FROM runtime WHERE kind='runtime-coverage' AND address_space=? AND start<=? AND "end">?
+      UNION ALL SELECT * FROM runtime WHERE kind='runtime-memory-access' AND instruction_address_space=? AND instruction_address=?
+    `);
+        for (const row of query.iterate(
+          addressSpace,
+          address3,
+          addressSpace,
+          address3,
+          address3,
+          addressSpace,
+          address3
+        ))
+          yield runtimeFromRow(row);
+      }
+      /**
+       * Stream runtime facts without retaining the complete table.
+       * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
+       * @yields {RuntimeEvidenceRecord} One runtime fact.
+       */
+      *runtimeRecords() {
+        for (const row of this.#database.prepare("SELECT * FROM runtime").iterate())
+          yield runtimeFromRow(row);
+      }
+      /**
+       * Read one metadata table directly; Sources must not load unrelated CFG or runtime tables.
+       * @param {string} kind Metadata table name from the semantic collection contract.
+       * @returns {Array} Decoded metadata in deterministic display order.
+       */
+      loadTable(kind) {
+        const order = {
+          labels: "address_space, address, id",
+          comments: "address_space, address, id",
+          annotations: 'address_space, start, "end", id',
+          regions: 'address_space, start, "end", id',
+          analysis: "id",
+          evidence: "id",
+          imports: "id"
+        };
+        if (!Object.hasOwn(order, kind)) throw new Error(`Unknown analysis table '${kind}'.`);
+        const records = [];
+        for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`).iterate())
+          records.push(parseRecord(row.payload));
+        return records;
+      }
+      /**
+       * Materialize metadata once; full runtime history is opt-in for callers that need it.
+       * @param {boolean} [runtime] Include complete runtime history; false keeps it on disk.
+       * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
+       */
+      loadShards(runtime = true) {
+        return {
+          evidence: this.loadTable("evidence"),
+          labels: this.loadTable("labels"),
+          comments: this.loadTable("comments"),
+          regions: this.loadTable("regions"),
+          annotations: this.loadTable("annotations"),
+          analysis: this.loadTable("analysis"),
+          imports: this.loadTable("imports"),
+          runtime: runtime ? [...this.runtimeRecords()] : []
+        };
+      }
+      /**
+       * Table counts for reports.
+       * @returns {Readonly<Record<string, number>>} Row counts.
+       */
+      counts() {
+        const tables = [
+          "evidence",
+          "labels",
+          "comments",
+          "regions",
+          "annotations",
+          "analysis",
+          "imports",
+          "runtime"
+        ];
+        const result = {};
+        for (const table of tables) {
+          const row = this.#database.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get();
+          result[table] = Number(row?.n ?? 0);
+        }
+        return result;
+      }
+      /**
+       * Atomically refresh the watcher hint after commit. SQLite is authoritative: a failed hint write
+       * is reported as a warning, never as a failed import that could cause an unsafe retry.
+       * @param {string} directory Project root for the watcher hint.
+       */
+      writePointer(directory) {
+        const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto2.randomUUID)()}.tmp`);
+        try {
+          this.transaction(() => {
+            import_node_fs2.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
+            import_node_fs2.default.renameSync(temporary, import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+          });
+        } catch (error) {
+          process.emitWarning(
+            `Analysis database committed, but its watcher pointer could not be refreshed: ${String(error)}`
+          );
+        } finally {
+          try {
+            import_node_fs2.default.rmSync(temporary, { force: true });
+          } catch {
+          }
+        }
+      }
+      /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
+      compact() {
+        this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
+      }
+      /** Close prepared statements and the database. */
+      close() {
+        this.#database.close();
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/project-transaction.ts
+var import_node_crypto3, fs3, import_node_path3, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitAnalysisProjectViewUpdate;
+var init_project_transaction = __esm({
+  "packages/disassembler/src/project-transaction.ts"() {
+    "use strict";
+    import_node_crypto3 = require("node:crypto");
+    fs3 = __toESM(require("node:fs"), 1);
+    import_node_path3 = __toESM(require("node:path"), 1);
+    init_canonical_json();
+    init_project_store();
+    init_project_types();
+    init_project_validation();
+    init_sqlite_store();
+    ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
+    ANALYSIS_PROJECT_REVISION_VERSION = 1;
+    AnalysisProjectStaleError = class extends Error {
+      constructor(expected, actual) {
+        super(
+          `Analysis project changed since it was loaded (expected ${expected.manifestSha256}, found ${actual.manifestSha256}).`
+        );
+        this.expected = expected;
+        this.actual = actual;
+        this.name = "AnalysisProjectStaleError";
+      }
+      expected;
+      actual;
+    };
+    analysisProjectRevision = (manifest) => ({
+      format: ANALYSIS_PROJECT_REVISION_FORMAT,
+      version: ANALYSIS_PROJECT_REVISION_VERSION,
+      manifestSha256: (0, import_node_crypto3.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+    });
+    assertAnalysisProjectRevision = (store, expected) => {
+      const actual = analysisProjectRevision(store.manifest());
+      if (expected.manifestSha256 !== actual.manifestSha256)
+        throw new AnalysisProjectStaleError(expected, actual);
+    };
+    loadAnalysisProjectViewSnapshot = (directory, createProjection) => {
+      const project = loadAnalysisProjectView(directory, createProjection);
+      return { ...project, revision: analysisProjectRevision(project.manifest) };
+    };
+    prepareAnalysisProjectTransaction = (_directory, project) => {
+      validateAnalysisProjectManifest({ ...project.manifest, shards: [] });
+      validateLoadedShards(project.shards, project.manifest);
+      return { project };
+    };
+    committed = (manifest) => ({
+      manifest,
+      revision: analysisProjectRevision(manifest),
+      maintenance: { removedBytes: 0, warnings: [] }
+    });
+    publish = (directory, project, expected, updates = project.shards) => {
+      prepareAnalysisProjectTransaction(directory, project);
+      fs3.mkdirSync(directory, { recursive: true });
+      const exists = fs3.existsSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path3.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+      try {
+        const manifest = store.transaction(() => {
+          if (expected) assertAnalysisProjectRevision(store, expected);
+          else if (store.revision() !== 0)
+            throw new Error("Analysis project already exists; reload before publishing.");
+          const evidenceIds = new Set(project.shards.evidence.map(({ id }) => id));
+          const removedEvidence = updates.runtime === void 0 && updates.evidence !== void 0 && store.loadTable("evidence").some(({ id }) => !evidenceIds.has(id));
+          store.replaceTables(updates);
+          if (removedEvidence) store.validateRuntimeEvidence();
+          return store.publishManifest(project.manifest);
+        });
+        store.writePointer(directory);
+        return committed(manifest);
+      } finally {
+        store.close();
+      }
+    };
+    commitAnalysisProjectViewUpdate = (directory, snapshot, updates) => {
+      if ("runtime" in updates) throw new Error("Read-view updates cannot replace runtime history.");
+      const project = {
+        manifest: snapshot.manifest,
+        shards: { ...snapshot.view, ...updates, runtime: [] }
+      };
+      const changed = {};
+      for (const kind of Object.keys(updates)) {
+        if (updates[kind] !== snapshot.view[kind]) Object.assign(changed, { [kind]: updates[kind] });
+      }
+      return publish(directory, project, snapshot.revision, changed);
+    };
+  }
+});
+
+// packages/disassembler/src/project-store.ts
+var fs4, import_node_path4, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProjectView;
+var init_project_store = __esm({
+  "packages/disassembler/src/project-store.ts"() {
+    "use strict";
+    fs4 = __toESM(require("node:fs"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
+    init_project_types();
+    init_project_validation();
+    init_sqlite_store();
+    init_canonical_json();
+    parseAnalysisProjectManifest = (input) => {
+      if (!input || typeof input !== "object") throw new Error("Invalid analysis project manifest.");
+      const manifest = input;
+      if (manifest.schemaVersion > 3)
+        throw new Error(
+          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3; refusing to downgrade.`
+        );
+      validateAnalysisProjectManifest(manifest);
+      if (manifest.db !== "analysis.sqlite")
+        throw new Error("Legacy analysis storage is no longer supported; use a SQLite project.");
+      return manifest;
+    };
+    openAnalysisProjectStore = (directory) => {
+      const manifest = parseAnalysisProjectManifest(
+        JSON.parse(fs4.readFileSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+      );
+      return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
+    };
+    loadProject = (directory, runtime, createProjection) => {
+      const store = openAnalysisProjectStore(directory);
+      try {
+        return store.transaction(() => {
+          const manifest = parseAnalysisProjectManifest(store.manifest());
+          const shards = store.loadShards(false);
+          validateLoadedShards(shards, manifest);
+          if (!runtime && !createProjection) return { manifest, shards };
+          const validate = createRuntimeRecordValidator(manifest, shards.evidence, false);
+          const records = [];
+          const projection = createProjection?.();
+          try {
+            for (const record of store.runtimeRecords()) {
+              validate(record);
+              if (projection) projection.push(record);
+              else records.push(record);
+            }
+            return {
+              manifest,
+              shards: { ...shards, runtime: projection ? projection.finish() : records }
+            };
+          } finally {
+            validate.close();
+          }
+        }, false);
+      } finally {
+        store.close();
+      }
+    };
+    loadAnalysisProjectView = (directory, createProjection) => {
+      const { manifest, shards } = loadProject(directory, false, createProjection);
+      return { manifest, view: shards };
+    };
+  }
+});
+
+// packages/disassembler/src/runtime-trace.ts
+var init_runtime_trace = __esm({
+  "packages/disassembler/src/runtime-trace.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/execution-window.ts
+var init_execution_window = __esm({
+  "packages/disassembler/src/execution-window.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/instruction-annotations.ts
+var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
+var init_instruction_annotations = __esm({
+  "packages/disassembler/src/instruction-annotations.ts"() {
+    "use strict";
+    init_canonical_json();
+    sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
+    sortedNumbers = (values) => values ? [...new Set(values)].sort((left, right) => left - right) : [];
+    valueKey = (value, present) => present ? JSON.stringify(canonicalValue(value)) : "<absent>";
+    locationKey = (addressSpace, address3) => `${addressSpace}:${address3}`;
+    addValue = (target, value) => {
+      const values = target ?? /* @__PURE__ */ new Set();
+      values.add(value);
+      return values;
+    };
+    addAll = (target, values) => {
+      if (values.length === 0) return target;
+      target ??= /* @__PURE__ */ new Set();
+      for (const value of values) target.add(value);
+      return target;
+    };
+    numberField = (record, name) => {
+      const value = record[name];
+      return Number.isSafeInteger(value) && value >= 0 ? value : void 0;
+    };
+    effectiveAddress = (value) => {
+      const operandIndex = numberField(value, "operandIndex");
+      if (operandIndex === void 0 || typeof value.volatile !== "boolean" || typeof value.explanation !== "string") {
+        return void 0;
+      }
+      const address3 = numberField(value, "address");
+      const baseAddress = numberField(value, "baseAddress");
+      const romOffset = numberField(value, "romOffset");
+      const symbol = typeof value.symbol === "string" && value.symbol.length > 0 ? value.symbol : void 0;
+      return {
+        operandIndex,
+        ...address3 === void 0 ? {} : { address: address3 },
+        ...baseAddress === void 0 ? {} : { baseAddress },
+        ...symbol === void 0 ? {} : { symbol },
+        volatile: value.volatile,
+        ...romOffset === void 0 ? {} : { romOffset },
+        explanation: value.explanation
+      };
+    };
+    annotationState = (annotation) => annotation.state;
+    runtimeState = (record) => record.state;
+    buildInstructionAnalysisAnnotations = (manifest, shards, runtime = () => shards.runtime) => {
+      const fileAddressSpaces = new Set(
+        manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
+      );
+      const instructions = /* @__PURE__ */ new Map();
+      const diagnostics = [];
+      const ensure = (addressSpace, address3) => {
+        const key2 = locationKey(addressSpace, address3);
+        let instruction = instructions.get(key2);
+        if (!instruction) {
+          instruction = {
+            addressSpace,
+            address: address3,
+            executionCount: 0
+          };
+          instructions.set(key2, instruction);
+        }
+        return instruction;
+      };
+      const addStateObservation = (instruction, source, architecture, state, recordId, evidence, count) => {
+        const stateKey = JSON.stringify(canonicalValue(state));
+        const key2 = `${source}:${architecture}:${stateKey}`;
+        const observations = instruction.stateObservations ??= /* @__PURE__ */ new Map();
+        let observation = observations.get(key2);
+        if (!observation) {
+          observation = {
+            source,
+            architecture,
+            state,
+            stateKey,
+            ...count === void 0 ? {} : { count: 0 },
+            recordIds: /* @__PURE__ */ new Set(),
+            evidence: /* @__PURE__ */ new Set()
+          };
+          observations.set(key2, observation);
+        }
+        if (count !== void 0) observation.count = (observation.count ?? 0) + count;
+        observation.recordIds.add(recordId);
+        addAll(observation.evidence, evidence);
+        instruction.architectures = addValue(instruction.architectures, architecture);
+        instruction.evidence = addAll(instruction.evidence, evidence);
+      };
+      const addNode = (node) => {
+        const instruction = ensure(node.addressSpace, node.address);
+        instruction.nodeIds = addValue(instruction.nodeIds, node.id);
+        if (node.fileOffset !== void 0)
+          instruction.outputOffsets = addValue(instruction.outputOffsets, node.fileOffset);
+        instruction.evidence = addAll(instruction.evidence, node.evidence);
+        for (const raw of node.effectiveAddresses) {
+          const value = effectiveAddress(raw);
+          if (!value) {
+            diagnostics.push({
+              recordId: node.id,
+              message: "Ignored malformed effective-address metadata; required operandIndex, volatile, and explanation fields were not valid."
+            });
+            continue;
+          }
+          const key2 = JSON.stringify(canonicalValue(value));
+          const addresses2 = instruction.effectiveAddresses ??= /* @__PURE__ */ new Map();
+          let entry = addresses2.get(key2);
+          if (!entry) {
+            entry = { value, nodeIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
+            addresses2.set(key2, entry);
+          }
+          entry.nodeIds.add(node.id);
+          addAll(entry.evidence, node.evidence);
+        }
+        const before = node.incomingState;
+        const after = node.outgoingState;
+        for (const field of sortedStrings([...Object.keys(before), ...Object.keys(after)])) {
+          const hasBefore = Object.hasOwn(before, field);
+          const hasAfter = Object.hasOwn(after, field);
+          const beforeValue = before[field];
+          const afterValue = after[field];
+          const beforeKey = valueKey(beforeValue, hasBefore);
+          const afterKey = valueKey(afterValue, hasAfter);
+          if (beforeKey === afterKey) continue;
+          const key2 = `${field}:${beforeKey}:${afterKey}`;
+          const transitions = instruction.stateTransitions ??= /* @__PURE__ */ new Map();
+          let transition = transitions.get(key2);
+          if (!transition) {
+            transition = {
+              field,
+              beforeKey,
+              afterKey,
+              ...hasBefore ? { before: beforeValue } : {},
+              ...hasAfter ? { after: afterValue } : {},
+              nodeIds: /* @__PURE__ */ new Set(),
+              evidence: /* @__PURE__ */ new Set()
+            };
+            transitions.set(key2, transition);
+          }
+          transition.nodeIds.add(node.id);
+          addAll(transition.evidence, node.evidence);
+        }
+      };
+      for (const record of shards.analysis) {
+        if (record.kind === "cfg-node") addNode(record);
+      }
+      for (const annotation of shards.annotations) {
+        if (annotation.classification !== "opcode") continue;
+        const instruction = ensure(annotation.addressSpace, annotation.start);
+        if (fileAddressSpaces.has(annotation.addressSpace)) {
+          instruction.outputOffsets = addValue(instruction.outputOffsets, annotation.start);
+        }
+      }
+      for (const record of runtime()) {
+        if (record.kind === "runtime-execution") {
+          const instruction = ensure(record.addressSpace, record.address);
+          if (record.fileOffset !== void 0) {
+            instruction.outputOffsets = addValue(instruction.outputOffsets, record.fileOffset);
+          }
+          instruction.architectures = addValue(instruction.architectures, record.architecture);
+          instruction.executionCount += record.count;
+          instruction.executionRecordIds = addValue(instruction.executionRecordIds, record.id);
+          instruction.evidence = addAll(instruction.evidence, record.evidence);
+        } else if (record.kind === "runtime-cpu-state") {
+          const instruction = ensure(record.addressSpace, record.address);
+          addStateObservation(
+            instruction,
+            "runtime",
+            record.architecture,
+            runtimeState(record),
+            record.id,
+            record.evidence,
+            record.count
+          );
+        } else if (record.kind === "runtime-memory-access") {
+          const instruction = ensure(record.instructionAddressSpace, record.instructionAddress);
+          instruction.architectures = addValue(instruction.architectures, record.architecture);
+          const value = {
+            accessedAddressSpace: record.accessedAddressSpace,
+            accessedAddress: record.accessedAddress,
+            access: record.access,
+            width: record.width,
+            ...record.actor === void 0 ? {} : { actor: record.actor },
+            ...record.channel === void 0 ? {} : { channel: record.channel },
+            ...record.value === void 0 ? {} : { value: record.value }
+          };
+          const key2 = JSON.stringify(canonicalValue(value));
+          const accesses = instruction.memoryAccesses ??= /* @__PURE__ */ new Map();
+          let access = accesses.get(key2);
+          if (!access) {
+            access = { value, count: 0, recordIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
+            accesses.set(key2, access);
+          }
+          access.count += record.count;
+          access.recordIds.add(record.id);
+          addAll(access.evidence, record.evidence);
+          instruction.evidence = addAll(instruction.evidence, record.evidence);
+        }
+      }
+      for (const comment of shards.comments) {
+        const instruction = ensure(comment.addressSpace, comment.address);
+        (instruction.comments ??= []).push(comment);
+        for (const evidence of comment.evidence) (instruction.evidence ??= /* @__PURE__ */ new Set()).add(evidence);
+      }
+      const mutable = [...instructions.values()];
+      const directIndex = /* @__PURE__ */ new Map();
+      const outputIndex = [];
+      for (const instruction of mutable) {
+        const direct = directIndex.get(instruction.addressSpace);
+        if (direct) direct.push(instruction);
+        else directIndex.set(instruction.addressSpace, [instruction]);
+        for (const offset of instruction.outputOffsets ?? []) outputIndex.push({ offset, instruction });
+      }
+      for (const values of directIndex.values()) {
+        values.sort((left, right) => left.address - right.address);
+      }
+      outputIndex.sort((left, right) => left.offset - right.offset);
+      const lowerBound2 = (values, target, at) => {
+        let low = 0;
+        let high = values.length;
+        while (low < high) {
+          const middle = low + Math.floor((high - low) / 2);
+          if (at(values[middle]) < target) low = middle + 1;
+          else high = middle;
+        }
+        return low;
+      };
+      const attachToRange = (addressSpace, start, end, callback) => {
+        const direct = directIndex.get(addressSpace) ?? [];
+        for (let index = lowerBound2(direct, start, ({ address: address3 }) => address3); index < direct.length && direct[index].address < end; index++) {
+          callback(direct[index]);
+        }
+        if (fileAddressSpaces.has(addressSpace)) {
+          for (let index = lowerBound2(outputIndex, start, ({ offset }) => offset); index < outputIndex.length && outputIndex[index].offset < end; index++) {
+            const instruction = outputIndex[index].instruction;
+            if (instruction.addressSpace === addressSpace && instruction.address >= start && instruction.address < end) {
+              continue;
+            }
+            callback(instruction);
+          }
+        }
+      };
+      for (const annotation of shards.annotations) {
+        attachToRange(annotation.addressSpace, annotation.start, annotation.end, (instruction) => {
+          instruction.architectures = addValue(instruction.architectures, annotation.architecture);
+          if (annotationState(annotation)) {
+            addStateObservation(
+              instruction,
+              "project",
+              annotation.architecture,
+              annotationState(annotation),
+              annotation.id,
+              annotation.evidence
+            );
+          }
+        });
+      }
+      const coverageById = /* @__PURE__ */ new Map();
+      for (const record of runtime()) {
+        if (record.kind !== "runtime-coverage") continue;
+        coverageById.set(record.id, record);
+        attachToRange(record.addressSpace, record.start, record.end, (instruction) => {
+          instruction.architectures = addValue(instruction.architectures, record.architecture);
+          instruction.coverageRecordIds = addValue(instruction.coverageRecordIds, record.id);
+          instruction.evidence = addAll(instruction.evidence, record.evidence);
+        });
+      }
+      const summaries3 = new Set(
+        shards.analysis.filter((record) => record.kind === "summary").map(({ architecture }) => architecture)
+      );
+      if (summaries3.size === 1) {
+        const [architecture] = summaries3;
+        for (const instruction of mutable) {
+          if (architecture && (instruction.architectures?.size ?? 0) === 0) {
+            instruction.architectures = addValue(instruction.architectures, architecture);
+          }
+        }
+      }
+      const finalized = mutable.map((instruction) => {
+        const coverage = /* @__PURE__ */ new Map();
+        for (const recordId of instruction.coverageRecordIds ?? []) {
+          const record = coverageById.get(recordId);
+          const previous = coverage.get(record.coverage);
+          coverage.set(record.coverage, {
+            coverage: record.coverage,
+            count: (previous?.count ?? 0) + record.count,
+            recordIds: sortedStrings([...previous?.recordIds ?? [], record.id]),
+            evidence: sortedStrings([...previous?.evidence ?? [], ...record.evidence])
+          });
+        }
+        return {
+          id: `instruction:${instruction.addressSpace}:${instruction.address}`,
+          addressSpace: instruction.addressSpace,
+          address: instruction.address,
+          outputOffsets: sortedNumbers(instruction.outputOffsets),
+          architectures: sortedStrings(instruction.architectures),
+          nodeIds: sortedStrings(instruction.nodeIds),
+          effectiveAddresses: [...instruction.effectiveAddresses?.values() ?? []].map(({ value, nodeIds, evidence }) => ({
+            ...value,
+            nodeIds: sortedStrings(nodeIds),
+            evidence: sortedStrings(evidence)
+          })).sort(
+            (left, right) => left.operandIndex - right.operandIndex || (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) || left.explanation.localeCompare(right.explanation)
+          ),
+          stateTransitions: [...instruction.stateTransitions?.values() ?? []].sort(
+            (left, right) => left.field.localeCompare(right.field) || left.beforeKey.localeCompare(right.beforeKey) || left.afterKey.localeCompare(right.afterKey)
+          ).map(({ field, before, after, nodeIds, evidence }) => ({
+            field,
+            ...before === void 0 ? {} : { before },
+            ...after === void 0 ? {} : { after },
+            nodeIds: sortedStrings(nodeIds),
+            evidence: sortedStrings(evidence)
+          })),
+          stateObservations: [...instruction.stateObservations?.values() ?? []].sort(
+            (left, right) => left.source.localeCompare(right.source) || left.architecture.localeCompare(right.architecture) || left.stateKey.localeCompare(right.stateKey)
+          ).map(({ source, architecture, state, count, recordIds, evidence }) => ({
+            source,
+            architecture,
+            state,
+            ...count === void 0 ? {} : { count },
+            recordIds: sortedStrings(recordIds),
+            evidence: sortedStrings(evidence)
+          })),
+          executionCount: instruction.executionCount,
+          ...instruction.comments ? { comments: [...instruction.comments].sort((a, b) => a.id.localeCompare(b.id)) } : {},
+          executionRecordIds: sortedStrings(instruction.executionRecordIds),
+          runtimeCoverage: [...coverage.values()].sort(
+            (left, right) => left.coverage.localeCompare(right.coverage)
+          ),
+          memoryAccesses: [...instruction.memoryAccesses?.values() ?? []].map(({ value, count, recordIds, evidence }) => ({
+            ...value,
+            count,
+            recordIds: sortedStrings(recordIds),
+            evidence: sortedStrings(evidence)
+          })).sort(
+            (left, right) => left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) || left.accessedAddress - right.accessedAddress || left.access.localeCompare(right.access) || left.width - right.width || (left.value ?? -1) - (right.value ?? -1)
+          ),
+          evidence: sortedStrings(instruction.evidence)
+        };
+      });
+      return {
+        instructions: finalized.sort(
+          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
+        ),
+        diagnostics: diagnostics.sort(
+          (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
+        )
+      };
+    };
+  }
+});
+
+// packages/disassembler/src/runtime-evidence.ts
+var init_runtime_evidence = __esm({
+  "packages/disassembler/src/runtime-evidence.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/behavior-capture.ts
+var MAX_CAPTURE_FILE_BYTES;
+var init_behavior_capture = __esm({
+  "packages/disassembler/src/behavior-capture.ts"() {
+    "use strict";
+    MAX_CAPTURE_FILE_BYTES = 128 * 1024 * 1024;
+  }
+});
+
+// packages/disassembler/src/behavior-capture-recorder.ts
+var init_behavior_capture_recorder = __esm({
+  "packages/disassembler/src/behavior-capture-recorder.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/interval-index.ts
+var HalfOpenIntervalIndex;
+var init_interval_index = __esm({
+  "packages/disassembler/src/interval-index.ts"() {
+    "use strict";
+    HalfOpenIntervalIndex = class {
+      #entries;
+      #prefixMaximumEnd;
+      /**
+       * Builds an immutable search index from already-owned interval values.
+       * @param {readonly Value[]} values Non-negative safe half-open intervals in semantic input order.
+       * @throws {Error} When an interval is empty, reversed, negative, or outside safe integers.
+       */
+      constructor(values) {
+        for (const value of values) {
+          if (!Number.isSafeInteger(value.start) || !Number.isSafeInteger(value.end) || value.start < 0 || value.end <= value.start) {
+            throw new Error("Interval index entries must be non-negative safe half-open ranges.");
+          }
+        }
+        this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).sort(
+          (left, right) => left.value.start - right.value.start || left.value.end - right.value.end || left.inputIndex - right.inputIndex
+        );
+        const prefixMaximumEnd = [];
+        let maximumEnd = -1;
+        for (const [index, entry] of this.#entries.entries()) {
+          maximumEnd = Math.max(maximumEnd, entry.value.end);
+          prefixMaximumEnd[index] = maximumEnd;
+        }
+        this.#prefixMaximumEnd = prefixMaximumEnd;
+      }
+      /**
+       * Returns every interval containing one safe non-negative point, in input order.
+       * @param {number} point Safe non-negative point to query.
+       * @returns {readonly Value[]} Matching intervals in their original input order.
+       */
+      at(point) {
+        if (!Number.isSafeInteger(point) || point < 0) {
+          throw new Error("Interval index points must be non-negative safe integers.");
+        }
+        return this.#matching(point, point + 1);
+      }
+      /**
+       * Returns every interval intersecting a valid half-open query, in input order.
+       * @param {number} start Inclusive safe non-negative query start.
+       * @param {number} end Exclusive safe query end greater than `start`.
+       * @returns {readonly Value[]} Matching intervals in their original input order.
+       */
+      overlapping(start, end) {
+        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
+          throw new Error("Interval index queries must be non-negative safe half-open ranges.");
+        }
+        return this.#matching(start, end);
+      }
+      #matching(start, end) {
+        let low = 0;
+        let high = this.#entries.length;
+        while (low < high) {
+          const middle = low + Math.floor((high - low) / 2);
+          if (this.#entries[middle].value.start < end) low = middle + 1;
+          else high = middle;
+        }
+        const matches = [];
+        for (let index = low - 1; index >= 0 && this.#prefixMaximumEnd[index] > start; index--) {
+          const entry = this.#entries[index];
+          if (entry.value.end > start) matches.push(entry);
+        }
+        return matches.sort((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/project-labels.ts
+var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
+var init_project_labels = __esm({
+  "packages/disassembler/src/project-labels.ts"() {
+    "use strict";
+    validateSourceLabelName = (name) => {
+      if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name))
+        throw new Error(
+          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
+        );
+    };
+    legacySourceLabelName = (name) => `L_${name.replaceAll(/\W/g, "_").replaceAll(/_+/g, "_") || "unnamed"}`;
+    projectSourceLabelNames = (labels, reserved = []) => {
+      const names = /* @__PURE__ */ new Map();
+      const used = new Set([...reserved].map((name) => name.toLowerCase()));
+      const sorted2 = [...labels].sort((a, b) => a.id.localeCompare(b.id));
+      for (const label of sorted2.filter((label2) => label2.sourceName === void 0)) {
+        const base = legacySourceLabelName(label.name);
+        let name = base;
+        let suffix = 2;
+        while (used.has(name.toLowerCase())) name = `${base}_${suffix++}`;
+        used.add(name.toLowerCase());
+        names.set(label.id, name);
+      }
+      for (const label of sorted2.filter((label2) => label2.sourceName !== void 0)) {
+        const name = label.sourceName;
+        validateSourceLabelName(name);
+        if (used.has(name.toLowerCase()))
+          throw new Error(`Source label '${name}' conflicts with another symbol.`);
+        used.add(name.toLowerCase());
+        names.set(label.id, name);
+      }
+      return names;
+    };
+  }
+});
+
+// packages/disassembler/src/project-edit.ts
+var isStableId2, manifestWithoutShards, assertStableId, recordMatches, sortedUnique2, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, applyDisassemblyAnnotationEdit;
+var init_project_edit = __esm({
+  "packages/disassembler/src/project-edit.ts"() {
+    "use strict";
+    init_project_labels();
+    init_project_store();
+    isStableId2 = (id) => {
+      const isAlphaNumeric = (character) => {
+        const code = character.charCodeAt(0);
+        return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+      };
+      if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) return false;
+      for (const character of id) {
+        if (!isAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+      }
+      return true;
+    };
+    manifestWithoutShards = (manifest) => {
+      if (!("shards" in manifest)) return manifest;
+      const { shards: ignored, ...projectManifest } = manifest;
+      void ignored;
+      return projectManifest;
+    };
+    assertStableId = (id, label) => {
+      if (!isStableId2(id)) throw new Error(`${label} '${id}' is not a stable project id.`);
+    };
+    recordMatches = (left, right) => canonicalJson(left) === canonicalJson(right);
+    sortedUnique2 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+    assertManualEvidenceRequest = (project, evidenceId, sourceId) => {
+      assertStableId(evidenceId, "Evidence id");
+      assertStableId(sourceId, "Evidence source id");
+      if (project.shards.evidence.some(({ id }) => id === evidenceId)) {
+        throw new Error(`Evidence '${evidenceId}' already exists.`);
+      }
+    };
+    manualEvidence = (evidenceId, sourceId, detail) => ({
+      id: evidenceId,
+      source: "manual",
+      sourceId,
+      confidence: "certain",
+      ...detail?.trim() ? { detail: detail.trim() } : {}
+    });
+    addressSpaceMaximum = (project, addressSpaceId) => {
+      const addressSpace = project.manifest.addressSpaces.find(({ id }) => id === addressSpaceId);
+      if (!addressSpace) throw new Error(`Unknown analysis address space '${addressSpaceId}'.`);
+      return addressSpace.kind === "file" ? project.manifest.rom.contentSize : 2 ** addressSpace.addressBits;
+    };
+    applyDisassemblyAnnotationEdit = (project, request2) => {
+      assertManualEvidenceRequest(project, request2.evidenceId, request2.sourceId);
+      const maximum = addressSpaceMaximum(project, request2.addressSpace);
+      if (!Number.isSafeInteger(request2.address) || request2.address < 0 || request2.address >= maximum)
+        throw new Error("The annotation address is outside the selected address space.");
+      for (const text of [request2.comment, request2.inlineComment, request2.instructionComment]) {
+        if (text === void 0) continue;
+        if (typeof text !== "string") throw new Error("Comments must contain plain text.");
+        for (const character of text) {
+          const code = character.codePointAt(0);
+          if (code < 32 && ![9, 10, 13].includes(code) || code === 8232 || code === 8233)
+            throw new Error("Comments must contain plain text without control characters.");
+        }
+      }
+      for (const text of [request2.inlineComment, request2.instructionComment]) {
+        if (text !== void 0 && /[\n\r]/.test(text))
+          throw new Error("Inline comments must fit on one line.");
+      }
+      const atAddress = (record) => record.addressSpace === request2.addressSpace && record.address === request2.address;
+      const fileAddress = project.manifest.addressSpaces.some(
+        (space) => space.id === request2.addressSpace && space.kind === "file"
+      );
+      const labelBefore = request2.labelId === void 0 ? void 0 : project.shards.labels.find(({ id }) => id === request2.labelId);
+      if (labelBefore && !atAddress(labelBefore))
+        throw new Error("The label id belongs to a different address.");
+      let labelAfter;
+      if (request2.name !== void 0) {
+        if (!request2.labelId) throw new Error("A stable label id is required.");
+        assertStableId(request2.labelId, "Label id");
+        const name = request2.name.trim();
+        validateSourceLabelName(name);
+        labelAfter = {
+          ...labelBefore ?? {
+            id: request2.labelId,
+            addressSpace: request2.addressSpace,
+            address: request2.address,
+            analysisEntryPoint: false
+          },
+          name,
+          sourceName: name,
+          ...request2.comment !== void 0 ? { comment: request2.comment.replaceAll("\r\n", "\n").replaceAll("\r", "\n") } : {},
+          ...request2.inlineComment !== void 0 ? { inlineComment: request2.inlineComment } : {},
+          evidence: sortedUnique2([...labelBefore?.evidence ?? [], request2.evidenceId])
+        };
+      } else if (request2.comment || request2.inlineComment || request2.labelId) {
+        throw new Error("A label name is required for comments attached to a label.");
+      }
+      const labels = labelAfter ? [...project.shards.labels.filter(({ id }) => id !== labelAfter.id), labelAfter] : project.shards.labels;
+      projectSourceLabelNames(labels);
+      const commentBefore = request2.instructionCommentId === void 0 || request2.instructionComment === void 0 ? void 0 : project.shards.comments.find(({ id }) => id === request2.instructionCommentId);
+      if (commentBefore && (!atAddress(commentBefore) || commentBefore.placement !== "inline-instruction"))
+        throw new Error("The comment id belongs to a different address or placement.");
+      let commentAfter;
+      if (request2.instructionComment !== void 0) {
+        if (!request2.instructionCommentId)
+          throw new Error("A stable instruction-comment id is required.");
+        assertStableId(request2.instructionCommentId, "Comment id");
+        if (request2.instructionComment) {
+          if (request2.instructionComment !== commentBefore?.text && !project.shards.analysis.some(
+            (record) => record.kind === "cfg-node" && (atAddress(record) || fileAddress && record.fileOffset === request2.address)
+          ))
+            throw new Error("An inline instruction comment requires an accepted instruction boundary.");
+          commentAfter = {
+            id: request2.instructionCommentId,
+            addressSpace: request2.addressSpace,
+            address: request2.address,
+            placement: "inline-instruction",
+            text: request2.instructionComment,
+            evidence: sortedUnique2([...commentBefore?.evidence ?? [], request2.evidenceId])
+          };
+        }
+      }
+      const withoutEvidence = (record) => {
+        if (!record) return void 0;
+        const { evidence: ignored, ...value } = record;
+        void ignored;
+        return value;
+      };
+      if (recordMatches(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) && recordMatches(withoutEvidence(commentBefore), withoutEvidence(commentAfter)))
+        throw new Error("The annotation has no changes to save.");
+      const evidence = manualEvidence(
+        request2.evidenceId,
+        request2.sourceId,
+        `Edited disassembly annotation at ${request2.addressSpace}:$${request2.address.toString(16).toUpperCase()}.`
+      );
+      return {
+        project: {
+          manifest: manifestWithoutShards(project.manifest),
+          shards: {
+            ...project.shards,
+            labels,
+            comments: request2.instructionComment === void 0 ? project.shards.comments : [
+              ...project.shards.comments.filter(({ id }) => id !== request2.instructionCommentId),
+              ...commentAfter ? [commentAfter] : []
+            ],
+            evidence: [...project.shards.evidence, evidence]
+          }
+        },
+        inverse: {
+          kind: "restore-disassembly-annotation",
+          labelBefore,
+          labelAfter,
+          commentBefore,
+          commentAfter,
+          evidence
+        }
+      };
+    };
+  }
+});
+
+// packages/disassembler/src/rom-image.ts
+var init_rom_image = __esm({
+  "packages/disassembler/src/rom-image.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/runtime-trace-file.ts
+var DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS;
+var init_runtime_trace_file = __esm({
+  "packages/disassembler/src/runtime-trace-file.ts"() {
+    "use strict";
+    DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
+    MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
+  }
+});
+
+// packages/disassembler/src/source-export.ts
+var canonicalSourceExportJson;
+var init_source_export = __esm({
+  "packages/disassembler/src/source-export.ts"() {
+    "use strict";
+    init_canonical_json();
+    canonicalSourceExportJson = (value) => canonicalJson(value);
+  }
+});
+
+// packages/disassembler/src/static-analysis.ts
+var init_static_analysis = __esm({
+  "packages/disassembler/src/static-analysis.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/analysis-sources.ts
+var sorted, key, addressKey2, hex, buildAnalysisSourceCatalog, AnalysisSourceIndex, compareLocations;
+var init_analysis_sources = __esm({
+  "packages/disassembler/src/analysis-sources.ts"() {
+    "use strict";
+    init_interval_index();
+    init_project_labels();
+    sorted = (values) => [...new Set(values)].sort();
+    key = (...values) => JSON.stringify(values);
+    addressKey2 = (space, address3) => key(space, address3);
+    hex = (address3) => `$${address3.toString(16).toUpperCase().padStart(6, "0")}`;
+    buildAnalysisSourceCatalog = (shards) => {
+      const sources = /* @__PURE__ */ new Map();
+      const ensure = (id, name, format, sha2562) => {
+        let source = sources.get(id);
+        if (!source) {
+          source = {
+            id,
+            names: /* @__PURE__ */ new Set(),
+            kinds: /* @__PURE__ */ new Set(),
+            format,
+            sha256: sha2562,
+            evidenceIds: [],
+            reports: []
+          };
+          sources.set(id, source);
+        }
+        source.names.add(name);
+        return source;
+      };
+      const reportSources = /* @__PURE__ */ new Map();
+      for (const report of shards.imports) {
+        const id = key("artifact", report.format, report.sourceSha256);
+        ensure(id, report.sourceName, report.format, report.sourceSha256).reports.push(report);
+        reportSources.set(report.id, id);
+      }
+      for (const evidence of shards.evidence) {
+        const artifact = evidence.artifact;
+        const legacy = !artifact ? shards.imports.filter(
+          (report) => report.id === evidence.id || report.sourceSha256 === evidence.sourceId
+        ) : [];
+        let id = key("producer", evidence.source, evidence.sourceId);
+        if (artifact) id = key("artifact", artifact.format, artifact.sha256);
+        else if (legacy.length === 1) id = reportSources.get(legacy[0].id);
+        const source = sources.get(id) ?? ensure(id, evidence.sourceId, artifact?.format, artifact?.sha256);
+        source.kinds.add(evidence.source);
+        source.evidenceIds.push(evidence.id);
+      }
+      return [...sources.values()].map((source) => ({
+        ...source,
+        names: sorted(source.names),
+        name: sorted(source.names).join(" / "),
+        kinds: [...source.kinds].sort(),
+        evidenceIds: sorted(source.evidenceIds),
+        reports: source.reports.sort((a, b) => a.id.localeCompare(b.id))
+      })).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
+    };
+    AnalysisSourceIndex = class {
+      sources;
+      #sourceById;
+      #owners = /* @__PURE__ */ new Map();
+      #observations = /* @__PURE__ */ new Map();
+      #coverage = /* @__PURE__ */ new Map();
+      #memory = /* @__PURE__ */ new Map();
+      #nodes = /* @__PURE__ */ new Map();
+      #nodesAt = /* @__PURE__ */ new Map();
+      #functionsAt = /* @__PURE__ */ new Map();
+      #labelsAt = /* @__PURE__ */ new Map();
+      #contributions = /* @__PURE__ */ new Map();
+      #sourceInstructions = /* @__PURE__ */ new Map();
+      #runtimeSources = /* @__PURE__ */ new Set();
+      #comparisons = /* @__PURE__ */ new Map();
+      #manifest;
+      /** Build contribution indexes while streaming runtime rows; the input history is never retained. */
+      constructor(manifest, shards, runtime = shards.runtime) {
+        this.#manifest = manifest;
+        this.sources = buildAnalysisSourceCatalog(shards);
+        this.#sourceById = new Map(this.sources.map((source) => [source.id, source]));
+        const sourceOfEvidence = new Map(
+          this.sources.flatMap((source) => source.evidenceIds.map((id) => [id, source.id]))
+        );
+        const sourceSets = /* @__PURE__ */ new Map();
+        const sourceIds = (evidence) => {
+          const token = JSON.stringify(evidence);
+          let ids = sourceSets.get(token);
+          if (!ids) {
+            ids = sorted(
+              evidence.flatMap((id) => sourceOfEvidence.has(id) ? [sourceOfEvidence.get(id)] : [])
+            );
+            sourceSets.set(token, ids);
+          }
+          return ids;
+        };
+        for (const node of shards.analysis) {
+          if (node.kind === "cfg-node") {
+            this.#nodes.set(node.id, node);
+            const location = addressKey2(node.addressSpace, node.address);
+            const nodes = this.#nodesAt.get(location) ?? [];
+            nodes.push(node);
+            this.#nodesAt.set(location, nodes);
+          } else if (node.kind === "function") {
+            const location = addressKey2(node.addressSpace, node.address);
+            const functions = this.#functionsAt.get(location) ?? [];
+            functions.push(node);
+            this.#functionsAt.set(location, functions);
+          }
+        }
+        const names = projectSourceLabelNames(shards.labels);
+        for (const label of shards.labels) {
+          const location = addressKey2(label.addressSpace, label.address);
+          this.#labelsAt.set(location, [
+            ...this.#labelsAt.get(location) ?? [],
+            names.get(label.id) ?? label.name
+          ]);
+        }
+        const coverage = /* @__PURE__ */ new Map();
+        for (const record of runtime) {
+          const ids = sourceIds(record.evidence);
+          for (const id of ids) this.#runtimeSources.add(id);
+          if (record.kind === "runtime-execution" || record.kind === "runtime-instruction") {
+            const location = key(record.architecture, record.addressSpace, record.address);
+            let observation = this.#observations.get(location);
+            if (!observation) {
+              observation = {
+                architecture: record.architecture,
+                addressSpace: record.addressSpace,
+                address: record.address,
+                sources: /* @__PURE__ */ new Set(),
+                sizes: /* @__PURE__ */ new Map(),
+                bytes: /* @__PURE__ */ new Map(),
+                mixedBytes: /* @__PURE__ */ new Set()
+              };
+              this.#observations.set(location, observation);
+            }
+            for (const id of ids) {
+              observation.sources.add(id);
+              const size = record.kind === "runtime-instruction" ? record.bytes.length : record.size ?? 0;
+              observation.sizes.set(id, Math.max(size, observation.sizes.get(id) ?? 0));
+            }
+            if (record.kind === "runtime-instruction")
+              for (const id of ids) {
+                const prior = observation.bytes.get(id);
+                if (!prior) observation.bytes.set(id, record.bytes);
+                else if (prior.join(",") !== record.bytes.join(",")) observation.mixedBytes.add(id);
+              }
+          } else if (record.kind === "runtime-coverage" && record.coverage === "executed") {
+            const location = key(record.architecture, record.addressSpace);
+            const list = coverage.get(location) ?? [];
+            list.push({ start: record.start, end: record.end, sources: ids });
+            coverage.set(location, list);
+          } else if (record.kind === "runtime-memory-access") {
+            const identity = key(
+              record.architecture,
+              record.instructionAddressSpace,
+              record.instructionAddress,
+              record.accessedAddressSpace,
+              record.accessedAddress,
+              record.access,
+              record.width,
+              record.actor,
+              record.channel
+            );
+            let site = this.#memory.get(identity);
+            if (!site) {
+              const description = `${record.access} ${record.accessedAddressSpace} ${hex(record.accessedAddress)} \xB7 ${record.width} byte(s) \xB7 ${record.actor ?? "unknown actor"}${record.channel === void 0 ? "" : ` ${record.channel}`}`;
+              site = {
+                sources: /* @__PURE__ */ new Set(),
+                entry: {
+                  id: identity,
+                  label: hex(record.instructionAddress),
+                  description,
+                  detail: description,
+                  addressSpace: record.instructionAddressSpace,
+                  address: record.instructionAddress,
+                  architecture: record.architecture,
+                  outputOffsets: [],
+                  recordIds: []
+                }
+              };
+              this.#memory.set(identity, site);
+            }
+            for (const id of ids) site.sources.add(id);
+          }
+        }
+        for (const [id, ranges] of coverage) this.#coverage.set(id, new HalfOpenIntervalIndex(ranges));
+        for (const observation of this.#observations.values())
+          for (const id of observation.sources) {
+            const list = this.#sourceInstructions.get(id) ?? [];
+            list.push(observation);
+            this.#sourceInstructions.set(id, list);
+          }
+        for (const list of this.#sourceInstructions.values()) list.sort(compareLocations);
+        const addContribution = (record, entry) => {
+          for (const id of sourceIds(record.evidence)) {
+            const list = this.#contributions.get(id) ?? [];
+            list.push(entry);
+            this.#contributions.set(id, list);
+          }
+        };
+        for (const record of shards.labels)
+          addContribution(record, {
+            id: record.id,
+            label: names.get(record.id) ?? record.name,
+            description: `Label \xB7 ${record.addressSpace} ${hex(record.address)}`,
+            detail: [record.comment, record.inlineComment].filter(Boolean).join("\n"),
+            addressSpace: record.addressSpace,
+            address: record.address,
+            outputOffsets: [],
+            recordIds: [record.id]
+          });
+        for (const record of shards.comments)
+          addContribution(record, {
+            id: record.id,
+            label: record.text.split(/\r?\n/)[0],
+            description: `Comment \xB7 ${record.addressSpace} ${hex(record.address)}`,
+            detail: record.text,
+            addressSpace: record.addressSpace,
+            address: record.address,
+            outputOffsets: [],
+            recordIds: [record.id]
+          });
+        for (const record of shards.annotations)
+          addContribution(record, {
+            id: record.id,
+            label: `${hex(record.start)}\u2013${hex(record.end - 1)}`,
+            description: `${record.classification} \xB7 ${record.addressSpace} \xB7 ${record.end - record.start} bytes`,
+            detail: `Classified interval from ${hex(record.start)} through ${hex(record.end - 1)}. This is attributed metadata, not proof of execution in this capture.`,
+            addressSpace: record.addressSpace,
+            address: record.start,
+            architecture: record.architecture,
+            outputOffsets: [],
+            recordIds: [record.id]
+          });
+      }
+      /**
+       * Sources with recorded runtime facts; static/imported classifications are not capture baselines.
+       * @returns {readonly AnalysisEvidenceSource[]} Sources contributing direct runtime facts.
+       */
+      runtimeSources() {
+        return this.sources.filter((source) => this.#runtimeSources.has(source.id));
+      }
+      /**
+       * Compare direct observations against all other captures or an explicit baseline selection.
+       * @param {string} sourceId Selected catalog identity.
+       * @param {readonly string[]} [baselineIds] Explicit baseline identities; undefined means all other runtime sources.
+       * @returns {AnalysisSourceComparison} Compact counts and interpretation notes.
+       */
+      compare(sourceId, baselineIds) {
+        return this.#comparison(sourceId, baselineIds).summary;
+      }
+      /**
+       * Materialize only a bounded page for an editor tree.
+       * @param {string} sourceId Selected source identity.
+       * @param {AnalysisSourceGroup} group Contribution group.
+       * @param {number} offset Zero-based page start.
+       * @param {readonly string[]} [baselineIds] Optional comparison captures.
+       * @returns {readonly AnalysisSourceEntry[]} Up to 200 navigable entries.
+       */
+      page(sourceId, group, offset = 0, baselineIds) {
+        if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Invalid source page offset.");
+        const data = this.#comparison(sourceId, baselineIds);
+        const slice = (entries3) => entries3.slice(offset, offset + 200);
+        switch (group) {
+          case "uniqueInstructions":
+            return slice(data.unique).map((entry) => this.#instructionEntry(entry, sourceId));
+          case "sharedInstructions":
+            return slice(data.shared).map((entry) => this.#instructionEntry(entry, sourceId));
+          case "codeRanges":
+            return slice(data.ranges).map((range) => ({
+              id: key(range.architecture, range.addressSpace, range.start),
+              label: `${hex(range.start)}\u2013${hex(range.end - 1)}`,
+              description: `${range.end - range.start} bytes \xB7 ${range.addressSpace}`,
+              detail: "Known code extent at instruction addresses absent from the selected comparison captures. Addresses remain qualified by architecture and address space; this is not a ROM-file byte total.",
+              addressSpace: range.addressSpace,
+              address: range.start,
+              architecture: range.architecture,
+              outputOffsets: [],
+              recordIds: []
+            }));
+          case "functions":
+            return slice(data.functions);
+          case "memory":
+            return slice(data.memory);
+          case "contributions":
+            return slice(this.#contributions.get(sourceId) ?? []);
+          default:
+            throw new Error("Unknown source contribution group.");
+        }
+      }
+      #matchingNodes(observation) {
+        return (this.#nodesAt.get(addressKey2(observation.addressSpace, observation.address)) ?? []).filter(
+          (node) => node.specificationId === observation.architecture || node.specificationId.startsWith(`${observation.architecture}.`)
+        );
+      }
+      #size(observation, sourceId) {
+        const captured = observation.sizes.get(sourceId) ?? 0;
+        if (captured) return { size: captured, inferred: false };
+        const sizes = new Set(this.#matchingNodes(observation).map(({ size }) => size));
+        return sizes.size === 1 ? { size: [...sizes][0], inferred: true } : { size: 0, inferred: false };
+      }
+      #instructionEntry(observation, sourceId) {
+        const nodes = this.#matchingNodes(observation);
+        const { size, inferred } = this.#size(observation, sourceId);
+        const labels = this.#labelsAt.get(addressKey2(observation.addressSpace, observation.address));
+        const mnemonic = sorted(nodes.map(({ mnemonic: mnemonic2 }) => mnemonic2)).join(" / ");
+        const bytes = observation.bytes.get(sourceId);
+        const name = labels?.length ? labels.join(" / ") : mnemonic;
+        return {
+          id: key(observation.architecture, observation.addressSpace, observation.address),
+          label: `${hex(observation.address)}${name ? ` ${name}` : ""}`,
+          description: `${observation.addressSpace} \xB7 ${size ? `${size} byte(s)${inferred ? " (analysis)" : ""}` : "size unknown"}`,
+          detail: [
+            `${observation.architecture} \xB7 ${observation.addressSpace} ${hex(observation.address)}`,
+            `Observed in: ${sorted(observation.sources).map((id) => this.#sourceById.get(id)?.name ?? id).join(", ")}`,
+            bytes ? `Captured bytes${observation.mixedBytes.has(sourceId) ? " (one of multiple variants)" : ""}: ${bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")}` : "No execution-time bytes were saved.",
+            inferred ? "Byte extent uses the single agreed instruction size in the current analysis." : ""
+          ].filter(Boolean).join("\n"),
+          addressSpace: observation.addressSpace,
+          address: observation.address,
+          architecture: observation.architecture,
+          outputOffsets: [
+            ...new Set(
+              nodes.flatMap((node) => node.fileOffset === void 0 ? [] : [node.fileOffset])
+            )
+          ],
+          recordIds: nodes.slice(0, 32).map(({ id }) => id)
+        };
+      }
+      #ownerIds(node) {
+        const cached = this.#owners.get(node.id);
+        if (cached) return cached;
+        const path8 = node.evidencePath.length ? node.evidencePath : [node.id];
+        for (let index = path8.length - 1; index >= 0; index--) {
+          const parent = this.#nodes.get(path8[index]);
+          if (!parent) continue;
+          const owners = this.#functionsAt.get(addressKey2(parent.addressSpace, parent.address));
+          if (owners?.length) {
+            const ids = sorted(owners.map(({ id }) => id));
+            this.#owners.set(node.id, ids);
+            return ids;
+          }
+        }
+        this.#owners.set(node.id, []);
+        return [];
+      }
+      #comparison(sourceId, baselineIds) {
+        const source = this.#sourceById.get(sourceId);
+        if (!source)
+          throw new Error("This source no longer exists. Refresh Sources and select it again.");
+        const ids = sorted(baselineIds ?? [...this.#runtimeSources].filter((id) => id !== sourceId));
+        if (ids.some((id) => id === sourceId || !this.#sourceById.has(id)))
+          throw new Error("Invalid source comparison selection.");
+        const token = key(sourceId, JSON.stringify(ids));
+        const cached = this.#comparisons.get(token);
+        if (cached) return cached;
+        const baseline = new Set(ids);
+        const observations = this.#sourceInstructions.get(sourceId) ?? [];
+        const unique = [], shared = [];
+        for (const observation of observations) {
+          const aggregate = this.#coverage.get(key(observation.architecture, observation.addressSpace))?.at(observation.address) ?? [];
+          const present = ids.some((id) => observation.sources.has(id)) || aggregate.some((range) => range.sources.some((id) => baseline.has(id)));
+          (present ? shared : unique).push(observation);
+        }
+        const ranges = [];
+        const functions = /* @__PURE__ */ new Map();
+        const functionById = new Map([...this.#functionsAt.values()].flat().map((fn) => [fn.id, fn]));
+        let unknownSizeInstructions = 0, unownedInstructions = 0, ambiguousInstructions = 0, inferred = 0;
+        for (const observation of unique) {
+          const size = this.#size(observation, sourceId);
+          if (size.inferred) inferred++;
+          const maximum = this.#manifest.addressSpaces.find(
+            ({ id }) => id === observation.addressSpace
+          );
+          let limit = maximum ? 2 ** maximum.addressBits : 0;
+          if (maximum?.kind === "file") limit = this.#manifest.rom.contentSize;
+          if (size.size && observation.address + size.size <= limit) {
+            const prior = ranges.at(-1);
+            if (prior && prior.architecture === observation.architecture && prior.addressSpace === observation.addressSpace && prior.end >= observation.address)
+              prior.end = Math.max(prior.end, observation.address + size.size);
+            else
+              ranges.push({
+                architecture: observation.architecture,
+                addressSpace: observation.addressSpace,
+                start: observation.address,
+                end: observation.address + size.size
+              });
+          } else unknownSizeInstructions++;
+          const nodes = this.#matchingNodes(observation);
+          const owners = sorted(nodes.flatMap((node) => this.#ownerIds(node)));
+          if (!owners.length) unownedInstructions++;
+          else if (owners.length !== 1 || nodes.some((node) => !this.#ownerIds(node).length))
+            ambiguousInstructions++;
+          else {
+            const fn = functionById.get(owners[0]);
+            const prior = functions.get(fn.id);
+            functions.set(fn.id, {
+              fn,
+              count: (prior?.count ?? 0) + 1,
+              architecture: observation.architecture
+            });
+          }
+        }
+        const functionEntries = [...functions.values()].sort(
+          (a, b) => b.count - a.count || a.fn.address - b.fn.address || a.fn.id.localeCompare(b.fn.id)
+        ).map(({ fn, count, architecture }) => ({
+          id: fn.id,
+          label: this.#labelsAt.get(addressKey2(fn.addressSpace, fn.address))?.join(" / ") ?? `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
+          description: `${count} unique instruction(s) \xB7 ${hex(fn.address)}`,
+          detail: "Contains instruction addresses observed only in the selected source relative to the chosen baseline. Other parts of this function may be shared.",
+          addressSpace: fn.addressSpace,
+          address: fn.address,
+          architecture,
+          outputOffsets: [],
+          recordIds: [fn.id]
+        }));
+        const memory = [...this.#memory.values()].filter(
+          (site) => site.sources.has(sourceId) && ![...site.sources].some((id) => baseline.has(id))
+        ).map(({ entry }) => entry).sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
+        const summary = {
+          source,
+          baseline: ids.map((id) => this.#sourceById.get(id)),
+          instructionCount: observations.length,
+          uniqueInstructionCount: unique.length,
+          sharedInstructionCount: shared.length,
+          knownCodeBytes: ranges.reduce((sum, range) => sum + range.end - range.start, 0),
+          unknownSizeInstructions,
+          functionCount: functionEntries.length,
+          unownedInstructions,
+          ambiguousInstructions,
+          uniqueMemoryCount: memory.length,
+          contributionCount: this.#contributions.get(sourceId)?.length ?? 0,
+          codeRangeCount: ranges.length,
+          notes: [
+            "Unique means an instruction start was recorded here and absent from execution observations/coverage in the selected comparison captures. It does not prove behavior-exclusive logic.",
+            "Code byte totals merge known extents at unique instruction starts within each architecture/address space. They are not a delta of ROM file bytes or byte values; mirrored addresses stay separate.",
+            "Static analysis and imported byte classifications do not count as captured execution. Labels, comments and classifications below show attribution, not exclusivity.",
+            ...inferred ? [
+              `${inferred} unique instruction(s) use an agreed analysis size because their capture saved only PCs.`
+            ] : [],
+            ...unknownSizeInstructions ? [
+              `${unknownSizeInstructions} unique instruction(s) have an unknown or unprojectable size and are excluded from the byte total.`
+            ] : [],
+            ...!ids.length ? ["No comparison captures selected; all observed instruction addresses are shown."] : [],
+            ...[source, ...ids.map((id) => this.#sourceById.get(id))].flatMap(
+              (entry) => entry.reports.flatMap((report) => [
+                ...report.warnings.map((warning) => `${entry.name}: ${warning}`),
+                ...report.unsupported.map(
+                  (loss) => `${entry.name}: ${loss.count} ${loss.field} omitted. ${loss.reason}`
+                )
+              ])
+            )
+          ]
+        };
+        const data = { summary, unique, shared, ranges, functions: functionEntries, memory };
+        if (this.#comparisons.size >= 4)
+          this.#comparisons.delete(this.#comparisons.keys().next().value);
+        this.#comparisons.set(token, data);
+        return data;
+      }
+    };
+    compareLocations = (a, b) => a.architecture.localeCompare(b.architecture) || a.addressSpace.localeCompare(b.addressSpace) || a.address - b.address;
+  }
+});
+
+// packages/disassembler/src/runtime-trace-project.ts
+var init_runtime_trace_project = __esm({
+  "packages/disassembler/src/runtime-trace-project.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/index.ts
+var init_src = __esm({
+  "packages/disassembler/src/index.ts"() {
+    "use strict";
+    init_asset_codec();
+    init_asset_codecs();
+    init_asset_preview();
+    init_analysis_graph();
+    init_compression_codec();
+    init_coverage_map();
+    init_execution_window();
+    init_instruction_annotations();
+    init_behavior_capture();
+    init_behavior_capture_recorder();
+    init_interval_index();
+    init_sqlite_store();
+    init_project_store();
+    init_project_transaction();
+    init_project_edit();
+    init_project_labels();
+    init_project_types();
+    init_rom_image();
+    init_runtime_evidence();
+    init_runtime_trace();
+    init_runtime_trace_file();
+    init_source_export();
+    init_static_analysis();
+    init_trace_detail();
+    init_analysis_sources();
+    init_runtime_trace_project();
+  }
+});
+
+// packages/core/src/address-width.ts
+var init_address_width = __esm({
+  "packages/core/src/address-width.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
@@ -84,9 +4105,23 @@ var init_addressToLine = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
-var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+// packages/core/src/architecture-registry.ts
+var init_architecture_registry = __esm({
+  "packages/core/src/architecture-registry.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/source-location.ts
+var init_source_location = __esm({
+  "packages/core/src/source-location.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/diagnostics.ts
+var init_diagnostics = __esm({
+  "packages/core/src/diagnostics.ts"() {
     "use strict";
   }
 });
@@ -111,67 +4146,9 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/source-location.ts
-var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/diagnostics.ts
-var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
-    "use strict";
-  }
-});
-
 // packages/core/src/ir/expression-node.ts
 var init_expression_node = __esm({
   "packages/core/src/ir/expression-node.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/ir/normalized-command.ts
-var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
-var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
-    "use strict";
-    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
-    EMPTY_TOKEN_SPANS = Object.freeze([]);
-  }
-});
-
-// packages/core/src/operand-syntax.ts
-function parseOperandSyntax(operand) {
-  const raw = operand;
-  const trimmed = operand.trim();
-  const normalizedUpper = trimmed.toUpperCase();
-  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
-  const indexRegister = indexMatch?.[1].toLowerCase();
-  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
-  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
-  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
-  return {
-    raw,
-    trimmed,
-    normalizedUpper,
-    immediate: trimmed.startsWith("#"),
-    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
-    indexRegister,
-    explicitWidth,
-    numericSpelling: /^[\d#$%]/.test(trimmed)
-  };
-}
-var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/architecture-registry.ts
-var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
     "use strict";
   }
 });
@@ -214,23 +4191,46 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
-var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/services/command-lowering-service.ts
-var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
-    "use strict";
-  }
-});
-
 // packages/core/src/file-provider.ts
 var init_file_provider = __esm({
   "packages/core/src/file-provider.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/ir/normalized-command.ts
+var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
+var init_normalized_command = __esm({
+  "packages/core/src/ir/normalized-command.ts"() {
+    "use strict";
+    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
+    EMPTY_TOKEN_SPANS = Object.freeze([]);
+  }
+});
+
+// packages/core/src/operand-syntax.ts
+function parseOperandSyntax(operand) {
+  const raw = operand;
+  const trimmed = operand.trim();
+  const normalizedUpper = trimmed.toUpperCase();
+  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
+  const indexRegister = indexMatch?.[1].toLowerCase();
+  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
+  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
+  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
+  return {
+    raw,
+    trimmed,
+    normalizedUpper,
+    immediate: trimmed.startsWith("#"),
+    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
+    indexRegister,
+    explicitWidth,
+    numericSpelling: /^[\d#$%]/.test(trimmed)
+  };
+}
+var init_operand_syntax = __esm({
+  "packages/core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
@@ -2466,6 +6466,20 @@ var init_plugin = __esm({
   }
 });
 
+// packages/core/src/services/assembly-front-end-service.ts
+var init_assembly_front_end_service = __esm({
+  "packages/core/src/services/assembly-front-end-service.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/services/command-lowering-service.ts
+var init_command_lowering_service = __esm({
+  "packages/core/src/services/command-lowering-service.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/assembler.ts
 var init_assembler = __esm({
   "packages/core/src/assembler.ts"() {
@@ -2509,25 +6523,25 @@ var init_decoder_types = __esm({
 });
 
 // packages/core/src/debug-map.ts
-var import_node_crypto, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, validateDebugMap;
+var import_node_crypto4, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha256, validateDebugMap;
 var init_debug_map = __esm({
   "packages/core/src/debug-map.ts"() {
     "use strict";
-    import_node_crypto = require("node:crypto");
+    import_node_crypto4 = require("node:crypto");
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
     DEBUG_MAP_SCHEMA_VERSION = 1;
-    canonicalValue = (value) => {
-      if (Array.isArray(value)) return value.map(canonicalValue);
+    canonicalValue2 = (value) => {
+      if (Array.isArray(value)) return value.map(canonicalValue2);
       if (value !== null && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue(entry)])
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue2(entry)])
         );
       }
       return value;
     };
-    canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
+    canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue2(value), null, 2)}
 `;
-    sha256 = (value) => (0, import_node_crypto.createHash)("sha256").update(value).digest("hex");
+    sha256 = (value) => (0, import_node_crypto4.createHash)("sha256").update(value).digest("hex");
     validateDebugMap = (map, output) => {
       const { fingerprint, ...payload } = map;
       const issues = [];
@@ -2619,7 +6633,7 @@ var init_lsp = __esm({
 });
 
 // packages/core/src/index.ts
-var init_src = __esm({
+var init_src2 = __esm({
   "packages/core/src/index.ts"() {
     "use strict";
     init_assembler();
@@ -2935,6 +6949,286 @@ var init_spec = __esm({
         });
       })
     );
+  }
+});
+
+// packages/plugin-snes/src/architectures/65816-decoder.ts
+var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor, buildInstruction, Cpu65816Decoder;
+var init_decoder = __esm({
+  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+    "use strict";
+    init_spec();
+    flagValue = (value) => {
+      if (value === true || value === 1) return 1;
+      if (value === false || value === 0) return 0;
+      return "unknown";
+    };
+    resolvedWidthFlag = (state, flag) => {
+      const emulation = flagValue(state.e);
+      if (emulation === 1) return 1;
+      const width2 = flagValue(state[flag]);
+      if (width2 === 1) return 1;
+      if (width2 === 0 && emulation === 0) return 0;
+      return "unknown";
+    };
+    readLittleEndian = (bytes, offset, width2) => {
+      let value = 0;
+      for (let index = 0; index < width2; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
+      return value >>> 0;
+    };
+    signed = (value, width2) => {
+      const signBit = 1 << width2 * 8 - 1;
+      const modulus = 2 ** (width2 * 8);
+      return value & signBit ? value - modulus : value;
+    };
+    bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
+    addressOperand = (value, width2) => ({
+      kind: "address",
+      value,
+      width: width2
+    });
+    operandsFor = (specification2, bytes, logicalAddress) => {
+      const value8 = bytes[1] ?? 0;
+      const value16 = readLittleEndian(bytes, 1, 2);
+      const value24 = readLittleEndian(bytes, 1, 3);
+      switch (specification2.mode) {
+        case "implied":
+          return [];
+        case "accumulator":
+          return [{ kind: "accumulator", register: "a" }];
+        case "signature":
+          return [{ kind: "signature", value: value8, width: 1 }];
+        case "immediate":
+          return [
+            {
+              kind: "immediate",
+              value: bytes.length === 2 ? value8 : value16,
+              width: bytes.length - 1
+            }
+          ];
+        case "immediate16":
+          return [{ kind: "immediate", value: value16, width: 2 }];
+        case "direct":
+        case "directIndexedX":
+        case "directIndexedY":
+        case "directIndirect":
+        case "directIndirectLong":
+        case "directIndexedXIndirect":
+        case "directIndirectIndexedY":
+        case "directIndirectLongIndexedY":
+        case "stackRelative":
+        case "stackRelativeIndirectIndexedY":
+          return [addressOperand(value8, 1)];
+        case "absolute":
+        case "absoluteIndexedX":
+        case "absoluteIndexedY":
+        case "absoluteIndirect":
+        case "absoluteIndexedXIndirect":
+        case "absoluteIndirectLong":
+          return [addressOperand(value16, 2)];
+        case "absoluteLong":
+        case "absoluteLongIndexedX":
+          return [addressOperand(value24, 3)];
+        case "relative": {
+          const displacement = signed(value8, 1);
+          return [
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 1,
+              signed: true,
+              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+            }
+          ];
+        }
+        case "relativeLong": {
+          const displacement = signed(value16, 2);
+          return [
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 2,
+              signed: true,
+              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
+            }
+          ];
+        }
+        case "blockMove":
+          return [
+            { kind: "bank", value: value8, width: 1 },
+            { kind: "bank", value: bytes[2] ?? 0, width: 1 }
+          ];
+        default:
+          return [];
+      }
+    };
+    targetFor = (specification2, operands, state, logicalAddress) => {
+      const operand = operands[0];
+      if (!operand) return void 0;
+      if (operand.targetAddress !== void 0) return operand.targetAddress;
+      if (operand.value === void 0) return void 0;
+      if (specification2.mode === "absoluteLong") return operand.value;
+      if (specification2.mode === "absolute") {
+        const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
+        return bank << 16 | operand.value;
+      }
+      return void 0;
+    };
+    referencesFor3 = (specification2, operands, state, logicalAddress) => {
+      const { mnemonic, mode: mode3 } = specification2;
+      const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
+      const isCall = mnemonic === "JSR" || mnemonic === "JSL";
+      const isJump = mnemonic === "JMP" || mnemonic === "JML";
+      if (isBranch || isCall || isJump) {
+        const target = targetFor(specification2, operands, state, logicalAddress);
+        let kind = "jump";
+        if (isBranch) kind = "branch";
+        else if (isCall) kind = "call";
+        return [
+          {
+            kind,
+            operandIndex: 0,
+            ...target === void 0 ? {} : { address: target },
+            ...mode3.includes("Indirect") ? { indirect: true } : {}
+          }
+        ];
+      }
+      if (mode3.includes("Indirect")) {
+        const value = operands[0]?.value;
+        return [
+          {
+            kind: "pointer",
+            operandIndex: 0,
+            ...value === void 0 ? {} : { address: value },
+            indirect: true
+          }
+        ];
+      }
+      const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
+      if (!memoryMode || operands[0]?.value === void 0) return [];
+      if (mode3.startsWith("direct")) {
+        return [
+          {
+            kind: "data",
+            operandIndex: 0,
+            ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
+          }
+        ];
+      }
+      if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
+        return [
+          {
+            kind: "data",
+            operandIndex: 0,
+            ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
+          }
+        ];
+      }
+      return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+    };
+    effectsFor = (specification2, operands) => {
+      const mask = operands[0]?.value;
+      if (specification2.operandStatusEffect && mask !== void 0) {
+        return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
+      }
+      return specification2.effects;
+    };
+    buildInstruction = (specification2, bytes, context, state) => {
+      const operands = operandsFor(specification2, bytes, context.logicalAddress);
+      return {
+        architecture: "snes.65816",
+        specificationId: specification2.id,
+        opcode: specification2.opcode[0],
+        mnemonic: specification2.mnemonic,
+        mode: specification2.mode,
+        offset: context.offset,
+        logicalAddress: context.logicalAddress & 16777215,
+        bytes,
+        size: bytes.length,
+        operands,
+        references: referencesFor3(specification2, operands, state, context.logicalAddress),
+        flow: specification2.flow,
+        effects: effectsFor(specification2, operands)
+      };
+    };
+    Cpu65816Decoder = class {
+      /**
+       * Decodes a 65816 instruction.
+       * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
+       * @returns {ArchitectureDecodeResult} The decode result.
+       */
+      decode(context) {
+        const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+        const opcode = context.source.readByte(context.offset);
+        if (opcode === void 0) {
+          return {
+            kind: "error",
+            code: "outOfBounds",
+            message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+            offset: context.offset,
+            requiredBytes: 1,
+            availableBytes
+          };
+        }
+        const specification2 = cpu65816Specifications[opcode];
+        if (!specification2) {
+          return {
+            kind: "error",
+            code: "invalidOpcode",
+            message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+            offset: context.offset
+          };
+        }
+        const state = context.state ?? {};
+        let sizes = [specification2.minimumSize];
+        if (specification2.widthFlag) {
+          const width2 = resolvedWidthFlag(state, specification2.widthFlag);
+          sizes = width2 === "unknown" ? [2, 3] : [width2 === 1 ? 2 : 3];
+        }
+        const minimumSize = Math.min(...sizes);
+        const maximumSize = Math.max(...sizes);
+        if (availableBytes < minimumSize) {
+          return {
+            kind: "error",
+            code: "truncated",
+            message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+            offset: context.offset,
+            requiredBytes: minimumSize,
+            availableBytes
+          };
+        }
+        if (sizes.length === 1 && availableBytes < maximumSize) {
+          return {
+            kind: "error",
+            code: "truncated",
+            message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
+            offset: context.offset,
+            requiredBytes: maximumSize,
+            availableBytes
+          };
+        }
+        const availableSizes = sizes.filter((size) => size <= availableBytes);
+        const alternatives = availableSizes.map((size) => {
+          const bytes = context.source.readBytes(context.offset, size);
+          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+          return buildInstruction(specification2, bytes, context, state);
+        });
+        if (sizes.length === 2) {
+          return {
+            kind: "ambiguous",
+            reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
+            requiredState: [specification2.widthFlag ?? "m"],
+            alternatives,
+            ...availableSizes.length === sizes.length ? {} : {
+              unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
+            },
+            minimumSize: 2,
+            maximumSize: 3
+          };
+        }
+        return { kind: "instruction", instruction: alternatives[0] };
+      }
+    };
   }
 });
 
@@ -3265,7 +7559,7 @@ function buildSuperFxCatalog() {
   for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
   return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
-var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
+var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
   "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
@@ -3459,7 +7753,7 @@ var init_superfx_spec = __esm({
         return { kind: "jump", fallthrough: false, indirect: true };
       return { kind: "fallthrough", fallthrough: true };
     };
-    effectsFor = (definition) => {
+    effectsFor2 = (definition) => {
       if (definition.mnemonic === "ALT1" || definition.mnemonic === "ALT2" || definition.mnemonic === "ALT3") {
         return [
           {
@@ -3539,7 +7833,7 @@ var init_superfx_spec = __esm({
         ...definition.register === void 0 ? {} : { register: definition.register },
         summary: summaryFor(definition.mnemonic),
         flow: flowFor3(definition, opcode),
-        effects: effectsFor(definition),
+        effects: effectsFor2(definition),
         ...definition.writesDestination ? { writesDestination: true } : {},
         alteredByAlt
       });
@@ -3857,7 +8151,7 @@ function classifySuperFxOperand(resolver, operand) {
 var init_operand_classifiers = __esm({
   "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
-    init_src();
+    init_src2();
   }
 });
 
@@ -3866,7 +8160,7 @@ var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816
 var init__ = __esm({
   "packages/plugin-snes/src/architectures/65816.ts"() {
     "use strict";
-    init_src();
+    init_src2();
     init_instruction_catalog2();
     init_operand_classifiers();
     lower65816Operand = (resolver, operand) => {
@@ -5820,211 +10114,232 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
-var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor2, buildInstruction, Cpu65816Decoder;
-var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
+var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder;
+var init_spc700_decoder = __esm({
+  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
-    init_spec();
-    flagValue = (value) => {
-      if (value === true || value === 1) return 1;
-      if (value === false || value === 0) return 0;
-      return "unknown";
-    };
-    resolvedWidthFlag = (state, flag) => {
-      const emulation = flagValue(state.e);
-      if (emulation === 1) return 1;
-      const width2 = flagValue(state[flag]);
-      if (width2 === 1) return 1;
-      if (width2 === 0 && emulation === 0) return 0;
-      return "unknown";
-    };
-    readLittleEndian = (bytes, offset, width2) => {
+    init_spc700_spec();
+    readLittleEndian2 = (bytes, offset, width2) => {
       let value = 0;
       for (let index = 0; index < width2; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
       return value >>> 0;
     };
-    signed = (value, width2) => {
-      const signBit = 1 << width2 * 8 - 1;
-      const modulus = 2 ** (width2 * 8);
-      return value & signBit ? value - modulus : value;
-    };
-    bankLocalTarget = (logicalAddress, size, displacement) => logicalAddress & 16711680 | logicalAddress + size + displacement & 65535;
-    addressOperand = (value, width2) => ({
+    signedByte = (value) => value & 128 ? value - 256 : value;
+    register2 = (name) => ({ kind: "register", register: name });
+    address = (value, width2) => ({
       kind: "address",
       value,
       width: width2
     });
-    operandsFor = (specification2, bytes, logicalAddress) => {
-      const value8 = bytes[1] ?? 0;
-      const value16 = readLittleEndian(bytes, 1, 2);
-      const value24 = readLittleEndian(bytes, 1, 3);
+    immediate = (value) => ({ kind: "immediate", value, width: 1 });
+    bit = (value) => ({ kind: "bit", value, width: 1 });
+    relative = (value, logicalAddress, size) => ({
+      kind: "displacement",
+      value: signedByte(value),
+      width: 1,
+      signed: true,
+      targetAddress: logicalAddress + size + signedByte(value) & 65535
+    });
+    bitAddress = (bytes) => {
+      const encoded = readLittleEndian2(bytes, 1, 2);
+      return [address(encoded & 8191, 2), bit(encoded >>> 13)];
+    };
+    fixedRegisters = {
+      registerA: ["A"],
+      registerX: ["X"],
+      registerY: ["Y"],
+      registerP: ["P"],
+      registerYA: ["YA"],
+      registerYAX: ["YA", "X"],
+      registerXA: ["X", "A"],
+      registerAX: ["A", "X"],
+      registerXSP: ["X", "SP"],
+      registerSPX: ["SP", "X"],
+      registerAY: ["A", "Y"],
+      registerYA2: ["Y", "A"],
+      registerPostIncrementXA: ["X", "A"],
+      registerAPostIncrementX: ["A", "X"],
+      registerIndirectXA: ["X", "A"],
+      registerAIndirectX: ["A", "X"],
+      indirectXY: ["X", "Y"]
+    };
+    operandsFor2 = (specification2, bytes, logicalAddress) => {
+      const byte = bytes[1] ?? 0;
+      const word2 = readLittleEndian2(bytes, 1, 2);
+      const fixed = fixedRegisters[specification2.mode];
+      if (fixed) return fixed.map(register2);
       switch (specification2.mode) {
         case "implied":
           return [];
-        case "accumulator":
-          return [{ kind: "accumulator", register: "a" }];
-        case "signature":
-          return [{ kind: "signature", value: value8, width: 1 }];
-        case "immediate":
+        case "tableCall":
+          return [immediate(specification2.opcode[0] >>> 4)];
+        case "directBit":
+          return [address(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
+        case "directBitRelative":
           return [
-            {
-              kind: "immediate",
-              value: bytes.length === 2 ? value8 : value16,
-              width: bytes.length - 1
-            }
+            address(byte, 1),
+            bit(Number(specification2.mnemonic.at(-1))),
+            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
           ];
-        case "immediate16":
-          return [{ kind: "immediate", value: value16, width: 2 }];
+        case "accumulatorDirect":
+        case "accumulatorDirectIndexedX":
+        case "accumulatorDirectIndexedXIndirect":
+        case "accumulatorDirectIndirectIndexedY":
+          return [register2("A"), address(byte, 1)];
+        case "accumulatorAbsolute":
+        case "accumulatorAbsoluteIndexedX":
+        case "accumulatorAbsoluteIndexedY":
+          return [register2("A"), address(word2, 2)];
+        case "accumulatorIndirectX":
+          return [register2("A"), register2("X")];
+        case "accumulatorImmediate":
+          return [register2("A"), immediate(byte)];
+        case "directDirect":
+          return [address(bytes[2] ?? 0, 1), address(byte, 1)];
+        case "carryMemoryBit":
+        case "carryInvertedMemoryBit": {
+          const [memory, bit2] = bitAddress(bytes);
+          return [register2("C"), memory, bit2];
+        }
+        case "memoryBitCarry": {
+          const [memory, bit2] = bitAddress(bytes);
+          return [memory, bit2, register2("C")];
+        }
+        case "memoryBit":
+          return bitAddress(bytes);
         case "direct":
         case "directIndexedX":
-        case "directIndexedY":
-        case "directIndirect":
-        case "directIndirectLong":
-        case "directIndexedXIndirect":
-        case "directIndirectIndexedY":
-        case "directIndirectLongIndexedY":
-        case "stackRelative":
-        case "stackRelativeIndirectIndexedY":
-          return [addressOperand(value8, 1)];
+        case "directWord":
+          return [address(byte, 1)];
         case "absolute":
-        case "absoluteIndexedX":
-        case "absoluteIndexedY":
-        case "absoluteIndirect":
         case "absoluteIndexedXIndirect":
-        case "absoluteIndirectLong":
-          return [addressOperand(value16, 2)];
-        case "absoluteLong":
-        case "absoluteLongIndexedX":
-          return [addressOperand(value24, 3)];
-        case "relative": {
-          const displacement = signed(value8, 1);
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 1,
-              signed: true,
-              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
-            }
-          ];
-        }
-        case "relativeLong": {
-          const displacement = signed(value16, 2);
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 2,
-              signed: true,
-              targetAddress: bankLocalTarget(logicalAddress, bytes.length, displacement)
-            }
-          ];
-        }
-        case "blockMove":
-          return [
-            { kind: "bank", value: value8, width: 1 },
-            { kind: "bank", value: bytes[2] ?? 0, width: 1 }
-          ];
+          return [address(word2, 2)];
+        case "relative":
+          return [relative(byte, logicalAddress, bytes.length)];
+        case "absoluteAccumulator":
+          return [address(word2, 2), register2("A")];
+        case "directImmediate":
+          return [address(bytes[2] ?? 0, 1), immediate(byte)];
+        case "registerXAbsolute":
+          return [register2("X"), address(word2, 2)];
+        case "registerXDirect":
+        case "registerXDirectIndexedY":
+          return [register2("X"), address(byte, 1)];
+        case "registerYAbsolute":
+          return [register2("Y"), address(word2, 2)];
+        case "registerYDirect":
+        case "registerYDirectIndexedX":
+          return [register2("Y"), address(byte, 1)];
+        case "registerXImmediate":
+          return [register2("X"), immediate(byte)];
+        case "registerYImmediate":
+          return [register2("Y"), immediate(byte)];
+        case "directRelative":
+        case "directIndexedXRelative":
+          return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
+        case "registerYRelative":
+          return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
+        case "registerYADirect":
+          return [register2("YA"), address(byte, 1)];
+        case "directRegisterYA":
+          return [address(byte, 1), register2("YA")];
+        case "upperPageCall":
+          return [address(65280 | byte, 2)];
+        case "directRegisterA":
+        case "directIndexedXRegisterA":
+        case "directIndirectIndexedYRegisterA":
+        case "directIndexedXIndirectRegisterA":
+          return [address(byte, 1), register2("A")];
+        case "absoluteRegisterA":
+        case "absoluteIndexedXRegisterA":
+        case "absoluteIndexedYRegisterA":
+          return [address(word2, 2), register2("A")];
+        case "indirectXRegisterA":
+          return [register2("X"), register2("A")];
+        case "directRegisterX":
+        case "directIndexedYRegisterX":
+          return [address(byte, 1), register2("X")];
+        case "absoluteRegisterX":
+          return [address(word2, 2), register2("X")];
+        case "directRegisterY":
+        case "directIndexedXRegisterY":
+          return [address(byte, 1), register2("Y")];
+        case "absoluteRegisterY":
+          return [address(word2, 2), register2("Y")];
         default:
-          return [];
+          throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
       }
     };
-    targetFor = (specification2, operands, state, logicalAddress) => {
-      const operand = operands[0];
-      if (!operand) return void 0;
-      if (operand.targetAddress !== void 0) return operand.targetAddress;
-      if (operand.value === void 0) return void 0;
-      if (specification2.mode === "absoluteLong") return operand.value;
-      if (specification2.mode === "absolute") {
-        const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
-        return bank << 16 | operand.value;
-      }
-      return void 0;
-    };
-    referencesFor = (specification2, operands, state, logicalAddress) => {
-      const { mnemonic, mode: mode3 } = specification2;
-      const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
-      const isCall = mnemonic === "JSR" || mnemonic === "JSL";
-      const isJump = mnemonic === "JMP" || mnemonic === "JML";
-      if (isBranch || isCall || isJump) {
-        const target = targetFor(specification2, operands, state, logicalAddress);
-        let kind = "jump";
-        if (isBranch) kind = "branch";
-        else if (isCall) kind = "call";
-        return [
-          {
-            kind,
-            operandIndex: 0,
-            ...target === void 0 ? {} : { address: target },
-            ...mode3.includes("Indirect") ? { indirect: true } : {}
-          }
-        ];
-      }
-      if (mode3.includes("Indirect")) {
-        const value = operands[0]?.value;
-        return [
-          {
+    referencesFor4 = (specification2, operands, state) => {
+      const references = [];
+      const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
+      if (branchIndex >= 0) {
+        references.push({
+          kind: "branch",
+          operandIndex: branchIndex,
+          address: operands[branchIndex].targetAddress
+        });
+      } else if (specification2.mnemonic === "TCALL") {
+        const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
+        references.push({ kind: "call", operandIndex: 0, indirect: true });
+        references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
+      } else if (specification2.mnemonic === "PCALL") {
+        references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
+      } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
+        if (specification2.flow.indirect) {
+          references.push({ kind: "jump", operandIndex: 0, indirect: true });
+          references.push({
             kind: "pointer",
             operandIndex: 0,
-            ...value === void 0 ? {} : { address: value },
+            address: operands[0]?.value,
             indirect: true
-          }
-        ];
-      }
-      const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
-      if (!memoryMode || operands[0]?.value === void 0) return [];
-      if (mode3.startsWith("direct")) {
-        return [
-          {
-            kind: "data",
+          });
+        } else {
+          references.push({
+            kind: specification2.mnemonic === "CALL" ? "call" : "jump",
             operandIndex: 0,
-            ...state.directPage === void 0 ? {} : { address: state.directPage + operands[0].value & 65535 }
-          }
-        ];
+            address: operands[0]?.value
+          });
+        }
       }
-      if (!mode3.startsWith("absoluteLong") && mode3.startsWith("absolute")) {
-        return [
-          {
-            kind: "data",
-            operandIndex: 0,
-            ...state.dataBank === void 0 ? {} : { address: (state.dataBank & 255) << 16 | operands[0].value }
-          }
-        ];
+      for (let index = 0; index < operands.length; index++) {
+        const operand = operands[index];
+        if (operand.kind !== "address" || operand.value === void 0) continue;
+        if (references.some((reference) => reference.operandIndex === index)) continue;
+        const isDirect = operand.width === 1;
+        let resolved = operand.value;
+        if (isDirect) {
+          resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+        }
+        references.push({
+          kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
+          operandIndex: index,
+          ...resolved === void 0 ? {} : { address: resolved },
+          ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
+        });
       }
-      return [{ kind: "data", operandIndex: 0, address: operands[0].value }];
+      return references;
     };
-    effectsFor2 = (specification2, operands) => {
-      const mask = operands[0]?.value;
-      if (specification2.operandStatusEffect && mask !== void 0) {
-        return [{ kind: specification2.operandStatusEffect, target: "p", mask }];
-      }
-      return specification2.effects;
-    };
-    buildInstruction = (specification2, bytes, context, state) => {
-      const operands = operandsFor(specification2, bytes, context.logicalAddress);
+    buildInstruction2 = (specification2, bytes, context) => {
+      const operands = operandsFor2(specification2, bytes, context.logicalAddress);
       return {
-        architecture: "snes.65816",
+        architecture: "snes.spc700",
         specificationId: specification2.id,
         opcode: specification2.opcode[0],
         mnemonic: specification2.mnemonic,
         mode: specification2.mode,
         offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
+        logicalAddress: context.logicalAddress & 65535,
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor(specification2, operands, state, context.logicalAddress),
+        references: referencesFor4(specification2, operands, context.state ?? {}),
         flow: specification2.flow,
-        effects: effectsFor2(specification2, operands)
+        effects: specification2.effects
       };
     };
-    Cpu65816Decoder = class {
-      /**
-       * Decodes a 65816 instruction.
-       * @param {ArchitectureDecodeContext<Cpu65816DecodeState>} context The decode context.
-       * @returns {ArchitectureDecodeResult} The decode result.
-       */
+    Spc700Decoder = class {
       decode(context) {
         const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
         const opcode = context.source.readByte(context.offset);
@@ -6032,69 +10347,35 @@ var init_decoder = __esm({
           return {
             kind: "error",
             code: "outOfBounds",
-            message: `Cannot read a 65816 opcode at offset ${context.offset}.`,
+            message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
             offset: context.offset,
             requiredBytes: 1,
             availableBytes
           };
         }
-        const specification2 = cpu65816Specifications[opcode];
+        const specification2 = spc700Specifications[opcode];
         if (!specification2) {
           return {
             kind: "error",
             code: "invalidOpcode",
-            message: `Unknown 65816 opcode $${opcode.toString(16).padStart(2, "0")}.`,
+            message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
             offset: context.offset
           };
         }
-        const state = context.state ?? {};
-        let sizes = [specification2.minimumSize];
-        if (specification2.widthFlag) {
-          const width2 = resolvedWidthFlag(state, specification2.widthFlag);
-          sizes = width2 === "unknown" ? [2, 3] : [width2 === 1 ? 2 : 3];
-        }
-        const minimumSize = Math.min(...sizes);
-        const maximumSize = Math.max(...sizes);
-        if (availableBytes < minimumSize) {
+        const size = specification2.minimumSize;
+        if (availableBytes < size) {
           return {
             kind: "error",
             code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires at least ${minimumSize} byte(s), ${availableBytes} available.`,
+            message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
             offset: context.offset,
-            requiredBytes: minimumSize,
+            requiredBytes: size,
             availableBytes
           };
         }
-        if (sizes.length === 1 && availableBytes < maximumSize) {
-          return {
-            kind: "error",
-            code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires ${maximumSize} byte(s), ${availableBytes} available.`,
-            offset: context.offset,
-            requiredBytes: maximumSize,
-            availableBytes
-          };
-        }
-        const availableSizes = sizes.filter((size) => size <= availableBytes);
-        const alternatives = availableSizes.map((size) => {
-          const bytes = context.source.readBytes(context.offset, size);
-          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
-          return buildInstruction(specification2, bytes, context, state);
-        });
-        if (sizes.length === 2) {
-          return {
-            kind: "ambiguous",
-            reason: `The 65816 ${specification2.widthFlag?.toUpperCase()} flag is unknown.`,
-            requiredState: [specification2.widthFlag ?? "m"],
-            alternatives,
-            ...availableSizes.length === sizes.length ? {} : {
-              unavailableAlternatives: sizes.filter((size) => size > availableBytes).map((size) => ({ code: "truncated", size, availableBytes }))
-            },
-            minimumSize: 2,
-            maximumSize: 3
-          };
-        }
-        return { kind: "instruction", instruction: alternatives[0] };
+        const bytes = context.source.readBytes(context.offset, size);
+        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+        return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
       }
     };
   }
@@ -6226,7 +10507,7 @@ var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_
 var init_spc700 = __esm({
   "packages/plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
-    init_src();
+    init_src2();
     init_instruction_catalog2();
     init_operand_classifiers();
     init_split_operands();
@@ -8124,268 +12405,291 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
-var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
-var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
+var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
+var init_superfx_decoder = __esm({
+  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
-    init_spc700_spec();
-    readLittleEndian2 = (bytes, offset, width2) => {
-      let value = 0;
-      for (let index = 0; index < width2; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
-      return value >>> 0;
-    };
-    signedByte = (value) => value & 128 ? value - 256 : value;
-    register2 = (name) => ({ kind: "register", register: name });
-    address = (value, width2) => ({
+    init_superfx_spec();
+    word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
+    register3 = (value) => ({ kind: "register", register: `R${value}` });
+    immediate2 = (value, width2, signed2 = false) => ({
+      kind: "immediate",
+      value,
+      width: width2,
+      ...signed2 ? { signed: true } : {}
+    });
+    address2 = (value, width2) => ({
       kind: "address",
       value,
       width: width2
     });
-    immediate = (value) => ({ kind: "immediate", value, width: 1 });
-    bit = (value) => ({ kind: "bit", value, width: 1 });
-    relative = (value, logicalAddress, size) => ({
-      kind: "displacement",
-      value: signedByte(value),
-      width: 1,
-      signed: true,
-      targetAddress: logicalAddress + size + signedByte(value) & 65535
-    });
-    bitAddress = (bytes) => {
-      const encoded = readLittleEndian2(bytes, 1, 2);
-      return [address(encoded & 8191, 2), bit(encoded >>> 13)];
-    };
-    fixedRegisters = {
-      registerA: ["A"],
-      registerX: ["X"],
-      registerY: ["Y"],
-      registerP: ["P"],
-      registerYA: ["YA"],
-      registerYAX: ["YA", "X"],
-      registerXA: ["X", "A"],
-      registerAX: ["A", "X"],
-      registerXSP: ["X", "SP"],
-      registerSPX: ["SP", "X"],
-      registerAY: ["A", "Y"],
-      registerYA2: ["Y", "A"],
-      registerPostIncrementXA: ["X", "A"],
-      registerAPostIncrementX: ["A", "X"],
-      registerIndirectXA: ["X", "A"],
-      registerAIndirectX: ["A", "X"],
-      indirectXY: ["X", "Y"]
-    };
-    operandsFor2 = (specification2, bytes, logicalAddress) => {
-      const byte = bytes[1] ?? 0;
-      const word2 = readLittleEndian2(bytes, 1, 2);
-      const fixed = fixedRegisters[specification2.mode];
-      if (fixed) return fixed.map(register2);
-      switch (specification2.mode) {
+    operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
+      const operandOffset = prefixLength + 1;
+      const registerNumber = specification2.register ?? 0;
+      switch (specification2.operandEncoding) {
         case "implied":
           return [];
-        case "tableCall":
-          return [immediate(specification2.opcode[0] >>> 4)];
-        case "directBit":
-          return [address(byte, 1), bit(Number(specification2.mnemonic.at(-1)))];
-        case "directBitRelative":
+        case "relative": {
+          const raw = bytes[operandOffset] ?? 0;
+          const displacement = raw & 128 ? raw - 256 : raw;
           return [
-            address(byte, 1),
-            bit(Number(specification2.mnemonic.at(-1))),
-            relative(bytes[2] ?? 0, logicalAddress, bytes.length)
+            {
+              kind: "displacement",
+              value: displacement,
+              width: 1,
+              signed: true,
+              targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
+            }
           ];
-        case "accumulatorDirect":
-        case "accumulatorDirectIndexedX":
-        case "accumulatorDirectIndexedXIndirect":
-        case "accumulatorDirectIndirectIndexedY":
-          return [register2("A"), address(byte, 1)];
-        case "accumulatorAbsolute":
-        case "accumulatorAbsoluteIndexedX":
-        case "accumulatorAbsoluteIndexedY":
-          return [register2("A"), address(word2, 2)];
-        case "accumulatorIndirectX":
-          return [register2("A"), register2("X")];
-        case "accumulatorImmediate":
-          return [register2("A"), immediate(byte)];
-        case "directDirect":
-          return [address(bytes[2] ?? 0, 1), address(byte, 1)];
-        case "carryMemoryBit":
-        case "carryInvertedMemoryBit": {
-          const [memory, bit2] = bitAddress(bytes);
-          return [register2("C"), memory, bit2];
         }
-        case "memoryBitCarry": {
-          const [memory, bit2] = bitAddress(bytes);
-          return [memory, bit2, register2("C")];
-        }
-        case "memoryBit":
-          return bitAddress(bytes);
-        case "direct":
-        case "directIndexedX":
-        case "directWord":
-          return [address(byte, 1)];
-        case "absolute":
-        case "absoluteIndexedXIndirect":
-          return [address(word2, 2)];
-        case "relative":
-          return [relative(byte, logicalAddress, bytes.length)];
-        case "absoluteAccumulator":
-          return [address(word2, 2), register2("A")];
-        case "directImmediate":
-          return [address(bytes[2] ?? 0, 1), immediate(byte)];
-        case "registerXAbsolute":
-          return [register2("X"), address(word2, 2)];
-        case "registerXDirect":
-        case "registerXDirectIndexedY":
-          return [register2("X"), address(byte, 1)];
-        case "registerYAbsolute":
-          return [register2("Y"), address(word2, 2)];
-        case "registerYDirect":
-        case "registerYDirectIndexedX":
-          return [register2("Y"), address(byte, 1)];
-        case "registerXImmediate":
-          return [register2("X"), immediate(byte)];
-        case "registerYImmediate":
-          return [register2("Y"), immediate(byte)];
-        case "directRelative":
-        case "directIndexedXRelative":
-          return [address(byte, 1), relative(bytes[2] ?? 0, logicalAddress, bytes.length)];
-        case "registerYRelative":
-          return [register2("Y"), relative(byte, logicalAddress, bytes.length)];
-        case "registerYADirect":
-          return [register2("YA"), address(byte, 1)];
-        case "directRegisterYA":
-          return [address(byte, 1), register2("YA")];
-        case "upperPageCall":
-          return [address(65280 | byte, 2)];
-        case "directRegisterA":
-        case "directIndexedXRegisterA":
-        case "directIndirectIndexedYRegisterA":
-        case "directIndexedXIndirectRegisterA":
-          return [address(byte, 1), register2("A")];
-        case "absoluteRegisterA":
-        case "absoluteIndexedXRegisterA":
-        case "absoluteIndexedYRegisterA":
-          return [address(word2, 2), register2("A")];
-        case "indirectXRegisterA":
-          return [register2("X"), register2("A")];
-        case "directRegisterX":
-        case "directIndexedYRegisterX":
-          return [address(byte, 1), register2("X")];
-        case "absoluteRegisterX":
-          return [address(word2, 2), register2("X")];
-        case "directRegisterY":
-        case "directIndexedXRegisterY":
-          return [address(byte, 1), register2("Y")];
-        case "absoluteRegisterY":
-          return [address(word2, 2), register2("Y")];
-        default:
-          throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
+        case "register":
+        case "registerIndirect":
+          return [register3(registerNumber)];
+        case "immediateNibble":
+          return [immediate2(registerNumber, 1)];
+        case "registerImmediate8":
+          return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
+        case "registerImmediate16":
+          return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
+        case "registerRamShort":
+          return [register3(registerNumber), address2((bytes[operandOffset] ?? 0) << 1, 2)];
+        case "ramShortRegister":
+          return [address2((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
+        case "registerRamAbsolute":
+          return [register3(registerNumber), address2(word(bytes, operandOffset), 2)];
+        case "ramAbsoluteRegister":
+          return [address2(word(bytes, operandOffset), 2), register3(registerNumber)];
       }
+      throw new Error("Unsupported SuperFX operand encoding.");
     };
-    referencesFor2 = (specification2, operands, state) => {
-      const references = [];
-      const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
-      if (branchIndex >= 0) {
-        references.push({
-          kind: "branch",
-          operandIndex: branchIndex,
-          address: operands[branchIndex].targetAddress
-        });
-      } else if (specification2.mnemonic === "TCALL") {
-        const vector = 65502 - (specification2.opcode[0] >>> 4) * 2;
-        references.push({ kind: "call", operandIndex: 0, indirect: true });
-        references.push({ kind: "pointer", operandIndex: 0, address: vector, indirect: true });
-      } else if (specification2.mnemonic === "PCALL") {
-        references.push({ kind: "call", operandIndex: 0, address: operands[0]?.value });
-      } else if (specification2.mnemonic === "CALL" || specification2.mnemonic === "JMP") {
-        if (specification2.flow.indirect) {
-          references.push({ kind: "jump", operandIndex: 0, indirect: true });
-          references.push({
-            kind: "pointer",
-            operandIndex: 0,
-            address: operands[0]?.value,
-            indirect: true
-          });
-        } else {
-          references.push({
-            kind: specification2.mnemonic === "CALL" ? "call" : "jump",
-            operandIndex: 0,
-            address: operands[0]?.value
-          });
+    r15Target = (specification2, operands, state, logicalAddress) => {
+      if (specification2.register === 15) {
+        if (specification2.mnemonic === "IWT") {
+          return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
         }
-      }
-      for (let index = 0; index < operands.length; index++) {
-        const operand = operands[index];
-        if (operand.kind !== "address" || operand.value === void 0) continue;
-        if (references.some((reference) => reference.operandIndex === index)) continue;
-        const isDirect = operand.width === 1;
-        let resolved = operand.value;
-        if (isDirect) {
-          resolved = state.directPage === void 0 || state.directPage === "unknown" ? void 0 : state.directPage + operand.value & 65535;
+        if (specification2.mnemonic === "IBT") {
+          const raw = operands[1]?.value ?? 0;
+          const target = raw & 128 ? 65280 | raw : raw;
+          const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
+          return (bank & 255) << 16 | target;
         }
-        references.push({
-          kind: specification2.mode.includes("Indirect") ? "pointer" : "data",
-          operandIndex: index,
-          ...resolved === void 0 ? {} : { address: resolved },
-          ...specification2.mode.includes("Indirect") ? { indirect: true } : {}
-        });
+        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
       }
-      return references;
+      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
+      return void 0;
     };
-    buildInstruction2 = (specification2, bytes, context) => {
-      const operands = operandsFor2(specification2, bytes, context.logicalAddress);
+    controlsFor = (specification2, operands, state, logicalAddress) => {
+      const r15 = r15Target(specification2, operands, state, logicalAddress);
+      if (typeof r15 === "number") {
+        return {
+          flow: { kind: "jump", fallthrough: false },
+          references: [{ kind: "jump", operandIndex: 1, address: r15 }]
+        };
+      }
+      if (r15 === "indirect") {
+        return {
+          flow: { kind: "jump", fallthrough: false, indirect: true },
+          references: [{ kind: "jump", indirect: true }]
+        };
+      }
+      if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
+        };
+      }
+      if (specification2.mnemonic === "LOOP") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "branch", indirect: true }]
+        };
+      }
+      if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "jump", operandIndex: 0, indirect: true }]
+        };
+      }
+      let memoryIndex;
+      if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
+        memoryIndex = 1;
+      } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
+        memoryIndex = 0;
+      }
+      if (memoryIndex !== void 0) {
+        return {
+          flow: specification2.flow,
+          references: [
+            { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
+          ]
+        };
+      }
+      if (specification2.operandEncoding === "registerIndirect") {
+        return {
+          flow: specification2.flow,
+          references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
+        };
+      }
+      return { flow: specification2.flow, references: [] };
+    };
+    buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
+      const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
+      const controls = controlsFor(specification2, operands, state, context.logicalAddress);
       return {
-        architecture: "snes.spc700",
+        architecture: "snes.superfx",
         specificationId: specification2.id,
         opcode: specification2.opcode[0],
         mnemonic: specification2.mnemonic,
         mode: specification2.mode,
         offset: context.offset,
-        logicalAddress: context.logicalAddress & 65535,
+        logicalAddress: context.logicalAddress & 16777215,
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor2(specification2, operands, context.state ?? {}),
+        references: controls.references,
+        flow: controls.flow,
+        effects: specification2.effects
+      };
+    };
+    buildFusedInstruction = (specification2, bytes, context) => {
+      let operands;
+      if (specification2.mode === "registerRegister") {
+        operands = [
+          register3(specification2.destinationRegister),
+          register3(specification2.sourceRegister ?? 0)
+        ];
+      } else if (specification2.mode === "registerRegisterIndirect") {
+        operands = [
+          register3(specification2.destinationRegister),
+          register3(specification2.pointerRegister ?? 0)
+        ];
+      } else {
+        operands = [
+          register3(specification2.sourceRegister ?? 0),
+          register3(specification2.pointerRegister ?? 0)
+        ];
+      }
+      return {
+        architecture: "snes.superfx",
+        specificationId: specification2.id,
+        opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
+        mnemonic: specification2.mnemonic,
+        mode: specification2.mode,
+        offset: context.offset,
+        logicalAddress: context.logicalAddress & 16777215,
+        bytes,
+        size: bytes.length,
+        operands,
+        references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
         flow: specification2.flow,
         effects: specification2.effects
       };
     };
-    Spc700Decoder = class {
+    matchFused = (context) => superFxFusedSpecifications.find(
+      (entry) => entry.opcode.every((value, index) => context.source.readByte(context.offset + index) === value)
+    );
+    availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
+    truncated = (context, requiredBytes) => ({
+      kind: "error",
+      code: "truncated",
+      message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
+      offset: context.offset,
+      requiredBytes,
+      availableBytes: availableAt(context)
+    });
+    prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
+    SuperFxDecoder = class {
       decode(context) {
-        const availableBytes = Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
         const opcode = context.source.readByte(context.offset);
         if (opcode === void 0) {
           return {
             kind: "error",
             code: "outOfBounds",
-            message: `Cannot read an SPC700 opcode at offset ${context.offset}.`,
+            message: `No SuperFX opcode exists at offset ${context.offset}.`,
             offset: context.offset,
-            requiredBytes: 1,
-            availableBytes
+            availableBytes: availableAt(context)
           };
         }
-        const specification2 = spc700Specifications[opcode];
-        if (!specification2) {
+        const state = context.state ?? {};
+        const requestedAlt = state.alt ?? 0;
+        if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
           return {
             kind: "error",
-            code: "invalidOpcode",
-            message: `Unknown SPC700 opcode $${opcode.toString(16).padStart(2, "0")}.`,
-            offset: context.offset
-          };
-        }
-        const size = specification2.minimumSize;
-        if (availableBytes < size) {
-          return {
-            kind: "error",
-            code: "truncated",
-            message: `Truncated ${specification2.mnemonic}: requires ${size} byte(s), ${availableBytes} available.`,
+            code: "invalidState",
+            message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
             offset: context.offset,
-            requiredBytes: size,
-            availableBytes
+            availableBytes: availableAt(context)
           };
         }
-        const bytes = context.source.readBytes(context.offset, size);
-        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
-        return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
+        if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
+          const fused2 = matchFused(context);
+          if (fused2) {
+            const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
+            if (!bytes2) return truncated(context, fused2.minimumSize);
+            return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
+          }
+        }
+        const prefix = prefixAlt(opcode);
+        if (prefix !== void 0) {
+          const next = context.source.readByte(context.offset + 1);
+          const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
+          if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
+            const effective = superFxOpcodeMatrix[prefix][next];
+            if (effective.alteredByAlt) {
+              const required = effective.minimumSize + 1;
+              const bytes3 = context.source.readBytes(context.offset, required);
+              if (!bytes3) return truncated(context, required);
+              return {
+                kind: "instruction",
+                instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
+              };
+            }
+          }
+          const specification3 = superFxOpcodeMatrix[0][opcode];
+          const bytes2 = context.source.readBytes(context.offset, 1);
+          return {
+            kind: "instruction",
+            instruction: buildInstruction3(specification3, bytes2, context, state, 0)
+          };
+        }
+        if (requestedAlt === "unknown") {
+          const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
+          const unique = [
+            ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
+          ];
+          if (unique.length > 1) {
+            const alternatives = unique.flatMap((entry) => {
+              const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
+              return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
+            });
+            return {
+              kind: "ambiguous",
+              reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
+              requiredState: ["alt"],
+              alternatives,
+              minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
+              maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
+              ...alternatives.length === unique.length ? {} : {
+                unavailableAlternatives: unique.filter(
+                  (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
+                ).map((entry) => ({
+                  code: "truncated",
+                  size: entry.minimumSize,
+                  availableBytes: availableAt(context)
+                }))
+              }
+            };
+          }
+        }
+        const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
+        const specification2 = superFxOpcodeMatrix[alt][opcode];
+        const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
+        if (!bytes) return truncated(context, specification2.minimumSize);
+        return {
+          kind: "instruction",
+          instruction: buildInstruction3(specification2, bytes, context, state, 0)
+        };
       }
     };
   }
@@ -8475,7 +12779,7 @@ var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OP
 var init_superfx = __esm({
   "packages/plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
-    init_src();
+    init_src2();
     init_compatibility();
     init_instruction_catalog2();
     init_operand_classifiers();
@@ -9253,296 +13557,6 @@ var init_superfx = __esm({
         } catch {
           return void 0;
         }
-      }
-    };
-  }
-});
-
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
-var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
-var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
-    "use strict";
-    init_superfx_spec();
-    word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
-    register3 = (value) => ({ kind: "register", register: `R${value}` });
-    immediate2 = (value, width2, signed2 = false) => ({
-      kind: "immediate",
-      value,
-      width: width2,
-      ...signed2 ? { signed: true } : {}
-    });
-    address2 = (value, width2) => ({
-      kind: "address",
-      value,
-      width: width2
-    });
-    operandsFor3 = (specification2, bytes, prefixLength, logicalAddress) => {
-      const operandOffset = prefixLength + 1;
-      const registerNumber = specification2.register ?? 0;
-      switch (specification2.operandEncoding) {
-        case "implied":
-          return [];
-        case "relative": {
-          const raw = bytes[operandOffset] ?? 0;
-          const displacement = raw & 128 ? raw - 256 : raw;
-          return [
-            {
-              kind: "displacement",
-              value: displacement,
-              width: 1,
-              signed: true,
-              targetAddress: logicalAddress & 16711680 | logicalAddress + bytes.length + displacement & 65535
-            }
-          ];
-        }
-        case "register":
-        case "registerIndirect":
-          return [register3(registerNumber)];
-        case "immediateNibble":
-          return [immediate2(registerNumber, 1)];
-        case "registerImmediate8":
-          return [register3(registerNumber), immediate2(bytes[operandOffset] ?? 0, 1, true)];
-        case "registerImmediate16":
-          return [register3(registerNumber), immediate2(word(bytes, operandOffset), 2)];
-        case "registerRamShort":
-          return [register3(registerNumber), address2((bytes[operandOffset] ?? 0) << 1, 2)];
-        case "ramShortRegister":
-          return [address2((bytes[operandOffset] ?? 0) << 1, 2), register3(registerNumber)];
-        case "registerRamAbsolute":
-          return [register3(registerNumber), address2(word(bytes, operandOffset), 2)];
-        case "ramAbsoluteRegister":
-          return [address2(word(bytes, operandOffset), 2), register3(registerNumber)];
-      }
-      throw new Error("Unsupported SuperFX operand encoding.");
-    };
-    r15Target = (specification2, operands, state, logicalAddress) => {
-      if (specification2.register === 15) {
-        if (specification2.mnemonic === "IWT") {
-          return (((state.programBank === "unknown" ? logicalAddress >>> 16 : state.programBank) ?? logicalAddress >>> 16) & 255) << 16 | (operands[1]?.value ?? 0);
-        }
-        if (specification2.mnemonic === "IBT") {
-          const raw = operands[1]?.value ?? 0;
-          const target = raw & 128 ? 65280 | raw : raw;
-          const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
-          return (bank & 255) << 16 | target;
-        }
-        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
-      }
-      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
-      return void 0;
-    };
-    controlsFor = (specification2, operands, state, logicalAddress) => {
-      const r15 = r15Target(specification2, operands, state, logicalAddress);
-      if (typeof r15 === "number") {
-        return {
-          flow: { kind: "jump", fallthrough: false },
-          references: [{ kind: "jump", operandIndex: 1, address: r15 }]
-        };
-      }
-      if (r15 === "indirect") {
-        return {
-          flow: { kind: "jump", fallthrough: false, indirect: true },
-          references: [{ kind: "jump", indirect: true }]
-        };
-      }
-      if (specification2.mnemonic === "BRA" || specification2.mnemonic.startsWith("B") && specification2.operandEncoding === "relative") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "branch", operandIndex: 0, address: operands[0]?.targetAddress }]
-        };
-      }
-      if (specification2.mnemonic === "LOOP") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "branch", indirect: true }]
-        };
-      }
-      if (specification2.mnemonic === "JMP" || specification2.mnemonic === "LJMP") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "jump", operandIndex: 0, indirect: true }]
-        };
-      }
-      let memoryIndex;
-      if (specification2.operandEncoding === "registerRamShort" || specification2.operandEncoding === "registerRamAbsolute") {
-        memoryIndex = 1;
-      } else if (specification2.operandEncoding === "ramShortRegister" || specification2.operandEncoding === "ramAbsoluteRegister") {
-        memoryIndex = 0;
-      }
-      if (memoryIndex !== void 0) {
-        return {
-          flow: specification2.flow,
-          references: [
-            { kind: "data", operandIndex: memoryIndex, address: operands[memoryIndex]?.value }
-          ]
-        };
-      }
-      if (specification2.operandEncoding === "registerIndirect") {
-        return {
-          flow: specification2.flow,
-          references: [{ kind: "pointer", operandIndex: 0, indirect: true }]
-        };
-      }
-      return { flow: specification2.flow, references: [] };
-    };
-    buildInstruction3 = (specification2, bytes, context, state, prefixLength) => {
-      const operands = operandsFor3(specification2, bytes, prefixLength, context.logicalAddress);
-      const controls = controlsFor(specification2, operands, state, context.logicalAddress);
-      return {
-        architecture: "snes.superfx",
-        specificationId: specification2.id,
-        opcode: specification2.opcode[0],
-        mnemonic: specification2.mnemonic,
-        mode: specification2.mode,
-        offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
-        bytes,
-        size: bytes.length,
-        operands,
-        references: controls.references,
-        flow: controls.flow,
-        effects: specification2.effects
-      };
-    };
-    buildFusedInstruction = (specification2, bytes, context) => {
-      let operands;
-      if (specification2.mode === "registerRegister") {
-        operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.sourceRegister ?? 0)
-        ];
-      } else if (specification2.mode === "registerRegisterIndirect") {
-        operands = [
-          register3(specification2.destinationRegister),
-          register3(specification2.pointerRegister ?? 0)
-        ];
-      } else {
-        operands = [
-          register3(specification2.sourceRegister ?? 0),
-          register3(specification2.pointerRegister ?? 0)
-        ];
-      }
-      return {
-        architecture: "snes.superfx",
-        specificationId: specification2.id,
-        opcode: specification2.opcode.at(-1) ?? specification2.opcode[0],
-        mnemonic: specification2.mnemonic,
-        mode: specification2.mode,
-        offset: context.offset,
-        logicalAddress: context.logicalAddress & 16777215,
-        bytes,
-        size: bytes.length,
-        operands,
-        references: specification2.flow.kind === "jump" ? [{ kind: "jump", indirect: true }] : [],
-        flow: specification2.flow,
-        effects: specification2.effects
-      };
-    };
-    matchFused = (context) => superFxFusedSpecifications.find(
-      (entry) => entry.opcode.every((value, index) => context.source.readByte(context.offset + index) === value)
-    );
-    availableAt = (context) => Number.isInteger(context.offset) && context.offset >= 0 ? Math.max(0, context.source.length - context.offset) : 0;
-    truncated = (context, requiredBytes) => ({
-      kind: "error",
-      code: "truncated",
-      message: `SuperFX instruction at offset ${context.offset} needs ${requiredBytes} byte(s).`,
-      offset: context.offset,
-      requiredBytes,
-      availableBytes: availableAt(context)
-    });
-    prefixAlt = (opcode) => opcode >= 61 && opcode <= 63 ? opcode - 60 : void 0;
-    SuperFxDecoder = class {
-      decode(context) {
-        const opcode = context.source.readByte(context.offset);
-        if (opcode === void 0) {
-          return {
-            kind: "error",
-            code: "outOfBounds",
-            message: `No SuperFX opcode exists at offset ${context.offset}.`,
-            offset: context.offset,
-            availableBytes: availableAt(context)
-          };
-        }
-        const state = context.state ?? {};
-        const requestedAlt = state.alt ?? 0;
-        if (requestedAlt !== "unknown" && ![0, 1, 2, 3].includes(requestedAlt)) {
-          return {
-            kind: "error",
-            code: "invalidState",
-            message: `Invalid SuperFX ALT state '${requestedAlt}'.`,
-            offset: context.offset,
-            availableBytes: availableAt(context)
-          };
-        }
-        if (requestedAlt === 0 && (state.destinationRegister === void 0 || state.destinationRegister === 0) && (state.sourceRegister === void 0 || state.sourceRegister === 0)) {
-          const fused2 = matchFused(context);
-          if (fused2) {
-            const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
-            if (!bytes2) return truncated(context, fused2.minimumSize);
-            return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
-          }
-        }
-        const prefix = prefixAlt(opcode);
-        if (prefix !== void 0) {
-          const next = context.source.readByte(context.offset + 1);
-          const canFuse = requestedAlt === 0 || requestedAlt === "unknown";
-          if (next !== void 0 && canFuse && prefixAlt(next) === void 0) {
-            const effective = superFxOpcodeMatrix[prefix][next];
-            if (effective.alteredByAlt) {
-              const required = effective.minimumSize + 1;
-              const bytes3 = context.source.readBytes(context.offset, required);
-              if (!bytes3) return truncated(context, required);
-              return {
-                kind: "instruction",
-                instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
-              };
-            }
-          }
-          const specification3 = superFxOpcodeMatrix[0][opcode];
-          const bytes2 = context.source.readBytes(context.offset, 1);
-          return {
-            kind: "instruction",
-            instruction: buildInstruction3(specification3, bytes2, context, state, 0)
-          };
-        }
-        if (requestedAlt === "unknown") {
-          const candidates = [0, 1, 2, 3].map((alt2) => superFxOpcodeMatrix[alt2][opcode]);
-          const unique = [
-            ...new Map(candidates.map((entry) => [`${entry.mnemonic}:${entry.mode}`, entry])).values()
-          ];
-          if (unique.length > 1) {
-            const alternatives = unique.flatMap((entry) => {
-              const bytes2 = context.source.readBytes(context.offset, entry.minimumSize);
-              return bytes2 ? [buildInstruction3(entry, bytes2, context, { ...state, alt: entry.alt }, 0)] : [];
-            });
-            return {
-              kind: "ambiguous",
-              reason: `SuperFX opcode $${opcode.toString(16).toUpperCase().padStart(2, "0")} depends on ALT state.`,
-              requiredState: ["alt"],
-              alternatives,
-              minimumSize: Math.min(...unique.map((entry) => entry.minimumSize)),
-              maximumSize: Math.max(...unique.map((entry) => entry.maximumSize)),
-              ...alternatives.length === unique.length ? {} : {
-                unavailableAlternatives: unique.filter(
-                  (entry) => context.source.readBytes(context.offset, entry.minimumSize) === void 0
-                ).map((entry) => ({
-                  code: "truncated",
-                  size: entry.minimumSize,
-                  availableBytes: availableAt(context)
-                }))
-              }
-            };
-          }
-        }
-        const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
-        const specification2 = superFxOpcodeMatrix[alt][opcode];
-        const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
-        if (!bytes) return truncated(context, specification2.minimumSize);
-        return {
-          kind: "instruction",
-          instruction: buildInstruction3(specification2, bytes, context, state, 0)
-        };
       }
     };
   }
@@ -10727,3653 +14741,6 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codec.ts
-var init_asset_codec = __esm({
-  "packages/disassembler/src/asset-codec.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/asset-codecs/common.ts
-var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
-var init_common = __esm({
-  "packages/disassembler/src/asset-codecs/common.ts"() {
-    "use strict";
-    objectValue = (value, label) => {
-      if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
-        if (value === void 0) return {};
-        throw new Error(`${label} must be an object.`);
-      }
-      return value;
-    };
-    optionsFor = (context) => objectValue(context.request.options, `Asset '${context.request.id}' options`);
-    stringOption = (options, key2, fallback) => {
-      const value = options[key2];
-      if (value === void 0) return fallback;
-      if (typeof value !== "string") throw new Error(`Asset option '${key2}' must be a string.`);
-      return value;
-    };
-    booleanOption = (options, key2, fallback = false) => {
-      const value = options[key2];
-      if (value === void 0) return fallback;
-      if (typeof value !== "boolean") throw new Error(`Asset option '${key2}' must be boolean.`);
-      return value;
-    };
-    integerOption = (options, key2, settings6 = {}) => {
-      const value = options[key2] ?? settings6.fallback;
-      if (value === void 0) return void 0;
-      if (typeof value !== "number" || !Number.isSafeInteger(value) || settings6.minimum !== void 0 && value < settings6.minimum || settings6.maximum !== void 0 && value > settings6.maximum) {
-        throw new Error(`Asset option '${key2}' is outside its integer bounds.`);
-      }
-      return value;
-    };
-    byteOrderOption = (options) => {
-      const value = stringOption(options, "endian", "little");
-      if (value !== "little" && value !== "big") {
-        throw new Error("Asset option 'endian' must be 'little' or 'big'.");
-      }
-      return value;
-    };
-    readExactAssetBytes = (context, size = context.inspection.size) => {
-      return readAssetBytes(context, size);
-    };
-    readAssetBytes = (context, size) => {
-      const bytes = context.source.read(context.request.sourceOffset, size);
-      if (!bytes) throw new Error(`Asset '${context.request.id}' source range is unreadable.`);
-      return bytes;
-    };
-    resolveCountAndSize = (context, unitSize, options = optionsFor(context)) => {
-      if (!Number.isSafeInteger(unitSize) || unitSize <= 0) {
-        throw new Error("Asset unit size must be a positive safe integer.");
-      }
-      const configuredCount = integerOption(options, "count", { minimum: 1 });
-      const requestedLength = context.request.length;
-      if (configuredCount === void 0 && requestedLength === void 0) {
-        throw new Error(`Asset '${context.request.id}' requires either length or option 'count'.`);
-      }
-      if (requestedLength !== void 0 && requestedLength % unitSize !== 0) {
-        throw new Error(
-          `Asset '${context.request.id}' length ${requestedLength} is not divisible by ${unitSize}.`
-        );
-      }
-      const count = configuredCount ?? requestedLength / unitSize;
-      const size = count * unitSize;
-      if (!Number.isSafeInteger(size))
-        throw new Error(`Asset '${context.request.id}' size overflowed.`);
-      if (requestedLength !== void 0 && requestedLength !== size) {
-        throw new Error(
-          `Asset '${context.request.id}' count ${count} requires ${size} bytes, not ${requestedLength}.`
-        );
-      }
-      return { count, size };
-    };
-    readInteger = (bytes, offset, width2, endian, signed2 = false) => {
-      let value = 0;
-      for (let index = 0; index < width2; index++) {
-        const byteIndex = endian === "little" ? offset + index : offset + width2 - index - 1;
-        value += (bytes[byteIndex] ?? 0) * 2 ** (index * 8);
-      }
-      const modulus = 2 ** (width2 * 8);
-      return signed2 && value >= modulus / 2 ? value - modulus : value;
-    };
-    writeInteger = (bytes, offset, width2, endian, value, signed2 = false) => {
-      const modulus = 2 ** (width2 * 8);
-      const minimum = signed2 ? -modulus / 2 : 0;
-      const maximum = signed2 ? modulus / 2 - 1 : modulus - 1;
-      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-        throw new Error(
-          `Integer ${String(value)} does not fit ${signed2 ? "signed" : "unsigned"} ${width2}-byte storage.`
-        );
-      }
-      let remaining = value < 0 ? value + modulus : value;
-      for (let index = 0; index < width2; index++) {
-        const byteIndex = endian === "little" ? offset + index : offset + width2 - index - 1;
-        bytes[byteIndex] = remaining % 256;
-        remaining = Math.floor(remaining / 256);
-      }
-    };
-    decodedObject = (value, owner) => objectValue(value, `Decoded asset '${owner}'`);
-    numberArray = (value, label) => {
-      if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
-      return value.map((entry) => {
-        if (typeof entry !== "number" || !Number.isSafeInteger(entry)) {
-          throw new Error(`${label} must contain only safe integers.`);
-        }
-        return entry;
-      });
-    };
-    byteArray = (value, label) => {
-      const values = numberArray(value, label);
-      if (values.some((entry) => entry < 0 || entry > 255)) {
-        throw new Error(`${label} must contain only bytes in the range 0..255.`);
-      }
-      return values;
-    };
-    defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
-    jsonFile = (path7, value) => ({
-      path: path7,
-      mediaType: "application/json",
-      bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
-`)
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/index-table.ts
-var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor3, indexTableAssetCodec;
-var init_index_table = __esm({
-  "packages/disassembler/src/asset-codecs/index-table.ts"() {
-    "use strict";
-    init_common();
-    INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
-    settings = (context) => {
-      const options = optionsFor(context);
-      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
-      const endian = byteOrderOption(options);
-      const baseIndex = integerOption(options, "baseIndex", { fallback: 0 });
-      const nullValue = integerOption(options, "nullValue", {
-        minimum: 0,
-        maximum: 2 ** (width2 * 8) - 1
-      });
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      if (!Array.isArray(options.targets)) {
-        throw new Error("Index-table option 'targets' must be an array.");
-      }
-      const indexes = /* @__PURE__ */ new Set();
-      const targets = options.targets.map((value, position) => {
-        const target = objectValue(value, `Index target ${position}`);
-        const index = integerOption(target, "index", { minimum: 0 });
-        const id = stringOption(target, "id");
-        const addressSpace = stringOption(target, "addressSpace");
-        const address3 = integerOption(target, "address", { minimum: 0 });
-        if (index === void 0 || !id || !addressSpace || address3 === void 0) {
-          throw new Error(`Index target ${position} is incomplete.`);
-        }
-        if (indexes.has(index)) throw new Error(`Index target ${index} is duplicated.`);
-        indexes.add(index);
-        return { index, id, addressSpace, address: address3 };
-      });
-      return { options, width: width2, endian, baseIndex, nullValue, count, size, targets };
-    };
-    indexesFor = (context) => {
-      const resolved = settings(context);
-      const bytes = readAssetBytes(context, resolved.size);
-      const indexes = Array.from({ length: resolved.count }, (_, index) => {
-        const raw = readInteger(bytes, index * resolved.width, resolved.width, resolved.endian);
-        return resolved.nullValue !== void 0 && raw === resolved.nullValue ? null : raw + resolved.baseIndex;
-      });
-      return { settings: resolved, indexes };
-    };
-    referencesFor3 = (entries3) => {
-      const targets = new Map(entries3.settings.targets.map((target) => [target.index, target]));
-      return entries3.indexes.flatMap((index, position) => {
-        if (index === null) return [];
-        const target = targets.get(index);
-        return target ? [
-          {
-            id: `entry-${position.toString().padStart(4, "0")}`,
-            kind: "index",
-            addressSpace: target.addressSpace,
-            address: target.address,
-            width: entries3.settings.width,
-            targetAssetId: target.id,
-            detail: `Index ${index}`
-          }
-        ] : [];
-      });
-    };
-    indexTableAssetCodec = Object.freeze({
-      id: INDEX_TABLE_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const entries3 = indexesFor(context);
-        return {
-          size: entries3.settings.size,
-          references: referencesFor3(entries3),
-          metadata: {
-            count: entries3.settings.count,
-            width: entries3.settings.width,
-            endian: entries3.settings.endian,
-            baseIndex: entries3.settings.baseIndex,
-            unresolvedIndexes: entries3.indexes.filter(
-              (index) => index !== null && !entries3.settings.targets.some((target) => target.index === index)
-            )
-          }
-        };
-      },
-      decode: (context) => {
-        const entries3 = indexesFor(context);
-        const value = { kind: "index-table", indexes: entries3.indexes };
-        const path7 = stringOption(
-          entries3.settings.options,
-          "path",
-          defaultAssetPath(context.request.id, "json")
-        );
-        return { value, files: [jsonFile(path7, value)] };
-      },
-      encode: (context) => {
-        const resolved = settings(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        if (!Array.isArray(value.indexes) || value.indexes.length !== resolved.count) {
-          throw new Error(`Index asset '${context.request.id}' requires ${resolved.count} indexes.`);
-        }
-        const bytes = new Uint8Array(resolved.size);
-        value.indexes.forEach((index, position) => {
-          let raw;
-          if (index === null) {
-            if (resolved.nullValue === void 0) {
-              throw new Error(`Index asset '${context.request.id}' has null without a nullValue.`);
-            }
-            raw = resolved.nullValue;
-          } else {
-            if (typeof index !== "number" || !Number.isSafeInteger(index)) {
-              throw new Error(`Index asset '${context.request.id}' indexes must be integers or null.`);
-            }
-            raw = index - resolved.baseIndex;
-          }
-          writeInteger(bytes, position * resolved.width, resolved.width, resolved.endian, raw);
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/pointer-table.ts
-var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor4, pointerTableAssetCodec;
-var init_pointer_table = __esm({
-  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
-    "use strict";
-    init_common();
-    POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
-    settings2 = (context) => {
-      const options = optionsFor(context);
-      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 2 });
-      const endian = byteOrderOption(options);
-      const base = integerOption(options, "base", { fallback: 0 });
-      const scale = integerOption(options, "scale", { minimum: 1, fallback: 1 });
-      const nullValue = integerOption(options, "nullValue", {
-        minimum: 0,
-        maximum: 2 ** (width2 * 8) - 1
-      });
-      const addressSpace = stringOption(options, "addressSpace", context.request.addressSpace);
-      if (addressSpace === "") throw new Error("Pointer target address space cannot be empty.");
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      const targetIdsValue = options.targetAssetIds;
-      let targetAssetIds = [];
-      if (targetIdsValue !== void 0) {
-        if (!Array.isArray(targetIdsValue) || targetIdsValue.length !== count) {
-          throw new Error("Pointer option 'targetAssetIds' must match the pointer count.");
-        }
-        targetAssetIds = targetIdsValue.map((value) => {
-          if (value !== null && typeof value !== "string") {
-            throw new Error("Pointer target asset ids must be strings or null.");
-          }
-          return value;
-        });
-      }
-      return {
-        options,
-        width: width2,
-        endian,
-        base,
-        scale,
-        nullValue,
-        addressSpace,
-        count,
-        size,
-        targetAssetIds
-      };
-    };
-    entriesFor = (context) => {
-      const resolved = settings2(context);
-      const bytes = readAssetBytes(context, resolved.size);
-      const rawValues = Array.from(
-        { length: resolved.count },
-        (_, index) => readInteger(bytes, index * resolved.width, resolved.width, resolved.endian)
-      );
-      const addresses2 = rawValues.map((raw) => {
-        if (resolved.nullValue !== void 0 && raw === resolved.nullValue) return null;
-        const address3 = resolved.base + raw * resolved.scale;
-        if (!Number.isSafeInteger(address3) || address3 < 0) {
-          throw new Error(`Pointer asset '${context.request.id}' produced an invalid address.`);
-        }
-        return address3;
-      });
-      return { settings: resolved, rawValues, addresses: addresses2 };
-    };
-    referencesFor4 = (entries3) => entries3.addresses.flatMap(
-      (address3, index) => address3 === null ? [] : [
-        {
-          id: `entry-${index.toString().padStart(4, "0")}`,
-          kind: "pointer",
-          addressSpace: entries3.settings.addressSpace,
-          address: address3,
-          width: entries3.settings.width,
-          ...entries3.settings.targetAssetIds[index] ? { targetAssetId: entries3.settings.targetAssetIds[index] } : {}
-        }
-      ]
-    );
-    pointerTableAssetCodec = Object.freeze({
-      id: POINTER_TABLE_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const entries3 = entriesFor(context);
-        return {
-          size: entries3.settings.size,
-          references: referencesFor4(entries3),
-          metadata: {
-            count: entries3.settings.count,
-            width: entries3.settings.width,
-            endian: entries3.settings.endian,
-            base: entries3.settings.base,
-            scale: entries3.settings.scale,
-            ...entries3.settings.nullValue === void 0 ? {} : { nullValue: entries3.settings.nullValue }
-          }
-        };
-      },
-      decode: (context) => {
-        const entries3 = entriesFor(context);
-        const value = {
-          kind: "pointer-table",
-          addresses: entries3.addresses,
-          rawValues: entries3.rawValues
-        };
-        const path7 = stringOption(
-          entries3.settings.options,
-          "path",
-          defaultAssetPath(context.request.id, "json")
-        );
-        return { value, files: [jsonFile(path7, value)] };
-      },
-      encode: (context) => {
-        const resolved = settings2(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        if (!Array.isArray(value.addresses) || value.addresses.length !== resolved.count) {
-          throw new Error(
-            `Pointer asset '${context.request.id}' requires ${resolved.count} addresses.`
-          );
-        }
-        const bytes = new Uint8Array(resolved.size);
-        value.addresses.forEach((address3, index) => {
-          let raw;
-          if (address3 === null) {
-            if (resolved.nullValue === void 0) {
-              throw new Error(`Pointer asset '${context.request.id}' has null without a nullValue.`);
-            }
-            raw = resolved.nullValue;
-          } else {
-            if (typeof address3 !== "number" || !Number.isSafeInteger(address3)) {
-              throw new Error(
-                `Pointer asset '${context.request.id}' addresses must be integers or null.`
-              );
-            }
-            const relative2 = address3 - resolved.base;
-            if (relative2 < 0 || relative2 % resolved.scale !== 0) {
-              throw new Error(`Pointer address ${address3} is not representable by its base and scale.`);
-            }
-            raw = relative2 / resolved.scale;
-          }
-          writeInteger(bytes, index * resolved.width, resolved.width, resolved.endian, raw);
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/raw.ts
-var import_node_crypto2, RAW_ASSET_CODEC_ID, rawAssetCodec;
-var init_raw = __esm({
-  "packages/disassembler/src/asset-codecs/raw.ts"() {
-    "use strict";
-    import_node_crypto2 = require("node:crypto");
-    init_common();
-    RAW_ASSET_CODEC_ID = "uttori.asset.raw";
-    rawAssetCodec = Object.freeze({
-      id: RAW_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: ({ request: request2 }) => {
-        if (request2.length === void 0) {
-          throw new Error(`Raw asset '${request2.id}' requires an exact length.`);
-        }
-        return { size: request2.length, metadata: { sourceForm: "incbin" } };
-      },
-      decode: (context) => {
-        const bytes = readExactAssetBytes(context);
-        const options = optionsFor(context);
-        const path7 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
-        const mediaType = stringOption(options, "mediaType", "application/octet-stream");
-        return {
-          value: {
-            kind: "raw",
-            bytes: [...bytes],
-            sha256: (0, import_node_crypto2.createHash)("sha256").update(bytes).digest("hex")
-          },
-          files: [{ path: path7, mediaType, bytes }]
-        };
-      },
-      encode: ({ decoded, request: request2 }) => {
-        const value = decodedObject(decoded.value, request2.id);
-        return Uint8Array.from(byteArray(value.bytes, `Raw asset '${request2.id}' bytes`));
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/scalar-array.ts
-var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
-var init_scalar_array = __esm({
-  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
-    "use strict";
-    init_common();
-    SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
-    settings3 = (context) => {
-      const options = optionsFor(context);
-      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
-      const endian = byteOrderOption(options);
-      const signed2 = booleanOption(options, "signed");
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      return { options, width: width2, endian, signed: signed2, count, size };
-    };
-    scalarArrayAssetCodec = Object.freeze({
-      id: SCALAR_ARRAY_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const { width: width2, endian, signed: signed2, count, size } = settings3(context);
-        return { size, metadata: { width: width2, endian, signed: signed2, count } };
-      },
-      decode: (context) => {
-        const { options, width: width2, endian, signed: signed2, count } = settings3(context);
-        const bytes = readExactAssetBytes(context);
-        const values = Array.from(
-          { length: count },
-          (_, index) => readInteger(bytes, index * width2, width2, endian, signed2)
-        );
-        const value = { kind: "scalar-array", width: width2, endian, signed: signed2, values };
-        const path7 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path7, value)] };
-      },
-      encode: (context) => {
-        const { width: width2, endian, signed: signed2, count, size } = settings3(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        const values = numberArray(value.values, `Scalar asset '${context.request.id}' values`);
-        if (values.length !== count) {
-          throw new Error(`Scalar asset '${context.request.id}' requires exactly ${count} values.`);
-        }
-        const bytes = new Uint8Array(size);
-        values.forEach(
-          (entry, index) => writeInteger(bytes, index * width2, width2, endian, entry, signed2)
-        );
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/struct-array.ts
-var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
-var init_struct_array = __esm({
-  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
-    "use strict";
-    init_common();
-    STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
-    parseFields = (options) => {
-      const input = options.fields;
-      if (!Array.isArray(input) || input.length === 0) {
-        throw new Error("Struct asset option 'fields' must be a non-empty array.");
-      }
-      const defaultEndian = byteOrderOption(options);
-      const names = /* @__PURE__ */ new Set();
-      const fields = input.map((entry, index) => {
-        const definition = objectValue(entry, `Struct field ${index}`);
-        const name = stringOption(definition, "name");
-        if (!name) throw new Error(`Struct field ${index} requires a non-empty name.`);
-        if (names.has(name)) throw new Error(`Struct field name '${name}' is duplicated.`);
-        names.add(name);
-        const signed2 = booleanOption(definition, "signed");
-        const bitOffset = integerOption(definition, "bitOffset", { minimum: 0 });
-        const bits = integerOption(definition, "bits", { minimum: 1, maximum: 32 });
-        if (bitOffset !== void 0 || bits !== void 0) {
-          if (bitOffset === void 0 || bits === void 0) {
-            throw new Error(`Bitfield '${name}' requires both 'bitOffset' and 'bits'.`);
-          }
-          return { kind: "bitfield", name, bitStart: bitOffset, bitLength: bits, signed: signed2 };
-        }
-        const byteOffset = integerOption(definition, "offset", { minimum: 0 });
-        if (byteOffset === void 0) throw new Error(`Scalar field '${name}' requires 'offset'.`);
-        const width2 = integerOption(definition, "width", { minimum: 1, maximum: 4, fallback: 1 });
-        const endianValue = stringOption(definition, "endian", defaultEndian);
-        if (endianValue !== "little" && endianValue !== "big") {
-          throw new Error(`Scalar field '${name}' has an invalid byte order.`);
-        }
-        return {
-          kind: "scalar",
-          name,
-          bitStart: byteOffset * 8,
-          bitLength: width2 * 8,
-          byteOffset,
-          width: width2,
-          endian: endianValue,
-          signed: signed2
-        };
-      });
-      for (let left = 0; left < fields.length; left++) {
-        const leftEnd = fields[left].bitStart + fields[left].bitLength;
-        for (let right = left + 1; right < fields.length; right++) {
-          const rightEnd = fields[right].bitStart + fields[right].bitLength;
-          if (fields[left].bitStart < rightEnd && fields[right].bitStart < leftEnd) {
-            throw new Error(
-              `Struct fields '${fields[left].name}' and '${fields[right].name}' overlap.`
-            );
-          }
-        }
-      }
-      const requiredStride = Math.ceil(
-        Math.max(...fields.map((field) => field.bitStart + field.bitLength)) / 8
-      );
-      const stride = integerOption(options, "stride", { minimum: requiredStride }) ?? requiredStride;
-      return { fields, stride };
-    };
-    settings4 = (context) => {
-      const options = optionsFor(context);
-      const { fields, stride } = parseFields(options);
-      const { count, size } = resolveCountAndSize(context, stride, options);
-      return { options, fields, stride, count, size };
-    };
-    readBits = (bytes, base, field) => {
-      let value = 0;
-      for (let index = 0; index < field.bitLength; index++) {
-        const bit2 = field.bitStart + index;
-        if (((bytes[base + Math.floor(bit2 / 8)] ?? 0) & 1 << bit2 % 8) !== 0) {
-          value += 2 ** index;
-        }
-      }
-      const modulus = 2 ** field.bitLength;
-      return field.signed && value >= modulus / 2 ? value - modulus : value;
-    };
-    writeBits = (bytes, base, field, value) => {
-      const modulus = 2 ** field.bitLength;
-      const minimum = field.signed ? -modulus / 2 : 0;
-      const maximum = field.signed ? modulus / 2 - 1 : modulus - 1;
-      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-        throw new Error(`Field '${field.name}' value does not fit ${field.bitLength} bits.`);
-      }
-      const encoded = value < 0 ? value + modulus : value;
-      for (let index = 0; index < field.bitLength; index++) {
-        const bit2 = field.bitStart + index;
-        const byteIndex = base + Math.floor(bit2 / 8);
-        const mask = 1 << bit2 % 8;
-        bytes[byteIndex] = (encoded & 2 ** index) === 0 ? bytes[byteIndex] & ~mask : bytes[byteIndex] | mask;
-      }
-    };
-    structArrayAssetCodec = Object.freeze({
-      id: STRUCT_ARRAY_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const { fields, stride, count, size } = settings4(context);
-        return {
-          size,
-          metadata: {
-            count,
-            stride,
-            bitOrder: "lsb0",
-            fields: fields.map((field) => ({ ...field }))
-          }
-        };
-      },
-      decode: (context) => {
-        const { options, fields, stride, count } = settings4(context);
-        const bytes = readExactAssetBytes(context);
-        const records = Array.from({ length: count }, (_, recordIndex) => {
-          const base = recordIndex * stride;
-          return Object.fromEntries(
-            fields.map((field) => [
-              field.name,
-              field.kind === "scalar" ? readInteger(bytes, base + field.byteOffset, field.width, field.endian, field.signed) : readBits(bytes, base, field)
-            ])
-          );
-        });
-        const value = {
-          kind: "struct-array",
-          raw: [...bytes],
-          records
-        };
-        const path7 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path7, value)] };
-      },
-      encode: (context) => {
-        const { fields, stride, count, size } = settings4(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        const raw = byteArray(value.raw, `Struct asset '${context.request.id}' raw bytes`);
-        if (raw.length !== size) {
-          throw new Error(
-            `Struct asset '${context.request.id}' raw backing must remain ${size} bytes.`
-          );
-        }
-        if (!Array.isArray(value.records) || value.records.length !== count) {
-          throw new Error(`Struct asset '${context.request.id}' requires exactly ${count} records.`);
-        }
-        const bytes = Uint8Array.from(raw);
-        value.records.forEach((recordValue, recordIndex) => {
-          const record = objectValue(recordValue, `Struct record ${recordIndex}`);
-          const base = recordIndex * stride;
-          for (const field of fields) {
-            const fieldValue = record[field.name];
-            if (typeof fieldValue !== "number") {
-              throw new Error(`Struct field '${field.name}' requires an integer value.`);
-            }
-            if (field.kind === "scalar") {
-              writeInteger(
-                bytes,
-                base + field.byteOffset,
-                field.width,
-                field.endian,
-                fieldValue,
-                field.signed
-              );
-            } else {
-              writeBits(bytes, base, field, fieldValue);
-            }
-          }
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/text.ts
-var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
-var init_text = __esm({
-  "packages/disassembler/src/asset-codecs/text.ts"() {
-    "use strict";
-    init_common();
-    TEXT_ASSET_CODEC_ID = "uttori.asset.text";
-    parseByteKey = (key2) => {
-      const normalized = key2.startsWith("$") ? `0x${key2.slice(1)}` : key2;
-      let value = Number.NaN;
-      if (/^0x[\da-f]+$/i.test(normalized)) {
-        value = Number.parseInt(normalized.slice(2), 16);
-      } else if (/^\d+$/.test(normalized)) {
-        value = Number.parseInt(normalized, 10);
-      }
-      if (!Number.isSafeInteger(value) || value < 0 || value > 255) {
-        throw new Error(`Text table byte '${key2}' must be in the range 0..255.`);
-      }
-      return value;
-    };
-    settings5 = (context) => {
-      const options = optionsFor(context);
-      const byteToToken = /* @__PURE__ */ new Map();
-      if (booleanOption(options, "ascii", true)) {
-        byteToToken.set(9, "	");
-        byteToToken.set(10, "\n");
-        byteToToken.set(13, "\r");
-        for (let byte = 32; byte <= 126; byte++) {
-          if (byte !== 92) byteToToken.set(byte, String.fromCharCode(byte));
-        }
-      }
-      const table = objectValue(options.table, "Text asset option 'table'");
-      for (const [key2, tokenValue] of Object.entries(table)) {
-        if (typeof tokenValue !== "string" || tokenValue.length === 0 || tokenValue.includes("\\")) {
-          throw new Error(`Text table entry '${key2}' must be a non-empty string without backslashes.`);
-        }
-        byteToToken.set(parseByteKey(key2), tokenValue);
-      }
-      const tokenToByte = [...byteToToken.entries()].map(([byte, token]) => [token, byte]);
-      const tokens = /* @__PURE__ */ new Set();
-      for (const [token] of tokenToByte) {
-        if (tokens.has(token)) throw new Error(`Text table token '${token}' is duplicated.`);
-        tokens.add(token);
-      }
-      for (const [left] of tokenToByte) {
-        const ambiguous = tokenToByte.find(
-          ([right]) => left !== right && (left.startsWith(right) || right.startsWith(left))
-        );
-        if (ambiguous) {
-          throw new Error(`Text table tokens '${left}' and '${ambiguous[0]}' are not prefix-free.`);
-        }
-      }
-      tokenToByte.sort(([left], [right]) => right.length - left.length || left.localeCompare(right));
-      const terminator = integerOption(options, "terminator", { minimum: 0, maximum: 255 });
-      return { options, byteToToken, tokenToByte, terminator };
-    };
-    inspectedSize = (context, resolved) => {
-      if (context.request.length !== void 0) return context.request.length;
-      if (resolved.terminator === void 0) {
-        throw new Error(`Text asset '${context.request.id}' requires a length or terminator.`);
-      }
-      const maxLength = integerOption(resolved.options, "maxLength", { minimum: 1 });
-      if (maxLength === void 0) {
-        throw new Error(
-          `Text asset '${context.request.id}' requires 'maxLength' for terminator search.`
-        );
-      }
-      for (let size = 1; size <= maxLength; size++) {
-        const bytes = context.source.read(context.request.sourceOffset + size - 1, 1);
-        if (!bytes) break;
-        if (bytes[0] === resolved.terminator) return size;
-      }
-      throw new Error(
-        `Text asset '${context.request.id}' has no terminator within ${maxLength} bytes.`
-      );
-    };
-    textValue = (bytes, resolved) => [...bytes].map(
-      (byte) => resolved.byteToToken.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`
-    ).join("");
-    encodeText = (text, resolved, owner) => {
-      const bytes = [];
-      for (let offset = 0; offset < text.length; ) {
-        if (text[offset] === "\\" && /^\\x[\da-f]{2}/i.test(text.slice(offset, offset + 4))) {
-          bytes.push(Number.parseInt(text.slice(offset + 2, offset + 4), 16));
-          offset += 4;
-          continue;
-        }
-        const match = resolved.tokenToByte.find(([token]) => text.startsWith(token, offset));
-        if (!match) {
-          throw new Error(`Text asset '${owner}' cannot encode text at character ${offset}.`);
-        }
-        bytes.push(match[1]);
-        offset += match[0].length;
-      }
-      return Uint8Array.from(bytes);
-    };
-    textAssetCodec = Object.freeze({
-      id: TEXT_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const resolved = settings5(context);
-        const size = inspectedSize(context, resolved);
-        return {
-          size,
-          metadata: {
-            encoding: "single-byte-translation-table",
-            terminated: resolved.terminator !== void 0,
-            ...resolved.terminator === void 0 ? {} : { terminator: resolved.terminator }
-          }
-        };
-      },
-      decode: (context) => {
-        const resolved = settings5(context);
-        const bytes = readAssetBytes(context, context.inspection.size);
-        const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
-        const payload = terminated ? bytes.subarray(0, -1) : bytes;
-        const value = { kind: "text", text: textValue(payload, resolved), terminated };
-        const path7 = stringOption(
-          resolved.options,
-          "path",
-          defaultAssetPath(context.request.id, "txt")
-        );
-        return {
-          value,
-          files: [
-            {
-              path: path7,
-              mediaType: "text/plain; charset=utf-8",
-              bytes: new TextEncoder().encode(value.text)
-            }
-          ]
-        };
-      },
-      encode: (context) => {
-        const resolved = settings5(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        const text = value.text;
-        const terminated = value.terminated;
-        if (typeof text !== "string" || typeof terminated !== "boolean") {
-          throw new Error(
-            `Text asset '${context.request.id}' requires string text and terminated flag.`
-          );
-        }
-        const payload = encodeText(text, resolved, context.request.id);
-        if (!terminated) return payload;
-        if (resolved.terminator === void 0) {
-          throw new Error(
-            `Text asset '${context.request.id}' cannot append an unconfigured terminator.`
-          );
-        }
-        const bytes = new Uint8Array(payload.length + 1);
-        bytes.set(payload);
-        bytes[bytes.length - 1] = resolved.terminator;
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/index.ts
-var builtinAssetCodecs;
-var init_asset_codecs = __esm({
-  "packages/disassembler/src/asset-codecs/index.ts"() {
-    "use strict";
-    init_index_table();
-    init_pointer_table();
-    init_raw();
-    init_scalar_array();
-    init_struct_array();
-    init_text();
-    init_index_table();
-    init_pointer_table();
-    init_raw();
-    init_scalar_array();
-    init_struct_array();
-    init_text();
-    builtinAssetCodecs = Object.freeze(
-      [
-        indexTableAssetCodec,
-        pointerTableAssetCodec,
-        rawAssetCodec,
-        scalarArrayAssetCodec,
-        structArrayAssetCodec,
-        textAssetCodec
-      ].sort((left, right) => left.id.localeCompare(right.id))
-    );
-  }
-});
-
-// packages/disassembler/src/asset-preview.ts
-var init_asset_preview = __esm({
-  "packages/disassembler/src/asset-preview.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/analysis-graph.ts
-var sortedUnique, sortedUniqueNumbers, addressKey, outputOffsetsFor, buildAnalysisCallGraph;
-var init_analysis_graph = __esm({
-  "packages/disassembler/src/analysis-graph.ts"() {
-    "use strict";
-    sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
-    sortedUniqueNumbers = (values) => [...new Set(values)].sort((left, right) => left - right);
-    addressKey = (addressSpace, address3) => `${addressSpace}:${address3}`;
-    outputOffsetsFor = (nodeIds, nodesById) => sortedUniqueNumbers(
-      nodeIds.flatMap((id) => {
-        const node = nodesById.get(id);
-        return node?.fileOffset === void 0 ? [] : [node.fileOffset];
-      })
-    );
-    buildAnalysisCallGraph = (shards) => {
-      const nodes = shards.analysis.filter(
-        (record) => record.kind === "cfg-node"
-      );
-      const nodesById = new Map(nodes.map((node) => [node.id, node]));
-      const functionRecords = shards.analysis.filter(
-        (record) => record.kind === "function"
-      );
-      const functionsByAddress = /* @__PURE__ */ new Map();
-      for (const fn of functionRecords) {
-        const key2 = addressKey(fn.addressSpace, fn.address);
-        functionsByAddress.set(key2, [...functionsByAddress.get(key2) ?? [], fn]);
-      }
-      const ownersByNode = /* @__PURE__ */ new Map();
-      const ownerFunctionIds = (node) => {
-        if (!node) return [];
-        const cached = ownersByNode.get(node.id);
-        if (cached) return cached;
-        const path7 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
-        for (let index = path7.length - 1; index >= 0; index--) {
-          const candidate = nodesById.get(path7[index]);
-          if (!candidate) continue;
-          const matches = functionsByAddress.get(addressKey(candidate.addressSpace, candidate.address));
-          if (matches) {
-            const owners = sortedUnique(matches.map(({ id }) => id));
-            ownersByNode.set(node.id, owners);
-            return owners;
-          }
-        }
-        ownersByNode.set(node.id, []);
-        return [];
-      };
-      const callRecords = shards.analysis.filter(
-        (record) => record.kind === "cfg-edge" && (record.edgeKind === "call" || record.edgeKind === "interrupt") && record.toAddress !== void 0
-      );
-      const calls = callRecords.map((edge) => {
-        const fromNode = nodesById.get(edge.from);
-        const callerFunctionIds = ownerFunctionIds(fromNode);
-        const calleeFunctionIds = sortedUnique(
-          (functionsByAddress.get(addressKey(edge.addressSpace, edge.toAddress)) ?? []).map(
-            ({ id }) => id
-          )
-        );
-        const toNodeIds = edge.to ? [edge.to] : [];
-        return {
-          id: edge.id,
-          edgeKind: edge.edgeKind,
-          addressSpace: edge.addressSpace,
-          fromAddress: edge.fromAddress,
-          toAddress: edge.toAddress,
-          fromNodeId: edge.from,
-          ...edge.to ? { toNodeId: edge.to } : {},
-          callerFunctionIds,
-          calleeFunctionIds,
-          fromOutputOffsets: outputOffsetsFor([edge.from], nodesById),
-          toOutputOffsets: outputOffsetsFor(toNodeIds, nodesById),
-          indirect: edge.indirect,
-          ...edge.override ? { override: edge.override } : {},
-          ...edge.explanation ? { explanation: edge.explanation } : {},
-          evidence: edge.evidence
-        };
-      });
-      const unresolvedRecords = shards.analysis.filter(
-        (record) => record.kind === "unresolved"
-      );
-      const unresolvedEdges = shards.analysis.filter(
-        (record) => record.kind === "cfg-edge" && record.edgeKind === "unresolved"
-      );
-      const unresolved = unresolvedRecords.map((record) => {
-        const matchingNodes = sortedUnique(
-          unresolvedEdges.filter(
-            (edge) => edge.addressSpace === record.addressSpace && edge.fromAddress === record.address
-          ).map(({ from }) => from)
-        );
-        return {
-          id: record.id,
-          addressSpace: record.addressSpace,
-          address: record.address,
-          flowKind: record.flowKind,
-          indirect: record.indirect,
-          reason: record.reason,
-          nodeIds: matchingNodes,
-          ownerFunctionIds: sortedUnique(
-            matchingNodes.flatMap((id) => ownerFunctionIds(nodesById.get(id)))
-          ),
-          outputOffsets: outputOffsetsFor(matchingNodes, nodesById),
-          evidence: record.evidence
-        };
-      });
-      const nodeIdsByFunction = /* @__PURE__ */ new Map();
-      const append2 = (map, key2, id) => {
-        const entries3 = map.get(key2);
-        if (entries3) entries3.push(id);
-        else map.set(key2, [id]);
-      };
-      const incoming = /* @__PURE__ */ new Map();
-      const outgoing = /* @__PURE__ */ new Map();
-      const unresolvedByOwner = /* @__PURE__ */ new Map();
-      for (const call of calls) {
-        for (const id of call.calleeFunctionIds) append2(incoming, id, call.id);
-        for (const id of call.callerFunctionIds) append2(outgoing, id, call.id);
-      }
-      for (const record of unresolved) {
-        for (const id of record.ownerFunctionIds) append2(unresolvedByOwner, id, record.id);
-      }
-      for (const node of nodes) {
-        for (const owner of ownerFunctionIds(node)) {
-          append2(nodeIdsByFunction, owner, node.id);
-        }
-      }
-      const functions = functionRecords.map((fn) => {
-        const nodeIds = sortedUnique(nodeIdsByFunction.get(fn.id) ?? []);
-        return {
-          id: fn.id,
-          addressSpace: fn.addressSpace,
-          address: fn.address,
-          source: fn.source,
-          labels: shards.labels.filter((label) => label.addressSpace === fn.addressSpace && label.address === fn.address).map(({ id, name }) => ({ id, name })).sort((left, right) => left.id.localeCompare(right.id)),
-          nodeIds,
-          outputOffsets: outputOffsetsFor(
-            nodeIds.filter((id) => nodesById.get(id)?.address === fn.address),
-            nodesById
-          ),
-          incomingCallIds: sortedUnique(incoming.get(fn.id) ?? []),
-          outgoingCallIds: sortedUnique(outgoing.get(fn.id) ?? []),
-          unresolvedIds: sortedUnique(unresolvedByOwner.get(fn.id) ?? []),
-          evidence: fn.evidence
-        };
-      });
-      return {
-        functions: functions.sort(
-          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
-        ),
-        calls: calls.sort(
-          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.fromAddress - right.fromAddress || left.toAddress - right.toAddress || left.id.localeCompare(right.id)
-        ),
-        unresolved: unresolved.sort(
-          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
-        ),
-        orphanCallIds: sortedUnique(
-          calls.filter(
-            ({ callerFunctionIds, calleeFunctionIds }) => callerFunctionIds.length === 0 || calleeFunctionIds.length === 0
-          ).map(({ id }) => id)
-        ),
-        orphanUnresolvedIds: sortedUnique(
-          unresolved.filter(({ ownerFunctionIds: owners }) => owners.length === 0).map(({ id }) => id)
-        )
-      };
-    };
-  }
-});
-
-// packages/disassembler/src/compression-codec.ts
-var init_compression_codec = __esm({
-  "packages/disassembler/src/compression-codec.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/coverage-map.ts
-var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
-var init_coverage_map = __esm({
-  "packages/disassembler/src/coverage-map.ts"() {
-    "use strict";
-    CLASSIFICATION_ORDER = [
-      "opcode",
-      "operand",
-      "data",
-      "asset",
-      "unknown"
-    ];
-    RUNTIME_ORDER = ["executed", "operand", "read", "written"];
-    annotationClassification = (classification) => {
-      switch (classification) {
-        case "opcode":
-        case "operand":
-          return classification;
-        case "graphics":
-        case "music":
-        case "compressed":
-        case "asset":
-          return "asset";
-        case "unreached":
-          return void 0;
-        default:
-          return "data";
-      }
-    };
-    compareStrings = (left, right) => left.localeCompare(right);
-    arraysEqual = (left, right) => left.length === right.length && left.every((value, index) => value === right[index]);
-    segmentsEqual = (left, right) => left.status === right.status && arraysEqual(left.classifications, right.classifications) && arraysEqual(left.runtime, right.runtime) && arraysEqual(left.annotationIds, right.annotationIds) && arraysEqual(left.analysisIds, right.analysisIds) && arraysEqual(left.runtimeIds, right.runtimeIds) && arraysEqual(left.conflictIds, right.conflictIds) && arraysEqual(left.regionIds, right.regionIds);
-    coverageAddressSpace = (record) => {
-      if (record.kind === "runtime-coverage" || record.kind === "runtime-execution") {
-        return record.addressSpace;
-      }
-      if (record.kind === "runtime-memory-access") return record.accessedAddressSpace;
-      return void 0;
-    };
-    buildRomCoverageMap = (manifest, shards) => {
-      const contentSize = manifest.rom.contentSize;
-      if (!Number.isSafeInteger(contentSize) || contentSize < 0) {
-        throw new Error("ROM coverage requires a non-negative safe content size.");
-      }
-      const fileAddressSpaces = manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id).sort(compareStrings);
-      const fileAddressSpaceSet = new Set(fileAddressSpaces);
-      const events = /* @__PURE__ */ new Map();
-      const unprojected = [];
-      const diagnostics = [];
-      let nextToken = 0;
-      const eventAt = (offset) => {
-        let event = events.get(offset);
-        if (!event) {
-          event = { starts: [], ends: [] };
-          events.set(offset, event);
-        }
-        return event;
-      };
-      const addOverlay = (overlay, start, end, source) => {
-        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
-          unprojected.push({ ...source, reason: "invalid-range" });
-          return false;
-        }
-        if (start >= contentSize || end <= 0 || contentSize === 0) {
-          unprojected.push({ ...source, reason: "outside-rom" });
-          return false;
-        }
-        const clippedStart = Math.max(0, start);
-        const clippedEnd = Math.min(contentSize, end);
-        if (clippedStart !== start || clippedEnd !== end) {
-          diagnostics.push({
-            recordId: source.id,
-            message: `Clipped coverage range [${start}, ${end}) to ROM content [${clippedStart}, ${clippedEnd}).`
-          });
-        }
-        const value = {
-          ...overlay,
-          token: nextToken++,
-          start: clippedStart,
-          end: clippedEnd
-        };
-        eventAt(clippedStart).starts.push(value);
-        eventAt(clippedEnd).ends.push(value);
-        return true;
-      };
-      const addAddressSpaceOverlay = (overlay, start, end, source) => {
-        if (!source.addressSpace || !fileAddressSpaceSet.has(source.addressSpace)) {
-          unprojected.push({ ...source, reason: "non-file-address-space" });
-          return false;
-        }
-        return addOverlay(overlay, start, end, source);
-      };
-      for (const annotation of shards.annotations) {
-        const classification = annotationClassification(annotation.classification);
-        if (!classification) continue;
-        addAddressSpaceOverlay(
-          { classification, annotationId: annotation.id },
-          annotation.start,
-          annotation.end,
-          { kind: "annotation", id: annotation.id, addressSpace: annotation.addressSpace }
-        );
-      }
-      for (const region of shards.regions) {
-        addAddressSpaceOverlay({ regionId: region.id }, region.start, region.end, {
-          kind: "region",
-          id: region.id,
-          addressSpace: region.addressSpace
-        });
-      }
-      const controlFlowNodes = /* @__PURE__ */ new Map();
-      for (const record of shards.analysis) {
-        if (record.kind !== "cfg-node") continue;
-        controlFlowNodes.set(record.id, record);
-        if (record.fileOffset === void 0) {
-          unprojected.push({ kind: "analysis", id: record.id, addressSpace: record.addressSpace, reason: "missing-file-offset" });
-          continue;
-        }
-        addOverlay(
-          { classification: "opcode", analysisId: record.id },
-          record.fileOffset,
-          record.fileOffset + 1,
-          { kind: "analysis", id: record.id, addressSpace: record.addressSpace }
-        );
-        if (record.size > 1) {
-          addOverlay(
-            { classification: "operand", analysisId: record.id },
-            record.fileOffset + 1,
-            record.fileOffset + record.size,
-            { kind: "analysis", id: record.id, addressSpace: record.addressSpace }
-          );
-        }
-      }
-      const addConflict = (record) => {
-        if (fileAddressSpaceSet.has(record.addressSpace)) {
-          addOverlay({ conflictId: record.id }, record.address, record.end ?? record.address + 1, {
-            kind: "analysis",
-            id: record.id,
-            addressSpace: record.addressSpace
-          });
-          return;
-        }
-        let projected = false;
-        for (const nodeId of record.nodes) {
-          const node = controlFlowNodes.get(nodeId);
-          if (!node || node.fileOffset === void 0) continue;
-          projected = addOverlay(
-            { conflictId: record.id, analysisId: node.id },
-            node.fileOffset,
-            node.fileOffset + node.size,
-            { kind: "analysis", id: record.id, addressSpace: record.addressSpace }
-          ) || projected;
-        }
-        if (!projected) {
-          unprojected.push({
-            kind: "analysis",
-            id: record.id,
-            addressSpace: record.addressSpace,
-            reason: "missing-file-offset"
-          });
-        }
-      };
-      for (const record of shards.analysis) {
-        if (record.kind === "conflict") addConflict(record);
-      }
-      const addRuntimeAddressSpaceOverlay = (record, runtime, start, end) => {
-        const addressSpace = coverageAddressSpace(record);
-        addAddressSpaceOverlay({ runtime, runtimeId: record.id }, start, end, {
-          kind: "runtime",
-          id: record.id,
-          addressSpace
-        });
-      };
-      for (const record of shards.runtime) {
-        if (record.kind === "runtime-coverage") {
-          addRuntimeAddressSpaceOverlay(record, record.coverage, record.start, record.end);
-          continue;
-        }
-        if (record.kind === "runtime-execution") {
-          if (record.fileOffset === void 0) {
-            unprojected.push({
-              kind: "runtime",
-              id: record.id,
-              addressSpace: record.addressSpace,
-              reason: "missing-file-offset"
-            });
-            continue;
-          }
-          const size = record.size ?? 1;
-          addOverlay(
-            { runtime: "executed", runtimeId: record.id },
-            record.fileOffset,
-            record.fileOffset + 1,
-            { kind: "runtime", id: record.id, addressSpace: record.addressSpace }
-          );
-          if (size > 1) {
-            addOverlay(
-              { runtime: "operand", runtimeId: record.id },
-              record.fileOffset + 1,
-              record.fileOffset + size,
-              { kind: "runtime", id: record.id, addressSpace: record.addressSpace }
-            );
-          }
-          continue;
-        }
-        if (record.kind === "runtime-memory-access") {
-          if (!fileAddressSpaceSet.has(record.accessedAddressSpace)) continue;
-          if (record.access === "read" || record.access === "read-write") {
-            addRuntimeAddressSpaceOverlay(
-              record,
-              "read",
-              record.accessedAddress,
-              record.accessedAddress + record.width
-            );
-          }
-          if (record.access === "write" || record.access === "read-write") {
-            addRuntimeAddressSpaceOverlay(
-              record,
-              "written",
-              record.accessedAddress,
-              record.accessedAddress + record.width
-            );
-          }
-        }
-      }
-      eventAt(0);
-      eventAt(contentSize);
-      const boundaries = [...events.keys()].sort((left, right) => left - right);
-      const active = /* @__PURE__ */ new Map();
-      const segments = [];
-      for (let index = 0; index + 1 < boundaries.length; index++) {
-        const start = boundaries[index];
-        const event = events.get(start);
-        for (const overlay of event.ends) active.delete(overlay.token);
-        for (const overlay of event.starts) active.set(overlay.token, overlay);
-        const end = boundaries[index + 1];
-        if (end <= start) continue;
-        const values = [...active.values()];
-        const classifications = /* @__PURE__ */ new Set();
-        for (const { classification } of values) {
-          if (classification) classifications.add(classification);
-        }
-        const sortedClassifications = classifications.size === 0 ? ["unknown"] : [...classifications];
-        sortedClassifications.sort(
-          (left, right) => CLASSIFICATION_ORDER.indexOf(left) - CLASSIFICATION_ORDER.indexOf(right)
-        );
-        const conflictIds = [
-          ...new Set(values.flatMap(({ conflictId }) => conflictId ? [conflictId] : []))
-        ].sort(compareStrings);
-        let status = "classified";
-        if (classifications.size === 0 && conflictIds.length === 0) status = "unknown";
-        else if (classifications.size > 1 || conflictIds.length > 0) status = "conflict";
-        const segment = {
-          start,
-          end,
-          status,
-          classifications: sortedClassifications,
-          runtime: [...new Set(values.flatMap(({ runtime }) => runtime ? [runtime] : []))].sort(
-            (left, right) => RUNTIME_ORDER.indexOf(left) - RUNTIME_ORDER.indexOf(right)
-          ),
-          annotationIds: [
-            ...new Set(values.flatMap(({ annotationId }) => annotationId ? [annotationId] : []))
-          ].sort(compareStrings),
-          analysisIds: [
-            ...new Set(values.flatMap(({ analysisId }) => analysisId ? [analysisId] : []))
-          ].sort(compareStrings),
-          runtimeIds: [
-            ...new Set(values.flatMap(({ runtimeId }) => runtimeId ? [runtimeId] : []))
-          ].sort(compareStrings),
-          conflictIds,
-          regionIds: [...new Set(values.flatMap(({ regionId }) => regionId ? [regionId] : []))].sort(
-            compareStrings
-          )
-        };
-        const previous = segments.at(-1);
-        if (previous && previous.end === segment.start && segmentsEqual(previous, segment)) {
-          segments[segments.length - 1] = { ...previous, end: segment.end };
-        } else {
-          segments.push(segment);
-        }
-      }
-      const bytesByClassification = {
-        opcode: 0,
-        operand: 0,
-        data: 0,
-        asset: 0,
-        unknown: 0
-      };
-      const bytesByRuntimeCoverage = {
-        executed: 0,
-        operand: 0,
-        read: 0,
-        written: 0
-      };
-      let classifiedBytes = 0;
-      let unknownBytes = 0;
-      let conflictBytes = 0;
-      for (const segment of segments) {
-        const size = segment.end - segment.start;
-        for (const classification of segment.classifications) {
-          bytesByClassification[classification] += size;
-        }
-        for (const runtime of segment.runtime) bytesByRuntimeCoverage[runtime] += size;
-        if (segment.status === "classified") classifiedBytes += size;
-        else if (segment.status === "unknown") unknownBytes += size;
-        else conflictBytes += size;
-      }
-      return {
-        contentSize,
-        fileAddressSpaces,
-        segments,
-        summary: {
-          totalBytes: contentSize,
-          classifiedBytes,
-          unknownBytes,
-          conflictBytes,
-          segmentCount: segments.length,
-          bytesByClassification,
-          bytesByRuntimeCoverage
-        },
-        unprojected: unprojected.sort(
-          (left, right) => left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id) || left.reason.localeCompare(right.reason)
-        ),
-        diagnostics: diagnostics.sort(
-          (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
-        )
-      };
-    };
-  }
-});
-
-// packages/disassembler/src/trace-detail.ts
-var isArray, validateRuntimeInstructionDetails;
-var init_trace_detail = __esm({
-  "packages/disassembler/src/trace-detail.ts"() {
-    "use strict";
-    isArray = (value) => Array.isArray(value);
-    validateRuntimeInstructionDetails = (value, count) => {
-      if (!Array.isArray(value) || value.length !== count)
-        throw new Error("Trace details must align one-to-one with instruction addresses.");
-      return value.map((detail) => {
-        if (!detail || !isArray(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255))
-          throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
-        if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
-          ([key2, entry]) => !key2 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-        ))
-          throw new Error("Trace instruction state contains an invalid register value.");
-        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0))
-          throw new Error("Trace memory loss must be a non-negative safe integer.");
-        if (detail.memoryAccesses !== void 0 && (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256))
-          throw new Error("Trace instruction memory accesses exceed the 256-operation bound.");
-        const memoryAccesses = detail.memoryAccesses?.map((access) => {
-          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isSafeInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu")))
-            throw new Error("Trace contains an invalid bus operation.");
-          return { ...access };
-        });
-        return {
-          bytes: [...detail.bytes],
-          state: { ...detail.state },
-          ...memoryAccesses === void 0 ? {} : { memoryAccesses },
-          ...detail.droppedMemoryAccesses === void 0 ? {} : { droppedMemoryAccesses: detail.droppedMemoryAccesses }
-        };
-      });
-    };
-  }
-});
-
-// packages/disassembler/src/json-array-file.ts
-var fs, import_node_crypto3, import_node_string_decoder, scanObjectArrayFile, readObjectArrayFile, validateObjectArrayFile;
-var init_json_array_file = __esm({
-  "packages/disassembler/src/json-array-file.ts"() {
-    "use strict";
-    fs = __toESM(require("node:fs"), 1);
-    import_node_crypto3 = require("node:crypto");
-    import_node_string_decoder = require("node:string_decoder");
-    scanObjectArrayFile = (file, expectedSha256, onRecord) => {
-      const descriptor2 = fs.openSync(file, "r");
-      const buffer = Buffer.allocUnsafe(64 * 1024);
-      const decoder = new import_node_string_decoder.StringDecoder("utf8");
-      const hash3 = (0, import_node_crypto3.createHash)("sha256");
-      let records = 0;
-      let mode3 = "start";
-      let allowEnd = true;
-      let depth = 0;
-      let inString = false;
-      let escaped = false;
-      let parts = [];
-      let recordLength = 0;
-      const fail = () => {
-        throw new Error(`Analysis shard '${file}' is not a valid JSON object-record array.`);
-      };
-      const consume = (text) => {
-        let recordStart = mode3 === "record" ? 0 : -1;
-        for (let index = 0; index < text.length; index++) {
-          const char = text[index];
-          if (mode3 === "record") {
-            if (inString) {
-              if (escaped) escaped = false;
-              else if (char === "\\") escaped = true;
-              else if (char === '"') inString = false;
-            } else if (char === '"') inString = true;
-            else if (char === "{" || char === "[") depth++;
-            else if (char === "}" || char === "]") {
-              depth--;
-              if (depth === 0) {
-                const tail = text.slice(recordStart, index + 1);
-                recordLength += tail.length;
-                if (recordLength > 32 * 1024 * 1024)
-                  throw new Error("Analysis shard record exceeds the 32 MiB limit.");
-                parts.push(tail);
-                const record = JSON.parse(parts.join(""));
-                onRecord?.(record);
-                records++;
-                parts = [];
-                recordLength = 0;
-                recordStart = -1;
-                mode3 = "comma";
-              }
-            }
-            continue;
-          }
-          if (char === " " || char === "\n" || char === "\r" || char === "	") continue;
-          if (mode3 === "start" && char === "[") {
-            mode3 = "value";
-            continue;
-          }
-          if (mode3 === "value") {
-            if (char === "]" && allowEnd) {
-              mode3 = "end";
-              continue;
-            }
-            if (char !== "{") fail();
-            mode3 = "record";
-            recordStart = index;
-            depth = 1;
-            continue;
-          }
-          if (mode3 === "comma" && char === ",") {
-            mode3 = "value";
-            allowEnd = false;
-            continue;
-          }
-          if (mode3 === "comma" && char === "]") {
-            mode3 = "end";
-            continue;
-          }
-          fail();
-        }
-        if (recordStart >= 0) {
-          const tail = text.slice(recordStart);
-          parts.push(tail);
-          recordLength += tail.length;
-          if (recordLength > 32 * 1024 * 1024)
-            throw new Error("Analysis shard record exceeds the 32 MiB limit.");
-        }
-      };
-      try {
-        let count;
-        while ((count = fs.readSync(descriptor2, buffer, 0, buffer.length, null)) > 0) {
-          const bytes = buffer.subarray(0, count);
-          hash3.update(bytes);
-          consume(decoder.write(bytes));
-        }
-        consume(decoder.end());
-        if (String(mode3) !== "end") fail();
-        if (hash3.digest("hex") !== expectedSha256)
-          throw new Error(`Analysis shard '${file}' does not match its SHA-256.`);
-        return records;
-      } finally {
-        fs.closeSync(descriptor2);
-      }
-    };
-    readObjectArrayFile = (file, expectedSha256) => {
-      const records = [];
-      scanObjectArrayFile(file, expectedSha256, (record) => records.push(record));
-      return records;
-    };
-    validateObjectArrayFile = (file, expectedSha256) => scanObjectArrayFile(file, expectedSha256);
-  }
-});
-
-// packages/disassembler/src/project-types.ts
-var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
-var init_project_types = __esm({
-  "packages/disassembler/src/project-types.ts"() {
-    "use strict";
-    ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
-    ANALYSIS_PROJECT_SCHEMA_VERSION = 2;
-    ANALYSIS_PROJECT_MANIFEST = "analysis.json";
-  }
-});
-
-// packages/disassembler/src/project-store.ts
-var import_node_crypto4, fs2, import_node_path, SHARD_PATHS, sha2562, CANONICAL_JSON_RECORD_BATCH, canonicalize, writeCanonicalJsonArrayFile, canonicalJson, assertSafeRelativePath, sortById, runtimeSortSpace, runtimeSortAddress, normalizedShards, validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId, assertCodecReference, validateLoadedShards, migrateManifest, writeAnalysisProject, loadAnalysisProject;
-var init_project_store = __esm({
-  "packages/disassembler/src/project-store.ts"() {
-    "use strict";
-    init_trace_detail();
-    import_node_crypto4 = require("node:crypto");
-    fs2 = __toESM(require("node:fs"), 1);
-    import_node_path = __toESM(require("node:path"), 1);
-    init_json_array_file();
-    init_project_types();
-    SHARD_PATHS = Object.freeze({
-      analysis: "analysis/control-flow.json",
-      annotations: "analysis/annotations.json",
-      labels: "analysis/labels.json",
-      comments: "analysis/comments.json",
-      regions: "analysis/regions.json",
-      runtime: "analysis/runtime.json",
-      evidence: "analysis/evidence.json",
-      imports: "analysis/imports.json"
-    });
-    sha2562 = (value) => (0, import_node_crypto4.createHash)("sha256").update(value).digest("hex");
-    CANONICAL_JSON_RECORD_BATCH = 64;
-    canonicalize = (value) => {
-      if (Array.isArray(value)) return value.map(canonicalize);
-      if (value && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalize(entry)])
-        );
-      }
-      return value;
-    };
-    writeCanonicalJsonArrayFile = (destination, values) => {
-      const hash3 = (0, import_node_crypto4.createHash)("sha256");
-      const descriptor2 = fs2.openSync(destination, "w");
-      let pending = "";
-      const append2 = (fragment) => {
-        pending += fragment;
-        if (pending.length >= 64 * 1024) flush();
-      };
-      const flush = () => {
-        if (pending.length === 0) return;
-        fs2.writeSync(descriptor2, pending);
-        hash3.update(pending);
-        pending = "";
-      };
-      try {
-        if (values.length === 0) {
-          append2("[]\n");
-        } else {
-          append2("[\n");
-          for (let start = 0; start < values.length; start += CANONICAL_JSON_RECORD_BATCH) {
-            const encoded = JSON.stringify(
-              canonicalize(values.slice(start, start + CANONICAL_JSON_RECORD_BATCH)),
-              void 0,
-              2
-            );
-            const records = encoded.slice(2, -2);
-            append2(`${start === 0 ? "" : ",\n"}${records}`);
-          }
-          append2("\n]\n");
-        }
-        flush();
-      } finally {
-        fs2.closeSync(descriptor2);
-      }
-      return hash3.digest("hex");
-    };
-    canonicalJson = (value) => `${JSON.stringify(canonicalize(value), void 0, 2)}
-`;
-    assertSafeRelativePath = (relative2) => {
-      if (relative2 === "" || import_node_path.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === "..")) {
-        throw new Error(`Unsafe project shard path '${relative2}'.`);
-      }
-    };
-    sortById = (records) => [...records].sort((left, right) => left.id.localeCompare(right.id));
-    runtimeSortSpace = (record) => {
-      if ("addressSpace" in record) return record.addressSpace;
-      if (record.kind === "runtime-memory-access") return record.instructionAddressSpace;
-      return record.fromAddressSpace;
-    };
-    runtimeSortAddress = (record) => {
-      if ("address" in record) return record.address;
-      if (record.kind === "runtime-coverage") return record.start;
-      if (record.kind === "runtime-memory-access") return record.instructionAddress;
-      return record.fromAddress;
-    };
-    normalizedShards = (shards) => ({
-      analysis: [...shards.analysis].sort(
-        (left, right) => ("address" in left ? left.address : Number.MAX_SAFE_INTEGER) - ("address" in right ? right.address : Number.MAX_SAFE_INTEGER) || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id)
-      ),
-      annotations: [...shards.annotations].sort(
-        (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.start - right.start || left.end - right.end || left.id.localeCompare(right.id)
-      ),
-      labels: [...shards.labels].sort(
-        (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
-      ),
-      comments: [...shards.comments].sort(
-        (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
-      ),
-      regions: [...shards.regions].sort(
-        (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.start - right.start || left.end - right.end || left.id.localeCompare(right.id)
-      ),
-      runtime: [...shards.runtime].sort((left, right) => {
-        return runtimeSortSpace(left).localeCompare(runtimeSortSpace(right)) || runtimeSortAddress(left) - runtimeSortAddress(right) || left.kind.localeCompare(right.kind) || left.id.localeCompare(right.id);
-      }),
-      evidence: sortById(shards.evidence),
-      imports: sortById(shards.imports)
-    });
-    validateAnalysisProjectManifest = (manifest) => {
-      if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
-        throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
-      }
-      if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
-        throw new Error(
-          `Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`
-        );
-      }
-      if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) throw new Error("Invalid ROM SHA-256.");
-      if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
-        throw new Error("Invalid ROM content SHA-256.");
-      }
-      const addressSpaceIds = /* @__PURE__ */ new Set();
-      for (const addressSpace of manifest.addressSpaces) {
-        if (addressSpace.id === "" || addressSpace.name === "") {
-          throw new Error("Analysis address spaces require non-empty ids and names.");
-        }
-        if (addressSpaceIds.has(addressSpace.id)) {
-          throw new Error(`Duplicate analysis address-space id '${addressSpace.id}'.`);
-        }
-        if (!Number.isSafeInteger(addressSpace.addressBits) || addressSpace.addressBits <= 0 || addressSpace.addressBits > 53) {
-          throw new Error(`Analysis address space '${addressSpace.id}' has invalid address bits.`);
-        }
-        addressSpaceIds.add(addressSpace.id);
-      }
-      const shardIds = /* @__PURE__ */ new Set();
-      const shardPaths = /* @__PURE__ */ new Set();
-      for (const shard of manifest.shards) {
-        assertSafeRelativePath(shard.path);
-        if (!(shard.kind in SHARD_PATHS))
-          throw new Error(`Unknown analysis shard kind '${shard.kind}'.`);
-        if (!/^[\da-f]{64}$/.test(shard.sha256)) {
-          throw new Error(`Analysis shard '${shard.id}' has an invalid SHA-256.`);
-        }
-        if (!Number.isSafeInteger(shard.records) || shard.records < 0) {
-          throw new Error(`Analysis shard '${shard.id}' has an invalid record count.`);
-        }
-        if (shardIds.has(shard.id)) throw new Error(`Duplicate analysis shard id '${shard.id}'.`);
-        if (shardPaths.has(shard.path))
-          throw new Error(`Duplicate analysis shard path '${shard.path}'.`);
-        shardIds.add(shard.id);
-        shardPaths.add(shard.path);
-      }
-    };
-    FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
-    assertNoRomPayload = (value, location) => {
-      if (Array.isArray(value)) {
-        for (let index = 0; index < value.length; index++) {
-          assertNoRomPayload(value[index], `${location}[${index}]`);
-        }
-        return;
-      }
-      if (!value || typeof value !== "object") return;
-      for (const [key2, entry] of Object.entries(value)) {
-        if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
-          throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
-        }
-        assertNoRomPayload(entry, `${location}.${key2}`);
-      }
-    };
-    isStableId = (id) => {
-      const isAlphaNumeric = (character) => {
-        const code = character.charCodeAt(0);
-        return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-      };
-      if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) return false;
-      for (let index = 0; index < id.length; index++) {
-        const character = id[index];
-        if (!isAlphaNumeric(character) && !"._:/-".includes(character)) return false;
-      }
-      return true;
-    };
-    assertCodecReference = (reference, location) => {
-      if (typeof reference.codecId !== "string" || !isStableId(reference.codecId)) {
-        throw new Error(`${location} has an invalid codec id.`);
-      }
-      if (typeof reference.codecVersion !== "string" || reference.codecVersion.trim() === "") {
-        throw new Error(`${location} has no codec version.`);
-      }
-      if (reference.provider) {
-        if (typeof reference.provider.pluginId !== "string" || !isStableId(reference.provider.pluginId)) {
-          throw new Error(`${location} has an invalid provider plugin id.`);
-        }
-        if (typeof reference.provider.pluginVersion !== "string" || reference.provider.pluginVersion.trim() === "") {
-          throw new Error(`${location} has no provider plugin version.`);
-        }
-      }
-      const visitJson = (value, current2) => {
-        if (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)) {
-          return;
-        }
-        if (Array.isArray(value)) {
-          value.forEach((entry, index) => visitJson(entry, `${current2}[${index}]`));
-          return;
-        }
-        if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-          Object.entries(value).forEach(([key2, entry]) => visitJson(entry, `${current2}.${key2}`));
-          return;
-        }
-        throw new Error(`${current2} is not a JSON-safe codec option.`);
-      };
-      if (reference.options !== void 0) visitJson(reference.options, `${location} options`);
-    };
-    validateLoadedShards = (shards, project) => {
-      const { addressSpaces } = project;
-      const evidenceIds = new Set(shards.evidence.map((record) => record.id));
-      for (const [kind, records] of Object.entries(shards)) {
-        const ids = /* @__PURE__ */ new Set();
-        for (const record of records) {
-          if (!record || typeof record.id !== "string" || record.id === "") {
-            throw new Error(`Analysis shard '${kind}' contains a record without an id.`);
-          }
-          if (ids.has(record.id)) {
-            throw new Error(`Analysis shard '${kind}' contains duplicate id '${record.id}'.`);
-          }
-          ids.add(record.id);
-          for (const evidence of record.evidence ?? []) {
-            if (!evidenceIds.has(evidence)) {
-              throw new Error(
-                `Analysis record '${record.id}' refers to missing evidence '${evidence}'.`
-              );
-            }
-          }
-        }
-      }
-      for (const evidence of shards.evidence) {
-        if (!evidence.artifact) continue;
-        if (evidence.artifact.format === "" || !/^[\da-f]{64}$/.test(evidence.artifact.sha256) || !/^[\da-f]{64}$/.test(evidence.artifact.romContentSha256)) {
-          throw new Error(`Evidence '${evidence.id}' has an invalid artifact identity.`);
-        }
-        if (evidence.artifact.romContentSha256 !== project.rom.contentSha256) {
-          throw new Error(`Evidence '${evidence.id}' belongs to a different ROM.`);
-        }
-        if (evidence.artifact.mapper && evidence.artifact.mapper !== project.mapping.mapper) {
-          throw new Error(`Evidence '${evidence.id}' belongs to a different mapper.`);
-        }
-      }
-      for (const interval of [...shards.annotations, ...shards.regions]) {
-        if (!Number.isSafeInteger(interval.start) || !Number.isSafeInteger(interval.end) || interval.start < 0 || interval.end <= interval.start) {
-          throw new Error(`Analysis interval '${interval.id}' has an invalid half-open range.`);
-        }
-      }
-      for (const record of shards.runtime) {
-        if (!Number.isSafeInteger(record.count) || record.count <= 0) {
-          throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
-        }
-        if (record.kind === "runtime-coverage") {
-          if (!Number.isSafeInteger(record.start) || !Number.isSafeInteger(record.end) || record.start < 0 || record.end <= record.start) {
-            throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
-          }
-        }
-        if (record.kind === "runtime-memory-access") {
-          if (record.actor !== void 0 && !["cpu", "dma", "hdma"].includes(record.actor) || record.channel !== void 0 && (!Number.isInteger(record.channel) || record.channel < 0 || record.channel > 7 || !["dma", "hdma"].includes(record.actor ?? "cpu")))
-            throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
-          if (!Number.isSafeInteger(record.width) || record.width <= 0) {
-            throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
-          }
-          if (record.value !== void 0 && (!Number.isSafeInteger(record.value) || record.value < 0)) {
-            throw new Error(`Runtime memory access '${record.id}' has an invalid value.`);
-          }
-        }
-        if (record.kind === "runtime-execution") {
-          if (record.size !== void 0 && (!Number.isSafeInteger(record.size) || record.size <= 0)) {
-            throw new Error(`Runtime execution '${record.id}' has an invalid instruction size.`);
-          }
-          if (record.opcode !== void 0 && (!Number.isInteger(record.opcode) || record.opcode < 0 || record.opcode > 255)) {
-            throw new Error(`Runtime execution '${record.id}' has an invalid opcode.`);
-          }
-          if (record.fileOffset !== void 0 && (!Number.isSafeInteger(record.fileOffset) || record.fileOffset < 0 || record.fileOffset >= project.rom.contentSize)) {
-            throw new Error(`Runtime execution '${record.id}' has an invalid ROM file offset.`);
-          }
-        }
-        if (record.kind === "runtime-instruction") {
-          validateRuntimeInstructionDetails([{ bytes: record.bytes, state: record.state }], 1);
-        }
-        if (record.kind === "runtime-cpu-state") {
-          for (const [name, value] of Object.entries(record.state)) {
-            if (name === "" || !["string", "boolean", "number"].includes(typeof value) || typeof value === "number" && !Number.isFinite(value)) {
-              throw new Error(`Runtime CPU state '${record.id}' has invalid field '${name}'.`);
-            }
-          }
-        }
-      }
-      for (const annotation of shards.annotations) {
-        if (!annotation.asset) continue;
-        if (!["asset", "compressed", "graphics", "music", "text"].includes(annotation.classification)) {
-          throw new Error(
-            `Analysis annotation '${annotation.id}' cannot attach an asset codec to '${annotation.classification}'.`
-          );
-        }
-        assertCodecReference(annotation.asset, `Analysis annotation '${annotation.id}' asset codec`);
-        const compression = annotation.asset.compression;
-        if (!compression) continue;
-        assertCodecReference(compression, `Analysis annotation '${annotation.id}' compression codec`);
-        const rangeSize = annotation.end - annotation.start;
-        const maximumSize = compression.maximumSize ?? rangeSize;
-        if (!Number.isSafeInteger(maximumSize) || maximumSize <= 0 || maximumSize > rangeSize) {
-          throw new Error(
-            `Analysis annotation '${annotation.id}' compression maximumSize must be within its range.`
-          );
-        }
-        const hasBankStart = compression.bankStart !== void 0;
-        const hasBankEnd = compression.bankEnd !== void 0;
-        if (hasBankStart !== hasBankEnd) {
-          throw new Error(
-            `Analysis annotation '${annotation.id}' compression bank bounds must be supplied together.`
-          );
-        }
-        const bankStart = compression.bankStart;
-        const bankEnd = compression.bankEnd;
-        if (hasBankStart && (typeof bankStart !== "number" || typeof bankEnd !== "number" || !Number.isSafeInteger(bankStart) || !Number.isSafeInteger(bankEnd) || bankStart < 0 || bankEnd <= bankStart || annotation.start < bankStart || annotation.end > bankEnd)) {
-          throw new Error(
-            `Analysis annotation '${annotation.id}' has invalid compression bank bounds.`
-          );
-        }
-        if (compression.fillByte !== void 0 && (!Number.isInteger(compression.fillByte) || compression.fillByte < 0 || compression.fillByte > 255)) {
-          throw new Error(
-            `Analysis annotation '${annotation.id}' has an invalid compression fillByte.`
-          );
-        }
-      }
-      for (const conflict of shards.analysis) {
-        if (conflict.kind !== "conflict" || conflict.end === void 0) continue;
-        if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
-          throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
-        }
-      }
-      const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
-      for (const region of shards.regions) {
-        if (!region.parentRegion) continue;
-        const parent = regionsById.get(region.parentRegion);
-        if (!parent) {
-          throw new Error(
-            `Analysis region '${region.id}' refers to missing parent region '${region.parentRegion}'.`
-          );
-        }
-        if (parent.addressSpace === region.addressSpace && (region.start < parent.start || region.end > parent.end)) {
-          throw new Error(
-            `Analysis region '${region.id}' is not contained by parent region '${parent.id}'.`
-          );
-        }
-        const visited = /* @__PURE__ */ new Set([region.id]);
-        let ancestor = parent;
-        while (ancestor.parentRegion) {
-          if (visited.has(ancestor.id)) {
-            throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
-          }
-          visited.add(ancestor.id);
-          const next = regionsById.get(ancestor.parentRegion);
-          if (!next) break;
-          ancestor = next;
-        }
-        if (visited.has(ancestor.id)) {
-          throw new Error(`Analysis region '${region.id}' has a cyclic parent relationship.`);
-        }
-      }
-      for (const addressed of [...shards.labels, ...shards.comments]) {
-        if (!Number.isSafeInteger(addressed.address) || addressed.address < 0) {
-          throw new Error(`Analysis record '${addressed.id}' has an invalid address.`);
-        }
-      }
-      for (const label of shards.labels) {
-        if (label.sourceName !== void 0 && (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName)))
-          throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
-        if (label.inlineComment !== void 0 && (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment)))
-          throw new Error(`Analysis label '${label.id}' requires a single-line inline comment.`);
-        if (label.analysisEntryPoint !== void 0 && typeof label.analysisEntryPoint !== "boolean")
-          throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
-      }
-      for (const comment of shards.comments) {
-        if (comment.placement !== void 0 && !["before", "inline-instruction"].includes(comment.placement))
-          throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
-        if (comment.placement === "inline-instruction" && (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text)))
-          throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
-      }
-      const addressSpaceById = new Map(
-        addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
-      );
-      const addressedRecords = [
-        ...shards.annotations,
-        ...shards.labels,
-        ...shards.comments,
-        ...shards.regions,
-        ...shards.runtime.filter(
-          (record) => "addressSpace" in record
-        ),
-        ...shards.analysis.filter(
-          (record) => "addressSpace" in record
-        )
-      ];
-      for (const record of addressedRecords) {
-        const addressSpace = addressSpaceById.get(record.addressSpace);
-        if (!addressSpace) {
-          throw new Error(
-            `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
-          );
-        }
-        const maximum = 2 ** addressSpace.addressBits;
-        const addresses2 = [];
-        if ("start" in record) {
-          addresses2.push(record.start, record.end - 1);
-        } else if ("address" in record) {
-          addresses2.push(record.address);
-          if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
-            addresses2.push(record.end - 1);
-          }
-        } else {
-          if ("fromAddress" in record) addresses2.push(record.fromAddress);
-          if ("toAddress" in record && record.toAddress !== void 0) addresses2.push(record.toAddress);
-          if ("targets" in record) addresses2.push(...record.targets);
-        }
-        if (addresses2.some(
-          (address3) => !Number.isSafeInteger(address3) || address3 < 0 || address3 >= maximum
-        )) {
-          throw new Error(
-            `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
-          );
-        }
-      }
-      for (const record of shards.runtime) {
-        let addresses2 = [];
-        if (record.kind === "runtime-memory-access") {
-          addresses2 = [
-            [record.instructionAddressSpace, record.instructionAddress],
-            [record.accessedAddressSpace, record.accessedAddress]
-          ];
-        } else if (record.kind === "runtime-control-target") {
-          addresses2 = [
-            [record.fromAddressSpace, record.fromAddress],
-            [record.toAddressSpace, record.toAddress]
-          ];
-        }
-        for (const [spaceId, address3] of addresses2) {
-          const addressSpace = addressSpaceById.get(spaceId);
-          if (!addressSpace) {
-            throw new Error(
-              `Runtime record '${record.id}' refers to unknown address space '${spaceId}'.`
-            );
-          }
-          if (!Number.isSafeInteger(address3) || address3 < 0 || address3 >= 2 ** addressSpace.addressBits) {
-            throw new Error(`Runtime record '${record.id}' exceeds address space '${spaceId}'.`);
-          }
-        }
-      }
-      assertNoRomPayload(shards, "shards");
-    };
-    migrateManifest = (input) => {
-      if (!input || typeof input !== "object") throw new Error("Invalid analysis project manifest.");
-      const version = input.schemaVersion;
-      if (version === 0) {
-        const legacy = input;
-        const headerSize = legacy.headerSize ?? 0;
-        const migrated = {
-          format: ANALYSIS_PROJECT_FORMAT,
-          schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
-          target: legacy.target,
-          rom: {
-            sha256: legacy.romHash,
-            contentSha256: legacy.romHash,
-            fileSize: legacy.romSize + headerSize,
-            contentSize: legacy.romSize,
-            headerSize
-          },
-          mapping: { mapper: legacy.mapper, source: "override", candidates: [] },
-          addressSpaces: [],
-          shards: []
-        };
-        validateAnalysisProjectManifest(migrated);
-        return migrated;
-      }
-      if (version === 1) {
-        const migrated = {
-          ...input,
-          schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION
-        };
-        validateAnalysisProjectManifest(migrated);
-        return migrated;
-      }
-      if (typeof version !== "number") throw new Error("Manifest schemaVersion is required.");
-      if (version > ANALYSIS_PROJECT_SCHEMA_VERSION) {
-        throw new Error(
-          `Analysis project schema ${version} is newer than supported schema ${ANALYSIS_PROJECT_SCHEMA_VERSION}; refusing to downgrade.`
-        );
-      }
-      if (version < 0 || version !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
-        throw new Error(`No migration exists for analysis project schema ${version}.`);
-      }
-      const manifest = input;
-      validateAnalysisProjectManifest(manifest);
-      return manifest;
-    };
-    writeAnalysisProject = (directory, project) => {
-      const shards = normalizedShards(project.shards);
-      validateLoadedShards(shards, project.manifest);
-      const descriptors = [];
-      for (const [kind, relative2] of Object.entries(SHARD_PATHS)) {
-        assertSafeRelativePath(relative2);
-        const records = shards[kind];
-        const destination = import_node_path.default.join(directory, relative2);
-        fs2.mkdirSync(import_node_path.default.dirname(destination), { recursive: true });
-        const shardHash = writeCanonicalJsonArrayFile(destination, records);
-        descriptors.push({
-          id: kind,
-          kind,
-          path: relative2,
-          sha256: shardHash,
-          records: records.length
-        });
-      }
-      const manifest = {
-        ...project.manifest,
-        addressSpaces: [...project.manifest.addressSpaces].sort((a, b) => a.id.localeCompare(b.id)),
-        mapping: {
-          ...project.manifest.mapping,
-          candidates: [...project.manifest.mapping.candidates].sort(
-            (a, b) => b.score - a.score || a.mapper.localeCompare(b.mapper)
-          )
-        },
-        shards: descriptors.sort((a, b) => a.id.localeCompare(b.id))
-      };
-      validateAnalysisProjectManifest(manifest);
-      fs2.mkdirSync(directory, { recursive: true });
-      fs2.writeFileSync(import_node_path.default.join(directory, ANALYSIS_PROJECT_MANIFEST), canonicalJson(manifest));
-      return manifest;
-    };
-    loadAnalysisProject = (directory) => {
-      const manifestFile = import_node_path.default.join(directory, ANALYSIS_PROJECT_MANIFEST);
-      const manifest = migrateManifest(JSON.parse(fs2.readFileSync(manifestFile, "utf8")));
-      const loaded = {};
-      for (const descriptor2 of manifest.shards) {
-        assertSafeRelativePath(descriptor2.path);
-        const file = import_node_path.default.join(directory, descriptor2.path);
-        const records = fs2.statSync(file).size > 8 * 1024 * 1024 ? readObjectArrayFile(file, descriptor2.sha256) : (() => {
-          const text = fs2.readFileSync(file, "utf8");
-          if (sha2562(text) !== descriptor2.sha256)
-            throw new Error(`Analysis shard '${descriptor2.path}' does not match its SHA-256.`);
-          return JSON.parse(text);
-        })();
-        if (!Array.isArray(records) || records.length !== descriptor2.records) {
-          throw new Error(
-            `Analysis shard '${descriptor2.path}' record count does not match its manifest.`
-          );
-        }
-        if (loaded[descriptor2.kind] !== void 0) {
-          throw new Error(`Analysis project contains more than one '${descriptor2.kind}' shard.`);
-        }
-        loaded[descriptor2.kind] = records;
-      }
-      for (const kind of Object.keys(SHARD_PATHS)) {
-        loaded[kind] ??= [];
-      }
-      const shards = loaded;
-      validateLoadedShards(shards, manifest);
-      return { manifest, shards };
-    };
-  }
-});
-
-// packages/disassembler/src/runtime-trace.ts
-var init_runtime_trace = __esm({
-  "packages/disassembler/src/runtime-trace.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/execution-window.ts
-var init_execution_window = __esm({
-  "packages/disassembler/src/execution-window.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/instruction-annotations.ts
-var sortedStrings, sortedNumbers, canonicalValue2, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
-var init_instruction_annotations = __esm({
-  "packages/disassembler/src/instruction-annotations.ts"() {
-    "use strict";
-    sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
-    sortedNumbers = (values) => values ? [...new Set(values)].sort((left, right) => left - right) : [];
-    canonicalValue2 = (value) => {
-      if (Array.isArray(value)) return value.map(canonicalValue2);
-      if (value !== null && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue2(entry)])
-        );
-      }
-      return value;
-    };
-    valueKey = (value, present) => present ? JSON.stringify(canonicalValue2(value)) : "<absent>";
-    locationKey = (addressSpace, address3) => `${addressSpace}:${address3}`;
-    addValue = (target, value) => {
-      const values = target ?? /* @__PURE__ */ new Set();
-      values.add(value);
-      return values;
-    };
-    addAll = (target, values) => {
-      if (values.length === 0) return target;
-      target ??= /* @__PURE__ */ new Set();
-      for (const value of values) target.add(value);
-      return target;
-    };
-    numberField = (record, name) => {
-      const value = record[name];
-      return Number.isSafeInteger(value) && value >= 0 ? value : void 0;
-    };
-    effectiveAddress = (value) => {
-      const operandIndex = numberField(value, "operandIndex");
-      if (operandIndex === void 0 || typeof value.volatile !== "boolean" || typeof value.explanation !== "string") {
-        return void 0;
-      }
-      const address3 = numberField(value, "address");
-      const baseAddress = numberField(value, "baseAddress");
-      const romOffset = numberField(value, "romOffset");
-      const symbol = typeof value.symbol === "string" && value.symbol.length > 0 ? value.symbol : void 0;
-      return {
-        operandIndex,
-        ...address3 === void 0 ? {} : { address: address3 },
-        ...baseAddress === void 0 ? {} : { baseAddress },
-        ...symbol === void 0 ? {} : { symbol },
-        volatile: value.volatile,
-        ...romOffset === void 0 ? {} : { romOffset },
-        explanation: value.explanation
-      };
-    };
-    annotationState = (annotation) => annotation.state;
-    runtimeState = (record) => record.state;
-    buildInstructionAnalysisAnnotations = (manifest, shards) => {
-      const fileAddressSpaces = new Set(
-        manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
-      );
-      const instructions = /* @__PURE__ */ new Map();
-      const diagnostics = [];
-      const ensure = (addressSpace, address3) => {
-        const key2 = locationKey(addressSpace, address3);
-        let instruction = instructions.get(key2);
-        if (!instruction) {
-          instruction = {
-            addressSpace,
-            address: address3,
-            executionCount: 0
-          };
-          instructions.set(key2, instruction);
-        }
-        return instruction;
-      };
-      const addStateObservation = (instruction, source, architecture, state, recordId, evidence, count) => {
-        const stateKey = JSON.stringify(canonicalValue2(state));
-        const key2 = `${source}:${architecture}:${stateKey}`;
-        const observations = instruction.stateObservations ??= /* @__PURE__ */ new Map();
-        let observation = observations.get(key2);
-        if (!observation) {
-          observation = {
-            source,
-            architecture,
-            state,
-            stateKey,
-            ...count === void 0 ? {} : { count: 0 },
-            recordIds: /* @__PURE__ */ new Set(),
-            evidence: /* @__PURE__ */ new Set()
-          };
-          observations.set(key2, observation);
-        }
-        if (count !== void 0) observation.count = (observation.count ?? 0) + count;
-        observation.recordIds.add(recordId);
-        addAll(observation.evidence, evidence);
-        instruction.architectures = addValue(instruction.architectures, architecture);
-        instruction.evidence = addAll(instruction.evidence, evidence);
-      };
-      const addNode = (node) => {
-        const instruction = ensure(node.addressSpace, node.address);
-        instruction.nodeIds = addValue(instruction.nodeIds, node.id);
-        if (node.fileOffset !== void 0)
-          instruction.outputOffsets = addValue(instruction.outputOffsets, node.fileOffset);
-        instruction.evidence = addAll(instruction.evidence, node.evidence);
-        for (const raw of node.effectiveAddresses) {
-          const value = effectiveAddress(raw);
-          if (!value) {
-            diagnostics.push({
-              recordId: node.id,
-              message: "Ignored malformed effective-address metadata; required operandIndex, volatile, and explanation fields were not valid."
-            });
-            continue;
-          }
-          const key2 = JSON.stringify(canonicalValue2(value));
-          const addresses2 = instruction.effectiveAddresses ??= /* @__PURE__ */ new Map();
-          let entry = addresses2.get(key2);
-          if (!entry) {
-            entry = { value, nodeIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
-            addresses2.set(key2, entry);
-          }
-          entry.nodeIds.add(node.id);
-          addAll(entry.evidence, node.evidence);
-        }
-        const before = node.incomingState;
-        const after = node.outgoingState;
-        for (const field of sortedStrings([...Object.keys(before), ...Object.keys(after)])) {
-          const hasBefore = Object.hasOwn(before, field);
-          const hasAfter = Object.hasOwn(after, field);
-          const beforeValue = before[field];
-          const afterValue = after[field];
-          const beforeKey = valueKey(beforeValue, hasBefore);
-          const afterKey = valueKey(afterValue, hasAfter);
-          if (beforeKey === afterKey) continue;
-          const key2 = `${field}:${beforeKey}:${afterKey}`;
-          const transitions = instruction.stateTransitions ??= /* @__PURE__ */ new Map();
-          let transition = transitions.get(key2);
-          if (!transition) {
-            transition = {
-              field,
-              beforeKey,
-              afterKey,
-              ...hasBefore ? { before: beforeValue } : {},
-              ...hasAfter ? { after: afterValue } : {},
-              nodeIds: /* @__PURE__ */ new Set(),
-              evidence: /* @__PURE__ */ new Set()
-            };
-            transitions.set(key2, transition);
-          }
-          transition.nodeIds.add(node.id);
-          addAll(transition.evidence, node.evidence);
-        }
-      };
-      for (const record of shards.analysis) {
-        if (record.kind === "cfg-node") addNode(record);
-      }
-      for (const annotation of shards.annotations) {
-        if (annotation.classification !== "opcode") continue;
-        const instruction = ensure(annotation.addressSpace, annotation.start);
-        if (fileAddressSpaces.has(annotation.addressSpace)) {
-          instruction.outputOffsets = addValue(instruction.outputOffsets, annotation.start);
-        }
-      }
-      for (const record of shards.runtime) {
-        if (record.kind === "runtime-execution") {
-          const instruction = ensure(record.addressSpace, record.address);
-          if (record.fileOffset !== void 0) {
-            instruction.outputOffsets = addValue(instruction.outputOffsets, record.fileOffset);
-          }
-          instruction.architectures = addValue(instruction.architectures, record.architecture);
-          instruction.executionCount += record.count;
-          instruction.executionRecordIds = addValue(instruction.executionRecordIds, record.id);
-          instruction.evidence = addAll(instruction.evidence, record.evidence);
-        } else if (record.kind === "runtime-cpu-state") {
-          const instruction = ensure(record.addressSpace, record.address);
-          addStateObservation(
-            instruction,
-            "runtime",
-            record.architecture,
-            runtimeState(record),
-            record.id,
-            record.evidence,
-            record.count
-          );
-        } else if (record.kind === "runtime-memory-access") {
-          const instruction = ensure(record.instructionAddressSpace, record.instructionAddress);
-          instruction.architectures = addValue(instruction.architectures, record.architecture);
-          const value = {
-            accessedAddressSpace: record.accessedAddressSpace,
-            accessedAddress: record.accessedAddress,
-            access: record.access,
-            width: record.width,
-            ...record.actor === void 0 ? {} : { actor: record.actor },
-            ...record.channel === void 0 ? {} : { channel: record.channel },
-            ...record.value === void 0 ? {} : { value: record.value }
-          };
-          const key2 = JSON.stringify(canonicalValue2(value));
-          const accesses = instruction.memoryAccesses ??= /* @__PURE__ */ new Map();
-          let access = accesses.get(key2);
-          if (!access) {
-            access = { value, count: 0, recordIds: /* @__PURE__ */ new Set(), evidence: /* @__PURE__ */ new Set() };
-            accesses.set(key2, access);
-          }
-          access.count += record.count;
-          access.recordIds.add(record.id);
-          addAll(access.evidence, record.evidence);
-          instruction.evidence = addAll(instruction.evidence, record.evidence);
-        }
-      }
-      for (const comment of shards.comments) {
-        const instruction = ensure(comment.addressSpace, comment.address);
-        (instruction.comments ??= []).push(comment);
-        for (const evidence of comment.evidence) (instruction.evidence ??= /* @__PURE__ */ new Set()).add(evidence);
-      }
-      const mutable = [...instructions.values()];
-      const directIndex = /* @__PURE__ */ new Map();
-      const outputIndex = [];
-      for (const instruction of mutable) {
-        const direct = directIndex.get(instruction.addressSpace);
-        if (direct) direct.push(instruction);
-        else directIndex.set(instruction.addressSpace, [instruction]);
-        for (const offset of instruction.outputOffsets ?? []) outputIndex.push({ offset, instruction });
-      }
-      for (const values of directIndex.values()) {
-        values.sort((left, right) => left.address - right.address);
-      }
-      outputIndex.sort((left, right) => left.offset - right.offset);
-      const lowerBound2 = (values, target, at) => {
-        let low = 0;
-        let high = values.length;
-        while (low < high) {
-          const middle = low + Math.floor((high - low) / 2);
-          if (at(values[middle]) < target) low = middle + 1;
-          else high = middle;
-        }
-        return low;
-      };
-      const attachToRange = (addressSpace, start, end, callback) => {
-        const direct = directIndex.get(addressSpace) ?? [];
-        for (let index = lowerBound2(direct, start, ({ address: address3 }) => address3); index < direct.length && direct[index].address < end; index++) {
-          callback(direct[index]);
-        }
-        if (fileAddressSpaces.has(addressSpace)) {
-          for (let index = lowerBound2(outputIndex, start, ({ offset }) => offset); index < outputIndex.length && outputIndex[index].offset < end; index++) {
-            const instruction = outputIndex[index].instruction;
-            if (instruction.addressSpace === addressSpace && instruction.address >= start && instruction.address < end) {
-              continue;
-            }
-            callback(instruction);
-          }
-        }
-      };
-      for (const annotation of shards.annotations) {
-        attachToRange(annotation.addressSpace, annotation.start, annotation.end, (instruction) => {
-          instruction.architectures = addValue(instruction.architectures, annotation.architecture);
-          if (annotationState(annotation)) {
-            addStateObservation(
-              instruction,
-              "project",
-              annotation.architecture,
-              annotationState(annotation),
-              annotation.id,
-              annotation.evidence
-            );
-          }
-        });
-      }
-      const coverageById = /* @__PURE__ */ new Map();
-      for (const record of shards.runtime) {
-        if (record.kind !== "runtime-coverage") continue;
-        coverageById.set(record.id, record);
-        attachToRange(record.addressSpace, record.start, record.end, (instruction) => {
-          instruction.architectures = addValue(instruction.architectures, record.architecture);
-          instruction.coverageRecordIds = addValue(instruction.coverageRecordIds, record.id);
-          instruction.evidence = addAll(instruction.evidence, record.evidence);
-        });
-      }
-      const summaries3 = new Set(
-        shards.analysis.filter((record) => record.kind === "summary").map(({ architecture }) => architecture)
-      );
-      if (summaries3.size === 1) {
-        const [architecture] = summaries3;
-        for (const instruction of mutable) {
-          if (architecture && (instruction.architectures?.size ?? 0) === 0) {
-            instruction.architectures = addValue(instruction.architectures, architecture);
-          }
-        }
-      }
-      const finalized = mutable.map((instruction) => {
-        const coverage = /* @__PURE__ */ new Map();
-        for (const recordId of instruction.coverageRecordIds ?? []) {
-          const record = coverageById.get(recordId);
-          const previous = coverage.get(record.coverage);
-          coverage.set(record.coverage, {
-            coverage: record.coverage,
-            count: (previous?.count ?? 0) + record.count,
-            recordIds: sortedStrings([...previous?.recordIds ?? [], record.id]),
-            evidence: sortedStrings([...previous?.evidence ?? [], ...record.evidence])
-          });
-        }
-        return {
-          id: `instruction:${instruction.addressSpace}:${instruction.address}`,
-          addressSpace: instruction.addressSpace,
-          address: instruction.address,
-          outputOffsets: sortedNumbers(instruction.outputOffsets),
-          architectures: sortedStrings(instruction.architectures),
-          nodeIds: sortedStrings(instruction.nodeIds),
-          effectiveAddresses: [...instruction.effectiveAddresses?.values() ?? []].map(({ value, nodeIds, evidence }) => ({
-            ...value,
-            nodeIds: sortedStrings(nodeIds),
-            evidence: sortedStrings(evidence)
-          })).sort(
-            (left, right) => left.operandIndex - right.operandIndex || (left.address ?? left.baseAddress ?? -1) - (right.address ?? right.baseAddress ?? -1) || left.explanation.localeCompare(right.explanation)
-          ),
-          stateTransitions: [...instruction.stateTransitions?.values() ?? []].sort(
-            (left, right) => left.field.localeCompare(right.field) || left.beforeKey.localeCompare(right.beforeKey) || left.afterKey.localeCompare(right.afterKey)
-          ).map(({ field, before, after, nodeIds, evidence }) => ({
-            field,
-            ...before === void 0 ? {} : { before },
-            ...after === void 0 ? {} : { after },
-            nodeIds: sortedStrings(nodeIds),
-            evidence: sortedStrings(evidence)
-          })),
-          stateObservations: [...instruction.stateObservations?.values() ?? []].sort(
-            (left, right) => left.source.localeCompare(right.source) || left.architecture.localeCompare(right.architecture) || left.stateKey.localeCompare(right.stateKey)
-          ).map(({ source, architecture, state, count, recordIds, evidence }) => ({
-            source,
-            architecture,
-            state,
-            ...count === void 0 ? {} : { count },
-            recordIds: sortedStrings(recordIds),
-            evidence: sortedStrings(evidence)
-          })),
-          executionCount: instruction.executionCount,
-          ...instruction.comments ? { comments: [...instruction.comments].sort((a, b) => a.id.localeCompare(b.id)) } : {},
-          executionRecordIds: sortedStrings(instruction.executionRecordIds),
-          runtimeCoverage: [...coverage.values()].sort(
-            (left, right) => left.coverage.localeCompare(right.coverage)
-          ),
-          memoryAccesses: [...instruction.memoryAccesses?.values() ?? []].map(({ value, count, recordIds, evidence }) => ({
-            ...value,
-            count,
-            recordIds: sortedStrings(recordIds),
-            evidence: sortedStrings(evidence)
-          })).sort(
-            (left, right) => left.accessedAddressSpace.localeCompare(right.accessedAddressSpace) || left.accessedAddress - right.accessedAddress || left.access.localeCompare(right.access) || left.width - right.width || (left.value ?? -1) - (right.value ?? -1)
-          ),
-          evidence: sortedStrings(instruction.evidence)
-        };
-      });
-      return {
-        instructions: finalized.sort(
-          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
-        ),
-        diagnostics: diagnostics.sort(
-          (left, right) => left.recordId.localeCompare(right.recordId) || left.message.localeCompare(right.message)
-        )
-      };
-    };
-  }
-});
-
-// packages/disassembler/src/runtime-evidence.ts
-var init_runtime_evidence = __esm({
-  "packages/disassembler/src/runtime-evidence.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/behavior-capture.ts
-var MAX_CAPTURE_FILE_BYTES;
-var init_behavior_capture = __esm({
-  "packages/disassembler/src/behavior-capture.ts"() {
-    "use strict";
-    MAX_CAPTURE_FILE_BYTES = 128 * 1024 * 1024;
-  }
-});
-
-// packages/disassembler/src/behavior-capture-recorder.ts
-var init_behavior_capture_recorder = __esm({
-  "packages/disassembler/src/behavior-capture-recorder.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/interval-index.ts
-var HalfOpenIntervalIndex;
-var init_interval_index = __esm({
-  "packages/disassembler/src/interval-index.ts"() {
-    "use strict";
-    HalfOpenIntervalIndex = class {
-      #entries;
-      #prefixMaximumEnd;
-      /**
-       * Builds an immutable search index from already-owned interval values.
-       * @param {readonly Value[]} values Non-negative safe half-open intervals in semantic input order.
-       * @throws {Error} When an interval is empty, reversed, negative, or outside safe integers.
-       */
-      constructor(values) {
-        for (const value of values) {
-          if (!Number.isSafeInteger(value.start) || !Number.isSafeInteger(value.end) || value.start < 0 || value.end <= value.start) {
-            throw new Error("Interval index entries must be non-negative safe half-open ranges.");
-          }
-        }
-        this.#entries = values.map((value, inputIndex) => ({ value, inputIndex })).sort(
-          (left, right) => left.value.start - right.value.start || left.value.end - right.value.end || left.inputIndex - right.inputIndex
-        );
-        const prefixMaximumEnd = [];
-        let maximumEnd = -1;
-        for (const [index, entry] of this.#entries.entries()) {
-          maximumEnd = Math.max(maximumEnd, entry.value.end);
-          prefixMaximumEnd[index] = maximumEnd;
-        }
-        this.#prefixMaximumEnd = prefixMaximumEnd;
-      }
-      /**
-       * Returns every interval containing one safe non-negative point, in input order.
-       * @param {number} point Safe non-negative point to query.
-       * @returns {readonly Value[]} Matching intervals in their original input order.
-       */
-      at(point) {
-        if (!Number.isSafeInteger(point) || point < 0) {
-          throw new Error("Interval index points must be non-negative safe integers.");
-        }
-        return this.#matching(point, point + 1);
-      }
-      /**
-       * Returns every interval intersecting a valid half-open query, in input order.
-       * @param {number} start Inclusive safe non-negative query start.
-       * @param {number} end Exclusive safe query end greater than `start`.
-       * @returns {readonly Value[]} Matching intervals in their original input order.
-       */
-      overlapping(start, end) {
-        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start) {
-          throw new Error("Interval index queries must be non-negative safe half-open ranges.");
-        }
-        return this.#matching(start, end);
-      }
-      #matching(start, end) {
-        let low = 0;
-        let high = this.#entries.length;
-        while (low < high) {
-          const middle = low + Math.floor((high - low) / 2);
-          if (this.#entries[middle].value.start < end) low = middle + 1;
-          else high = middle;
-        }
-        const matches = [];
-        for (let index = low - 1; index >= 0 && this.#prefixMaximumEnd[index] > start; index--) {
-          const entry = this.#entries[index];
-          if (entry.value.end > start) matches.push(entry);
-        }
-        return matches.sort((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
-      }
-    };
-  }
-});
-
-// packages/disassembler/src/project-transaction.ts
-var import_node_crypto5, fs3, import_node_path2, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, ANALYSIS_PROJECT_LOCK_DIRECTORY, DEFAULT_ANALYSIS_PROJECT_LOCK_STALE_MS, TRANSACTIONS_DIRECTORY, GENERATIONS_DIRECTORY, LOCK_OWNER_FILE, MAX_SNAPSHOT_ATTEMPTS, REQUIRED_SHARD_KINDS, sha2563, sha256File, isNodeError, tokensEqual, AnalysisProjectLockedError, AnalysisProjectStaleError, revisionFor, revisionsEqual, defaultProcessIsAlive, readLockOwner, syncPath, acquireProjectLock, verifyPreparedShards, verifyPreparedShardHashes, validatePreparedTransaction, loadAnalysisProjectSnapshot, loadAnalysisProjectRevision, prepareAnalysisProjectTransaction, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction;
-var init_project_transaction = __esm({
-  "packages/disassembler/src/project-transaction.ts"() {
-    "use strict";
-    import_node_crypto5 = require("node:crypto");
-    fs3 = __toESM(require("node:fs"), 1);
-    import_node_path2 = __toESM(require("node:path"), 1);
-    init_json_array_file();
-    init_project_types();
-    init_project_store();
-    ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
-    ANALYSIS_PROJECT_REVISION_VERSION = 1;
-    ANALYSIS_PROJECT_LOCK_DIRECTORY = ".uttori-asm-analysis.lock";
-    DEFAULT_ANALYSIS_PROJECT_LOCK_STALE_MS = 5 * 60 * 1e3;
-    TRANSACTIONS_DIRECTORY = "analysis/.transactions";
-    GENERATIONS_DIRECTORY = "analysis/generations";
-    LOCK_OWNER_FILE = "owner.json";
-    MAX_SNAPSHOT_ATTEMPTS = 3;
-    REQUIRED_SHARD_KINDS = [
-      "analysis",
-      "annotations",
-      "labels",
-      "comments",
-      "regions",
-      "runtime",
-      "evidence",
-      "imports"
-    ];
-    sha2563 = (value) => (0, import_node_crypto5.createHash)("sha256").update(value).digest("hex");
-    sha256File = (filePath) => {
-      const hash3 = (0, import_node_crypto5.createHash)("sha256");
-      const buffer = Buffer.allocUnsafe(64 * 1024);
-      const descriptor2 = fs3.openSync(filePath, "r");
-      try {
-        let bytesRead = 0;
-        while ((bytesRead = fs3.readSync(descriptor2, buffer, 0, buffer.length, null)) > 0) {
-          hash3.update(buffer.subarray(0, bytesRead));
-        }
-      } finally {
-        fs3.closeSync(descriptor2);
-      }
-      return hash3.digest("hex");
-    };
-    isNodeError = (error, code) => error instanceof Error && "code" in error && error.code === code;
-    tokensEqual = (left, right) => {
-      const leftBytes = Buffer.from(left);
-      const rightBytes = Buffer.from(right);
-      return leftBytes.length === rightBytes.length && (0, import_node_crypto5.timingSafeEqual)(leftBytes, rightBytes);
-    };
-    AnalysisProjectLockedError = class extends Error {
-      ownerProcessId;
-      constructor(directory, ownerProcessId) {
-        super(
-          ownerProcessId === void 0 ? `Analysis project '${directory}' is locked by another writer.` : `Analysis project '${directory}' is locked by process ${ownerProcessId}.`
-        );
-        this.name = "AnalysisProjectLockedError";
-        this.ownerProcessId = ownerProcessId;
-      }
-    };
-    AnalysisProjectStaleError = class extends Error {
-      expected;
-      actual;
-      constructor(expected, actual) {
-        super(
-          `Analysis project changed since it was loaded (expected ${expected.manifestSha256}, found ${actual.manifestSha256}).`
-        );
-        this.name = "AnalysisProjectStaleError";
-        this.expected = expected;
-        this.actual = actual;
-      }
-    };
-    revisionFor = (manifestText, manifest) => ({
-      format: ANALYSIS_PROJECT_REVISION_FORMAT,
-      version: ANALYSIS_PROJECT_REVISION_VERSION,
-      manifestSha256: sha2563(manifestText),
-      shards: manifest.shards.map(({ id, kind, path: shardPath, sha256: shardHash, records }) => ({
-        id,
-        kind,
-        path: shardPath,
-        sha256: shardHash,
-        records
-      })).sort((left, right) => left.id.localeCompare(right.id))
-    });
-    revisionsEqual = (left, right) => canonicalJson(left) === canonicalJson(right);
-    defaultProcessIsAlive = (processId) => {
-      try {
-        process.kill(processId, 0);
-        return true;
-      } catch (error) {
-        if (isNodeError(error, "ESRCH")) return false;
-        return true;
-      }
-    };
-    readLockOwner = (lockDirectory) => {
-      try {
-        const text = fs3.readFileSync(import_node_path2.default.join(lockDirectory, LOCK_OWNER_FILE), "utf8");
-        if (text.length > 4096) return void 0;
-        const value = JSON.parse(text);
-        if (value.format !== "uttori-asm-analysis-lock" || value.version !== 1 || typeof value.token !== "string" || value.token === "" || !Number.isSafeInteger(value.processId) || value.processId <= 0 || !Number.isSafeInteger(value.createdAtMilliseconds) || value.createdAtMilliseconds < 0) {
-          return void 0;
-        }
-        return value;
-      } catch {
-        return void 0;
-      }
-    };
-    syncPath = (filePath) => {
-      let descriptor2;
-      try {
-        descriptor2 = fs3.openSync(filePath, "r");
-        fs3.fsyncSync(descriptor2);
-      } catch (error) {
-        if (!isNodeError(error, "EINVAL") && !isNodeError(error, "ENOTSUP") && !isNodeError(error, "EISDIR") && !isNodeError(error, "EPERM")) {
-          throw error;
-        }
-      } finally {
-        if (descriptor2 !== void 0) fs3.closeSync(descriptor2);
-      }
-    };
-    acquireProjectLock = (directory, options) => {
-      const staleLockMilliseconds = options.staleLockMilliseconds ?? DEFAULT_ANALYSIS_PROJECT_LOCK_STALE_MS;
-      const recoveryAttempts = options.recoveryAttempts ?? 3;
-      if (!Number.isSafeInteger(staleLockMilliseconds) || staleLockMilliseconds < 0) {
-        throw new Error("staleLockMilliseconds must be a non-negative safe integer.");
-      }
-      if (!Number.isSafeInteger(recoveryAttempts) || recoveryAttempts < 1 || recoveryAttempts > 16) {
-        throw new Error("recoveryAttempts must be an integer from 1 through 16.");
-      }
-      const now = options.now ?? Date.now;
-      const processIsAlive = options.processIsAlive ?? defaultProcessIsAlive;
-      const lockDirectory = import_node_path2.default.join(directory, ANALYSIS_PROJECT_LOCK_DIRECTORY);
-      const token = (0, import_node_crypto5.randomUUID)();
-      fs3.mkdirSync(directory, { recursive: true });
-      for (let attempt = 0; attempt < recoveryAttempts; attempt++) {
-        try {
-          fs3.mkdirSync(lockDirectory);
-          const owner2 = {
-            format: "uttori-asm-analysis-lock",
-            version: 1,
-            token,
-            processId: process.pid,
-            createdAtMilliseconds: now()
-          };
-          try {
-            const ownerPath = import_node_path2.default.join(lockDirectory, LOCK_OWNER_FILE);
-            fs3.writeFileSync(ownerPath, canonicalJson(owner2), { flag: "wx", mode: 384 });
-            syncPath(ownerPath);
-            syncPath(lockDirectory);
-          } catch (error) {
-            fs3.rmSync(lockDirectory, { recursive: true, force: true });
-            throw error;
-          }
-          return {
-            release: () => {
-              const activeOwner = readLockOwner(lockDirectory);
-              if (activeOwner && tokensEqual(activeOwner.token, token)) {
-                fs3.rmSync(lockDirectory, { recursive: true, force: true });
-              }
-            }
-          };
-        } catch (error) {
-          if (!isNodeError(error, "EEXIST")) throw error;
-        }
-        const owner = readLockOwner(lockDirectory);
-        let createdAtMilliseconds = owner?.createdAtMilliseconds;
-        if (createdAtMilliseconds === void 0) {
-          try {
-            createdAtMilliseconds = Math.floor(fs3.statSync(lockDirectory).mtimeMs);
-          } catch (error) {
-            if (isNodeError(error, "ENOENT")) continue;
-            throw error;
-          }
-        }
-        const age = Math.max(0, now() - createdAtMilliseconds);
-        if (age <= staleLockMilliseconds || owner !== void 0 && processIsAlive(owner.processId)) {
-          throw new AnalysisProjectLockedError(directory, owner?.processId);
-        }
-        const quarantined = `${lockDirectory}.stale-${token}`;
-        try {
-          fs3.renameSync(lockDirectory, quarantined);
-          fs3.rmSync(quarantined, { recursive: true, force: true });
-        } catch (error) {
-          if (isNodeError(error, "ENOENT") || isNodeError(error, "EEXIST")) continue;
-          throw error;
-        }
-      }
-      throw new AnalysisProjectLockedError(directory, readLockOwner(lockDirectory)?.processId);
-    };
-    verifyPreparedShards = (directory, descriptors) => {
-      for (const descriptor2 of descriptors) {
-        const shardPath = import_node_path2.default.join(directory, descriptor2.path);
-        const records = validateObjectArrayFile(shardPath, descriptor2.sha256);
-        if (records !== descriptor2.records) {
-          throw new Error(`Prepared analysis shard '${descriptor2.path}' has the wrong record count.`);
-        }
-      }
-    };
-    verifyPreparedShardHashes = (directory, descriptors) => {
-      for (const descriptor2 of descriptors) {
-        if (sha256File(import_node_path2.default.join(directory, descriptor2.path)) !== descriptor2.sha256) {
-          throw new Error(`Prepared analysis shard '${descriptor2.path}' does not match its SHA-256.`);
-        }
-      }
-    };
-    validatePreparedTransaction = (prepared) => {
-      if (prepared.format !== "uttori-asm-analysis-transaction" || prepared.version !== 1 || !/^[\da-f]{64}$/.test(prepared.generation)) {
-        throw new Error("Unsupported prepared analysis-project transaction.");
-      }
-      validateAnalysisProjectManifest(prepared.manifest);
-      const kinds = [...prepared.manifest.shards.map(({ kind }) => kind)].sort();
-      const requiredKinds = [...REQUIRED_SHARD_KINDS].sort();
-      if (canonicalJson(kinds) !== canonicalJson(requiredKinds)) {
-        throw new Error("Prepared analysis-project transaction does not contain every required shard.");
-      }
-      const generation = sha2563(
-        canonicalJson(
-          prepared.manifest.shards.map(({ id, kind, sha256: shardHash, records }) => ({
-            id,
-            kind,
-            sha256: shardHash,
-            records
-          })).sort((left, right) => left.id.localeCompare(right.id))
-        )
-      );
-      if (!tokensEqual(generation, prepared.generation)) {
-        throw new Error("Prepared analysis-project transaction has the wrong generation identity.");
-      }
-      const prefix = `${GENERATIONS_DIRECTORY}/${prepared.generation}/`;
-      for (const descriptor2 of prepared.manifest.shards) {
-        const basename = descriptor2.path.slice(prefix.length);
-        if (!descriptor2.path.startsWith(prefix) || basename === "" || basename.includes("/") || basename.includes("\\")) {
-          throw new Error(`Prepared analysis shard '${descriptor2.id}' is outside its generation.`);
-        }
-      }
-    };
-    loadAnalysisProjectSnapshot = (directory) => {
-      const manifestPath = import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST);
-      for (let attempt = 0; attempt < MAX_SNAPSHOT_ATTEMPTS; attempt++) {
-        const before = fs3.readFileSync(manifestPath, "utf8");
-        let project;
-        try {
-          project = loadAnalysisProject(directory);
-        } catch (error) {
-          const afterFailure = fs3.readFileSync(manifestPath, "utf8");
-          if (afterFailure !== before) continue;
-          throw error;
-        }
-        const after = fs3.readFileSync(manifestPath, "utf8");
-        if (after === before) return { ...project, revision: revisionFor(before, project.manifest) };
-      }
-      throw new Error(`Analysis project '${directory}' changed repeatedly while it was loading.`);
-    };
-    loadAnalysisProjectRevision = (directory) => {
-      const manifestPath = import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST);
-      for (let attempt = 0; attempt < MAX_SNAPSHOT_ATTEMPTS; attempt++) {
-        const before = fs3.readFileSync(manifestPath, "utf8");
-        const manifest = migrateManifest(JSON.parse(before));
-        verifyPreparedShardHashes(directory, manifest.shards);
-        const after = fs3.readFileSync(manifestPath, "utf8");
-        if (after === before) return revisionFor(before, manifest);
-      }
-      throw new Error(`Analysis project '${directory}' changed repeatedly while it was loading.`);
-    };
-    prepareAnalysisProjectTransaction = (directory, project) => {
-      const token = (0, import_node_crypto5.randomUUID)();
-      const transactionRoot = import_node_path2.default.join(directory, TRANSACTIONS_DIRECTORY);
-      const stagingDirectory = import_node_path2.default.join(transactionRoot, token);
-      fs3.mkdirSync(stagingDirectory, { recursive: true });
-      try {
-        const stagingManifest = writeAnalysisProject(stagingDirectory, project);
-        const generation = sha2563(
-          canonicalJson(
-            stagingManifest.shards.map(({ id, kind, sha256: shardHash, records }) => ({
-              id,
-              kind,
-              sha256: shardHash,
-              records
-            }))
-          )
-        );
-        const generationRelative = `${GENERATIONS_DIRECTORY}/${generation}`;
-        const descriptors = stagingManifest.shards.map((descriptor2) => ({
-          ...descriptor2,
-          path: `${generationRelative}/${import_node_path2.default.basename(descriptor2.path)}`
-        }));
-        const stagingAnalysis = import_node_path2.default.join(stagingDirectory, "analysis");
-        for (const descriptor2 of stagingManifest.shards) {
-          syncPath(import_node_path2.default.join(stagingDirectory, descriptor2.path));
-        }
-        syncPath(stagingAnalysis);
-        const generationDirectory = import_node_path2.default.join(directory, generationRelative);
-        fs3.mkdirSync(import_node_path2.default.dirname(generationDirectory), { recursive: true });
-        if (!fs3.existsSync(generationDirectory)) {
-          try {
-            fs3.renameSync(stagingAnalysis, generationDirectory);
-          } catch (error) {
-            if (!isNodeError(error, "EEXIST") && !isNodeError(error, "ENOTEMPTY")) throw error;
-          }
-        }
-        verifyPreparedShardHashes(directory, descriptors);
-        syncPath(generationDirectory);
-        syncPath(import_node_path2.default.dirname(generationDirectory));
-        const manifest = {
-          ...stagingManifest,
-          shards: descriptors
-        };
-        verifyPreparedShardHashes(directory, manifest.shards);
-        return {
-          format: "uttori-asm-analysis-transaction",
-          version: 1,
-          generation,
-          manifest
-        };
-      } finally {
-        fs3.rmSync(stagingDirectory, { recursive: true, force: true });
-      }
-    };
-    commitPreparedAnalysisProjectTransaction = (directory, expected, prepared, options = {}) => {
-      validatePreparedTransaction(prepared);
-      verifyPreparedShards(directory, prepared.manifest.shards);
-      const lock = acquireProjectLock(directory, options);
-      const token = (0, import_node_crypto5.randomUUID)();
-      const temporaryManifest = import_node_path2.default.join(directory, `.analysis.json.${token}.tmp`);
-      try {
-        const currentRevision = loadAnalysisProjectRevision(directory);
-        if (!revisionsEqual(expected, currentRevision)) {
-          throw new AnalysisProjectStaleError(expected, currentRevision);
-        }
-        verifyPreparedShardHashes(directory, prepared.manifest.shards);
-        const manifestText = canonicalJson(prepared.manifest);
-        fs3.writeFileSync(temporaryManifest, manifestText, { flag: "wx" });
-        syncPath(temporaryManifest);
-        fs3.renameSync(temporaryManifest, import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
-        syncPath(directory);
-        return {
-          manifest: prepared.manifest,
-          revision: revisionFor(manifestText, prepared.manifest)
-        };
-      } finally {
-        try {
-          fs3.unlinkSync(temporaryManifest);
-        } catch {
-        }
-        lock.release();
-      }
-    };
-    commitAnalysisProjectTransaction = (directory, expected, project, options = {}) => commitPreparedAnalysisProjectTransaction(
-      directory,
-      expected,
-      prepareAnalysisProjectTransaction(directory, project),
-      options
-    );
-  }
-});
-
-// packages/disassembler/src/project-labels.ts
-var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
-var init_project_labels = __esm({
-  "packages/disassembler/src/project-labels.ts"() {
-    "use strict";
-    validateSourceLabelName = (name) => {
-      if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name))
-        throw new Error(
-          "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore."
-        );
-    };
-    legacySourceLabelName = (name) => `L_${name.replaceAll(/\W/g, "_").replaceAll(/_+/g, "_") || "unnamed"}`;
-    projectSourceLabelNames = (labels, reserved = []) => {
-      const names = /* @__PURE__ */ new Map();
-      const used = new Set([...reserved].map((name) => name.toLowerCase()));
-      const sorted2 = [...labels].sort((a, b) => a.id.localeCompare(b.id));
-      for (const label of sorted2.filter((label2) => label2.sourceName === void 0)) {
-        const base = legacySourceLabelName(label.name);
-        let name = base;
-        let suffix = 2;
-        while (used.has(name.toLowerCase())) name = `${base}_${suffix++}`;
-        used.add(name.toLowerCase());
-        names.set(label.id, name);
-      }
-      for (const label of sorted2.filter((label2) => label2.sourceName !== void 0)) {
-        const name = label.sourceName;
-        validateSourceLabelName(name);
-        if (used.has(name.toLowerCase()))
-          throw new Error(`Source label '${name}' conflicts with another symbol.`);
-        used.add(name.toLowerCase());
-        names.set(label.id, name);
-      }
-      return names;
-    };
-  }
-});
-
-// packages/disassembler/src/project-edit.ts
-var isStableId2, manifestWithoutShards, assertStableId, recordMatches, sortedUnique2, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, applyDisassemblyAnnotationEdit;
-var init_project_edit = __esm({
-  "packages/disassembler/src/project-edit.ts"() {
-    "use strict";
-    init_project_store();
-    init_project_labels();
-    isStableId2 = (id) => {
-      const isAlphaNumeric = (character) => {
-        const code = character.charCodeAt(0);
-        return code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-      };
-      if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) return false;
-      for (const character of id) {
-        if (!isAlphaNumeric(character) && !"._:/-".includes(character)) return false;
-      }
-      return true;
-    };
-    manifestWithoutShards = (manifest) => {
-      if (!("shards" in manifest)) return manifest;
-      const { shards: ignored, ...projectManifest } = manifest;
-      void ignored;
-      return projectManifest;
-    };
-    assertStableId = (id, label) => {
-      if (!isStableId2(id)) throw new Error(`${label} '${id}' is not a stable project id.`);
-    };
-    recordMatches = (left, right) => canonicalJson(left) === canonicalJson(right);
-    sortedUnique2 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
-    assertManualEvidenceRequest = (project, evidenceId, sourceId) => {
-      assertStableId(evidenceId, "Evidence id");
-      assertStableId(sourceId, "Evidence source id");
-      if (project.shards.evidence.some(({ id }) => id === evidenceId)) {
-        throw new Error(`Evidence '${evidenceId}' already exists.`);
-      }
-    };
-    manualEvidence = (evidenceId, sourceId, detail) => ({
-      id: evidenceId,
-      source: "manual",
-      sourceId,
-      confidence: "certain",
-      ...detail?.trim() ? { detail: detail.trim() } : {}
-    });
-    addressSpaceMaximum = (project, addressSpaceId) => {
-      const addressSpace = project.manifest.addressSpaces.find(({ id }) => id === addressSpaceId);
-      if (!addressSpace) throw new Error(`Unknown analysis address space '${addressSpaceId}'.`);
-      return addressSpace.kind === "file" ? project.manifest.rom.contentSize : 2 ** addressSpace.addressBits;
-    };
-    applyDisassemblyAnnotationEdit = (project, request2) => {
-      assertManualEvidenceRequest(project, request2.evidenceId, request2.sourceId);
-      const maximum = addressSpaceMaximum(project, request2.addressSpace);
-      if (!Number.isSafeInteger(request2.address) || request2.address < 0 || request2.address >= maximum)
-        throw new Error("The annotation address is outside the selected address space.");
-      for (const text of [request2.comment, request2.inlineComment, request2.instructionComment]) {
-        if (text === void 0) continue;
-        if (typeof text !== "string") throw new Error("Comments must contain plain text.");
-        for (const character of text) {
-          const code = character.codePointAt(0);
-          if (code < 32 && ![9, 10, 13].includes(code) || code === 8232 || code === 8233)
-            throw new Error("Comments must contain plain text without control characters.");
-        }
-      }
-      for (const text of [request2.inlineComment, request2.instructionComment]) {
-        if (text !== void 0 && /[\n\r]/.test(text))
-          throw new Error("Inline comments must fit on one line.");
-      }
-      const atAddress = (record) => record.addressSpace === request2.addressSpace && record.address === request2.address;
-      const fileAddress = project.manifest.addressSpaces.some(
-        (space) => space.id === request2.addressSpace && space.kind === "file"
-      );
-      const labelBefore = request2.labelId === void 0 ? void 0 : project.shards.labels.find(({ id }) => id === request2.labelId);
-      if (labelBefore && !atAddress(labelBefore))
-        throw new Error("The label id belongs to a different address.");
-      let labelAfter;
-      if (request2.name !== void 0) {
-        if (!request2.labelId) throw new Error("A stable label id is required.");
-        assertStableId(request2.labelId, "Label id");
-        const name = request2.name.trim();
-        validateSourceLabelName(name);
-        labelAfter = {
-          ...labelBefore ?? {
-            id: request2.labelId,
-            addressSpace: request2.addressSpace,
-            address: request2.address,
-            analysisEntryPoint: false
-          },
-          name,
-          sourceName: name,
-          ...request2.comment !== void 0 ? { comment: request2.comment.replaceAll("\r\n", "\n").replaceAll("\r", "\n") } : {},
-          ...request2.inlineComment !== void 0 ? { inlineComment: request2.inlineComment } : {},
-          evidence: sortedUnique2([...labelBefore?.evidence ?? [], request2.evidenceId])
-        };
-      } else if (request2.comment || request2.inlineComment || request2.labelId) {
-        throw new Error("A label name is required for comments attached to a label.");
-      }
-      const labels = labelAfter ? [...project.shards.labels.filter(({ id }) => id !== labelAfter.id), labelAfter] : project.shards.labels;
-      projectSourceLabelNames(labels);
-      const commentBefore = request2.instructionCommentId === void 0 || request2.instructionComment === void 0 ? void 0 : project.shards.comments.find(({ id }) => id === request2.instructionCommentId);
-      if (commentBefore && (!atAddress(commentBefore) || commentBefore.placement !== "inline-instruction"))
-        throw new Error("The comment id belongs to a different address or placement.");
-      let commentAfter;
-      if (request2.instructionComment !== void 0) {
-        if (!request2.instructionCommentId)
-          throw new Error("A stable instruction-comment id is required.");
-        assertStableId(request2.instructionCommentId, "Comment id");
-        if (request2.instructionComment) {
-          if (request2.instructionComment !== commentBefore?.text && !project.shards.analysis.some(
-            (record) => record.kind === "cfg-node" && (atAddress(record) || fileAddress && record.fileOffset === request2.address)
-          ))
-            throw new Error("An inline instruction comment requires an accepted instruction boundary.");
-          commentAfter = {
-            id: request2.instructionCommentId,
-            addressSpace: request2.addressSpace,
-            address: request2.address,
-            placement: "inline-instruction",
-            text: request2.instructionComment,
-            evidence: sortedUnique2([...commentBefore?.evidence ?? [], request2.evidenceId])
-          };
-        }
-      }
-      const withoutEvidence = (record) => {
-        if (!record) return void 0;
-        const { evidence: ignored, ...value } = record;
-        void ignored;
-        return value;
-      };
-      if (recordMatches(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) && recordMatches(withoutEvidence(commentBefore), withoutEvidence(commentAfter)))
-        throw new Error("The annotation has no changes to save.");
-      const evidence = manualEvidence(
-        request2.evidenceId,
-        request2.sourceId,
-        `Edited disassembly annotation at ${request2.addressSpace}:$${request2.address.toString(16).toUpperCase()}.`
-      );
-      return {
-        project: {
-          manifest: manifestWithoutShards(project.manifest),
-          shards: {
-            ...project.shards,
-            labels,
-            comments: request2.instructionComment === void 0 ? project.shards.comments : [
-              ...project.shards.comments.filter(({ id }) => id !== request2.instructionCommentId),
-              ...commentAfter ? [commentAfter] : []
-            ],
-            evidence: [...project.shards.evidence, evidence]
-          }
-        },
-        inverse: {
-          kind: "restore-disassembly-annotation",
-          labelBefore,
-          labelAfter,
-          commentBefore,
-          commentAfter,
-          evidence
-        }
-      };
-    };
-  }
-});
-
-// packages/disassembler/src/rom-image.ts
-var init_rom_image = __esm({
-  "packages/disassembler/src/rom-image.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/runtime-trace-file.ts
-var DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS;
-var init_runtime_trace_file = __esm({
-  "packages/disassembler/src/runtime-trace-file.ts"() {
-    "use strict";
-    DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
-    MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
-  }
-});
-
-// packages/disassembler/src/source-export.ts
-var canonicalize2, canonicalSourceExportJson;
-var init_source_export = __esm({
-  "packages/disassembler/src/source-export.ts"() {
-    "use strict";
-    canonicalize2 = (value) => {
-      if (Array.isArray(value)) return value.map(canonicalize2);
-      if (value && typeof value === "object") {
-        return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalize2(entry)])
-        );
-      }
-      return value;
-    };
-    canonicalSourceExportJson = (value) => `${JSON.stringify(canonicalize2(value), null, 2)}
-`;
-  }
-});
-
-// packages/disassembler/src/static-analysis.ts
-var init_static_analysis = __esm({
-  "packages/disassembler/src/static-analysis.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/analysis-sources.ts
-var sorted, key, addressKey2, hex, buildAnalysisSourceCatalog, AnalysisSourceIndex, compareLocations;
-var init_analysis_sources = __esm({
-  "packages/disassembler/src/analysis-sources.ts"() {
-    "use strict";
-    init_interval_index();
-    init_project_labels();
-    sorted = (values) => [...new Set(values)].sort();
-    key = (...values) => JSON.stringify(values);
-    addressKey2 = (space, address3) => key(space, address3);
-    hex = (address3) => `$${address3.toString(16).toUpperCase().padStart(6, "0")}`;
-    buildAnalysisSourceCatalog = (shards) => {
-      const sources = /* @__PURE__ */ new Map();
-      const ensure = (id, name, format, sha2564) => {
-        let source = sources.get(id);
-        if (!source) {
-          source = {
-            id,
-            names: /* @__PURE__ */ new Set(),
-            kinds: /* @__PURE__ */ new Set(),
-            format,
-            sha256: sha2564,
-            evidenceIds: [],
-            reports: []
-          };
-          sources.set(id, source);
-        }
-        source.names.add(name);
-        return source;
-      };
-      const reportSources = /* @__PURE__ */ new Map();
-      for (const report of shards.imports) {
-        const id = key("artifact", report.format, report.sourceSha256);
-        ensure(id, report.sourceName, report.format, report.sourceSha256).reports.push(report);
-        reportSources.set(report.id, id);
-      }
-      for (const evidence of shards.evidence) {
-        const artifact = evidence.artifact;
-        const legacy = !artifact ? shards.imports.filter(
-          (report) => report.id === evidence.id || report.sourceSha256 === evidence.sourceId
-        ) : [];
-        let id = key("producer", evidence.source, evidence.sourceId);
-        if (artifact) id = key("artifact", artifact.format, artifact.sha256);
-        else if (legacy.length === 1) id = reportSources.get(legacy[0].id);
-        const source = sources.get(id) ?? ensure(id, evidence.sourceId, artifact?.format, artifact?.sha256);
-        source.kinds.add(evidence.source);
-        source.evidenceIds.push(evidence.id);
-      }
-      return [...sources.values()].map((source) => ({
-        ...source,
-        names: sorted(source.names),
-        name: sorted(source.names).join(" / "),
-        kinds: [...source.kinds].sort(),
-        evidenceIds: sorted(source.evidenceIds),
-        reports: source.reports.sort((a, b) => a.id.localeCompare(b.id))
-      })).sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
-    };
-    AnalysisSourceIndex = class {
-      sources;
-      #sourceById;
-      #owners = /* @__PURE__ */ new Map();
-      #observations = /* @__PURE__ */ new Map();
-      #coverage = /* @__PURE__ */ new Map();
-      #memory = /* @__PURE__ */ new Map();
-      #nodes = /* @__PURE__ */ new Map();
-      #nodesAt = /* @__PURE__ */ new Map();
-      #functionsAt = /* @__PURE__ */ new Map();
-      #labelsAt = /* @__PURE__ */ new Map();
-      #contributions = /* @__PURE__ */ new Map();
-      #sourceInstructions = /* @__PURE__ */ new Map();
-      #runtimeSources = /* @__PURE__ */ new Set();
-      #comparisons = /* @__PURE__ */ new Map();
-      #manifest;
-      constructor(manifest, shards) {
-        this.#manifest = manifest;
-        this.sources = buildAnalysisSourceCatalog(shards);
-        this.#sourceById = new Map(this.sources.map((source) => [source.id, source]));
-        const sourceOfEvidence = new Map(
-          this.sources.flatMap((source) => source.evidenceIds.map((id) => [id, source.id]))
-        );
-        const sourceSets = /* @__PURE__ */ new Map();
-        const sourceIds = (evidence) => {
-          const token = JSON.stringify(evidence);
-          let ids = sourceSets.get(token);
-          if (!ids) {
-            ids = sorted(
-              evidence.flatMap((id) => sourceOfEvidence.has(id) ? [sourceOfEvidence.get(id)] : [])
-            );
-            sourceSets.set(token, ids);
-          }
-          return ids;
-        };
-        for (const node of shards.analysis) {
-          if (node.kind === "cfg-node") {
-            this.#nodes.set(node.id, node);
-            const location = addressKey2(node.addressSpace, node.address);
-            const nodes = this.#nodesAt.get(location) ?? [];
-            nodes.push(node);
-            this.#nodesAt.set(location, nodes);
-          } else if (node.kind === "function") {
-            const location = addressKey2(node.addressSpace, node.address);
-            const functions = this.#functionsAt.get(location) ?? [];
-            functions.push(node);
-            this.#functionsAt.set(location, functions);
-          }
-        }
-        const names = projectSourceLabelNames(shards.labels);
-        for (const label of shards.labels) {
-          const location = addressKey2(label.addressSpace, label.address);
-          this.#labelsAt.set(location, [
-            ...this.#labelsAt.get(location) ?? [],
-            names.get(label.id) ?? label.name
-          ]);
-        }
-        const coverage = /* @__PURE__ */ new Map();
-        for (const record of shards.runtime) {
-          const ids = sourceIds(record.evidence);
-          for (const id of ids) this.#runtimeSources.add(id);
-          if (record.kind === "runtime-execution" || record.kind === "runtime-instruction") {
-            const location = key(record.architecture, record.addressSpace, record.address);
-            let observation = this.#observations.get(location);
-            if (!observation) {
-              observation = {
-                architecture: record.architecture,
-                addressSpace: record.addressSpace,
-                address: record.address,
-                sources: /* @__PURE__ */ new Set(),
-                sizes: /* @__PURE__ */ new Map(),
-                bytes: /* @__PURE__ */ new Map(),
-                mixedBytes: /* @__PURE__ */ new Set()
-              };
-              this.#observations.set(location, observation);
-            }
-            for (const id of ids) {
-              observation.sources.add(id);
-              const size = record.kind === "runtime-instruction" ? record.bytes.length : record.size ?? 0;
-              observation.sizes.set(id, Math.max(size, observation.sizes.get(id) ?? 0));
-            }
-            if (record.kind === "runtime-instruction")
-              for (const id of ids) {
-                const prior = observation.bytes.get(id);
-                if (!prior) observation.bytes.set(id, record.bytes);
-                else if (prior.join(",") !== record.bytes.join(",")) observation.mixedBytes.add(id);
-              }
-          } else if (record.kind === "runtime-coverage" && record.coverage === "executed") {
-            const location = key(record.architecture, record.addressSpace);
-            const list = coverage.get(location) ?? [];
-            list.push({ start: record.start, end: record.end, sources: ids });
-            coverage.set(location, list);
-          } else if (record.kind === "runtime-memory-access") {
-            const identity = key(
-              record.architecture,
-              record.instructionAddressSpace,
-              record.instructionAddress,
-              record.accessedAddressSpace,
-              record.accessedAddress,
-              record.access,
-              record.width,
-              record.actor,
-              record.channel
-            );
-            let site = this.#memory.get(identity);
-            if (!site) {
-              const description = `${record.access} ${record.accessedAddressSpace} ${hex(record.accessedAddress)} \xB7 ${record.width} byte(s) \xB7 ${record.actor ?? "unknown actor"}${record.channel === void 0 ? "" : ` ${record.channel}`}`;
-              site = {
-                sources: /* @__PURE__ */ new Set(),
-                entry: {
-                  id: identity,
-                  label: hex(record.instructionAddress),
-                  description,
-                  detail: description,
-                  addressSpace: record.instructionAddressSpace,
-                  address: record.instructionAddress,
-                  architecture: record.architecture,
-                  outputOffsets: [],
-                  recordIds: []
-                }
-              };
-              this.#memory.set(identity, site);
-            }
-            for (const id of ids) site.sources.add(id);
-          }
-        }
-        for (const [id, ranges] of coverage) this.#coverage.set(id, new HalfOpenIntervalIndex(ranges));
-        for (const observation of this.#observations.values())
-          for (const id of observation.sources) {
-            const list = this.#sourceInstructions.get(id) ?? [];
-            list.push(observation);
-            this.#sourceInstructions.set(id, list);
-          }
-        for (const list of this.#sourceInstructions.values()) list.sort(compareLocations);
-        const addContribution = (record, entry) => {
-          for (const id of sourceIds(record.evidence)) {
-            const list = this.#contributions.get(id) ?? [];
-            list.push(entry);
-            this.#contributions.set(id, list);
-          }
-        };
-        for (const record of shards.labels)
-          addContribution(record, {
-            id: record.id,
-            label: names.get(record.id) ?? record.name,
-            description: `Label \xB7 ${record.addressSpace} ${hex(record.address)}`,
-            detail: [record.comment, record.inlineComment].filter(Boolean).join("\n"),
-            addressSpace: record.addressSpace,
-            address: record.address,
-            outputOffsets: [],
-            recordIds: [record.id]
-          });
-        for (const record of shards.comments)
-          addContribution(record, {
-            id: record.id,
-            label: record.text.split(/\r?\n/)[0],
-            description: `Comment \xB7 ${record.addressSpace} ${hex(record.address)}`,
-            detail: record.text,
-            addressSpace: record.addressSpace,
-            address: record.address,
-            outputOffsets: [],
-            recordIds: [record.id]
-          });
-        for (const record of shards.annotations)
-          addContribution(record, {
-            id: record.id,
-            label: `${hex(record.start)}\u2013${hex(record.end - 1)}`,
-            description: `${record.classification} \xB7 ${record.addressSpace} \xB7 ${record.end - record.start} bytes`,
-            detail: `Classified interval from ${hex(record.start)} through ${hex(record.end - 1)}. This is attributed metadata, not proof of execution in this capture.`,
-            addressSpace: record.addressSpace,
-            address: record.start,
-            architecture: record.architecture,
-            outputOffsets: [],
-            recordIds: [record.id]
-          });
-      }
-      /**
-       * Sources with recorded runtime facts; static/imported classifications are not capture baselines.
-       * @returns {readonly AnalysisEvidenceSource[]} Sources contributing direct runtime facts.
-       */
-      runtimeSources() {
-        return this.sources.filter((source) => this.#runtimeSources.has(source.id));
-      }
-      /**
-       * Compare direct observations against all other captures or an explicit baseline selection.
-       * @param {string} sourceId Selected catalog identity.
-       * @param {readonly string[]} [baselineIds] Explicit baseline identities; undefined means all other runtime sources.
-       * @returns {AnalysisSourceComparison} Compact counts and interpretation notes.
-       */
-      compare(sourceId, baselineIds) {
-        return this.#comparison(sourceId, baselineIds).summary;
-      }
-      /**
-       * Materialize only a bounded page for an editor tree.
-       * @param {string} sourceId Selected source identity.
-       * @param {AnalysisSourceGroup} group Contribution group.
-       * @param {number} offset Zero-based page start.
-       * @param {readonly string[]} [baselineIds] Optional comparison captures.
-       * @returns {readonly AnalysisSourceEntry[]} Up to 200 navigable entries.
-       */
-      page(sourceId, group, offset = 0, baselineIds) {
-        if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Invalid source page offset.");
-        const data = this.#comparison(sourceId, baselineIds);
-        const slice = (entries3) => entries3.slice(offset, offset + 200);
-        switch (group) {
-          case "uniqueInstructions":
-            return slice(data.unique).map((entry) => this.#instructionEntry(entry, sourceId));
-          case "sharedInstructions":
-            return slice(data.shared).map((entry) => this.#instructionEntry(entry, sourceId));
-          case "codeRanges":
-            return slice(data.ranges).map((range) => ({
-              id: key(range.architecture, range.addressSpace, range.start),
-              label: `${hex(range.start)}\u2013${hex(range.end - 1)}`,
-              description: `${range.end - range.start} bytes \xB7 ${range.addressSpace}`,
-              detail: "Known code extent at instruction addresses absent from the selected comparison captures. Addresses remain qualified by architecture and address space; this is not a ROM-file byte total.",
-              addressSpace: range.addressSpace,
-              address: range.start,
-              architecture: range.architecture,
-              outputOffsets: [],
-              recordIds: []
-            }));
-          case "functions":
-            return slice(data.functions);
-          case "memory":
-            return slice(data.memory);
-          case "contributions":
-            return slice(this.#contributions.get(sourceId) ?? []);
-          default:
-            throw new Error("Unknown source contribution group.");
-        }
-      }
-      #matchingNodes(observation) {
-        return (this.#nodesAt.get(addressKey2(observation.addressSpace, observation.address)) ?? []).filter(
-          (node) => node.specificationId === observation.architecture || node.specificationId.startsWith(`${observation.architecture}.`)
-        );
-      }
-      #size(observation, sourceId) {
-        const captured = observation.sizes.get(sourceId) ?? 0;
-        if (captured) return { size: captured, inferred: false };
-        const sizes = new Set(this.#matchingNodes(observation).map(({ size }) => size));
-        return sizes.size === 1 ? { size: [...sizes][0], inferred: true } : { size: 0, inferred: false };
-      }
-      #instructionEntry(observation, sourceId) {
-        const nodes = this.#matchingNodes(observation);
-        const { size, inferred } = this.#size(observation, sourceId);
-        const labels = this.#labelsAt.get(addressKey2(observation.addressSpace, observation.address));
-        const mnemonic = sorted(nodes.map(({ mnemonic: mnemonic2 }) => mnemonic2)).join(" / ");
-        const bytes = observation.bytes.get(sourceId);
-        const name = labels?.length ? labels.join(" / ") : mnemonic;
-        return {
-          id: key(observation.architecture, observation.addressSpace, observation.address),
-          label: `${hex(observation.address)}${name ? ` ${name}` : ""}`,
-          description: `${observation.addressSpace} \xB7 ${size ? `${size} byte(s)${inferred ? " (analysis)" : ""}` : "size unknown"}`,
-          detail: [
-            `${observation.architecture} \xB7 ${observation.addressSpace} ${hex(observation.address)}`,
-            `Observed in: ${sorted(observation.sources).map((id) => this.#sourceById.get(id)?.name ?? id).join(", ")}`,
-            bytes ? `Captured bytes${observation.mixedBytes.has(sourceId) ? " (one of multiple variants)" : ""}: ${bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")}` : "No execution-time bytes were saved.",
-            inferred ? "Byte extent uses the single agreed instruction size in the current analysis." : ""
-          ].filter(Boolean).join("\n"),
-          addressSpace: observation.addressSpace,
-          address: observation.address,
-          architecture: observation.architecture,
-          outputOffsets: [
-            ...new Set(
-              nodes.flatMap((node) => node.fileOffset === void 0 ? [] : [node.fileOffset])
-            )
-          ],
-          recordIds: nodes.slice(0, 32).map(({ id }) => id)
-        };
-      }
-      #ownerIds(node) {
-        const cached = this.#owners.get(node.id);
-        if (cached) return cached;
-        const path7 = node.evidencePath.length ? node.evidencePath : [node.id];
-        for (let index = path7.length - 1; index >= 0; index--) {
-          const parent = this.#nodes.get(path7[index]);
-          if (!parent) continue;
-          const owners = this.#functionsAt.get(addressKey2(parent.addressSpace, parent.address));
-          if (owners?.length) {
-            const ids = sorted(owners.map(({ id }) => id));
-            this.#owners.set(node.id, ids);
-            return ids;
-          }
-        }
-        this.#owners.set(node.id, []);
-        return [];
-      }
-      #comparison(sourceId, baselineIds) {
-        const source = this.#sourceById.get(sourceId);
-        if (!source)
-          throw new Error("This source no longer exists. Refresh Sources and select it again.");
-        const ids = sorted(baselineIds ?? [...this.#runtimeSources].filter((id) => id !== sourceId));
-        if (ids.some((id) => id === sourceId || !this.#sourceById.has(id)))
-          throw new Error("Invalid source comparison selection.");
-        const token = key(sourceId, JSON.stringify(ids));
-        const cached = this.#comparisons.get(token);
-        if (cached) return cached;
-        const baseline = new Set(ids);
-        const observations = this.#sourceInstructions.get(sourceId) ?? [];
-        const unique = [], shared = [];
-        for (const observation of observations) {
-          const aggregate = this.#coverage.get(key(observation.architecture, observation.addressSpace))?.at(observation.address) ?? [];
-          const present = ids.some((id) => observation.sources.has(id)) || aggregate.some((range) => range.sources.some((id) => baseline.has(id)));
-          (present ? shared : unique).push(observation);
-        }
-        const ranges = [];
-        const functions = /* @__PURE__ */ new Map();
-        const functionById = new Map([...this.#functionsAt.values()].flat().map((fn) => [fn.id, fn]));
-        let unknownSizeInstructions = 0, unownedInstructions = 0, ambiguousInstructions = 0, inferred = 0;
-        for (const observation of unique) {
-          const size = this.#size(observation, sourceId);
-          if (size.inferred) inferred++;
-          const maximum = this.#manifest.addressSpaces.find(
-            ({ id }) => id === observation.addressSpace
-          );
-          let limit = maximum ? 2 ** maximum.addressBits : 0;
-          if (maximum?.kind === "file") limit = this.#manifest.rom.contentSize;
-          if (size.size && observation.address + size.size <= limit) {
-            const prior = ranges.at(-1);
-            if (prior && prior.architecture === observation.architecture && prior.addressSpace === observation.addressSpace && prior.end >= observation.address)
-              prior.end = Math.max(prior.end, observation.address + size.size);
-            else
-              ranges.push({
-                architecture: observation.architecture,
-                addressSpace: observation.addressSpace,
-                start: observation.address,
-                end: observation.address + size.size
-              });
-          } else unknownSizeInstructions++;
-          const nodes = this.#matchingNodes(observation);
-          const owners = sorted(nodes.flatMap((node) => this.#ownerIds(node)));
-          if (!owners.length) unownedInstructions++;
-          else if (owners.length !== 1 || nodes.some((node) => !this.#ownerIds(node).length))
-            ambiguousInstructions++;
-          else {
-            const fn = functionById.get(owners[0]);
-            const prior = functions.get(fn.id);
-            functions.set(fn.id, {
-              fn,
-              count: (prior?.count ?? 0) + 1,
-              architecture: observation.architecture
-            });
-          }
-        }
-        const functionEntries = [...functions.values()].sort(
-          (a, b) => b.count - a.count || a.fn.address - b.fn.address || a.fn.id.localeCompare(b.fn.id)
-        ).map(({ fn, count, architecture }) => ({
-          id: fn.id,
-          label: this.#labelsAt.get(addressKey2(fn.addressSpace, fn.address))?.join(" / ") ?? `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
-          description: `${count} unique instruction(s) \xB7 ${hex(fn.address)}`,
-          detail: "Contains instruction addresses observed only in the selected source relative to the chosen baseline. Other parts of this function may be shared.",
-          addressSpace: fn.addressSpace,
-          address: fn.address,
-          architecture,
-          outputOffsets: [],
-          recordIds: [fn.id]
-        }));
-        const memory = [...this.#memory.values()].filter(
-          (site) => site.sources.has(sourceId) && ![...site.sources].some((id) => baseline.has(id))
-        ).map(({ entry }) => entry).sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
-        const summary = {
-          source,
-          baseline: ids.map((id) => this.#sourceById.get(id)),
-          instructionCount: observations.length,
-          uniqueInstructionCount: unique.length,
-          sharedInstructionCount: shared.length,
-          knownCodeBytes: ranges.reduce((sum, range) => sum + range.end - range.start, 0),
-          unknownSizeInstructions,
-          functionCount: functionEntries.length,
-          unownedInstructions,
-          ambiguousInstructions,
-          uniqueMemoryCount: memory.length,
-          contributionCount: this.#contributions.get(sourceId)?.length ?? 0,
-          codeRangeCount: ranges.length,
-          notes: [
-            "Unique means an instruction start was recorded here and absent from execution observations/coverage in the selected comparison captures. It does not prove behavior-exclusive logic.",
-            "Code byte totals merge known extents at unique instruction starts within each architecture/address space. They are not a delta of ROM file bytes or byte values; mirrored addresses stay separate.",
-            "Static analysis and imported byte classifications do not count as captured execution. Labels, comments and classifications below show attribution, not exclusivity.",
-            ...inferred ? [
-              `${inferred} unique instruction(s) use an agreed analysis size because their capture saved only PCs.`
-            ] : [],
-            ...unknownSizeInstructions ? [
-              `${unknownSizeInstructions} unique instruction(s) have an unknown or unprojectable size and are excluded from the byte total.`
-            ] : [],
-            ...!ids.length ? ["No comparison captures selected; all observed instruction addresses are shown."] : [],
-            ...[source, ...ids.map((id) => this.#sourceById.get(id))].flatMap(
-              (entry) => entry.reports.flatMap((report) => [
-                ...report.warnings.map((warning) => `${entry.name}: ${warning}`),
-                ...report.unsupported.map(
-                  (loss) => `${entry.name}: ${loss.count} ${loss.field} omitted. ${loss.reason}`
-                )
-              ])
-            )
-          ]
-        };
-        const data = { summary, unique, shared, ranges, functions: functionEntries, memory };
-        if (this.#comparisons.size >= 4)
-          this.#comparisons.delete(this.#comparisons.keys().next().value);
-        this.#comparisons.set(token, data);
-        return data;
-      }
-    };
-    compareLocations = (a, b) => a.architecture.localeCompare(b.architecture) || a.addressSpace.localeCompare(b.addressSpace) || a.address - b.address;
-  }
-});
-
-// packages/disassembler/src/index.ts
-var init_src2 = __esm({
-  "packages/disassembler/src/index.ts"() {
-    "use strict";
-    init_asset_codec();
-    init_asset_codecs();
-    init_asset_preview();
-    init_analysis_graph();
-    init_compression_codec();
-    init_coverage_map();
-    init_execution_window();
-    init_instruction_annotations();
-    init_behavior_capture();
-    init_behavior_capture_recorder();
-    init_interval_index();
-    init_project_store();
-    init_project_transaction();
-    init_project_edit();
-    init_project_labels();
-    init_project_types();
-    init_rom_image();
-    init_runtime_evidence();
-    init_runtime_trace();
-    init_runtime_trace_file();
-    init_source_export();
-    init_static_analysis();
-    init_trace_detail();
-    init_analysis_sources();
-  }
-});
-
 // packages/plugin-snes/src/disassembler/65816-state.ts
 var init_state = __esm({
   "packages/plugin-snes/src/disassembler/65816-state.ts"() {
@@ -14954,13 +15321,13 @@ var init_framework_asset_helpers = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-var fs4, import_node_path3, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, hex3, cleanText, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap;
+var fs5, import_node_path5, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, hex3, cleanText, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap;
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
-    init_src2();
-    fs4 = __toESM(require("node:fs"), 1);
-    import_node_path3 = __toESM(require("node:path"), 1);
+    fs5 = __toESM(require("node:fs"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
+    init_src();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
     SNES_RAM_MAP_SOURCE = "ram-map.json";
@@ -15051,12 +15418,12 @@ var init_ram_map = __esm({
       variables: []
     });
     loadSnesRamMap = (directory) => {
-      const file = import_node_path3.default.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs4.existsSync(file)) {
-        fs4.mkdirSync(directory, { recursive: true });
-        fs4.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      const file = import_node_path5.default.join(directory, SNES_RAM_MAP_SOURCE);
+      if (!fs5.existsSync(file)) {
+        fs5.mkdirSync(directory, { recursive: true });
+        fs5.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs4.readFileSync(file);
+      const sourceBytes = fs5.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -15076,7 +15443,7 @@ var toFileOffset, snesSourceLabelNames;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
-    init_src2();
+    init_src();
     init_address_space();
     init_address_identities();
     init_hardware_registers();
@@ -15093,7 +15460,7 @@ var init_source_export2 = __esm({
       const reserved = [...renderSnesHardwareDefines().matchAll(/^([A-Z_a-z]\w*)\s*=/gm)].map(
         (match) => match[1]
       );
-      reserved.push(...ramNames);
+      for (const name of ramNames) reserved.push(name);
       for (const fn of shards.analysis) {
         if (fn.kind !== "function") continue;
         const offset = toFileOffset(fn.addressSpace, fn.address, mapper, romSize);
@@ -15179,20 +15546,13 @@ var init_processor_source_export = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
-var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
-    "use strict";
-  }
-});
-
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
-var import_node_crypto6, isArray2, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
+var import_node_crypto5, isArray2, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
-    import_node_crypto6 = require("node:crypto");
-    init_src2();
+    import_node_crypto5 = require("node:crypto");
+    init_src();
     init_hardware_registers();
     isArray2 = (value) => Array.isArray(value);
     rank = { low: 0, medium: 1, high: 2 };
@@ -15312,7 +15672,7 @@ var init_function_heuristics = __esm({
       return hardware ? [hardware.address] : [];
     });
     immediate3 = (node) => node.mode.startsWith("immediate") && node.bytes?.length ? node.bytes.slice(1).reduce((sum, byte, index) => sum + byte * 2 ** (8 * index), 0) : void 0;
-    analyzeSnesFunctionRoles = (shards, options = {}) => {
+    analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.runtime) => {
       const config = validateSnesHeuristicConfiguration(options);
       if (config.enabled === false) return { roles: [], comments: [], evidence: [] };
       const disabled = new Set(config.disabledRules);
@@ -15351,7 +15711,7 @@ var init_function_heuristics = __esm({
         const key2 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
         const prior = found.get(key2);
         found.set(key2, {
-          id: `heuristic:snes:${(0, import_node_crypto6.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
+          id: `heuristic:snes:${(0, import_node_crypto5.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
           rule,
           role,
           addressSpace: node.addressSpace,
@@ -15556,7 +15916,7 @@ var init_function_heuristics = __esm({
         list.push(node);
         atAddress.set(node.address, list);
       }
-      for (const access of shards.runtime) {
+      for (const access of runtime) {
         if (access.kind !== "runtime-memory-access" || access.architecture !== "snes.65816" || access.instructionAddressSpace !== "snes.cpu" || access.accessedAddressSpace !== "snes.cpu")
           continue;
         const port = identifySnesHardwareRegister(access.accessedAddress)?.address;
@@ -15638,7 +15998,7 @@ var init_function_heuristics = __esm({
       const roles = [...found.values()].sort(
         (a, b) => a.address - b.address || a.id.localeCompare(b.id)
       );
-      const signature = (0, import_node_crypto6.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
+      const signature = (0, import_node_crypto5.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
       const evidence = roles.map((role) => ({
         id: `${role.id}:evidence`,
         source: "detector",
@@ -15658,6 +16018,13 @@ var init_function_heuristics = __esm({
         }))
       };
     };
+  }
+});
+
+// packages/plugin-snes/src/disassembler/runtime-code.ts
+var init_runtime_code = __esm({
+  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+    "use strict";
   }
 });
 
@@ -15781,8 +16148,8 @@ var init_common2 = __esm({
       return value;
     };
     defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile2 = (path7, value) => ({
-      path: path7,
+    jsonFile2 = (path8, value) => ({
+      path: path8,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -15853,7 +16220,7 @@ var init_brr = __esm({
           };
         });
         const value = { kind: "snes-brr", blocks };
-        const path7 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
+        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
         const metadataPath = stringOption2(
           options,
           "metadataPath",
@@ -15861,7 +16228,7 @@ var init_brr = __esm({
         );
         return {
           value,
-          files: [{ path: path7, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
+          files: [{ path: path8, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
         };
       },
       encode: (context) => {
@@ -15935,8 +16302,8 @@ var init_palette = __esm({
           };
         });
         const value = { kind: "snes-palette-bgr555", colors };
-        const path7 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile2(path7, value)] };
+        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
+        return { value, files: [jsonFile2(path8, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 2);
@@ -16013,8 +16380,8 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           entries: entries3
         };
-        const path7 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile2(path7, value)] };
+        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
+        return { value, files: [jsonFile2(path8, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 2);
@@ -16073,12 +16440,12 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           indexes: [...bytes]
         };
-        const path7 = stringOption2(
+        const path8 = stringOption2(
           options,
           "path",
           defaultPath(context.request.id, "mode7-tilemap.json")
         );
-        return { value, files: [jsonFile2(path7, value)] };
+        return { value, files: [jsonFile2(path8, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 1);
@@ -16174,12 +16541,12 @@ var init_tiles = __esm({
             tileHeight: 8,
             tiles
           };
-          const path7 = stringOption2(
+          const path8 = stringOption2(
             options,
             "path",
             defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
           );
-          return { value, files: [jsonFile2(path7, value)] };
+          return { value, files: [jsonFile2(path8, value)] };
         },
         encode: (context) => {
           const { count, size } = resolveCount(context, bytesPerTile);
@@ -16242,8 +16609,8 @@ var init_tiles = __esm({
           tileHeight: 8,
           tiles
         };
-        const path7 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile2(path7, value)] };
+        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
+        return { value, files: [jsonFile2(path8, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 64);
@@ -16442,18 +16809,18 @@ var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, 
 var init_src3 = __esm({
   "packages/plugin-snes/src/index.ts"() {
     "use strict";
-    init_src();
-    init__();
+    init_src2();
     init_decoder();
     init_spec();
-    init_spc700();
+    init__();
+    init_operand_classifiers();
     init_spc700_decoder();
     init_spc700_spec();
-    init_superfx();
+    init_spc700();
+    init_split_operands();
     init_superfx_decoder();
     init_superfx_spec();
-    init_operand_classifiers();
-    init_split_operands();
+    init_superfx();
     init_compatibility();
     init_ca65_compat();
     init_freespace();
@@ -16934,12 +17301,62 @@ var init_src3 = __esm({
 // packages/vscode-extension/src/analysis-worker.ts
 var analysis_worker_exports = {};
 module.exports = __toCommonJS(analysis_worker_exports);
-var import_node_crypto9 = require("node:crypto");
-init_src3();
-var import_node_worker_threads = require("node:worker_threads");
+var import_node_crypto7 = require("node:crypto");
 var fs7 = __toESM(require("node:fs"));
-var path6 = __toESM(require("node:path"));
-init_src2();
+var path7 = __toESM(require("node:path"));
+var import_node_worker_threads = require("node:worker_threads");
+init_src();
+init_src3();
+
+// packages/vscode-extension/src/analysis-annotation-format.ts
+init_canonical_json();
+var hexadecimal = (value) => `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
+var valueText = (value, present = true) => {
+  if (!present) return "\u2205";
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record = value;
+    if (record.kind === "known" && "value" in record) return valueText(record.value);
+    if (record.kind === "unknown") return "?";
+  }
+  if (typeof value === "string") return value;
+  if (typeof value === "number")
+    return Number.isInteger(value) ? hexadecimal(value) : String(value);
+  if (typeof value === "boolean") return String(value);
+  const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
+  return serialized.length > 60 ? `${serialized.slice(0, 57)}\u2026` : serialized;
+};
+var effectiveAddressText = (address3) => {
+  const resolved = address3.address ?? address3.baseAddress;
+  const identity = [address3.symbol, resolved === void 0 ? void 0 : hexadecimal(resolved)].filter((value) => value !== void 0).join("@");
+  return `EA${address3.operandIndex} ${identity || "?"}${address3.address === void 0 && address3.baseAddress !== void 0 ? " base" : ""}${address3.volatile ? " volatile" : ""}`;
+};
+var transitionText = (transition) => `\u0394${transition.field} ${valueText(transition.before, "before" in transition)}\u2192${valueText(transition.after, "after" in transition)}`;
+var stateText = (observation) => {
+  const fields = Object.entries(observation.state).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${valueText(value)}`).join(",");
+  return `${observation.source} state ${fields || "\u2205"}${observation.count === void 0 ? "" : ` \xD7${observation.count}`}`;
+};
+var accessText = (access) => {
+  let mode3 = "?";
+  if (access.access === "read") mode3 = "R";
+  else if (access.access === "write") mode3 = "W";
+  else if (access.access === "read-write") mode3 = "RW";
+  return `${access.actor ? `${access.actor}${access.channel === void 0 ? "" : ` channel ${access.channel}`} ` : ""}${mode3} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === void 0 ? "" : `=${hexadecimal(access.value)}`} ${access.width}B \xD7${access.count}`;
+};
+var clipped = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
+var formatInstructionAnnotationSummary = (annotation, maximumLength = 220) => {
+  const parts = [];
+  parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text }) => text));
+  if (annotation.executionCount > 0) parts.push(`\u25B6 ${annotation.executionCount}\xD7`);
+  const coverage = annotation.runtimeCoverage.map(({ coverage: coverage2 }) => coverage2);
+  if (coverage.length > 0) parts.push(`coverage ${coverage.join("/")}`);
+  parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
+  parts.push(...annotation.memoryAccesses.slice(0, 2).map(accessText));
+  parts.push(...annotation.stateTransitions.slice(0, 3).map(transitionText));
+  if (annotation.stateTransitions.length === 0 && annotation.stateObservations.length > 0) {
+    parts.push(stateText(annotation.stateObservations[0]));
+  }
+  return clipped(parts.join(" \xB7 "), Math.max(24, maximumLength));
+};
 
 // packages/vscode-extension/src/analysis-annotation-index.ts
 var append = (map, key2, value) => {
@@ -17006,326 +17423,9 @@ var instructionAnnotationsForDebugRange = (index, range) => {
   );
 };
 
-// packages/vscode-extension/src/analysis-annotation-format.ts
-var hexadecimal = (value) => `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
-var canonicalValue3 = (value) => {
-  if (Array.isArray(value)) return value.map(canonicalValue3);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue3(entry)])
-    );
-  }
-  return value;
-};
-var valueText = (value, present = true) => {
-  if (!present) return "\u2205";
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const record = value;
-    if (record.kind === "known" && "value" in record) return valueText(record.value);
-    if (record.kind === "unknown") return "?";
-  }
-  if (typeof value === "string") return value;
-  if (typeof value === "number")
-    return Number.isInteger(value) ? hexadecimal(value) : String(value);
-  if (typeof value === "boolean") return String(value);
-  const serialized = JSON.stringify(canonicalValue3(value)) ?? String(value);
-  return serialized.length > 60 ? `${serialized.slice(0, 57)}\u2026` : serialized;
-};
-var effectiveAddressText = (address3) => {
-  const resolved = address3.address ?? address3.baseAddress;
-  const identity = [address3.symbol, resolved === void 0 ? void 0 : hexadecimal(resolved)].filter((value) => value !== void 0).join("@");
-  return `EA${address3.operandIndex} ${identity || "?"}${address3.address === void 0 && address3.baseAddress !== void 0 ? " base" : ""}${address3.volatile ? " volatile" : ""}`;
-};
-var transitionText = (transition) => `\u0394${transition.field} ${valueText(transition.before, "before" in transition)}\u2192${valueText(transition.after, "after" in transition)}`;
-var stateText = (observation) => {
-  const fields = Object.entries(observation.state).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${valueText(value)}`).join(",");
-  return `${observation.source} state ${fields || "\u2205"}${observation.count === void 0 ? "" : ` \xD7${observation.count}`}`;
-};
-var accessText = (access) => {
-  let mode3 = "?";
-  if (access.access === "read") mode3 = "R";
-  else if (access.access === "write") mode3 = "W";
-  else if (access.access === "read-write") mode3 = "RW";
-  return `${access.actor ? `${access.actor}${access.channel === void 0 ? "" : ` channel ${access.channel}`} ` : ""}${mode3} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === void 0 ? "" : `=${hexadecimal(access.value)}`} ${access.width}B \xD7${access.count}`;
-};
-var clipped = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
-var formatInstructionAnnotationSummary = (annotation, maximumLength = 220) => {
-  const parts = [];
-  parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text }) => text));
-  if (annotation.executionCount > 0) parts.push(`\u25B6 ${annotation.executionCount}\xD7`);
-  const coverage = annotation.runtimeCoverage.map(({ coverage: coverage2 }) => coverage2);
-  if (coverage.length > 0) parts.push(`coverage ${coverage.join("/")}`);
-  parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
-  parts.push(...annotation.memoryAccesses.slice(0, 2).map(accessText));
-  parts.push(...annotation.stateTransitions.slice(0, 3).map(transitionText));
-  if (annotation.stateTransitions.length === 0 && annotation.stateObservations.length > 0) {
-    parts.push(stateText(annotation.stateObservations[0]));
-  }
-  return clipped(parts.join(" \xB7 "), Math.max(24, maximumLength));
-};
-
-// packages/vscode-extension/src/disassembly-annotation-data.ts
-var import_node_crypto7 = require("node:crypto");
-var fs5 = __toESM(require("node:fs"));
-var path4 = __toESM(require("node:path"));
-init_debug_map();
-init_src2();
-init_src3();
-
-// packages/vscode-extension/src/disassembly-annotation-location.ts
-init_src2();
-var annotationReferenceAt = (text, line, column) => {
-  const code = (text.split(/\r?\n/)[line - 1] ?? "").split(";")[0];
-  if (/^\s*[A-Z_a-z]\w*\s*:/.test(code)) return void 0;
-  const token = [...code.matchAll(/[A-Z_a-z]\w*/g)].find(
-    (match) => match.index <= column && column <= match.index + match[0].length
-  );
-  if (!token || /[\d$]/.test(code[token.index - 1] ?? "") || token.index <= code.search(/\S/) + (code.trimStart().match(/^\S+/)?.[0].length ?? 0))
-    return void 0;
-  return token[0];
-};
-var namedAnnotationLocations = (shards) => {
-  const names = projectSourceLabelNames(shards.labels);
-  const locations = shards.labels.map((label) => ({
-    addressSpace: label.addressSpace,
-    address: label.address,
-    labelId: label.id,
-    name: names.get(label.id)
-  }));
-  const addressed = new Set(
-    locations.map((location) => `${location.addressSpace}:${location.address}`)
-  );
-  for (const record of shards.analysis) {
-    if (record.kind !== "function" || addressed.has(`${record.addressSpace}:${record.address}`))
-      continue;
-    locations.push({
-      addressSpace: record.addressSpace,
-      address: record.address,
-      name: `Fn_${record.address.toString(16).toUpperCase().padStart(6, "0")}`
-    });
-    addressed.add(`${record.addressSpace}:${record.address}`);
-  }
-  return locations;
-};
-var annotationLocationsForSource = (map, sourceId, text, line, column, shards, sources = /* @__PURE__ */ new Map([[sourceId, text]]), fileAddressSpaces = []) => {
-  const lines = text.split(/\r?\n/);
-  const named = namedAnnotationLocations(shards);
-  const reference = annotationReferenceAt(text, line, column);
-  if (reference) {
-    const locations2 = [];
-    for (const [id, source] of sources) {
-      source.split(/\r?\n/).forEach((value, index) => {
-        if (value.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1] === reference)
-          locations2.push(
-            ...annotationLocationsForSource(
-              map,
-              id,
-              source,
-              index + 1,
-              0,
-              shards,
-              sources,
-              fileAddressSpaces
-            )
-          );
-      });
-    }
-    return locations2;
-  }
-  let mappedLine = line;
-  const metadata = (value) => {
-    const body = value.split(";")[0].trim();
-    return body === "" || /^[A-Z_a-z]\w*\s*:$/.test(body) || /^\.[ai](8|16)$/.test(body);
-  };
-  while (mappedLine <= lines.length && metadata(lines[mappedLine - 1])) mappedLine++;
-  const ranges = map.ranges.filter(
-    (range) => range.sourceId === sourceId && range.line === mappedLine
-  );
-  const locations = /* @__PURE__ */ new Map();
-  const definitionName = lines[line - 1]?.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1];
-  for (const range of ranges) {
-    const fileLabels = named.filter(
-      (entry) => entry.labelId && fileAddressSpaces.includes(entry.addressSpace) && entry.address === range.outputStart
-    );
-    const native = shards.analysis.filter(
-      (record) => record.kind === "cfg-node" && (record.addressSpace === range.addressSpace && record.address === range.start || range.outputStart !== void 0 && record.fileOffset === range.outputStart)
-    );
-    const matches = native.length ? native.map((record) => ({ addressSpace: record.addressSpace, address: record.address })) : [{ addressSpace: range.addressSpace, address: range.start }];
-    let candidates = [
-      ...fileLabels,
-      ...named.filter(
-        (entry) => matches.some(
-          (match) => entry.addressSpace === match.addressSpace && entry.address === match.address
-        )
-      )
-    ];
-    const labels = candidates.filter((entry) => entry.labelId);
-    if (labels.length) candidates = labels;
-    const selectedDefinition = candidates.filter((entry) => entry.name === definitionName);
-    if (selectedDefinition.length) candidates = selectedDefinition;
-    for (const location of candidates.length ? candidates : matches)
-      locations.set(
-        `${location.addressSpace}:${location.address}:${"labelId" in location ? location.labelId ?? "" : ""}`,
-        location
-      );
-  }
-  return [...locations.values()];
-};
-
-// packages/vscode-extension/src/disassembly-annotation-data.ts
-var hash = (bytes) => (0, import_node_crypto7.createHash)("sha256").update(bytes).digest("hex");
-var maps = /* @__PURE__ */ new Map();
-var annotationFileSignature = (file) => {
-  const stat = fs5.statSync(file, { bigint: true });
-  return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
-};
-var readMap = (file) => {
-  const signature = annotationFileSignature(file);
-  const cached = maps.get(file);
-  if (cached?.signature === signature) return cached.map;
-  const map = JSON.parse(fs5.readFileSync(file, "utf8"));
-  if (validateDebugMap(map).length) throw new Error("Invalid debug map.");
-  if (annotationFileSignature(file) !== signature)
-    throw new Error("Debug map changed while loading.");
-  if (maps.size >= 64) maps.clear();
-  maps.set(file, { signature, map });
-  return map;
-};
-var readSource = (source, candidate, expectedFile) => {
-  const files = path4.isAbsolute(source.path) ? [source.path] : [
-    ...candidate.sourceRoots.map((root) => path4.resolve(root, source.path)),
-    path4.resolve(path4.dirname(candidate.file), source.path)
-  ];
-  for (const file of new Set(files)) {
-    if (expectedFile && file !== expectedFile) continue;
-    try {
-      const bytes = fs5.readFileSync(file);
-      if (hash(bytes) === source.sha256) return { file, text: bytes.toString("utf8") };
-    } catch {
-    }
-  }
-  return void 0;
-};
-var lookupDisassemblyAnnotation = (snapshot, input) => {
-  const fileSpaces = snapshot.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id);
-  let locations;
-  let sourceHash;
-  let sourceDirectory;
-  if (input.source) {
-    const found = [];
-    for (const candidate of input.maps) {
-      let map;
-      try {
-        map = readMap(candidate.file);
-      } catch {
-        continue;
-      }
-      if (map.target !== snapshot.manifest.target || map.output.sha256 !== snapshot.manifest.rom.contentSha256 || map.output.size !== snapshot.manifest.rom.contentSize)
-        continue;
-      for (const source of map.sources) {
-        if (source.sha256 !== input.source.sha256) continue;
-        const current2 = readSource(source, candidate, input.source.file);
-        if (!current2) continue;
-        sourceHash = source.sha256;
-        const texts = /* @__PURE__ */ new Map([[source.id, current2.text]]);
-        if (annotationReferenceAt(current2.text, input.source.line, input.source.column)) {
-          for (const other of map.sources) {
-            if (other.id === source.id) continue;
-            const resolved = readSource(other, candidate);
-            if (resolved) texts.set(other.id, resolved.text);
-          }
-        }
-        found.push(
-          ...annotationLocationsForSource(
-            map,
-            source.id,
-            current2.text,
-            input.source.line,
-            input.source.column,
-            snapshot.shards,
-            texts,
-            fileSpaces
-          )
-        );
-      }
-    }
-    locations = [
-      ...new Map(
-        found.map((location) => [
-          `${location.addressSpace}:${location.address}:${location.labelId ?? ""}`,
-          location
-        ])
-      ).values()
-    ];
-    if (!sourceHash || !locations.length)
-      throw new Error(
-        "No exact current ROM/source mapping exists at the cursor. Run Analyze and Regenerate Disassembly, then select a label or instruction."
-      );
-    for (let directory = path4.dirname(input.source.file); ; directory = path4.dirname(directory)) {
-      if (fs5.existsSync(path4.join(directory, "generated-files.json"))) {
-        sourceDirectory = directory;
-        break;
-      }
-      if (path4.dirname(directory) === directory) break;
-    }
-  } else locations = namedAnnotationLocations(snapshot.shards);
-  if (!locations.length)
-    throw new Error(
-      "No native labels or function candidates exist. Open generated source to annotate an instruction."
-    );
-  const labels = new Map(snapshot.shards.labels.map((label) => [label.id, label]));
-  const comments = /* @__PURE__ */ new Map();
-  for (const comment of snapshot.shards.comments) {
-    if (comment.placement !== "inline-instruction") continue;
-    const key2 = `${comment.addressSpace}:${comment.address}`;
-    const list = comments.get(key2) ?? [];
-    list.push(comment);
-    comments.set(key2, list);
-  }
-  const instructions = /* @__PURE__ */ new Set();
-  for (const record of snapshot.shards.analysis) {
-    if (record.kind !== "cfg-node") continue;
-    instructions.add(`${record.addressSpace}:${record.address}`);
-    if (record.fileOffset !== void 0)
-      for (const space of fileSpaces) instructions.add(`${space}:${record.fileOffset}`);
-  }
-  return {
-    revision: snapshot.revision,
-    sourceFile: input.source?.file,
-    sourceHash,
-    sourceDirectory,
-    choices: locations.map((location) => ({
-      location,
-      label: location.labelId ? labels.get(location.labelId) : void 0,
-      inlineComments: comments.get(`${location.addressSpace}:${location.address}`) ?? [],
-      hasInstruction: instructions.has(`${location.addressSpace}:${location.address}`)
-    }))
-  };
-};
-var saveDisassemblyAnnotation = (directory, snapshot, input) => {
-  if (canonicalJson(snapshot.revision) !== canonicalJson(input.revision))
-    throw new Error(
-      "The analysis project changed while this form was open. Reopen the annotation and retry."
-    );
-  if (input.sourceFile && hash(fs5.readFileSync(input.sourceFile)) !== input.sourceHash)
-    throw new Error(
-      "The source changed while this form was open. Reopen the annotation from current generated source."
-    );
-  const applied = applyDisassemblyAnnotationEdit(snapshot, input.request);
-  if (snapshot.manifest.target === "snes.sfc")
-    snesSourceLabelNames(
-      applied.project.shards,
-      snapshot.manifest.mapping.mapper,
-      snapshot.manifest.rom.contentSize,
-      input.sourceDirectory ? loadSnesRamMap(input.sourceDirectory).variables.map(({ name }) => name) : []
-    );
-  const committed = commitAnalysisProjectTransaction(directory, snapshot.revision, applied.project);
-  return { inverse: applied.inverse, snapshot: { ...committed, shards: applied.project.shards } };
-};
-
 // packages/vscode-extension/src/analysis-navigation-data.ts
-init_src2();
-var projectAnalysisNavigation = (project, target) => {
+init_src();
+var projectAnalysisNavigation = (project, target, runtimeAt) => {
   if (project.manifest.target !== target.target || project.manifest.rom.contentSha256 !== target.romContentSha256 || project.manifest.rom.contentSize !== target.romContentSize)
     throw new Error("Navigation target no longer matches the current native analysis project.");
   const matchesArchitecture = (specification2) => !target.architectureHints.length || target.architectureHints.some(
@@ -17348,7 +17448,18 @@ var projectAnalysisNavigation = (project, target) => {
     if (space === target.addressSpace) return [...addresses2];
     return fileSpaces.has(space) ? [...offsets] : [];
   };
-  const runtime = project.shards.runtime.filter((record) => {
+  function* runtimeCandidates() {
+    if (!runtimeAt) {
+      yield* project.shards.runtime;
+      return;
+    }
+    for (const address3 of addresses2) yield* runtimeAt(target.addressSpace, address3);
+    for (const space of fileSpaces) {
+      if (space === target.addressSpace) continue;
+      for (const offset of offsets) yield* runtimeAt(space, offset);
+    }
+  }
+  const runtime = [...runtimeCandidates()].filter((record) => {
     if (!matchesArchitecture(record.architecture)) return false;
     if (record.kind === "runtime-memory-access")
       return record.instructionAddressSpace === target.addressSpace && addresses2.has(record.instructionAddress);
@@ -17401,61 +17512,343 @@ var projectAnalysisNavigation = (project, target) => {
 };
 
 // packages/vscode-extension/src/analysis-sources-data.ts
-var import_node_crypto8 = require("node:crypto");
-var fs6 = __toESM(require("node:fs"));
-var path5 = __toESM(require("node:path"));
-init_src2();
+init_src();
 var object = (value) => !!value && typeof value === "object" && !Array.isArray(value);
 var strings = (value) => Array.isArray(value) && value.every((entry) => typeof entry === "string");
-var hash2 = (value) => typeof value === "string" && /^[\da-f]{64}$/u.test(value);
+var hash = (value) => typeof value === "string" && /^[\da-f]{64}$/u.test(value);
 var readAnalysisSourceCatalog = (directory) => {
-  const file = path5.join(directory, "analysis.json");
-  const revision = fs6.readFileSync(file, "utf8");
-  const manifest = migrateManifest(JSON.parse(revision));
-  const read = (kind) => {
-    const descriptor2 = manifest.shards.find((entry) => entry.kind === kind);
-    if (!descriptor2) return [];
-    const target = path5.resolve(directory, descriptor2.path);
-    if (!target.startsWith(`${path5.resolve(directory)}${path5.sep}`))
-      throw new Error("Source metadata path is outside its project.");
-    if (fs6.statSync(target).size > 16 * 1024 * 1024)
-      throw new Error("Source catalog metadata exceeds the 16 MiB limit.");
-    const bytes = fs6.readFileSync(target);
-    if ((0, import_node_crypto8.createHash)("sha256").update(bytes).digest("hex") !== descriptor2.sha256)
-      throw new Error(`Source ${kind} metadata does not match its SHA-256.`);
-    const records = JSON.parse(bytes.toString("utf8"));
-    if (!Array.isArray(records) || records.length !== descriptor2.records)
-      throw new Error(`Invalid source ${kind} metadata.`);
-    for (const record of records) {
-      if (!object(record) || typeof record.id !== "string")
-        throw new Error(`Invalid source ${kind} identity.`);
-      if (kind === "imports" && (typeof record.sourceName !== "string" || !hash2(record.sourceSha256) || typeof record.format !== "string" || !strings(record.warnings) || !object(record.imported) || Object.values(record.imported).some(
-        (value) => !Number.isSafeInteger(value) || value < 0
-      ) || !Array.isArray(record.unsupported) || !record.unsupported.every(
-        (loss) => object(loss) && typeof loss.field === "string" && typeof loss.reason === "string" && Number.isSafeInteger(loss.count) && loss.count >= 0
-      )))
-        throw new Error("Invalid source import metadata.");
-      if (kind === "evidence") {
-        if (typeof record.sourceId !== "string" || typeof record.source !== "string" || !["import", "runtime", "manual", "detector", "static"].includes(record.source))
-          throw new Error("Invalid source evidence metadata.");
-        const artifact = record.artifact;
-        if (artifact !== void 0 && (!object(artifact) || typeof artifact.format !== "string" || !hash2(artifact.sha256) || artifact.romContentSha256 !== manifest.rom.contentSha256))
-          throw new Error("Invalid source artifact identity.");
+  const store = openAnalysisProjectStore(directory);
+  try {
+    return store.transaction(() => {
+      const manifest = store.manifest();
+      const read = (kind) => {
+        const records = store.loadTable(kind);
+        for (const record of records) {
+          if (!object(record) || typeof record.id !== "string")
+            throw new Error(`Invalid source ${kind} identity.`);
+          if (kind === "imports" && (typeof record.sourceName !== "string" || !hash(record.sourceSha256) || typeof record.format !== "string" || !strings(record.warnings) || !object(record.imported) || Object.values(record.imported).some(
+            (value) => !Number.isSafeInteger(value) || value < 0
+          ) || !Array.isArray(record.unsupported) || !record.unsupported.every(
+            (loss) => object(loss) && typeof loss.field === "string" && typeof loss.reason === "string" && Number.isSafeInteger(loss.count) && loss.count >= 0
+          )))
+            throw new Error("Invalid source import metadata.");
+          if (kind === "evidence") {
+            if (typeof record.sourceId !== "string" || typeof record.source !== "string" || !["import", "runtime", "manual", "detector", "static"].includes(record.source))
+              throw new Error("Invalid source evidence metadata.");
+            const artifact = record.artifact;
+            if (artifact !== void 0 && (!object(artifact) || typeof artifact.format !== "string" || !hash(artifact.sha256) || artifact.romContentSha256 !== manifest.rom.contentSha256))
+              throw new Error("Invalid source artifact identity.");
+          }
+        }
+        return records;
+      };
+      const sources = buildAnalysisSourceCatalog({
+        imports: read("imports"),
+        evidence: read("evidence")
+      });
+      return { manifest, sources };
+    }, false);
+  } finally {
+    store.close();
+  }
+};
+
+// packages/vscode-extension/src/disassembly-annotation-data.ts
+var import_node_crypto6 = require("node:crypto");
+var fs6 = __toESM(require("node:fs"));
+var path6 = __toESM(require("node:path"));
+init_debug_map();
+init_src();
+init_src3();
+
+// packages/vscode-extension/src/disassembly-annotation-location.ts
+init_src();
+var annotationReferenceAt = (text, line, column) => {
+  const code = (text.split(/\r?\n/)[line - 1] ?? "").split(";")[0];
+  if (/^\s*[A-Z_a-z]\w*\s*:/.test(code)) return void 0;
+  const token = [...code.matchAll(/[A-Z_a-z]\w*/g)].find(
+    (match) => match.index <= column && column <= match.index + match[0].length
+  );
+  if (!token || /[\d$]/.test(code[token.index - 1] ?? "") || token.index <= code.search(/\S/) + (code.trimStart().match(/^\S+/)?.[0].length ?? 0))
+    return void 0;
+  return token[0];
+};
+var namedAnnotationLocations = (shards) => {
+  const names = projectSourceLabelNames(shards.labels);
+  const locations = shards.labels.map((label) => ({
+    addressSpace: label.addressSpace,
+    address: label.address,
+    labelId: label.id,
+    name: names.get(label.id)
+  }));
+  const addressed = new Set(
+    locations.map((location) => `${location.addressSpace}:${location.address}`)
+  );
+  for (const record of shards.analysis) {
+    if (record.kind !== "function" || addressed.has(`${record.addressSpace}:${record.address}`))
+      continue;
+    locations.push({
+      addressSpace: record.addressSpace,
+      address: record.address,
+      name: `Fn_${record.address.toString(16).toUpperCase().padStart(6, "0")}`
+    });
+    addressed.add(`${record.addressSpace}:${record.address}`);
+  }
+  return locations;
+};
+var annotationLocationsForSource = (map, sourceId, text, line, column, shards, sources = /* @__PURE__ */ new Map([[sourceId, text]]), fileAddressSpaces = []) => {
+  const lines = text.split(/\r?\n/);
+  const named = namedAnnotationLocations(shards);
+  const reference = annotationReferenceAt(text, line, column);
+  if (reference) {
+    const locations2 = [];
+    for (const [id, source] of sources) {
+      source.split(/\r?\n/).forEach((value, index) => {
+        if (value.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1] === reference) {
+          for (const location of annotationLocationsForSource(
+            map,
+            id,
+            source,
+            index + 1,
+            0,
+            shards,
+            sources,
+            fileAddressSpaces
+          ))
+            locations2.push(location);
+        }
+      });
+    }
+    return locations2;
+  }
+  let mappedLine = line;
+  const metadata = (value) => {
+    const body = value.split(";")[0].trim();
+    return body === "" || /^[A-Z_a-z]\w*\s*:$/.test(body) || /^\.[ai](8|16)$/.test(body);
+  };
+  while (mappedLine <= lines.length && metadata(lines[mappedLine - 1])) mappedLine++;
+  const ranges = map.ranges.filter(
+    (range) => range.sourceId === sourceId && range.line === mappedLine
+  );
+  const locations = /* @__PURE__ */ new Map();
+  const definitionName = lines[line - 1]?.match(/^\s*([A-Z_a-z]\w*)\s*:/)?.[1];
+  for (const range of ranges) {
+    const fileLabels = named.filter(
+      (entry) => entry.labelId && fileAddressSpaces.includes(entry.addressSpace) && entry.address === range.outputStart
+    );
+    const native = shards.analysis.filter(
+      (record) => record.kind === "cfg-node" && (record.addressSpace === range.addressSpace && record.address === range.start || range.outputStart !== void 0 && record.fileOffset === range.outputStart)
+    );
+    const matches = native.length ? native.map((record) => ({ addressSpace: record.addressSpace, address: record.address })) : [{ addressSpace: range.addressSpace, address: range.start }];
+    let candidates = [
+      ...fileLabels,
+      ...named.filter(
+        (entry) => matches.some(
+          (match) => entry.addressSpace === match.addressSpace && entry.address === match.address
+        )
+      )
+    ];
+    const labels = candidates.filter((entry) => entry.labelId);
+    if (labels.length) candidates = labels;
+    const selectedDefinition = candidates.filter((entry) => entry.name === definitionName);
+    if (selectedDefinition.length) candidates = selectedDefinition;
+    for (const location of candidates.length ? candidates : matches)
+      locations.set(
+        `${location.addressSpace}:${location.address}:${"labelId" in location ? location.labelId ?? "" : ""}`,
+        location
+      );
+  }
+  return [...locations.values()];
+};
+
+// packages/vscode-extension/src/disassembly-annotation-data.ts
+var hash2 = (bytes) => (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex");
+var maps = /* @__PURE__ */ new Map();
+var annotationFileSignature = (file) => {
+  const stat = fs6.statSync(file, { bigint: true });
+  return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+};
+var readMap = (file) => {
+  const signature = annotationFileSignature(file);
+  const cached = maps.get(file);
+  if (cached?.signature === signature) return cached.map;
+  const map = JSON.parse(fs6.readFileSync(file, "utf8"));
+  if (validateDebugMap(map).length) throw new Error("Invalid debug map.");
+  if (annotationFileSignature(file) !== signature)
+    throw new Error("Debug map changed while loading.");
+  if (maps.size >= 64) maps.clear();
+  maps.set(file, { signature, map });
+  return map;
+};
+var readSource = (source, candidate, expectedFile) => {
+  const files = path6.isAbsolute(source.path) ? [source.path] : [
+    ...candidate.sourceRoots.map((root) => path6.resolve(root, source.path)),
+    path6.resolve(path6.dirname(candidate.file), source.path)
+  ];
+  for (const file of new Set(files)) {
+    if (expectedFile && file !== expectedFile) continue;
+    try {
+      const bytes = fs6.readFileSync(file);
+      if (hash2(bytes) === source.sha256) return { file, text: bytes.toString("utf8") };
+    } catch {
+    }
+  }
+  return void 0;
+};
+var lookupDisassemblyAnnotation = (snapshot, input) => {
+  const fileSpaces = snapshot.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id);
+  let locations;
+  let sourceHash;
+  let sourceDirectory;
+  if (input.source) {
+    const found = [];
+    for (const candidate of input.maps) {
+      let map;
+      try {
+        map = readMap(candidate.file);
+      } catch {
+        continue;
+      }
+      if (map.target !== snapshot.manifest.target || map.output.sha256 !== snapshot.manifest.rom.contentSha256 || map.output.size !== snapshot.manifest.rom.contentSize)
+        continue;
+      for (const source of map.sources) {
+        if (source.sha256 !== input.source.sha256) continue;
+        const current2 = readSource(source, candidate, input.source.file);
+        if (!current2) continue;
+        sourceHash = source.sha256;
+        const texts = /* @__PURE__ */ new Map([[source.id, current2.text]]);
+        if (annotationReferenceAt(current2.text, input.source.line, input.source.column)) {
+          for (const other of map.sources) {
+            if (other.id === source.id) continue;
+            const resolved = readSource(other, candidate);
+            if (resolved) texts.set(other.id, resolved.text);
+          }
+        }
+        for (const location of annotationLocationsForSource(
+          map,
+          source.id,
+          current2.text,
+          input.source.line,
+          input.source.column,
+          snapshot.shards,
+          texts,
+          fileSpaces
+        ))
+          found.push(location);
       }
     }
-    return records;
+    locations = [
+      ...new Map(
+        found.map((location) => [
+          `${location.addressSpace}:${location.address}:${location.labelId ?? ""}`,
+          location
+        ])
+      ).values()
+    ];
+    if (!sourceHash || !locations.length)
+      throw new Error(
+        "No exact current ROM/source mapping exists at the cursor. Run Analyze and Regenerate Disassembly, then select a label or instruction."
+      );
+    for (let directory = path6.dirname(input.source.file); ; directory = path6.dirname(directory)) {
+      if (fs6.existsSync(path6.join(directory, "generated-files.json"))) {
+        sourceDirectory = directory;
+        break;
+      }
+      if (path6.dirname(directory) === directory) break;
+    }
+  } else locations = namedAnnotationLocations(snapshot.shards);
+  if (!locations.length)
+    throw new Error(
+      "No native labels or function candidates exist. Open generated source to annotate an instruction."
+    );
+  const labels = new Map(snapshot.shards.labels.map((label) => [label.id, label]));
+  const comments = /* @__PURE__ */ new Map();
+  for (const comment of snapshot.shards.comments) {
+    if (comment.placement !== "inline-instruction") continue;
+    const key2 = `${comment.addressSpace}:${comment.address}`;
+    const list = comments.get(key2) ?? [];
+    list.push(comment);
+    comments.set(key2, list);
+  }
+  const instructions = /* @__PURE__ */ new Set();
+  for (const record of snapshot.shards.analysis) {
+    if (record.kind !== "cfg-node") continue;
+    instructions.add(`${record.addressSpace}:${record.address}`);
+    if (record.fileOffset !== void 0)
+      for (const space of fileSpaces) instructions.add(`${space}:${record.fileOffset}`);
+  }
+  return {
+    revision: snapshot.revision,
+    sourceFile: input.source?.file,
+    sourceHash,
+    sourceDirectory,
+    choices: locations.map((location) => ({
+      location,
+      label: location.labelId ? labels.get(location.labelId) : void 0,
+      inlineComments: comments.get(`${location.addressSpace}:${location.address}`) ?? [],
+      hasInstruction: instructions.has(`${location.addressSpace}:${location.address}`)
+    }))
   };
-  const sources = buildAnalysisSourceCatalog({
-    imports: read("imports"),
-    evidence: read("evidence")
-  });
-  if (fs6.readFileSync(file, "utf8") !== revision)
-    throw new Error("The project changed while Sources was loading. Refresh to retry.");
-  return { manifest, sources };
+};
+var saveDisassemblyAnnotation = (directory, snapshot, input) => {
+  if (canonicalJson(snapshot.revision) !== canonicalJson(input.revision))
+    throw new Error(
+      "The analysis project changed while this form was open. Reopen the annotation and retry."
+    );
+  if (input.sourceFile && hash2(fs6.readFileSync(input.sourceFile)) !== input.sourceHash)
+    throw new Error(
+      "The source changed while this form was open. Reopen the annotation from current generated source."
+    );
+  const applied = applyDisassemblyAnnotationEdit(snapshot, input.request);
+  if (snapshot.manifest.target === "snes.sfc")
+    snesSourceLabelNames(
+      applied.project.shards,
+      snapshot.manifest.mapping.mapper,
+      snapshot.manifest.rom.contentSize,
+      input.sourceDirectory ? loadSnesRamMap(input.sourceDirectory).variables.map(({ name }) => name) : []
+    );
+  const { runtime: _runtime, ...updates } = applied.project.shards;
+  const committed2 = commitAnalysisProjectViewUpdate(
+    directory,
+    { ...snapshot, view: snapshot.shards },
+    updates
+  );
+  return { inverse: applied.inverse, snapshot: { ...committed2, shards: applied.project.shards } };
 };
 
 // packages/vscode-extension/src/analysis-worker.ts
 var current;
+var sqliteSnapshot = (directory) => {
+  const loaded = loadAnalysisProjectViewSnapshot(directory);
+  return { manifest: loaded.manifest, shards: loaded.view, revision: loaded.revision };
+};
+var database;
+var projectDatabase = (directory) => {
+  const stat = fs7.statSync(path7.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
+  const identity = `${stat.dev}:${stat.ino}`;
+  if (database?.directory !== directory || database.identity !== identity) {
+    database?.store.close();
+    database = { directory, identity, store: openAnalysisProjectStore(directory) };
+  }
+  return database.store;
+};
+var readProjection = (store, snapshot, read) => store.transaction(() => {
+  assertAnalysisProjectRevision(store, snapshot.revision);
+  return read();
+}, false);
+var sqliteCoverageMap = (store, snapshot) => readProjection(
+  store,
+  snapshot,
+  () => buildRomCoverageMap(
+    snapshot.manifest,
+    snapshot.shards,
+    store.runtimeRecordsByKinds([
+      "runtime-coverage",
+      "runtime-execution",
+      "runtime-memory-access"
+    ])
+  )
+);
 var request = (message) => {
   if (message.operation === "clear") {
     if (current) {
@@ -17467,15 +17860,26 @@ var request = (message) => {
     return void 0;
   }
   if (message.operation === "sources") return readAnalysisSourceCatalog(message.directory);
-  const revision = fs7.readFileSync(path6.join(message.directory, "analysis.json"), "utf8");
-  if (message.operation === "manifest") return migrateManifest(JSON.parse(revision));
-  const shardSignature = () => current.project.manifest.shards.map(({ path: file }) => annotationFileSignature(path6.join(message.directory, file))).join("|");
+  const store = projectDatabase(message.directory);
+  const manifest = store.transaction(() => store.manifest(), false);
+  const revision = canonicalJson(manifest);
+  if (message.operation === "manifest") return manifest;
+  const shardSignature = () => [ANALYSIS_PROJECT_SQLITE_FILE, `${ANALYSIS_PROJECT_SQLITE_FILE}-wal`].map((file) => {
+    try {
+      return annotationFileSignature(path7.join(message.directory, file));
+    } catch (error) {
+      if (file.endsWith("-wal") && error.code === "ENOENT")
+        return "absent";
+      throw error;
+    }
+  }).join("|");
   if (!current || current.directory !== message.directory || current.revision !== revision || current.shardSignature !== shardSignature()) {
     current = void 0;
+    const project2 = sqliteSnapshot(message.directory);
     current = {
       directory: message.directory,
       revision,
-      project: loadAnalysisProjectSnapshot(message.directory),
+      project: project2,
       shardSignature: ""
     };
     current.shardSignature = shardSignature();
@@ -17483,11 +17887,25 @@ var request = (message) => {
   const { project } = current;
   if (message.operation === "navigation") {
     if (!message.navigationTarget) throw new Error("Choose an analysis location.");
-    return projectAnalysisNavigation(project, message.navigationTarget);
+    return readProjection(
+      store,
+      project,
+      () => projectAnalysisNavigation(
+        project,
+        message.navigationTarget,
+        (space, address3) => store.runtimeAt(space, address3)
+      )
+    );
   }
   if (message.operation === "sourceSummary" || message.operation === "sourceEntries") {
     if (!message.sourceId) throw new Error("Choose a source to inspect.");
-    current.sources ??= new AnalysisSourceIndex(project.manifest, project.shards);
+    if (!current.sources) {
+      current.sources = readProjection(
+        store,
+        project,
+        () => new AnalysisSourceIndex(project.manifest, project.shards, store.runtimeRecords())
+      );
+    }
     if (message.operation === "sourceSummary")
       return {
         manifest: project.manifest,
@@ -17509,8 +17927,8 @@ var request = (message) => {
     if (!message.annotationSave) throw new Error("Missing annotation edit.");
     const saved = saveDisassemblyAnnotation(message.directory, project, message.annotationSave);
     try {
-      const published = fs7.readFileSync(path6.join(message.directory, "analysis.json"), "utf8");
-      if ((0, import_node_crypto9.createHash)("sha256").update(published).digest("hex") === saved.snapshot.revision.manifestSha256) {
+      const published = fs7.readFileSync(path7.join(message.directory, "analysis.json"), "utf8");
+      if ((0, import_node_crypto7.createHash)("sha256").update(published).digest("hex") === saved.snapshot.revision.manifestSha256) {
         current = {
           directory: message.directory,
           revision: published,
@@ -17527,11 +17945,19 @@ var request = (message) => {
   if (message.operation === "heuristics") {
     if (project.manifest.target !== "snes.sfc")
       throw new Error("Function heuristics require a SNES analysis project.");
-    const file = path6.join(message.directory, "heuristics.json");
+    const file = path7.join(message.directory, "heuristics.json");
     const config = validateSnesHeuristicConfiguration(
       fs7.existsSync(file) ? JSON.parse(fs7.readFileSync(file, "utf8")) : {}
     );
-    const result = analyzeSnesFunctionRoles(project.shards, config);
+    const result = readProjection(
+      store,
+      project,
+      () => analyzeSnesFunctionRoles(
+        project.shards,
+        config,
+        store.runtimeRecordsByKinds(["runtime-memory-access"])
+      )
+    );
     return {
       enabled: config.enabled !== false,
       total: result.roles.length,
@@ -17539,7 +17965,7 @@ var request = (message) => {
     };
   }
   if (["coverage", "segments", "details"].includes(message.operation)) {
-    const map = current.coverage ??= buildRomCoverageMap(project.manifest, project.shards);
+    const map = current.coverage ??= sqliteCoverageMap(store, project);
     if (message.operation === "coverage")
       return {
         ...map,
@@ -17576,62 +18002,72 @@ var request = (message) => {
     return details;
   }
   if (message.operation === "graph") {
-    const graph = buildAnalysisCallGraph(project.shards);
-    const fileSpaces = new Set(
-      project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
-    );
-    const indexes = new Map(
-      project.manifest.addressSpaces.map(({ id }) => [
-        id,
-        new HalfOpenIntervalIndex(
-          project.shards.annotations.filter(({ addressSpace }) => addressSpace === id)
-        )
-      ])
-    );
-    const summaries3 = [
-      ...new Set(
-        project.shards.analysis.flatMap(
-          (record) => record.kind === "summary" ? [record.architecture] : []
-        )
-      )
-    ];
-    const hints = {};
-    for (const location of [
-      ...graph.functions,
-      ...graph.unresolved,
-      ...graph.calls.map((call) => ({
-        addressSpace: call.addressSpace,
-        address: call.fromAddress,
-        outputOffsets: call.fromOutputOffsets
-      }))
-    ]) {
-      const key2 = `${location.addressSpace}:${location.address}`;
-      if (hints[key2]) continue;
-      const annotations = [
-        ...indexes.get(location.addressSpace)?.at(location.address) ?? [],
-        ...[...fileSpaces].flatMap(
-          (space) => location.outputOffsets.flatMap((offset) => indexes.get(space)?.at(offset) ?? [])
-        )
-      ];
-      const runtime = project.shards.runtime.filter(
-        (record) => "addressSpace" in record && record.addressSpace === location.addressSpace && ("address" in record && record.address === location.address || record.kind === "runtime-coverage" && record.start <= location.address && location.address < record.end)
+    return readProjection(store, project, () => {
+      const graph = buildAnalysisCallGraph(project.shards);
+      const fileSpaces = new Set(
+        project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
       );
-      const architectures = [
-        .../* @__PURE__ */ new Set([
-          ...annotations.map(({ architecture }) => architecture),
-          ...runtime.map(({ architecture }) => architecture)
+      const indexes = new Map(
+        project.manifest.addressSpaces.map(({ id }) => [
+          id,
+          new HalfOpenIntervalIndex(
+            project.shards.annotations.filter(({ addressSpace }) => addressSpace === id)
+          )
         ])
+      );
+      const summaries3 = [
+        ...new Set(
+          project.shards.analysis.flatMap(
+            (record) => record.kind === "summary" ? [record.architecture] : []
+          )
+        )
       ];
-      const fallback = summaries3.length === 1 ? summaries3 : [];
-      hints[key2] = architectures.length ? architectures : fallback;
-    }
-    return { manifest: project.manifest, graph, hints };
+      const hints = {};
+      for (const location of [
+        ...graph.functions,
+        ...graph.unresolved,
+        ...graph.calls.map((call) => ({
+          addressSpace: call.addressSpace,
+          address: call.fromAddress,
+          outputOffsets: call.fromOutputOffsets
+        }))
+      ]) {
+        const key2 = `${location.addressSpace}:${location.address}`;
+        if (hints[key2]) continue;
+        const annotations = [
+          ...indexes.get(location.addressSpace)?.at(location.address) ?? [],
+          ...[...fileSpaces].flatMap(
+            (space) => location.outputOffsets.flatMap((offset) => indexes.get(space)?.at(offset) ?? [])
+          )
+        ];
+        const runtime = store.runtimeAt(location.addressSpace, location.address);
+        const architectures = [
+          .../* @__PURE__ */ new Set([
+            ...annotations.map(({ architecture }) => architecture),
+            ...Array.from(runtime, ({ architecture }) => architecture)
+          ])
+        ];
+        const fallback = summaries3.length === 1 ? summaries3 : [];
+        hints[key2] = architectures.length ? architectures : fallback;
+      }
+      return { manifest: project.manifest, graph, hints };
+    });
   }
   if (message.operation === "annotations" && !message.ranges?.length) return [];
-  current.instructions ??= buildInstructionAnalysisAnnotations(
-    project.manifest,
-    project.shards
-  ).instructions;
+  current.instructions ??= readProjection(
+    store,
+    project,
+    () => buildInstructionAnalysisAnnotations(
+      project.manifest,
+      project.shards,
+      () => store.runtimeRecordsByKinds([
+        "runtime-execution",
+        "runtime-cpu-state",
+        "runtime-memory-access",
+        "runtime-coverage"
+      ])
+    ).instructions
+  );
   if (message.operation === "debugAnnotations")
     return current.instructions.map((entry) => ({
       addressSpace: entry.addressSpace,

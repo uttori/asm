@@ -20,6 +20,6 @@
     "strict": true,
     "strictNullChecks": true,
     "target": "esnext",
-    "types": ["debug", "node", "sinon"]
+    "types": ["node", "sinon"]
   }
 }

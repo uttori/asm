@@ -1,5 +1,5 @@
 import { type SnesMapper } from "@uttori/asm-plugin-snes";
-export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-validate" | "verify-roundtrip";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-compact" | "project-validate" | "verify-roundtrip";
 export interface CliArguments {
     readonly command: CliCommand;
     readonly input?: string;
@@ -23,6 +23,7 @@ export interface CliArguments {
     readonly mesenLabels?: string;
     readonly instructionTrace?: string;
     readonly traceMaxMiB?: number;
+    readonly traceIndex?: "full" | "65816-disassembly";
     readonly entryPoints: readonly number[];
     readonly maxWorkItems?: number;
     readonly maxCallDepth?: number;

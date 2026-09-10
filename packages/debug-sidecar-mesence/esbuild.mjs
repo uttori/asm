@@ -1,7 +1,8 @@
-import { build } from "esbuild";
 import { chmodSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { build } from "esbuild";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outfile = path.join(here, "out/sidecar.mjs");
@@ -13,7 +14,7 @@ await build({
   platform: "node",
   format: "esm",
   target: "node20",
-  external: ["debug"],
+  external: [],
   banner: { js: "#!/usr/bin/env node" },
   logLevel: "info",
 });

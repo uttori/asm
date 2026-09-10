@@ -1,6 +1,6 @@
+import type { ArchitectureDefinition } from "../architecture-registry.js";
 import type { LoweredInstruction } from "../architecture-types.js";
 import type { ConditionalBranch, ConditionalBranchNode, ExecutableNode, LoopNode } from "../ir/assembly-tree.js";
-import type { ArchitectureDefinition } from "../architecture-registry.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
 import type { ProgramModel } from "./program-model-builder.js";
 export type LoweredDirective = {

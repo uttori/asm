@@ -1,5 +1,5 @@
-import { type DebugSidecarEvent, type DebugSidecarProtocolLimits, type DebugSidecarRequest } from "./sidecar-protocol.js";
 import type { DebugSubscription } from "./contracts.js";
+import { type DebugSidecarEvent, type DebugSidecarProtocolLimits, type DebugSidecarRequest } from "./sidecar-protocol.js";
 /** Byte-stream transport implemented by stdio or a loopback socket host. */
 export interface DebugSidecarTransport {
     write(data: Uint8Array): Promise<void>;

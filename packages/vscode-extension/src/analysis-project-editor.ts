@@ -2,6 +2,7 @@
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+
 import {
   RANGE_CLASSIFICATIONS,
   applyLabelRenameEdit,
@@ -10,9 +11,10 @@ import {
   applyStateEntryPointEdit,
   applyTargetResolutionEdit,
   canonicalJson,
-  commitAnalysisProjectTransaction,
+  commitAnalysisProjectViewUpdate,
   explainProjectEvidence,
   loadAnalysisProjectSnapshot,
+  loadAnalysisProjectViewSnapshot,
   revertLabelRenameEdit,
   revertDisassemblyAnnotationEdit,
   revertRangeClassificationEdit,
@@ -35,14 +37,44 @@ import {
   type TargetResolutionInverse,
 } from "@uttori/asm-disassembler";
 import { commands, Uri, window, workspace, type Disposable } from "vscode";
+
 import { discoverAnalysisDebugMapFiles } from "./analysis-debug-maps.js";
 import { analysisWorker } from "./analysis-worker-client.js";
-import type { AnnotationLookupResult } from "./disassembly-annotation-data.js";
-import { openDisassemblyAnnotationForm } from "./disassembly-annotation-form.js";
 import {
   findAnalysisProjectDirectories,
   type AnalysisCoverageEditTarget,
 } from "./coverage-tree.js";
+import type { AnnotationLookupResult } from "./disassembly-annotation-data.js";
+import { openDisassemblyAnnotationForm } from "./disassembly-annotation-form.js";
+
+/**
+ * Editing changes metadata only; runtime remains in SQLite through edits and undo/redo.
+ * @param {string} directory Selected project root.
+ * @returns {AnalysisProjectSnapshot} Metadata in the editor's record shape, paired with its revision.
+ */
+const loadEditableSnapshot = (directory: string): AnalysisProjectSnapshot => {
+  const loaded = loadAnalysisProjectViewSnapshot(directory);
+  return { manifest: loaded.manifest, shards: loaded.view, revision: loaded.revision };
+};
+
+/**
+ * Publish metadata edits without replacing the runtime history omitted from the editor snapshot.
+ * @param {string} directory Selected project root.
+ * @param {AnalysisProjectSnapshot} snapshot Original metadata and optimistic token.
+ * @param {AnalysisProject} project Edited metadata from an edit or inverse operation.
+ */
+const commitEditableSnapshot = (
+  directory: string,
+  snapshot: AnalysisProjectSnapshot,
+  project: AnalysisProject,
+): void => {
+  const { runtime: _runtime, ...updates } = project.shards;
+  commitAnalysisProjectViewUpdate(
+    directory,
+    { manifest: snapshot.manifest, view: snapshot.shards, revision: snapshot.revision },
+    updates,
+  );
+};
 
 interface RangeHistoryEntry {
   readonly kind: "range";
@@ -222,7 +254,7 @@ export class AnalysisProjectEditor {
         "Classify Analysis Range",
       );
       if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
+      const snapshot = loadEditableSnapshot(projectDirectory);
       if (snapshot.manifest.rom.contentSize === 0) {
         await window.showErrorMessage(
           "The selected analysis project has no ROM content to classify.",
@@ -353,7 +385,7 @@ export class AnalysisProjectEditor {
         ...(detail.trim() ? { detail: detail.trim() } : {}),
       };
       const applied = applyRangeClassificationEdit(snapshot, request);
-      commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, applied.project);
+      commitEditableSnapshot(projectDirectory, snapshot, applied.project);
       this.#undo.push({ kind: "range", projectDirectory, request, inverse: applied.inverse });
       this.#redo.length = 0;
       await this.updateContexts();
@@ -384,7 +416,7 @@ export class AnalysisProjectEditor {
         "Set Analysis State / Entry Point",
       );
       if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
+      const snapshot = loadEditableSnapshot(projectDirectory);
       const targetIds = new Set(target?.annotationIds ?? []);
       const candidates = snapshot.shards.annotations
         .filter((annotation) => !target || targetIds.has(annotation.id))
@@ -450,7 +482,7 @@ export class AnalysisProjectEditor {
         ...(detail.trim() ? { detail: detail.trim() } : {}),
       };
       const applied = applyStateEntryPointEdit(snapshot, request);
-      commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, applied.project);
+      commitEditableSnapshot(projectDirectory, snapshot, applied.project);
       this.#undo.push({
         kind: "state-entry",
         projectDirectory,
@@ -485,7 +517,7 @@ export class AnalysisProjectEditor {
         "Resolve Indirect Target",
       );
       if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
+      const snapshot = loadEditableSnapshot(projectDirectory);
       const sites = new Map<
         string,
         {
@@ -586,7 +618,7 @@ export class AnalysisProjectEditor {
         ...(detail.trim() ? { detail: detail.trim() } : {}),
       };
       const applied = applyTargetResolutionEdit(snapshot, request);
-      commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, applied.project);
+      commitEditableSnapshot(projectDirectory, snapshot, applied.project);
       this.#undo.push({ kind: "target", projectDirectory, request, inverse: applied.inverse });
       this.#redo.length = 0;
       await this.updateContexts();
@@ -783,7 +815,7 @@ export class AnalysisProjectEditor {
         "Rename Analysis Label",
       );
       if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
+      const snapshot = loadEditableSnapshot(projectDirectory);
       if (snapshot.shards.labels.length === 0) {
         await window.showErrorMessage("The selected project has no label to rename.");
         return;
@@ -833,7 +865,7 @@ export class AnalysisProjectEditor {
         ...(detail.trim() ? { detail: detail.trim() } : {}),
       };
       const applied = applyLabelRenameEdit(snapshot, request);
-      commitAnalysisProjectTransaction(projectDirectory, snapshot.revision, applied.project);
+      commitEditableSnapshot(projectDirectory, snapshot, applied.project);
       this.#undo.push({ kind: "label", projectDirectory, request, inverse: applied.inverse });
       this.#redo.length = 0;
       await this.updateContexts();
@@ -902,9 +934,9 @@ export class AnalysisProjectEditor {
     }
     try {
       this.assertTrustedProject(entry.projectDirectory);
-      const snapshot = loadAnalysisProjectSnapshot(entry.projectDirectory);
+      const snapshot = loadEditableSnapshot(entry.projectDirectory);
       const project = this.revertEdit(snapshot, entry);
-      commitAnalysisProjectTransaction(entry.projectDirectory, snapshot.revision, project);
+      commitEditableSnapshot(entry.projectDirectory, snapshot, project);
       this.#undo.pop();
       this.#redo.push(entry);
       await this.updateContexts();
@@ -923,13 +955,9 @@ export class AnalysisProjectEditor {
     }
     try {
       this.assertTrustedProject(entry.projectDirectory);
-      const snapshot = loadAnalysisProjectSnapshot(entry.projectDirectory);
+      const snapshot = loadEditableSnapshot(entry.projectDirectory);
       const reapplied = this.reapplyEdit(snapshot, entry);
-      commitAnalysisProjectTransaction(
-        entry.projectDirectory,
-        snapshot.revision,
-        reapplied.project,
-      );
+      commitEditableSnapshot(entry.projectDirectory, snapshot, reapplied.project);
       this.#redo.pop();
       this.#undo.push(reapplied.history);
       await this.updateContexts();

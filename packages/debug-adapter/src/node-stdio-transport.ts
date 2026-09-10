@@ -1,8 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 
 import type { DebugSubscription } from "./contracts.js";
-import { assertDebugSidecarSessionToken } from "./sidecar-protocol.js";
 import type { DebugSidecarTransport } from "./sidecar-client.js";
+import { assertDebugSidecarSessionToken } from "./sidecar-protocol.js";
 
 /** Environment variable inherited by a native sidecar instead of exposing its token in argv. */
 export const DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION" as const;

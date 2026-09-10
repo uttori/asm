@@ -2,12 +2,12 @@ import { RomImage } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
 import { Assembler } from "../../../tests/test-assembler.js";
-import { Spc700AramImage } from "../src/disassembler/spc700-address-space.js";
 import {
   renderSpc700AramSource,
   renderSpc700UploadSource,
   renderSuperFxRomSource,
 } from "../src/disassembler/processor-source-export.js";
+import { Spc700AramImage } from "../src/disassembler/spc700-address-space.js";
 import { parseSpc700UploadStream } from "../src/disassembler/spc700-upload.js";
 import { SuperFxRomImage } from "../src/disassembler/superfx-address-space.js";
 
@@ -60,4 +60,17 @@ test("generated SuperFX native source round-trips base, fused ALT, branch, and t
   t.true(source.includes("SMS ($0040),R2"));
   t.true(source.includes("db $F0"));
   t.deepEqual(assemble(source), bytes);
+});
+
+test("maximum-size SPC700 upload retains every instruction and round-trips as linear bytes", (t) => {
+  // One-byte NOPs maximize rendered line count within the upload format's 16-bit length.
+  const bytes = new Uint8Array(4 + 0xffff + 4);
+  bytes.set([0xff, 0xff, 0x00, 0x00]);
+  const rom = new RomImage(bytes, { headerSize: 0 });
+  const source = renderSpc700UploadSource(rom, parseSpc700UploadStream(rom, 0));
+  t.is(source.split("\n").filter((line) => line === "NOP").length, 0xffff);
+  // This fixture is an upload stream, not a cartridge: linear output avoids LoROM bank
+  // aliases and automatic cartridge checksums modifying bytes inside the large payload.
+  const linearSource = source.replace("lorom\norg $008000", "norom\norg $000000");
+  t.true(Buffer.from(assemble(linearSource)).equals(bytes));
 });

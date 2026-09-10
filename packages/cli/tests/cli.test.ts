@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { CRC32, validateDebugMap, type DebugMap } from "@uttori/asm-core";
 import { loadAnalysisProject, writeAnalysisProject } from "@uttori/asm-disassembler";
+
 import { test } from "../../../tests/ava-helper.js";
 import { parseCliArguments, runCli, usage } from "../src/index.js";
 
@@ -147,6 +148,7 @@ test("CLI parses analysis project commands and validates mapper/header options",
     "--mesen-labels=game.mlb",
     "--instruction-trace=game.uttori-trace.json",
     "--trace-max-mib=4096",
+    "--trace-index=65816-disassembly",
   ]);
   t.is(evidence.command, "evidence-import");
   t.is(evidence.mesenCdl, "game.cdl");
@@ -155,6 +157,10 @@ test("CLI parses analysis project commands and validates mapper/header options",
   t.is(evidence.mesenLabels, "game.mlb");
   t.is(evidence.instructionTrace, "game.uttori-trace.json");
   t.is(evidence.traceMaxMiB, 4096);
+  t.is(evidence.traceIndex, "65816-disassembly");
+  t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-index=sample"]), {
+    message: /full or 65816-disassembly/,
+  });
   t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-max-mib=0"]), {
     message: /positive integer/,
   });
@@ -247,17 +253,21 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
       labelsFile,
       "--instruction-trace",
       instructionTraceFile,
+      "--trace-index=65816-disassembly",
     ];
     t.is(await runCli(importArguments), 0);
     const imported = loadAnalysisProject(project);
+    t.true(
+      imported.shards.imports.some((report) => report.indexProfile === "65816-disassembly-v1"),
+    );
     t.true(imported.shards.runtime.length > 0);
     t.true(imported.shards.annotations.some((annotation) => annotation.state?.m === false));
     t.true(imported.shards.labels.some((label) => label.name === "TraceEntry"));
     const manifestBefore = await fs.readFile(path.join(project, "analysis.json"), "utf8");
-    const runtimeBefore = await fs.readFile(path.join(project, "analysis/runtime.json"), "utf8");
+    const runtimeBefore = imported.shards.runtime;
     t.is(await runCli(importArguments), 0);
     t.is(await fs.readFile(path.join(project, "analysis.json"), "utf8"), manifestBefore);
-    t.is(await fs.readFile(path.join(project, "analysis/runtime.json"), "utf8"), runtimeBefore);
+    t.deepEqual(loadAnalysisProject(project).shards.runtime, runtimeBefore);
 
     t.is(await runCli(["evidence-report", project, reportFile]), 0);
     const report = JSON.parse(await fs.readFile(reportFile, "utf8")) as {
@@ -315,7 +325,7 @@ test("CLI persists conservative 65816 analysis without embedding ROM bytes", asy
     await fs.writeFile(rom, bytes);
     t.is(await runCli(["disassemble", rom, project, "--mapper=lorom"]), 0);
     t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-    // Transactions publish generation-specific shards through the manifest;
+    // Transactions publish analysis rows in SQLite;
     // the original conventional path is no longer the current snapshot.
     const records = loadAnalysisProject(project).shards.analysis;
     t.true(records.some((record) => record.kind === "cfg-node" && record.mnemonic === "STP"));

@@ -13,25 +13,25 @@ import type {
   TargetFactoryContext,
 } from "@uttori/asm-core/plugin";
 
-import { Arch65816 } from "./architectures/65816.js";
 import { Cpu65816Decoder } from "./architectures/65816-decoder.js";
 import { cpu65816Specifications } from "./architectures/65816-spec.js";
-import { ArchSPC700 } from "./architectures/spc700.js";
-import { Spc700Decoder } from "./architectures/spc700-decoder.js";
-import { spc700Specifications } from "./architectures/spc700-spec.js";
-import { ArchSuperFX } from "./architectures/superfx.js";
-import { SuperFxDecoder } from "./architectures/superfx-decoder.js";
-import { superFxSpecifications } from "./architectures/superfx-spec.js";
+import { Arch65816 } from "./architectures/65816.js";
 import {
   classify65816Operand,
   classifySpc700Operand,
   classifySuperFxOperand,
 } from "./architectures/operand-classifiers.js";
+import { Spc700Decoder } from "./architectures/spc700-decoder.js";
+import { spc700Specifications } from "./architectures/spc700-spec.js";
+import { ArchSPC700 } from "./architectures/spc700.js";
 import {
   splitCommaOperands,
   splitSingleOperand,
   splitTopLevelCommaOperands,
 } from "./architectures/split-operands.js";
+import { SuperFxDecoder } from "./architectures/superfx-decoder.js";
+import { superFxSpecifications } from "./architectures/superfx-spec.js";
+import { ArchSuperFX } from "./architectures/superfx.js";
 import {
   ASAR_COMPAT_NO_OP_DIRECTIVES,
   applyMapperSelection,

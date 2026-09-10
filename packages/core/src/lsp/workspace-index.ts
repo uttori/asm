@@ -1,18 +1,19 @@
 import path from "node:path";
+
 import { Assembler } from "../assembler.js";
-import type { AssemblerEnvironment } from "../plugin/environment.js";
-import type { ToolingCatalog } from "../plugin/contracts.js";
-import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
 import type {
   AssemblyDiagnostic,
   AssemblyIncludeEdge,
   AssemblySymbolDefinition,
   AssemblySymbolReference,
 } from "../diagnostics.js";
-import { OverlayFileProvider } from "./overlay-file-provider.js";
-import type { DirectiveDescriptor } from "./directive-catalog.js";
-import { hashBytes, RootAnalysisCache, type CachedRootAnalysis } from "./root-analysis-cache.js";
 import { measureInternalPhase } from "../internal-instrumentation.js";
+import type { ToolingCatalog } from "../plugin/contracts.js";
+import type { AssemblerEnvironment } from "../plugin/environment.js";
+import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
+import type { DirectiveDescriptor } from "./directive-catalog.js";
+import { OverlayFileProvider } from "./overlay-file-provider.js";
+import { hashBytes, RootAnalysisCache, type CachedRootAnalysis } from "./root-analysis-cache.js";
 
 /**
  * The per-file slice of analysis artifacts produced for a single source file.

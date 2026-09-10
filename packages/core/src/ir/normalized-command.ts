@@ -1,10 +1,10 @@
+import { incrementInternalCounter } from "../internal-instrumentation.js";
+import { createLineSpan, deriveTokenSpans, type SourceSpan } from "../source-location.js";
 import {
   parseExpressionNode,
   type ExpressionNode,
   type RangeExpressionNode,
 } from "./expression-node.js";
-import { createLineSpan, deriveTokenSpans, type SourceSpan } from "../source-location.js";
-import { incrementInternalCounter } from "../internal-instrumentation.js";
 
 export type CommandKind =
   | "unknown"

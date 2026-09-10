@@ -1,4 +1,5 @@
 import type { InstructionDescriptor } from "@uttori/asm-core";
+
 import type { InstructionForm } from "./schema.js";
 
 /** Hover/completion syntax strings keyed by addressing mode. */

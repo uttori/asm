@@ -1,3 +1,4 @@
+import { test } from "../../../tests/ava-helper.js";
 import {
   DEBUG_SIDECAR_PROTOCOL,
   DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -9,7 +10,6 @@ import {
   type DebugSidecarMessage,
   type DebugSidecarRequest,
 } from "../src/index.js";
-import { test } from "../../../tests/ava-helper.js";
 import { debugConformanceScript } from "./fixtures/debug-conformance-fixture.js";
 
 const request = (

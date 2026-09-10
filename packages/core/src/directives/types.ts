@@ -1,7 +1,7 @@
 import type { ArchitectureRegistry } from "../architecture-registry.js";
-import type { OperandResolver } from "../operand-resolver.js";
 import type { ExpressionNode } from "../ir/expression-node.js";
 import type { NormalizedCommand } from "../ir/normalized-command.js";
+import type { OperandResolver } from "../operand-resolver.js";
 import type { IncludeSourceService } from "../services/include-source-service.js";
 import type { OutputWriterService } from "../services/output-writer-service.js";
 import type { StructEngine } from "../services/struct-engine.js";

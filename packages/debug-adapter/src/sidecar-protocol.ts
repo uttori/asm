@@ -23,6 +23,7 @@ export const DEBUG_SIDECAR_COMMANDS = Object.freeze([
   "startTrace",
   "readTrace",
   "stopTrace",
+  "capture",
   "ping",
   "shutdown",
 ] as const);

@@ -1,6 +1,6 @@
-import { type SnesHeuristicConfiguration } from "./function-heuristics.js";
 import { type AnalysisProjectManifest, type ByteComparison, type ImportReport, type ProjectMapping, type RomIdentity, type SourceExportManifest, type StaticAnalysisIncompleteReason } from "@uttori/asm-disassembler";
 import { type Snes65816EntryPoint } from "./65816-analysis.js";
+import { type SnesHeuristicConfiguration } from "./function-heuristics.js";
 import { type SnesMapper, type SnesRomDetection } from "./rom-header.js";
 /** Stable target id written to native SNES analysis projects. */
 declare const TARGET_ID = "snes.sfc";

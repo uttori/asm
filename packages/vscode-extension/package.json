@@ -877,6 +877,16 @@
           "default": 4096,
           "description": "JavaScript heap budget in MiB for the isolated analysis-view process and each disassembly maintenance process. Increase for large analysis projects. Maintenance phases exit before the next starts; views reuse a validated project cache. Total process memory may exceed the heap budget."
         },
+        "asm.trace.indexMode": {
+          "type": "string",
+          "scope": "resource",
+          "enum": [
+            "full",
+            "65816-disassembly"
+          ],
+          "default": "full",
+          "description": "How native instruction captures are indexed. Full retains complete register snapshots in the analysis project. 65816-disassembly keeps every fetched-byte and decoding-state variant plus exact execution counts and bus observations, while other register history remains in the original capture. Use it for very large 65816 captures."
+        },
         "asm.trace.maxImportSizeMiB": {
           "type": "integer",
           "scope": "resource",
@@ -894,6 +904,16 @@
           ],
           "default": "off",
           "description": "Traces the communication between VS Code and the Uttori Assembly language server."
+        },
+        "asm.debug.traceMode": {
+          "type": "string",
+          "scope": "resource",
+          "enum": [
+            "live",
+            "lossless-instructions"
+          ],
+          "default": "live",
+          "description": "Runtime trace recording mode. Lossless instructions requires the capture-v2 ares runtime, retains every 65816 instruction with fetched bytes and state, throttles emulation while storage drains, and writes a durable ACT2 archive plus an importable JSON trace. CPU/DMA/HDMA bus history is excluded. Behavior captures retain the live trace workflow."
         },
         "asm.debug.traceDetail": {
           "type": "string",

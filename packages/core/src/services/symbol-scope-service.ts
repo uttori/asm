@@ -1,5 +1,5 @@
-import type { StructDefinition } from "./struct-engine.js";
 import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "../syntax-profile.js";
+import type { StructDefinition } from "./struct-engine.js";
 
 export type LabelEntry = {
   value: number;
@@ -370,7 +370,8 @@ export class SymbolScopeService {
       throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
     }
 
-    return Math.min(...possibleTargets);
+    // Generated source can define more local labels than V8 permits as function arguments.
+    return possibleTargets.reduce((nearest, address) => Math.min(nearest, address), Infinity);
   }
 
   /**
@@ -408,7 +409,8 @@ export class SymbolScopeService {
       throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
     }
 
-    return Math.max(...possibleTargets);
+    // Fold candidates without changing nearest-label selection or expanding the call stack.
+    return possibleTargets.reduce((nearest, address) => Math.max(nearest, address), -Infinity);
   }
 
   /**

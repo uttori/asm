@@ -4,6 +4,7 @@
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  */
 import * as path from "node:path";
+
 import {
   commands,
   ConfigurationTarget,
@@ -27,18 +28,17 @@ import {
   type LanguageClientOptions,
   type ServerOptions,
 } from "vscode-languageclient/node";
+
 import {
   AnalysisAnnotationController,
   TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
 } from "./analysis-annotation-controller.js";
-import { initializeAnalysisWorker } from "./analysis-worker-client.js";
-import { AnalysisProjectEditor } from "./analysis-project-editor.js";
 import { AnalysisGraphProvider } from "./analysis-graph-tree.js";
-import { AnalysisSourcesProvider } from "./analysis-sources-tree.js";
 import { navigateToAnalysisLocation } from "./analysis-navigation.js";
+import { AnalysisProjectEditor } from "./analysis-project-editor.js";
+import { AnalysisSourcesProvider } from "./analysis-sources-tree.js";
+import { initializeAnalysisWorker } from "./analysis-worker-client.js";
 import { AnalysisCoverageProvider } from "./coverage-tree.js";
-import { ProjectOutlineProvider } from "./outline-tree.js";
-import { ProjectPanelProvider } from "./panel.js";
 import {
   configureEmulatorRuntime,
   configuredEmulatorRuntime,
@@ -46,8 +46,10 @@ import {
   registerDebugging,
   type BuiltDebugArtifacts,
 } from "./debug.js";
-import { registerProjectWizards } from "./project-wizard.js";
 import { registerDisassemblyMaintenance } from "./disassembly-maintenance.js";
+import { ProjectOutlineProvider } from "./outline-tree.js";
+import { ProjectPanelProvider } from "./panel.js";
+import { registerProjectWizards } from "./project-wizard.js";
 
 /**
  * The result of a build request returned by the language server.

@@ -264,6 +264,13 @@ export class DebugSidecarServer {
         address(args.address, "Disassembly address"),
         integer(args.count, "Disassembly count"),
       );
+    if (request.command === "capture") {
+      const capture = args as CaptureRequestV2;
+      validateCaptureRequest(capture);
+      if (!this.#implementation.capture)
+        throw new Error("This backend does not support capture v2.");
+      return this.#implementation.capture(capture);
+    }
     if (request.command === "startTrace") {
       if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full")
         throw new Error("Trace detail must be pc or full.");
@@ -354,3 +361,4 @@ export class DebugSidecarServer {
     return write;
   }
 }
+import { validateCaptureRequest, type CaptureRequestV2 } from "./capture-v2.js";
