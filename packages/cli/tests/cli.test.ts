@@ -108,6 +108,9 @@ test("CLI parses analysis project commands and validates mapper/header options",
   const validate = parseCliArguments(["project-validate", "game.analysis", "--rom=game.sfc"]);
   t.is(validate.command, "project-validate");
   t.is(validate.rom, "game.sfc");
+  const migrate = parseCliArguments(["project-migrate", "game.analysis"]);
+  t.is(migrate.command, "project-migrate");
+  t.is(migrate.input, "game.analysis");
   const analyze = parseCliArguments([
     "analyze",
     "game.analysis",
@@ -268,6 +271,21 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
     t.is(await runCli(importArguments), 0);
     t.is(await fs.readFile(path.join(project, "analysis.json"), "utf8"), manifestBefore);
     t.deepEqual(loadAnalysisProject(project).shards.runtime, runtimeBefore);
+    const nativeArguments = [
+      "evidence-import",
+      project,
+      "--rom",
+      romFile,
+      "--instruction-trace",
+      instructionTraceFile,
+      "--trace-index=65816-disassembly",
+    ];
+    t.is(await runCli(nativeArguments), 0);
+    t.is(await fs.readFile(path.join(project, "analysis.json"), "utf8"), manifestBefore);
+    t.deepEqual(loadAnalysisProject(project).shards.runtime, runtimeBefore);
+    // A profile conflict must leave the earlier combined import untouched in the disk path too.
+    t.is(await runCli([...nativeArguments.slice(0, -1), "--trace-index=full"]), 1);
+    t.deepEqual(loadAnalysisProject(project), imported);
 
     t.is(await runCli(["evidence-report", project, reportFile]), 0);
     const report = JSON.parse(await fs.readFile(reportFile, "utf8")) as {
@@ -306,6 +324,13 @@ test("CLI creates and validates a hash-gated analysis project", async (t) => {
       ),
     );
     t.is(await runCli(["project-validate", project, "--rom", rom]), 0);
+    const databaseBeforeMigration = await fs.readFile(path.join(project, "analysis.sqlite"));
+    t.is(await runCli(["project-migrate", project]), 0);
+    t.deepEqual(await fs.readFile(path.join(project, "analysis.sqlite")), databaseBeforeMigration);
+    t.deepEqual(
+      JSON.parse(await fs.readFile(path.join(project, "analysis.json"), "utf8")),
+      manifest,
+    );
     await fs.writeFile(rom, new Uint8Array(0x8000));
     t.is(await runCli(["project-validate", project, "--rom", rom]), 1);
   } finally {

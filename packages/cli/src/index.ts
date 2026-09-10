@@ -13,12 +13,15 @@ import {
   inspectRuntimeEvidence,
   importRuntimeInstructionTrace,
   importRuntimeInstructionTraceFile,
+  importRuntimeTraceIntoProject,
+  openAnalysisProjectStore,
   loadAnalysisProject,
+  loadAnalysisProjectView,
   loadSourceExportManifest,
   mergeRuntimeEvidence,
-  validateAnalysisProject,
   validateSourceExportFiles,
   compactAnalysisProject,
+  migrateAnalysisProjectStorage,
   commitAnalysisProjectTransaction,
   loadAnalysisProjectSnapshot,
   validateProjectRom,
@@ -54,6 +57,7 @@ export type CliCommand =
   | "export"
   | "mesen-labels-export"
   | "project-compact"
+  | "project-migrate"
   | "project-validate"
   | "verify-roundtrip";
 
@@ -101,6 +105,7 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
   uttori-asm project-compact <project-directory>
+  uttori-asm project-migrate <project-directory>
 
 Project options:
   --mapper <${SNES_MAPPERS.join("|")}>
@@ -154,6 +159,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     argv[0] === "export" ||
     argv[0] === "mesen-labels-export" ||
     argv[0] === "project-compact" ||
+    argv[0] === "project-migrate" ||
     argv[0] === "project-validate" ||
     argv[0] === "verify-roundtrip"
   ) {
@@ -468,11 +474,16 @@ const createAnalysisProject = (parsed: CliArguments, cwd: string): number => {
 const validateProject = (parsed: CliArguments, cwd: string): number => {
   const directory = path.resolve(cwd, parsed.input!);
   try {
-    const loaded = loadAnalysisProject(directory);
+    // The loader validates each runtime fact before passing it to this sink. Validation should
+    // neither retain millions of facts nor reload the entire project to check its ROM identity.
+    const loaded = loadAnalysisProjectView(directory, () => ({
+      push: () => undefined,
+      finish: () => [],
+    }));
     const rom = parsed.rom
       ? RomImage.load(path.resolve(cwd, parsed.rom), { headerSize: loaded.manifest.rom.headerSize })
       : undefined;
-    validateAnalysisProject(directory, rom);
+    if (rom) validateProjectRom(loaded.manifest, rom);
     console.log(
       `Success: Analysis project '${directory}' is valid${rom ? " and its ROM identity matches" : ""}.`,
     );
@@ -506,6 +517,47 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
     return 1;
   }
   try {
+    // A native capture on its own can use the shared disk importer without loading prior history.
+    // Mixed-format imports retain the all-or-nothing batch path below so a later invalid input
+    // cannot leave earlier files partially published.
+    if (parsed.instructionTrace && !parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels) {
+      const store = openAnalysisProjectStore(directory);
+      const manifest = (() => {
+        try {
+          return store.transaction(() => store.manifest(), false);
+        } finally {
+          store.close();
+        }
+      })();
+      const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
+        headerSize: manifest.rom.headerSize,
+      });
+      validateProjectRom(manifest, rom);
+      if (!SNES_MAPPERS.includes(manifest.mapping.mapper as SnesMapper))
+        throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
+      const filename = path.resolve(cwd, parsed.instructionTrace);
+      const result = await importRuntimeTraceIntoProject(
+        filename,
+        directory,
+        {
+          projectRomContentSha256: manifest.rom.contentSha256,
+          sourceName: path.basename(filename),
+          indexMode: parsed.traceIndex,
+        },
+        {
+          maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024,
+          onStage: (stage) => console.log(stage),
+        },
+      );
+      const action = result.changed ? "updated" : "no-op reimport for";
+      console.log(
+        `Success: ${action} '${directory}'; ${result.added.runtime} new runtime record(s).`,
+      );
+      console.log(
+        `Import: ${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported.`,
+      );
+      return 0;
+    }
     const loaded = loadAnalysisProjectSnapshot(directory);
     const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
       headerSize: loaded.manifest.rom.headerSize,
@@ -600,8 +652,6 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
       const { shards: ignoredShards, ...manifest } = loaded.manifest;
       void ignoredShards;
       commitAnalysisProjectTransaction(directory, loaded.revision, { manifest, shards });
-    } else {
-      compactAnalysisProject(directory);
     }
     const importAction = changed ? "updated" : "no-op reimport for";
     let diagnosticSummary = "detailed diagnostics deferred for compact trace indexing.";
@@ -664,11 +714,11 @@ const exportProjectMesenLabels = (parsed: CliArguments, cwd: string): number => 
     return 1;
   }
   try {
-    const loaded = loadAnalysisProject(directory);
+    const loaded = loadAnalysisProjectView(directory);
     const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
       headerSize: loaded.manifest.rom.headerSize,
     });
-    validateAnalysisProject(directory, rom);
+    validateProjectRom(loaded.manifest, rom);
     if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
       throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
     }
@@ -676,8 +726,8 @@ const exportProjectMesenLabels = (parsed: CliArguments, cwd: string): number => 
       ? path.resolve(cwd, parsed.output)
       : defaultOutputPath(directory, ".mlb");
     const result = exportMesenLabels(
-      loaded.shards.labels,
-      loaded.shards.comments,
+      loaded.view.labels,
+      loaded.view.comments,
       rom,
       loaded.manifest.mapping.mapper as SnesMapper,
       path.basename(output),
@@ -1001,6 +1051,27 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
   }
   if (parsed.command === "project-validate") {
     return validateProject(parsed, cwd);
+  }
+  if (parsed.command === "project-migrate") {
+    try {
+      const result = await migrateAnalysisProjectStorage(path.resolve(cwd, parsed.input), {
+        onProgress: ({ phase, table, records }) => {
+          if (records === undefined || records % 100000 === 0)
+            console.log(
+              `Storage migration: ${phase}${table ? ` ${table}` : ""}${records === undefined ? "" : ` (${records} records)`}.`,
+            );
+        },
+      });
+      console.log(
+        `Success: storage format ${result.storageVersion}; ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`,
+      );
+      if (result.backupFile) console.log(`Verified original retained at '${result.backupFile}'.`);
+      for (const warning of result.warnings) console.warn(warning);
+      return result.warnings.length ? 1 : 0;
+    } catch (error) {
+      console.error(`Project storage migration failed: ${formatFailure(error)}`);
+      return 1;
+    }
   }
   if (parsed.command === "project-compact") {
     try {

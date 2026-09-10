@@ -50,17 +50,27 @@ An uncompressed DiztinGUIsh project can be imported while creating the project:
 uttori-asm disassemble game.sfc game.analysis --dizraw game.dizraw --mapper hirom
 ```
 
-The importer stores its deterministic loss report in the manifest-selected imports shard. Compressed `.diz` input and `.dizraw` export are unsupported.
+The importer stores its deterministic loss report in SQLite's imports table. Compressed `.diz` input and `.dizraw` export are unsupported.
 
-Analysis storage is compressed and automatically pruned after imports and analysis publication. The current and previous committed snapshots are retained, with identical files shared between them. No-op imports also run storage maintenance. To compact an existing project and reclaim legacy history:
+Standalone `--instruction-trace` imports stream through SQLite without loading prior runtime history. Combined Mesen/native imports retain the existing atomic in-memory batch path; use separate commands for large captures.
+
+SQLite storage format 1 normalizes runtime identifiers and provenance and selectively compresses larger record payloads. Imports preserve prior runtime history; exact reimports do not rewrite records or run VACUUM. To upgrade the earlier SQLite layout, close clients using the project and run:
+
+```sh
+uttori-asm project-migrate game.analysis
+```
+
+Migration streams and validates every record, verifies per-table content digests, and atomically publishes the new database without changing its logical revision. It retains `analysis.sqlite.storage-v0.backup`; archive or remove that original only after checking the migrated project. Running the command again recovers interrupted staging/publication when the prior process is no longer active. No JSON/shard migration path is provided.
+
+To reclaim unused pages in a current-format database during explicit maintenance:
 
 ```sh
 uttori-asm project-compact game.analysis
 ```
 
-Compaction verifies a lossless decoded round trip before switching the manifest and removing legacy snapshots. Existing record identities and evidence are preserved.
+Compaction checkpoints WAL, prunes unused dictionary entries, and runs VACUUM. It preserves logical records and revision and checks that there is sufficient temporary disk space. See the [storage audit and migration rationale](../../docs/performance/sqlite-som-storage-audit.md).
 
-Validate shard hashes and schema compatibility, optionally checking the exact ROM identity:
+Validate metadata and stream runtime history, optionally checking the exact ROM identity:
 
 ```sh
 uttori-asm project-validate game.analysis --rom game.sfc
@@ -74,7 +84,7 @@ uttori-asm analyze game.analysis --rom game.sfc
 
 Additional entry points can be supplied with repeatable `--entry` options using `$`, `0x`, or decimal notation. `--max-work-items` and `--max-call-depth` bound hostile or recursive control flow; hitting either bound writes an explicit incomplete result rather than silently truncating it.
 
-Editable `target-set` and `target-override` records in `analysis/control-flow.json` are retained on subsequent runs and take precedence over unresolved static targets.
+Editable `target-set` and `target-override` records in the SQLite analysis table are retained on subsequent runs and take precedence over unresolved static targets.
 
 ROM bytes are never copied into the project.
 

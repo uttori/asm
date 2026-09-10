@@ -2,6 +2,8 @@ import { type AnalysisProjectManifest, type AnalysisProjectShards, type RuntimeE
 import type { RuntimeTraceFactIndex } from "./runtime-trace.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
+/** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
+export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 1;
 /**
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
@@ -18,9 +20,10 @@ export declare class SqliteAnalysisStore {
     /**
      * Opens or creates a project database.
      * @param {string} file Absolute sqlite path.
-     * @param {boolean} [createSchema] Whether to apply DDL.
+     * @param {boolean} [createSchema] Permit initialization of an empty database; never upgrade an existing one.
+     * @param {boolean} [deferIndexes] Migration-only bulk load; finishMigration must build indexes before publication.
      */
-    constructor(file: string, createSchema?: boolean);
+    constructor(file: string, createSchema?: boolean, deferIndexes?: boolean);
     /**
      * Preserve the triggering error when SQLite has already aborted (for example SQLITE_FULL).
      * A cleanup error must never replace the original failure reported to the user.
@@ -48,6 +51,12 @@ export declare class SqliteAnalysisStore {
      * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
      */
     replaceTables(shards: Partial<AnalysisProjectShards>): void;
+    /**
+     * Append validated migration rows without materializing a complete table or comparing absent IDs.
+     * @param {ShardKind} kind Destination semantic table.
+     * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+     */
+    appendRecords<K extends ShardKind>(kind: K, records: Iterable<AnalysisProjectShards[K][number]>): void;
     /**
      * Insert a content-addressed runtime fact once; an ID collision with different content is an
      * error, never a silent no-op. Count values are already aggregated within the source capture.
@@ -100,6 +109,24 @@ export declare class SqliteAnalysisStore {
      * @returns {Array} Decoded metadata in deterministic display order.
      */
     loadTable<K extends Exclude<ShardKind, "runtime">>(kind: K): AnalysisProjectShards[K];
+    /**
+     * Stream decoded records in insertion order for migration digest verification.
+     * @param {ShardKind} kind Semantic table to traverse.
+     * @returns {IterableIterator} Cursor retaining only the current decoded record.
+     * @yields {object} Original semantic record.
+     */
+    records<K extends ShardKind>(kind: K): IterableIterator<AnalysisProjectShards[K][number]>;
+    /**
+     * Initialize a migrated project's unchanged logical identity once, inside its first publication.
+     * @param {AnalysisProjectManifest} manifest Validated authoritative source manifest and revision.
+     */
+    initializeMigratedManifest(manifest: AnalysisProjectManifest): void;
+    /**
+     * Build deferred indexes and check all physical structures before closing a staged migration file.
+     * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+     * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
+     */
+    finishMigration(): void;
     /**
      * Materialize metadata once; full runtime history is opt-in for callers that need it.
      * @param {boolean} [runtime] Include complete runtime history; false keeps it on disk.

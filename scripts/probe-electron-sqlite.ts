@@ -16,10 +16,23 @@ try {
     rollbackMessage = error.message;
   }
   const automaticRollback = db.isTransaction === false && rollbackMessage === "probe rollback";
+  const { deflateSync, inflateSync } = require("node:zlib");
+  const { types, TextDecoder } = require("node:util");
+  const text = JSON.stringify({ text: "日本語".repeat(1000), zero: 0, flag: false });
+  const compressed = deflateSync(text, { level: 1 });
+  db.exec("CREATE TABLE payloads(prefix INTEGER, suffix BLOB, payload BLOB, UNIQUE(prefix,suffix)); PRAGMA user_version=1;");
+  db.prepare("INSERT INTO payloads VALUES (?,?,?)").run(1, Buffer.alloc(32, 0xab), compressed);
+  const stored = db.prepare("SELECT suffix,payload FROM payloads WHERE prefix=? AND suffix=?").get(1, Buffer.alloc(32, 0xab));
+  const binaryPayloads = types.isUint8Array(stored.payload) && stored.suffix.length === 32 &&
+    new TextDecoder("utf-8", { fatal: true }).decode(inflateSync(stored.payload, { maxOutputLength: Buffer.byteLength(text) })) === text;
+  let boundedInflation = false;
+  try { inflateSync(stored.payload, { maxOutputLength: 1 }); } catch { boundedInflation = true; }
   db.close();
   process.stdout.write(JSON.stringify({
-    ok: row.id === 1 && automaticRollback,
+    ok: row.id === 1 && automaticRollback && binaryPayloads && boundedInflation,
     automaticRollback,
+    binaryPayloads,
+    boundedInflation,
     node: process.version,
     electron: process.versions.electron || null,
     execPath: process.execPath,
@@ -65,9 +78,14 @@ for (const execPath of hosts) {
     const row = parsed as ElectronProbeResult;
     results.push(row);
   } catch {
-    results.push({ execPath, ok: false, error: child.stderr || line || `status ${String(child.status)}` });
+    results.push({
+      execPath,
+      ok: false,
+      error: child.stderr || line || `status ${String(child.status)}`,
+    });
   }
 }
 
 process.stdout.write(`${JSON.stringify({ results }, undefined, 2)}\n`);
-if (results.some((result) => result.ok !== true && result.error !== "missing")) process.exitCode = 1;
+if (results.some((result) => result.ok !== true && result.error !== "missing"))
+  process.exitCode = 1;

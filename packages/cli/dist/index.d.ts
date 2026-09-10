@@ -1,5 +1,5 @@
 import { type SnesMapper } from "@uttori/asm-plugin-snes";
-export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-compact" | "project-validate" | "verify-roundtrip";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-compact" | "project-migrate" | "project-validate" | "verify-roundtrip";
 export interface CliArguments {
     readonly command: CliCommand;
     readonly input?: string;

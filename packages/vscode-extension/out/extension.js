@@ -10540,8 +10540,8 @@ var require_ast = __commonJS({
     exports2.AST = void 0;
     var brace_expressions_js_1 = require_brace_expressions();
     var unescape_js_1 = require_unescape();
-    var types = /* @__PURE__ */ new Set(["!", "?", "+", "*", "@"]);
-    var isExtglobType = (c) => types.has(c);
+    var types2 = /* @__PURE__ */ new Set(["!", "?", "+", "*", "@"]);
+    var isExtglobType = (c) => types2.has(c);
     var isExtglobAST = (c) => isExtglobType(c.type);
     var adoptionMap = /* @__PURE__ */ new Map([
       ["!", ["@"]],
@@ -11271,11 +11271,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path32 = {
+    var path34 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path32.win32.sep : path32.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path34.win32.sep : path34.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -14122,13 +14122,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path32) {
+        function ensurePath(config, path34) {
           let current = config;
-          for (let i = 0; i < path32.length - 1; i++) {
-            let obj = current[path32[i]];
+          for (let i = 0; i < path34.length - 1; i++) {
+            let obj = current[path34[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path32[i]] = obj;
+              current[path34[i]] = obj;
             }
             current = obj;
           }
@@ -14146,8 +14146,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key2);
           }
           if (config) {
-            const path32 = keys[i].split(".");
-            ensurePath(result, path32)[path32[path32.length - 1]] = toJSONObject(config);
+            const path34 = keys[i].split(".");
+            ensurePath(result, path34)[path34[path34.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -18122,13 +18122,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path32 = uri.fsPath.replace(/\\/g, "/");
+          const path34 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path32)) {
+              if (filter.matcher.match(path34)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18142,7 +18142,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path32}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path34}/`)) {
                   return true;
                 }
               }
@@ -20790,9 +20790,9 @@ var require_main = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path32 = __importStar(require("path"));
+    var path34 = __importStar(require("path"));
     var os2 = __importStar(require("os"));
-    var fs20 = __importStar(require("fs"));
+    var fs22 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
     var net_1 = require("net");
     var api_1 = require_api();
@@ -20933,7 +20933,7 @@ var require_main = __commonJS({
       }
       let randomLength = 32;
       const fixedLength = "/lsp-.sock".length;
-      const tmpDir = fs20.realpathSync(XDG_RUNTIME_DIR ?? os2.tmpdir());
+      const tmpDir = fs22.realpathSync(XDG_RUNTIME_DIR ?? os2.tmpdir());
       const limit = safeIpcPathLengths.get(process.platform);
       if (limit !== void 0) {
         randomLength = Math.min(limit - tmpDir.length - fixedLength, randomLength);
@@ -20942,7 +20942,7 @@ var require_main = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path32.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path34.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -22302,8 +22302,8 @@ var require_main3 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
-    var fs20 = __importStar(require("fs"));
-    var path32 = __importStar(require("path"));
+    var fs22 = __importStar(require("fs"));
+    var path34 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22753,19 +22753,19 @@ var require_main3 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path32.isAbsolute(runtime)) {
+        if (path34.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path32.join(mainRootPath, runtime);
-          if (fs20.existsSync(result)) {
+          const result = path34.join(mainRootPath, runtime);
+          if (fs22.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path32.join(serverWorkingDirectory, runtime);
-          if (fs20.existsSync(result)) {
+          const result = path34.join(serverWorkingDirectory, runtime);
+          if (fs22.existsSync(result)) {
             return result;
           }
         }
@@ -22789,7 +22789,7 @@ var require_main3 = __commonJS({
         }
         if (cwd) {
           return new Promise((s) => {
-            fs20.lstat(cwd, (err, stats) => {
+            fs22.lstat(cwd, (err, stats) => {
               s(!err && stats.isDirectory() ? cwd : void 0);
             });
           });
@@ -23138,13 +23138,13 @@ var init_asset_codec = __esm({
        * @returns {AssetCodec} Registered codec.
        */
       resolve(id) {
-        const visit = (current, path32) => {
+        const visit = (current, path34) => {
           const codec = this.#codecs.get(current);
           if (!codec) throw new Error(`Unknown asset codec '${current}'.`);
-          if (path32.includes(current)) {
-            throw new Error(`Asset codec dependency cycle: ${[...path32, current].join(" -> ")}.`);
+          if (path34.includes(current)) {
+            throw new Error(`Asset codec dependency cycle: ${[...path34, current].join(" -> ")}.`);
           }
-          for (const dependency of codec.dependencies ?? []) visit(dependency, [...path32, current]);
+          for (const dependency of codec.dependencies ?? []) visit(dependency, [...path34, current]);
           return codec;
         };
         return visit(id, []);
@@ -23512,8 +23512,8 @@ var init_common = __esm({
       return values;
     };
     defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
-    jsonFile = (path32, value) => ({
-      path: path32,
+    jsonFile = (path34, value) => ({
+      path: path34,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -23607,12 +23607,12 @@ var init_index_table = __esm({
       decode: (context) => {
         const entries3 = indexesFor(context);
         const value = { kind: "index-table", indexes: entries3.indexes };
-        const path32 = stringOption(
+        const path34 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path32, value)] };
+        return { value, files: [jsonFile(path34, value)] };
       },
       encode: (context) => {
         const resolved = settings(context);
@@ -23743,12 +23743,12 @@ var init_pointer_table = __esm({
           addresses: entries3.addresses,
           rawValues: entries3.rawValues
         };
-        const path32 = stringOption(
+        const path34 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path32, value)] };
+        return { value, files: [jsonFile(path34, value)] };
       },
       encode: (context) => {
         const resolved = settings2(context);
@@ -23807,7 +23807,7 @@ var init_raw = __esm({
       decode: (context) => {
         const bytes = readExactAssetBytes(context);
         const options = optionsFor(context);
-        const path32 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
+        const path34 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
         const mediaType = stringOption(options, "mediaType", "application/octet-stream");
         return {
           value: {
@@ -23815,7 +23815,7 @@ var init_raw = __esm({
             bytes: [...bytes],
             sha256: (0, import_node_crypto4.createHash)("sha256").update(bytes).digest("hex")
           },
-          files: [{ path: path32, mediaType, bytes }]
+          files: [{ path: path34, mediaType, bytes }]
         };
       },
       encode: ({ decoded, request }) => {
@@ -23857,8 +23857,8 @@ var init_scalar_array = __esm({
           (_, index) => readInteger(bytes, index * width2, width2, endian, signed3)
         );
         const value = { kind: "scalar-array", width: width2, endian, signed: signed3, values };
-        const path32 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path32, value)] };
+        const path34 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path34, value)] };
       },
       encode: (context) => {
         const { width: width2, endian, signed: signed3, count: count2, size } = settings3(context);
@@ -24008,8 +24008,8 @@ var init_struct_array = __esm({
           raw: [...bytes],
           records: records2
         };
-        const path32 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path32, value)] };
+        const path34 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path34, value)] };
       },
       encode: (context) => {
         const { fields, stride, count: count2, size } = settings4(context);
@@ -24170,7 +24170,7 @@ var init_text = __esm({
         const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
         const payload = terminated ? bytes.subarray(0, -1) : bytes;
         const value = { kind: "text", text: textValue(payload, resolved), terminated };
-        const path32 = stringOption(
+        const path34 = stringOption(
           resolved.options,
           "path",
           defaultAssetPath(context.request.id, "txt")
@@ -24179,7 +24179,7 @@ var init_text = __esm({
           value,
           files: [
             {
-              path: path32,
+              path: path34,
               mediaType: "text/plain; charset=utf-8",
               bytes: new TextEncoder().encode(value.text)
             }
@@ -24388,9 +24388,9 @@ var init_analysis_graph = __esm({
         if (!node) return [];
         const cached = ownersByNode.get(node.id);
         if (cached) return cached;
-        const path32 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
-        for (let index = path32.length - 1; index >= 0; index--) {
-          const candidate = nodesById.get(path32[index]);
+        const path34 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
+        for (let index = path34.length - 1; index >= 0; index--) {
+          const candidate = nodesById.get(path34[index]);
           if (!candidate) continue;
           const matches = functionsByAddress.get(addressKey(candidate.addressSpace, candidate.address));
           if (matches) {
@@ -25529,109 +25529,114 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-store.ts
-var import_node_crypto7, import_node_fs2, import_node_path3, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, SCHEMA, SCHEMA_INDEX_STATEMENTS, analysisProjectSqlitePath, parseRecord, runtimeColumns, runtimeFromRow, analysisAddress, SqliteAnalysisStore;
-var init_sqlite_store = __esm({
-  "packages/disassembler/src/sqlite-store.ts"() {
+// packages/disassembler/src/sqlite-maintenance.ts
+var import_node_fs2, import_node_path3, SQLITE_MIGRATION_DIRECTORY, SQLITE_MIGRATION_BACKUP, assertNoSqliteMigration, sqliteFileIdentity, syncSqlitePath;
+var init_sqlite_maintenance = __esm({
+  "packages/disassembler/src/sqlite-maintenance.ts"() {
     "use strict";
-    import_node_crypto7 = require("node:crypto");
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_path3 = __toESM(require("node:path"), 1);
-    import_node_sqlite2 = require("node:sqlite");
-    init_canonical_json();
-    init_project_types();
-    ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
-    SCHEMA = `
-PRAGMA journal_mode=WAL;
-PRAGMA synchronous=NORMAL;
-PRAGMA foreign_keys=ON;
-PRAGMA busy_timeout=5000;
-CREATE TABLE IF NOT EXISTS meta (
-  k TEXT PRIMARY KEY,
-  v TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS evidence (
-  id TEXT PRIMARY KEY,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS labels (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  address INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS comments (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  address INTEGER NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS regions (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  start INTEGER NOT NULL,
-  "end" INTEGER NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS annotations (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  start INTEGER NOT NULL,
-  "end" INTEGER NOT NULL,
-  classification TEXT NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS analysis (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  address_space TEXT,
-  address INTEGER,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS imports (
-  id TEXT PRIMARY KEY,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS runtime (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  architecture TEXT NOT NULL,
-  count INTEGER NOT NULL,
-  address_space TEXT,
-  address INTEGER,
-  start INTEGER,
-  "end" INTEGER,
-  from_address_space TEXT,
-  from_address INTEGER,
-  to_address_space TEXT,
-  to_address INTEGER,
-  instruction_address_space TEXT,
-  instruction_address INTEGER,
-  accessed_address_space TEXT,
-  accessed_address INTEGER,
-  coverage TEXT,
-  evidence TEXT NOT NULL,
-  payload TEXT
-) WITHOUT ROWID;
-`;
-    SCHEMA_INDEX_STATEMENTS = [
-      "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
-      "CREATE INDEX IF NOT EXISTS comments_addr ON comments (address_space, address)",
-      'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
-      'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
-      "CREATE INDEX IF NOT EXISTS analysis_addr ON analysis (address_space, address)",
-      "CREATE INDEX IF NOT EXISTS analysis_kind ON analysis (kind)",
-      "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime (kind, address_space, address, start)",
-      "CREATE INDEX IF NOT EXISTS runtime_from ON runtime (from_address_space, from_address)"
-    ];
-    analysisProjectSqlitePath = (directory, manifest) => {
-      const relative6 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
-      if (relative6 !== ANALYSIS_PROJECT_SQLITE_FILE)
-        throw new Error(`Unsupported analysis sqlite path '${relative6}'.`);
-      return import_node_path3.default.join(directory, relative6);
+    SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
+    SQLITE_MIGRATION_BACKUP = "analysis.sqlite.storage-v0.backup";
+    assertNoSqliteMigration = (file) => {
+      if (import_node_fs2.default.existsSync(import_node_path3.default.join(import_node_path3.default.dirname(file), SQLITE_MIGRATION_DIRECTORY)))
+        throw new Error(
+          "Analysis storage migration is in progress. Retry after it completes, or run project-migrate to recover an interrupted migration."
+        );
     };
-    parseRecord = (payload) => JSON.parse(payload);
+    sqliteFileIdentity = (file) => {
+      const stat2 = import_node_fs2.default.statSync(file, { bigint: true });
+      return `${stat2.dev}:${stat2.ino}`;
+    };
+    syncSqlitePath = (file) => {
+      const descriptor2 = import_node_fs2.default.openSync(file, "r");
+      try {
+        import_node_fs2.default.fsyncSync(descriptor2);
+      } finally {
+        import_node_fs2.default.closeSync(descriptor2);
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-payload.ts
+var import_node_util, import_node_zlib, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES, utf8, encodeSqlitePayload, decodeSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
+var init_sqlite_payload = __esm({
+  "packages/disassembler/src/sqlite-payload.ts"() {
+    "use strict";
+    import_node_util = require("node:util");
+    import_node_zlib = require("node:zlib");
+    MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
+    HEADER = Buffer.from([85, 65, 80, 1]);
+    HEADER_BYTES = 8;
+    utf8 = new import_node_util.TextDecoder("utf-8", { fatal: true });
+    encodeSqlitePayload = (json) => {
+      const bytes = Buffer.byteLength(json);
+      if (bytes > MAX_SQLITE_PAYLOAD_BYTES)
+        throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
+      if (bytes < 256) return json;
+      const compressed = (0, import_node_zlib.deflateSync)(json, { level: 1, chunkSize: Math.min(bytes, 16 * 1024) });
+      if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8))) return json;
+      const result = Buffer.allocUnsafe(HEADER_BYTES + compressed.length);
+      HEADER.copy(result);
+      result.writeUInt32LE(bytes, 4);
+      compressed.copy(result, HEADER_BYTES);
+      return result;
+    };
+    decodeSqlitePayload = (value) => {
+      if (typeof value === "string") {
+        if (Buffer.byteLength(value) > MAX_SQLITE_PAYLOAD_BYTES)
+          throw new Error("SQLite text payload exceeds the decoded size limit.");
+        return value;
+      }
+      if (!import_node_util.types.isUint8Array(value)) throw new Error("Invalid SQLite payload representation.");
+      const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+      if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER))
+        throw new Error("Unsupported or truncated SQLite payload codec.");
+      const bytes = encoded.readUInt32LE(4);
+      if (bytes === 0 || bytes > MAX_SQLITE_PAYLOAD_BYTES)
+        throw new Error("SQLite compressed payload exceeds the decoded size limit.");
+      try {
+        const decoded = (0, import_node_zlib.inflateSync)(encoded.subarray(HEADER_BYTES), {
+          maxOutputLength: bytes,
+          chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
+        });
+        if (decoded.length !== bytes)
+          throw new Error("Decoded payload length does not match its header.");
+        return utf8.decode(decoded);
+      } catch (cause) {
+        throw new Error("Corrupt SQLite compressed payload.", { cause });
+      }
+    };
+    sqliteRuntimeIdentity = (id) => {
+      const split = id.lastIndexOf(":") + 1;
+      const suffix = id.slice(split);
+      return {
+        prefix: id.slice(0, split),
+        suffix: /^[\da-f]{64}$/.test(suffix) ? Buffer.from(suffix, "hex") : suffix
+      };
+    };
+    decodeSqliteRuntimeIdentity = (prefix, suffix) => {
+      if (typeof prefix !== "string") throw new Error("Invalid SQLite runtime ID prefix.");
+      if (typeof suffix === "string") return prefix + suffix;
+      if (!import_node_util.types.isUint8Array(suffix) || suffix.length !== 32)
+        throw new Error("Invalid SQLite runtime ID suffix.");
+      return prefix + Buffer.from(suffix).toString("hex");
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-records.ts
+var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
+var init_sqlite_records = __esm({
+  "packages/disassembler/src/sqlite-records.ts"() {
+    "use strict";
+    init_sqlite_payload();
+    compareRuntimeRecordIds = (left, right) => {
+      if (left.id < right.id) return -1;
+      if (left.id > right.id) return 1;
+      return 0;
+    };
     runtimeColumns = (record3) => {
       switch (record3.kind) {
         case "runtime-execution":
@@ -25751,12 +25756,14 @@ CREATE TABLE IF NOT EXISTS runtime (
     };
     runtimeFromRow = (row) => {
       const fields = row;
-      const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(fields.payload);
+      const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(decodeSqlitePayload(fields.payload));
+      if (typeof fields.evidence !== "string")
+        throw new Error("Missing SQLite runtime evidence dictionary entry.");
       const evidence = JSON.parse(fields.evidence);
       const kind = fields.kind;
       const architecture2 = fields.architecture;
       const count2 = Number(fields.count);
-      const id = fields.id;
+      const id = fields.id_prefix === void 0 ? fields.id : decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
       if (kind === "runtime-execution") {
         return {
           id,
@@ -25825,6 +25832,8 @@ CREATE TABLE IF NOT EXISTS runtime (
           coverage: fields.coverage
         };
       }
+      if (kind !== "runtime-control-target")
+        throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
       return {
         id,
         kind: "runtime-control-target",
@@ -25846,8 +25855,131 @@ CREATE TABLE IF NOT EXISTS runtime (
         return { addressSpace: record3.addressSpace, address: record3.fromAddress };
       return { addressSpace: null, address: null };
     };
+  }
+});
+
+// packages/disassembler/src/sqlite-store.ts
+var import_node_crypto7, import_node_fs3, import_node_path4, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, SqliteAnalysisStore;
+var init_sqlite_store = __esm({
+  "packages/disassembler/src/sqlite-store.ts"() {
+    "use strict";
+    import_node_crypto7 = require("node:crypto");
+    import_node_fs3 = __toESM(require("node:fs"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
+    import_node_sqlite2 = require("node:sqlite");
+    init_canonical_json();
+    init_project_types();
+    init_sqlite_maintenance();
+    init_sqlite_payload();
+    init_sqlite_records();
+    ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
+    ANALYSIS_SQLITE_STORAGE_VERSION = 1;
+    SCHEMA = `
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA foreign_keys=ON;
+PRAGMA busy_timeout=5000;
+CREATE TABLE IF NOT EXISTS meta (
+  k TEXT PRIMARY KEY,
+  v TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS evidence (
+  id TEXT NOT NULL PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS labels (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS regions (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS annotations (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  classification TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS analysis (
+  id TEXT NOT NULL PRIMARY KEY,
+  kind TEXT NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS imports (
+  id TEXT NOT NULL PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS runtime_prefixes (
+  id INTEGER PRIMARY KEY,
+  value TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS runtime_evidence (
+  id INTEGER PRIMARY KEY,
+  value TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS runtime (
+  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
+  id BLOB NOT NULL,
+  kind TEXT NOT NULL,
+  architecture TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  start INTEGER,
+  "end" INTEGER,
+  from_address_space TEXT,
+  from_address INTEGER,
+  to_address_space TEXT,
+  to_address INTEGER,
+  instruction_address_space TEXT,
+  instruction_address INTEGER,
+  accessed_address_space TEXT,
+  accessed_address INTEGER,
+  coverage TEXT,
+  evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id),
+  payload BLOB,
+  UNIQUE (prefix_id, id)
+);
+PRAGMA user_version=1;
+`;
+    SCHEMA_INDEX_STATEMENTS = [
+      "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
+      "CREATE INDEX IF NOT EXISTS comments_addr ON comments (address_space, address)",
+      'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
+      'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
+      "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime (kind, address_space, address, start)",
+      "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'"
+    ];
+    RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
+  FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
+  LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+    analysisProjectSqlitePath = (directory, manifest) => {
+      const relative6 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
+      if (relative6 !== ANALYSIS_PROJECT_SQLITE_FILE)
+        throw new Error(`Unsupported analysis sqlite path '${relative6}'.`);
+      return import_node_path4.default.join(directory, relative6);
+    };
+    parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
     SqliteAnalysisStore = class {
       #database;
+      #fileIdentity;
       file;
       #insertEvidence;
       #insertLabel;
@@ -25858,21 +25990,37 @@ CREATE TABLE IF NOT EXISTS runtime (
       #insertImport;
       #insertRuntime;
       #findRuntime;
+      #dictionaryStatements = /* @__PURE__ */ new Map();
+      /** Transaction-local cache: rollback or another writer cannot leave stale integer references here. */
+      #dictionaryIds = /* @__PURE__ */ new Map();
+      #dictionaryCacheBytes = 0;
       /**
        * Opens or creates a project database.
        * @param {string} file Absolute sqlite path.
-       * @param {boolean} [createSchema] Whether to apply DDL.
+       * @param {boolean} [createSchema] Permit initialization of an empty database; never upgrade an existing one.
+       * @param {boolean} [deferIndexes] Migration-only bulk load; finishMigration must build indexes before publication.
        */
-      constructor(file, createSchema = true) {
-        if (!createSchema && !import_node_fs2.default.existsSync(file))
+      constructor(file, createSchema = true, deferIndexes = false) {
+        assertNoSqliteMigration(file);
+        if (!createSchema && !import_node_fs3.default.existsSync(file))
           throw new Error(`Analysis database does not exist: ${file}`);
         this.file = file;
         this.#database = new import_node_sqlite2.DatabaseSync(file, { open: true });
+        this.#fileIdentity = sqliteFileIdentity(file);
         try {
-          if (createSchema) {
+          const empty = Number(this.#database.prepare("SELECT count(*) AS n FROM sqlite_schema").get()?.n) === 0;
+          const initialVersion = Number(
+            this.#database.prepare("PRAGMA user_version").get()?.user_version
+          );
+          if (createSchema && empty && initialVersion === 0) {
             this.#database.exec(SCHEMA);
-            for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
+            if (!deferIndexes) for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
           }
+          const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
+          if (version !== ANALYSIS_SQLITE_STORAGE_VERSION)
+            throw new Error(
+              `Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+            );
           this.#database.exec(
             "PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE;"
           );
@@ -25897,14 +26045,21 @@ CREATE TABLE IF NOT EXISTS runtime (
           this.#insertImport = this.#database.prepare(
             "INSERT INTO imports (id, payload) VALUES (?, ?)"
           );
-          this.#findRuntime = this.#database.prepare("SELECT * FROM runtime WHERE id=?");
+          for (const table of ["runtime_prefixes", "runtime_evidence"]) {
+            this.#dictionaryStatements.set(table, {
+              find: this.#database.prepare(`SELECT id FROM ${table} WHERE value=?`),
+              insert: this.#database.prepare(`INSERT INTO ${table} (value) VALUES (?)`)
+            });
+          }
+          this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
+        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
           this.#insertRuntime = this.#database.prepare(
             `INSERT INTO runtime (
-          id, kind, architecture, count, address_space, address, start, "end",
+          prefix_id, id, kind, architecture, count, address_space, address, start, "end",
           from_address_space, from_address, to_address_space, to_address,
           instruction_address_space, instruction_address, accessed_address_space, accessed_address,
-          coverage, evidence, payload
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          coverage, evidence_id, payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           );
         } catch (error) {
           this.#database.close();
@@ -25916,16 +26071,44 @@ CREATE TABLE IF NOT EXISTS runtime (
        * A cleanup error must never replace the original failure reported to the user.
        */
       rollback() {
+        this.#clearDictionaryCache();
         if (!this.#database.isTransaction) return;
         try {
           this.#database.exec("ROLLBACK");
         } catch {
         }
       }
+      /** Forget all transaction-owned dictionary references and their bounded text allocation. */
+      #clearDictionaryCache() {
+        this.#dictionaryIds.clear();
+        this.#dictionaryCacheBytes = 0;
+      }
+      /**
+       * Intern exact text with a bounded cache; callers hold the SQLite writer lock.
+       * @param {string} table One of the two prepared dictionary tables.
+       * @param {string} value Exact prefix or serialized evidence list.
+       * @returns {number} Transactionally created or existing dictionary rowid.
+       */
+      #intern(table, value) {
+        const key2 = `${table}:${value}`;
+        const cached = this.#dictionaryIds.get(key2);
+        if (cached !== void 0) return cached;
+        const statements = this.#dictionaryStatements.get(table);
+        const found = statements.find.get(value);
+        const id = found ? Number(found.id) : Number(statements.insert.run(value).lastInsertRowid);
+        const bytes = Buffer.byteLength(key2);
+        if (this.#dictionaryIds.size >= 256 || this.#dictionaryCacheBytes + bytes > 512 * 1024)
+          this.#clearDictionaryCache();
+        if (bytes <= 512 * 1024) {
+          this.#dictionaryIds.set(key2, id);
+          this.#dictionaryCacheBytes += bytes;
+        }
+        return id;
+      }
       #insertRecord(kind, value) {
         if (kind === "evidence") {
           const record4 = value;
-          this.#insertEvidence.run(record4.id, JSON.stringify(record4));
+          this.#insertEvidence.run(record4.id, encodeSqlitePayload(JSON.stringify(record4)));
           return;
         }
         if (kind === "labels") {
@@ -25935,7 +26118,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record4.addressSpace,
             record4.address,
             record4.name,
-            JSON.stringify(record4)
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
@@ -25945,7 +26128,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record4.id,
             record4.addressSpace,
             record4.address,
-            JSON.stringify(record4)
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
@@ -25956,7 +26139,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record4.addressSpace,
             record4.start,
             record4.end,
-            JSON.stringify(record4)
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
@@ -25968,7 +26151,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record4.start,
             record4.end,
             record4.classification,
-            JSON.stringify(record4)
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
@@ -25980,19 +26163,21 @@ CREATE TABLE IF NOT EXISTS runtime (
             record4.kind,
             located.addressSpace,
             located.address,
-            JSON.stringify(record4)
+            encodeSqlitePayload(JSON.stringify(record4))
           );
           return;
         }
         if (kind === "imports") {
           const record4 = value;
-          this.#insertImport.run(record4.id, JSON.stringify(record4));
+          this.#insertImport.run(record4.id, encodeSqlitePayload(JSON.stringify(record4)));
           return;
         }
         const record3 = value;
         const columns = runtimeColumns(record3);
+        const identity2 = sqliteRuntimeIdentity(record3.id);
         this.#insertRuntime.run(
-          record3.id,
+          this.#intern("runtime_prefixes", identity2.prefix),
+          identity2.suffix,
           record3.kind,
           record3.architecture,
           record3.count,
@@ -26009,8 +26194,8 @@ CREATE TABLE IF NOT EXISTS runtime (
           columns.accessedAddressSpace,
           columns.accessedAddress,
           columns.coverage,
-          JSON.stringify(record3.evidence),
-          columns.payload
+          this.#intern("runtime_evidence", JSON.stringify(record3.evidence)),
+          columns.payload === null ? null : encodeSqlitePayload(columns.payload)
         );
       }
       /**
@@ -26021,10 +26206,17 @@ CREATE TABLE IF NOT EXISTS runtime (
        * @returns {T} Callback result after a successful commit.
        */
       transaction(action, write = true) {
+        assertNoSqliteMigration(this.file);
+        if (sqliteFileIdentity(this.file) !== this.#fileIdentity)
+          throw new Error(
+            "Analysis database was replaced; close this connection and reload the project."
+          );
+        this.#clearDictionaryCache();
         this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
         try {
           const result = action();
           this.#database.exec("COMMIT");
+          this.#clearDictionaryCache();
           return result;
         } catch (error) {
           this.rollback();
@@ -26064,6 +26256,7 @@ CREATE TABLE IF NOT EXISTS runtime (
         try {
           const result = await action(index);
           this.#database.exec("COMMIT");
+          this.#clearDictionaryCache();
           return result;
         } catch (error) {
           this.rollback();
@@ -26098,6 +26291,10 @@ CREATE TABLE IF NOT EXISTS runtime (
         ]);
         for (const kind of Object.keys(shards)) {
           if (!tables.has(kind)) throw new Error(`Unknown analysis table '${kind}'.`);
+          if (kind === "runtime") {
+            this.#replaceRuntime(shards.runtime ?? []);
+            continue;
+          }
           this.#database.exec("DELETE FROM temp.replacement_ids");
           const find = this.#database.prepare(`SELECT * FROM ${kind} WHERE id=?`);
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
@@ -26105,7 +26302,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             remember.run(record3.id);
             const prior = find.get(record3.id);
             if (prior) {
-              const before = kind === "runtime" ? runtimeFromRow(prior) : parseRecord(prior.payload);
+              const before = parseRecord(prior.payload);
               if (canonicalJson(before) === canonicalJson(record3)) continue;
               remove.run(record3.id);
             }
@@ -26117,6 +26314,45 @@ CREATE TABLE IF NOT EXISTS runtime (
         }
       }
       /**
+       * Replace runtime by integer storage IDs, keeping the temporary retention set compact.
+       * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
+       */
+      #replaceRuntime(records2) {
+        this.#database.exec(
+          "CREATE TEMP TABLE IF NOT EXISTS replacement_runtime_ids (id INTEGER PRIMARY KEY); DELETE FROM replacement_runtime_ids"
+        );
+        const remember = this.#database.prepare("INSERT INTO temp.replacement_runtime_ids VALUES (?)");
+        const seen = this.#database.prepare("SELECT 1 FROM temp.replacement_runtime_ids WHERE id=?");
+        const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
+        for (const record3 of records2) {
+          const identity2 = sqliteRuntimeIdentity(record3.id);
+          let prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
+          if (prior && seen.get(prior.storage_rowid))
+            throw new Error(`Duplicate runtime record ID '${record3.id}'.`);
+          if (prior && canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record3)) {
+            remove.run(prior.storage_rowid);
+            prior = void 0;
+          }
+          if (!prior) {
+            this.#insertRecord("runtime", record3);
+            prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
+          }
+          remember.run(prior.storage_rowid);
+        }
+        this.#database.exec(
+          "DELETE FROM runtime WHERE rowid NOT IN (SELECT id FROM temp.replacement_runtime_ids)"
+        );
+      }
+      /**
+       * Append validated migration rows without materializing a complete table or comparing absent IDs.
+       * @param {ShardKind} kind Destination semantic table.
+       * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+       */
+      appendRecords(kind, records2) {
+        this.#requireTransaction();
+        for (const record3 of records2) this.#insertRecord(kind, record3);
+      }
+      /**
        * Insert a content-addressed runtime fact once; an ID collision with different content is an
        * error, never a silent no-op. Count values are already aggregated within the source capture.
        * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
@@ -26124,7 +26360,8 @@ CREATE TABLE IF NOT EXISTS runtime (
        */
       insertRuntime(record3) {
         this.#requireTransaction();
-        const prior = this.#findRuntime.get(record3.id);
+        const identity2 = sqliteRuntimeIdentity(record3.id);
+        const prior = this.#findRuntime.get(identity2.prefix, identity2.suffix);
         if (prior) {
           if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record3))
             throw new Error(
@@ -26138,13 +26375,12 @@ CREATE TABLE IF NOT EXISTS runtime (
       /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
       validateRuntimeEvidence() {
         const missing = this.#database.prepare(`
-      SELECT runtime.id, ref.value AS evidence FROM runtime, json_each(runtime.evidence) AS ref
-      LEFT JOIN evidence ON evidence.id=ref.value WHERE evidence.id IS NULL LIMIT 1
+      SELECT ref.value AS evidence FROM runtime_evidence AS sets, json_each(sets.value) AS ref
+      LEFT JOIN evidence ON evidence.id=ref.value
+      WHERE evidence.id IS NULL AND EXISTS (SELECT 1 FROM runtime WHERE evidence_id=sets.id) LIMIT 1
     `).get();
         if (missing)
-          throw new Error(
-            `Analysis record '${String(missing.id)}' refers to missing evidence '${String(missing.evidence)}'.`
-          );
+          throw new Error(`Runtime history refers to missing evidence '${String(missing.evidence)}'.`);
       }
       /**
        * Store manifest and counter in the same transaction as the changed records.
@@ -26191,7 +26427,7 @@ CREATE TABLE IF NOT EXISTS runtime (
       *runtimeRecordsByKinds(kinds) {
         if (kinds.length === 0) return;
         const statement = this.#database.prepare(
-          `SELECT * FROM runtime WHERE kind IN (${kinds.map(() => "?").join(", ")})`
+          `${RUNTIME_SELECT} WHERE r.kind IN (${kinds.map(() => "?").join(", ")})`
         );
         for (const row of statement.iterate(...kinds)) yield runtimeFromRow(row);
       }
@@ -26204,10 +26440,10 @@ CREATE TABLE IF NOT EXISTS runtime (
        */
       *runtimeAt(addressSpace2, address4) {
         const query = this.#database.prepare(`
-      SELECT * FROM runtime WHERE kind IN ('runtime-execution', 'runtime-instruction', 'runtime-cpu-state')
-        AND address_space=? AND address=?
-      UNION ALL SELECT * FROM runtime WHERE kind='runtime-coverage' AND address_space=? AND start<=? AND "end">?
-      UNION ALL SELECT * FROM runtime WHERE kind='runtime-memory-access' AND instruction_address_space=? AND instruction_address=?
+      ${RUNTIME_SELECT} WHERE r.kind IN ('runtime-execution', 'runtime-instruction', 'runtime-cpu-state')
+        AND r.address_space=? AND r.address=?
+      UNION ALL ${RUNTIME_SELECT} WHERE r.kind='runtime-coverage' AND r.address_space=? AND r.address IS NULL AND r.start<=? AND r."end">?
+      UNION ALL ${RUNTIME_SELECT} WHERE r.kind='runtime-memory-access' AND r.instruction_address_space=? AND r.instruction_address=?
     `);
         for (const row of query.iterate(
           addressSpace2,
@@ -26226,7 +26462,7 @@ CREATE TABLE IF NOT EXISTS runtime (
        * @yields {RuntimeEvidenceRecord} One runtime fact.
        */
       *runtimeRecords() {
-        for (const row of this.#database.prepare("SELECT * FROM runtime").iterate())
+        for (const row of this.#database.prepare(`${RUNTIME_SELECT} ORDER BY r.rowid`).iterate())
           yield runtimeFromRow(row);
       }
       /**
@@ -26251,6 +26487,52 @@ CREATE TABLE IF NOT EXISTS runtime (
         return records2;
       }
       /**
+       * Stream decoded records in insertion order for migration digest verification.
+       * @param {ShardKind} kind Semantic table to traverse.
+       * @returns {IterableIterator} Cursor retaining only the current decoded record.
+       * @yields {object} Original semantic record.
+       */
+      *records(kind) {
+        if (kind === "runtime") {
+          yield* this.runtimeRecords();
+          return;
+        }
+        if (!["evidence", "labels", "comments", "regions", "annotations", "analysis", "imports"].includes(
+          kind
+        ))
+          throw new Error(`Unknown analysis table '${kind}'.`);
+        for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY rowid`).iterate())
+          yield parseRecord(row.payload);
+      }
+      /**
+       * Initialize a migrated project's unchanged logical identity once, inside its first publication.
+       * @param {AnalysisProjectManifest} manifest Validated authoritative source manifest and revision.
+       */
+      initializeMigratedManifest(manifest) {
+        this.#requireTransaction();
+        if (this.#database.prepare("SELECT 1 FROM meta LIMIT 1").get())
+          throw new Error("Migration manifest can only initialize an empty metadata header.");
+        const insert = this.#database.prepare("INSERT INTO meta (k,v) VALUES (?,?)");
+        insert.run("revision", String(manifest.revision ?? 0));
+        insert.run("manifest", canonicalJson(manifest));
+      }
+      /**
+       * Build deferred indexes and check all physical structures before closing a staged migration file.
+       * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+       * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
+       */
+      finishMigration() {
+        for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
+        const integrity = this.#database.prepare("PRAGMA integrity_check").all();
+        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok")
+          throw new Error("Migrated SQLite database failed integrity validation.");
+        if (this.#database.prepare("PRAGMA foreign_key_check").get())
+          throw new Error("Migrated SQLite database contains an invalid dictionary reference.");
+        this.#database.exec(
+          "PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; PRAGMA journal_mode=WAL;"
+        );
+      }
+      /**
        * Materialize metadata once; full runtime history is opt-in for callers that need it.
        * @param {boolean} [runtime] Include complete runtime history; false keeps it on disk.
        * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
@@ -26264,7 +26546,7 @@ CREATE TABLE IF NOT EXISTS runtime (
           annotations: this.loadTable("annotations"),
           analysis: this.loadTable("analysis"),
           imports: this.loadTable("imports"),
-          runtime: runtime ? [...this.runtimeRecords()] : []
+          runtime: runtime ? [...this.runtimeRecords()].sort(compareRuntimeRecordIds) : []
         };
       }
       /**
@@ -26295,11 +26577,11 @@ CREATE TABLE IF NOT EXISTS runtime (
        * @param {string} directory Project root for the watcher hint.
        */
       writePointer(directory) {
-        const temporary = import_node_path3.default.join(directory, `.analysis.json.${(0, import_node_crypto7.randomUUID)()}.tmp`);
+        const temporary = import_node_path4.default.join(directory, `.analysis.json.${(0, import_node_crypto7.randomUUID)()}.tmp`);
         try {
           this.transaction(() => {
-            import_node_fs2.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-            import_node_fs2.default.renameSync(temporary, import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+            import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
+            import_node_fs3.default.renameSync(temporary, import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
           });
         } catch (error) {
           process.emitWarning(
@@ -26307,13 +26589,26 @@ CREATE TABLE IF NOT EXISTS runtime (
           );
         } finally {
           try {
-            import_node_fs2.default.rmSync(temporary, { force: true });
+            import_node_fs3.default.rmSync(temporary, { force: true });
           } catch {
           }
         }
       }
       /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
       compact() {
+        const disk = import_node_fs3.default.statfsSync(import_node_path4.default.dirname(this.file));
+        const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
+        const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
+        if (disk.bavail * disk.bsize < 2 * pageCount * pageSize)
+          throw new Error(
+            "Insufficient free disk space for SQLite VACUUM; allow twice the database size."
+          );
+        this.transaction(() => {
+          this.#database.exec(`
+        DELETE FROM runtime_prefixes WHERE id NOT IN (SELECT DISTINCT prefix_id FROM runtime);
+        DELETE FROM runtime_evidence WHERE id NOT IN (SELECT DISTINCT evidence_id FROM runtime);
+      `);
+        });
         this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
       }
       /** Close prepared statements and the database. */
@@ -26325,13 +26620,13 @@ CREATE TABLE IF NOT EXISTS runtime (
 });
 
 // packages/disassembler/src/project-transaction.ts
-var import_node_crypto8, fs4, import_node_path4, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
+var import_node_crypto8, fs5, import_node_path5, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
   "packages/disassembler/src/project-transaction.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
-    fs4 = __toESM(require("node:fs"), 1);
-    import_node_path4 = __toESM(require("node:path"), 1);
+    fs5 = __toESM(require("node:fs"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_project_store();
     init_project_types();
@@ -26381,9 +26676,9 @@ var init_project_transaction = __esm({
     });
     publish = (directory, project, expected, updates = project.shards) => {
       prepareAnalysisProjectTransaction(directory, project);
-      fs4.mkdirSync(directory, { recursive: true });
-      const exists = fs4.existsSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
-      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path4.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+      fs5.mkdirSync(directory, { recursive: true });
+      const exists = fs5.existsSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path5.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
       try {
         const manifest = store.transaction(() => {
           if (expected) assertAnalysisProjectRevision(store, expected);
@@ -26417,7 +26712,7 @@ var init_project_transaction = __esm({
     };
     publishAnalysisProject = (directory, project) => {
       let expected;
-      if (fs4.existsSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
+      if (fs5.existsSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
         const store = openAnalysisProjectStore(directory);
         try {
           expected = store.transaction(() => analysisProjectRevision(store.manifest()), false);
@@ -26430,12 +26725,12 @@ var init_project_transaction = __esm({
     compactAnalysisProject = (directory) => {
       const store = openAnalysisProjectStore(directory);
       try {
-        const before = fs4.statSync(store.file).size;
+        const before = fs5.statSync(store.file).size;
         store.compact();
         return {
           ...committed(store.manifest()),
           maintenance: {
-            removedBytes: Math.max(0, before - fs4.statSync(store.file).size),
+            removedBytes: Math.max(0, before - fs5.statSync(store.file).size),
             warnings: []
           }
         };
@@ -26447,15 +26742,16 @@ var init_project_transaction = __esm({
 });
 
 // packages/disassembler/src/project-store.ts
-var fs5, import_node_path5, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
+var fs6, import_node_path6, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
   "packages/disassembler/src/project-store.ts"() {
     "use strict";
-    fs5 = __toESM(require("node:fs"), 1);
-    import_node_path5 = __toESM(require("node:path"), 1);
+    fs6 = __toESM(require("node:fs"), 1);
+    import_node_path6 = __toESM(require("node:path"), 1);
     init_project_transaction();
     init_project_types();
     init_project_validation();
+    init_sqlite_records();
     init_sqlite_store();
     init_canonical_json();
     init_project_validation();
@@ -26473,7 +26769,7 @@ var init_project_store = __esm({
     };
     openAnalysisProjectStore = (directory) => {
       const manifest = parseAnalysisProjectManifest(
-        JSON.parse(fs5.readFileSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+        JSON.parse(fs6.readFileSync(import_node_path6.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
       );
       return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
     };
@@ -26494,6 +26790,7 @@ var init_project_store = __esm({
               if (projection) projection.push(record3);
               else records2.push(record3);
             }
+            if (!projection) records2.sort(compareRuntimeRecordIds);
             return {
               manifest,
               shards: { ...shards, runtime: projection ? projection.finish() : records2 }
@@ -28181,6 +28478,319 @@ var init_interval_index = __esm({
   }
 });
 
+// packages/disassembler/src/sqlite-migration.ts
+function* legacyRecords(database, kind) {
+  for (const row of database.prepare(`SELECT * FROM ${kind} ORDER BY id`).iterate()) {
+    if (kind === "runtime") {
+      yield runtimeFromRow(row);
+    } else {
+      const record3 = JSON.parse(
+        decodeSqlitePayload(row.payload)
+      );
+      if (record3.id !== row.id) throw new Error(`Stored ${kind} ID differs from its payload.`);
+      yield record3;
+    }
+  }
+}
+var import_node_crypto11, import_node_fs4, import_node_path7, import_node_sqlite3, import_promises, TABLES, RESERVE_BYTES, writeJournal, processAlive, sourceManifest, recoverMigration, migrateAnalysisProjectStorage;
+var init_sqlite_migration = __esm({
+  "packages/disassembler/src/sqlite-migration.ts"() {
+    "use strict";
+    import_node_crypto11 = require("node:crypto");
+    import_node_fs4 = __toESM(require("node:fs"), 1);
+    import_node_path7 = __toESM(require("node:path"), 1);
+    import_node_sqlite3 = require("node:sqlite");
+    import_promises = require("node:timers/promises");
+    init_canonical_json();
+    init_project_store();
+    init_project_validation();
+    init_sqlite_maintenance();
+    init_sqlite_payload();
+    init_sqlite_records();
+    init_sqlite_store();
+    TABLES = [
+      "evidence",
+      "labels",
+      "comments",
+      "regions",
+      "annotations",
+      "analysis",
+      "imports",
+      "runtime"
+    ];
+    RESERVE_BYTES = 256 * 1024 * 1024;
+    writeJournal = (stage, journal) => {
+      const temporary = import_node_path7.default.join(stage, "journal.tmp");
+      import_node_fs4.default.writeFileSync(temporary, JSON.stringify(journal), { mode: 384 });
+      syncSqlitePath(temporary);
+      import_node_fs4.default.renameSync(temporary, import_node_path7.default.join(stage, "journal.json"));
+      syncSqlitePath(stage);
+    };
+    processAlive = (pid) => {
+      if (!Number.isSafeInteger(pid) || pid <= 0) throw new Error("Invalid SQLite migration owner.");
+      try {
+        process.kill(pid, 0);
+        return true;
+      } catch (error) {
+        return error.code !== "ESRCH";
+      }
+    };
+    sourceManifest = (database) => {
+      const manifest = JSON.parse(
+        String(database.prepare("SELECT v FROM meta WHERE k='manifest'").get()?.v)
+      );
+      const revision = Number(database.prepare("SELECT v FROM meta WHERE k='revision'").get()?.v);
+      return parseAnalysisProjectManifest({ ...manifest, revision });
+    };
+    recoverMigration = (directory) => {
+      const stage = import_node_path7.default.join(directory, SQLITE_MIGRATION_DIRECTORY);
+      const file = import_node_path7.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE);
+      const backup = import_node_path7.default.join(directory, SQLITE_MIGRATION_BACKUP);
+      const journal = JSON.parse(
+        import_node_fs4.default.readFileSync(import_node_path7.default.join(stage, "journal.json"), "utf8")
+      );
+      if (!journal.released && processAlive(journal.pid))
+        throw new Error("Another process owns the analysis storage migration.");
+      const identity2 = sqliteFileIdentity(file);
+      if (identity2 === journal.targetIdentity && journal.result) {
+        const database = new import_node_sqlite3.DatabaseSync(file, { readOnly: true });
+        try {
+          if ((0, import_node_crypto11.createHash)("sha256").update(canonicalJson(sourceManifest(database))).digest("hex") !== journal.manifestSha256)
+            throw new Error("Published migration identity differs from its recovery journal.");
+        } finally {
+          database.close();
+        }
+        if (sqliteFileIdentity(backup) !== journal.sourceIdentity)
+          throw new Error("Migration backup identity differs from its recovery journal.");
+        import_node_fs4.default.rmSync(stage, { recursive: true });
+        syncSqlitePath(directory);
+        return { ...journal.result, recovered: true };
+      }
+      if (identity2 !== journal.sourceIdentity)
+        throw new Error(
+          "Analysis database identity changed outside the recorded migration; preserving recovery files."
+        );
+      if (import_node_fs4.default.existsSync(backup)) {
+        if (sqliteFileIdentity(backup) !== identity2)
+          throw new Error("An unrelated migration backup already exists; preserving both databases.");
+        import_node_fs4.default.unlinkSync(backup);
+      }
+      import_node_fs4.default.rmSync(stage, { recursive: true });
+      syncSqlitePath(directory);
+      return void 0;
+    };
+    migrateAnalysisProjectStorage = async (directory, options = {}) => {
+      directory = import_node_path7.default.resolve(directory);
+      const file = import_node_path7.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE);
+      const stage = import_node_path7.default.join(directory, SQLITE_MIGRATION_DIRECTORY);
+      const backup = import_node_path7.default.join(directory, SQLITE_MIGRATION_BACKUP);
+      if (import_node_fs4.default.existsSync(stage)) {
+        const recovered = recoverMigration(directory);
+        if (recovered) return recovered;
+      }
+      options.signal?.throwIfAborted();
+      if (import_node_fs4.default.lstatSync(file).isSymbolicLink())
+        throw new Error("Migrate a regular analysis database file, not a symbolic link.");
+      const probe = new import_node_sqlite3.DatabaseSync(file, { readOnly: true });
+      let version;
+      let manifest;
+      try {
+        version = Number(probe.prepare("PRAGMA user_version").get()?.user_version);
+        if (version !== 0 && version !== ANALYSIS_SQLITE_STORAGE_VERSION)
+          throw new Error(`Cannot migrate unsupported analysis storage format ${version}.`);
+        manifest = sourceManifest(probe);
+      } finally {
+        probe.close();
+      }
+      let beforeBytes = import_node_fs4.default.statSync(file).size;
+      if (version === ANALYSIS_SQLITE_STORAGE_VERSION)
+        return {
+          changed: false,
+          recovered: false,
+          storageVersion: version,
+          beforeBytes,
+          afterBytes: beforeBytes,
+          tables: {},
+          warnings: []
+        };
+      if (import_node_fs4.default.existsSync(backup)) throw new Error(`Migration backup already exists: ${backup}`);
+      const disk = import_node_fs4.default.statfsSync(directory);
+      const required = Math.ceil(beforeBytes * 0.75) + RESERVE_BYTES;
+      if (disk.bavail * disk.bsize < required)
+        throw new Error(
+          `Insufficient migration workspace: need an estimated ${Math.ceil(required / 1024 / 1024)} MiB free.`
+        );
+      import_node_fs4.default.mkdirSync(stage, { mode: 448 });
+      let journal = {
+        pid: process.pid,
+        sourceIdentity: sqliteFileIdentity(file),
+        beforeBytes,
+        manifestSha256: (0, import_node_crypto11.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+      };
+      let source;
+      let destination;
+      let linked = false;
+      let published = false;
+      let failed = false;
+      const warnings = [];
+      try {
+        writeJournal(stage, journal);
+        syncSqlitePath(directory);
+        source = new import_node_sqlite3.DatabaseSync(file);
+        try {
+          source.exec(
+            "PRAGMA busy_timeout=1000; PRAGMA locking_mode=EXCLUSIVE; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; BEGIN EXCLUSIVE;"
+          );
+        } catch (cause) {
+          throw new Error(
+            `Cannot acquire exclusive migration access; close clients using this analysis database and retry. ${String(cause)}`,
+            { cause }
+          );
+        }
+        manifest = sourceManifest(source);
+        beforeBytes = import_node_fs4.default.statSync(file).size;
+        journal = {
+          ...journal,
+          beforeBytes,
+          manifestSha256: (0, import_node_crypto11.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+        };
+        writeJournal(stage, journal);
+        const stagedFile = import_node_path7.default.join(stage, ANALYSIS_PROJECT_SQLITE_FILE);
+        destination = new SqliteAnalysisStore(stagedFile, true, true);
+        const tables = {};
+        for (const kind of TABLES) {
+          const hash2 = (0, import_node_crypto11.createHash)("sha256");
+          let count2 = 0;
+          let bytes = 0;
+          let batch = [];
+          const flush = async () => {
+            if (batch.length === 0) return;
+            options.signal?.throwIfAborted();
+            const available = import_node_fs4.default.statfsSync(directory);
+            if (available.bavail * available.bsize < RESERVE_BYTES)
+              throw new Error("Migration stopped before exhausting free disk space.");
+            destination.transaction(() => destination.appendRecords(kind, batch));
+            batch = [];
+            bytes = 0;
+            options.onProgress?.({ phase: "copy", table: kind, records: count2 });
+            await (0, import_promises.setImmediate)();
+          };
+          for (const record3 of legacyRecords(source, kind)) {
+            const json = canonicalJson(record3);
+            hash2.update(json);
+            bytes += Buffer.byteLength(json);
+            batch.push(record3);
+            count2++;
+            if (batch.length >= 2e3 || bytes >= 4 * 1024 * 1024) await flush();
+          }
+          await flush();
+          tables[kind] = { records: count2, sha256: hash2.digest("hex") };
+        }
+        destination.transaction(() => destination.initializeMigratedManifest(manifest));
+        const context = {
+          evidence: destination.loadTable("evidence"),
+          regions: destination.loadTable("regions"),
+          labels: [],
+          comments: [],
+          annotations: [],
+          analysis: [],
+          imports: [],
+          runtime: []
+        };
+        validateLoadedShards(context, manifest);
+        const validateRuntime = createRuntimeRecordValidator(manifest, context.evidence, false);
+        for (const kind of TABLES) {
+          const hash2 = (0, import_node_crypto11.createHash)("sha256");
+          let records2 = 0;
+          let batch = [];
+          let batchBytes = 0;
+          const validateBatch = () => {
+            if (batch.length !== 0) validateLoadedShards({ ...context, [kind]: batch }, manifest);
+            batch = [];
+            batchBytes = 0;
+          };
+          for (const record3 of destination.records(kind)) {
+            const json = canonicalJson(record3);
+            hash2.update(json);
+            if (kind === "runtime") validateRuntime(record3);
+            else if (kind !== "evidence" && kind !== "regions") {
+              batch.push(record3);
+              batchBytes += Buffer.byteLength(json);
+            }
+            records2++;
+            if (records2 % 2e3 === 0 || batchBytes >= 4 * 1024 * 1024) {
+              validateBatch();
+              options.signal?.throwIfAborted();
+              options.onProgress?.({ phase: "verify", table: kind, records: records2 });
+              await (0, import_promises.setImmediate)();
+            }
+          }
+          validateBatch();
+          if (records2 !== tables[kind].records || hash2.digest("hex") !== tables[kind].sha256)
+            throw new Error(`Migrated ${kind} records differ from the original database.`);
+        }
+        validateRuntime.close();
+        options.signal?.throwIfAborted();
+        options.onProgress?.({ phase: "indexes" });
+        options.signal?.throwIfAborted();
+        destination.finishMigration();
+        await (0, import_promises.setImmediate)();
+        options.signal?.throwIfAborted();
+        destination.close();
+        destination = void 0;
+        syncSqlitePath(stagedFile);
+        const result = {
+          changed: true,
+          recovered: false,
+          storageVersion: ANALYSIS_SQLITE_STORAGE_VERSION,
+          beforeBytes,
+          afterBytes: import_node_fs4.default.statSync(stagedFile).size,
+          backupFile: backup,
+          tables,
+          warnings
+        };
+        journal = { ...journal, targetIdentity: sqliteFileIdentity(stagedFile), result };
+        writeJournal(stage, journal);
+        options.signal?.throwIfAborted();
+        options.onProgress?.({ phase: "publish" });
+        options.signal?.throwIfAborted();
+        source.exec("COMMIT");
+        import_node_fs4.default.linkSync(file, backup);
+        linked = true;
+        syncSqlitePath(directory);
+        import_node_fs4.default.renameSync(stagedFile, file);
+        published = true;
+        syncSqlitePath(directory);
+        return result;
+      } catch (error) {
+        if (published && journal.result) {
+          warnings.push(`Storage was published, but final housekeeping failed: ${String(error)}`);
+          return { ...journal.result, warnings };
+        }
+        failed = true;
+        throw error;
+      } finally {
+        try {
+          try {
+            destination?.close();
+          } finally {
+            source?.close();
+          }
+          writeJournal(stage, { ...journal, released: true });
+          if (linked && !published && sqliteFileIdentity(file) === journal.sourceIdentity)
+            import_node_fs4.default.unlinkSync(backup);
+          import_node_fs4.default.rmSync(stage, { recursive: true, force: true });
+          syncSqlitePath(directory);
+        } catch (error) {
+          const message = `SQLite migration cleanup needs recovery via project-migrate: ${String(error)}`;
+          if (failed) process.emitWarning(message);
+          else warnings.push(message);
+        }
+      }
+    };
+  }
+});
+
 // packages/disassembler/src/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
@@ -28852,13 +29462,13 @@ var init_project_edit = __esm({
 });
 
 // packages/disassembler/src/rom-image.ts
-var import_node_crypto11, fs6, sha2566, detectCopierHeaderSize, RomImage;
+var import_node_crypto12, fs8, sha2566, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
   "packages/disassembler/src/rom-image.ts"() {
     "use strict";
-    import_node_crypto11 = require("node:crypto");
-    fs6 = __toESM(require("node:fs"), 1);
-    sha2566 = (bytes) => (0, import_node_crypto11.createHash)("sha256").update(bytes).digest("hex");
+    import_node_crypto12 = require("node:crypto");
+    fs8 = __toESM(require("node:fs"), 1);
+    sha2566 = (bytes) => (0, import_node_crypto12.createHash)("sha256").update(bytes).digest("hex");
     detectCopierHeaderSize = (fileSize) => {
       if (fileSize < 0) throw new Error("ROM size cannot be negative.");
       const remainder = fileSize % 32768;
@@ -28902,7 +29512,7 @@ var init_rom_image = __esm({
        * @returns {RomImage} Loaded image.
        */
       static load(file, options = {}) {
-        return new _RomImage(fs6.readFileSync(file), { ...options, sourcePath: file });
+        return new _RomImage(fs8.readFileSync(file), { ...options, sourcePath: file });
       }
       /**
        * Headerless cartridge length in bytes.
@@ -28960,7 +29570,7 @@ async function* traceEntries(file, options) {
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
     throw new Error("Trace import maximum bytes must be a positive safe integer.");
   options.signal?.throwIfAborted();
-  const before = await (0, import_promises.stat)(file);
+  const before = await (0, import_promises2.stat)(file);
   const checkSize = (size) => {
     if (size > maxBytes)
       throw new Error(
@@ -28989,7 +29599,7 @@ async function* traceEntries(file, options) {
     parts.push(text2);
   };
   const decoder = new import_node_string_decoder.StringDecoder("utf8");
-  const stream = (0, import_node_fs3.createReadStream)(file, { highWaterMark: 64 * 1024 });
+  const stream = (0, import_node_fs5.createReadStream)(file, { highWaterMark: 64 * 1024 });
   let bytesRead = 0;
   try {
     for await (const bytes of stream) {
@@ -29105,7 +29715,7 @@ async function* traceEntries(file, options) {
     }
     options.signal?.throwIfAborted();
     if (decoder.end() || String(mode3) !== "end" || !keys.has("chunks")) fail();
-    const after = await (0, import_promises.stat)(file);
+    const after = await (0, import_promises2.stat)(file);
     if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs)
       throw new Error(
         "Instruction trace changed while it was being read; stop recording before importing."
@@ -29129,12 +29739,12 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
   if (canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata))
     throw new Error("Instruction trace identity changed while importing.");
 }
-var import_node_fs3, import_promises, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, importRuntimeInstructionTraceFile, summarizeExecutionWindowFile;
+var import_node_fs5, import_promises2, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, importRuntimeInstructionTraceFile, summarizeExecutionWindowFile;
 var init_runtime_trace_file = __esm({
   "packages/disassembler/src/runtime-trace-file.ts"() {
     "use strict";
-    import_node_fs3 = require("node:fs");
-    import_promises = require("node:fs/promises");
+    import_node_fs5 = require("node:fs");
+    import_promises2 = require("node:fs/promises");
     import_node_string_decoder = require("node:string_decoder");
     init_execution_window();
     init_project_store();
@@ -29180,27 +29790,27 @@ var init_runtime_trace_file = __esm({
 });
 
 // packages/disassembler/src/source-export.ts
-var import_node_crypto12, fs7, import_node_path6, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
+var import_node_crypto13, fs9, import_node_path8, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source-export.ts"() {
     "use strict";
-    import_node_crypto12 = require("node:crypto");
-    fs7 = __toESM(require("node:fs"), 1);
-    import_node_path6 = __toESM(require("node:path"), 1);
+    import_node_crypto13 = require("node:crypto");
+    fs9 = __toESM(require("node:fs"), 1);
+    import_node_path8 = __toESM(require("node:path"), 1);
     init_canonical_json();
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
     SOURCE_EXPORT_MANIFEST = "generated-files.json";
-    sourceExportSha256 = (value) => (0, import_node_crypto12.createHash)("sha256").update(value).digest("hex");
+    sourceExportSha256 = (value) => (0, import_node_crypto13.createHash)("sha256").update(value).digest("hex");
     canonicalSourceExportJson = (value) => canonicalJson(value);
     assertSafePath = (relative6) => {
-      if (relative6 === "" || import_node_path6.default.isAbsolute(relative6) || relative6.split(/[/\\]/).some((part) => part === ".." || part === "")) {
+      if (relative6 === "" || import_node_path8.default.isAbsolute(relative6) || relative6.split(/[/\\]/).some((part) => part === ".." || part === "")) {
         throw new Error(`Unsafe generated-file path '${relative6}'.`);
       }
     };
     loadSourceExportManifest = (directory) => {
       const manifest = JSON.parse(
-        fs7.readFileSync(import_node_path6.default.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
+        fs9.readFileSync(import_node_path8.default.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
       );
       if (manifest.format !== SOURCE_EXPORT_FORMAT) throw new Error("Invalid source-export format.");
       if (manifest.schemaVersion !== SOURCE_EXPORT_SCHEMA_VERSION) {
@@ -29246,9 +29856,9 @@ var init_source_export = __esm({
     };
     validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
       for (const file of manifest.files) {
-        const absolute = import_node_path6.default.join(directory, file.path);
-        if (!fs7.existsSync(absolute)) throw new Error(`Generated file '${file.path}' is missing.`);
-        const bytes = fs7.readFileSync(absolute);
+        const absolute = import_node_path8.default.join(directory, file.path);
+        if (!fs9.existsSync(absolute)) throw new Error(`Generated file '${file.path}' is missing.`);
+        const bytes = fs9.readFileSync(absolute);
         if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
           throw new Error(`Generated file '${file.path}' was modified after export.`);
         }
@@ -29256,9 +29866,9 @@ var init_source_export = __esm({
     };
     validateSourceExportInputs = (directory, manifest = loadSourceExportManifest(directory)) => {
       for (const input of manifest.inputs ?? []) {
-        const absolute = import_node_path6.default.join(directory, input.path);
-        if (!fs7.existsSync(absolute)) throw new Error(`Source input '${input.path}' is missing.`);
-        const bytes = fs7.readFileSync(absolute);
+        const absolute = import_node_path8.default.join(directory, input.path);
+        if (!fs9.existsSync(absolute)) throw new Error(`Source input '${input.path}' is missing.`);
+        const bytes = fs9.readFileSync(absolute);
         if (bytes.length !== input.size || sourceExportSha256(bytes) !== input.sha256) {
           throw new Error(`Source input '${input.path}' changed after the last export.`);
         }
@@ -29521,7 +30131,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path32 = [...item.path, nodeId];
+        const path34 = [...item.path, nodeId];
         nodes.set(nodeId, {
           id: nodeId,
           address: instruction2.address,
@@ -29537,7 +30147,7 @@ var init_static_analysis = __esm({
           effectiveAddresses: instruction2.effectiveAddresses ?? [],
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          evidencePath: path32
+          evidencePath: path34
         });
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
@@ -29594,7 +30204,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path32,
+            path: path34,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -29609,7 +30219,7 @@ var init_static_analysis = __esm({
                 address: target.address,
                 source: kind === "call" ? "call" : "interrupt",
                 evidence: targetEvidence,
-                evidencePath: path32
+                evidencePath: path34
               });
             }
           }
@@ -29644,7 +30254,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path32,
+              path: path34,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -29656,7 +30266,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path32,
+            path: path34,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -30031,9 +30641,9 @@ var init_analysis_sources = __esm({
       #ownerIds(node) {
         const cached = this.#owners.get(node.id);
         if (cached) return cached;
-        const path32 = node.evidencePath.length ? node.evidencePath : [node.id];
-        for (let index = path32.length - 1; index >= 0; index--) {
-          const parent = this.#nodes.get(path32[index]);
+        const path34 = node.evidencePath.length ? node.evidencePath : [node.id];
+        for (let index = path34.length - 1; index >= 0; index--) {
+          const parent = this.#nodes.get(path34[index]);
           if (!parent) continue;
           const owners = this.#functionsAt.get(addressKey3(parent.addressSpace, parent.address));
           if (owners?.length) {
@@ -30273,6 +30883,7 @@ __export(src_exports, {
   ANALYSIS_PROJECT_REVISION_VERSION: () => ANALYSIS_PROJECT_REVISION_VERSION,
   ANALYSIS_PROJECT_SCHEMA_VERSION: () => ANALYSIS_PROJECT_SCHEMA_VERSION,
   ANALYSIS_PROJECT_SQLITE_FILE: () => ANALYSIS_PROJECT_SQLITE_FILE,
+  ANALYSIS_SQLITE_STORAGE_VERSION: () => ANALYSIS_SQLITE_STORAGE_VERSION,
   AnalysisProjectStaleError: () => AnalysisProjectStaleError,
   AnalysisSourceIndex: () => AnalysisSourceIndex,
   AssetCodecRegistry: () => AssetCodecRegistry,
@@ -30345,6 +30956,7 @@ __export(src_exports, {
   loadAnalysisProjectViewSnapshot: () => loadAnalysisProjectViewSnapshot,
   loadSourceExportManifest: () => loadSourceExportManifest,
   mergeRuntimeEvidence: () => mergeRuntimeEvidence,
+  migrateAnalysisProjectStorage: () => migrateAnalysisProjectStorage,
   openAnalysisProjectStore: () => openAnalysisProjectStore,
   parseAnalysisProjectManifest: () => parseAnalysisProjectManifest,
   planAssets: () => planAssets,
@@ -30398,6 +31010,7 @@ var init_src = __esm({
     init_behavior_capture_recorder();
     init_interval_index();
     init_sqlite_store();
+    init_sqlite_migration();
     init_project_store();
     init_project_transaction();
     init_project_edit();
@@ -30476,20 +31089,20 @@ var init_crc32 = __esm({
 });
 
 // packages/core/src/addressToLine.ts
-var import_node_crypto17, fs9, sourceIdentity, AddressToLineMapping;
+var import_node_crypto18, fs11, sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
   "packages/core/src/addressToLine.ts"() {
     "use strict";
-    import_node_crypto17 = require("node:crypto");
-    fs9 = __toESM(require("node:fs"), 1);
+    import_node_crypto18 = require("node:crypto");
+    fs11 = __toESM(require("node:fs"), 1);
     init_crc32();
     sourceIdentity = (filename) => {
       try {
-        const data = fs9.readFileSync(filename);
+        const data = fs11.readFileSync(filename);
         return {
           crc: CRC32.compute(data),
           size: data.length,
-          sha256: (0, import_node_crypto17.createHash)("sha256").update(data).digest("hex")
+          sha256: (0, import_node_crypto18.createHash)("sha256").update(data).digest("hex")
         };
       } catch {
         return { crc: 0, size: 0, sha256: "" };
@@ -32713,12 +33326,12 @@ function stripWrappingQuotes(filename) {
   }
   return filename;
 }
-var import_node_fs6, import_node_path9, NodeAssemblyFileProvider;
+var import_node_fs8, import_node_path11, NodeAssemblyFileProvider;
 var init_file_provider = __esm({
   "packages/core/src/file-provider.ts"() {
     "use strict";
-    import_node_fs6 = __toESM(require("node:fs"), 1);
-    import_node_path9 = __toESM(require("node:path"), 1);
+    import_node_fs8 = __toESM(require("node:fs"), 1);
+    import_node_path11 = __toESM(require("node:path"), 1);
     NodeAssemblyFileProvider = class {
       /**
        * Resolves path.
@@ -32731,21 +33344,21 @@ var init_file_provider = __esm({
           return void 0;
         }
         const normalized = stripWrappingQuotes(filename);
-        if (import_node_path9.default.isAbsolute(normalized)) {
-          return import_node_fs6.default.existsSync(normalized) ? normalized : void 0;
+        if (import_node_path11.default.isAbsolute(normalized)) {
+          return import_node_fs8.default.existsSync(normalized) ? normalized : void 0;
         }
         const candidates = /* @__PURE__ */ new Set();
         const baseDirectories = [
-          options.macroSourceFile ? import_node_path9.default.dirname(options.macroSourceFile) : void 0,
-          options.currentFile ? import_node_path9.default.dirname(options.currentFile) : void 0,
+          options.macroSourceFile ? import_node_path11.default.dirname(options.macroSourceFile) : void 0,
+          options.currentFile ? import_node_path11.default.dirname(options.currentFile) : void 0,
           ...options.includePaths ?? [],
           process.cwd()
         ].filter((entry) => Boolean(entry));
         for (const baseDirectory of baseDirectories) {
-          candidates.add(import_node_path9.default.resolve(baseDirectory, normalized));
+          candidates.add(import_node_path11.default.resolve(baseDirectory, normalized));
         }
         for (const candidate of candidates) {
-          if (import_node_fs6.default.existsSync(candidate)) {
+          if (import_node_fs8.default.existsSync(candidate)) {
             return candidate;
           }
         }
@@ -32759,12 +33372,12 @@ var init_file_provider = __esm({
       stat(filePath) {
         let st;
         try {
-          st = import_node_fs6.default.statSync(filePath);
+          st = import_node_fs8.default.statSync(filePath);
         } catch {
           return { exists: false, readable: false };
         }
         try {
-          import_node_fs6.default.accessSync(filePath, import_node_fs6.default.constants.R_OK);
+          import_node_fs8.default.accessSync(filePath, import_node_fs8.default.constants.R_OK);
           return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
         } catch {
           return { exists: true, readable: false, mtimeMs: st.mtimeMs };
@@ -32776,7 +33389,7 @@ var init_file_provider = __esm({
        * @returns {Uint8Array} The result.
        */
       readFile(filePath) {
-        return new Uint8Array(import_node_fs6.default.readFileSync(filePath));
+        return new Uint8Array(import_node_fs8.default.readFileSync(filePath));
       }
       /**
        * Reads text file.
@@ -32785,7 +33398,7 @@ var init_file_provider = __esm({
        * @returns {string} The result.
        */
       readTextFile(filePath, encoding = "utf8") {
-        return import_node_fs6.default.readFileSync(filePath, encoding);
+        return import_node_fs8.default.readFileSync(filePath, encoding);
       }
     };
   }
@@ -54210,11 +54823,11 @@ var init_analysis = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/dizraw-import.ts
-var import_node_crypto18, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
+var import_node_crypto19, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
 var init_dizraw_import = __esm({
   "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
-    import_node_crypto18 = require("node:crypto");
+    import_node_crypto19 = require("node:crypto");
     SUBSTITUTIONS = [
       ["0001E", "ZQ"],
       ["B0001", "Zq"],
@@ -54412,7 +55025,7 @@ var init_dizraw_import = __esm({
       const dataAttributes = attributes(data.opening);
       const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
       if (!mapper) throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
-      const sourceSha256 = (0, import_node_crypto18.createHash)("sha256").update(xml).digest("hex");
+      const sourceSha256 = (0, import_node_crypto19.createHash)("sha256").update(xml).digest("hex");
       const sourceName = options.sourceName ?? "import.dizraw";
       const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
       const labelsElement = element(data.body, "Labels");
@@ -54589,11 +55202,11 @@ var init_dizraw_import = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/mesen-runtime.ts
-var import_node_crypto19, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2567, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
+var import_node_crypto20, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2567, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
 var init_mesen_runtime = __esm({
   "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
-    import_node_crypto19 = require("node:crypto");
+    import_node_crypto20 = require("node:crypto");
     init_src2();
     init_src();
     init_decoder();
@@ -54609,7 +55222,7 @@ var init_mesen_runtime = __esm({
     CDL_MEMORY_8 = 32;
     CDL_GSU = 64;
     CDL_CX4 = 128;
-    sha2567 = (value) => (0, import_node_crypto19.createHash)("sha256").update(value).digest("hex");
+    sha2567 = (value) => (0, import_node_crypto20.createHash)("sha256").update(value).digest("hex");
     stableSuffix = (value) => sha2567(canonicalJson(value)).slice(0, 16);
     hex8 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
     assertContext = (rom, mapper, context) => {
@@ -55220,11 +55833,11 @@ var init_mesen_runtime = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/spc700-address-space.ts
-var import_node_crypto20, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
+var import_node_crypto21, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
 var init_spc700_address_space = __esm({
   "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
-    import_node_crypto20 = require("node:crypto");
+    import_node_crypto21 = require("node:crypto");
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SPC700_ARAM_ADDRESS_SPACE,
@@ -55249,7 +55862,7 @@ var init_spc700_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto20.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto21.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       /**
        * Number of represented ARAM bytes.
@@ -55305,11 +55918,11 @@ var init_spc700_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/mesen-labels.ts
-var import_node_crypto21, LABEL_PATTERN, MEMORY_TYPES, sha2568, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
+var import_node_crypto22, LABEL_PATTERN, MEMORY_TYPES, sha2568, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
 var init_mesen_labels = __esm({
   "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
-    import_node_crypto21 = require("node:crypto");
+    import_node_crypto22 = require("node:crypto");
     init_address_identities();
     init_mesen_runtime();
     init_spc700_address_space();
@@ -55356,7 +55969,7 @@ var init_mesen_labels = __esm({
         maximum: 65536
       }
     };
-    sha2568 = (value) => (0, import_node_crypto21.createHash)("sha256").update(value).digest("hex");
+    sha2568 = (value) => (0, import_node_crypto22.createHash)("sha256").update(value).digest("hex");
     reportFor = (operation, sourceName, sourceSha256, imported, unsupported, warnings) => ({
       id: `${operation}:mesence-labels:${sourceSha256}`,
       format: "mesence-labels",
@@ -55779,12 +56392,12 @@ var init_code_preservation = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-var fs11, import_node_path10, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, parseAddress2, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
+var fs13, import_node_path12, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, parseAddress2, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
-    fs11 = __toESM(require("node:fs"), 1);
-    import_node_path10 = __toESM(require("node:path"), 1);
+    fs13 = __toESM(require("node:fs"), 1);
+    import_node_path12 = __toESM(require("node:path"), 1);
     init_src();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
@@ -55877,12 +56490,12 @@ var init_ram_map = __esm({
       variables: []
     });
     loadSnesRamMap = (directory) => {
-      const file = import_node_path10.default.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs11.existsSync(file)) {
-        fs11.mkdirSync(directory, { recursive: true });
-        fs11.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      const file = import_node_path12.default.join(directory, SNES_RAM_MAP_SOURCE);
+      if (!fs13.existsSync(file)) {
+        fs13.mkdirSync(directory, { recursive: true });
+        fs13.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs11.readFileSync(file);
+      const sourceBytes = fs13.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -55971,12 +56584,12 @@ var init_ram_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/struct-map.ts
-var fs12, import_node_path11, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex10, comment, object2, integer5, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+var fs14, import_node_path13, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex10, comment, object2, integer5, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
   "packages/plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
-    fs12 = __toESM(require("node:fs"), 1);
-    import_node_path11 = __toESM(require("node:path"), 1);
+    fs14 = __toESM(require("node:fs"), 1);
+    import_node_path13 = __toESM(require("node:path"), 1);
     init_ram_map();
     SNES_STRUCT_MAP_SOURCE = "struct-map.json";
     SNES_STRUCT_DEFINES_SOURCE = "structs.asm";
@@ -56103,9 +56716,9 @@ var init_struct_map = __esm({
       return { structures, bindings };
     };
     loadSnesStructMap = (directory) => {
-      const filename = import_node_path11.default.join(directory, SNES_STRUCT_MAP_SOURCE);
-      if (!fs12.existsSync(filename)) return void 0;
-      const sourceBytes = fs12.readFileSync(filename);
+      const filename = import_node_path13.default.join(directory, SNES_STRUCT_MAP_SOURCE);
+      if (!fs14.existsSync(filename)) return void 0;
+      const sourceBytes = fs14.readFileSync(filename);
       return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
     };
     completeFields = (structure) => {
@@ -56263,12 +56876,12 @@ var init_struct_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/source-export.ts
-var fs13, import_node_path12, hex11, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, widthDirective, regionIdsFor, exportSnes65816Source;
+var fs15, import_node_path14, hex11, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, widthDirective, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
-    fs13 = __toESM(require("node:fs"), 1);
-    import_node_path12 = __toESM(require("node:path"), 1);
+    fs15 = __toESM(require("node:fs"), 1);
+    import_node_path14 = __toESM(require("node:path"), 1);
     init_src2();
     init_src();
     init_decoder();
@@ -56829,10 +57442,10 @@ var init_source_export2 = __esm({
       return grouped;
     };
     preflight = (directory, force) => {
-      if (!fs13.existsSync(directory)) return void 0;
-      const manifestFile = import_node_path12.default.join(directory, SOURCE_EXPORT_MANIFEST);
-      if (!fs13.existsSync(manifestFile)) {
-        const unexpected = fs13.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
+      if (!fs15.existsSync(directory)) return void 0;
+      const manifestFile = import_node_path14.default.join(directory, SOURCE_EXPORT_MANIFEST);
+      if (!fs15.existsSync(manifestFile)) {
+        const unexpected = fs15.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
           throw new Error(
             `Export directory '${directory}' is not empty; pass --force to write into it.`
@@ -56846,9 +57459,9 @@ var init_source_export2 = __esm({
     };
     writeFile = (root, relative6, bytes, kind, files) => {
       const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
-      const destination = import_node_path12.default.join(root, relative6);
-      fs13.mkdirSync(import_node_path12.default.dirname(destination), { recursive: true });
-      fs13.writeFileSync(destination, value);
+      const destination = import_node_path14.default.join(root, relative6);
+      fs15.mkdirSync(import_node_path14.default.dirname(destination), { recursive: true });
+      fs15.writeFileSync(destination, value);
       files.push({ path: relative6, kind, size: value.length, sha256: sourceExportSha256(value) });
     };
     widthDirective = (flag, sixteen, eight) => {
@@ -57211,12 +57824,12 @@ var init_source_export2 = __esm({
       const currentPaths = new Set(manifest.files.map((file) => file.path));
       for (const stale of previousManifest?.files ?? []) {
         if (currentPaths.has(stale.path)) continue;
-        const staleFile = import_node_path12.default.join(directory, stale.path);
-        if (fs13.existsSync(staleFile) && fs13.statSync(staleFile).isFile()) fs13.unlinkSync(staleFile);
+        const staleFile = import_node_path14.default.join(directory, stale.path);
+        if (fs15.existsSync(staleFile) && fs15.statSync(staleFile).isFile()) fs15.unlinkSync(staleFile);
       }
-      fs13.mkdirSync(directory, { recursive: true });
-      fs13.writeFileSync(
-        import_node_path12.default.join(directory, SOURCE_EXPORT_MANIFEST),
+      fs15.mkdirSync(directory, { recursive: true });
+      fs15.writeFileSync(
+        import_node_path14.default.join(directory, SOURCE_EXPORT_MANIFEST),
         canonicalSourceExportJson(manifest)
       );
       return manifest;
@@ -58119,11 +58732,11 @@ var init_processor_source_export = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
-var import_node_crypto22, isArray4, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
+var import_node_crypto23, isArray4, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
-    import_node_crypto22 = require("node:crypto");
+    import_node_crypto23 = require("node:crypto");
     init_src();
     init_hardware_registers();
     isArray4 = (value) => Array.isArray(value);
@@ -58283,7 +58896,7 @@ var init_function_heuristics = __esm({
         const key2 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
         const prior = found.get(key2);
         found.set(key2, {
-          id: `heuristic:snes:${(0, import_node_crypto22.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
+          id: `heuristic:snes:${(0, import_node_crypto23.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
           rule,
           role,
           addressSpace: node.addressSpace,
@@ -58570,7 +59183,7 @@ var init_function_heuristics = __esm({
       const roles = [...found.values()].sort(
         (a, b) => a.address - b.address || a.id.localeCompare(b.id)
       );
-      const signature = (0, import_node_crypto22.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
+      const signature = (0, import_node_crypto23.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
       const evidence = roles.map((role) => ({
         id: `${role.id}:evidence`,
         source: "detector",
@@ -58594,11 +59207,11 @@ var init_function_heuristics = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/runtime-code.ts
-var import_node_crypto23, runtimeDecodeState, createSnesRuntimeAnalysisProjection, analyzeSnesRuntimeCode;
+var import_node_crypto24, runtimeDecodeState, createSnesRuntimeAnalysisProjection, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
   "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
-    import_node_crypto23 = require("node:crypto");
+    import_node_crypto24 = require("node:crypto");
     init_src2();
     init_src();
     init_decoder();
@@ -58678,7 +59291,7 @@ var init_runtime_code = __esm({
         if (sample.kind !== "runtime-instruction" || sample.architecture !== "snes.65816" || sample.addressSpace !== "snes.cpu")
           continue;
         const state = runtimeDecodeState(sample);
-        const variant = (0, import_node_crypto23.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
+        const variant = (0, import_node_crypto24.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
         const id = `runtime:code:${variant}`;
         const duplicate = nodes.get(id);
         if (duplicate) {
@@ -58852,11 +59465,11 @@ var init_runtime_code = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/superfx-address-space.ts
-var import_node_crypto24, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
+var import_node_crypto25, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
 var init_superfx_address_space = __esm({
   "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
-    import_node_crypto24 = require("node:crypto");
+    import_node_crypto25 = require("node:crypto");
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SUPERFX_ROM_ADDRESS_SPACE,
@@ -58877,7 +59490,7 @@ var init_superfx_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto24.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto25.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       get length() {
         return this.#bytes.length;
@@ -58912,12 +59525,12 @@ var init_superfx_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/project-initializer.ts
-var fs14, import_node_path13, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace, SNES_SOURCE_EXPORT_MANIFEST;
+var fs16, import_node_path15, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace, SNES_SOURCE_EXPORT_MANIFEST;
 var init_project_initializer = __esm({
   "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
-    fs14 = __toESM(require("node:fs"), 1);
-    import_node_path13 = __toESM(require("node:path"), 1);
+    fs16 = __toESM(require("node:fs"), 1);
+    import_node_path15 = __toESM(require("node:path"), 1);
     init_src2();
     init_src();
     init_address_space();
@@ -58955,7 +59568,7 @@ var init_project_initializer = __esm({
       if (signal?.aborted) throw new SnesProjectInitializationCancelledError();
     };
     assertDizRawFile = (file) => {
-      if (import_node_path13.default.extname(file).toLowerCase() !== ".dizraw") {
+      if (import_node_path15.default.extname(file).toLowerCase() !== ".dizraw") {
         throw new Error(
           "Only uncompressed .dizraw imports are supported; compressed .diz input is not supported."
         );
@@ -58963,55 +59576,55 @@ var init_project_initializer = __esm({
     };
     importDizRawFile = (file, rom) => {
       assertDizRawFile(file);
-      return importDizRaw(fs14.readFileSync(file, "utf8"), {
-        sourceName: import_node_path13.default.basename(file),
+      return importDizRaw(fs16.readFileSync(file, "utf8"), {
+        sourceName: import_node_path15.default.basename(file),
         expectedRomSize: rom.length
       });
     };
     ensureWritableDestination = (directory) => {
-      if (!fs14.existsSync(directory)) return;
-      const stat2 = fs14.statSync(directory);
+      if (!fs16.existsSync(directory)) return;
+      const stat2 = fs16.statSync(directory);
       if (!stat2.isDirectory()) throw new Error(`Destination '${directory}' is not a directory.`);
-      if (fs14.readdirSync(directory).length > 0) {
+      if (fs16.readdirSync(directory).length > 0) {
         throw new Error(`Destination '${directory}' must be empty.`);
       }
     };
     safeWorkspacePath = (relative6) => {
-      if (relative6 === "" || import_node_path13.default.isAbsolute(relative6) || relative6.split(/[/\\]/).some((part) => part === "" || part === "..")) {
+      if (relative6 === "" || import_node_path15.default.isAbsolute(relative6) || relative6.split(/[/\\]/).some((part) => part === "" || part === "..")) {
         throw new Error(`Unsafe workspace file path '${relative6}'.`);
       }
       return relative6;
     };
     temporarySibling = (destination, suffix) => {
-      const resolved = import_node_path13.default.resolve(destination);
-      const parent = import_node_path13.default.dirname(resolved);
-      fs14.mkdirSync(parent, { recursive: true });
-      return fs14.mkdtempSync(import_node_path13.default.join(parent, `.${import_node_path13.default.basename(resolved)}.${suffix}-`));
+      const resolved = import_node_path15.default.resolve(destination);
+      const parent = import_node_path15.default.dirname(resolved);
+      fs16.mkdirSync(parent, { recursive: true });
+      return fs16.mkdtempSync(import_node_path15.default.join(parent, `.${import_node_path15.default.basename(resolved)}.${suffix}-`));
     };
     removeDirectory = (directory) => {
-      fs14.rmSync(directory, { recursive: true, force: true });
+      fs16.rmSync(directory, { recursive: true, force: true });
     };
     commitStagedDirectory = (staging, destination) => {
-      const resolved = import_node_path13.default.resolve(destination);
+      const resolved = import_node_path15.default.resolve(destination);
       ensureWritableDestination(resolved);
-      if (!fs14.existsSync(resolved)) {
-        fs14.renameSync(staging, resolved);
+      if (!fs16.existsSync(resolved)) {
+        fs16.renameSync(staging, resolved);
         return;
       }
-      const backup = `${resolved}.empty-${import_node_path13.default.basename(staging)}`;
-      fs14.renameSync(resolved, backup);
+      const backup = `${resolved}.empty-${import_node_path15.default.basename(staging)}`;
+      fs16.renameSync(resolved, backup);
       try {
-        fs14.renameSync(staging, resolved);
-        fs14.rmdirSync(backup);
+        fs16.renameSync(staging, resolved);
+        fs16.rmdirSync(backup);
       } catch (error) {
-        if (!fs14.existsSync(resolved) && fs14.existsSync(backup)) fs14.renameSync(backup, resolved);
+        if (!fs16.existsSync(resolved) && fs16.existsSync(backup)) fs16.renameSync(backup, resolved);
         throw error;
       }
     };
     probeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path15.default.resolve(options.romFile), {
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       const detection = detectSnesRom(rom, {
@@ -59019,7 +59632,7 @@ var init_project_initializer = __esm({
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       throwIfCancelled(options.signal);
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path13.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path15.default.resolve(options.dizRawFile), rom) : void 0;
       const detectedMapper = detection.mapper;
       const importedMapper = imported?.mapping.mapper;
       const conflict = options.mapper === void 0 && detectedMapper !== void 0 && importedMapper !== void 0 && detectedMapper !== importedMapper;
@@ -59047,7 +59660,7 @@ var init_project_initializer = __esm({
       };
     };
     createSnesAnalysisProject = (options) => {
-      const projectDirectory = import_node_path13.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path15.default.resolve(options.projectDirectory);
       ensureWritableDestination(projectDirectory);
       const probe = probeSnesProject(options);
       if (probe.mapperSelectionRequired || probe.detection.mapper === void 0) {
@@ -59057,10 +59670,10 @@ var init_project_initializer = __esm({
       }
       throwIfCancelled(options.signal);
       report(options, "create", "Creating the native analysis project.");
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path15.default.resolve(options.romFile), {
         headerSize: probe.rom.headerSize
       });
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path13.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path15.default.resolve(options.dizRawFile), rom) : void 0;
       const mapper = options.mapper ?? probe.detection.mapper;
       const importWarnings = imported && options.mapper && options.mapper !== imported.mapping.mapper ? [
         ...imported.report.warnings,
@@ -59115,22 +59728,22 @@ var init_project_initializer = __esm({
     analyzeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "analyze", "Running bounded conservative 65816 analysis.");
-      const projectDirectory = import_node_path13.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path15.default.resolve(options.projectDirectory);
       const loaded = loadAnalysisProjectViewSnapshot(
         projectDirectory,
         createSnesRuntimeAnalysisProjection
       );
       report(options, "analyze", "Building static analysis from the validated runtime view.");
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path15.default.resolve(options.romFile), {
         headerSize: loaded.manifest.rom.headerSize
       });
       validateProjectRom(loaded.manifest, rom);
       if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
       }
-      const heuristicFile = import_node_path13.default.join(projectDirectory, "heuristics.json");
+      const heuristicFile = import_node_path15.default.join(projectDirectory, "heuristics.json");
       const heuristicConfig = validateSnesHeuristicConfiguration(
-        options.heuristics ?? (fs14.existsSync(heuristicFile) ? JSON.parse(fs14.readFileSync(heuristicFile, "utf8")) : {})
+        options.heuristics ?? (fs16.existsSync(heuristicFile) ? JSON.parse(fs16.readFileSync(heuristicFile, "utf8")) : {})
       );
       const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
       const editableRecords = loaded.view.analysis.filter(
@@ -59289,18 +59902,18 @@ var init_project_initializer = __esm({
     exportSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "export", "Exporting deterministic native 65816 source.");
-      const projectDirectory = import_node_path13.default.resolve(options.projectDirectory);
-      const sourceDirectory = import_node_path13.default.resolve(options.sourceDirectory);
+      const projectDirectory = import_node_path15.default.resolve(options.projectDirectory);
+      const sourceDirectory = import_node_path15.default.resolve(options.sourceDirectory);
       const snapshot = loadAnalysisProjectView(projectDirectory);
       const loaded = { manifest: snapshot.manifest, shards: snapshot.view };
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path15.default.resolve(options.romFile), {
         headerSize: loaded.manifest.rom.headerSize
       });
       validateProjectRom(loaded.manifest, rom);
       if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
       }
-      const projectManifest = fs14.readFileSync(import_node_path13.default.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
+      const projectManifest = fs16.readFileSync(import_node_path15.default.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
       const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
         force: options.force,
         allowCodeRegression: options.allowCodeRegression,
@@ -59316,11 +59929,11 @@ var init_project_initializer = __esm({
     verifySnesProjectRoundTrip = async (options) => {
       throwIfCancelled(options.signal);
       report(options, "verify", "Rebuilding and verifying the exported source byte-for-byte.");
-      const sourceDirectory = import_node_path13.default.resolve(options.sourceDirectory);
+      const sourceDirectory = import_node_path15.default.resolve(options.sourceDirectory);
       const manifest = loadSourceExportManifest(sourceDirectory);
       validateSourceExportFiles(sourceDirectory, manifest);
       validateSourceExportInputs(sourceDirectory, manifest);
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path15.default.resolve(options.romFile), {
         headerSize: manifest.rom.headerSize
       });
       if (rom.identity.sha256 !== manifest.rom.sha256 || rom.identity.contentSha256 !== manifest.rom.contentSha256) {
@@ -59331,7 +59944,7 @@ var init_project_initializer = __esm({
       const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src3(), src_exports2));
       throwIfCancelled(options.signal);
       const environment = await createSnesAssemblerEnvironment2();
-      const entrySource = import_node_path13.default.join(sourceDirectory, manifest.entrySource);
+      const entrySource = import_node_path15.default.join(sourceDirectory, manifest.entrySource);
       const assembler = new Assembler({
         environment,
         target: TARGET_ID,
@@ -59342,25 +59955,25 @@ var init_project_initializer = __esm({
       try {
         assembler.setIncludePaths([sourceDirectory]);
         assembler.setCurrentFile(entrySource);
-        const source = fs14.readFileSync(entrySource, "utf8");
+        const source = fs16.readFileSync(entrySource, "utf8");
         assembler.assembleProgram(assembler.buildProgramModel(source, entrySource, 0));
         throwIfCancelled(options.signal);
         const content = Buffer.from(assembler.getBinaryOutput());
-        const contentOutput = import_node_path13.default.join(sourceDirectory, manifest.contentOutput);
-        const finalOutput = import_node_path13.default.join(sourceDirectory, manifest.finalOutput);
-        fs14.mkdirSync(import_node_path13.default.dirname(contentOutput), { recursive: true });
-        fs14.writeFileSync(contentOutput, content);
+        const contentOutput = import_node_path15.default.join(sourceDirectory, manifest.contentOutput);
+        const finalOutput = import_node_path15.default.join(sourceDirectory, manifest.finalOutput);
+        fs16.mkdirSync(import_node_path15.default.dirname(contentOutput), { recursive: true });
+        fs16.writeFileSync(contentOutput, content);
         const final = manifest.rom.headerSize === 0 ? content : Buffer.concat([
-          fs14.readFileSync(
-            import_node_path13.default.join(
+          fs16.readFileSync(
+            import_node_path15.default.join(
               sourceDirectory,
               manifest.spans.find((span) => span.role === "copier-header").file
             )
           ),
           content
         ]);
-        fs14.mkdirSync(import_node_path13.default.dirname(finalOutput), { recursive: true });
-        fs14.writeFileSync(finalOutput, final);
+        fs16.mkdirSync(import_node_path15.default.dirname(finalOutput), { recursive: true });
+        fs16.writeFileSync(finalOutput, final);
         const comparison = compareByteImages(rom.fileBytes(), final);
         if (!comparison.equal) {
           throw new Error(
@@ -59370,7 +59983,7 @@ var init_project_initializer = __esm({
         let debugMap;
         if (options.emitDebugMap ?? true) {
           debugMap = `${contentOutput}.debug.json`;
-          fs14.writeFileSync(
+          fs16.writeFileSync(
             debugMap,
             canonicalDebugMapJson(
               createDebugMap({
@@ -59394,7 +60007,7 @@ var init_project_initializer = __esm({
       }
     };
     initializeSnesDisassemblyWorkspace = async (options) => {
-      const outputDirectory = import_node_path13.default.resolve(options.outputDirectory);
+      const outputDirectory = import_node_path15.default.resolve(options.outputDirectory);
       ensureWritableDestination(outputDirectory);
       const staging = temporarySibling(outputDirectory, "workspace");
       const analysisTemporary = temporarySibling(outputDirectory, "workspace-analysis-destination");
@@ -59430,27 +60043,27 @@ var init_project_initializer = __esm({
         });
         throwIfCancelled(options.signal);
         report(options, "configure", "Writing workspace configuration.");
-        fs14.renameSync(analysisTemporary, import_node_path13.default.join(staging, "analysis"));
+        fs16.renameSync(analysisTemporary, import_node_path15.default.join(staging, "analysis"));
         for (const file of options.workspaceFiles ?? []) {
           const relative6 = safeWorkspacePath(file.path);
-          const destination = import_node_path13.default.join(staging, relative6);
-          fs14.mkdirSync(import_node_path13.default.dirname(destination), { recursive: true });
-          fs14.writeFileSync(destination, file.contents);
+          const destination = import_node_path15.default.join(staging, relative6);
+          fs16.mkdirSync(import_node_path15.default.dirname(destination), { recursive: true });
+          fs16.writeFileSync(destination, file.contents);
         }
         throwIfCancelled(options.signal);
         report(options, "commit", "Committing the completed workspace.");
         commitStagedDirectory(staging, outputDirectory);
-        const remap = (value) => import_node_path13.default.join(outputDirectory, import_node_path13.default.relative(staging, value));
+        const remap = (value) => import_node_path15.default.join(outputDirectory, import_node_path15.default.relative(staging, value));
         return {
           outputDirectory,
           probe: project.probe,
           project: {
             ...project,
-            projectDirectory: import_node_path13.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path15.default.join(outputDirectory, "analysis")
           },
           analysis: {
             ...analysis,
-            projectDirectory: import_node_path13.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path15.default.join(outputDirectory, "analysis")
           },
           source: { ...source, sourceDirectory: outputDirectory },
           roundTrip: {
@@ -59853,8 +60466,8 @@ var init_common2 = __esm({
       return value;
     };
     defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile2 = (path32, value) => ({
-      path: path32,
+    jsonFile2 = (path34, value) => ({
+      path: path34,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -59925,7 +60538,7 @@ var init_brr = __esm({
           };
         });
         const value = { kind: "snes-brr", blocks };
-        const path32 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
+        const path34 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
         const metadataPath = stringOption2(
           options,
           "metadataPath",
@@ -59933,7 +60546,7 @@ var init_brr = __esm({
         );
         return {
           value,
-          files: [{ path: path32, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
+          files: [{ path: path34, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
         };
       },
       encode: (context) => {
@@ -60007,8 +60620,8 @@ var init_palette = __esm({
           };
         });
         const value = { kind: "snes-palette-bgr555", colors };
-        const path32 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile2(path32, value)] };
+        const path34 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
+        return { value, files: [jsonFile2(path34, value)] };
       },
       encode: (context) => {
         const { count: count2, size } = resolveCount(context, 2);
@@ -60085,8 +60698,8 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           entries: entries3
         };
-        const path32 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile2(path32, value)] };
+        const path34 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
+        return { value, files: [jsonFile2(path34, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 2);
@@ -60145,12 +60758,12 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           indexes: [...bytes]
         };
-        const path32 = stringOption2(
+        const path34 = stringOption2(
           options,
           "path",
           defaultPath(context.request.id, "mode7-tilemap.json")
         );
-        return { value, files: [jsonFile2(path32, value)] };
+        return { value, files: [jsonFile2(path34, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 1);
@@ -60246,12 +60859,12 @@ var init_tiles = __esm({
             tileHeight: 8,
             tiles
           };
-          const path32 = stringOption2(
+          const path34 = stringOption2(
             options,
             "path",
             defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
           );
-          return { value, files: [jsonFile2(path32, value)] };
+          return { value, files: [jsonFile2(path34, value)] };
         },
         encode: (context) => {
           const { count: count2, size } = resolveCount(context, bytesPerTile);
@@ -60314,8 +60927,8 @@ var init_tiles = __esm({
           tileHeight: 8,
           tiles
         };
-        const path32 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile2(path32, value)] };
+        const path34 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
+        return { value, files: [jsonFile2(path34, value)] };
       },
       encode: (context) => {
         const { count: count2, size } = resolveCount(context, 64);
@@ -61203,12 +61816,12 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path31 = __toESM(require("node:path"));
+var path33 = __toESM(require("node:path"));
 var import_vscode16 = require("vscode");
 var import_node = __toESM(require_main3());
 
 // packages/vscode-extension/src/analysis-annotation-controller.ts
-var path10 = __toESM(require("node:path"));
+var path12 = __toESM(require("node:path"));
 var import_vscode3 = require("vscode");
 
 // packages/vscode-extension/src/analysis-annotation-format.ts
@@ -61558,7 +62171,7 @@ var analysisWorker = () => {
 };
 
 // packages/vscode-extension/src/coverage-tree.ts
-var path9 = __toESM(require("node:path"));
+var path11 = __toESM(require("node:path"));
 init_src();
 var import_vscode2 = require("vscode");
 var PAGE_SIZE = 200;
@@ -61705,11 +62318,11 @@ var findAnalysisProjectDirectories = async () => {
   const configured = import_vscode2.workspace.getConfiguration("asm").get("analysisProject", "").trim();
   if (configured !== "") {
     const folders = import_vscode2.workspace.workspaceFolders ?? [];
-    const candidates = path9.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path9.resolve(uri.fsPath, configured));
+    const candidates = path11.isAbsolute(configured) ? [configured] : folders.map(({ uri }) => path11.resolve(uri.fsPath, configured));
     return [
       ...new Set(
         candidates.map(
-          (candidate) => path9.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path9.dirname(candidate) : candidate
+          (candidate) => path11.basename(candidate) === ANALYSIS_PROJECT_MANIFEST ? path11.dirname(candidate) : candidate
         )
       )
     ].sort();
@@ -61721,7 +62334,7 @@ var findAnalysisProjectDirectories = async () => {
   );
   return [
     ...new Set(
-      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path9.dirname(fsPath))
+      manifests.filter(({ scheme }) => scheme === "file").map(({ fsPath }) => path11.dirname(fsPath))
     )
   ].sort();
 };
@@ -61812,7 +62425,7 @@ var AnalysisCoverageProvider = class {
     const directories = await findAnalysisProjectDirectories();
     const result = [];
     for (const directory of directories) {
-      const manifestUri = import_vscode2.Uri.file(path9.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const manifestUri = import_vscode2.Uri.file(path11.join(directory, ANALYSIS_PROJECT_MANIFEST));
       const projectId = `analysis:${directory}`;
       try {
         const manifest = await analysisWorker().request(
@@ -61821,7 +62434,7 @@ var AnalysisCoverageProvider = class {
         );
         result.push({
           id: projectId,
-          label: path9.basename(directory),
+          label: path11.basename(directory),
           description: `${manifest.target} \xB7 ${manifest.mapping.mapper} \xB7 ${manifest.rom.contentSha256.slice(0, 12)}`,
           tooltip: `${directory}
 ${formatBytes(manifest.rom.contentSize)} ROM content`,
@@ -61835,7 +62448,7 @@ ${formatBytes(manifest.rom.contentSize)} ROM content`,
         const message = error instanceof Error ? error.message : String(error);
         result.push({
           id: `${projectId}:error`,
-          label: path9.basename(directory),
+          label: path11.basename(directory),
           description: "invalid analysis project",
           tooltip: `${directory}
 ${message}`,
@@ -61915,7 +62528,7 @@ var AnalysisAnnotationController = class {
     this.#decoration.dispose();
   }
   async #decorations(editor, generation) {
-    const currentFile = path10.resolve(editor.document.uri.fsPath);
+    const currentFile = path12.resolve(editor.document.uri.fsPath);
     const byLine = /* @__PURE__ */ new Map();
     const loaded = [];
     for (const directory of await findAnalysisProjectDirectories()) {
@@ -61942,7 +62555,7 @@ var AnalysisAnnotationController = class {
         const sourceIds = new Set(
           candidate.map.sources.filter((source) => {
             const resolved = currentAnalysisSourcePath(source, candidate, currentFile);
-            return resolved !== void 0 && path10.resolve(resolved) === currentFile;
+            return resolved !== void 0 && path12.resolve(resolved) === currentFile;
           }).map(({ id }) => id)
         );
         if (sourceIds.size === 0) continue;
@@ -61955,7 +62568,7 @@ var AnalysisAnnotationController = class {
         if (ranges.length === 0) continue;
         const rows = await analysisWorker().request(directory, "annotations", { ranges });
         for (const { line, annotation } of rows) {
-          append(byLine, line, { project: path10.basename(directory), annotation });
+          append(byLine, line, { project: path12.basename(directory), annotation });
         }
       }
     }
@@ -62009,7 +62622,7 @@ var AnalysisAnnotationController = class {
 };
 
 // packages/vscode-extension/src/analysis-graph-tree.ts
-var path11 = __toESM(require("node:path"));
+var path13 = __toESM(require("node:path"));
 init_src();
 var import_vscode4 = require("vscode");
 var PAGE_SIZE2 = 200;
@@ -62281,7 +62894,7 @@ var AnalysisGraphProvider = class {
     const result = [];
     for (const directory of directories) {
       const projectId = `analysis-graph:${directory}`;
-      const manifestUri = import_vscode4.Uri.file(path11.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const manifestUri = import_vscode4.Uri.file(path13.join(directory, ANALYSIS_PROJECT_MANIFEST));
       try {
         const manifest = await analysisWorker().request(
           directory,
@@ -62289,7 +62902,7 @@ var AnalysisGraphProvider = class {
         );
         result.push({
           id: projectId,
-          label: path11.basename(directory),
+          label: path13.basename(directory),
           description: `${manifest.target} \xB7 ${manifest.mapping.mapper}`,
           tooltip: `${directory}
 ${manifest.rom.contentSha256}`,
@@ -62317,7 +62930,7 @@ ${manifest.rom.contentSha256}`,
         const message = error instanceof Error ? error.message : String(error);
         result.push({
           id: `${projectId}:error`,
-          label: path11.basename(directory),
+          label: path13.basename(directory),
           description: "invalid analysis project",
           tooltip: `${directory}
 ${message}`,
@@ -62351,7 +62964,7 @@ ${message}`,
 };
 
 // packages/vscode-extension/src/analysis-navigation.ts
-var path13 = __toESM(require("node:path"));
+var path15 = __toESM(require("node:path"));
 
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
@@ -62610,7 +63223,7 @@ var formatDebugExpressionValue = (value) => value < 0n ? `-0x${(-value).toString
 
 // packages/debug-adapter/src/dap.ts
 var import_node_async_hooks = require("node:async_hooks");
-var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_path9 = __toESM(require("node:path"), 1);
 init_debug_map();
 
 // packages/debug-adapter/src/capture-v2.ts
@@ -62898,7 +63511,7 @@ var DebugAdapterSession = class {
   constructor(options) {
     this.#backend = options.backend;
     this.#map = options.debugMap;
-    this.#sourceRoot = import_node_path7.default.resolve(options.sourceRoot ?? process.cwd());
+    this.#sourceRoot = import_node_path9.default.resolve(options.sourceRoot ?? process.cwd());
     this.#instructionAnnotation = options.instructionAnnotation;
     this.#onMessage = options.onMessage;
     this.#configurationHandshake = options.configurationHandshake ?? false;
@@ -63168,13 +63781,13 @@ var DebugAdapterSession = class {
         if (range && this.#map) {
           const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
           if (source) {
-            const sourcePath = import_node_path7.default.isAbsolute(source.path) ? source.path : import_node_path7.default.resolve(this.#sourceRoot, source.path);
+            const sourcePath = import_node_path9.default.isAbsolute(source.path) ? source.path : import_node_path9.default.resolve(this.#sourceRoot, source.path);
             return {
               id: frame.id,
               name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
               line: range.line,
               column: 1,
-              source: { name: import_node_path7.default.basename(sourcePath), path: sourcePath },
+              source: { name: import_node_path9.default.basename(sourcePath), path: sourcePath },
               instructionPointerReference: formatDebugAddress(frame.pc)
             };
           }
@@ -63512,7 +64125,7 @@ var DebugAdapterSession = class {
    */
   #sourceRanges(sourcePath) {
     if (!this.#map) return [];
-    const normalized = sourcePath.split(import_node_path7.default.sep).join("/");
+    const normalized = sourcePath.split(import_node_path9.default.sep).join("/");
     const sourceIds = new Set(
       this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
     );
@@ -63786,7 +64399,7 @@ var createDebugMapReplayScript = (map, output) => {
 var import_node_child_process2 = require("node:child_process");
 
 // packages/debug-adapter/src/sidecar-protocol.ts
-var import_node_crypto13 = require("node:crypto");
+var import_node_crypto14 = require("node:crypto");
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -63830,7 +64443,7 @@ var isRecord = (value) => typeof value === "object" && value !== null && !Array.
 var positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 var nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 var sessionPattern = /^[\w-]{32,128}$/;
-var createDebugSidecarSessionToken = () => (0, import_node_crypto13.randomBytes)(32).toString("base64url");
+var createDebugSidecarSessionToken = () => (0, import_node_crypto14.randomBytes)(32).toString("base64url");
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value))
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
@@ -65325,7 +65938,7 @@ var DebugSidecarClient = class {
 };
 
 // packages/debug-adapter/src/capture-file.ts
-var import_promises2 = require("node:fs/promises");
+var import_promises3 = require("node:fs/promises");
 var pause = () => new Promise((resolve11) => setTimeout(resolve11, 10));
 var metadataValid = (m) => {
   if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision)
@@ -65371,12 +65984,12 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
   static async create(options) {
     metadataValid(options);
     validateCaptureCapabilities(await options.transport({ operation: "capabilities" }));
-    const destination = await (0, import_promises2.open)(options.file, "wx");
+    const destination = await (0, import_promises3.open)(options.file, "wx");
     await destination.close();
     let handle;
     let position;
     try {
-      handle = await (0, import_promises2.open)(`${options.file}.act2.partial`, "wx");
+      handle = await (0, import_promises3.open)(`${options.file}.act2.partial`, "wx");
       position = validateCapturePosition(
         await options.transport({
           operation: "start",
@@ -65412,7 +66025,7 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       if (position)
         await options.transport({ operation: "abort", session: position.session }).catch(() => void 0);
       await handle?.close().catch(() => void 0);
-      await (0, import_promises2.unlink)(options.file).catch(() => void 0);
+      await (0, import_promises3.unlink)(options.file).catch(() => void 0);
       throw error;
     }
   }
@@ -65498,8 +66111,8 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
       await this.#handle.sync();
       await this.#handle.close();
       const archive = `${this.#file}.act2`;
-      await (0, import_promises2.link)(this.#partial, archive);
-      await (0, import_promises2.unlink)(this.#partial);
+      await (0, import_promises3.link)(this.#partial, archive);
+      await (0, import_promises3.unlink)(this.#partial);
       await exportCaptureJson(archive, this.#file, true);
       return {
         file: this.#file,
@@ -65518,7 +66131,7 @@ var LosslessCaptureFileRecorder = class _LosslessCaptureFileRecorder {
   }
 };
 var recoverCaptureFile = async (file, accept) => {
-  const handle = await (0, import_promises2.open)(file, "r");
+  const handle = await (0, import_promises3.open)(file, "r");
   let offset = 0;
   const read = async (length) => {
     const b = Buffer.alloc(length);
@@ -65610,7 +66223,7 @@ var exportCaptureJson = async (archive, destination, reserved = false) => {
     throw new Error(
       "Legacy JSON sequence numbers cannot represent this capture; retain the exact ACT2 archive."
     );
-  const h = await (0, import_promises2.open)(destination, reserved ? "r+" : "wx");
+  const h = await (0, import_promises3.open)(destination, reserved ? "r+" : "wx");
   try {
     if (reserved && (await h.stat()).size !== 0)
       throw new Error("Reserved trace destination changed during capture.");
@@ -65692,7 +66305,7 @@ var openSourceLocation = async (locations) => {
   if (locations.length === 0) return false;
   const selected = locations.length === 1 ? locations[0] : (await import_vscode5.window.showQuickPick(
     locations.map((location) => ({
-      label: `${path13.basename(location.file)}:${location.line}`,
+      label: `${path15.basename(location.file)}:${location.line}`,
       description: `${location.architecture} \xB7 ${location.addressSpace} \xB7 ${location.mapFile}`,
       location
     })),
@@ -65811,9 +66424,9 @@ var navigateToAnalysisLocation = async (target) => {
 };
 
 // packages/vscode-extension/src/analysis-project-editor.ts
-var import_node_crypto15 = require("node:crypto");
-var fs8 = __toESM(require("node:fs"));
-var path14 = __toESM(require("node:path"));
+var import_node_crypto16 = require("node:crypto");
+var fs10 = __toESM(require("node:fs"));
+var path16 = __toESM(require("node:path"));
 init_src();
 var import_vscode8 = require("vscode");
 
@@ -65821,18 +66434,18 @@ var import_vscode8 = require("vscode");
 var import_vscode7 = require("vscode");
 
 // packages/vscode-extension/src/webview-template.ts
-var import_node_crypto14 = require("node:crypto");
-var import_node_fs4 = require("node:fs");
+var import_node_crypto15 = require("node:crypto");
+var import_node_fs6 = require("node:fs");
 var import_vscode6 = require("vscode");
 var renderWebviewTemplate = (webview, extensionUri, name) => {
   const asset = (file) => import_vscode6.Uri.joinPath(extensionUri, "media", file);
   const values = {
     cspSource: webview.cspSource,
-    nonce: (0, import_node_crypto14.randomBytes)(18).toString("base64"),
+    nonce: (0, import_node_crypto15.randomBytes)(18).toString("base64"),
     styleUri: webview.asWebviewUri(asset(`${name}.css`)).toString(),
     scriptUri: webview.asWebviewUri(asset(`${name}.js`)).toString()
   };
-  return (0, import_node_fs4.readFileSync)(asset(`${name}.html`).fsPath, "utf8").replace(
+  return (0, import_node_fs6.readFileSync)(asset(`${name}.html`).fsPath, "utf8").replace(
     /{{(\w+)}}/g,
     (_match, key2) => {
       if (!(key2 in values)) throw new Error(`Unknown webview template field '${key2}'.`);
@@ -66139,7 +66752,7 @@ var AnalysisProjectEditor = class {
       });
       if (detail === void 0) return;
       const architecture2 = architectureInput.trim();
-      const suffix = (0, import_node_crypto15.createHash)("sha256").update(
+      const suffix = (0, import_node_crypto16.createHash)("sha256").update(
         canonicalJson({
           revision: snapshot.revision.manifestSha256,
           addressSpace: addressSpace2.id,
@@ -66383,8 +66996,8 @@ var AnalysisProjectEditor = class {
           "Use a saved, unchanged generated source file. Regenerate source if it was edited."
         );
       const source = sourceEditor ? {
-        file: path14.resolve(sourceEditor.document.uri.fsPath),
-        sha256: (0, import_node_crypto15.createHash)("sha256").update(sourceEditor.document.getText()).digest("hex"),
+        file: path16.resolve(sourceEditor.document.uri.fsPath),
+        sha256: (0, import_node_crypto16.createHash)("sha256").update(sourceEditor.document.getText()).digest("hex"),
         line: sourceEditor.selection.active.line + 1,
         column: sourceEditor.selection.active.character
       } : void 0;
@@ -66447,13 +67060,13 @@ var AnalysisProjectEditor = class {
       };
       form.initialize(
         {
-          location: `${path14.basename(projectDirectory)} \xB7 ${location.addressSpace} ${hexadecimal3(location.address)}`,
+          location: `${path16.basename(projectDirectory)} \xB7 ${location.addressSpace} ${hexadecimal3(location.address)}`,
           fields: initialFields,
           hasInstruction: hasInstruction || Boolean(inline)
         },
         async (fields) => {
           this.assertTrustedProject(projectDirectory);
-          if (source && ((0, import_node_crypto15.createHash)("sha256").update(await fs8.promises.readFile(source.file)).digest("hex") !== resolved.sourceHash || sourceEditor?.document.isDirty))
+          if (source && ((0, import_node_crypto16.createHash)("sha256").update(await fs10.promises.readFile(source.file)).digest("hex") !== resolved.sourceHash || sourceEditor?.document.isDirty))
             throw new Error(
               "The source changed while this form was open. Reopen the annotation from current generated source."
             );
@@ -66680,7 +67293,7 @@ var AnalysisProjectEditor = class {
     if (directories.length === 1) return directories[0];
     const selected = await import_vscode8.window.showQuickPick(
       directories.map((directory) => ({
-        label: path14.basename(directory),
+        label: path16.basename(directory),
         description: directory,
         directory
       })),
@@ -66692,7 +67305,7 @@ var AnalysisProjectEditor = class {
     return selected?.directory;
   }
   editSuffix(snapshot, input) {
-    return (0, import_node_crypto15.createHash)("sha256").update(canonicalJson({ revision: snapshot.revision.manifestSha256, ...input })).digest("hex").slice(0, 20);
+    return (0, import_node_crypto16.createHash)("sha256").update(canonicalJson({ revision: snapshot.revision.manifestSha256, ...input })).digest("hex").slice(0, 20);
   }
   revertEdit(snapshot, entry) {
     switch (entry.kind) {
@@ -66816,7 +67429,7 @@ var AnalysisProjectEditor = class {
 };
 
 // packages/vscode-extension/src/analysis-sources-tree.ts
-var path15 = __toESM(require("node:path"));
+var path17 = __toESM(require("node:path"));
 var import_vscode9 = require("vscode");
 var count = (value) => value.toLocaleString("en-US");
 var PAGE_SIZE3 = 200;
@@ -66954,7 +67567,7 @@ var AnalysisSourcesProvider = class {
           if (epoch === this.#epoch) this.#catalogs.set(directory, catalog);
           return {
             id: directory,
-            label: path15.basename(directory),
+            label: path17.basename(directory),
             description: `${count(catalog.sources.length)} sources`,
             tooltip: directory,
             icon: "database",
@@ -66963,7 +67576,7 @@ var AnalysisSourcesProvider = class {
         } catch (error) {
           return {
             id: `${directory}:error`,
-            label: path15.basename(directory),
+            label: path17.basename(directory),
             description: "could not read sources",
             icon: "error",
             tooltip: `${directory}
@@ -67190,8 +67803,8 @@ ${String(error)}`
 };
 
 // packages/vscode-extension/src/debug.ts
-var fs18 = __toESM(require("node:fs"));
-var path28 = __toESM(require("node:path"));
+var fs20 = __toESM(require("node:fs"));
+var path30 = __toESM(require("node:path"));
 init_debug_map();
 
 // packages/debug-sidecar-ares/src/profile.ts
@@ -67279,10 +67892,10 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
 
 // packages/debug-sidecar-ares/src/ares-process-host.ts
 var import_node_child_process3 = require("node:child_process");
-var import_node_crypto16 = require("node:crypto");
-var import_node_fs5 = require("node:fs");
+var import_node_crypto17 = require("node:crypto");
+var import_node_fs7 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
-var import_node_path8 = __toESM(require("node:path"), 1);
+var import_node_path10 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
@@ -67421,7 +68034,7 @@ var checkedRevision = (value, name) => {
   return value.toLowerCase();
 };
 var checkedResourcePath = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path8.default.posix.isAbsolute(value) || import_node_path8.default.posix.normalize(value) !== value || value.split("/").includes(".."))
+  if (value === "." || value.includes("\\") || import_node_path10.default.posix.isAbsolute(value) || import_node_path10.default.posix.normalize(value) !== value || value.split("/").includes(".."))
     throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
   return value;
 };
@@ -67464,8 +68077,8 @@ var NodeAresProcessHandle = class {
   }
 };
 var nodeSha256 = async (file) => {
-  const digest2 = (0, import_node_crypto16.createHash)("sha256");
-  for await (const chunk of (0, import_node_fs5.createReadStream)(file)) digest2.update(chunk);
+  const digest2 = (0, import_node_crypto17.createHash)("sha256");
+  for await (const chunk of (0, import_node_fs7.createReadStream)(file)) digest2.update(chunk);
   return digest2.digest("hex");
 };
 var reserveLoopbackPort = async () => {
@@ -67664,10 +68277,10 @@ var MESEN_CAPABILITIES = Object.freeze({
 
 // packages/debug-sidecar-mesence/src/mesen-process-host.ts
 var import_node_child_process4 = require("node:child_process");
-var import_node_crypto25 = require("node:crypto");
-var import_node_fs7 = require("node:fs");
+var import_node_crypto26 = require("node:crypto");
+var import_node_fs9 = require("node:fs");
 var import_node_net4 = __toESM(require("node:net"), 1);
-var import_node_path14 = __toESM(require("node:path"), 1);
+var import_node_path16 = __toESM(require("node:path"), 1);
 
 // packages/debug-sidecar-mesence/src/node-tcp-mesen-transport.ts
 var import_node_net3 = __toESM(require("node:net"), 1);
@@ -67807,7 +68420,7 @@ var checkedRevision2 = (value) => {
   return value.toLowerCase();
 };
 var checkedResourcePath2 = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path14.default.posix.isAbsolute(value) || import_node_path14.default.posix.normalize(value) !== value || value.split("/").includes(".."))
+  if (value === "." || value.includes("\\") || import_node_path16.default.posix.isAbsolute(value) || import_node_path16.default.posix.normalize(value) !== value || value.split("/").includes(".."))
     throw new Error(`Mesen resource path '${value}' must be normalized and relative.`);
   return value;
 };
@@ -67850,8 +68463,8 @@ var NodeMesenProcessHandle = class {
   }
 };
 var nodeSha2562 = async (file) => {
-  const digest2 = (0, import_node_crypto25.createHash)("sha256");
-  for await (const chunk of (0, import_node_fs7.createReadStream)(file)) digest2.update(chunk);
+  const digest2 = (0, import_node_crypto26.createHash)("sha256");
+  for await (const chunk of (0, import_node_fs9.createReadStream)(file)) digest2.update(chunk);
   return digest2.digest("hex");
 };
 var reserveLoopbackPort2 = async () => {
@@ -67877,7 +68490,7 @@ var nodeMesenProcessRuntime = Object.freeze({
   platform: process.platform,
   architecture: process.arch,
   sha256: nodeSha2562,
-  randomToken: () => (0, import_node_crypto25.randomBytes)(32).toString("hex"),
+  randomToken: () => (0, import_node_crypto26.randomBytes)(32).toString("hex"),
   reserveLoopbackPort: reserveLoopbackPort2,
   launch: (options) => new NodeMesenProcessHandle(options),
   connect: (port, timeoutMs) => NodeTcpMesenTransport.connect({
@@ -67952,14 +68565,14 @@ var parseMesenRuntimeManifest = (value) => {
 var import_vscode12 = require("vscode");
 
 // packages/vscode-extension/src/behavior-capture.ts
-var import_node_crypto27 = require("node:crypto");
-var fs16 = __toESM(require("node:fs"));
-var path25 = __toESM(require("node:path"));
+var import_node_crypto28 = require("node:crypto");
+var fs18 = __toESM(require("node:fs"));
+var path27 = __toESM(require("node:path"));
 init_src();
 var import_vscode11 = require("vscode");
 
 // packages/vscode-extension/src/behavior-capture-demo.ts
-var import_node_crypto26 = require("node:crypto");
+var import_node_crypto27 = require("node:crypto");
 init_src();
 var architecture = "snes.65816";
 var addressSpace = "snes.cpu";
@@ -68032,7 +68645,7 @@ var runBehaviorCaptureDemo = async () => {
   };
   const baseline = await record3("baseline", [shared, idle, shared, idle]);
   const action = await record3("action", [shared, menu, draw, menu, shared]);
-  const hash2 = (value) => (0, import_node_crypto26.createHash)("sha256").update(canonicalJson(value)).digest("hex");
+  const hash2 = (value) => (0, import_node_crypto27.createHash)("sha256").update(canonicalJson(value)).digest("hex");
   const capture = validateBehaviorCapture({
     format: BEHAVIOR_CAPTURE_FORMAT,
     schemaVersion: 1,
@@ -68114,8 +68727,8 @@ Check the saved event count and dropped-event warnings. Zero events usually mean
 `;
 
 // packages/vscode-extension/src/disassembly-maintenance.ts
-var fs15 = __toESM(require("node:fs"));
-var path24 = __toESM(require("node:path"));
+var fs17 = __toESM(require("node:fs"));
+var path26 = __toESM(require("node:path"));
 init_src();
 init_src3();
 var import_vscode10 = require("vscode");
@@ -68228,7 +68841,7 @@ var fileChanges = (before, after) => {
 };
 
 // packages/vscode-extension/src/snes-rom-bindings.ts
-var path23 = __toESM(require("node:path"));
+var path25 = __toESM(require("node:path"));
 var ROM_BINDINGS_KEY = "snesProjectRomBindings.v1";
 var MAX_ROM_BINDINGS = 32;
 var rememberedSnesRom = (context, contentSha256) => context.globalState.get(ROM_BINDINGS_KEY, {})[contentSha256]?.path;
@@ -68237,7 +68850,7 @@ var rememberSnesRom = async (context, identity2, romFile) => {
   const next = {
     ...previous,
     [identity2.contentSha256]: {
-      path: path23.resolve(romFile),
+      path: path25.resolve(romFile),
       fileSha256: identity2.sha256,
       contentSha256: identity2.contentSha256,
       headerSize: identity2.headerSize,
@@ -68350,18 +68963,18 @@ var showMarkdown = async (content) => {
   );
 };
 var insideWorkspace = (directory) => {
-  const absolute = path24.resolve(directory);
+  const absolute = path26.resolve(directory);
   return (import_vscode10.workspace.workspaceFolders ?? []).some((folder) => {
     if (folder.uri.scheme !== "file") return false;
-    const relative6 = path24.relative(path24.resolve(folder.uri.fsPath), absolute);
-    return relative6 === "" || relative6 !== ".." && !relative6.startsWith(`..${path24.sep}`) && !path24.isAbsolute(relative6);
+    const relative6 = path26.relative(path26.resolve(folder.uri.fsPath), absolute);
+    return relative6 === "" || relative6 !== ".." && !relative6.startsWith(`..${path26.sep}`) && !path26.isAbsolute(relative6);
   });
 };
 var readProjectChoice = (directory) => {
   const manifest = parseAnalysisProjectManifest(
-    JSON.parse(fs15.readFileSync(path24.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+    JSON.parse(fs17.readFileSync(path26.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
   );
-  return { directory: path24.resolve(directory), manifest };
+  return { directory: path26.resolve(directory), manifest };
 };
 var chooseProject = async (preferred, romContentSha256) => {
   if (preferred) {
@@ -68384,7 +68997,7 @@ var chooseProject = async (preferred, romContentSha256) => {
   if (choices.length === 1) return choices[0];
   return (await import_vscode10.window.showQuickPick(
     choices.map((choice) => ({
-      label: path24.basename(choice.directory),
+      label: path26.basename(choice.directory),
       description: choice.directory,
       choice
     })),
@@ -68403,12 +69016,12 @@ var chooseSource = async (project, preferred) => {
   if (preferred) {
     if (!insideWorkspace(preferred))
       throw new Error("Generated source must be inside the trusted workspace.");
-    const manifest = sourceMatches(path24.resolve(preferred), project);
+    const manifest = sourceMatches(path26.resolve(preferred), project);
     if (!manifest)
       throw new Error("The selected source export does not match this analysis project.");
-    return { directory: path24.resolve(preferred), manifest };
+    return { directory: path26.resolve(preferred), manifest };
   }
-  const nearby = path24.dirname(project.directory);
+  const nearby = path26.dirname(project.directory);
   const nearManifest = sourceMatches(nearby, project);
   if (nearManifest) return { directory: nearby, manifest: nearManifest };
   const files = await import_vscode10.workspace.findFiles(
@@ -68417,7 +69030,7 @@ var chooseSource = async (project, preferred) => {
     64
   );
   const matches = files.flatMap((file) => {
-    const directory = path24.dirname(file.fsPath);
+    const directory = path26.dirname(file.fsPath);
     const manifest = insideWorkspace(directory) ? sourceMatches(directory, project) : void 0;
     return manifest ? [{ directory, manifest }] : [];
   });
@@ -68425,7 +69038,7 @@ var chooseSource = async (project, preferred) => {
   if (matches.length === 1) return matches[0];
   return (await import_vscode10.window.showQuickPick(
     matches.map((match) => ({
-      label: path24.basename(match.directory),
+      label: path26.basename(match.directory),
       description: match.directory,
       match
     })),
@@ -68443,11 +69056,11 @@ var exactRom = (file, manifest) => {
 var chooseRom = async (context, project, sourceDirectory, source) => {
   const candidates = [
     rememberedSnesRom(context, project.manifest.rom.contentSha256),
-    path24.join(sourceDirectory, source.finalOutput),
-    ...project.manifest.rom.headerSize === 0 ? [path24.join(sourceDirectory, source.contentOutput)] : []
+    path26.join(sourceDirectory, source.finalOutput),
+    ...project.manifest.rom.headerSize === 0 ? [path26.join(sourceDirectory, source.contentOutput)] : []
   ].filter((value) => Boolean(value));
   for (const file2 of candidates) {
-    if (fs15.existsSync(file2) && exactRom(file2, project.manifest)) {
+    if (fs17.existsSync(file2) && exactRom(file2, project.manifest)) {
       await rememberSnesRom(context, project.manifest.rom, file2);
       return file2;
     }
@@ -68659,7 +69272,7 @@ var withMaintenanceProgress = async (title, action, sourceDirectory) => import_v
 );
 var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
   const client3 = new DisassemblyMaintenanceClient(
-    path24.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs")
+    path26.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs")
   );
   let busy = false;
   const run = async (operation) => {
@@ -68706,9 +69319,9 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
         if (!selected) throw new Error("No native analysis project was found in the workspace.");
         if (selected.manifest.target !== "snes.sfc")
           throw new Error("Function heuristics require a SNES analysis project.");
-        const file = path24.join(selected.directory, "heuristics.json");
+        const file = path26.join(selected.directory, "heuristics.json");
         try {
-          await fs15.promises.writeFile(
+          await fs17.promises.writeFile(
             file,
             JSON.stringify(
               {
@@ -68733,7 +69346,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
       (target) => run(async () => {
         const selected = await chooseProject(target?.projectDirectory);
         if (!selected) throw new Error("No native analysis project was found in the workspace.");
-        const file = path24.join(selected.directory, "heuristics.json");
+        const file = path26.join(selected.directory, "heuristics.json");
         if (import_vscode10.workspace.textDocuments.some(
           (document) => document.uri.fsPath === file && document.isDirty
         ))
@@ -68782,7 +69395,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
         if (!resolved) return;
         loadSnesRamMap(resolved.sourceDirectory);
         await import_vscode10.window.showTextDocument(
-          import_vscode10.Uri.file(path24.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
+          import_vscode10.Uri.file(path26.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
           { preview: false }
         );
       })
@@ -68927,17 +69540,17 @@ var acquireTraceLease = () => {
 
 // packages/vscode-extension/src/behavior-capture.ts
 var isLocalWorkspaceProject2 = (directory) => {
-  const real = fs16.realpathSync(directory);
+  const real = fs18.realpathSync(directory);
   return (import_vscode11.workspace.workspaceFolders ?? []).some((folder) => {
     if (folder.uri.scheme !== "file") return false;
-    const relative6 = path25.relative(fs16.realpathSync(folder.uri.fsPath), real);
-    return relative6 === "" || !relative6.startsWith(`..${path25.sep}`) && relative6 !== ".." && !path25.isAbsolute(relative6);
+    const relative6 = path27.relative(fs18.realpathSync(folder.uri.fsPath), real);
+    return relative6 === "" || !relative6.startsWith(`..${path27.sep}`) && relative6 !== ".." && !path27.isAbsolute(relative6);
   });
 };
 var readCapture = (file) => {
-  if (fs16.statSync(file).size > MAX_CAPTURE_FILE_BYTES)
+  if (fs18.statSync(file).size > MAX_CAPTURE_FILE_BYTES)
     throw new Error("Capture file exceeds the 128 MiB safety limit.");
-  return validateBehaviorCapture(JSON.parse(fs16.readFileSync(file, "utf8")));
+  return validateBehaviorCapture(JSON.parse(fs18.readFileSync(file, "utf8")));
 };
 var hexadecimal4 = (address4) => `$${address4.toString(16).toUpperCase().padStart(6, "0")}`;
 var plain = (value) => value.split("").map((char) => "\\`*{}[]<>&|!#\r\n".includes(char) ? "_" : char).join("");
@@ -68945,13 +69558,13 @@ var selectProject = async (binarySha256, target) => {
   const matches = (await Promise.all(
     (await findAnalysisProjectDirectories()).filter(isLocalWorkspaceProject2).map(async (directory) => {
       try {
-        const bytes = await fs16.promises.readFile(path25.join(directory, "analysis.json"));
+        const bytes = await fs18.promises.readFile(path27.join(directory, "analysis.json"));
         const manifest = parseAnalysisProjectManifest(JSON.parse(bytes.toString("utf8")));
         return manifest.rom.contentSha256 === binarySha256 && manifest.target === target ? [
           {
             directory,
             manifest,
-            manifestSha256: (0, import_node_crypto27.createHash)("sha256").update(bytes).digest("hex")
+            manifestSha256: (0, import_node_crypto28.createHash)("sha256").update(bytes).digest("hex")
           }
         ] : [];
       } catch {
@@ -68962,7 +69575,7 @@ var selectProject = async (binarySha256, target) => {
   if (matches.length < 2) return matches[0];
   return (await import_vscode11.window.showQuickPick(
     matches.map((project) => ({
-      label: path25.basename(project.directory),
+      label: path27.basename(project.directory),
       description: project.directory,
       project
     })),
@@ -69244,9 +69857,9 @@ var registerBehaviorCaptures = (host) => {
       const destination = await import_vscode11.window.showSaveDialog({
         title: "Save capture",
         defaultUri: import_vscode11.Uri.file(
-          path25.join(
+          path27.join(
             session.workspaceFolder?.uri.fsPath ?? context.sourceRoot,
-            `${role}-${(0, import_node_crypto27.randomUUID)()}.capture.json`
+            `${role}-${(0, import_node_crypto28.randomUUID)()}.capture.json`
           )
         ),
         filters: { "Behavior capture": ["json"] },
@@ -69263,7 +69876,7 @@ var registerBehaviorCaptures = (host) => {
         if (!choice) return;
         if (choice === "Start and Continue") resumeThread = stoppedThreads.get(session.id);
       }
-      const descriptor2 = fs16.openSync(destination.fsPath, "wx");
+      const descriptor2 = fs18.openSync(destination.fsPath, "wx");
       const recordingSession = session;
       try {
         await recordingSession.customRequest("uttori/startTrace", {
@@ -69314,8 +69927,8 @@ var registerBehaviorCaptures = (host) => {
           identity: identity2,
           windows: [...baselines, captured]
         });
-        fs16.writeFileSync(descriptor2, canonicalJson(artifact));
-        fs16.fsyncSync(descriptor2);
+        fs18.writeFileSync(descriptor2, canonicalJson(artifact));
+        fs18.fsyncSync(descriptor2);
         const events = captured.trace.chunks.reduce(
           (sum, chunk) => sum + chunk.addresses.length,
           0
@@ -69329,7 +69942,7 @@ var registerBehaviorCaptures = (host) => {
           void import_vscode11.window.showWarningMessage(message);
         else void import_vscode11.window.showInformationMessage(message);
       } finally {
-        fs16.closeSync(descriptor2);
+        fs18.closeSync(descriptor2);
       }
     } finally {
       if (started && session)
@@ -69551,33 +70164,33 @@ var createDebugInstructionAnnotation = async (map) => {
 };
 
 // packages/vscode-extension/src/debug-source-root.ts
-var import_node_fs8 = __toESM(require("node:fs"));
-var import_node_path15 = __toESM(require("node:path"));
+var import_node_fs10 = __toESM(require("node:fs"));
+var import_node_path17 = __toESM(require("node:path"));
 var sourceMatches2 = (root, source) => {
-  if (import_node_path15.default.isAbsolute(source.path)) return false;
-  const resolved = import_node_path15.default.resolve(root, source.path);
-  const relative6 = import_node_path15.default.relative(root, resolved);
-  if (!relative6 || relative6.startsWith(`..${import_node_path15.default.sep}`) || import_node_path15.default.isAbsolute(relative6)) return false;
+  if (import_node_path17.default.isAbsolute(source.path)) return false;
+  const resolved = import_node_path17.default.resolve(root, source.path);
+  const relative6 = import_node_path17.default.relative(root, resolved);
+  if (!relative6 || relative6.startsWith(`..${import_node_path17.default.sep}`) || import_node_path17.default.isAbsolute(relative6)) return false;
   try {
-    const stat2 = import_node_fs8.default.statSync(resolved);
+    const stat2 = import_node_fs10.default.statSync(resolved);
     return stat2.isFile() && stat2.size === source.size;
   } catch {
     return false;
   }
 };
 var resolveDebugSourceRoot = (options) => {
-  const configuredRoot = import_node_path15.default.resolve(options.configuredRoot);
+  const configuredRoot = import_node_path17.default.resolve(options.configuredRoot);
   const candidates = [
     configuredRoot,
-    ...options.workspaceRoot ? [import_node_path15.default.resolve(options.workspaceRoot)] : [],
-    import_node_path15.default.dirname(import_node_path15.default.resolve(options.debugMapFile)),
+    ...options.workspaceRoot ? [import_node_path17.default.resolve(options.workspaceRoot)] : [],
+    import_node_path17.default.dirname(import_node_path17.default.resolve(options.debugMapFile)),
     // Generated ROMs/maps commonly live in build/, with mapped sources in its parent.
-    import_node_path15.default.dirname(import_node_path15.default.dirname(import_node_path15.default.resolve(options.debugMapFile))),
-    import_node_path15.default.dirname(import_node_path15.default.resolve(options.programFile)),
-    import_node_path15.default.dirname(import_node_path15.default.dirname(import_node_path15.default.resolve(options.programFile)))
+    import_node_path17.default.dirname(import_node_path17.default.dirname(import_node_path17.default.resolve(options.debugMapFile))),
+    import_node_path17.default.dirname(import_node_path17.default.resolve(options.programFile)),
+    import_node_path17.default.dirname(import_node_path17.default.dirname(import_node_path17.default.resolve(options.programFile)))
   ];
   const unique = [...new Set(candidates)];
-  const relativeSources = options.map.sources.filter((source) => !import_node_path15.default.isAbsolute(source.path)).slice(0, 128);
+  const relativeSources = options.map.sources.filter((source) => !import_node_path17.default.isAbsolute(source.path)).slice(0, 128);
   if (relativeSources.length === 0) return configuredRoot;
   let bestRoot = configuredRoot;
   let bestMatches = relativeSources.filter(
@@ -69594,7 +70207,7 @@ var resolveDebugSourceRoot = (options) => {
 };
 
 // packages/vscode-extension/src/runtime-binding.ts
-var path27 = __toESM(require("node:path"));
+var path29 = __toESM(require("node:path"));
 var runtimeBindingFromLaunch = (configurations, root) => {
   const bindings = /* @__PURE__ */ new Map();
   for (const configuration of configurations) {
@@ -69605,7 +70218,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
     const resolve11 = (value) => {
       if (typeof value !== "string" || !value.trim()) return void 0;
       const expanded = value.replaceAll("${workspaceFolder}", root);
-      return expanded.includes("${") ? void 0 : path27.resolve(root, expanded);
+      return expanded.includes("${") ? void 0 : path29.resolve(root, expanded);
     };
     const runtimeManifest = resolve11(config.runtimeManifest);
     const emulator = resolve11(config.emulator);
@@ -69625,7 +70238,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
 };
 
 // packages/vscode-extension/src/runtime-trace-recorder.ts
-var import_promises3 = require("node:fs/promises");
+var import_promises4 = require("node:fs/promises");
 var resolveEditorTraceDetail = (requested, instructionDetails) => {
   if (requested === "full" && !instructionDetails)
     throw new Error(
@@ -69675,7 +70288,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
       throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
     if (!Number.isSafeInteger(options.maxBatchEvents) || options.maxBatchEvents < 1)
       throw new Error("Trace batch maximum must be a positive safe integer.");
-    const handle = await (0, import_promises3.open)(options.file, "w");
+    const handle = await (0, import_promises4.open)(options.file, "w");
     const header = {
       format: "uttori-asm-instruction-trace",
       schemaVersion: 1,
@@ -69871,7 +70484,7 @@ var configureEmulatorRuntime = async (context, resource) => {
     folders: true
   });
   if (!runtimeDirectory) return void 0;
-  const manifest = JSON.parse(fs18.readFileSync(runtimeManifest, "utf8"));
+  const manifest = JSON.parse(fs20.readFileSync(runtimeManifest, "utf8"));
   if (selectedBackend.backend === "ares") parseAresRuntimeManifest(manifest);
   else parseMesenRuntimeManifest(manifest);
   const binding = {
@@ -69901,7 +70514,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
   backend: binding.backend,
   program: artifacts.outputPath,
   debugMap: artifacts.debugMapPath,
-  sourceRoot: folder?.uri.fsPath ?? path28.dirname(artifacts.outputPath),
+  sourceRoot: folder?.uri.fsPath ?? path30.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
@@ -69911,7 +70524,7 @@ var liveDebugConfiguration = (binding, artifacts, folder) => ({
 var activeTraceRecording;
 var sessionContexts = /* @__PURE__ */ new Map();
 var annotationRefreshers = /* @__PURE__ */ new Map();
-var resolvedPath = (value, folder) => path28.isAbsolute(value) ? value : path28.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var resolvedPath = (value, folder) => path30.isAbsolute(value) ? value : path30.resolve(folder?.uri.fsPath ?? process.cwd(), value);
 var requiredLivePath = (value, name, folder) => {
   if (!value) throw new Error(`Live Uttori ASM debugging requires '${name}'.`);
   return resolvedPath(value, folder);
@@ -69940,7 +70553,7 @@ var traceProducer = (session, map) => {
       revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value")
     };
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
-  const manifest = JSON.parse(fs18.readFileSync(manifestFile, "utf8"));
+  const manifest = JSON.parse(fs20.readFileSync(manifestFile, "utf8"));
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
   const revision = kind === "ares" ? stringField(manifest.forkRevision, "runtimeManifest.forkRevision") : stringField(manifest.upstreamRevision, "runtimeManifest.upstreamRevision");
   const executable = stringField(manifest.executableSha256, "runtimeManifest.executableSha256");
@@ -69965,7 +70578,7 @@ var defaultTraceUri = (session) => {
   const root = session.workspaceFolder?.uri.fsPath ?? import_vscode12.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!root) return void 0;
   const timestamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(":", "-");
-  return import_vscode12.Uri.file(path28.join(root, `instruction-trace-${timestamp}.json`));
+  return import_vscode12.Uri.file(path30.join(root, `instruction-trace-${timestamp}.json`));
 };
 var startRuntimeTraceWithLease = async () => {
   if (activeTraceRecording) throw new Error("An instruction trace recording is already active.");
@@ -70112,7 +70725,7 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, log) => 
     "runtimeDirectory",
     folder
   );
-  const bundledSidecar = path28.join(
+  const bundledSidecar = path30.join(
     extensionRoot,
     "sidecars",
     kind === "ares" ? "ares.mjs" : "mesence.mjs"
@@ -70161,8 +70774,8 @@ var loadConfiguration = (session, extensionRoot, log) => {
   const folder = session.workspaceFolder;
   const program = resolvedPath(configuration.program, folder);
   const mapFile = resolvedPath(configuration.debugMap, folder);
-  const output = new Uint8Array(fs18.readFileSync(program));
-  const map = JSON.parse(fs18.readFileSync(mapFile, "utf8"));
+  const output = new Uint8Array(fs20.readFileSync(program));
+  const map = JSON.parse(fs20.readFileSync(mapFile, "utf8"));
   const issues = validateDebugMap(map, output);
   if (issues.length) throw new Error(issues.join(" "));
   const kind = configuration.backend ?? "replay";
@@ -70170,7 +70783,7 @@ var loadConfiguration = (session, extensionRoot, log) => {
     if (kind !== "replay")
       return createLiveBackend(configuration, folder, extensionRoot, program, log);
     const script = configuration.replay ? JSON.parse(
-      fs18.readFileSync(resolvedPath(configuration.replay, folder), "utf8")
+      fs20.readFileSync(resolvedPath(configuration.replay, folder), "utf8")
     ) : createDebugMapReplayScript(map, output);
     return new ReplayDebugBackend(script);
   })();
@@ -70246,7 +70859,7 @@ var UttoriDebugConfigurationProvider = class {
     const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
     const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
     const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
-    const program = configuredProgram ?? path28.join(root, "build", "rebuilt-content.sfc");
+    const program = configuredProgram ?? path30.join(root, "build", "rebuilt-content.sfc");
     return {
       ...configuration,
       type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
@@ -70280,7 +70893,7 @@ var UttoriDebugAdapterFactory = class {
       if (session.configuration.backend === "ares") {
         const manifest = parseAresRuntimeManifest(
           JSON.parse(
-            fs18.readFileSync(
+            fs20.readFileSync(
               requiredLivePath(
                 session.configuration.runtimeManifest,
                 "runtimeManifest",
@@ -70505,7 +71118,7 @@ function iconForSymbolKind(kind) {
 }
 
 // packages/vscode-extension/src/panel.ts
-var path29 = __toESM(require("node:path"));
+var path31 = __toESM(require("node:path"));
 var import_vscode14 = require("vscode");
 var ProjectPanelProvider = class {
   constructor(extensionUri, getClient, initConfig2) {
@@ -70651,7 +71264,7 @@ var ProjectPanelProvider = class {
         const { status } = await this.snapshot();
         const root = import_vscode14.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (root && status.configFile)
-          await import_vscode14.window.showTextDocument(import_vscode14.Uri.file(path29.resolve(root, status.configFile)));
+          await import_vscode14.window.showTextDocument(import_vscode14.Uri.file(path31.resolve(root, status.configFile)));
         return;
       }
       case "addEntryPoint":
@@ -70734,7 +71347,7 @@ var ProjectPanelProvider = class {
     const next = [...current];
     for (const uri of picked) {
       const folder = import_vscode14.workspace.workspaceFolders?.[0];
-      const relative6 = folder ? path29.relative(folder.uri.fsPath, uri.fsPath) : void 0;
+      const relative6 = folder ? path31.relative(folder.uri.fsPath, uri.fsPath) : void 0;
       const value = relative6 && !relative6.startsWith("..") ? relative6 : uri.fsPath;
       if (!next.includes(value)) {
         next.push(value);
@@ -70797,8 +71410,8 @@ function asString(value) {
 }
 
 // packages/vscode-extension/src/project-wizard.ts
-var fs19 = __toESM(require("node:fs"));
-var import_node_path16 = __toESM(require("node:path"));
+var fs21 = __toESM(require("node:fs"));
+var import_node_path18 = __toESM(require("node:path"));
 init_src3();
 var import_vscode15 = require("vscode");
 var CREATE_DISASSEMBLY_PROJECT_COMMAND = "asm.createDisassemblyProject";
@@ -70893,7 +71506,7 @@ var chooseFile = async (title, filters) => {
 var chooseOutputDirectory = async (romFile) => {
   const selected = await import_vscode15.window.showOpenDialog({
     title: "Select an empty output directory",
-    defaultUri: import_vscode15.Uri.file(import_node_path16.default.dirname(romFile)),
+    defaultUri: import_vscode15.Uri.file(import_node_path18.default.dirname(romFile)),
     canSelectFiles: false,
     canSelectFolders: true,
     canSelectMany: false,
@@ -70902,7 +71515,7 @@ var chooseOutputDirectory = async (romFile) => {
   const directory = selected?.[0]?.fsPath;
   if (!directory) return void 0;
   try {
-    if (fs19.readdirSync(directory).length > 0) {
+    if (fs21.readdirSync(directory).length > 0) {
       void import_vscode15.window.showErrorMessage("Assembly: the selected output directory must be empty.");
       return void 0;
     }
@@ -70984,7 +71597,7 @@ var runProjectWizard = async (context, outputChannel2, importDiz) => {
     const detectedMapper = resolvedProbe.detection.mapper ?? "needs selection";
     const header = resolvedProbe.rom.headerSize === 0 ? "none" : `${resolvedProbe.rom.headerSize} bytes`;
     const create = await import_vscode15.window.showInformationMessage(
-      `Create a disassembly project in '${import_node_path16.default.basename(outputDirectory)}'?`,
+      `Create a disassembly project in '${import_node_path18.default.basename(outputDirectory)}'?`,
       {
         modal: true,
         detail: `SNES \xB7 ${detectedMapper} \xB7 ${formatBytes3(resolvedProbe.rom.contentSize)} \xB7 copier header: ${header}
@@ -71073,7 +71686,7 @@ function activate(context) {
     maxMemoryMiB: (directory) => import_vscode16.workspace.getConfiguration("asm", import_vscode16.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
   });
   context.subscriptions.push(worker);
-  const serverModule = context.asAbsolutePath(path31.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path33.join("server", "server.mjs"));
   const serverOptions = {
     run: {
       command: process.execPath,
@@ -71315,7 +71928,7 @@ function toggleWatch() {
     }
     saveListener = import_vscode16.workspace.onDidSaveTextDocument(onDocumentSaved);
     void import_vscode16.window.showInformationMessage(
-      `Assembly: watching ${path31.basename(import_vscode16.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+      `Assembly: watching ${path33.basename(import_vscode16.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   }
   updateStatusItem();
@@ -71392,7 +72005,7 @@ function resolveBuildEntryUri() {
   const folder = activeUri ? import_vscode16.workspace.getWorkspaceFolder(activeUri) : import_vscode16.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path31.isAbsolute(first) ? import_vscode16.Uri.file(first).toString() : import_vscode16.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path33.isAbsolute(first) ? import_vscode16.Uri.file(first).toString() : import_vscode16.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
       `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode16.Uri.parse(resolved).fsPath}`
     );
@@ -71436,9 +72049,9 @@ async function initConfig() {
   let entryPoints = config.get("entryPoints", []);
   const active = import_vscode16.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative6 = path31.relative(folder.uri.fsPath, active.fileName);
+    const relative6 = path33.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative6 && !relative6.startsWith("..") ? relative6 : path31.basename(active.fileName)
+      relative6 && !relative6.startsWith("..") ? relative6 : path33.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -71534,11 +72147,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path31.isAbsolute(configuredPath)) {
-    return path31.normalize(configuredPath);
+  if (path33.isAbsolute(configuredPath)) {
+    return path33.normalize(configuredPath);
   }
   const folder = import_vscode16.workspace.getWorkspaceFolder(document);
-  return path31.resolve(folder?.uri.fsPath ?? path31.dirname(document.fsPath), configuredPath);
+  return path33.resolve(folder?.uri.fsPath ?? path33.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!statusItem) {

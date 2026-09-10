@@ -16,6 +16,7 @@ export * from "./behavior-capture.js";
 export * from "./behavior-capture-recorder.js";
 export * from "./interval-index.js";
 export * from "./sqlite-store.js";
+export * from "./sqlite-migration.js";
 export * from "./project-store.js";
 export * from "./project-transaction.js";
 export * from "./project-edit.js";

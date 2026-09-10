@@ -401,8 +401,10 @@ test("VS Code resolves generated functions, validates the form, saves transactio
   );
   await h.panels.at(-1)!.receive({ type: "cancel" });
   await h.editor.undo();
+  t.deepEqual(h.errors, [], "undo must not hide a storage failure behind an unchanged view");
   t.deepEqual(loadAnalysisProjectSnapshot(h.directory).shards, before.shards);
   await h.editor.redo();
+  t.deepEqual(h.errors, []);
   t.deepEqual(loadAnalysisProjectSnapshot(h.directory).shards, saved.shards);
 });
 

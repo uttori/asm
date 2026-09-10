@@ -264,3 +264,78 @@ test("missing and corrupt SQLite files are rejected without silently creating a 
   fs.writeFileSync(file, "not a SQLite database");
   t.throws(() => loadAnalysisProject(directory), { message: /not a database/ });
 });
+
+test("dictionary inserts roll back atomically and a retained connection can retry after automatic rollback", (t) => {
+  const directory = temporary();
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const project = projectFor(new RomImage(new Uint8Array(0x8000)));
+  writeAnalysisProject(directory, project);
+  const store = openAnalysisProjectStore(directory);
+  const database = new DatabaseSync(store.file);
+  const record = {
+    ...project.shards.runtime[0],
+    id: `new:prefix:${"f".repeat(64)}`,
+    evidence: ["manual-1", "manual-1"],
+  };
+  try {
+    database.exec(
+      "CREATE TRIGGER fail_fact BEFORE INSERT ON runtime BEGIN SELECT RAISE(ROLLBACK, 'fact rollback'); END",
+    );
+    t.throws(() => store.transaction(() => store.insertRuntime(record)), {
+      message: "fact rollback",
+    });
+    t.is(database.prepare("SELECT count(*) AS n FROM runtime_prefixes").get()?.n, 1);
+    t.is(database.prepare("SELECT count(*) AS n FROM runtime_evidence").get()?.n, 1);
+    database.exec("DROP TRIGGER fail_fact");
+    t.true(store.transaction(() => store.insertRuntime(record)));
+    t.false(store.transaction(() => store.insertRuntime(record)));
+    t.throws(() => store.transaction(() => store.insertRuntime({ ...record, count: 99 })), {
+      message: /changed content/,
+    });
+    t.is(database.prepare("SELECT count(*) AS n FROM runtime_prefixes").get()?.n, 2);
+    t.is(database.prepare("SELECT count(*) AS n FROM runtime_evidence").get()?.n, 2);
+  } finally {
+    database.close();
+    store.close();
+  }
+});
+
+test("missing normalized dictionaries cannot silently hide retained runtime records", (t) => {
+  const directory = temporary();
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  const database = new DatabaseSync(path.join(directory, "analysis.sqlite"));
+  database.exec("PRAGMA foreign_keys=OFF; DELETE FROM runtime_evidence");
+  database.close();
+  t.throws(() => loadAnalysisProject(directory), { message: /dictionary entry/ });
+});
+
+test("runtime replacement rejects repeated IDs even when changed content would get a new rowid", (t) => {
+  const directory = temporary();
+  try {
+    const project = projectFor(new RomImage(new Uint8Array(0x8000)));
+    const first = project.shards.runtime[0]!;
+    const second = { ...first, id: "second-runtime-id" };
+    writeAnalysisProject(directory, {
+      ...project,
+      shards: { ...project.shards, runtime: [first, second] },
+    });
+    const store = openAnalysisProjectStore(directory);
+    try {
+      for (const replacement of [first, { ...first, count: first.count + 1 }]) {
+        t.throws(
+          () => store.transaction(() => store.replaceTables({ runtime: [first, replacement] })),
+          {
+            message: /Duplicate runtime record ID/,
+          },
+        );
+        t.deepEqual(store.loadShards().runtime, [first, second]);
+        t.is(store.revision(), 1);
+      }
+    } finally {
+      store.close();
+    }
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});

@@ -19,6 +19,14 @@ refresh was interrupted. SchemaVersion remains 3. Legacy JSON arrays, gzip shard
 folders, lock files, and manifest migrations are no longer supported. User configuration, debug maps,
 source-export manifests, and capture/trace interchange formats remain JSON.
 
+Physical SQLite storage format 1 is recorded in `PRAGMA user_version`, independently of semantic
+schema version 3 and the logical revision. Runtime prefixes and evidence sets are stored once,
+canonical hash suffixes use binary storage, and large metadata records use rowid tables. One
+versioned, checksummed DEFLATE codec compresses payloads of at least 256 bytes only when it saves
+at least 32 bytes and one eighth of the input. Smaller values remain TEXT. Decoded payloads are
+limited to 16 MiB per record; unknown codecs, invalid UTF-8, oversized output, and corrupt checksums
+are rejected. Complete runtime arrays are sorted by ID; streaming projections use storage order.
+
 The semantic collections retain the in-memory `AnalysisProjectShards` shape. Database reads use
 stable ordering; rewrites preserve logical records rather than promising identical SQLite bytes.
 Address ranges are half-open, every address must fit its declared space, evidence references must
@@ -41,7 +49,14 @@ preserves runtime history. Complete-project writers deliberately replace runtime
 rows are retained, and removal of evidence checks references from retained runtime facts.
 
 `compactAnalysisProject()` and `uttori-asm project-compact` checkpoint and VACUUM SQLite during
-explicit maintenance. They do not convert other storage formats. For backups, use SQLite's backup
+explicit maintenance, pruning unused runtime dictionary entries after replacements. They check for
+temporary disk space and do not run after no-op imports. `migrateAnalysisProjectStorage()` and
+`uttori-asm project-migrate` explicitly upgrade the earlier SQLite layout with bounded record batches,
+semantic validation, content digests, crash recovery, and a retained original backup. Migration requires
+exclusive database access; a temporary process gate prevents new project work during publication.
+Cached clients must reopen after the database inode changes. See the [storage audit](../../docs/performance/sqlite-som-storage-audit.md).
+
+For backups, use SQLite's backup
 facilities or close every connection before copying the database and pointer; copying a live database
 without its WAL can omit committed data.
 

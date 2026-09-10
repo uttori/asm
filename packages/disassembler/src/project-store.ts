@@ -15,6 +15,7 @@ import {
   type RuntimeRecordProjection,
 } from "./project-validation.js";
 import type { RomImage } from "./rom-image.js";
+import { compareRuntimeRecordIds } from "./sqlite-records.js";
 import { SqliteAnalysisStore, analysisProjectSqlitePath } from "./sqlite-store.js";
 export { canonicalJson } from "./canonical-json.js";
 export {
@@ -93,6 +94,9 @@ const loadProject = (
           if (projection) projection.push(record);
           else records.push(record);
         }
+        // Complete materializations retain stable-ID ordering. Streaming projections must
+        // not sort a project-sized runtime table merely because the physical layout changed.
+        if (!projection) records.sort(compareRuntimeRecordIds);
         return {
           manifest,
           shards: { ...shards, runtime: projection ? projection.finish() : records },

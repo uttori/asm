@@ -161,8 +161,8 @@ var init_common = __esm({
       return values;
     };
     defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
-    jsonFile = (path8, value) => ({
-      path: path8,
+    jsonFile = (path9, value) => ({
+      path: path9,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -256,12 +256,12 @@ var init_index_table = __esm({
       decode: (context) => {
         const entries3 = indexesFor(context);
         const value = { kind: "index-table", indexes: entries3.indexes };
-        const path8 = stringOption(
+        const path9 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path8, value)] };
+        return { value, files: [jsonFile(path9, value)] };
       },
       encode: (context) => {
         const resolved = settings(context);
@@ -392,12 +392,12 @@ var init_pointer_table = __esm({
           addresses: entries3.addresses,
           rawValues: entries3.rawValues
         };
-        const path8 = stringOption(
+        const path9 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path8, value)] };
+        return { value, files: [jsonFile(path9, value)] };
       },
       encode: (context) => {
         const resolved = settings2(context);
@@ -456,7 +456,7 @@ var init_raw = __esm({
       decode: (context) => {
         const bytes = readExactAssetBytes(context);
         const options = optionsFor(context);
-        const path8 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
+        const path9 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
         const mediaType = stringOption(options, "mediaType", "application/octet-stream");
         return {
           value: {
@@ -464,7 +464,7 @@ var init_raw = __esm({
             bytes: [...bytes],
             sha256: (0, import_node_crypto.createHash)("sha256").update(bytes).digest("hex")
           },
-          files: [{ path: path8, mediaType, bytes }]
+          files: [{ path: path9, mediaType, bytes }]
         };
       },
       encode: ({ decoded, request: request2 }) => {
@@ -506,8 +506,8 @@ var init_scalar_array = __esm({
           (_, index) => readInteger(bytes, index * width2, width2, endian, signed2)
         );
         const value = { kind: "scalar-array", width: width2, endian, signed: signed2, values };
-        const path8 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path8, value)] };
+        const path9 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path9, value)] };
       },
       encode: (context) => {
         const { width: width2, endian, signed: signed2, count, size } = settings3(context);
@@ -657,8 +657,8 @@ var init_struct_array = __esm({
           raw: [...bytes],
           records
         };
-        const path8 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path8, value)] };
+        const path9 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path9, value)] };
       },
       encode: (context) => {
         const { fields, stride, count, size } = settings4(context);
@@ -819,7 +819,7 @@ var init_text = __esm({
         const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
         const payload = terminated ? bytes.subarray(0, -1) : bytes;
         const value = { kind: "text", text: textValue(payload, resolved), terminated };
-        const path8 = stringOption(
+        const path9 = stringOption(
           resolved.options,
           "path",
           defaultAssetPath(context.request.id, "txt")
@@ -828,7 +828,7 @@ var init_text = __esm({
           value,
           files: [
             {
-              path: path8,
+              path: path9,
               mediaType: "text/plain; charset=utf-8",
               bytes: new TextEncoder().encode(value.text)
             }
@@ -930,9 +930,9 @@ var init_analysis_graph = __esm({
         if (!node) return [];
         const cached = ownersByNode.get(node.id);
         if (cached) return cached;
-        const path8 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
-        for (let index = path8.length - 1; index >= 0; index--) {
-          const candidate = nodesById.get(path8[index]);
+        const path9 = node.evidencePath.length > 0 ? node.evidencePath : [node.id];
+        for (let index = path9.length - 1; index >= 0; index--) {
+          const candidate = nodesById.get(path9[index]);
           if (!candidate) continue;
           const matches = functionsByAddress.get(addressKey(candidate.addressSpace, candidate.address));
           if (matches) {
@@ -1910,109 +1910,105 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-store.ts
-var import_node_crypto2, import_node_fs2, import_node_path2, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, SCHEMA, SCHEMA_INDEX_STATEMENTS, analysisProjectSqlitePath, parseRecord, runtimeColumns, runtimeFromRow, analysisAddress, SqliteAnalysisStore;
-var init_sqlite_store = __esm({
-  "packages/disassembler/src/sqlite-store.ts"() {
+// packages/disassembler/src/sqlite-maintenance.ts
+var import_node_fs2, import_node_path2, SQLITE_MIGRATION_DIRECTORY, assertNoSqliteMigration, sqliteFileIdentity;
+var init_sqlite_maintenance = __esm({
+  "packages/disassembler/src/sqlite-maintenance.ts"() {
     "use strict";
-    import_node_crypto2 = require("node:crypto");
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_path2 = __toESM(require("node:path"), 1);
-    import_node_sqlite2 = require("node:sqlite");
-    init_canonical_json();
-    init_project_types();
-    ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
-    SCHEMA = `
-PRAGMA journal_mode=WAL;
-PRAGMA synchronous=NORMAL;
-PRAGMA foreign_keys=ON;
-PRAGMA busy_timeout=5000;
-CREATE TABLE IF NOT EXISTS meta (
-  k TEXT PRIMARY KEY,
-  v TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS evidence (
-  id TEXT PRIMARY KEY,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS labels (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  address INTEGER NOT NULL,
-  name TEXT NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS comments (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  address INTEGER NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS regions (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  start INTEGER NOT NULL,
-  "end" INTEGER NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS annotations (
-  id TEXT PRIMARY KEY,
-  address_space TEXT NOT NULL,
-  start INTEGER NOT NULL,
-  "end" INTEGER NOT NULL,
-  classification TEXT NOT NULL,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS analysis (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  address_space TEXT,
-  address INTEGER,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS imports (
-  id TEXT PRIMARY KEY,
-  payload TEXT NOT NULL
-) WITHOUT ROWID;
-CREATE TABLE IF NOT EXISTS runtime (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  architecture TEXT NOT NULL,
-  count INTEGER NOT NULL,
-  address_space TEXT,
-  address INTEGER,
-  start INTEGER,
-  "end" INTEGER,
-  from_address_space TEXT,
-  from_address INTEGER,
-  to_address_space TEXT,
-  to_address INTEGER,
-  instruction_address_space TEXT,
-  instruction_address INTEGER,
-  accessed_address_space TEXT,
-  accessed_address INTEGER,
-  coverage TEXT,
-  evidence TEXT NOT NULL,
-  payload TEXT
-) WITHOUT ROWID;
-`;
-    SCHEMA_INDEX_STATEMENTS = [
-      "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
-      "CREATE INDEX IF NOT EXISTS comments_addr ON comments (address_space, address)",
-      'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
-      'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
-      "CREATE INDEX IF NOT EXISTS analysis_addr ON analysis (address_space, address)",
-      "CREATE INDEX IF NOT EXISTS analysis_kind ON analysis (kind)",
-      "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime (kind, address_space, address, start)",
-      "CREATE INDEX IF NOT EXISTS runtime_from ON runtime (from_address_space, from_address)"
-    ];
-    analysisProjectSqlitePath = (directory, manifest) => {
-      const relative2 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
-      if (relative2 !== ANALYSIS_PROJECT_SQLITE_FILE)
-        throw new Error(`Unsupported analysis sqlite path '${relative2}'.`);
-      return import_node_path2.default.join(directory, relative2);
+    SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
+    assertNoSqliteMigration = (file) => {
+      if (import_node_fs2.default.existsSync(import_node_path2.default.join(import_node_path2.default.dirname(file), SQLITE_MIGRATION_DIRECTORY)))
+        throw new Error(
+          "Analysis storage migration is in progress. Retry after it completes, or run project-migrate to recover an interrupted migration."
+        );
     };
-    parseRecord = (payload) => JSON.parse(payload);
+    sqliteFileIdentity = (file) => {
+      const stat = import_node_fs2.default.statSync(file, { bigint: true });
+      return `${stat.dev}:${stat.ino}`;
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-payload.ts
+var import_node_util, import_node_zlib, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES, utf8, encodeSqlitePayload, decodeSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
+var init_sqlite_payload = __esm({
+  "packages/disassembler/src/sqlite-payload.ts"() {
+    "use strict";
+    import_node_util = require("node:util");
+    import_node_zlib = require("node:zlib");
+    MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
+    HEADER = Buffer.from([85, 65, 80, 1]);
+    HEADER_BYTES = 8;
+    utf8 = new import_node_util.TextDecoder("utf-8", { fatal: true });
+    encodeSqlitePayload = (json) => {
+      const bytes = Buffer.byteLength(json);
+      if (bytes > MAX_SQLITE_PAYLOAD_BYTES)
+        throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
+      if (bytes < 256) return json;
+      const compressed = (0, import_node_zlib.deflateSync)(json, { level: 1, chunkSize: Math.min(bytes, 16 * 1024) });
+      if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8))) return json;
+      const result = Buffer.allocUnsafe(HEADER_BYTES + compressed.length);
+      HEADER.copy(result);
+      result.writeUInt32LE(bytes, 4);
+      compressed.copy(result, HEADER_BYTES);
+      return result;
+    };
+    decodeSqlitePayload = (value) => {
+      if (typeof value === "string") {
+        if (Buffer.byteLength(value) > MAX_SQLITE_PAYLOAD_BYTES)
+          throw new Error("SQLite text payload exceeds the decoded size limit.");
+        return value;
+      }
+      if (!import_node_util.types.isUint8Array(value)) throw new Error("Invalid SQLite payload representation.");
+      const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+      if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER))
+        throw new Error("Unsupported or truncated SQLite payload codec.");
+      const bytes = encoded.readUInt32LE(4);
+      if (bytes === 0 || bytes > MAX_SQLITE_PAYLOAD_BYTES)
+        throw new Error("SQLite compressed payload exceeds the decoded size limit.");
+      try {
+        const decoded = (0, import_node_zlib.inflateSync)(encoded.subarray(HEADER_BYTES), {
+          maxOutputLength: bytes,
+          chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
+        });
+        if (decoded.length !== bytes)
+          throw new Error("Decoded payload length does not match its header.");
+        return utf8.decode(decoded);
+      } catch (cause) {
+        throw new Error("Corrupt SQLite compressed payload.", { cause });
+      }
+    };
+    sqliteRuntimeIdentity = (id) => {
+      const split = id.lastIndexOf(":") + 1;
+      const suffix = id.slice(split);
+      return {
+        prefix: id.slice(0, split),
+        suffix: /^[\da-f]{64}$/.test(suffix) ? Buffer.from(suffix, "hex") : suffix
+      };
+    };
+    decodeSqliteRuntimeIdentity = (prefix, suffix) => {
+      if (typeof prefix !== "string") throw new Error("Invalid SQLite runtime ID prefix.");
+      if (typeof suffix === "string") return prefix + suffix;
+      if (!import_node_util.types.isUint8Array(suffix) || suffix.length !== 32)
+        throw new Error("Invalid SQLite runtime ID suffix.");
+      return prefix + Buffer.from(suffix).toString("hex");
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-records.ts
+var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
+var init_sqlite_records = __esm({
+  "packages/disassembler/src/sqlite-records.ts"() {
+    "use strict";
+    init_sqlite_payload();
+    compareRuntimeRecordIds = (left, right) => {
+      if (left.id < right.id) return -1;
+      if (left.id > right.id) return 1;
+      return 0;
+    };
     runtimeColumns = (record) => {
       switch (record.kind) {
         case "runtime-execution":
@@ -2132,12 +2128,14 @@ CREATE TABLE IF NOT EXISTS runtime (
     };
     runtimeFromRow = (row) => {
       const fields = row;
-      const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(fields.payload);
+      const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(decodeSqlitePayload(fields.payload));
+      if (typeof fields.evidence !== "string")
+        throw new Error("Missing SQLite runtime evidence dictionary entry.");
       const evidence = JSON.parse(fields.evidence);
       const kind = fields.kind;
       const architecture = fields.architecture;
       const count = Number(fields.count);
-      const id = fields.id;
+      const id = fields.id_prefix === void 0 ? fields.id : decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
       if (kind === "runtime-execution") {
         return {
           id,
@@ -2206,6 +2204,8 @@ CREATE TABLE IF NOT EXISTS runtime (
           coverage: fields.coverage
         };
       }
+      if (kind !== "runtime-control-target")
+        throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
       return {
         id,
         kind: "runtime-control-target",
@@ -2227,8 +2227,131 @@ CREATE TABLE IF NOT EXISTS runtime (
         return { addressSpace: record.addressSpace, address: record.fromAddress };
       return { addressSpace: null, address: null };
     };
+  }
+});
+
+// packages/disassembler/src/sqlite-store.ts
+var import_node_crypto2, import_node_fs3, import_node_path3, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, SqliteAnalysisStore;
+var init_sqlite_store = __esm({
+  "packages/disassembler/src/sqlite-store.ts"() {
+    "use strict";
+    import_node_crypto2 = require("node:crypto");
+    import_node_fs3 = __toESM(require("node:fs"), 1);
+    import_node_path3 = __toESM(require("node:path"), 1);
+    import_node_sqlite2 = require("node:sqlite");
+    init_canonical_json();
+    init_project_types();
+    init_sqlite_maintenance();
+    init_sqlite_payload();
+    init_sqlite_records();
+    ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
+    ANALYSIS_SQLITE_STORAGE_VERSION = 1;
+    SCHEMA = `
+PRAGMA journal_mode=WAL;
+PRAGMA synchronous=NORMAL;
+PRAGMA foreign_keys=ON;
+PRAGMA busy_timeout=5000;
+CREATE TABLE IF NOT EXISTS meta (
+  k TEXT PRIMARY KEY,
+  v TEXT NOT NULL
+) WITHOUT ROWID;
+CREATE TABLE IF NOT EXISTS evidence (
+  id TEXT NOT NULL PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS labels (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  address INTEGER NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS regions (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS annotations (
+  id TEXT NOT NULL PRIMARY KEY,
+  address_space TEXT NOT NULL,
+  start INTEGER NOT NULL,
+  "end" INTEGER NOT NULL,
+  classification TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS analysis (
+  id TEXT NOT NULL PRIMARY KEY,
+  kind TEXT NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS imports (
+  id TEXT NOT NULL PRIMARY KEY,
+  payload TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS runtime_prefixes (
+  id INTEGER PRIMARY KEY,
+  value TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS runtime_evidence (
+  id INTEGER PRIMARY KEY,
+  value TEXT NOT NULL UNIQUE
+);
+CREATE TABLE IF NOT EXISTS runtime (
+  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
+  id BLOB NOT NULL,
+  kind TEXT NOT NULL,
+  architecture TEXT NOT NULL,
+  count INTEGER NOT NULL,
+  address_space TEXT,
+  address INTEGER,
+  start INTEGER,
+  "end" INTEGER,
+  from_address_space TEXT,
+  from_address INTEGER,
+  to_address_space TEXT,
+  to_address INTEGER,
+  instruction_address_space TEXT,
+  instruction_address INTEGER,
+  accessed_address_space TEXT,
+  accessed_address INTEGER,
+  coverage TEXT,
+  evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id),
+  payload BLOB,
+  UNIQUE (prefix_id, id)
+);
+PRAGMA user_version=1;
+`;
+    SCHEMA_INDEX_STATEMENTS = [
+      "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
+      "CREATE INDEX IF NOT EXISTS comments_addr ON comments (address_space, address)",
+      'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
+      'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
+      "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime (kind, address_space, address, start)",
+      "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'"
+    ];
+    RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
+  FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
+  LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+    analysisProjectSqlitePath = (directory, manifest) => {
+      const relative2 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
+      if (relative2 !== ANALYSIS_PROJECT_SQLITE_FILE)
+        throw new Error(`Unsupported analysis sqlite path '${relative2}'.`);
+      return import_node_path3.default.join(directory, relative2);
+    };
+    parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
     SqliteAnalysisStore = class {
       #database;
+      #fileIdentity;
       file;
       #insertEvidence;
       #insertLabel;
@@ -2239,21 +2362,37 @@ CREATE TABLE IF NOT EXISTS runtime (
       #insertImport;
       #insertRuntime;
       #findRuntime;
+      #dictionaryStatements = /* @__PURE__ */ new Map();
+      /** Transaction-local cache: rollback or another writer cannot leave stale integer references here. */
+      #dictionaryIds = /* @__PURE__ */ new Map();
+      #dictionaryCacheBytes = 0;
       /**
        * Opens or creates a project database.
        * @param {string} file Absolute sqlite path.
-       * @param {boolean} [createSchema] Whether to apply DDL.
+       * @param {boolean} [createSchema] Permit initialization of an empty database; never upgrade an existing one.
+       * @param {boolean} [deferIndexes] Migration-only bulk load; finishMigration must build indexes before publication.
        */
-      constructor(file, createSchema = true) {
-        if (!createSchema && !import_node_fs2.default.existsSync(file))
+      constructor(file, createSchema = true, deferIndexes = false) {
+        assertNoSqliteMigration(file);
+        if (!createSchema && !import_node_fs3.default.existsSync(file))
           throw new Error(`Analysis database does not exist: ${file}`);
         this.file = file;
         this.#database = new import_node_sqlite2.DatabaseSync(file, { open: true });
+        this.#fileIdentity = sqliteFileIdentity(file);
         try {
-          if (createSchema) {
+          const empty = Number(this.#database.prepare("SELECT count(*) AS n FROM sqlite_schema").get()?.n) === 0;
+          const initialVersion = Number(
+            this.#database.prepare("PRAGMA user_version").get()?.user_version
+          );
+          if (createSchema && empty && initialVersion === 0) {
             this.#database.exec(SCHEMA);
-            for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
+            if (!deferIndexes) for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
           }
+          const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
+          if (version !== ANALYSIS_SQLITE_STORAGE_VERSION)
+            throw new Error(
+              `Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+            );
           this.#database.exec(
             "PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE;"
           );
@@ -2278,14 +2417,21 @@ CREATE TABLE IF NOT EXISTS runtime (
           this.#insertImport = this.#database.prepare(
             "INSERT INTO imports (id, payload) VALUES (?, ?)"
           );
-          this.#findRuntime = this.#database.prepare("SELECT * FROM runtime WHERE id=?");
+          for (const table of ["runtime_prefixes", "runtime_evidence"]) {
+            this.#dictionaryStatements.set(table, {
+              find: this.#database.prepare(`SELECT id FROM ${table} WHERE value=?`),
+              insert: this.#database.prepare(`INSERT INTO ${table} (value) VALUES (?)`)
+            });
+          }
+          this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
+        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
           this.#insertRuntime = this.#database.prepare(
             `INSERT INTO runtime (
-          id, kind, architecture, count, address_space, address, start, "end",
+          prefix_id, id, kind, architecture, count, address_space, address, start, "end",
           from_address_space, from_address, to_address_space, to_address,
           instruction_address_space, instruction_address, accessed_address_space, accessed_address,
-          coverage, evidence, payload
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          coverage, evidence_id, payload
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
           );
         } catch (error) {
           this.#database.close();
@@ -2297,16 +2443,44 @@ CREATE TABLE IF NOT EXISTS runtime (
        * A cleanup error must never replace the original failure reported to the user.
        */
       rollback() {
+        this.#clearDictionaryCache();
         if (!this.#database.isTransaction) return;
         try {
           this.#database.exec("ROLLBACK");
         } catch {
         }
       }
+      /** Forget all transaction-owned dictionary references and their bounded text allocation. */
+      #clearDictionaryCache() {
+        this.#dictionaryIds.clear();
+        this.#dictionaryCacheBytes = 0;
+      }
+      /**
+       * Intern exact text with a bounded cache; callers hold the SQLite writer lock.
+       * @param {string} table One of the two prepared dictionary tables.
+       * @param {string} value Exact prefix or serialized evidence list.
+       * @returns {number} Transactionally created or existing dictionary rowid.
+       */
+      #intern(table, value) {
+        const key2 = `${table}:${value}`;
+        const cached = this.#dictionaryIds.get(key2);
+        if (cached !== void 0) return cached;
+        const statements = this.#dictionaryStatements.get(table);
+        const found = statements.find.get(value);
+        const id = found ? Number(found.id) : Number(statements.insert.run(value).lastInsertRowid);
+        const bytes = Buffer.byteLength(key2);
+        if (this.#dictionaryIds.size >= 256 || this.#dictionaryCacheBytes + bytes > 512 * 1024)
+          this.#clearDictionaryCache();
+        if (bytes <= 512 * 1024) {
+          this.#dictionaryIds.set(key2, id);
+          this.#dictionaryCacheBytes += bytes;
+        }
+        return id;
+      }
       #insertRecord(kind, value) {
         if (kind === "evidence") {
           const record2 = value;
-          this.#insertEvidence.run(record2.id, JSON.stringify(record2));
+          this.#insertEvidence.run(record2.id, encodeSqlitePayload(JSON.stringify(record2)));
           return;
         }
         if (kind === "labels") {
@@ -2316,7 +2490,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record2.addressSpace,
             record2.address,
             record2.name,
-            JSON.stringify(record2)
+            encodeSqlitePayload(JSON.stringify(record2))
           );
           return;
         }
@@ -2326,7 +2500,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record2.id,
             record2.addressSpace,
             record2.address,
-            JSON.stringify(record2)
+            encodeSqlitePayload(JSON.stringify(record2))
           );
           return;
         }
@@ -2337,7 +2511,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record2.addressSpace,
             record2.start,
             record2.end,
-            JSON.stringify(record2)
+            encodeSqlitePayload(JSON.stringify(record2))
           );
           return;
         }
@@ -2349,7 +2523,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             record2.start,
             record2.end,
             record2.classification,
-            JSON.stringify(record2)
+            encodeSqlitePayload(JSON.stringify(record2))
           );
           return;
         }
@@ -2361,19 +2535,21 @@ CREATE TABLE IF NOT EXISTS runtime (
             record2.kind,
             located.addressSpace,
             located.address,
-            JSON.stringify(record2)
+            encodeSqlitePayload(JSON.stringify(record2))
           );
           return;
         }
         if (kind === "imports") {
           const record2 = value;
-          this.#insertImport.run(record2.id, JSON.stringify(record2));
+          this.#insertImport.run(record2.id, encodeSqlitePayload(JSON.stringify(record2)));
           return;
         }
         const record = value;
         const columns = runtimeColumns(record);
+        const identity = sqliteRuntimeIdentity(record.id);
         this.#insertRuntime.run(
-          record.id,
+          this.#intern("runtime_prefixes", identity.prefix),
+          identity.suffix,
           record.kind,
           record.architecture,
           record.count,
@@ -2390,8 +2566,8 @@ CREATE TABLE IF NOT EXISTS runtime (
           columns.accessedAddressSpace,
           columns.accessedAddress,
           columns.coverage,
-          JSON.stringify(record.evidence),
-          columns.payload
+          this.#intern("runtime_evidence", JSON.stringify(record.evidence)),
+          columns.payload === null ? null : encodeSqlitePayload(columns.payload)
         );
       }
       /**
@@ -2402,10 +2578,17 @@ CREATE TABLE IF NOT EXISTS runtime (
        * @returns {T} Callback result after a successful commit.
        */
       transaction(action, write = true) {
+        assertNoSqliteMigration(this.file);
+        if (sqliteFileIdentity(this.file) !== this.#fileIdentity)
+          throw new Error(
+            "Analysis database was replaced; close this connection and reload the project."
+          );
+        this.#clearDictionaryCache();
         this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
         try {
           const result = action();
           this.#database.exec("COMMIT");
+          this.#clearDictionaryCache();
           return result;
         } catch (error) {
           this.rollback();
@@ -2445,6 +2628,7 @@ CREATE TABLE IF NOT EXISTS runtime (
         try {
           const result = await action(index);
           this.#database.exec("COMMIT");
+          this.#clearDictionaryCache();
           return result;
         } catch (error) {
           this.rollback();
@@ -2479,6 +2663,10 @@ CREATE TABLE IF NOT EXISTS runtime (
         ]);
         for (const kind of Object.keys(shards)) {
           if (!tables.has(kind)) throw new Error(`Unknown analysis table '${kind}'.`);
+          if (kind === "runtime") {
+            this.#replaceRuntime(shards.runtime ?? []);
+            continue;
+          }
           this.#database.exec("DELETE FROM temp.replacement_ids");
           const find = this.#database.prepare(`SELECT * FROM ${kind} WHERE id=?`);
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
@@ -2486,7 +2674,7 @@ CREATE TABLE IF NOT EXISTS runtime (
             remember.run(record.id);
             const prior = find.get(record.id);
             if (prior) {
-              const before = kind === "runtime" ? runtimeFromRow(prior) : parseRecord(prior.payload);
+              const before = parseRecord(prior.payload);
               if (canonicalJson(before) === canonicalJson(record)) continue;
               remove.run(record.id);
             }
@@ -2498,6 +2686,45 @@ CREATE TABLE IF NOT EXISTS runtime (
         }
       }
       /**
+       * Replace runtime by integer storage IDs, keeping the temporary retention set compact.
+       * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
+       */
+      #replaceRuntime(records) {
+        this.#database.exec(
+          "CREATE TEMP TABLE IF NOT EXISTS replacement_runtime_ids (id INTEGER PRIMARY KEY); DELETE FROM replacement_runtime_ids"
+        );
+        const remember = this.#database.prepare("INSERT INTO temp.replacement_runtime_ids VALUES (?)");
+        const seen = this.#database.prepare("SELECT 1 FROM temp.replacement_runtime_ids WHERE id=?");
+        const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
+        for (const record of records) {
+          const identity = sqliteRuntimeIdentity(record.id);
+          let prior = this.#findRuntime.get(identity.prefix, identity.suffix);
+          if (prior && seen.get(prior.storage_rowid))
+            throw new Error(`Duplicate runtime record ID '${record.id}'.`);
+          if (prior && canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record)) {
+            remove.run(prior.storage_rowid);
+            prior = void 0;
+          }
+          if (!prior) {
+            this.#insertRecord("runtime", record);
+            prior = this.#findRuntime.get(identity.prefix, identity.suffix);
+          }
+          remember.run(prior.storage_rowid);
+        }
+        this.#database.exec(
+          "DELETE FROM runtime WHERE rowid NOT IN (SELECT id FROM temp.replacement_runtime_ids)"
+        );
+      }
+      /**
+       * Append validated migration rows without materializing a complete table or comparing absent IDs.
+       * @param {ShardKind} kind Destination semantic table.
+       * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+       */
+      appendRecords(kind, records) {
+        this.#requireTransaction();
+        for (const record of records) this.#insertRecord(kind, record);
+      }
+      /**
        * Insert a content-addressed runtime fact once; an ID collision with different content is an
        * error, never a silent no-op. Count values are already aggregated within the source capture.
        * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
@@ -2505,7 +2732,8 @@ CREATE TABLE IF NOT EXISTS runtime (
        */
       insertRuntime(record) {
         this.#requireTransaction();
-        const prior = this.#findRuntime.get(record.id);
+        const identity = sqliteRuntimeIdentity(record.id);
+        const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
         if (prior) {
           if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record))
             throw new Error(
@@ -2519,13 +2747,12 @@ CREATE TABLE IF NOT EXISTS runtime (
       /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
       validateRuntimeEvidence() {
         const missing = this.#database.prepare(`
-      SELECT runtime.id, ref.value AS evidence FROM runtime, json_each(runtime.evidence) AS ref
-      LEFT JOIN evidence ON evidence.id=ref.value WHERE evidence.id IS NULL LIMIT 1
+      SELECT ref.value AS evidence FROM runtime_evidence AS sets, json_each(sets.value) AS ref
+      LEFT JOIN evidence ON evidence.id=ref.value
+      WHERE evidence.id IS NULL AND EXISTS (SELECT 1 FROM runtime WHERE evidence_id=sets.id) LIMIT 1
     `).get();
         if (missing)
-          throw new Error(
-            `Analysis record '${String(missing.id)}' refers to missing evidence '${String(missing.evidence)}'.`
-          );
+          throw new Error(`Runtime history refers to missing evidence '${String(missing.evidence)}'.`);
       }
       /**
        * Store manifest and counter in the same transaction as the changed records.
@@ -2572,7 +2799,7 @@ CREATE TABLE IF NOT EXISTS runtime (
       *runtimeRecordsByKinds(kinds) {
         if (kinds.length === 0) return;
         const statement = this.#database.prepare(
-          `SELECT * FROM runtime WHERE kind IN (${kinds.map(() => "?").join(", ")})`
+          `${RUNTIME_SELECT} WHERE r.kind IN (${kinds.map(() => "?").join(", ")})`
         );
         for (const row of statement.iterate(...kinds)) yield runtimeFromRow(row);
       }
@@ -2585,10 +2812,10 @@ CREATE TABLE IF NOT EXISTS runtime (
        */
       *runtimeAt(addressSpace, address3) {
         const query = this.#database.prepare(`
-      SELECT * FROM runtime WHERE kind IN ('runtime-execution', 'runtime-instruction', 'runtime-cpu-state')
-        AND address_space=? AND address=?
-      UNION ALL SELECT * FROM runtime WHERE kind='runtime-coverage' AND address_space=? AND start<=? AND "end">?
-      UNION ALL SELECT * FROM runtime WHERE kind='runtime-memory-access' AND instruction_address_space=? AND instruction_address=?
+      ${RUNTIME_SELECT} WHERE r.kind IN ('runtime-execution', 'runtime-instruction', 'runtime-cpu-state')
+        AND r.address_space=? AND r.address=?
+      UNION ALL ${RUNTIME_SELECT} WHERE r.kind='runtime-coverage' AND r.address_space=? AND r.address IS NULL AND r.start<=? AND r."end">?
+      UNION ALL ${RUNTIME_SELECT} WHERE r.kind='runtime-memory-access' AND r.instruction_address_space=? AND r.instruction_address=?
     `);
         for (const row of query.iterate(
           addressSpace,
@@ -2607,7 +2834,7 @@ CREATE TABLE IF NOT EXISTS runtime (
        * @yields {RuntimeEvidenceRecord} One runtime fact.
        */
       *runtimeRecords() {
-        for (const row of this.#database.prepare("SELECT * FROM runtime").iterate())
+        for (const row of this.#database.prepare(`${RUNTIME_SELECT} ORDER BY r.rowid`).iterate())
           yield runtimeFromRow(row);
       }
       /**
@@ -2632,6 +2859,52 @@ CREATE TABLE IF NOT EXISTS runtime (
         return records;
       }
       /**
+       * Stream decoded records in insertion order for migration digest verification.
+       * @param {ShardKind} kind Semantic table to traverse.
+       * @returns {IterableIterator} Cursor retaining only the current decoded record.
+       * @yields {object} Original semantic record.
+       */
+      *records(kind) {
+        if (kind === "runtime") {
+          yield* this.runtimeRecords();
+          return;
+        }
+        if (!["evidence", "labels", "comments", "regions", "annotations", "analysis", "imports"].includes(
+          kind
+        ))
+          throw new Error(`Unknown analysis table '${kind}'.`);
+        for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY rowid`).iterate())
+          yield parseRecord(row.payload);
+      }
+      /**
+       * Initialize a migrated project's unchanged logical identity once, inside its first publication.
+       * @param {AnalysisProjectManifest} manifest Validated authoritative source manifest and revision.
+       */
+      initializeMigratedManifest(manifest) {
+        this.#requireTransaction();
+        if (this.#database.prepare("SELECT 1 FROM meta LIMIT 1").get())
+          throw new Error("Migration manifest can only initialize an empty metadata header.");
+        const insert = this.#database.prepare("INSERT INTO meta (k,v) VALUES (?,?)");
+        insert.run("revision", String(manifest.revision ?? 0));
+        insert.run("manifest", canonicalJson(manifest));
+      }
+      /**
+       * Build deferred indexes and check all physical structures before closing a staged migration file.
+       * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+       * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
+       */
+      finishMigration() {
+        for (const sql of SCHEMA_INDEX_STATEMENTS) this.#database.exec(sql);
+        const integrity = this.#database.prepare("PRAGMA integrity_check").all();
+        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok")
+          throw new Error("Migrated SQLite database failed integrity validation.");
+        if (this.#database.prepare("PRAGMA foreign_key_check").get())
+          throw new Error("Migrated SQLite database contains an invalid dictionary reference.");
+        this.#database.exec(
+          "PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; PRAGMA journal_mode=WAL;"
+        );
+      }
+      /**
        * Materialize metadata once; full runtime history is opt-in for callers that need it.
        * @param {boolean} [runtime] Include complete runtime history; false keeps it on disk.
        * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
@@ -2645,7 +2918,7 @@ CREATE TABLE IF NOT EXISTS runtime (
           annotations: this.loadTable("annotations"),
           analysis: this.loadTable("analysis"),
           imports: this.loadTable("imports"),
-          runtime: runtime ? [...this.runtimeRecords()] : []
+          runtime: runtime ? [...this.runtimeRecords()].sort(compareRuntimeRecordIds) : []
         };
       }
       /**
@@ -2676,11 +2949,11 @@ CREATE TABLE IF NOT EXISTS runtime (
        * @param {string} directory Project root for the watcher hint.
        */
       writePointer(directory) {
-        const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto2.randomUUID)()}.tmp`);
+        const temporary = import_node_path3.default.join(directory, `.analysis.json.${(0, import_node_crypto2.randomUUID)()}.tmp`);
         try {
           this.transaction(() => {
-            import_node_fs2.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-            import_node_fs2.default.renameSync(temporary, import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+            import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
+            import_node_fs3.default.renameSync(temporary, import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
           });
         } catch (error) {
           process.emitWarning(
@@ -2688,13 +2961,26 @@ CREATE TABLE IF NOT EXISTS runtime (
           );
         } finally {
           try {
-            import_node_fs2.default.rmSync(temporary, { force: true });
+            import_node_fs3.default.rmSync(temporary, { force: true });
           } catch {
           }
         }
       }
       /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
       compact() {
+        const disk = import_node_fs3.default.statfsSync(import_node_path3.default.dirname(this.file));
+        const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
+        const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
+        if (disk.bavail * disk.bsize < 2 * pageCount * pageSize)
+          throw new Error(
+            "Insufficient free disk space for SQLite VACUUM; allow twice the database size."
+          );
+        this.transaction(() => {
+          this.#database.exec(`
+        DELETE FROM runtime_prefixes WHERE id NOT IN (SELECT DISTINCT prefix_id FROM runtime);
+        DELETE FROM runtime_evidence WHERE id NOT IN (SELECT DISTINCT evidence_id FROM runtime);
+      `);
+        });
         this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
       }
       /** Close prepared statements and the database. */
@@ -2706,13 +2992,13 @@ CREATE TABLE IF NOT EXISTS runtime (
 });
 
 // packages/disassembler/src/project-transaction.ts
-var import_node_crypto3, fs3, import_node_path3, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitAnalysisProjectViewUpdate;
+var import_node_crypto3, fs4, import_node_path4, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitAnalysisProjectViewUpdate;
 var init_project_transaction = __esm({
   "packages/disassembler/src/project-transaction.ts"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
-    fs3 = __toESM(require("node:fs"), 1);
-    import_node_path3 = __toESM(require("node:path"), 1);
+    fs4 = __toESM(require("node:fs"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
     init_canonical_json();
     init_project_store();
     init_project_types();
@@ -2758,9 +3044,9 @@ var init_project_transaction = __esm({
     });
     publish = (directory, project, expected, updates = project.shards) => {
       prepareAnalysisProjectTransaction(directory, project);
-      fs3.mkdirSync(directory, { recursive: true });
-      const exists = fs3.existsSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
-      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path3.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+      fs4.mkdirSync(directory, { recursive: true });
+      const exists = fs4.existsSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path4.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
       try {
         const manifest = store.transaction(() => {
           if (expected) assertAnalysisProjectRevision(store, expected);
@@ -2794,14 +3080,15 @@ var init_project_transaction = __esm({
 });
 
 // packages/disassembler/src/project-store.ts
-var fs4, import_node_path4, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProjectView;
+var fs5, import_node_path5, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProjectView;
 var init_project_store = __esm({
   "packages/disassembler/src/project-store.ts"() {
     "use strict";
-    fs4 = __toESM(require("node:fs"), 1);
-    import_node_path4 = __toESM(require("node:path"), 1);
+    fs5 = __toESM(require("node:fs"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
     init_project_types();
     init_project_validation();
+    init_sqlite_records();
     init_sqlite_store();
     init_canonical_json();
     parseAnalysisProjectManifest = (input) => {
@@ -2818,7 +3105,7 @@ var init_project_store = __esm({
     };
     openAnalysisProjectStore = (directory) => {
       const manifest = parseAnalysisProjectManifest(
-        JSON.parse(fs4.readFileSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+        JSON.parse(fs5.readFileSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
       );
       return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
     };
@@ -2839,6 +3126,7 @@ var init_project_store = __esm({
               if (projection) projection.push(record);
               else records.push(record);
             }
+            if (!projection) records.sort(compareRuntimeRecordIds);
             return {
               manifest,
               shards: { ...shards, runtime: projection ? projection.finish() : records }
@@ -3315,6 +3603,16 @@ var init_interval_index = __esm({
         return matches.sort((left, right) => left.inputIndex - right.inputIndex).map(({ value }) => value);
       }
     };
+  }
+});
+
+// packages/disassembler/src/sqlite-migration.ts
+var import_node_sqlite3, RESERVE_BYTES;
+var init_sqlite_migration = __esm({
+  "packages/disassembler/src/sqlite-migration.ts"() {
+    "use strict";
+    import_node_sqlite3 = require("node:sqlite");
+    RESERVE_BYTES = 256 * 1024 * 1024;
   }
 });
 
@@ -3879,9 +4177,9 @@ var init_analysis_sources = __esm({
       #ownerIds(node) {
         const cached = this.#owners.get(node.id);
         if (cached) return cached;
-        const path8 = node.evidencePath.length ? node.evidencePath : [node.id];
-        for (let index = path8.length - 1; index >= 0; index--) {
-          const parent = this.#nodes.get(path8[index]);
+        const path9 = node.evidencePath.length ? node.evidencePath : [node.id];
+        for (let index = path9.length - 1; index >= 0; index--) {
+          const parent = this.#nodes.get(path9[index]);
           if (!parent) continue;
           const owners = this.#functionsAt.get(addressKey2(parent.addressSpace, parent.address));
           if (owners?.length) {
@@ -4035,6 +4333,7 @@ var init_src = __esm({
     init_behavior_capture_recorder();
     init_interval_index();
     init_sqlite_store();
+    init_sqlite_migration();
     init_project_store();
     init_project_transaction();
     init_project_edit();
@@ -15321,12 +15620,12 @@ var init_framework_asset_helpers = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-var fs5, import_node_path5, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, hex3, cleanText, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap;
+var fs6, import_node_path6, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, hex3, cleanText, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap;
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
-    fs5 = __toESM(require("node:fs"), 1);
-    import_node_path5 = __toESM(require("node:path"), 1);
+    fs6 = __toESM(require("node:fs"), 1);
+    import_node_path6 = __toESM(require("node:path"), 1);
     init_src();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
@@ -15418,12 +15717,12 @@ var init_ram_map = __esm({
       variables: []
     });
     loadSnesRamMap = (directory) => {
-      const file = import_node_path5.default.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs5.existsSync(file)) {
-        fs5.mkdirSync(directory, { recursive: true });
-        fs5.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      const file = import_node_path6.default.join(directory, SNES_RAM_MAP_SOURCE);
+      if (!fs6.existsSync(file)) {
+        fs6.mkdirSync(directory, { recursive: true });
+        fs6.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs5.readFileSync(file);
+      const sourceBytes = fs6.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -16148,8 +16447,8 @@ var init_common2 = __esm({
       return value;
     };
     defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile2 = (path8, value) => ({
-      path: path8,
+    jsonFile2 = (path9, value) => ({
+      path: path9,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -16220,7 +16519,7 @@ var init_brr = __esm({
           };
         });
         const value = { kind: "snes-brr", blocks };
-        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
+        const path9 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
         const metadataPath = stringOption2(
           options,
           "metadataPath",
@@ -16228,7 +16527,7 @@ var init_brr = __esm({
         );
         return {
           value,
-          files: [{ path: path8, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
+          files: [{ path: path9, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
         };
       },
       encode: (context) => {
@@ -16302,8 +16601,8 @@ var init_palette = __esm({
           };
         });
         const value = { kind: "snes-palette-bgr555", colors };
-        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile2(path8, value)] };
+        const path9 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
+        return { value, files: [jsonFile2(path9, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 2);
@@ -16380,8 +16679,8 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           entries: entries3
         };
-        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile2(path8, value)] };
+        const path9 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
+        return { value, files: [jsonFile2(path9, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 2);
@@ -16440,12 +16739,12 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           indexes: [...bytes]
         };
-        const path8 = stringOption2(
+        const path9 = stringOption2(
           options,
           "path",
           defaultPath(context.request.id, "mode7-tilemap.json")
         );
-        return { value, files: [jsonFile2(path8, value)] };
+        return { value, files: [jsonFile2(path9, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 1);
@@ -16541,12 +16840,12 @@ var init_tiles = __esm({
             tileHeight: 8,
             tiles
           };
-          const path8 = stringOption2(
+          const path9 = stringOption2(
             options,
             "path",
             defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
           );
-          return { value, files: [jsonFile2(path8, value)] };
+          return { value, files: [jsonFile2(path9, value)] };
         },
         encode: (context) => {
           const { count, size } = resolveCount(context, bytesPerTile);
@@ -16609,8 +16908,8 @@ var init_tiles = __esm({
           tileHeight: 8,
           tiles
         };
-        const path8 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile2(path8, value)] };
+        const path9 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
+        return { value, files: [jsonFile2(path9, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 64);
@@ -17302,8 +17601,8 @@ var init_src3 = __esm({
 var analysis_worker_exports = {};
 module.exports = __toCommonJS(analysis_worker_exports);
 var import_node_crypto7 = require("node:crypto");
-var fs7 = __toESM(require("node:fs"));
-var path7 = __toESM(require("node:path"));
+var fs8 = __toESM(require("node:fs"));
+var path8 = __toESM(require("node:path"));
 var import_node_worker_threads = require("node:worker_threads");
 init_src();
 init_src3();
@@ -17555,8 +17854,8 @@ var readAnalysisSourceCatalog = (directory) => {
 
 // packages/vscode-extension/src/disassembly-annotation-data.ts
 var import_node_crypto6 = require("node:crypto");
-var fs6 = __toESM(require("node:fs"));
-var path6 = __toESM(require("node:path"));
+var fs7 = __toESM(require("node:fs"));
+var path7 = __toESM(require("node:path"));
 init_debug_map();
 init_src();
 init_src3();
@@ -17665,14 +17964,14 @@ var annotationLocationsForSource = (map, sourceId, text, line, column, shards, s
 var hash2 = (bytes) => (0, import_node_crypto6.createHash)("sha256").update(bytes).digest("hex");
 var maps = /* @__PURE__ */ new Map();
 var annotationFileSignature = (file) => {
-  const stat = fs6.statSync(file, { bigint: true });
+  const stat = fs7.statSync(file, { bigint: true });
   return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
 };
 var readMap = (file) => {
   const signature = annotationFileSignature(file);
   const cached = maps.get(file);
   if (cached?.signature === signature) return cached.map;
-  const map = JSON.parse(fs6.readFileSync(file, "utf8"));
+  const map = JSON.parse(fs7.readFileSync(file, "utf8"));
   if (validateDebugMap(map).length) throw new Error("Invalid debug map.");
   if (annotationFileSignature(file) !== signature)
     throw new Error("Debug map changed while loading.");
@@ -17681,14 +17980,14 @@ var readMap = (file) => {
   return map;
 };
 var readSource = (source, candidate, expectedFile) => {
-  const files = path6.isAbsolute(source.path) ? [source.path] : [
-    ...candidate.sourceRoots.map((root) => path6.resolve(root, source.path)),
-    path6.resolve(path6.dirname(candidate.file), source.path)
+  const files = path7.isAbsolute(source.path) ? [source.path] : [
+    ...candidate.sourceRoots.map((root) => path7.resolve(root, source.path)),
+    path7.resolve(path7.dirname(candidate.file), source.path)
   ];
   for (const file of new Set(files)) {
     if (expectedFile && file !== expectedFile) continue;
     try {
-      const bytes = fs6.readFileSync(file);
+      const bytes = fs7.readFileSync(file);
       if (hash2(bytes) === source.sha256) return { file, text: bytes.toString("utf8") };
     } catch {
     }
@@ -17749,12 +18048,12 @@ var lookupDisassemblyAnnotation = (snapshot, input) => {
       throw new Error(
         "No exact current ROM/source mapping exists at the cursor. Run Analyze and Regenerate Disassembly, then select a label or instruction."
       );
-    for (let directory = path6.dirname(input.source.file); ; directory = path6.dirname(directory)) {
-      if (fs6.existsSync(path6.join(directory, "generated-files.json"))) {
+    for (let directory = path7.dirname(input.source.file); ; directory = path7.dirname(directory)) {
+      if (fs7.existsSync(path7.join(directory, "generated-files.json"))) {
         sourceDirectory = directory;
         break;
       }
-      if (path6.dirname(directory) === directory) break;
+      if (path7.dirname(directory) === directory) break;
     }
   } else locations = namedAnnotationLocations(snapshot.shards);
   if (!locations.length)
@@ -17795,7 +18094,7 @@ var saveDisassemblyAnnotation = (directory, snapshot, input) => {
     throw new Error(
       "The analysis project changed while this form was open. Reopen the annotation and retry."
     );
-  if (input.sourceFile && hash2(fs6.readFileSync(input.sourceFile)) !== input.sourceHash)
+  if (input.sourceFile && hash2(fs7.readFileSync(input.sourceFile)) !== input.sourceHash)
     throw new Error(
       "The source changed while this form was open. Reopen the annotation from current generated source."
     );
@@ -17824,7 +18123,7 @@ var sqliteSnapshot = (directory) => {
 };
 var database;
 var projectDatabase = (directory) => {
-  const stat = fs7.statSync(path7.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
+  const stat = fs8.statSync(path8.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });
   const identity = `${stat.dev}:${stat.ino}`;
   if (database?.directory !== directory || database.identity !== identity) {
     database?.store.close();
@@ -17866,7 +18165,7 @@ var request = (message) => {
   if (message.operation === "manifest") return manifest;
   const shardSignature = () => [ANALYSIS_PROJECT_SQLITE_FILE, `${ANALYSIS_PROJECT_SQLITE_FILE}-wal`].map((file) => {
     try {
-      return annotationFileSignature(path7.join(message.directory, file));
+      return annotationFileSignature(path8.join(message.directory, file));
     } catch (error) {
       if (file.endsWith("-wal") && error.code === "ENOENT")
         return "absent";
@@ -17927,7 +18226,7 @@ var request = (message) => {
     if (!message.annotationSave) throw new Error("Missing annotation edit.");
     const saved = saveDisassemblyAnnotation(message.directory, project, message.annotationSave);
     try {
-      const published = fs7.readFileSync(path7.join(message.directory, "analysis.json"), "utf8");
+      const published = fs8.readFileSync(path8.join(message.directory, "analysis.json"), "utf8");
       if ((0, import_node_crypto7.createHash)("sha256").update(published).digest("hex") === saved.snapshot.revision.manifestSha256) {
         current = {
           directory: message.directory,
@@ -17945,9 +18244,9 @@ var request = (message) => {
   if (message.operation === "heuristics") {
     if (project.manifest.target !== "snes.sfc")
       throw new Error("Function heuristics require a SNES analysis project.");
-    const file = path7.join(message.directory, "heuristics.json");
+    const file = path8.join(message.directory, "heuristics.json");
     const config = validateSnesHeuristicConfiguration(
-      fs7.existsSync(file) ? JSON.parse(fs7.readFileSync(file, "utf8")) : {}
+      fs8.existsSync(file) ? JSON.parse(fs8.readFileSync(file, "utf8")) : {}
     );
     const result = readProjection(
       store,
