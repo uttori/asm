@@ -12,8 +12,7 @@ import {
 import test from "ava";
 
 import { AresProcessHost, parseAresRuntimeManifest } from "../src/ares-process-host.js";
-import { AresRspDebugBackend } from "../src/ares-rsp-backend.js";
-import { ARES_RSP_CAPABILITIES } from "../src/ares-rsp-backend.js";
+import { AresRspDebugBackend, ARES_RSP_CAPABILITIES } from "../src/ares-rsp-backend.js";
 
 const live = process.env.UTTORI_ARES_RICH_LIVE === "1" ? test.serial : test.serial.skip;
 live(

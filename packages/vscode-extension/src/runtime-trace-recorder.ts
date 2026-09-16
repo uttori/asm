@@ -213,23 +213,18 @@ export class RuntimeTraceFileRecorder {
 
   async #writeChunk(batch: EditorTraceBatch): Promise<void> {
     const separator = this.#firstChunk ? "\n" : ",\n";
-    const json = JSON.stringify(
-      {
-        sequenceStart: batch.sequenceStart,
-        addresses: batch.addresses,
-        ...(batch.details === undefined ? {} : { details: batch.details }),
-        ...(batch.unattributedMemoryAccesses === undefined
-          ? {}
-          : { unattributedMemoryAccesses: batch.unattributedMemoryAccesses }),
-        droppedEvents: batch.droppedEvents,
-        active: batch.active,
-      },
-      undefined,
-      2,
-    )
-      .split("\n")
-      .map((line) => `    ${line}`)
-      .join("\n");
+    // Whitespace is not part of a capture's canonical import identity. Compact chunks avoid
+    // allocating/indenting every line and reduce capture backpressure without losing any fields.
+    const json = JSON.stringify({
+      sequenceStart: batch.sequenceStart,
+      addresses: batch.addresses,
+      ...(batch.details === undefined ? {} : { details: batch.details }),
+      ...(batch.unattributedMemoryAccesses === undefined
+        ? {}
+        : { unattributedMemoryAccesses: batch.unattributedMemoryAccesses }),
+      droppedEvents: batch.droppedEvents,
+      active: batch.active,
+    });
     await this.#handle.writeFile(`${separator}${json}`, "utf8");
     this.#firstChunk = false;
     this.#chunks++;

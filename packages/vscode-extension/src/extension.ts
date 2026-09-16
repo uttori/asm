@@ -227,10 +227,12 @@ export function activate(context: ExtensionContext): void {
   const analysisManifestWatcher = workspace.createFileSystemWatcher("**/analysis.json");
   const analysisShardWatcher = workspace.createFileSystemWatcher("**/analysis/**/*.json");
 
+  const analysisOutputChannel = window.createOutputChannel("Uttori Analysis", { log: true });
   context.subscriptions.push(
-    ...registerDebugging(context.extensionPath, refreshAnalysisViews),
+    ...registerDebugging(context.extensionPath),
     ...registerProjectWizards(context, outputChannel),
-    ...registerDisassemblyMaintenance(context, refreshAnalysisViews, outputChannel),
+    ...registerDisassemblyMaintenance(context, refreshAnalysisViews, analysisOutputChannel),
+    analysisOutputChannel,
     outputChannel,
     statusItem,
     analysisAnnotationController,
@@ -300,12 +302,6 @@ export function activate(context: ExtensionContext): void {
     commands.registerCommand("asm.coverage.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.analysisGraph.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
-    commands.registerCommand("asm.sources.compare", (element?: unknown) =>
-      sourcesProvider.compare(element),
-    ),
-    commands.registerCommand("asm.sources.resetComparison", (element?: unknown) =>
-      sourcesProvider.resetComparison(element),
-    ),
     commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
       const target = analysisGraphProvider.navigationTarget(element);
       if (target) void navigateToAnalysisLocation(target);

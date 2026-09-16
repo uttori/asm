@@ -1,18 +1,24 @@
 import type { DebugTraceInstructionDetail } from "./contracts.js";
 /** Exact counters crossing JavaScript/JSON boundaries. */
 export type CaptureU64 = string;
+/** Mutually exclusive streams; bus scope does not contain fetched instruction bytes or registers. */
+export type CaptureScopeV2 = "snes.65816.instructions" | "snes.cpu-bus" | "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
 export interface CaptureCapabilitiesV2 {
     readonly version: 2;
-    readonly scope: "snes.65816.instructions";
+    readonly scope: CaptureScopeV2;
     readonly mode: "lossless";
     readonly ownership: "durable-prefix";
     readonly maxChunkBytes: 262144;
-    readonly requiredReserveBytes: 71;
+    readonly requiredReserveBytes: 71 | 64 | 80 | 88;
     readonly overheadBytes: 4194304;
     readonly resumeSession: false;
+    /** Explicit native file capability; omitted by streamed-only producers. */
+    readonly nativeFile?: true;
 }
 export interface CapturePositionV2 {
     readonly session: string;
+    /** Older instruction producers omit this field; bus producers must identify their scope. */
+    readonly scope?: CaptureScopeV2;
     readonly state: "armed" | "recording" | "throttled" | "stopping" | "draining" | "complete" | "incomplete";
     readonly producedThrough: CaptureU64;
     readonly deliveredThrough: CaptureU64;
@@ -30,10 +36,31 @@ export interface CapturePositionV2 {
     readonly error: string;
 }
 export type CaptureRequestV2 = {
+    readonly operation: "file-capabilities";
+    readonly scope?: CaptureScopeV2;
+} | {
+    readonly operation: "file-start";
+    /** Optional native chunk/writer timings; omitted for ordinary recording. */
+    readonly measureStages?: boolean;
+    readonly scope?: CaptureScopeV2;
+    readonly bufferBytes: number;
+    /** Absolute path on the verified local runtime host. No remote path translation. */
+    readonly file: string;
+    readonly romContentSha256: string;
+    readonly producer: {
+        readonly id: string;
+        readonly revision: string;
+    };
+} | {
+    readonly operation: "file-status" | "file-stop" | "file-abort" | "file-release";
+    readonly session: string;
+} | {
     readonly operation: "capabilities";
+    readonly scope?: CaptureScopeV2;
 } | {
     readonly operation: "start";
     readonly bufferBytes: number;
+    readonly scope?: CaptureScopeV2;
 } | {
     readonly operation: "status" | "stop" | "abort" | "release";
     readonly session: string;
@@ -51,11 +78,30 @@ export type CaptureResultV2 = CaptureCapabilitiesV2 | CapturePositionV2 | {
     readonly hex: string;
 };
 export type CaptureTransportV2 = (request: CaptureRequestV2) => Promise<CaptureResultV2>;
+/**
+ * Validate the explicit stream dictionary. Callers choose the instruction default only on omission.
+ * @param {unknown} value Scope supplied by the caller or archive header.
+ * @returns {CaptureScopeV2} Supported stream identity; unknown values throw.
+ */
+export declare const captureScope: (value: unknown) => CaptureScopeV2;
 export declare const captureU64: (value: unknown) => bigint;
 export declare const captureSession: (value: unknown) => string;
 export declare const validateCaptureRequest: (value: CaptureRequestV2) => void;
-export declare const validateCaptureCapabilities: (value: unknown) => CaptureCapabilitiesV2;
-export declare const validateCapturePosition: (value: unknown, session?: string) => CapturePositionV2;
+/**
+ * Require the requested scope and its reservation size; never downgrade to a different stream.
+ * @param {unknown} value Native capability reply.
+ * @param {CaptureScopeV2} scope Requested stream, defaulting to instructions for older callers.
+ * @returns {CaptureCapabilitiesV2} Verified lossless ownership and allocation contract.
+ */
+export declare const validateCaptureCapabilities: (value: unknown, scope?: CaptureScopeV2) => CaptureCapabilitiesV2;
+/**
+ * Scope is stable for a session; only legacy instruction positions may omit it.
+ * @param {unknown} value Native status or archive terminal frame.
+ * @param {string} session Expected identity when an active session is already known.
+ * @param {CaptureScopeV2} scope Expected stream; bus positions must explicitly confirm it.
+ * @returns {CapturePositionV2} Validated ownership boundaries and integrity state.
+ */
+export declare const validateCapturePosition: (value: unknown, session?: string, scope?: CaptureScopeV2) => CapturePositionV2;
 /**
  * CRC-32C Castagnoli, including the canonical 123456789 test vector.
  * @param {Uint8Array} bytes Bytes to checksum.
@@ -70,18 +116,118 @@ export interface CaptureInstructionV2 {
     readonly address: number;
     readonly detail: DebugTraceInstructionDetail;
 }
-export interface CaptureChunkV2 {
+/** Actual PPU write decision, attached to the completing CPU-bus access.
+ * Byte destinations are physical offsets; duplicate offsets retain write order.
+ * The two raster counters describe the PPU decision, which may differ from the CPU counter.
+ */
+export interface CapturePPUEffectV2 {
+    readonly target: "vram" | "cgram" | "oam";
+    readonly outcome: "written" | "blocked" | "latched";
+    readonly forcedBlank: boolean;
+    readonly renderingRestricted: boolean;
+    readonly implementation: "accurate" | "performance";
+    readonly vramBytes: 65536 | 131072 | null;
+    readonly bytes: readonly {
+        readonly address: number;
+        readonly value: number;
+    }[];
+    readonly hcounter: number;
+    readonly vcounter: number;
+}
+/** Actual CPU-bus operation, with exact counters and optional instruction ownership. */
+export interface CaptureBusAccessV2 {
+    /** Present only on data-port writes in the explicitly negotiated PPU scope. */
+    readonly ppu?: CapturePPUEffectV2;
+    readonly sequence: CaptureU64;
+    /** Zero means no observed instruction owns the access; this is not an instruction event count. */
+    readonly ordinal: CaptureU64;
+    /** Monotonic SNES master-clock ticks in the archive's rational clock domain. */
+    readonly cycle: CaptureU64;
+    readonly address: number;
+    /** Owning instruction's starting PC, or the current PC when ordinal is zero. */
+    readonly pc: number;
+    readonly value: number;
+    readonly direction: "read" | "write";
+    readonly actor: "cpu" | "dma" | "hdma";
+    /** DMA/HDMA channel 0..7; CPU accesses have no channel. */
+    readonly channel: number | null;
+    readonly phase: "cpu" | "dma" | "hdma-table" | "hdma-indirect" | "hdma-transfer";
+    /** CPU execution context, not a claim that an instruction caused asynchronous HDMA. */
+    readonly context: "unattributed" | "instruction" | "interrupt" | "wait" | "stop";
+    /** Horizontal counter in master clocks, 0..1367. */
+    readonly hcounter: number;
+    /** Zero-based scanline, 0..312 for the supported NTSC/PAL cores. */
+    readonly vcounter: number;
+}
+/** Native DMA run / HDMA payload-burst boundary. End snapshots may lack an observed begin. */
+export interface CaptureTransferV2 {
+    readonly kind: "transfer";
+    readonly sequence: CaptureU64;
+    readonly ordinal: CaptureU64;
+    readonly cycle: CaptureU64;
+    /** Begin event sequence in this session, or zero for an unobserved begin. */
+    readonly transferId: CaptureU64;
+    readonly pc: number;
+    readonly boundary: "begin" | "complete" | "interrupted";
+    readonly actor: "dma" | "hdma";
+    readonly channel: number;
+    readonly context: CaptureBusAccessV2["context"];
+    readonly hcounter: number;
+    readonly vcounter: number;
+    /** Attempted byte slots, including hardware-suppressed accesses; zero on begin markers. */
+    readonly transferred: number;
+    /** Raw channel registers at this boundary: DMAP control, BBAD port offset, A1B:A1T source,
+     * DAS size/indirect address, DASB indirect bank, A2A table address, and NTLR line counter.
+     */
+    readonly configuration: {
+        readonly dmap: number;
+        readonly bbad: number;
+        readonly a1t: number;
+        readonly a1b: number;
+        readonly das: number;
+        readonly dasb: number;
+        readonly a2a: number;
+        readonly ntlr: number;
+        /** Bits: DMA enabled, HDMA enabled, HDMA completed, HDMA do-transfer. */
+        readonly flags: number;
+    };
+}
+export interface CaptureTransferChunkV2 extends CaptureChunkBaseV2 {
+    readonly scope: "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu";
+    readonly events: readonly (CaptureBusAccessV2 | CaptureTransferV2)[];
+}
+interface CaptureChunkBaseV2 {
     readonly session: string;
     readonly sequence: CaptureU64;
     readonly first: CaptureU64;
     readonly through: CaptureU64;
+}
+export interface CaptureInstructionChunkV2 extends CaptureChunkBaseV2 {
+    readonly scope: "snes.65816.instructions";
     readonly instructions: readonly CaptureInstructionV2[];
 }
+export interface CaptureBusChunkV2 extends CaptureChunkBaseV2 {
+    readonly scope: "snes.cpu-bus";
+    readonly accesses: readonly CaptureBusAccessV2[];
+}
+/** Scope discrimination prevents bus-only evidence from entering the instruction importer. */
+export type CaptureChunkV2 = CaptureInstructionChunkV2 | CaptureBusChunkV2 | CaptureTransferChunkV2;
+/**
+ * Common ordering fields without converting bus accesses into instruction records.
+ * @param {CaptureChunkV2} chunk Validated nonempty chunk.
+ * @returns {readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2)[]} Original ordered record array.
+ */
+export declare const captureChunkRecords: (chunk: CaptureChunkV2) => readonly (CaptureInstructionV2 | CaptureBusAccessV2 | CaptureTransferV2)[];
 /**
  * Validate the entire envelope and every record before accepting any event.
  * @param {Uint8Array} bytes Bounded encoded chunk.
  * @param {string} session Negotiated session identity.
- * @returns {CaptureChunkV2} Fully validated ordered instructions.
+ * @param {CaptureScopeV2} scope Negotiated stream; omission preserves instruction-only callers.
+ * @returns {CaptureChunkV2} Fully validated ordered records in exactly the requested scope.
  */
-export declare const decodeCaptureChunk: (bytes: Uint8Array, session: string) => CaptureChunkV2;
+export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope?: "snes.65816.instructions"): CaptureInstructionChunkV2;
+export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: "snes.cpu-bus"): CaptureBusChunkV2;
+export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: "snes.cpu-bus-transfers" | "snes.cpu-bus-ppu"): CaptureTransferChunkV2;
+export declare function decodeCaptureChunk(bytes: Uint8Array, session: string, scope: CaptureScopeV2): CaptureChunkV2;
+export {};
 //# sourceMappingURL=capture-v2.d.ts.map

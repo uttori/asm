@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { performance } from "node:perf_hooks";
 import { DatabaseSync } from "node:sqlite";
 import { setImmediate } from "node:timers/promises";
 
@@ -8,6 +9,7 @@ import { canonicalJson } from "./canonical-json.js";
 import { parseAnalysisProjectManifest } from "./project-store.js";
 import type { AnalysisProjectManifest, AnalysisProjectShards, ShardKind } from "./project-types.js";
 import { createRuntimeRecordValidator, validateLoadedShards } from "./project-validation.js";
+import { RUNTIME_ANALYSIS_PROFILE } from "./runtime-trace-profile.js";
 import {
   SQLITE_MIGRATION_BACKUP,
   SQLITE_MIGRATION_DIRECTORY,
@@ -16,6 +18,12 @@ import {
 } from "./sqlite-maintenance.js";
 import { decodeSqlitePayload } from "./sqlite-payload.js";
 import { runtimeFromRow } from "./sqlite-records.js";
+import {
+  RuntimeDigest,
+  migrationRuntimeQuery,
+  prepareRuntimeConversion,
+  convertedRuntimeRecords,
+} from "./sqlite-runtime-conversion.js";
 import {
   ANALYSIS_PROJECT_SQLITE_FILE,
   ANALYSIS_SQLITE_STORAGE_VERSION,
@@ -36,7 +44,7 @@ const RESERVE_BYTES = 256 * 1024 * 1024;
 
 /** Migration stages are cancellable until publication; reported record counts are per table. */
 export interface SqliteMigrationProgress {
-  readonly phase: "copy" | "verify" | "indexes" | "publish";
+  readonly phase: "project" | "copy" | "verify" | "indexes" | "publish";
   readonly table?: ShardKind;
   readonly records?: number;
 }
@@ -51,10 +59,16 @@ export interface SqliteMigrationResult {
   readonly backupFile?: string;
   readonly tables: Readonly<Record<string, { readonly records: number; readonly sha256: string }>>;
   readonly warnings: readonly string[];
+  /** Expected conversion notices; these do not indicate a failed migration. */
+  readonly notes?: readonly string[];
+  /** Non-overlapping copy, projection, validation and index costs in wall-clock milliseconds. */
+  readonly timings?: readonly { readonly step: string; readonly durationMs: number }[];
 }
 
 /** Callbacks report progress only; cancellation is observed between bounded copy/verification batches. */
 export interface SqliteMigrationOptions {
+  /** Explicitly discard full register-index detail after retaining the original database as backup. */
+  readonly convertRuntime?: boolean;
   readonly signal?: AbortSignal;
   readonly onProgress?: (progress: SqliteMigrationProgress) => void;
 }
@@ -113,26 +127,41 @@ const sourceManifest = (database: DatabaseSync): AnalysisProjectManifest => {
 };
 
 /**
- * Stream the sole supported old SQLite layout. No legacy JSON container or old write path is retained.
+ * Stream supported SQLite layouts, optionally substituting the explicitly requested working index.
  * @param {DatabaseSync} database Format-zero source under an exclusive SQLite lock.
  * @param {ShardKind} kind Table selected from the fixed semantic table inventory.
  * @returns {IterableIterator} Stable-ID-ordered semantic records.
  * @yields {object} One decoded record with its original external identity.
+ * @param {number} version Supported source layout.
+ * @param {boolean} convert Use the completed native working-index projection.
  */
 function* legacyRecords<K extends ShardKind>(
   database: DatabaseSync,
   kind: K,
+  version: number,
+  convert = false,
 ): IterableIterator<AnalysisProjectShards[K][number]> {
+  if (kind === "runtime") {
+    if (convert) yield* convertedRuntimeRecords(database);
+    else
+      for (const row of database.prepare(migrationRuntimeQuery(version)).iterate())
+        yield runtimeFromRow(row);
+    return;
+  }
   for (const row of database.prepare(`SELECT * FROM ${kind} ORDER BY id`).iterate()) {
-    if (kind === "runtime") {
-      yield runtimeFromRow(row);
-    } else {
-      const record = JSON.parse(
-        decodeSqlitePayload(row.payload),
-      ) as AnalysisProjectShards[K][number];
-      if (record.id !== row.id) throw new Error(`Stored ${kind} ID differs from its payload.`);
-      yield record;
-    }
+    let record = JSON.parse(decodeSqlitePayload(row.payload)) as AnalysisProjectShards[K][number];
+    if (record.id !== row.id) throw new Error(`Stored ${kind} ID differs from its payload.`);
+    if (
+      convert &&
+      kind === "imports" &&
+      "format" in record &&
+      record.format === "uttori-asm-instruction-trace" &&
+      database
+        .prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?")
+        .get(record.sourceSha256)
+    )
+      record = { ...record, indexProfile: RUNTIME_ANALYSIS_PROFILE };
+    yield record;
   }
 }
 
@@ -186,7 +215,7 @@ const recoverMigration = (directory: string): SqliteMigrationResult | undefined 
 };
 
 /**
- * Convert a format-zero SQLite project into the compact format with exact per-table content digests.
+ * Convert supported SQLite layouts with per-table content digests; optional runtime projection is explicit.
  * The process gate blocks new clients; switching WAL to DELETE under exclusive locking also requires
  * existing SQLite readers to release the source. No source row or logical revision is changed.
  * @param {string} directory Existing project root, on a filesystem supporting same-directory hard links.
@@ -214,14 +243,14 @@ export const migrateAnalysisProjectStorage = async (
   let manifest: AnalysisProjectManifest;
   try {
     version = Number(probe.prepare("PRAGMA user_version").get()?.user_version);
-    if (version !== 0 && version !== ANALYSIS_SQLITE_STORAGE_VERSION)
+    if (![0, 1, ANALYSIS_SQLITE_STORAGE_VERSION].includes(version))
       throw new Error(`Cannot migrate unsupported analysis storage format ${version}.`);
     manifest = sourceManifest(probe);
   } finally {
     probe.close();
   }
   let beforeBytes = fs.statSync(file).size;
-  if (version === ANALYSIS_SQLITE_STORAGE_VERSION)
+  if (version === ANALYSIS_SQLITE_STORAGE_VERSION && !options.convertRuntime)
     return {
       changed: false,
       recovered: false,
@@ -253,6 +282,7 @@ export const migrateAnalysisProjectStorage = async (
   let published = false;
   let failed = false;
   const warnings: string[] = [];
+  const notes: string[] = [];
   try {
     writeJournal(stage, journal);
     syncSqlitePath(directory);
@@ -279,9 +309,38 @@ export const migrateAnalysisProjectStorage = async (
     writeJournal(stage, journal);
     const stagedFile = path.join(stage, ANALYSIS_PROJECT_SQLITE_FILE);
     destination = new SqliteAnalysisStore(stagedFile, true, true);
+    const timings: { step: string; durationMs: number }[] = [];
     const tables: Record<string, { records: number; sha256: string }> = {};
+    if (options.convertRuntime) {
+      const started = performance.now();
+      const validateOriginal = createRuntimeRecordValidator(
+        manifest,
+        [...legacyRecords(source, "evidence", version)],
+        false,
+      );
+      try {
+        // Projection must not turn a malformed original (for example a negative count) into a
+        // plausible aggregate. Validate before omitting fields or combining equivalent variants.
+        await prepareRuntimeConversion(source, version, {
+          signal: options.signal,
+          validateRecord: validateOriginal,
+          onProgress: (records) =>
+            options.onProgress?.({ phase: "project", table: "runtime", records }),
+        });
+      } finally {
+        validateOriginal.close();
+      }
+      timings.push({
+        step: "Project native runtime detail",
+        durationMs: performance.now() - started,
+      });
+      notes.push(
+        "Full register-index detail was converted to 65816-analysis-v2. The original database is retained in the migration backup.",
+      );
+    }
     for (const kind of TABLES) {
-      const hash = createHash("sha256");
+      const started = performance.now();
+      const hash = kind === "runtime" ? new RuntimeDigest() : createHash("sha256");
       let count = 0;
       let bytes = 0;
       let batch: AnalysisProjectShards[ShardKind][number][] = [];
@@ -297,7 +356,7 @@ export const migrateAnalysisProjectStorage = async (
         options.onProgress?.({ phase: "copy", table: kind, records: count });
         await setImmediate();
       };
-      for (const record of legacyRecords(source, kind)) {
+      for (const record of legacyRecords(source, kind, version, options.convertRuntime)) {
         const json = canonicalJson(record);
         hash.update(json);
         bytes += Buffer.byteLength(json);
@@ -306,7 +365,8 @@ export const migrateAnalysisProjectStorage = async (
         if (batch.length >= 2000 || bytes >= 4 * 1024 * 1024) await flush();
       }
       await flush();
-      tables[kind] = { records: count, sha256: hash.digest("hex") };
+      tables[kind] = { records: count, sha256: String(hash.digest("hex")) };
+      timings.push({ step: `Copy ${kind}`, durationMs: performance.now() - started });
     }
     destination.transaction(() => destination!.initializeMigratedManifest(manifest));
     // Only provenance and region ancestry need cross-record context. Large CFG/annotation tables
@@ -324,7 +384,8 @@ export const migrateAnalysisProjectStorage = async (
     validateLoadedShards(context, manifest);
     const validateRuntime = createRuntimeRecordValidator(manifest, context.evidence, false);
     for (const kind of TABLES) {
-      const hash = createHash("sha256");
+      const started = performance.now();
+      const hash = kind === "runtime" ? new RuntimeDigest() : createHash("sha256");
       let records = 0;
       let batch: AnalysisProjectShards[ShardKind][number][] = [];
       let batchBytes = 0;
@@ -352,12 +413,50 @@ export const migrateAnalysisProjectStorage = async (
       validateBatch();
       if (records !== tables[kind].records || hash.digest("hex") !== tables[kind].sha256)
         throw new Error(`Migrated ${kind} records differ from the original database.`);
+      timings.push({ step: `Verify ${kind}`, durationMs: performance.now() - started });
     }
     validateRuntime.close();
+    destination.transaction(() => {
+      for (const report of destination!.loadTable("imports"))
+        destination!.recordCaptureReceipt(report);
+    });
+    if (version === ANALYSIS_SQLITE_STORAGE_VERSION) {
+      const staged = new DatabaseSync(stagedFile);
+      try {
+        staged.exec("BEGIN IMMEDIATE");
+        const save = staged.prepare(
+          "INSERT OR REPLACE INTO capture_catalog VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        );
+        for (const row of source.prepare("SELECT * FROM capture_catalog").iterate())
+          save.run(
+            ...Object.values({
+              ...row,
+              profile:
+                options.convertRuntime &&
+                source
+                  .prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?")
+                  .get(row.sha256)
+                  ? RUNTIME_ANALYSIS_PROFILE
+                  : row.profile,
+            }),
+          );
+        const policy = source.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
+        if (policy)
+          staged.prepare("INSERT OR REPLACE INTO meta VALUES('storage-policy',?)").run(policy);
+        staged.exec("COMMIT");
+      } finally {
+        staged.close();
+      }
+    }
     options.signal?.throwIfAborted();
     options.onProgress?.({ phase: "indexes" });
     options.signal?.throwIfAborted();
+    const indexStarted = performance.now();
     destination.finishMigration();
+    timings.push({
+      step: "Build indexes and verify SQLite integrity",
+      durationMs: performance.now() - indexStarted,
+    });
     // Index construction is synchronous native work. Yield once before publication so a queued
     // cancellation from the host can be delivered, then discard the staged file if it was requested.
     await setImmediate();
@@ -374,6 +473,8 @@ export const migrateAnalysisProjectStorage = async (
       backupFile: backup,
       tables,
       warnings,
+      notes,
+      timings,
     };
     journal = { ...journal, targetIdentity: sqliteFileIdentity(stagedFile), result };
     writeJournal(stage, journal);

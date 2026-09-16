@@ -12,6 +12,7 @@ import {
   applyStateEntryPointEdit,
   applyTargetResolutionEdit,
   buildRomCoverageMap,
+  commitAnalysisProjectAnnotationUpdate,
   explainProjectEvidence,
   loadAnalysisProjectSnapshot,
   revertLabelRenameEdit,
@@ -58,6 +59,66 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
     ],
     imports: [],
   },
+});
+
+test("annotation transactions validate only editable metadata, preserve provenance, and reject stale saves", async (t) => {
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-annotation-transaction-"));
+  t.teardown(() => fs.rm(directory, { recursive: true, force: true }));
+  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  const before = loadAnalysisProjectSnapshot(directory);
+  const updates = {
+    evidence: before.shards.evidence,
+    labels: [
+      {
+        id: "label",
+        name: "Start",
+        sourceName: "Start",
+        addressSpace: "rom.file",
+        address: 0,
+        evidence: ["imported.evidence"],
+      },
+    ],
+    comments: [
+      {
+        id: "comment",
+        text: "Entry",
+        addressSpace: "rom.file",
+        address: 0,
+        evidence: ["imported.evidence"],
+      },
+    ],
+  };
+  const commit = (value: typeof updates) =>
+    commitAnalysisProjectAnnotationUpdate(directory, before.revision, value);
+  t.throws(() => commit({ ...updates, evidence: [] }), { message: /preserve existing evidence/ });
+  t.throws(
+    () => commit({ ...updates, evidence: [{ ...updates.evidence[0], sourceId: "changed" }] }),
+    { message: /preserve existing evidence/ },
+  );
+  t.throws(() => commit({ ...updates, labels: [{ ...updates.labels[0], address: -1 }] }), {
+    message: /invalid address/,
+  });
+  t.throws(
+    () => commit({ ...updates, comments: [{ ...updates.comments[0], evidence: ["missing"] }] }),
+    { message: /missing evidence/ },
+  );
+  t.throws(() => commit({ ...updates, labels: [...updates.labels, ...updates.labels] }), {
+    message: /duplicate id/,
+  });
+  t.throws(
+    () =>
+      commitAnalysisProjectAnnotationUpdate(directory, before.revision, {
+        ...updates,
+        runtime: [],
+      } as typeof updates),
+    { message: /only replace labels/ },
+  );
+  t.deepEqual(loadAnalysisProjectSnapshot(directory), before);
+  const published = commit(updates);
+  const after = loadAnalysisProjectSnapshot(directory);
+  t.deepEqual(after.revision, published.revision);
+  t.deepEqual(after.shards, { ...before.shards, ...updates });
+  t.throws(() => commit(updates), { message: /changed since it was loaded/ });
 });
 
 test("range classification is evidence-preserving, visibly conflicting, and exactly undoable", async (t) => {

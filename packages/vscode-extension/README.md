@@ -14,7 +14,7 @@ Requires VS Code 1.128 or newer and implements the [Language Server Protocol 3.1
 - **Uttori SNES** and **Uttori 65xx** language modes (status bar / Change Language Mode). SNES is the default for `.asm` and includes SPC700, Super FX, and mapper directives; 65xx is CPU-only.
 - Inline **Uttori ASM Debugger** with replay, live ares, and live MesenCE backends; source/instruction breakpoints, stepping, threads, stack frames, registers, native watch expressions, memory, and virtual disassembly source.
 - Native **Analysis Coverage** tree for ROM classifications, conflicts, runtime coverage, and projection diagnostics.
-- Native **Functions & Calls** tree for persisted function candidates, resolved call/interrupt edges, unresolved control flow, and ownership diagnostics.
+- Optional **Functions & Calls** tree for persisted function candidates, resolved call/interrupt edges, unresolved control flow, and ownership diagnostics.
 - Hash-gated inline source and disassembly annotations for effective addresses, runtime coverage, memory access, and static/observed CPU state.
 
 ## Creating a Disassembly Project
@@ -39,7 +39,7 @@ machine-local extension storage and associated with the ROM's content identity.
 
 ## Analysis Coverage
 
-The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates shard hashes and builds projections in a shared, separate Node process using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. Large shards are parsed record-by-record; summaries and at most 200 rows per page cross back to the UI. Functions and calls are also expanded lazily, and inline annotations request only visible source lines. Requests run one at a time; each has a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode/operand/data/asset classifications, and executed/operand/read/written runtime overlays.
+The **Analysis Coverage** view discovers up to 32 native `analysis.json` projects in the workspace, or reads the project selected by `asm.analysisProject`. Discovery reads only manifests. Expanding a project validates native metadata and builds projections in background Node processes using the project's `asm.analysis.maxMemoryMiB` budget (default 4096 MiB). A fatal heap error is isolated from the extension host. Large shards are parsed record-by-record; summaries and at most 200 rows per page cross back to the UI. Functions and calls are also expanded lazily, and inline annotations request only visible source lines. Requests within each process run one at a time; reads have a 60-second execution timeout, excluding time queued behind another view. A failed process reports the operation and memory budget and can be retried by refreshing the view. Summary groups report exclusive classified/unknown/conflict totals, overlapping opcode/operand/data/asset classifications, and executed/operand/read/written runtime overlays.
 
 The ROM map is a coalesced list of half-open file-offset segments, paged at 200 rows so expanding a large ROM cannot enqueue the entire map in VS Code at once. CPU and RAM addresses are never guessed into ROM offsets: records without an explicit file address or file offset remain visible under **Projection diagnostics**.
 
@@ -54,7 +54,10 @@ remain read-only.
 
 ## Functions and Calls
 
-The **Functions & Calls** view builds a target-neutral graph only from validated native project
+The **Functions & Calls** view is hidden by default; enable it from the Assembly sidebar view menu
+when investigating a specific routine. Existing saved VS Code layouts keep their visibility choice.
+Function entries still provide generated labels and let heuristics attribute hardware access and
+callee roles to routines. The view builds a target-neutral graph only from validated native project
 records. Functions show incoming and outgoing calls plus their unresolved flow sites; project-level
 groups also expose every call edge, unresolved site, and orphan relationship. Rows are paged at 200
 items, and every displayed location keeps its named address space.
@@ -71,7 +74,7 @@ The active source editor shows instruction overlays aligned in a shared column f
 runtime coverage, static effective addresses, attributed memory reads/writes, and static or observed
 state. Theme colors distinguish project state (blue), runtime observations (green), and state changes
 (amber); the text and hover retain the meaning without relying on color. Hover an overlay for the
-complete detail, including native record ids and evidence. The **eye button beside Build Binary**
+detail preview, including native record ids and evidence. The **eye button beside Build Binary**
 toggles these source overlays immediately and saves the choice for the project. Use
 `asm.analysis.showAnnotations` to configure visibility and `asm.analysis.annotationColumn` to adjust
 the preferred column (default 80). Longer annotated lines move the shared column to keep code clear;
@@ -85,6 +88,15 @@ SHA-256. Editing a mapped source clears its decorations immediately; saving rest
 the new bytes match a map. Logical addresses and explicit output offsets are indexed separately and
 filtered by architecture. The extension never guesses a mapper projection, changes emulator
 instructions, or lets an invalid analysis project prevent debugger startup.
+
+Source and debugger overlays query SQLite for the requested addresses before decoding payloads.
+The first request builds derived address/output indexes; later reads update only changed entries.
+Frequently executed instructions show a bounded state/memory preview marked **details limited**;
+execution totals include every matching observation. Debugger startup loads matching manifests,
+then batches annotation queries for each displayed disassembly page.
+Annotation queries, form edits, and source refresh share their own worker process. Bulk Coverage,
+Sources, and graph queries use a separate process, so their queue or failure cannot cancel an edit.
+Each process uses the configured analysis memory budget and serializes its own requests.
 
 ## Replay Debugging
 
@@ -222,13 +234,14 @@ step-out are labeled unavailable and rejected instead of being approximated.
   backend with the VS Code debugger UI.
 - **Assembly: Run and Watch** (`asm.runAndWatch`) - debounces saves and fully reloads a changed,
   successfully rebuilt ROM while retaining the current session after build failures.
-- **Assembly: Start Runtime Trace Recording** (`asm.trace.start`) - starts an explicit execution window, selects a negotiated processor stream, asks for a local destination, and continuously drains bounded batches to a versioned native JSON artifact with disk writes providing backpressure.
-- **Assembly: Stop Runtime Trace Recording** (`asm.trace.stop`) - stops the producer, drains remaining events, and closes the artifact with observed and dropped-event counts. A terminated session preserves valid incomplete JSON. Saving remains non-mutating; the completion notification offers the separate, explicit import/update action.
-- **Assembly: Stop Execution Capture and Show Routines** (`asm.trace.stopAnalyze`) - stops the current execution window and immediately runs the explicit trace-import/update workflow. Its report lists statically evidenced routine candidates in first-observed order, dynamic instruction counts, unique PCs, and contiguous execution spans. Unknown and conflicting PCs remain separate instead of becoming invented function boundaries.
-- **Assembly: Import Runtime Trace and Update Disassembly** (`asm.trace.importRegenerate`) - validates and imports a saved trace, uses unique observed 65816 PCs as conservative code observations, reruns analysis, rewrites generated source, verifies an exact ROM round trip, and opens a report with the instruction/code-byte deltas and all attributable routine candidates. An observed PC proves reachability but does not invent a function boundary or `Fn_*` label.
+- **Assembly: Start Runtime Trace Recording** (`asm.trace.start`) - starts an explicit execution window, selects a negotiated processor stream, and asks for a local destination. Live capture writes compact JSON chunks; `asm.debug.traceMode: "lossless-instructions"` writes a durable `.act2` archive. `lossless-bus` requires the separate capture-bus ares runtime and records CPU/DMA/HDMA accesses with timing, channel and transfer phase to ACT2. `lossless-bus-transfers` requires the separate capture-transfer runtime and adds explicit DMA run / HDMA payload-burst boundaries and channel snapshots.
+- **Assembly: Stop Runtime Trace Recording** (`asm.trace.stop`) - stops the producer, drains remaining events, and closes the artifact with observed and dropped-event counts. Lossless capture finishes without generating an intermediate JSON file. A terminated live session preserves incomplete JSON; a terminated lossless session preserves its checkpointed `.act2.partial` archive. Saving remains non-mutating; the completion notification offers the separate, explicit import/update action.
+- **Assembly: Stop Execution Capture and Show Routines** (`asm.trace.stopAnalyze`) - stops the current instruction window and immediately runs the explicit trace-import/update workflow. Its report lists statically evidenced routine candidates in first-observed order, dynamic instruction counts, unique PCs, and contiguous execution spans. Unknown and conflicting PCs remain separate instead of becoming invented function boundaries. For bus recording, the same command saves the archive and opens the CPU/DMA/HDMA activity report through the separate bus importer.
+- **Assembly: Import Bus Capture and Show DMA/HDMA Activity** (`asm.trace.importBus`) - streams a completed lossless bus ACT2 archive into the matching ROM's analysis project and shows per-channel reads, writes, HDMA phases and unowned contexts. Imports run in the maintenance process, are atomic and idempotent, and preserve aggregate facts if the optional managed archive expires. Ordered timing/raster history requires the original or managed archive. These are byte-access counts, not inferred transfer boundaries or instruction execution. Transfer-enabled archives additionally report completed, interrupted and partial windows, with bounded starting-register examples. Full ordered configuration history requires the archive. Both bus modes also show bounded VRAM/CGRAM/OAM port destination candidates, unknown setup/latches, and data-supplying events. These are register-derived candidates, not verified graphics memory updates; reproducing this view requires the archive. No generated source or open ROM file is required.
+- **Assembly: Import Runtime Trace and Update Disassembly** (`asm.trace.importRegenerate`) - validates and imports saved JSON or ACT2 traces, uses unique observed 65816 PCs as conservative code observations, reruns analysis, rewrites generated source, verifies an exact ROM round trip, and opens a report with the instruction/code-byte deltas and all attributable routine candidates. ACT2 chunks pass directly from the binary decoder into indexing and routine reporting, with no JSON write/read round trip. An observed PC proves reachability but does not invent a function boundary or `Fn_*` label.
 - **Assembly: Open Disassembly RAM Map** (`asm.ramMap.open`) - opens the persistent, user-owned `ram-map.json` beside the generated source. Add or revise canonical `$7E0000`–`$7FFFFF` locations here; the adjacent generated JSON Schema provides validation and completion.
-- **Assembly: Show Disassembly Update Status** (`asm.disassembly.status`) - reports whether `generated-files.json` was exported from the current analysis revision and RAM-map bytes, verifies generated-file hashes, and summarizes static code, mapped RAM variables, runtime evidence, trace imports, and behavior comments.
-- **Assembly: Analyze and Regenerate Disassembly** (`asm.disassembly.regenerate`) - reruns conservative analysis using current labels/manual edits, regenerates the source tree and `ram-defines.asm` from `ram-map.json`, substitutes exact known WRAM operands (including low-WRAM mirrors), and proves the rebuild byte-identical. Label rename and behavior-capture application offer this as an immediate follow-up action.
+- **Assembly: Show Disassembly Update Status** (`asm.disassembly.status`) - reports whether `generated-files.json` was exported from the current analysis revision and RAM-map bytes, verifies generated-file hashes, and summarizes static code, mapped RAM variables, runtime evidence, trace imports, and heuristic comments.
+- **Assembly: Analyze and Regenerate Disassembly** (`asm.disassembly.regenerate`) - reruns conservative analysis using current labels/manual edits, regenerates the source tree and `ram-defines.asm` from `ram-map.json`, substitutes exact known WRAM operands (including low-WRAM mirrors), and proves the rebuild byte-identical. Label rename offers this as an immediate follow-up action.
 - **Assembly: Refresh Analysis Coverage** (`asm.coverage.refresh`) - reloads validated native project manifests and shards. The view also refreshes when an `analysis.json` manifest or `analysis/*.json` shard changes.
 - **Assembly: Refresh Functions & Calls** (`asm.analysisGraph.refresh`) - reloads the validated function/call projection. The view also refreshes with the same manifest and shard file watchers as Analysis Coverage.
 - **Open Analysis Source or Disassembly** (`asm.analysis.navigate`) - the inline tree action for an exact function, call site, or unresolved-flow location. It prefers current source, then live DAP disassembly, then persisted CFG records.
@@ -237,44 +250,49 @@ step-out are labeled unavailable and rejected instead of being approximated.
 - **Assembly: Resolve Indirect Target** (`asm.coverage.resolveTarget`) - selects an unresolved or previously overridden site and adds comma-separated targets in that record's existing address space. New targets and manual evidence are unioned with earlier runtime/import/manual observations rather than replacing them.
 - **Assembly: Rename Analysis Label** (`asm.coverage.renameLabel`) - renames one stable native label record and attaches certain manual provenance while retaining every earlier evidence id, then offers **Analyze and Regenerate** so the new name appears in generated source.
 - **Assembly: Edit Disassembly Annotation** (`asm.disassembly.editAnnotation`) - opens an address-aware form from a generated label, instruction, or symbolic reference. Creates persistent labels for generated `Fn_*` names, edits comments above/beside labels and beside instructions, and offers **Save and Regenerate**. Available in the editor context menu and on **Cmd+Option+A** (macOS) / **Ctrl+Alt+A** (Windows/Linux).
-- **Assembly: Explain Analysis Evidence** (`asm.coverage.explainEvidence`) - opens a read-only Markdown explanation for any persisted record, including the complete evidence records, reverse references, and related conflicts. Segment context narrows the picker to records projected there; this command remains available in an untrusted workspace because it does not write.
+- **Assembly: Explain Analysis Evidence** (`asm.coverage.explainEvidence`) - opens a read-only Markdown explanation for any persisted record, including complete direct evidence, related conflicts, an exact reverse-reference count, and up to 200 reverse links. Segment context narrows the picker to records projected there; this command remains available in an untrusted workspace because it does not write.
 - **Assembly: Undo Last Analysis Edit** (`asm.coverage.undo`) - removes or restores only the exact unchanged records from the last session edit. Undo refuses if another process changed the result or started using its new evidence.
 - **Assembly: Redo Last Analysis Edit** (`asm.coverage.redo`) - reapplies the last undone classification, state/entry overlay, target resolution, label rename, or disassembly annotation against a newly loaded project revision.
 
-### Compare imported sources
+### Inspect imported sources
 
-**Sources**, beside Outline, Analysis Coverage and Functions & Calls, lists imported artifacts by
-content identity. Expand a trace such as `chest.json` to inspect:
+**Sources** lists imported artifacts by content identity, most recently imported captures first.
+Receipt timestamps also handle reimports; sources without recorded dates follow in name order. Expand a source to inspect observed
+instructions, recorded memory accesses, attributed metadata, and capture notes. Instruction totals
+count distinct architecture/address-space/PC identities; execution counts include all observations.
+Memory counts describe persisted fact rows, including differing values or processor states.
 
-- **Unique instructions**: instruction addresses captured here but absent from the comparison captures.
-- **Code at unique instructions**: merged known instruction extents, with byte and range counts.
-- **Functions containing unique instructions**: candidates containing the new PCs; other parts of a function can be shared.
-- **Unique memory access sites**: instruction/target/access combinations absent from the comparison, ignoring changing values.
-- **Shared instructions**, **Attributed metadata**, and **Capture notes & interpretation**.
+SQLite selects each page before decoding its records. The catalog reads only imports, evidence, and capture receipt timestamps;
+opening a source never loads the full CFG or register history. Pages contain at most 200 items.
+Click an instruction or memory access to navigate to its qualified source or saved disassembly.
+**Assembly: Refresh Sources** (`asm.sources.refresh`) refreshes the view after external changes.
 
-Click an address or function to open its current generated source or a saved disassembly preview.
-Hover an instruction to see its captured bytes and the sources that observed it. Manual edits and
-analysis producers live under **Other evidence**; labels, comments and classifications show their
-attribution without claiming they are unique execution.
+Idle/behavior capture and source-baseline comparison have been removed while that workflow is
+reconsidered. Ordinary execution capture, capture import, provenance, and ROM rebuild verification
+remain available.
 
-By default, a trace is compared with **all other captures**. Use its inline **Compare Source With…**
-action, or the **Compared with** row, to select an idle/earlier trace or several baselines. Selecting
-none shows every recorded instruction. **Compare Source With All Other Captures** restores the
-automatic comparison. Selections last for the editor session and do not change project files.
+Disassembly update reports include a **Storage** comparison (database, WAL, free pages, shared facts, source relationships and archives), plus a **Step timings** section with measured durations, each step's
+share of processing time, the total, and the slowest step. Trace imports include metadata reading,
+validation, SQL import, analysis, source/assets, ROM verification, and final counts. Reports retain
+event/PC totals, dropped events, and warnings without expanding routine ownership tables or
+rereading the recording for attribution.
+Worker details separate SQL index preparation, variant grouping, metadata queries, static/captured
+decoding, heuristics, and publication. Details are contained in their parent duration and are not
+added twice. Verification separates file validation, assembly parsing, ROM assembly, output writes/
+byte comparison, and debug-map generation. Timings include process overhead but exclude user
+selections and opening the report.
+Failed regeneration reports retain completed timings and mark the failed stage. Annotation refresh
+logs its source refresh, verification, and revision-check timings to **Output → Uttori Analysis**.
 
-“Unique” is relative to the chosen captures, not proof that an instruction implements only that
-behavior. A later trace may also execute chest logic; missing or dropped events can make shared
-code appear unique. Review the capture notes. PCs remain qualified by architecture and address
-space, and static propagation from a trace seed does not count as captured execution. Byte totals
-cover instruction extents at unique starts, not a ROM-file byte delta or unique byte values. PC-only
-captures use a size only when the current compatible CFG nodes agree; these entries say **(analysis)**.
-Unknown sizes are excluded from the byte total.
-
-The catalog reads only the small, hash-checked import/evidence metadata. Expanding a source validates
-the project in the separate analysis process and caches the comparison; result pages contain at most
-200 items. The view refreshes after project imports and edits. **Assembly: Refresh Sources**
-(`asm.sources.refresh`) also refreshes it manually. Very large projects can take several seconds on
-the first expansion while validation completes.
+Use **Assembly: Show Analysis Output** (`asm.analysis.showOutput`) during an import or regeneration.
+The channel logs timestamps, project/capture paths, worker PID and memory budget, phase durations,
+file-read progress, provisional merge counts, stderr, and completion or failure. Counts are logged
+at most every five seconds, plus phase boundaries and final totals. After ten seconds without a
+worker update, the editor reports elapsed time and the last known count; this heartbeat does not
+claim the worker has advanced. Sixty seconds without an update is logged as a warning.
+Reading 100% of the file or merging every record does not mean publication has committed: the
+commit and subsequent archive/cache maintenance are reported separately. Cancellation waits for
+the current safe step; check disassembly status before retrying an interrupted update.
 
 ### Names and comments that survive regeneration
 
@@ -289,8 +307,14 @@ Open generated 65816 source and place the cursor on `Fn_C3002C`, an instruction,
 reference to the routine. Run **Assembly: Edit Disassembly Annotation** (or use its context menu
 action/shortcut). Enter `APU_IPL_Bootstrap` as the label name, then fill in the multiline comment
 above the label and either inline comment field. The form previews the placement. **Save Annotation**
-persists the metadata; **Save and Regenerate** also reruns analysis, rewrites source, and verifies
-that the rebuilt ROM is byte-identical.
+persists the metadata; **Save and Regenerate** reuses the saved analysis to rewrite source and
+verifies that the rebuilt ROM is byte-identical. Labels and comments are validated and saved without
+walking the full analysis or runtime history. Opening the form uses selected SQLite records.
+Source export reads small validated metadata and streams every instruction variant from a covering
+SQL index. It does not reload CFG contexts or the runtime history. A concurrent project edit rejects
+a stale refresh; changed RAM/structure inputs require full regeneration.
+Use **Analyze and Regenerate Disassembly** to decode pending traces or apply changes to analysis
+settings; annotation refresh preserves the existing decoded instructions.
 
 ```asm
 ; Initialize communication with the APU IPL.
@@ -320,21 +344,18 @@ rendered as a marked standalone comment where possible.
 
 ### Capturing the Secret of Mana Squaresoft logo window
 
-This is conventionally an **execution-window trace** or **PC trace**. The routine table is a
-dynamic-coverage view over the existing static call graph; it is not a complete dynamic call stack
-or causal program slice.
+This is an **execution-window trace** or **PC trace**. It records which instructions ran during
+a selected interval; it does not reconstruct a complete call stack or establish causality.
 
 1. Launch **Secret of Mana (ares)** in debug mode. The debugger stops at the reset entry point.
-2. In the Assembly sidebar, select **Start capture** and save a trace such as
-   `captures/squaresoft-logo.trace.json`.
+2. In the Assembly sidebar, select **Start Recording** and choose a capture file.
 3. Continue execution. When the Squaresoft logo has been visible for roughly three seconds and
    before it begins fading to the title screen, pause the debugger.
-4. Select **Stop / show routines**. The extension drains and closes the exact window, imports its
-   observed PCs, regenerates the disassembly, verifies the ROM round trip, and opens the routine
-   report.
-5. Start with the routines near the beginning of the table, then inspect high-count routines and
-   the unowned-PC section. After adding labels, entry points, or indirect targets, regenerate and
-   import the saved trace again to improve attribution.
+4. Select **Stop & Analyze**. The extension drains and closes the window, imports observed PCs,
+   regenerates the disassembly, verifies the ROM round trip, and opens the update report.
+5. Open the newest capture in **Sources** to inspect observed instructions, memory accesses, and
+   capture notes. Use the instruction annotations and hardware-role comments to investigate the
+   logo code; add labels or resolve indirect targets as the evidence becomes clear.
 
 Pause before stopping when the end boundary matters: the trace recorder observes instructions
 while the emulator is running, while the Stop command itself is an editor action rather than a
@@ -356,7 +377,7 @@ instruction-trace stream.
 - `asm.analysis.maxWorkItems` - static-analysis budget when regenerating disassembly (default 100,000). This counts CPU-state and call-path exploration, not imported trace events. Larger values consume more time and memory; incomplete analysis still cannot discard known code.
 - `asm.analysis.maxMemoryMiB` - JavaScript heap budget for the separate analysis-view process and each maintenance process (default 4096 MiB). Increase this in project settings for unusually large analyses. Analysis views reuse a validated project cache; changing the budget restarts that process on its next request. Import, analysis, export, verification, and reports run outside the editor process; each maintenance phase exits before the next starts, releasing its loaded project. A process failure reports its operation and budget. Cancellation stops async trace reading promptly; synchronous maintenance phases finish their current safe step before later phases are cancelled. Total process memory can exceed the heap budget.
 - `asm.trace.maxImportSizeMiB` - native trace import file-size limit (default 2048 MiB / 2 GiB). Set it in the project's `.vscode/settings.json`, for example `"asm.trace.maxImportSizeMiB": 4096` for a 4 GiB capture. Both import and routine reports read chunks incrementally, with progress and cancellation, instead of loading the entire recording into a JavaScript string. The compact import index has a separate 2,000,000-record budget; full indexes allow up to 8,000,000 records and need substantially more memory. Both fail before exhausting an individual engine collection. This setting is separate from the static-analysis budget.
-- `asm.trace.indexMode` - `full` (default) indexes complete register snapshots. For large 65816 captures, select `65816-disassembly`: all instruction addresses, fetched-byte variants, joint P/E/D/DB/PB/PC states, exact execution counts, and non-fetch bus observations remain indexed. A/X/Y/S and other register history remain in the original JSON/ACT2 capture. The source hash still covers the entire capture. This is an explicit analysis projection, not a reduced capture; no events are sampled. Different index profiles of the same recording cannot be mixed in one project.
+- `asm.trace.indexMode` - native SNES CPU captures default to `65816-analysis`: joint PC/bytes and normalized decoder state (P width bits, E, D, DB), exact counts and bus observations. Other processors use full indexing when the setting is unset. Explicit `full` and the older `65816-disassembly` profile remain available. General-register history requires an available original or managed archive. The source hash still covers the entire capture. Existing full imports require explicit `project-migrate --convert-runtime`; a different-profile reimport reuses the retained facts and reports that choice.
 
 Workspace plugin configuration is disabled in restricted workspaces. Trust the workspace to activate `uttori-asm.config.json` or `asm.plugins`; the bundled SNES target remains available before trust is granted.
 
@@ -379,50 +400,9 @@ and exercises real extension activation, LSP registration, analysis view command
 build. Contributor boundaries, Workspace Trust rules, and the complete gate matrix are in
 [CONTRIBUTING.md](../../CONTRIBUTING.md) and [Testing and release gates](../../docs/testing-and-release.md).
 
-## Behavior capture: locating code behind an action
+## Runtime capture
 
-Start with **Assembly: Run Idle Capture Demo** (also **Idle demo** in the Assembly Project panel).
-It runs a synthetic baseline and action through the real recorder, comparison, and in-memory comment
-merger without a ROM, emulator, or project writes. The report identifies `$808020` and `$808030` as
-action-only, retains `$808000` as shared, excludes idle-only `$808010`, preserves a handwritten comment,
-and verifies idempotent application. **Assembly: Open Behavior Capture Guide** explains the live
-Secret of Mana room/menu workflow. Both are available without an active debug session.
-
-With the trace-enabled ares runtime, use **Assembly: Capture Idle Baseline** while the game is
-idle. Repeat to collect several independent windows. Use **Assembly: Capture Behavior**, select
-the idle files, enter a label such as `Open Menu`, choose a stopping condition, then perform the
-action. If paused, choose **Start and Continue** to arm tracing and resume together, or **Start Paused**
-to step manually. A paused CPU is not an idle baseline; zero-event captures produce a warning.
-**Assembly: Stop Behavior
-Capture** ends either kind of capture early.
-
-Each capture has time and instruction caps (defaults: 5 seconds / 2,000,000 instructions). Address,
-label, and source-line stops delimit observed events after polling; use an existing breakpoint if
-you need the CPU to halt exactly. Trace recording and behavior capture cannot run concurrently.
-Do not rebuild between the selected baseline and action captures. Return to the same starting state
-for each observation; the integration does not automatically restore save states. Use the desktop
-runtime for player-driven tests; headless runtimes cannot display the game or accept controller input.
-
-**Assembly: Review and Apply Capture** displays action-only, frequency-enriched, and shared code,
-function candidates, mapped source locations when the matching debug session is available, and an
-ordered trace excerpt. Select the instructions you actually want to annotate, then confirm.
-Application adds provenance-bearing candidate comments and observed execution to the matching
-native project; it preserves existing comments, labels, source files, and control-flow evidence.
-Cancel makes no edits, and applying the same selection again is a no-op. Comments appear in
-hash-current inline annotations and subsequent debugger disassembly requests. The completion
-message reports the exact record deltas and offers **Analyze and Regenerate**. Its follow-up report
-shows instruction/code-byte deltas and lists changed generated files, so a five-second comparison
-has an explicit result even when it adds no new code.
-
-This is **dynamic feature location / differential execution profiling**, not proof that the chosen
-code causes the behavior. Shared routines remain visible. Lost events and incomplete captures are
-reported, and no transitions are invented across missing events. Files retain all captured windows
-for repeatable analysis. They contain project-sensitive addresses and labels; keep Secret of Mana
-captures private.
-
-MesenCE has no instruction trace stream yet and is explicitly unsupported for capture. Synthetic
-replay exercises the workflow but is not real-game evidence. Source-only projects (including
-SLIDESHOW) can capture/review; applying annotations requires a native analysis project.
+Use the Project panel's execution capture controls to record and import a bounded runtime window.
 
 `asm.debug.traceDetail` selects full execution details (default) or explicit PC-only recording. Full capture rejects runtimes without instruction-detail support; check the active workspace's `launch.json` runtime paths and restart debugging with a rich-trace build. Capture notifications show the selected mode and report dropped events, including when stopping to analyze. Both modes still use bounded buffers: a longer recording can lose events and does not guarantee more unique code coverage. New trace producer identities include the executable SHA-256 so supplemental runtime builds can be distinguished. Per-project `analysis/heuristics.json` configures evidence-backed role comments. Captured RAM instructions open from the analysis graph using their saved bytes. See [configuration, workflow, and remaining trace limits](../../docs/snes-function-heuristics-and-runtime-code.md).
 
@@ -454,3 +434,35 @@ messages and render as text or input values.
 The assets ship unchanged in the VSIX. Use VS Code's webview developer tools to inspect markup,
 styles, and the original JavaScript files. Reopen the annotation panel or reload the extension
 window after changing assets. `npm run vscode:build` rebuilds host/worker code when those files change.
+
+### Capture storage controls
+
+`asm.trace.archiveMaxMiB` defaults to 2048 for optional managed capture copies. Pinned captures are
+exempt. `asm.trace.archiveMaxAgeDays` and `asm.trace.archiveMaxCaptures` default to 0 (disabled).
+`asm.analysis.cacheMaxMiB` defaults to 256 for disposable SQL projections;
+`asm.analysis.storageMaxMiB` defaults to 0 (no database publication ceiling). Explicit editor settings
+override the persisted project policy; unset settings preserve policy choices made through the CLI.
+
+Use `uttori-asm project-storage <analysis-directory>` to inspect identities and availability, and
+`--pin-capture <sha256>` / `--unpin-capture <sha256>` to control archive expiry. Add
+`--expire-archives` to apply the policy and recycle caches/WAL immediately. Expiry does not delete
+original trace files, the migration backup, annotations, code variants, execution totals or receipts.
+Reload the extension after rebuilding and migrating an older database.
+
+### Native ares file capture
+
+With the separately installed `ares-capture-file-desktop-runtime` candidate, set
+`asm.debug.captureSink` to `native-file` and select any lossless `asm.debug.traceMode`.
+Start recording while paused, then continue or step. Ares writes bounded binary ACT2 batches
+directly to the selected local file; Stop Recording waits for durable finalization. The
+existing import and retention budgets still apply. Stream remains the default sink.
+See [native file capture](../../docs/ares-native-file-capture.md) for setup, scope,
+measured throughput, recovery and platform limitations.
+
+The `ares-realtime-desktop-runtime` follow-up adds faster native checksums and live bus analysis.
+With `native-file` and a lossless bus mode selected, enable `asm.debug.liveBusAnalysis` to choose
+a matching project and see provisional counts/backlog in the status bar. The isolated worker
+publishes only after complete archive validation. `asm.debug.liveBusMaxLagMiB` defaults to 256;
+exceeding it stops analysis while recording continues. Click the status bar or run
+**Assembly: Stop Live Bus Analysis** to stop analysis independently. Dense PPU analysis can still
+fall behind even when recording exceeds realtime. See [benchmarks and workflow](../../docs/ares-realtime-and-import.md).

@@ -17,8 +17,10 @@ export const SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
 /** One editable RAM variable as represented in `ram-map.json`. */
 export interface SnesRamMapVariableInput {
   readonly name: string;
-  /** Canonical WRAM address as `$7Exxxx`, `0x7Exxxx`, or an integer. */
+  /** CPU bus address as `$7EA171`, `0x7EA171`, or an integer; never a physical SRAM offset. */
   readonly address: string | number;
+  /** Defaults to WRAM. SRAM is an explicit cartridge-window declaration with exact-address lookup. */
+  readonly memory?: "wram" | "sram";
   /** Number of bytes occupied, used for documentation rather than allocation. */
   readonly size?: number;
   readonly category?: string;
@@ -39,6 +41,8 @@ export interface SnesRamMapFile {
 export interface SnesRamMapVariable {
   readonly name: string;
   readonly address: number;
+  /** Omitted means WRAM; SRAM addresses are not normalized across cartridge-dependent mirrors. */
+  readonly memory?: "wram" | "sram";
   readonly size: number;
   readonly category?: string;
   readonly description: string;
@@ -61,7 +65,28 @@ const cleanText = (value: string, field: string): string => {
   return cleaned;
 };
 
-const parseAddress = (value: string | number): number => {
+/**
+ * Bounds a standard LoROM/HiROM SRAM bus window without assuming cartridge size or mirroring.
+ * @param {number} address Validated 24-bit CPU address.
+ * @returns {number | undefined} Exclusive window end, or undefined outside the supported windows.
+ */
+const sramWindowEnd = (address: number): number | undefined => {
+  const bank = address >>> 16;
+  const offset = address & 0xffff;
+  const hiromBank = (bank >= 0x20 && bank <= 0x3f) || (bank >= 0xa0 && bank <= 0xbf);
+  const loromBank = (bank >= 0x70 && bank <= 0x7d) || bank >= 0xf0;
+  if ((hiromBank && offset >= 0x6000 && offset <= 0x7fff) || (loromBank && offset <= 0x7fff))
+    return (address & 0xff0000) + 0x8000;
+  return undefined;
+};
+
+/**
+ * Parses a CPU address and enforces the selected RAM domain before ranges are indexed.
+ * @param {string | number} value Hexadecimal string or integer CPU address.
+ * @param {"wram" | "sram"} memory Explicit SRAM declaration, or the WRAM default.
+ * @returns {number} Valid bus address; throws for malformed or out-of-domain values.
+ */
+const parseAddress = (value: string | number, memory: "wram" | "sram"): number => {
   let address: number;
   if (typeof value === "number") address = value;
   else {
@@ -70,7 +95,12 @@ const parseAddress = (value: string | number): number => {
     else if (/^0x[\da-f]{1,6}$/i.test(text)) address = Number.parseInt(text.slice(2), 16);
     else throw new Error(`Invalid RAM-map address '${value}'.`);
   }
-  if (!Number.isSafeInteger(address) || address < 0x7e0000 || address > 0x7fffff) {
+  if (!Number.isSafeInteger(address) || address < 0 || address > 0xffffff)
+    throw new Error(`Invalid RAM-map CPU address '${String(value)}'.`);
+  if (memory === "sram") {
+    if (sramWindowEnd(address) === undefined)
+      throw new Error(`RAM-map address '${String(value)}' is outside supported SNES SRAM windows.`);
+  } else if (address < 0x7e0000 || address > 0x7fffff) {
     throw new Error(`RAM-map address '${String(value)}' is outside canonical SNES WRAM.`);
   }
   return address;
@@ -106,17 +136,18 @@ export const validateSnesRamMap = (value: unknown): readonly SnesRamMapVariable[
     names.add(nameKey);
     if (typeof record.address !== "string" && typeof record.address !== "number")
       throw new Error(`RAM-map variable '${name}' must have a string or integer address.`);
-    const address = parseAddress(record.address);
+    const memory = record.memory ?? "wram";
+    if (memory !== "wram" && memory !== "sram")
+      throw new Error(`RAM-map memory for '${name}' must be 'wram' or 'sram'.`);
+    const address = parseAddress(record.address, memory);
     if (addresses.has(address))
       throw new Error(`Duplicate RAM-map address '${hex(address)}'; combine aliases in one entry.`);
     addresses.add(address);
     const size = record.size ?? 1;
-    if (
-      typeof size !== "number" ||
-      !Number.isSafeInteger(size) ||
-      size < 1 ||
-      address + size > 0x800000
-    )
+    // A SRAM declaration owns one CPU window, not the ROM or I/O beyond its end.
+    // Physical size and aliases depend on the cartridge and remain the map author's responsibility.
+    const end = memory === "sram" ? sramWindowEnd(address)! : 0x800000;
+    if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 1 || address + size > end)
       throw new Error(`Invalid size for RAM-map variable '${name}'.`);
     if (record.category !== undefined && typeof record.category !== "string")
       throw new Error(`RAM-map category for '${name}' must be a string.`);
@@ -131,7 +162,15 @@ export const validateSnesRamMap = (value: unknown): readonly SnesRamMapVariable[
       if (typeof note !== "string") throw new Error(`RAM-map notes for '${name}' must be strings.`);
       return cleanText(note, `${name} note`);
     });
-    return { name, address, size, ...(category ? { category } : {}), description, notes };
+    return {
+      name,
+      address,
+      ...(record.memory === undefined ? {} : { memory }),
+      size,
+      ...(category ? { category } : {}),
+      description,
+      notes,
+    };
   });
   const sorted = variables.sort(
     (left, right) => left.address - right.address || left.name.localeCompare(right.name),
@@ -270,9 +309,17 @@ export const renderSnesRamMapSchema = (): string =>
             name: { type: "string", pattern: "^[A-Za-z_][A-Za-z0-9_]*$" },
             address: {
               oneOf: [
-                { type: "integer", minimum: 0x7e0000, maximum: 0x7fffff },
+                { type: "integer", minimum: 0, maximum: 0xffffff },
                 { type: "string", pattern: "^(?:\\$|0x)[0-9A-Fa-f]{1,6}$" },
               ],
+              description:
+                "Canonical WRAM CPU address, or an explicit SRAM CPU-window address when memory is sram. SRAM mirrors are not inferred.",
+            },
+            memory: {
+              enum: ["wram", "sram"],
+              default: "wram",
+              description:
+                "SRAM requires a standard LoROM/HiROM cartridge window; confirm the actual cartridge mapping and size separately.",
             },
             size: { type: "integer", minimum: 1, maximum: 0x20000 },
             category: { type: "string", minLength: 1 },

@@ -181,6 +181,8 @@ export type AnalysisProjectShardRecord =
 
 /** Provenance and conflict links for one persisted project record. */
 export interface ProjectEvidenceExplanation {
+  /** Exact SQL reverse-reference total when the displayed list is a bounded preview. */
+  readonly referencedByTotal?: number;
   readonly shard: keyof AnalysisProjectShards;
   readonly record: AnalysisProjectShardRecord;
   readonly evidence: readonly EvidenceRecord[];

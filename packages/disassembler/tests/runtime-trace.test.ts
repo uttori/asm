@@ -91,6 +91,7 @@ test("trace indexes fail at an explicit record budget without sampling or exhaus
   const context = {
     projectRomContentSha256: romContentSha256,
     sourceName: "bounded.json",
+    indexMode: "full" as const,
     maxIndexRecords: 3,
   };
   const importer = createRuntimeInstructionTraceImporter(artifact(), context);
@@ -367,6 +368,7 @@ test("runtime trace import marks a complete lossless recording certain", (t) => 
   const emptyImport = importRuntimeInstructionTrace(empty, {
     projectRomContentSha256: romContentSha256,
     sourceName: "empty.trace.json",
+    indexMode: "full",
   });
   t.is(emptyImport.droppedEvents, 0);
   t.deepEqual(emptyImport.batch.runtime, []);

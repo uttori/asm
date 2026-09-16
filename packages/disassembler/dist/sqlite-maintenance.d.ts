@@ -1,7 +1,7 @@
 /** Same-filesystem staging directory and process gate for an explicit physical storage migration. */
 export declare const SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
 /** Retained original, created as a hard link only after the destination is verified. */
-export declare const SQLITE_MIGRATION_BACKUP = "analysis.sqlite.storage-v0.backup";
+export declare const SQLITE_MIGRATION_BACKUP = "analysis.sqlite.pre-retention.backup";
 /**
  * Reject new work while a migration owns the project. Its staging database has a different parent.
  * @param {string} file Database being opened or used for a new transaction.

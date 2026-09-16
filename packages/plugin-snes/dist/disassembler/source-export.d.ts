@@ -1,5 +1,5 @@
 import { type DecodedInstruction } from "@uttori/asm-core";
-import { type AnalysisProjectManifest, type AnalysisProjectShards, type RomImage, type SourceExportManifest } from "@uttori/asm-disassembler";
+import { type InstructionExportRecord, type AnalysisProjectManifest, type AnalysisProjectShards, type RomImage, type SourceExportManifest } from "@uttori/asm-disassembler";
 import { type SnesRamMapVariable } from "./ram-map.js";
 import { type SnesMapper } from "./rom-header.js";
 /** Options for `exportSnes65816Source`. `sourceProjectSha256` is required provenance. */
@@ -13,11 +13,13 @@ export interface SnesSourceExportOptions {
     readonly allowCodeRegression?: boolean;
     /** SHA-256 of the analysis project that produced this export (provenance). */
     readonly sourceProjectSha256: string;
+    /** Complete variants grouped in ascending explicit file-offset order; consumed inside the caller's SQL read snapshot. */
+    readonly instructionGroups?: Iterable<readonly InstructionExportRecord[]>;
 }
 /**
  * Formats one decoded instruction with explicit native operand-width qualification.
  * @param {DecodedInstruction} instruction Decoded 65816 instruction.
- * @param {ReadonlyMap<number, SnesRamMapVariable>} [ramVariables] Canonical WRAM locations to name.
+ * @param {ReadonlyMap<number, SnesRamMapVariable>} [ramVariables] Canonical WRAM and explicit SRAM CPU locations to name.
  * @param {number} [sourceAddress] Canonical address where generated source places the instruction.
  * @param {ReadonlyMap<number, string>} [sourceLabels] Explicit names at exact exported addresses.
  * @param {ReadonlyMap<number, string>} [structFields] Native struct expressions at known data addresses.

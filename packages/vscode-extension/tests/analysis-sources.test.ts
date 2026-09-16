@@ -32,22 +32,20 @@ const bundle = await build({
   ],
 });
 
-test("Sources lists metadata immediately, pages on demand, navigates qualified locations and resets comparisons", async (t) => {
-  const sources: AnalysisEvidenceSource[] = ["chest", "idle"].map((name) => ({
+test("Sources lists metadata immediately, pages on demand, navigates qualified locations", async (t) => {
+  const sources: AnalysisEvidenceSource[] = ["capture-a", "capture-b"].map((name) => ({
     id: name,
     name: `${name}.json`,
     names: [`${name}.json`],
     kinds: ["runtime"],
-    sha256: (name === "chest" ? "a" : "b").repeat(64),
+    sha256: (name === "capture-a" ? "a" : "b").repeat(64),
     evidenceIds: [name],
     reports: [],
   }));
   const calls: {
     operation: string;
-    options?: { baselineIds?: string[]; offset?: number; sourceId?: string };
+    options?: { offset?: number; sourceId?: string };
   }[] = [];
-  const picks: { picked?: boolean; sourceId?: string }[][] = [];
-  let selection: unknown[] | undefined = [];
   const host = {
     vscode: {
       EventEmitter: class {
@@ -65,14 +63,6 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
         ) {}
       },
       TreeItemCollapsibleState: { None: 0, Collapsed: 1 },
-      window: {
-        showQuickPick: async (items: (typeof picks)[number]) => {
-          picks.push(items);
-          return selection;
-        },
-        showErrorMessage: async (message: string) => t.fail(message),
-        showInformationMessage: async () => {},
-      },
     },
     "./coverage-tree.js": { findAnalysisProjectDirectories: async () => ["/fixture/analysis"] },
     "./analysis-worker-client.js": {
@@ -91,21 +81,11 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
           if (operation === "sourceSummary")
             return {
               manifest,
-              comparison: {
+              summary: {
                 source: sources[0],
-                baseline: options?.baselineIds?.length === 0 ? [] : [sources[1]],
                 instructionCount: 450,
-                uniqueInstructionCount: 450,
-                sharedInstructionCount: 0,
-                knownCodeBytes: 450,
-                codeRangeCount: 1,
-                unknownSizeInstructions: 0,
-                functionCount: 0,
-                unownedInstructions: 450,
-                ambiguousInstructions: 0,
-                uniqueMemoryCount: 0,
+                memoryCount: 0,
                 contributionCount: 0,
-                notes: ["capture loss note"],
               },
             };
           return [
@@ -137,10 +117,10 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     .AnalysisSourcesProvider;
   const provider = new Provider();
   t.teardown(() => provider.dispose());
-  let roots = await provider.getChildren();
+  const roots = await provider.getChildren();
   t.deepEqual(
     roots.map(({ label }) => label),
-    ["chest.json", "idle.json"],
+    ["capture-a.json", "capture-b.json"],
   );
   t.deepEqual(
     calls.map(({ operation }) => operation),
@@ -148,7 +128,7 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
   );
   t.is(provider.getTreeItem(roots[0]).contextValue, "analysisSource");
   const children = await provider.getChildren(roots[0]);
-  const unique = children.find(({ label }) => label === "Unique instructions")!;
+  const unique = children.find(({ label }) => label === "Observed instructions")!;
   t.is(provider.getTreeItem(unique).description, "450");
   const pages = await provider.getChildren(unique);
   t.deepEqual(
@@ -171,27 +151,9 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     architectureHints: ["snes.65816"],
     recordIds: ["node"],
   });
-  await provider.compare(roots[0]);
-  t.is(picks[0].length, 1);
-  t.true(picks[0][0].picked);
-  roots = await provider.getChildren();
-  t.regex(roots[0].description!, /custom comparison/);
-  await provider.getChildren(roots[0]);
-  t.deepEqual(
-    JSON.parse(JSON.stringify(calls.at(-1)?.options?.baselineIds)),
-    [],
-    "an empty baseline means show all, not reset to default",
-  );
-  selection = undefined;
-  await provider.compare(roots[0]);
-  t.false(picks[1][0].picked, "custom selections survive refresh and cancelled pickers");
-  await provider.resetComparison(roots[0]);
-  roots = await provider.getChildren();
-  await provider.getChildren(roots[0]);
-  t.is(calls.at(-1)?.options?.baselineIds, undefined);
-  t.false(roots[0].description!.includes("custom comparison"));
-  const notes = (await provider.getChildren(roots[0])).find(
+  t.false(children.some(({ label }) => label === "Compared with"));
+  const notes = children.find(
     ({ label }) => label === "Capture notes & interpretation",
   ) as AnalysisSourcesTreeNode;
-  t.is((await provider.getChildren(notes))[0].label, "capture loss note");
+  t.deepEqual(await provider.getChildren(notes), []);
 });

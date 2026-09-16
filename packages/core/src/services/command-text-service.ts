@@ -399,19 +399,4 @@ export function isBareLabelReference(input: string): boolean {
   return index === input.length;
 }
 
-/**
- * Self-contained command text helpers exposed as a static-style module object.
- */
-export const CommandTextService = {
-  getDefineVariable,
-  isBareLabelReference,
-  isLabelIdentifierPart,
-  isLabelIdentifierStart,
-  preprocessBlockCommands,
-  removeInlineComment,
-  splitCommandIntoWords,
-  splitInlineCommands,
-  splitSourcedInlineCommands,
-  splitRespectingFunctions,
-} as const;
 import { ASAR_SYNTAX_PROFILE, type SyntaxProfile } from "../syntax-profile.js";

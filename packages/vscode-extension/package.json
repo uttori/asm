@@ -129,18 +129,6 @@
         "category": "Assembly"
       },
       {
-        "command": "asm.sources.compare",
-        "title": "Compare Source With…",
-        "icon": "$(git-compare)",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.sources.resetComparison",
-        "title": "Compare Source With All Other Captures",
-        "icon": "$(clear-all)",
-        "category": "Assembly"
-      },
-      {
         "command": "asm.analysis.navigate",
         "title": "Open Analysis Source or Disassembly",
         "icon": "$(go-to-file)",
@@ -201,38 +189,6 @@
         "enablement": "isWorkspaceTrusted && asm.coverage.canRedo"
       },
       {
-        "command": "asm.capture.idle",
-        "title": "Capture Idle Baseline",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.capture.guide",
-        "title": "Open Behavior Capture Guide",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.capture.demo",
-        "title": "Run Idle Capture Demo",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.capture.behavior",
-        "title": "Capture Behavior",
-        "category": "Assembly",
-        "enablement": "isWorkspaceTrusted"
-      },
-      {
-        "command": "asm.capture.stop",
-        "title": "Stop Behavior Capture",
-        "category": "Assembly"
-      },
-      {
-        "command": "asm.capture.review",
-        "title": "Review and Apply Capture",
-        "category": "Assembly"
-      },
-      {
         "command": "asm.trace.start",
         "title": "Start Runtime Trace Recording",
         "category": "Assembly"
@@ -249,10 +205,21 @@
         "enablement": "isWorkspaceTrusted"
       },
       {
+        "command": "asm.trace.importBus",
+        "title": "Import Bus Capture and Show DMA/HDMA Activity",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.trace.importRegenerate",
         "title": "Import Runtime Trace and Update Disassembly",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.analysis.showOutput",
+        "title": "Show Analysis Output",
+        "category": "Assembly"
       },
       {
         "command": "asm.heuristics.configure",
@@ -281,6 +248,11 @@
         "title": "Analyze and Regenerate Disassembly",
         "category": "Assembly",
         "enablement": "isWorkspaceTrusted"
+      },
+      {
+        "command": "asm.trace.cancelLiveAnalysis",
+        "title": "Stop Live Bus Analysis",
+        "category": "Assembly"
       }
     ],
     "menus": {
@@ -360,6 +332,9 @@
         },
         {
           "command": "asm.trace.stopAnalyze"
+        },
+        {
+          "command": "asm.trace.importBus"
         },
         {
           "command": "asm.trace.importRegenerate"
@@ -451,16 +426,6 @@
           "command": "asm.coverage.renameLabel",
           "when": "view == uttori-asm.analysisCoverage && viewItem == analysisCoverageSegment && isWorkspaceTrusted",
           "group": "analysis@3"
-        },
-        {
-          "command": "asm.sources.compare",
-          "when": "view == uttori-asm.sources && viewItem == analysisSource",
-          "group": "inline@1"
-        },
-        {
-          "command": "asm.sources.resetComparison",
-          "when": "view == uttori-asm.sources && viewItem == analysisSource",
-          "group": "comparison@2"
         }
       ],
       "editor/title": [
@@ -747,7 +712,8 @@
         {
           "type": "tree",
           "id": "uttori-asm.analysisGraph",
-          "name": "Functions & Calls"
+          "name": "Functions & Calls",
+          "visibility": "hidden"
         },
         {
           "type": "tree",
@@ -881,11 +847,12 @@
           "type": "string",
           "scope": "resource",
           "enum": [
+            "65816-analysis",
             "full",
             "65816-disassembly"
           ],
-          "default": "full",
-          "description": "How native instruction captures are indexed. Full retains complete register snapshots in the analysis project. 65816-disassembly keeps every fetched-byte and decoding-state variant plus exact execution counts and bus observations, while other register history remains in the original capture. Use it for very large 65816 captures."
+          "default": "65816-analysis",
+          "description": "Native SNES CPU captures default to the versioned decoder-state index: joint bytes, width/bank variants, exact counts and bus observations. Full register history requires an available capture archive. Other processors use full indexing."
         },
         "asm.trace.maxImportSizeMiB": {
           "type": "integer",
@@ -905,15 +872,34 @@
           "default": "off",
           "description": "Traces the communication between VS Code and the Uttori Assembly language server."
         },
+        "asm.debug.captureSink": {
+          "type": "string",
+          "enum": [
+            "stream",
+            "native-file"
+          ],
+          "default": "stream",
+          "description": "Lossless ACT2 destination: stream through the editor, or let the local ares runtime write binary chunks directly. Native file capture requires the capture-file runtime and a paused debugger when starting."
+        },
         "asm.debug.traceMode": {
           "type": "string",
           "scope": "resource",
           "enum": [
             "live",
-            "lossless-instructions"
+            "lossless-instructions",
+            "lossless-bus",
+            "lossless-bus-transfers",
+            "lossless-bus-ppu"
           ],
           "default": "live",
-          "description": "Runtime trace recording mode. Lossless instructions requires the capture-v2 ares runtime, retains every 65816 instruction with fetched bytes and state, throttles emulation while storage drains, and writes a durable ACT2 archive plus an importable JSON trace. CPU/DMA/HDMA bus history is excluded. Behavior captures retain the live trace workflow."
+          "enumDescriptions": [
+            "Live instruction trace with bounded buffering; dropped events are reported.",
+            "Lossless fetched instruction bytes and CPU state, saved to ACT2 for disassembly import. Requires the capture-v2 ares runtime.",
+            "Lossless CPU/DMA/HDMA bus accesses with timing, channel and transfer phase, saved to ACT2 for bus activity import. Requires the capture-bus ares runtime.",
+            "Lossless bus accesses plus explicit DMA run and HDMA payload-burst boundaries and channel snapshots. Requires the capture-transfer runtime; imports show completed, interrupted and partial transfer windows.",
+            "Lossless bus and transfer capture with verified VRAM/CGRAM/OAM write destinations, blocked writes and latch-only outcomes, including during rendering. Requires the capture-ppu runtime."
+          ],
+          "description": "Runtime trace recording mode. Lossless modes slow emulation while storage drains and require a matching ares runtime. Instruction and bus capture are separate streams; bus mode does not include fetched instruction bytes or full CPU registers."
         },
         "asm.debug.traceDetail": {
           "type": "string",
@@ -924,6 +910,53 @@
           ],
           "default": "full",
           "description": "Full capture requires a runtime supplying execution-time instruction bytes, registers and bus accesses; unsupported runtimes are rejected. Select pc explicitly to record addresses only. Both modes use bounded buffers and report dropped events."
+        },
+        "asm.trace.archiveMaxMiB": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 0,
+          "default": 2048,
+          "description": "Managed unpinned capture archive budget in MiB. Pinned captures are exempt; original files and durable analysis facts are never expired."
+        },
+        "asm.trace.archiveMaxAgeDays": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 0,
+          "default": 0,
+          "description": "Maximum age of unpinned managed archives in days; 0 disables age expiry."
+        },
+        "asm.trace.archiveMaxCaptures": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 0,
+          "default": 0,
+          "description": "Maximum unpinned managed archives; 0 disables count expiry."
+        },
+        "asm.analysis.cacheMaxMiB": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 0,
+          "default": 256,
+          "description": "Disposable SQL projection budget in MiB, applied after imports or explicit storage maintenance. Editor/export indexes remain available."
+        },
+        "asm.analysis.storageMaxMiB": {
+          "type": "integer",
+          "scope": "resource",
+          "minimum": 0,
+          "default": 0,
+          "description": "Maximum live SQLite page allocation for new publications in MiB; 0 disables the ceiling. An exceeded budget rolls back the entire publication."
+        },
+        "asm.debug.liveBusAnalysis": {
+          "type": "boolean",
+          "default": false,
+          "description": "Analyze native-file bus captures in an isolated process while recording. Shows provisional activity and publishes facts to the selected matching project after complete validation."
+        },
+        "asm.debug.liveBusMaxLagMiB": {
+          "type": "integer",
+          "default": 256,
+          "minimum": 16,
+          "maximum": 4096,
+          "description": "Maximum unread durable capture backlog for live bus analysis, in MiB. Exceeding it stops analysis while native recording continues; import the final archive offline."
         }
       }
     },

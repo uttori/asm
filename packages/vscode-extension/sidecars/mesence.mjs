@@ -11031,7 +11031,7 @@ var init_address_identities = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/hardware-registers.ts
-var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, snesHardwareRegisterSymbols;
+var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
   "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
@@ -11374,9 +11374,6 @@ var init_hardware_registers = __esm({
     ];
     DMA_REGISTERS_BY_OFFSET = new Map(
       DMA_REGISTER_DEFINITIONS.map((definition) => [definition.offset, definition])
-    );
-    snesHardwareRegisterSymbols = Object.freeze(
-      Object.fromEntries(FIXED_REGISTER_DEFINITIONS.map(({ address: address4, symbol }) => [address4, symbol]))
     );
   }
 });
@@ -12919,6 +12916,11 @@ var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
 // packages/debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
+var captureScope = (value) => {
+  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
+    throw new Error("Unsupported capture scope.");
+  return value;
+};
 var captureU64 = (value) => {
   if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64)
     throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
@@ -12931,15 +12933,51 @@ var captureSession = (value) => {
 };
 var validateCaptureRequest = (value) => {
   if (!value || typeof value !== "object") throw new Error("Invalid capture request.");
+  if (value.operation === "file-capabilities") {
+    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key)))
+      throw new Error("Unsupported native file capability field.");
+    if (value.scope !== void 0) captureScope(value.scope);
+    return;
+  }
+  if (value.operation === "file-start") {
+    if (Object.keys(value).some(
+      (key) => ![
+        "operation",
+        "scope",
+        "bufferBytes",
+        "file",
+        "romContentSha256",
+        "producer",
+        "measureStages"
+      ].includes(key)
+    ))
+      throw new Error("Unsupported native file start field.");
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean")
+      throw new Error("Native file profiling must be boolean.");
+    validateCaptureRequest({
+      operation: "start",
+      bufferBytes: value.bufferBytes,
+      scope: value.scope
+    });
+    const bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
+    if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key) => !["id", "revision"].includes(key)))
+      throw new Error(
+        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
+      );
+    return;
+  }
   let fields = ["operation", "session"];
-  if (value.operation === "capabilities") fields = ["operation"];
-  if (value.operation === "start") fields = ["operation", "bufferBytes"];
+  if (value.operation === "capabilities") fields = ["operation", "scope"];
+  if (value.operation === "start") fields = ["operation", "bufferBytes", "scope"];
   if (value.operation === "read") fields = ["operation", "session", "chunk"];
   if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
   if (Object.keys(value).some((key) => !fields.includes(key)))
     throw new Error(
-      "Unsupported capture negotiation field; this version supports only lossless 65816 instructions with durable ownership."
+      "Unsupported capture negotiation field; capture requires an explicit supported stream with durable ownership."
     );
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) captureScope(value.scope);
+  }
   if (value.operation === "capabilities") return;
   if (value.operation === "start") {
     if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024)
@@ -12947,7 +12985,17 @@ var validateCaptureRequest = (value) => {
     return;
   }
   captureSession(value.session);
-  if (["status", "stop", "abort", "release"].includes(value.operation)) return;
+  if ([
+    "status",
+    "stop",
+    "abort",
+    "release",
+    "file-status",
+    "file-stop",
+    "file-abort",
+    "file-release"
+  ].includes(value.operation))
+    return;
   if (value.operation === "read" || value.operation === "ack") {
     if (!captureU64(value.chunk)) throw new Error("Capture chunk sequence starts at one.");
     if (value.operation === "ack" && !captureU64(value.event))
@@ -12961,6 +13009,11 @@ var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
   for (let bit2 = 0; bit2 < 8; bit2++) crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
   return crc >>> 0;
 });
+var crcSlices = [crcTable];
+for (let slice = 1; slice < 8; slice++)
+  crcSlices.push(
+    Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
+  );
 
 // packages/debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";

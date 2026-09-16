@@ -1,19 +1,21 @@
 import { execFile } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import {
   RomImage,
+  writeAnalysisProject,
+  openAnalysisProjectStore,
   type AnalysisProjectShards,
   type RuntimeEvidenceRecord,
   type RuntimeStateValue,
 } from "@uttori/asm-disassembler";
 
 import { test } from "../../../tests/ava-helper.js";
-import {
-  analyzeSnesRuntimeCode,
-  createSnesRuntimeAnalysisProjection,
-} from "../src/disassembler/runtime-code.js";
+import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
 
 test("runtime projections retain identical CFG variants, aliases, conflicts and trace provenance", (t) => {
   const runtime: RuntimeEvidenceRecord[] = [];
@@ -61,12 +63,37 @@ test("runtime projections retain identical CFG variants, aliases, conflicts and 
     evidence: [],
   };
   const original = structuredClone(runtime);
-  const projection = createSnesRuntimeAnalysisProjection();
-  for (const record of runtime) projection.push(record);
-  const projected = projection.finish();
+  const rom = new RomImage(new Uint8Array(0x8000));
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-variants-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const evidence = states.map((_, index) => ({
+    id: `trace:${index}`,
+    source: "runtime" as const,
+    sourceId: "fixture",
+    confidence: "certain" as const,
+  }));
+  writeAnalysisProject(directory, {
+    manifest: {
+      format: "uttori-asm-analysis",
+      schemaVersion: 3,
+      target: "snes.sfc",
+      rom: rom.identity,
+      mapping: { mapper: "lorom", source: "override", candidates: [] },
+      addressSpaces: [{ id: "snes.cpu", name: "CPU", kind: "cpu", addressBits: 24 }],
+    },
+    shards: { ...shards, evidence },
+  });
+  const store = openAnalysisProjectStore(directory);
+  t.teardown(() => store.close());
+  const fields = ["p", "P", "e", "E", "db", "DB", "d", "D"];
+  const masks = { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } };
+  const projected = [...store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks)];
   t.true(projected.length < runtime.length);
   t.false(projected.some((record) => record.kind === "runtime-cpu-state"));
-  const rom = new RomImage(new Uint8Array(0x8000));
+  t.deepEqual(
+    [...store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks)],
+    projected,
+  );
   t.deepEqual(
     analyzeSnesRuntimeCode({ ...shards, runtime: projected }, rom, "lorom"),
     analyzeSnesRuntimeCode(shards, rom, "lorom"),

@@ -16,6 +16,7 @@ import {
   type DapRequest,
   type ReplayScript,
   LosslessCaptureFileRecorder,
+  NativeCaptureFileRecorder,
   type CaptureResultV2,
 } from "@uttori/asm-debug-adapter";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
@@ -29,6 +30,7 @@ import {
   commands,
   debug,
   window,
+  StatusBarAlignment,
   workspace,
   type DebugAdapter,
   type DebugAdapterDescriptor,
@@ -44,9 +46,10 @@ import {
   type OutputChannel,
 } from "vscode";
 
-import { registerBehaviorCaptures, type BehaviorSessionContext } from "./behavior-capture.js";
 import { createDebugInstructionAnnotation } from "./debug-analysis-annotations.js";
 import { resolveDebugSourceRoot } from "./debug-source-root.js";
+import { chooseLiveBusProject } from "./disassembly-maintenance.js";
+import { LiveBusAnalysis } from "./live-bus-analysis.js";
 import { runtimeBindingFromLaunch } from "./runtime-binding.js";
 import {
   RuntimeTraceFileRecorder,
@@ -62,6 +65,7 @@ export const UTTORI_TRACE_START_COMMAND = "asm.trace.start";
 export const UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
 export const UTTORI_TRACE_STOP_ANALYZE_COMMAND = "asm.trace.stopAnalyze";
 const IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
+const IMPORT_BUS_TRACE_COMMAND = "asm.trace.importBus";
 
 export interface BuiltDebugArtifacts {
   readonly outputPath: string;
@@ -147,7 +151,7 @@ export const configureEmulatorRuntime = async (
       {
         label: "ares",
         description:
-          "65816 debugging and behavior capture; select a desktop manifest for a game window.",
+          "65816 debugging and runtime capture; select a desktop manifest for a game window.",
         backend: "ares" as const,
       },
       {
@@ -250,12 +254,23 @@ interface TraceCapability {
 
 interface ActiveTraceRecording {
   readonly session: DebugSession;
-  readonly recorder: RuntimeTraceFileRecorder | LosslessCaptureFileRecorder;
+  readonly recorder:
+    | RuntimeTraceFileRecorder
+    | LosslessCaptureFileRecorder
+    | NativeCaptureFileRecorder;
+  /** Independent worker; failure preserves the native archive for offline import. */
+  readonly live?: LiveBusAnalysis;
 }
 
 let activeTraceRecording: ActiveTraceRecording | undefined;
-const sessionContexts = new Map<string, BehaviorSessionContext>();
-const annotationRefreshers = new Map<string, () => Promise<void>>();
+let debuggingExtensionRoot = "";
+const liveAnalyses = new Set<LiveBusAnalysis>();
+/** ROM/producer identity retained for ordinary runtime trace recording. */
+interface DebugTraceSessionContext {
+  readonly map: DebugMap;
+  readonly producer: EditorTraceMetadata["producer"];
+}
+const sessionContexts = new Map<string, DebugTraceSessionContext>();
 
 const resolvedPath = (value: string, folder: WorkspaceFolder | undefined): string =>
   path.isAbsolute(value) ? value : path.resolve(folder?.uri.fsPath ?? process.cwd(), value);
@@ -323,24 +338,32 @@ const chooseTrace = async (session: DebugSession): Promise<TraceCapability | und
   return selected?.trace;
 };
 
-const defaultTraceUri = (session: DebugSession): Uri | undefined => {
+const defaultTraceUri = (
+  session: DebugSession,
+  extension: "json" | "act2",
+  bus: boolean,
+): Uri | undefined => {
   const root = session.workspaceFolder?.uri.fsPath ?? workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!root) return undefined;
   const timestamp = new Date().toISOString().replaceAll(":", "-");
-  return Uri.file(path.join(root, `instruction-trace-${timestamp}.json`));
+  const prefix = bus ? "bus-trace" : "instruction-trace";
+  return Uri.file(path.join(root, `${prefix}-${timestamp}.${extension}`));
 };
 
 const startRuntimeTraceWithLease = async (): Promise<void> => {
-  if (activeTraceRecording) throw new Error("An instruction trace recording is already active.");
+  if (activeTraceRecording) throw new Error("A trace recording is already active.");
   const session = debug.activeDebugSession;
   if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE)
     throw new Error("Start an Uttori ASM debug session before recording a trace.");
   const trace = await chooseTrace(session);
   if (!trace) return;
-  const lossless =
-    workspace
-      .getConfiguration("asm", session.workspaceFolder?.uri)
-      .get<string>("debug.traceMode", "live") === "lossless-instructions";
+  const traceMode = workspace
+    .getConfiguration("asm", session.workspaceFolder?.uri)
+    .get<string>("debug.traceMode", "live");
+  const ppu = traceMode === "lossless-bus-ppu";
+  const transfers = ppu || traceMode === "lossless-bus-transfers";
+  const bus = transfers || traceMode === "lossless-bus";
+  const lossless = bus || traceMode === "lossless-instructions";
   const detail = lossless
     ? "full"
     : resolveEditorTraceDetail(
@@ -350,22 +373,114 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
         trace.instructionDetails,
       );
   const destination = await window.showSaveDialog({
-    defaultUri: defaultTraceUri(session),
-    filters: { "Uttori ASM instruction trace": ["json"] },
+    defaultUri: defaultTraceUri(session, lossless ? "act2" : "json", bus),
+    filters: { "Uttori ASM trace": [lossless ? "act2" : "json"] },
     saveLabel: "Start Recording",
   });
   if (!destination) return;
   if (destination.scheme !== "file")
-    throw new Error("Live instruction traces must be written to a local file.");
+    throw new Error("Runtime traces must be written to a local file.");
   const metadata = traceMetadata(session, trace);
   if (lossless) {
-    const recorder = await LosslessCaptureFileRecorder.create({
+    let captureScope: import("@uttori/asm-debug-adapter").CaptureScopeV2 =
+      "snes.65816.instructions";
+    if (bus) captureScope = "snes.cpu-bus";
+    if (transfers) captureScope = "snes.cpu-bus-transfers";
+    if (ppu) captureScope = "snes.cpu-bus-ppu";
+    const nativeFile =
+      workspace
+        .getConfiguration("asm", session.workspaceFolder?.uri)
+        .get<string>("debug.captureSink", "stream") === "native-file";
+    const recorderType = nativeFile ? NativeCaptureFileRecorder : LosslessCaptureFileRecorder;
+    const settings = workspace.getConfiguration("asm", session.workspaceFolder?.uri);
+    const liveEnabled = nativeFile && bus && settings.get<boolean>("debug.liveBusAnalysis", false);
+    // A stopped capture may still be catching up. Bound the editor to one
+    // analysis worker, even if a new recording is requested during that drain.
+    if (liveEnabled && liveAnalyses.size > 0)
+      throw new Error(
+        "Previous live bus analysis is still finishing. Wait, or run Assembly: Stop Live Bus Analysis before starting another live recording.",
+      );
+    const liveProject = liveEnabled
+      ? await chooseLiveBusProject(metadata.romContentSha256)
+      : undefined;
+    if (liveEnabled && !liveProject)
+      throw new Error("Live analysis requires a matching analysis project.");
+    const recorder = await recorderType.create({
       ...metadata,
       file: destination.fsPath,
+      format: "act2",
+      scope: captureScope,
       transport: async (request) =>
         (await session.customRequest("uttori/capture", request)) as CaptureResultV2,
     });
-    activeTraceRecording = { session, recorder };
+    let live: LiveBusAnalysis | undefined;
+    if (liveProject && recorder instanceof NativeCaptureFileRecorder) {
+      const analysisSettings = workspace.getConfiguration("asm", Uri.file(liveProject));
+      const status = window.createStatusBarItem(StatusBarAlignment.Left, 10);
+      status.command = "asm.trace.cancelLiveAnalysis";
+      status.text = "$(sync~spin) Bus analysis: waiting for capture";
+      status.show();
+      try {
+        live = new LiveBusAnalysis(
+          path.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
+          {
+            file: destination.fsPath,
+            projectDirectory: liveProject,
+            position: recorder.position,
+            maxLagBytes: settings.get<number>("debug.liveBusMaxLagMiB", 256) * 1024 * 1024,
+            maxBytes: analysisSettings.get<number>("trace.maxImportSizeMiB", 2048) * 1048576,
+            maxIndexRecords: 2_000_000,
+          },
+          (progress) => {
+            const lagMiB = Math.max(0, progress.durableBytes - progress.readBytes) / 1048576;
+            status.text = `$(sync~spin) Bus: ${progress.busEvents.toLocaleString()} accesses · ${progress.distinctFacts.toLocaleString()} facts · ${lagMiB.toFixed(0)} MiB behind`;
+            status.tooltip = `Provisional activity; published after capture completion. PPU writes: ${progress.ppu?.byteWrites.toLocaleString() ?? "outside scope"}.`;
+          },
+          analysisSettings.get<number>("analysis.maxMemoryMiB", 512),
+        );
+        const analysis = live;
+        liveAnalyses.add(analysis);
+        // Only small validated positions cross IPC; analysis never owns the recorder's pump.
+        const polling = setInterval(() => analysis.update(recorder.position), 100);
+        void recorder.completion.then(
+          (summary) => {
+            clearInterval(polling);
+            analysis.update(
+              summary.position as import("@uttori/asm-debug-adapter").NativeCaptureFilePosition,
+            );
+          },
+          () => {
+            clearInterval(polling);
+            analysis.cancel();
+          },
+        );
+        void analysis.completion
+          .then(
+            (result) => {
+              void window.showInformationMessage(
+                `Assembly: live bus analysis published ${result.added.runtime.toLocaleString()} new facts from ${result.observedEvents.toLocaleString()} accesses.`,
+              );
+              void commands.executeCommand("asm.sources.refresh");
+            },
+            (error: unknown) => {
+              void window.showWarningMessage(
+                `Assembly live analysis stopped: ${error instanceof Error ? error.message : String(error)} The ACT2 recording remains available for offline import.`,
+              );
+            },
+          )
+          .finally(() => {
+            clearInterval(polling);
+            status.dispose();
+            liveAnalyses.delete(analysis);
+          });
+      } catch (error) {
+        status.dispose();
+        // A worker startup error must not leave an armed, unreachable recorder.
+        await recorder.finishIncomplete().catch(() => undefined);
+        throw error;
+      }
+    }
+    activeTraceRecording = { session, recorder, live };
     void recorder.completion.catch((error: unknown) => {
       if (activeTraceRecording?.recorder === recorder) activeTraceRecording = undefined;
       void window.showErrorMessage(
@@ -373,7 +488,9 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       );
     });
     void window.showInformationMessage(
-      "Assembly: recording lossless 65816 instructions with fetched bytes and CPU state. Emulation slows when storage falls behind. Bus events are outside this capture scope.",
+      bus
+        ? "Assembly: recording lossless CPU/DMA/HDMA bus accesses to ACT2. Emulation slows when storage falls behind. Instruction bytes and registers are not recorded in this mode."
+        : "Assembly: recording lossless 65816 instructions with fetched bytes and CPU state. Emulation slows when storage falls behind. Bus events are outside this capture scope.",
     );
     return;
   }
@@ -432,9 +549,31 @@ const startRuntimeTrace = async (): Promise<void> => {
 
 const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   const active = activeTraceRecording;
-  if (!active) throw new Error("No Uttori ASM instruction trace recording is active.");
+  if (!active) throw new Error("No Uttori ASM trace recording is active.");
   activeTraceRecording = undefined;
   const summary = await active.recorder.stop();
+  // Bus evidence has its own importer: observed accesses cannot supply instruction bytes or code seeds.
+  if ("scope" in summary && summary.scope !== "snes.65816.instructions") {
+    if (active.live) {
+      try {
+        await active.live.completion;
+        return;
+      } catch {
+        // Worker failure does not invalidate a successfully finalized native archive.
+      }
+    }
+    if (analyze) {
+      await commands.executeCommand(IMPORT_BUS_TRACE_COMMAND, Uri.file(summary.file));
+      return;
+    }
+    const action = await window.showInformationMessage(
+      `Assembly: ${summary.observedEvents.toLocaleString()} CPU/DMA/HDMA capture event(s) retained; zero dropped. Wrote ${summary.file}.`,
+      "Import Bus Activity",
+    );
+    if (action === "Import Bus Activity")
+      await commands.executeCommand(IMPORT_BUS_TRACE_COMMAND, Uri.file(summary.file));
+    return;
+  }
   const total = summary.observedEvents + summary.droppedEvents;
   const scope =
     "archive" in summary ? "; lossless instruction archive saved (bus events excluded)" : "";
@@ -464,7 +603,6 @@ const runTraceCommand = (command: () => Promise<void>): void => {
 
 const debugSessionTerminated = (session: DebugSession): void => {
   sessionContexts.delete(session.id);
-  annotationRefreshers.delete(session.id);
   const active = activeTraceRecording;
   if (!active || active.session.id !== session.id) return;
   activeTraceRecording = undefined;
@@ -726,9 +864,6 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
             ? "ares desktop: a game window will open with video, audio, and controller input. Launch pauses at entry; Continue (F5) starts the game. Configure controls in ares Settings → Input."
             : "ares headless: no game window, video, or controller input. Choose a desktop runtime manifest for interactive play.",
         );
-        log(
-          "Capture help: Assembly: Open Behavior Capture Guide. No-ROM test: Assembly: Run Idle Capture Demo.",
-        );
       }
       loaded = loadConfiguration(session, this.#extensionRoot, log);
     } catch (error) {
@@ -740,7 +875,6 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
     }
     sessionContexts.set(session.id, {
       map: loaded.map,
-      sourceRoot: loaded.sourceRoot,
       producer: traceProducer(session, loaded.map),
     });
     let instructionAnnotation: DebugAdapterSessionOptions["instructionAnnotation"];
@@ -749,7 +883,6 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
       const annotation = await createDebugInstructionAnnotation(loaded.map);
       if (sessionContexts.has(session.id)) instructionAnnotation = annotation;
     };
-    annotationRefreshers.set(session.id, updateAnnotations);
     void updateAnnotations().catch((error) =>
       log(`Optional annotations unavailable: ${String(error)}`),
     );
@@ -763,23 +896,18 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
 /**
  * Registers the Uttori ASM debug configuration and inline adapter factories.
  * @param {string} extensionRoot Absolute installed extension root containing bundled sidecars.
- * @param {() => void} refresh Refreshes native analysis views after applying a capture.
  * @returns {readonly Disposable[]} Extension subscriptions.
  */
-export const registerDebugging = (
-  extensionRoot: string,
-  refresh: () => void = () => {},
-): readonly Disposable[] => {
+export const registerDebugging = (extensionRoot: string): readonly Disposable[] => {
+  debuggingExtensionRoot = extensionRoot;
   const output = window.createOutputChannel("Uttori Emulator");
   return [
-    output,
-    ...registerBehaviorCaptures({
-      context: (session) => sessionContexts.get(session.id),
-      refresh: () => {
-        refresh();
-        for (const update of annotationRefreshers.values()) void update().catch(() => undefined);
+    {
+      dispose: () => {
+        for (const analysis of liveAnalyses) analysis.cancel();
       },
-    }),
+    },
+    output,
     debug.registerDebugConfigurationProvider(
       UTTORI_ASM_DEBUG_TYPE,
       new UttoriDebugConfigurationProvider(),
@@ -789,6 +917,9 @@ export const registerDebugging = (
       new UttoriDebugAdapterFactory(extensionRoot, output),
     ),
     commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
+    commands.registerCommand("asm.trace.cancelLiveAnalysis", () => {
+      for (const analysis of liveAnalyses) analysis.cancel();
+    }),
     commands.registerCommand(UTTORI_TRACE_STOP_COMMAND, () =>
       runTraceCommand(() => stopRuntimeTrace(false)),
     ),

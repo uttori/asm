@@ -148,23 +148,6 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       case "refresh":
         await this.refresh();
         return;
-      case "captureGuide":
-      case "captureDemo":
-      case "captureIdle":
-      case "captureBehavior":
-      case "captureStop":
-      case "captureReview": {
-        const command = {
-          captureGuide: "guide",
-          captureDemo: "demo",
-          captureIdle: "idle",
-          captureBehavior: "behavior",
-          captureStop: "stop",
-          captureReview: "review",
-        }[message.type];
-        await commands.executeCommand(`asm.capture.${command}`);
-        return;
-      }
       case "editAnnotation":
         await commands.executeCommand("asm.disassembly.editAnnotation");
         return;

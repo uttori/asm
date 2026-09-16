@@ -34,7 +34,8 @@ const asError = (error: unknown): Error =>
 
 const checksum = (payload: Uint8Array): number => {
   let value = 0;
-  for (const byte of payload) value = (value + byte) & 0xff;
+  // Indexed access avoids the byte iterator's overhead on large capture replies.
+  for (let index = 0; index < payload.length; index++) value = (value + payload[index]) & 0xff;
   return value;
 };
 
@@ -50,21 +51,44 @@ const escapedPayload = (payload: string): Uint8Array => {
   return Uint8Array.from(result);
 };
 
-const unescapePayload = (payload: Uint8Array): string => {
-  const result: number[] = [];
+/** Decode wire escapes without allocating a number array for large hex capture replies.
+ * @param {Buffer} payload Checked wire payload; this view is valid only during receive processing.
+ * @returns {string} Owned ASCII response. Unescaped RLE or a truncated escape throws.
+ */
+const unescapePayload = (payload: Buffer): string => {
+  // Capture replies contain only hexadecimal ASCII. Decode that common case directly;
+  // escaped control replies still need the byte walk to distinguish escaped literal '*'.
+  if (!payload.includes(0x7d)) {
+    if (payload.includes(0x2a))
+      throw new Error("RSP run-length encoded payloads are not supported on the ares channel.");
+    return payload.toString("ascii");
+  }
+  const result = Buffer.allocUnsafe(payload.length);
+  let length = 0;
   for (let index = 0; index < payload.length; index++) {
     const byte = payload[index];
     if (byte === 0x2a)
       throw new Error("RSP run-length encoded payloads are not supported on the ares channel.");
     if (byte !== 0x7d) {
-      result.push(byte);
+      result[length++] = byte;
       continue;
     }
     const escaped = payload[++index];
     if (escaped === undefined) throw new Error("RSP payload ends inside an escape sequence.");
-    result.push(escaped ^ 0x20);
+    result[length++] = escaped ^ 0x20;
   }
-  return Buffer.from(result).toString("ascii");
+  return result.toString("ascii", 0, length);
+};
+
+/** Parse exactly one ASCII checksum digit; unlike parseInt, invalid suffixes cannot be ignored.
+ * @param {number} byte Raw wire byte, without ASCII high-bit masking.
+ * @returns {number} Nibble value, or -1 for any non-hexadecimal byte.
+ */
+const hexDigit = (byte: number): number => {
+  if (byte >= 0x30 && byte <= 0x39) return byte - 0x30;
+  if (byte >= 0x41 && byte <= 0x46) return byte - 0x41 + 10;
+  if (byte >= 0x61 && byte <= 0x66) return byte - 0x61 + 10;
+  return -1;
 };
 
 const stop = (payload: string): GdbRspStop | undefined => {
@@ -83,6 +107,11 @@ export class GdbRspClient {
   readonly #dataSubscription: DebugSubscription;
   readonly #closeSubscription: DebugSubscription;
   #buffer = Buffer.alloc(0);
+  /** Unconsumed bytes occupy [start, end); capacity grows geometrically within the receive bound. */
+  #start = 0;
+  #end = 0;
+  /** First unchecked position for '#', or the delimiter while awaiting checksum bytes. */
+  #scan = 1;
   #pending: PendingResponse | undefined;
   #writeTail: Promise<void> = Promise.resolve();
   #started = false;
@@ -230,35 +259,37 @@ export class GdbRspClient {
   #receive(data: Uint8Array): void {
     if (this.#closed) return;
     try {
-      if (this.#buffer.length + data.length > this.#maxBufferedBytes)
-        throw new Error(`RSP receive buffer exceeds ${this.#maxBufferedBytes} bytes.`);
-      this.#buffer = Buffer.concat([this.#buffer, data]);
-      while (this.#buffer.length) {
-        const first = this.#buffer[0];
-        if (first === 0x2b || first === 0x2d) {
-          this.#buffer = this.#buffer.subarray(1);
-          continue;
+      this.#append(data);
+      while (this.#start < this.#end) {
+        if (this.#buffer[this.#start] !== 0x24) {
+          // ACK/NAK and out-of-packet noise do not form responses. Search only the
+          // initialized region: retained capacity can contain old packet delimiters.
+          const next = this.#buffer.subarray(this.#start, this.#end).indexOf(0x24);
+          if (next < 0) {
+            this.#start = this.#end;
+            break;
+          }
+          this.#start += next;
+          this.#scan = this.#start + 1;
         }
-        if (first !== 0x24) {
-          this.#buffer = this.#buffer.subarray(1);
-          continue;
-        }
-        const hash = this.#buffer.indexOf(0x23, 1);
-        if (hash < 0) {
-          if (this.#buffer.length > this.#maxPacketBytes + 4)
+        const offset = this.#buffer.subarray(this.#scan, this.#end).indexOf(0x23);
+        if (offset < 0) {
+          this.#scan = this.#end;
+          if (this.#end - this.#start - 1 > this.#maxPacketBytes)
             throw new Error(`RSP packet exceeds ${this.#maxPacketBytes} bytes.`);
           return;
         }
-        if (hash - 1 > this.#maxPacketBytes)
+        const hash = this.#scan + offset;
+        this.#scan = hash;
+        if (hash - this.#start - 1 > this.#maxPacketBytes)
           throw new Error(`RSP packet exceeds ${this.#maxPacketBytes} bytes.`);
-        if (this.#buffer.length < hash + 3) return;
-        const payload = this.#buffer.subarray(1, hash);
-        const expected = Number.parseInt(
-          this.#buffer.subarray(hash + 1, hash + 3).toString("ascii"),
-          16,
-        );
-        this.#buffer = this.#buffer.subarray(hash + 3);
-        if (!Number.isInteger(expected) || expected !== checksum(payload)) {
+        if (this.#end < hash + 3) return;
+        const payload = this.#buffer.subarray(this.#start + 1, hash);
+        const high = hexDigit(this.#buffer[hash + 1]);
+        const low = hexDigit(this.#buffer[hash + 2]);
+        this.#start = hash + 3;
+        this.#scan = this.#start + 1;
+        if (high < 0 || low < 0 || ((high << 4) | low) !== checksum(payload)) {
           void this.#write(Uint8Array.of(0x2d)).catch((error: unknown) =>
             this.#fail(asError(error)),
           );
@@ -267,9 +298,39 @@ export class GdbRspClient {
         void this.#write(Uint8Array.of(0x2b)).catch((error: unknown) => this.#fail(asError(error)));
         this.#deliver(unescapePayload(payload));
       }
+      // Retain capacity for the next reply without retaining any consumed bytes as input.
+      this.#start = this.#end = 0;
+      this.#scan = 1;
     } catch (error) {
       this.#fail(asError(error));
     }
+  }
+
+  /** Append one owned transport fragment without repeatedly copying its accumulated prefix.
+   * @param {Uint8Array} data Incoming bytes; the transport may reuse them after this call returns.
+   * @returns {void} Grows/compacts only when tail capacity is exhausted; exceeding the bound throws.
+   */
+  #append(data: Uint8Array): void {
+    const used = this.#end - this.#start;
+    const required = used + data.length;
+    if (required > this.#maxBufferedBytes)
+      throw new Error(`RSP receive buffer exceeds ${this.#maxBufferedBytes} bytes.`);
+    if (this.#end + data.length > this.#buffer.length) {
+      if (required > this.#buffer.length) {
+        const capacity = Math.min(
+          this.#maxBufferedBytes,
+          Math.max(required, 4096, this.#buffer.length * 2),
+        );
+        const next = Buffer.allocUnsafe(capacity);
+        this.#buffer.copy(next, 0, this.#start, this.#end);
+        this.#buffer = next;
+      } else this.#buffer.copy(this.#buffer, 0, this.#start, this.#end);
+      this.#scan -= this.#start;
+      this.#start = 0;
+      this.#end = used;
+    }
+    this.#buffer.set(data, this.#end);
+    this.#end += data.length;
   }
 
   #deliver(payload: string): void {
@@ -302,6 +363,9 @@ export class GdbRspClient {
   #fail(error: Error, closeTransport = true): void {
     if (this.#closed) return;
     this.#closed = true;
+    this.#buffer = Buffer.alloc(0);
+    this.#start = this.#end = 0;
+    this.#scan = 1;
     this.#closeError = error;
     this.#dataSubscription.dispose();
     this.#closeSubscription.dispose();

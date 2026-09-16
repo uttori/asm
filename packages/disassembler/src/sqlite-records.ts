@@ -1,4 +1,6 @@
+import { canonicalJson } from "./canonical-json.js";
 import type { AnalysisRecord, RuntimeEvidenceRecord, RuntimeStateValue } from "./project-types.js";
+import type { RuntimeBusFact } from "./runtime-bus-types.js";
 import { decodeSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
 
 /**
@@ -19,8 +21,10 @@ export const compareRuntimeRecordIds = (
 /**
  * Store searchable coordinates as columns and variant-only fields as a bounded payload.
  * Unused coordinate columns stay null so one record kind cannot masquerade as another.
+ * Canonicalize payloads here once: the writer reuses this exact text for hashing
+ * and encoding, avoiding a JSON stringify/parse/canonicalize round trip per fact.
  * @param {RuntimeEvidenceRecord} record Validated semantic runtime fact.
- * @returns {object} Column bindings with absent variant fields omitted from the payload.
+ * @returns {object} Column bindings with canonical payload text; absent variant fields remain omitted.
  */
 export const runtimeColumns = (
   record: RuntimeEvidenceRecord,
@@ -56,7 +60,7 @@ export const runtimeColumns = (
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: JSON.stringify({
+        payload: canonicalJson({
           ...(record.fileOffset === undefined ? {} : { fileOffset: record.fileOffset }),
           ...(record.size === undefined ? {} : { size: record.size }),
           ...(record.opcode === undefined ? {} : { opcode: record.opcode }),
@@ -77,7 +81,34 @@ export const runtimeColumns = (
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: JSON.stringify({ bytes: record.bytes, state: record.state }),
+        payload: canonicalJson({ bytes: record.bytes, state: record.state }),
+      };
+    case "runtime-bus-access":
+      return {
+        addressSpace: null,
+        address: null,
+        start: null,
+        end: null,
+        fromAddressSpace: null,
+        fromAddress: null,
+        toAddressSpace: null,
+        toAddress: null,
+        // Unowned accesses must never become instruction observations through a coordinate query.
+        instructionAddressSpace: record.context === "instruction" ? record.addressSpace : null,
+        instructionAddress: record.context === "instruction" ? record.pc : null,
+        accessedAddressSpace: record.addressSpace,
+        accessedAddress: record.address,
+        coverage: null,
+        payload: canonicalJson({
+          ...(record.ppu ? { ppu: record.ppu } : {}),
+          pc: record.pc,
+          value: record.value,
+          direction: record.direction,
+          actor: record.actor,
+          channel: record.channel,
+          phase: record.phase,
+          context: record.context,
+        }),
       };
     case "runtime-memory-access":
       return {
@@ -94,7 +125,7 @@ export const runtimeColumns = (
         accessedAddressSpace: record.accessedAddressSpace,
         accessedAddress: record.accessedAddress,
         coverage: null,
-        payload: JSON.stringify({
+        payload: canonicalJson({
           access: record.access,
           width: record.width,
           ...(record.actor === undefined ? {} : { actor: record.actor }),
@@ -117,7 +148,7 @@ export const runtimeColumns = (
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: JSON.stringify({ state: record.state }),
+        payload: canonicalJson({ state: record.state }),
       };
     case "runtime-coverage":
       return {
@@ -151,7 +182,7 @@ export const runtimeColumns = (
         accessedAddressSpace: null,
         accessedAddress: null,
         coverage: null,
-        payload: JSON.stringify({ flowKind: record.flowKind, indirect: record.indirect }),
+        payload: canonicalJson({ flowKind: record.flowKind, indirect: record.indirect }),
       };
   }
   throw new Error("Unsupported runtime evidence kind.");
@@ -208,6 +239,25 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
       address: Number(fields.address),
       bytes: extra.bytes as readonly number[],
       state: extra.state as Readonly<Record<string, RuntimeStateValue>>,
+    };
+  }
+  if (kind === "runtime-bus-access") {
+    return {
+      id,
+      kind,
+      architecture,
+      count,
+      evidence,
+      addressSpace: fields.accessed_address_space as "snes.cpu",
+      address: Number(fields.accessed_address),
+      ...(extra.ppu === undefined ? {} : { ppu: extra.ppu as RuntimeBusFact["ppu"] }),
+      pc: extra.pc as number,
+      value: extra.value as number,
+      direction: extra.direction as RuntimeBusFact["direction"],
+      actor: extra.actor as RuntimeBusFact["actor"],
+      channel: extra.channel as number | null,
+      phase: extra.phase as RuntimeBusFact["phase"],
+      context: extra.context as RuntimeBusFact["context"],
     };
   }
   if (kind === "runtime-memory-access") {

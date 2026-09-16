@@ -32,8 +32,8 @@ export interface DebugAdapterSessionOptions {
     readonly debugMap?: DebugMap;
     readonly output?: Uint8Array;
     readonly sourceRoot?: string;
-    /** Optional presentation-only suffix for DAP and virtual-source disassembly rows. */
-    readonly instructionAnnotation?: (address: DebugAddress) => string | undefined;
+    /** Optional display suffix. Async providers can batch a page; failures leave instruction text intact. */
+    readonly instructionAnnotation?: (address: DebugAddress) => string | undefined | Promise<string | undefined>;
     readonly onMessage?: (message: DapProtocolMessage) => void;
     /** Live DAP hosts configure breakpoints after connection and before launch completes. */
     readonly configurationHandshake?: boolean;

@@ -52,7 +52,7 @@ test("configuration validation rejects unknown keys and malformed plugin entries
     () => validateProjectConfiguration({ plugins: [{ module: "ok", extra: true }] }),
     { instanceOf: PluginError },
   );
-  t.regex(malformed.message, /plugins\[0\].*unknown field.*extra/i);
+  t.regex(malformed.message, /plugins\[0].*unknown field.*extra/i);
 });
 
 test("configuration accepts editor extra fields and discovers uttori-asm.config.json", async (t) => {
@@ -321,7 +321,7 @@ test("load failures name the configuration entry and resolved module", async (t)
     { instanceOf: PluginError },
   );
   t.is(missing.code, "PLUGIN_MODULE_NOT_FOUND");
-  t.regex(missing.message, /pluginModules\[0\].*resolved to.*missing-plugin\.mjs/i);
+  t.regex(missing.message, /pluginmodules\[0].*resolved to.*missing-plugin\.mjs/i);
 
   const invalidLoader = new NodePluginLoader();
   const invalid = await t.throwsAsync(
@@ -332,7 +332,7 @@ test("load failures name the configuration entry and resolved module", async (t)
     { instanceOf: PluginError },
   );
   t.is(invalid.code, "PLUGIN_INVALID_EXPORT");
-  t.regex(invalid.message, /pluginModules\[0\].*invalid-export\.mjs/i);
+  t.regex(invalid.message, /pluginmodules\[0].*invalid-export\.mjs/i);
 
   const optionsLoader = new NodePluginLoader();
   const invalidOptions = await t.throwsAsync(
@@ -345,7 +345,7 @@ test("load failures name the configuration entry and resolved module", async (t)
   );
   t.is(invalidOptions.code, "PLUGIN_CONFIGURATION_INVALID");
   t.is(invalidOptions.pluginId, "uttori.asm-plugin-snes");
-  t.regex(invalidOptions.message, /pluginModules\[0\].*packages\/plugin-snes\/src\/index\.ts/i);
+  t.regex(invalidOptions.message, /pluginmodules\[0].*packages\/plugin-snes\/src\/index\.ts/i);
 });
 
 test("duplicate resolved modules are rejected before activation", async (t) => {

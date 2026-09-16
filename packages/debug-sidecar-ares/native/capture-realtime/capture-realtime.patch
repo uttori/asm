@@ -1,0 +1,319 @@
+diff --git a/nall/nall/gdb/capture.hpp b/nall/nall/gdb/capture.hpp
+--- a/nall/nall/gdb/capture.hpp
++++ b/nall/nall/gdb/capture.hpp
+@@ -4,6 +4,7 @@
+ // No ares or transport dependencies; callers serialize access through the
+ // emulation thread or the frontend's guarded handoff.
+ #include <array>
++#include <chrono>
+ #include <algorithm>
+ #include <utility>
+ #include <charconv>
+@@ -13,6 +14,11 @@
+ #include <random>
+ #include <string>
+ #include <vector>
++#if defined(__ARM_FEATURE_CRC32) && !defined(ARES_CAPTURE_PORTABLE_CRC)
++#include <arm_acle.h>
++#elif defined(__SSE4_2__) && !defined(ARES_CAPTURE_PORTABLE_CRC)
++#include <nmmintrin.h>
++#endif
+ 
+ namespace ares_capture {
+ class Capture {
+@@ -39,6 +45,11 @@
+     bool sealed{};
+   };
+ 
++  // Chunk-level timing avoids clock reads on individual CPU/PPU accesses.
++  // One producer owns each emulation thread. Thread-local diagnostics preserve
++  // the Capture/Server object layout and never add work to disabled bus hooks.
++  static inline thread_local bool profileSeals{};
++  static inline thread_local uint64_t sealNanoseconds{};
+   auto active() const -> bool { return recording; }
+   auto busScope() const -> bool { return busOnly; }
+   auto busActive() const -> bool { return busOnly && recording; }
+@@ -217,6 +228,7 @@
+       catch(...) { return "E04"; }
+       auto numerator = clockNumerator, denominator = clockDenominator;
+       *this = Capture{};
++      profileSeals = false; sealNanoseconds = 0;
+       busOnly = fields.size() == 3;
+       ppuEffects = busOnly && fields[2] == "bus-ppu";
+       transfers = ppuEffects || (busOnly && fields[2] == "bus-transfers");
+@@ -406,6 +418,7 @@
+   }
+   auto seal(Chunk& chunk) -> void {
+     if(chunk.sealed) return;
++    auto started = profileSeals ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+     auto* p = chunk.bytes.data();
+     std::memcpy(p, "ACT2", 4); put(p + 4, 2, 2); put(p + 6, 0, 2);
+     std::memcpy(p + 8, sessionBytes.data(), 16);
+@@ -426,8 +439,23 @@
+       return table;
+     }();
+     uint32_t crc = ~uint32_t(0);
+-    for(uint32_t i = 0; i < chunk.used; ++i) crc = (crc >> 8) ^ crcTable[(crc ^ p[i]) & 255];
++    uint32_t i = 0;
++    // Intrinsics are used only when the compiler target promises CRC support;
++    // portable builds retain the exact Castagnoli fallback. memcpy permits
++    // unaligned records without aliasing undefined behavior. Wire bytes are LE.
++#if (defined(__ARM_FEATURE_CRC32) || (defined(__SSE4_2__) && defined(__x86_64__))) && !defined(ARES_CAPTURE_PORTABLE_CRC) && __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
++    for(; i + 8 <= chunk.used; i += 8) {
++      uint64_t word; std::memcpy(&word, p + i, 8);
++#if defined(__ARM_FEATURE_CRC32)
++      crc = __crc32cd(crc, word);
++#else
++      crc = uint32_t(_mm_crc32_u64(crc, word));
++#endif
++    }
++#endif
++    for(; i < chunk.used; ++i) crc = (crc >> 8) ^ crcTable[(crc ^ p[i]) & 255];
+     put(p + 56, ~crc, 4); chunk.sealed = true;
++    if(profileSeals) sealNanoseconds += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - started).count();
+   }
+ };
+ }
+diff --git a/nall/nall/gdb/capture-file.hpp b/nall/nall/gdb/capture-file.hpp
+--- a/nall/nall/gdb/capture-file.hpp
++++ b/nall/nall/gdb/capture-file.hpp
+@@ -37,6 +37,9 @@
+     std::string path, partial, header, session, terminal;
+     std::vector<uint8_t> bytes;
+     uint64_t sequence{}, event{}, writtenBytes{}, batches{};
++    // Worker counters are read only after acquiring Idle/Complete, just like bytes.
++    bool profile{};
++    uint64_t writeNs{}, syncNs{};
+     std::atomic<Phase> phase{Phase::Preparing};
+     std::atomic<bool> cancelled{false};
+     std::mutex mutex;
+@@ -44,8 +47,8 @@
+     bool job{}, quit{}, finish{}, cancel{};
+     std::thread thread;
+ 
+-    Writer(std::string path, std::string header, std::string session)
+-    : path(std::move(path)), partial(this->path + ".partial"), header(std::move(header)), session(std::move(session)) {
++    Writer(std::string path, std::string header, std::string session, bool profile)
++    : path(std::move(path)), partial(this->path + ".partial"), header(std::move(header)), session(std::move(session)), profile(profile) {
+       bytes.reserve(batchBytes);
+       thread = std::thread([this] { run(); });
+     }
+@@ -94,6 +97,17 @@
+     auto writeFrame(int fd, const char* magic, const std::string& json) -> bool {
+       auto frame = FileCapture::frame(magic, json);
+       return writeAll(fd, frame.data(), frame.size());
++    }
++    auto writeBatch(int fd) -> bool {
++      auto started = profile ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
++      if(!writeAll(fd, bytes.data(), bytes.size())) return false;
++      auto written = profile ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
++      if(!sync(fd)) return false;
++      if(profile) {
++        writeNs += std::chrono::duration_cast<std::chrono::nanoseconds>(written - started).count();
++        syncNs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - written).count();
++      }
++      return true;
+     }
+     auto run() -> void {
+       int fd = -1;
+@@ -131,7 +145,7 @@
+           // covers all preceding bytes; only its success permits batch release.
+           // Recovery still validates every CRC and contiguous checkpoint, so a
+           // torn/reordered unsynced tail never skips a missing earlier chunk.
+-          if(!writeAll(fd, bytes.data(), bytes.size()) || !sync(fd)) throw 0;
++          if(!writeBatch(fd)) throw 0;
+           ++batches;
+           phase.store(Phase::Idle, std::memory_order_release);
+         }
+@@ -140,7 +154,7 @@
+     }
+   };
+   std::unique_ptr<Writer> writer;
+-  uint64_t committedBytes{}, committedBatches{};
++  uint64_t committedBytes{}, committedBatches{}, copyNs{}, committedWriteNs{}, committedSyncNs{};
+ 
+ public:
+   // A live file session owns delivery/acknowledgement exclusively. Streamed
+@@ -157,6 +171,7 @@
+     // Acquire of Idle publishes the completed batch and worker counters. The
+     // next job's release through the mutex hands buffer ownership back.
+     committedBytes = w.writtenBytes; committedBatches = w.batches;
++    committedWriteNs = w.writeNs; committedSyncNs = w.syncNs;
+     if(w.sequence) {
+       if(!capture.acknowledgeNative(w.sequence, w.event)) { capture.fail("native-file-ack"); }
+       w.sequence = w.event = 0;
+@@ -166,6 +181,8 @@
+       submit(w, false, true);
+       return;
+     }
++    auto started = w.profile ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
++    auto sealsBefore = capture.sealNanoseconds;
+     for(size_t i = 0; i < batchChunks; ++i) {
+       auto* chunk = capture.nativeChunk(i);
+       if(!chunk) break;
+@@ -174,6 +191,9 @@
+       auto ack = frame("ACK2", "{\"session\":" + quote(w.session) + ",\"chunkThrough\":" + quote(std::to_string(w.sequence)) + ",\"eventThrough\":" + quote(std::to_string(w.event)) + "}");
+       w.bytes.insert(w.bytes.end(), ack.begin(), ack.end());
+     }
++    // Exclude seals triggered while collecting a partial tail: these already
++    // belong to the producer checksum counter. Copy includes ACK frame encoding.
++    if(w.profile) copyNs += std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - started).count() - (capture.sealNanoseconds - sealsBefore);
+     if(!w.bytes.empty()) submit(w, false, false);
+     else if(capture.complete()) {
+       w.terminal = capture.status();
+@@ -189,24 +209,25 @@
+       if(cap.empty() || cap[0] != '{') return "E01";
+       cap.pop_back(); return cap + ",\"nativeFile\":true}";
+     }
+-    if(fields[0] == "start" && fields.size() == 7) {
++    if(fields[0] == "start" && (fields.size() == 7 || (fields.size() == 8 && fields[7] == "profile"))) {
+       if(!halted || owns()) return "E09";
+       std::string path, id, revision;
+       if(!unhex(fields[3], path, 4096) || !unhex(fields[5], id, 256) || !unhex(fields[6], revision, 1024)
+         || fields[4].size() != 64 || fields[4].find_first_not_of("0123456789abcdef") != std::string::npos
+         || !std::filesystem::u8path(path).is_absolute() || capability(fields[2]).empty()) return "E02";
+-      writer.reset(); committedBytes = committedBatches = 0;
++      writer.reset(); committedBytes = committedBatches = copyNs = committedWriteNs = committedSyncNs = 0;
+       auto start = "start:" + fields[1];
+       if(fields[2] != "instructions") start += ":" + fields[2];
+       auto result = capture.command(start);
+       if(result.empty() || result[0] != '{') return result;
++      capture.profileSeals = fields.size() == 8; capture.sealNanoseconds = 0;
+       auto clock = capture.clockRatio();
+       auto header = "{\"format\":\"uttori-ares-capture\",\"version\":2,\"session\":" + quote(capture.sessionId()) +
+         ",\"scope\":" + quote(capture.scopeName()) + ",\"ownership\":\"durable-prefix\",\"compression\":\"none\",\"checksum\":\"crc32c\",\"maxChunkBytes\":262144,\"allocatedBytes\":" + std::to_string(capture.allocatedBytes()) +
+         ",\"clock\":{\"id\":\"snes.master\",\"numerator\":" + quote(std::to_string(clock.first)) + ",\"denominator\":" + quote(std::to_string(clock.second)) +
+         "},\"architecture\":\"snes.65816\",\"addressSpace\":\"snes.cpu\",\"romContentSha256\":" + quote(fields[4]) +
+         ",\"producer\":{\"id\":" + quote(id) + ",\"revision\":" + quote(revision) + "}}";
+-      try { writer = std::make_unique<Writer>(path, header, capture.sessionId()); }
++      try { writer = std::make_unique<Writer>(path, header, capture.sessionId(), capture.profileSeals); }
+       catch(...) { capture.fail("native-file-start"); return "E04"; }
+       return status(capture);
+     }
+@@ -251,6 +272,12 @@
+     if(phase == Phase::Complete) state = "complete";
+     if(phase == Phase::Incomplete || capture.incomplete()) state = "incomplete";
+     result.pop_back();
++    if(writer->profile) {
++      // Parallel writer spans overlap emulation; they are not additive wall shares.
++      result += ",\"fileProfile\":{\"sealNs\":" + quote(std::to_string(capture.sealNanoseconds)) +
++        ",\"copyNs\":" + quote(std::to_string(copyNs)) + ",\"writeNs\":" + quote(std::to_string(committedWriteNs)) +
++        ",\"syncNs\":" + quote(std::to_string(committedSyncNs)) + "}";
++    }
+     return result + ",\"fileState\":" + quote(state) + ",\"fileBytes\":" + quote(std::to_string(phase == Phase::Complete ? writer->writtenBytes : committedBytes)) + ",\"fileBatches\":" + quote(std::to_string(committedBatches)) + "}";
+   }
+   static auto capability(const std::string& scope) -> std::string {
+@@ -266,7 +293,7 @@
+     size_t start = 0;
+     for(size_t i = 0; i <= value.size(); ++i) if(i == value.size() || value[i] == ':') {
+       fields.push_back(value.substr(start, i - start)); start = i + 1;
+-      if(fields.size() > 7) return {};
++      if(fields.size() > 8) return {};
+     }
+     return fields;
+   }
+diff --git a/tests/gdb-capture/ppu-benchmark.cpp b/tests/gdb-capture/ppu-benchmark.cpp
+--- a/tests/gdb-capture/ppu-benchmark.cpp
++++ b/tests/gdb-capture/ppu-benchmark.cpp
+@@ -14,8 +14,9 @@
+   auto pak(Node::Object) -> std::shared_ptr<vfs::directory> override { return std::make_shared<vfs::directory>(); }
+ };
+ 
+-// Measure fixed work on the real CPU/PPU coroutine, including native sealing,
+-// hex encoding and acknowledgements. No TCP, storage or consumer decoding is timed.
++// Measure fixed work on the real CPU/PPU coroutine. Stream modes include native
++// encoding/ack only; file mode also includes worker drain and publication. No
++// TCP or consumer decoding is timed.
+ auto nall::main(Arguments args) -> void {
+   Host host; platform = &host;
+   bool accurate = args.find("accurate"), baseline = args.find("baseline"), files = args.find("files");
+@@ -61,9 +62,11 @@
+     auto output = outputDirectory / (std::to_string(blank) + "-" + std::to_string(sample) + ".act2");
+     if(mode == 3) {
+       auto request = "start:8388608:bus-ppu:" + encode(output.string()) + ":" + std::string(64, 'a') + ":61726573:62656e6368";
++      if(args.find("profile")) request += ":profile";
+       assert(server.captureFile.command(server.capture, request, true)[0] == '{');
+     } else if(mode) assert(server.capture.command(mode == 1 ? "start:4718656:bus" : "start:4718656:bus-ppu")[0] == '{');
+     uint64_t events = 0, bytes = 0;
++    std::string filePosition;
+     auto drain = [&] {
+       while(server.capture.size) {
+         auto& front = server.capture.queue[server.capture.head];
+@@ -94,6 +97,7 @@
+         std::this_thread::sleep_for(std::chrono::microseconds(100));
+         status = server.captureFile.command(server.capture, "status:" + server.capture.sessionId(), true);
+       }
++      filePosition = status;
+       events = server.capture.produced; bytes = std::filesystem::file_size(output);
+       assert(events == 200000 && server.capture.complete());
+     } else if(mode) {
+@@ -105,7 +109,9 @@
+     if(comma) results << ",\n";
+     comma = true;
+     results << "{\"blank\":" << (blank ? "true" : "false") << ",\"mode\":" << mode << ",\"sample\":" << sample
+-      << ",\"ms\":" << ms << ",\"events\":" << events << ",\"bytes\":" << bytes << ",\"masterClocks\":" << cpu.captureClock - beginClock << '}';
++      << ",\"ms\":" << ms << ",\"events\":" << events << ",\"bytes\":" << bytes << ",\"masterClocks\":" << cpu.captureClock - beginClock;
++    if(!filePosition.empty()) results << ",\"position\":" << filePosition;
++    results << '}';
+   }
+   results << "\n]}\nBENCH_END\n";
+   std::cout << results.str();
+diff --git a/tests/gdb-capture/file-test.cpp b/tests/gdb-capture/file-test.cpp
+--- a/tests/gdb-capture/file-test.cpp
++++ b/tests/gdb-capture/file-test.cpp
+@@ -28,8 +28,9 @@
+   }
+   assert(false && "native sink failed to release");
+ }
+-auto start(FileCapture& sink, Capture& capture, const fs::path& path, const std::string& scope = "instructions") -> std::string {
++auto start(FileCapture& sink, Capture& capture, const fs::path& path, const std::string& scope = "instructions", bool profile = false) -> std::string {
+   auto request = "start:8388608:" + scope + ":" + hex(path.string()) + ":" + std::string(64, 'a') + ":" + hex("test\"producer") + ":" + hex("native-file-test");
++  if(profile) request += ":profile";
+   assert(sink.command(capture, request, false) == "E09");
+   auto result = sink.command(capture, request, true);
+   assert(result[0] == '{');
+@@ -96,6 +97,27 @@
+   }
+   {
+     Capture capture; FileCapture sink;
++    auto path = directory / "profile.act2";
++    start(sink, capture, path, "instructions", true); waitFor(sink, capture, "writing");
++    // All fetched lengths exercise different CRC word/tail boundaries. The
++    // independent reader checks both compiler-selected and forced-portable CRC.
++    for(unsigned i = 0; i < 8000; ++i) {
++      assert(capture.ready()); capture.begin(0x808000, {}, i);
++      for(unsigned n = 0; n <= i % 4; ++n) capture.fetch(uint8_t(n));
++      capture.end();
++    }
++    sink.command(capture, "stop:" + capture.sessionId(), true);
++    auto status = waitFor(sink, capture, "complete");
++    assert(status.find("\"fileProfile\":") != std::string::npos && capture.sealNanoseconds > 0);
++    verify(path, 8000, true);
++    start(sink, capture, directory / "unprofiled.act2");
++    assert(!capture.profileSeals && capture.sealNanoseconds == 0);
++    sink.command(capture, "stop:" + capture.sessionId(), true);
++    status = waitFor(sink, capture, "complete");
++    assert(status.find("fileProfile") == std::string::npos);
++  }
++  {
++    Capture capture; FileCapture sink;
+     auto path = directory / "complete.act2";
+     start(sink, capture, path); waitFor(sink, capture, "writing");
+     FileCapture::holdSync = true;
+diff --git a/tests/gdb-capture/CMakeLists.txt b/tests/gdb-capture/CMakeLists.txt
+--- a/tests/gdb-capture/CMakeLists.txt
++++ b/tests/gdb-capture/CMakeLists.txt
+@@ -46,3 +46,13 @@
+ ares_configure_executable(gdb-capture-file)
+ add_test(NAME gdb-capture-file COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/file-test.sh $<TARGET_FILE:gdb-capture-file>)
+ set_tests_properties(gdb-capture-file PROPERTIES TIMEOUT 30)
++
++# Exercise the same independent wire reader with accelerated CRC explicitly disabled.
++add_executable(gdb-capture-file-portable file-test.cpp)
++target_include_directories(gdb-capture-file-portable PRIVATE ${CMAKE_SOURCE_DIR}/nall)
++target_link_libraries(gdb-capture-file-portable PRIVATE Threads::Threads)
++target_compile_definitions(gdb-capture-file-portable PRIVATE ARES_CAPTURE_FILE_TEST ARES_CAPTURE_PORTABLE_CRC)
++set_target_properties(gdb-capture-file-portable PROPERTIES FOLDER tests PREFIX "")
++ares_configure_executable(gdb-capture-file-portable)
++add_test(NAME gdb-capture-file-portable COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/file-test.sh $<TARGET_FILE:gdb-capture-file-portable>)
++set_tests_properties(gdb-capture-file-portable PROPERTIES TIMEOUT 30)

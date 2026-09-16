@@ -62,8 +62,6 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.coverage.refresh",
       "asm.analysisGraph.refresh",
       "asm.sources.refresh",
-      "asm.sources.compare",
-      "asm.sources.resetComparison",
       "asm.analysis.navigate",
       "asm.coverage.classifyRange",
       "asm.coverage.setStateEntryPoint",
@@ -73,21 +71,18 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.coverage.explainEvidence",
       "asm.coverage.undo",
       "asm.coverage.redo",
-      "asm.capture.idle",
-      "asm.capture.guide",
-      "asm.capture.demo",
-      "asm.capture.behavior",
-      "asm.capture.stop",
-      "asm.capture.review",
       "asm.trace.start",
       "asm.trace.stop",
       "asm.trace.stopAnalyze",
+      "asm.trace.importBus",
       "asm.trace.importRegenerate",
+      "asm.analysis.showOutput",
       "asm.heuristics.configure",
       "asm.heuristics.preview",
       "asm.ramMap.open",
       "asm.disassembly.status",
       "asm.disassembly.regenerate",
+      "asm.trace.cancelLiveAnalysis",
     ],
   );
   t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
@@ -168,15 +163,23 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.analysisProject",
       "asm.analysis.maxWorkItems",
       "asm.analysis.maxMemoryMiB",
+      "asm.analysis.cacheMaxMiB",
+      "asm.analysis.storageMaxMiB",
       "asm.analysis.showAnnotations",
       "asm.analysis.annotationColumn",
       "asm.trace.maxImportSizeMiB",
       "asm.trace.indexMode",
+      "asm.trace.archiveMaxAgeDays",
+      "asm.trace.archiveMaxCaptures",
+      "asm.trace.archiveMaxMiB",
       "asm.baseImage",
       "asm.buildOutput",
       "asm.configFile",
       "asm.debug.traceDetail",
       "asm.debug.traceMode",
+      "asm.debug.captureSink",
+      "asm.debug.liveBusAnalysis",
+      "asm.debug.liveBusMaxLagMiB",
       "asm.entryPoints",
       "asm.includePaths",
       "asm.plugins",
@@ -188,6 +191,15 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
     "off",
     "messages",
     "verbose",
+  ]);
+  t.deepEqual(properties["asm.debug.captureSink"]?.enum, ["stream", "native-file"]);
+  t.is(properties["asm.debug.captureSink"]?.default, "stream");
+  t.deepEqual(properties["asm.debug.traceMode"]?.enum, [
+    "live",
+    "lossless-instructions",
+    "lossless-bus",
+    "lossless-bus-transfers",
+    "lossless-bus-ppu",
   ]);
   t.false("enum" in properties["asm.architecture"]);
   t.is(manifest.capabilities.untrustedWorkspaces.supported, "limited");
@@ -375,7 +387,7 @@ test("VS Code disassembly maintenance makes trace-to-source changes explicit and
     path.join(root, "packages/vscode-extension/media/panel.html"),
     "utf8",
   );
-  t.true(jobs.includes("importRuntimeTraceIntoProject"));
+  t.true(jobs.includes("importRuntimeTraceSourceIntoProject"));
   t.true(jobs.includes("analyzeSnesProject"));
   t.true(jobs.includes("exportSnesProject"));
   t.true(jobs.includes("verifySnesProjectRoundTrip"));
@@ -386,13 +398,13 @@ test("VS Code disassembly maintenance makes trace-to-source changes explicit and
   t.true(source.includes("validateSourceExportInputs"));
   t.true(source.includes("RAM-map variables:"));
   t.true(source.includes("A positive code-byte delta"));
-  t.true(panel.includes("RAM map"));
-  t.true(panel.includes("Import saved trace"));
-  t.true(panel.includes("Analyze and regenerate"));
-  t.true(panel.includes("Stop and analyze"));
-  t.true(jobs.includes("summarizeExecutionWindow"));
-  t.true(source.includes("Executed routines (function candidates)"));
-  t.true(source.includes("Routine attribution from the saved analysis"));
+  t.true(panel.includes("RAM Map"));
+  t.true(panel.includes("Import Saved Trace"));
+  t.true(panel.includes("Analyze &amp; Regenerate") || panel.includes("Analyze & Regenerate"));
+  t.true(panel.includes("Stop &amp; Analyze") || panel.includes("Stop & Analyze"));
+  t.false(jobs.includes("createExecutionWindowAccumulator"));
+  t.false(source.includes("Executed routines (function candidates)"));
+  t.true(source.includes("renderTraceImportReport(imported, traceFile)"));
 });
 
 test("analysis graph preserves identity and navigates source-first", (t) => {
@@ -475,8 +487,9 @@ test("analysis coverage editing is trusted, transactional, and reversible", (t) 
     "utf8",
   );
   t.true(source.includes("workspace.isTrusted"));
-  t.true(source.includes("loadAnalysisProjectSnapshot"));
-  t.true(source.includes("commitAnalysisProjectViewUpdate"));
+  t.false(source.includes("loadAnalysisProjectSnapshot"));
+  t.true(source.includes("openAnalysisProjectStore"));
+  t.true(source.includes("commitAnalysisProjectSelectedEdit"));
   t.true(source.includes("applyRangeClassificationEdit"));
   t.true(source.includes("revertRangeClassificationEdit"));
   t.true(source.includes("applyStateEntryPointEdit"));
@@ -485,7 +498,7 @@ test("analysis coverage editing is trusted, transactional, and reversible", (t) 
   t.true(source.includes("revertTargetResolutionEdit"));
   t.true(source.includes("applyLabelRenameEdit"));
   t.true(source.includes("revertLabelRenameEdit"));
-  t.true(source.includes("explainProjectEvidence"));
+  t.true(source.includes('"explainEvidence"'));
   t.true(source.includes("asm.coverage.canUndo"));
   t.true(source.includes("asm.coverage.canRedo"));
 });

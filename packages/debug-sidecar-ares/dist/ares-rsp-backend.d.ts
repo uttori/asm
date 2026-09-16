@@ -20,6 +20,13 @@ export interface AresRspBackendOptions {
     readonly createClient: (options: DebugBackendConnectOptions) => AresGdbRspClient | GdbRspClient | Promise<AresGdbRspClient | GdbRspClient>;
     readonly terminate?: () => Promise<void>;
     readonly stopTimeoutMs?: number;
+    /** Set only by the manifest-verified local process host; binds file provenance
+     * and prevents native paths from being sent to an arbitrary remote RSP server. */
+    readonly nativeFileIdentity?: {
+        readonly romSha256: string;
+        readonly executableSha256: string;
+        readonly producerRevision?: string;
+    };
 }
 /** 65816 `DebugBackend` implemented over the maintained ares fork's private RSP channel. */
 export declare class AresRspDebugBackend implements DebugBackend {

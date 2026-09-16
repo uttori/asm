@@ -9,6 +9,8 @@ import {
   RomImage,
   importRuntimeInstructionTrace,
   importRuntimeTraceIntoProject,
+  importRuntimeTraceSourceIntoProject,
+  validateRuntimeInstructionTraceMetadata,
   loadAnalysisProject,
   loadAnalysisProjectViewSnapshot,
   mergeRuntimeEvidence,
@@ -47,6 +49,60 @@ const fixture = (): AnalysisProject => ({
       },
     ],
   },
+});
+
+test("in-memory chunks publish the same facts and roll back on a late producer failure", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-memory-source-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const project = fixture();
+  const artifact = trace(project);
+  const directory = path.join(root, "analysis");
+  writeAnalysisProject(directory, project);
+  const before = loadAnalysisProject(directory);
+  const context = {
+    projectRomContentSha256: artifact.romContentSha256,
+    sourceName: "live capture",
+  };
+  const source = {
+    metadata: validateRuntimeInstructionTraceMetadata(artifact),
+    read: async (accept: (chunk: unknown) => void) => {
+      for (const chunk of artifact.chunks) accept(chunk);
+    },
+  };
+  await t.throwsAsync(
+    importRuntimeTraceSourceIntoProject(
+      {
+        ...source,
+        read: async (accept) => {
+          await source.read(accept);
+          throw new Error("Producer tail failed");
+        },
+      },
+      directory,
+      context,
+    ),
+    { message: "Producer tail failed" },
+  );
+  t.deepEqual(loadAnalysisProject(directory), before);
+  const expected = importRuntimeInstructionTrace(artifact, context);
+  const progress: [number, number][] = [];
+  const stages: string[] = [];
+  const actual = await importRuntimeTraceSourceIntoProject(source, directory, context, {
+    onMergeProgress: (processed, total) => progress.push([processed, total]),
+    onStage: (stage) => stages.push(stage),
+  });
+  const totalRecords = expected.batch.runtime!.length;
+  t.deepEqual(progress[0], [0, totalRecords]);
+  t.deepEqual(progress.at(-1), [totalRecords, totalRecords]);
+  t.true(
+    stages.indexOf("Committing runtime import transaction…") <
+      stages.indexOf("Runtime import committed; project pointer updated."),
+  );
+  t.deepEqual(actual.report, expected.report);
+  const merged = mergeRuntimeEvidence(project.shards, expected.batch);
+  const expectedDirectory = path.join(root, "expected");
+  writeAnalysisProject(expectedDirectory, { ...project, shards: merged.shards });
+  t.deepEqual(loadAnalysisProject(directory).shards, loadAnalysisProject(expectedDirectory).shards);
 });
 
 const trace = (project: AnalysisProject): RuntimeInstructionTraceArtifact => {
@@ -120,13 +176,12 @@ for (const indexMode of ["full", "65816-disassembly"] as const) {
     const revision = loadAnalysisProjectViewSnapshot(directory).revision;
     t.false((await importRuntimeTraceIntoProject(file, directory, context)).changed);
     t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, revision);
-    await t.throwsAsync(
-      importRuntimeTraceIntoProject(file, directory, {
-        ...context,
-        indexMode: indexMode === "full" ? "65816-disassembly" : "full",
-      }),
-      { message: /profile|changed content/ },
-    );
+    const reused = await importRuntimeTraceIntoProject(file, directory, {
+      ...context,
+      indexMode: indexMode === "full" ? "65816-disassembly" : "full",
+    });
+    t.false(reused.changed);
+    t.true(reused.warnings.some((warning) => warning.includes("different profile")));
     t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, revision);
     // An import report alone must not suppress a missing fact, or hide a changed fact's content.
     const complete = loadAnalysisProject(directory);

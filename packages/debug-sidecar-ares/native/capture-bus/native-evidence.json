@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-12",
+  "host": "Darwin arm64",
+  "patchSha256": "dc2939a9d6e39233f5cc2344a742c944fd4d8b7bb82ee3dd19d26c3a51d9ca69",
+  "tests": {
+    "gdb-states": "passed",
+    "gdb-states-accurate": "passed",
+    "gdb-capture": "passed",
+    "gdb-capture-accurate": "passed",
+    "gdb-capture-bus": "passed",
+    "gdb-capture-bus-accurate": "passed"
+  },
+  "additionalCheck": "Existing C++17 instruction queue/send harness compiled against the extended producer and passed.",
+  "maximumDmaEvents": 1048576,
+  "nativeByteBudget": 4718656,
+  "machineStateComparison": "byte-identical after capture-on/off execution from the same synchronized state",
+  "saveDuringPendingDma": "incomplete prefix retained; guarded save completes; recovery release preserves debugger halt and stepping",
+  "runtimePromoted": false,
+  "binaries": {
+    "gdb-capture": "c7fcccba0c406230904c2a274db98ddcc61faa2e4cdce894b93a86d0057db3fb",
+    "gdb-capture-bus": "3aef855ad80c8462c8fb6e2d078f70e9fbef8e3483ae06dd407de1b812a6267d",
+    "gdb-states": "2db249a3da2d45c30acc10cf70bf7bd661c67333644e56ec08caf577ec41091b"
+  },
+  "logSha256": "0d816ba0a8443b81ca66941b12ce615e9c8efaf25ffcbd4221ec128536e6a107"
+}

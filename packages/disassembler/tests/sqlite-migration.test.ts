@@ -150,7 +150,7 @@ test("migration preserves every semantic record, logical revision and original d
   );
   t.deepEqual(loaded.shards.comments, project.shards.comments);
   const database = new DatabaseSync(file);
-  t.is(database.prepare("PRAGMA user_version").get()?.user_version, 1);
+  t.is(database.prepare("PRAGMA user_version").get()?.user_version, 2);
   t.is(database.prepare("PRAGMA journal_mode").get()?.journal_mode, "wal");
   t.is(database.prepare("SELECT typeof(payload) AS type FROM comments").get()?.type, "blob");
   t.is(database.prepare("SELECT count(*) AS n FROM runtime_evidence").get()?.n, 1);
@@ -388,7 +388,7 @@ test("an automatic SQLite rollback during copy retains its original error and le
           path.join(directory, SQLITE_MIGRATION_DIRECTORY, "analysis.sqlite"),
         );
         staged.exec(
-          "CREATE TRIGGER fail_copy BEFORE INSERT ON runtime BEGIN SELECT RAISE(ROLLBACK, 'simulated disk exhaustion'); END",
+          "CREATE TRIGGER fail_copy BEFORE INSERT ON runtime_observations BEGIN SELECT RAISE(ROLLBACK, 'simulated disk exhaustion'); END",
         );
         staged.close();
       },

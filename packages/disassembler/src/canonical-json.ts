@@ -5,13 +5,27 @@
  */
 export const canonicalValue = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(canonicalValue);
-  if (value !== null && typeof value === "object")
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([, entry]) => entry !== undefined)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([key, entry]) => [key, canonicalValue(entry)]),
-    );
+  if (value !== null && typeof value === "object") {
+    // Rich traces canonicalize millions of small register/access objects. Sorting keys directly
+    // avoids three temporary arrays and per-field entry tuples while preserving locale ordering.
+    const input = value as Record<string, unknown>;
+    const result: Record<string, unknown> = {};
+    for (const key of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
+      const entry = input[key];
+      if (entry === undefined) continue;
+      const normalized = canonicalValue(entry);
+      // Match Object.fromEntries: an input named __proto__ is data, not a prototype setter.
+      if (key === "__proto__")
+        Object.defineProperty(result, key, {
+          value: normalized,
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+      else result[key] = normalized;
+    }
+    return result;
+  }
   return value;
 };
 

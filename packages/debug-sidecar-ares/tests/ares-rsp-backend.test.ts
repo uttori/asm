@@ -7,6 +7,12 @@ import {
 
 import { test } from "../../../tests/ava-helper.js";
 import {
+  busCapabilities,
+  busPosition,
+  busSession,
+  busScope,
+} from "../../../tests/helpers/capture-bus.js";
+import {
   ARES_TRACE_BUFFER_EVENTS,
   AresRspDebugBackend,
   type AresGdbRspClient,
@@ -68,6 +74,207 @@ test("capture v2 rejects legacy runtimes and preserves exact acknowledgement int
     message: /rejected \(E07\)/,
   });
   t.is(sent, `qUttoriCapture:ack:${session}:${exact}:${exact}`);
+  await backend.disconnect();
+});
+
+test("bus capture negotiates distinct RSP commands and rejects scope changes", async (t) => {
+  const client = new FakeAresRspClient(
+    fakeState(),
+    targetXml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const original = client.request.bind(client);
+  const commands: string[] = [];
+  let scopeChanged = false;
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    commands.push(command);
+    let value: unknown = busPosition();
+    if (command.endsWith(":bus-capabilities")) value = busCapabilities;
+    else if (command.endsWith(":capabilities"))
+      value = { ...busCapabilities, scope: "snes.65816.instructions", requiredReserveBytes: 71 };
+    else if (scopeChanged) value = { ...busPosition(), scope: "snes.65816.instructions" };
+    return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
+  };
+  const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
+  await backend.connect();
+  t.teardown(() => backend.disconnect());
+  t.deepEqual(
+    await backend.capture({ operation: "start", bufferBytes: 4718656, scope: busScope }),
+    busPosition(),
+  );
+  t.deepEqual(commands, ["qUttoriCapture:bus-capabilities", "qUttoriCapture:start:4718656:bus"]);
+  await backend.capture({ operation: "capabilities" });
+  t.is(commands.at(-1), "qUttoriCapture:capabilities");
+  // No stop has arrived yet: the step request must settle so a queued capture
+  // pull can drain a long DMA instruction before its eventual stop notification.
+  let stepped = false;
+  client.step = () => {
+    stepped = true;
+    return Promise.resolve();
+  };
+  await backend.step(1, "instruction");
+  t.true(stepped);
+  t.deepEqual(await backend.capture({ operation: "status", session: busSession }), busPosition());
+  scopeChanged = true;
+  await t.throwsAsync(backend.capture({ operation: "status", session: busSession }), {
+    message: /scope changed/,
+  });
+});
+
+test("transfer capture negotiates separately and keeps long steps drainable", async (t) => {
+  const client = new FakeAresRspClient(
+    fakeState(),
+    targetXml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const scope = "snes.cpu-bus-transfers";
+  const position = () => ({ ...busPosition(), scope });
+  const original = client.request.bind(client);
+  const commands: string[] = [];
+  let scopeChanged = false;
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    commands.push(command);
+    let value: unknown = position();
+    if (command.endsWith(":transfer-capabilities"))
+      value = { ...busCapabilities, scope, requiredReserveBytes: 80 };
+    else if (command.endsWith(":capabilities"))
+      value = { ...busCapabilities, scope: "snes.65816.instructions", requiredReserveBytes: 71 };
+    else if (scopeChanged) value = { ...busPosition(), scope: "snes.65816.instructions" };
+    return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
+  };
+  const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
+  await backend.connect();
+  t.teardown(() => backend.disconnect());
+  t.deepEqual(
+    await backend.capture({ operation: "start", bufferBytes: 4718656, scope }),
+    position(),
+  );
+  t.deepEqual(commands, [
+    "qUttoriCapture:transfer-capabilities",
+    "qUttoriCapture:start:4718656:bus-transfers",
+  ]);
+  await backend.capture({ operation: "capabilities" });
+  t.is(commands.at(-1), "qUttoriCapture:capabilities");
+  // No stop has arrived yet: the step request must settle so a queued capture
+  // pull can drain a long DMA instruction before its eventual stop notification.
+  let stepped = false;
+  client.step = () => {
+    stepped = true;
+    return Promise.resolve();
+  };
+  await backend.step(1, "instruction");
+  t.true(stepped);
+  t.deepEqual(await backend.capture({ operation: "status", session: busSession }), position());
+  scopeChanged = true;
+  await t.throwsAsync(backend.capture({ operation: "status", session: busSession }), {
+    message: /scope changed/,
+  });
+});
+
+test("PPU effects negotiate separately and keeps long steps drainable", async (t) => {
+  const client = new FakeAresRspClient(
+    fakeState(),
+    targetXml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const scope = "snes.cpu-bus-ppu";
+  const position = () => ({ ...busPosition(), scope });
+  const original = client.request.bind(client);
+  const commands: string[] = [];
+  let scopeChanged = false;
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    commands.push(command);
+    let value: unknown = position();
+    if (command.endsWith(":ppu-capabilities"))
+      value = { ...busCapabilities, scope, requiredReserveBytes: 88 };
+    else if (command.endsWith(":capabilities"))
+      value = { ...busCapabilities, scope: "snes.65816.instructions", requiredReserveBytes: 71 };
+    else if (scopeChanged) value = { ...busPosition(), scope: "snes.65816.instructions" };
+    return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
+  };
+  const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
+  await backend.connect();
+  t.teardown(() => backend.disconnect());
+  t.deepEqual(
+    await backend.capture({ operation: "start", bufferBytes: 4718656, scope }),
+    position(),
+  );
+  t.deepEqual(commands, [
+    "qUttoriCapture:ppu-capabilities",
+    "qUttoriCapture:start:4718656:bus-ppu",
+  ]);
+  await backend.capture({ operation: "capabilities" });
+  t.is(commands.at(-1), "qUttoriCapture:capabilities");
+  // No stop has arrived yet: the step request must settle so a queued capture
+  // pull can drain a long DMA instruction before its eventual stop notification.
+  let stepped = false;
+  client.step = () => {
+    stepped = true;
+    return Promise.resolve();
+  };
+  await backend.step(1, "instruction");
+  t.true(stepped);
+  t.deepEqual(await backend.capture({ operation: "status", session: busSession }), position());
+  scopeChanged = true;
+  await t.throwsAsync(backend.capture({ operation: "status", session: busSession }), {
+    message: /scope changed/,
+  });
+});
+
+test("instruction-only capture runtimes reject bus setup before start", async (t) => {
+  for (const reply of ["", "E05"])
+    for (const [scope, operation] of [
+      [busScope, "bus-capabilities"],
+      ["snes.cpu-bus-ppu", "ppu-capabilities"],
+    ] as const) {
+      const client = new FakeAresRspClient(
+        fakeState(),
+        targetXml,
+        "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+      );
+      const original = client.request.bind(client);
+      const commands: string[] = [];
+      client.request = async (command) => {
+        if (!command.startsWith("qUttoriCapture:")) return original(command);
+        commands.push(command);
+        return reply;
+      };
+      const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
+      await backend.connect();
+      await t.throwsAsync(backend.capture({ operation: "start", bufferBytes: 4718656, scope }), {
+        message: /does not support CPU\/DMA\/HDMA/,
+      });
+      t.deepEqual(commands, [`qUttoriCapture:${operation}`]);
+      await backend.disconnect();
+    }
+});
+
+test("wrong-scope bus start is aborted before setup failure escapes", async (t) => {
+  const client = new FakeAresRspClient(
+    fakeState(),
+    targetXml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const original = client.request.bind(client);
+  const commands: string[] = [];
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    commands.push(command);
+    const value = command.endsWith(":bus-capabilities")
+      ? busCapabilities
+      : { ...busPosition(), scope: "snes.65816.instructions" };
+    return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
+  };
+  const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
+  await backend.connect();
+  await t.throwsAsync(
+    backend.capture({ operation: "start", bufferBytes: 4718656, scope: busScope }),
+    { message: /scope changed/ },
+  );
+  t.is(commands.at(-1), `qUttoriCapture:abort:${busSession}`);
   await backend.disconnect();
 });
 
@@ -585,4 +792,48 @@ test("ares RSP backend rejects failed or malformed named-memory replies and repo
   t.deepEqual([...result.bytes], [0xaa, 0]);
   t.is(result.unreadableBytes, 1);
   await short.disconnect({ terminate: true });
+});
+
+test("native file capture binds local manifest identity and keeps event bytes off RSP", async (t) => {
+  const client = new FakeAresRspClient(
+    fakeState(),
+    targetXml,
+    "PacketSize=4096;xmlRegisters+;qXfer:features:read+;uttoriInstructionBoundaryStop+;uttoriNamedMemory+;uttoriInstructionTrace+;uttoriCaptureV2+",
+  );
+  const original = client.request.bind(client),
+    commands: string[] = [];
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriCaptureFile:")) return original(command);
+    commands.push(command);
+    const value = command.includes(":capabilities:")
+      ? { ...busCapabilities, nativeFile: true }
+      : { ...busPosition(), fileState: "writing", fileBytes: "0", fileBatches: "0" };
+    return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
+  };
+  const identity = { romSha256: "a".repeat(64), executableSha256: "b".repeat(64) };
+  const backend = new AresRspDebugBackend({
+    createClient: async () => client,
+    nativeFileIdentity: identity,
+  });
+  await backend.connect();
+  const request = {
+    operation: "file-start",
+    measureStages: true,
+    file: "/tmp/trace: unicode-é.act2",
+    scope: busScope,
+    bufferBytes: 4718656,
+    romContentSha256: identity.romSha256,
+    producer: { id: "ares", revision: identity.executableSha256 },
+  } as const;
+  await t.throwsAsync(backend.capture({ ...request, romContentSha256: "c".repeat(64) }), {
+    message: /identity does not match/,
+  });
+  t.is(commands.length, 0);
+  await backend.capture(request);
+  t.is(commands[0], "qUttoriCaptureFile:capabilities:bus");
+  t.true(commands[1].includes(`:${Buffer.from(request.file).toString("hex")}:`));
+  t.true(commands[1].endsWith(":profile"));
+  await backend.capture({ operation: "file-stop", session: busSession });
+  t.is(commands.at(-1), `qUttoriCaptureFile:stop:${busSession}`);
+  await backend.disconnect();
 });

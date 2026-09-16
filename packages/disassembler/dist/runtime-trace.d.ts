@@ -36,7 +36,7 @@ export interface RuntimeInstructionTraceArtifact {
 export interface RuntimeInstructionTraceImportContext {
     readonly projectRomContentSha256: string;
     readonly sourceName: string;
-    /** Defaults to full snapshots; compact mode changes only the index, never the capture or its hash. */
+    /** Defaults to 65816-analysis for native SNES CPU captures, full for other CPUs; capture identity is unchanged. */
     readonly indexMode?: RuntimeTraceIndexMode;
     /**
      * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
@@ -48,7 +48,7 @@ export interface RuntimeInstructionTraceImportContext {
  * Full keeps all supplied registers. Compact preserves the joint 65816 decoding state and
  * execution counts; A/X/Y/S history remains in the capture and is unavailable from this index.
  */
-export type RuntimeTraceIndexMode = "full" | "65816-disassembly";
+export type RuntimeTraceIndexMode = "full" | "65816-disassembly" | "65816-analysis";
 /** Compact-index default; full snapshots retain a larger compatibility budget. */
 export declare const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2000000;
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
@@ -62,6 +62,15 @@ export interface RuntimeInstructionTraceImportResult {
 }
 /** Identity shared by all chunks of one trace. */
 export type RuntimeInstructionTraceMetadata = Omit<RuntimeInstructionTraceArtifact, "chunks">;
+/**
+ * Ordered chunks supplied directly by a producer or a bounded file reader. The reader must finish
+ * each synchronous consumer call and reject on incomplete envelopes or integrity failures; chunks are
+ * provisional until read() resolves. Consumers validate chunk contents and must not retain them.
+ */
+export interface RuntimeTraceSource {
+    readonly metadata: RuntimeInstructionTraceMetadata;
+    readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
+}
 /**
  * Validate the small trace envelope independently of its event stream.
  * @param {unknown} value Untrusted metadata.
@@ -116,13 +125,17 @@ export interface RuntimeTraceFactIndex {
 /** Optional external storage and record sink; sink output is provisional until finish returns. */
 export interface RuntimeTraceImporterStorage {
     readonly index: RuntimeTraceFactIndex;
+    /** Called after complete source validation, before emitting any provisional records. */
+    readonly onSource?: (sha256: string, profile: string) => void;
     /** Final records are emitted individually; batch.runtime is omitted when this sink is supplied. */
     readonly onRecord?: (record: RuntimeEvidenceRecord) => void;
+    /** Throttled provisional merge counts; reaching the total does not mean the transaction committed. */
+    readonly onMergeProgress?: (processedRecords: number, totalRecords: number) => void;
 }
 /** Incremental aggregation; any failed push permanently invalidates the pending import. */
 export interface RuntimeInstructionTraceImporter {
     /** Accept the next ordered chunk; invalid data or an exceeded record budget prevents finalization. */
-    push(value: unknown): void;
+    push(this: void, value: unknown): void;
     /** Consume the importer once, only after the caller has validated the entire file and its tail. */
     finish(): RuntimeInstructionTraceImportResult;
 }

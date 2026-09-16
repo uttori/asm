@@ -10,20 +10,21 @@ import {
   RomImage,
   canonicalJson,
   compareByteImages,
-  inspectRuntimeEvidence,
   importRuntimeInstructionTrace,
   importRuntimeInstructionTraceFile,
   importRuntimeTraceIntoProject,
   openAnalysisProjectStore,
-  loadAnalysisProject,
   loadAnalysisProjectView,
   loadSourceExportManifest,
   mergeRuntimeEvidence,
   validateSourceExportFiles,
   compactAnalysisProject,
+  expireCaptureArchives,
+  type AnalysisStoragePolicy,
   migrateAnalysisProjectStorage,
-  commitAnalysisProjectTransaction,
-  loadAnalysisProjectSnapshot,
+  commitRuntimeEvidenceBatch,
+  analysisProjectRevision,
+  type AnalysisProjectShards,
   validateProjectRom,
 } from "@uttori/asm-disassembler";
 import {
@@ -57,6 +58,7 @@ export type CliCommand =
   | "export"
   | "mesen-labels-export"
   | "project-compact"
+  | "project-storage"
   | "project-migrate"
   | "project-validate"
   | "verify-roundtrip";
@@ -84,7 +86,12 @@ export interface CliArguments {
   readonly mesenLabels?: string;
   readonly instructionTrace?: string;
   readonly traceMaxMiB?: number;
-  readonly traceIndex?: "full" | "65816-disassembly";
+  readonly traceIndex?: "full" | "65816-disassembly" | "65816-analysis";
+  readonly convertRuntime?: boolean;
+  readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
+  readonly pinCapture?: string;
+  readonly unpinCapture?: string;
+  readonly expireArchives?: boolean;
   readonly entryPoints: readonly number[];
   readonly maxWorkItems?: number;
   readonly maxCallDepth?: number;
@@ -105,7 +112,8 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
   uttori-asm project-compact <project-directory>
-  uttori-asm project-migrate <project-directory>
+  uttori-asm project-migrate <project-directory> [--convert-runtime]
+  uttori-asm project-storage <project-directory> [storage-options]
 
 Project options:
   --mapper <${SNES_MAPPERS.join("|")}>
@@ -118,12 +126,23 @@ Project options:
   --mesen-labels <path>        Import MesenCE label text
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
-  --trace-index <mode>         full (default) or 65816-disassembly for large captures
+  --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
   --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
   --max-work-items <count>     Deterministic analysis work limit
   --max-call-depth <count>     Bounded call-context depth
   --force                      Replace modified generated files during export
   --allow-code-regression       Allow export to replace existing code with raw bytes
+
+Storage options:
+  --convert-runtime           Convert existing trace detail to the native analysis profile; retain backup
+  --archive-max-mib <count>    Unpinned archive budget (default 2048)
+  --archive-max-days <count>   Optional archive age limit (0 disables)
+  --archive-max-captures <n>   Optional archive count limit (0 disables)
+  --cache-max-mib <count>      Disposable projection budget (default 256)
+  --storage-max-mib <count>    Project database publication ceiling (0 disables)
+  --pin-capture <sha256>       Keep this capture's managed archive regardless of expiry limits
+  --unpin-capture <sha256>     Allow this managed archive to expire
+  --expire-archives            Apply retention and recycle caches/WAL now
 
 Assemble options:
   --config <uttori-asm.config.json>
@@ -160,6 +179,7 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     argv[0] === "mesen-labels-export" ||
     argv[0] === "project-compact" ||
     argv[0] === "project-migrate" ||
+    argv[0] === "project-storage" ||
     argv[0] === "project-validate" ||
     argv[0] === "verify-roundtrip"
   ) {
@@ -182,7 +202,12 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let mesenLabels: string | undefined;
   let instructionTrace: string | undefined;
   let traceMaxMiB: number | undefined;
-  let traceIndex: "full" | "65816-disassembly" | undefined;
+  const storagePolicy: Partial<Record<keyof AnalysisStoragePolicy, number>> = {};
+  let convertRuntime = false;
+  let expireArchives = false;
+  let pinCapture: string | undefined;
+  let unpinCapture: string | undefined;
+  let traceIndex: "full" | "65816-disassembly" | "65816-analysis" | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
   let maxCallDepth: number | undefined;
@@ -216,6 +241,18 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     const equals = argument.indexOf("=");
     const flag = equals < 0 ? argument : argument.slice(0, equals);
     const inlineValue = equals < 0 ? undefined : argument.slice(equals + 1);
+    if (flag === "--convert-runtime") {
+      if (inlineValue !== undefined)
+        throw new Error("--convert-runtime takes no value; omit it to preserve full detail.");
+      convertRuntime = true;
+      continue;
+    }
+    if (flag === "--expire-archives") {
+      if (inlineValue !== undefined)
+        throw new Error("--expire-archives takes no value; omit it to leave archives untouched.");
+      expireArchives = true;
+      continue;
+    }
     if (flag === "--help") {
       help = true;
       continue;
@@ -306,9 +343,34 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
           );
         }
         break;
+      case "--archive-max-mib":
+      case "--archive-max-days":
+      case "--archive-max-captures":
+      case "--cache-max-mib":
+      case "--storage-max-mib": {
+        const keys: Record<string, keyof AnalysisStoragePolicy> = {
+          "--archive-max-mib": "archiveMaxBytes",
+          "--archive-max-days": "archiveMaxAgeDays",
+          "--archive-max-captures": "archiveMaxCaptures",
+          "--cache-max-mib": "cacheMaxBytes",
+          "--storage-max-mib": "databaseMaxBytes",
+        };
+        const amount = Number(value) * (flag.endsWith("mib") ? 1024 ** 2 : 1);
+        if (!Number.isSafeInteger(amount) || amount < 0)
+          throw new Error(`${flag} requires a nonnegative safe integer limit.`);
+        storagePolicy[keys[flag]] = amount;
+        break;
+      }
+      case "--pin-capture":
+      case "--unpin-capture":
+        if (!/^[\da-f]{64}$/.test(value))
+          throw new Error(`${flag} requires a lowercase capture SHA-256.`);
+        if (flag === "--pin-capture") pinCapture = value;
+        else unpinCapture = value;
+        break;
       case "--trace-index":
-        if (value !== "full" && value !== "65816-disassembly")
-          throw new Error("--trace-index must be full or 65816-disassembly.");
+        if (value !== "full" && value !== "65816-disassembly" && value !== "65816-analysis")
+          throw new Error("--trace-index must be full, 65816-disassembly, or 65816-analysis.");
         traceIndex = value;
         break;
       case "--entry": {
@@ -385,6 +447,11 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     instructionTrace,
     traceMaxMiB,
     traceIndex,
+    ...(convertRuntime ? { convertRuntime } : {}),
+    ...(expireArchives ? { expireArchives } : {}),
+    ...(pinCapture ? { pinCapture } : {}),
+    ...(unpinCapture ? { unpinCapture } : {}),
+    ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
     maxCallDepth,
@@ -547,8 +614,11 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
         {
           maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024,
           onStage: (stage) => console.log(stage),
+          storagePolicy: parsed.storagePolicy,
         },
       );
+      console.log(`Storage: ${JSON.stringify(result.storage)}`);
+      for (const warning of result.warnings) console.warn(warning);
       const action = result.changed ? "updated" : "no-op reimport for";
       console.log(
         `Success: ${action} '${directory}'; ${result.added.runtime} new runtime record(s).`,
@@ -558,7 +628,15 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
       );
       return 0;
     }
-    const loaded = loadAnalysisProjectSnapshot(directory);
+    const store = openAnalysisProjectStore(directory);
+    const loaded = (() => {
+      try {
+        const manifest = store.manifest();
+        return { manifest, revision: analysisProjectRevision(manifest) };
+      } finally {
+        store.close();
+      }
+    })();
     const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
       headerSize: loaded.manifest.rom.headerSize,
     });
@@ -567,12 +645,21 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
       throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
     }
     const mapper = loaded.manifest.mapping.mapper as SnesMapper;
-    let shards = loaded.shards;
+    let shards: AnalysisProjectShards = {
+      analysis: [],
+      annotations: [],
+      labels: [],
+      comments: [],
+      regions: [],
+      evidence: [],
+      imports: [],
+      runtime: [],
+    };
     let changed = false;
     let conflictCount = 0;
     let explanationCount = 0;
-    // Detailed reports expand prior register observations, even when the incoming index is compact.
-    // Keep that allocation out of large imports; evidence-report remains an explicit separate step.
+    // Detailed batch reports expand incoming register observations. Whole-project diagnostics use
+    // the separate evidence-report SQL reader, keeping saved histories out of this import path.
     const includeDiagnostics =
       !parsed.instructionTrace || parsed.traceIndex !== "65816-disassembly";
     const reports: string[] = [];
@@ -648,15 +735,13 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
         ),
       );
     }
-    if (changed) {
-      const { shards: ignoredShards, ...manifest } = loaded.manifest;
-      void ignoredShards;
-      commitAnalysisProjectTransaction(directory, loaded.revision, { manifest, shards });
-    }
+    // Only incoming batches are merged in memory. Destination collisions and append-only writes
+    // are checked atomically in SQL, including when several artifact formats are imported together.
+    changed = commitRuntimeEvidenceBatch(directory, loaded.revision, shards).changed;
     const importAction = changed ? "updated" : "no-op reimport for";
     let diagnosticSummary = "detailed diagnostics deferred for compact trace indexing.";
     if (includeDiagnostics)
-      diagnosticSummary = `${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
+      diagnosticSummary = `incoming batch: ${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
     console.log(`Success: ${importAction} '${directory}'; ${diagnosticSummary}`);
     for (const report of reports) {
       console.log(`Import: ${report}.`);
@@ -677,13 +762,15 @@ const importProjectEvidence = async (parsed: CliArguments, cwd: string): Promise
 const reportProjectEvidence = (parsed: CliArguments, cwd: string): number => {
   const directory = path.resolve(cwd, parsed.input!);
   try {
-    const loaded = loadAnalysisProject(directory);
-    const inspection = inspectRuntimeEvidence(loaded.shards);
-    const text = canonicalJson({
-      runtimeRecords: loaded.shards.runtime.length,
-      conflicts: inspection.conflicts,
-      explanations: inspection.explanations,
-    });
+    const store = openAnalysisProjectStore(directory);
+    const inspection = (() => {
+      try {
+        return store.transaction(() => store.inspectEvidence(), false);
+      } finally {
+        store.close();
+      }
+    })();
+    const text = canonicalJson(inspection);
     if (parsed.output) {
       const output = path.resolve(cwd, parsed.output);
       fs.mkdirSync(path.dirname(output), { recursive: true });
@@ -714,7 +801,20 @@ const exportProjectMesenLabels = (parsed: CliArguments, cwd: string): number => 
     return 1;
   }
   try {
-    const loaded = loadAnalysisProjectView(directory);
+    const store = openAnalysisProjectStore(directory);
+    const loaded = (() => {
+      try {
+        return store.transaction(
+          () => ({
+            manifest: store.manifest(),
+            view: { labels: store.loadTable("labels"), comments: store.loadTable("comments") },
+          }),
+          false,
+        );
+      } finally {
+        store.close();
+      }
+    })();
     const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
       headerSize: loaded.manifest.rom.headerSize,
     });
@@ -1055,6 +1155,7 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
   if (parsed.command === "project-migrate") {
     try {
       const result = await migrateAnalysisProjectStorage(path.resolve(cwd, parsed.input), {
+        convertRuntime: parsed.convertRuntime,
         onProgress: ({ phase, table, records }) => {
           if (records === undefined || records % 100000 === 0)
             console.log(
@@ -1065,12 +1166,48 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
       console.log(
         `Success: storage format ${result.storageVersion}; ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`,
       );
+      for (const step of result.timings ?? [])
+        console.log(`${step.step}: ${(step.durationMs / 1000).toFixed(3)} s`);
       if (result.backupFile) console.log(`Verified original retained at '${result.backupFile}'.`);
+      for (const note of result.notes ?? []) console.log(note);
       for (const warning of result.warnings) console.warn(warning);
       return result.warnings.length ? 1 : 0;
     } catch (error) {
       console.error(`Project storage migration failed: ${formatFailure(error)}`);
       return 1;
+    }
+  }
+  if (parsed.command === "project-storage") {
+    let store: ReturnType<typeof openAnalysisProjectStore> | undefined;
+    try {
+      store = openAnalysisProjectStore(path.resolve(cwd, parsed.input));
+      const active = store;
+      store.transaction(() => {
+        if (parsed.storagePolicy) active.setStoragePolicy(parsed.storagePolicy);
+        if (parsed.pinCapture) active.pinCapture(parsed.pinCapture, true);
+        if (parsed.unpinCapture) active.pinCapture(parsed.unpinCapture, false);
+      });
+      const archives = parsed.expireArchives ? expireCaptureArchives(store) : undefined;
+      const maintenance = parsed.expireArchives ? store.maintainStorage() : undefined;
+      console.log(
+        JSON.stringify(
+          {
+            policy: store.storagePolicy(),
+            storage: { ...store.storageSnapshot(), optionalCacheBytes: store.storageCacheBytes() },
+            captures: store.captureCatalog(),
+            archives,
+            maintenance,
+          },
+          null,
+          2,
+        ),
+      );
+      return archives?.warnings.length ? 1 : 0;
+    } catch (error) {
+      console.error(`Storage maintenance failed: ${formatFailure(error)}`);
+      return 1;
+    } finally {
+      store?.close();
     }
   }
   if (parsed.command === "project-compact") {

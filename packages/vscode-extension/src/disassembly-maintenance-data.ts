@@ -1,10 +1,13 @@
 import type {
   AnalysisProjectManifest,
+  AnalysisStorageSnapshot,
   AnalysisProjectShards,
-  AnalysisProjectSnapshot,
   SourceExportManifest,
 } from "@uttori/asm-disassembler";
 import type { AnalyzeSnesProjectResult, Snes65816EntryPoint } from "@uttori/asm-plugin-snes";
+
+import type { AnnotationRefresh } from "./disassembly-annotation-data.js";
+import type { MaintenanceTimingSummary } from "./disassembly-timings.js";
 const MAX_RUNTIME_ENTRY_SEEDS = 100_000;
 
 export interface DisassemblyEntrySeed {
@@ -16,6 +19,8 @@ export interface DisassemblyMaintenanceTarget {
   readonly projectDirectory?: string;
   readonly sourceDirectory?: string;
   readonly entrySeeds?: readonly DisassemblyEntrySeed[];
+  /** Set only by annotation saves; stale receipts fall back to full analysis. */
+  readonly annotationRefresh?: AnnotationRefresh;
 }
 
 export interface ProjectChoice {
@@ -34,13 +39,13 @@ export interface ResolvedTarget extends ResolvedProjectSource {
 }
 
 export interface CoverageSnapshot {
+  /** SQL/file allocation measured alongside coverage; absent only in older report fixtures. */
+  readonly storage?: AnalysisStorageSnapshot;
   readonly manifestSha256: string;
   readonly instructions: number;
-  readonly functions: number;
   readonly runtimeRecords: number;
   readonly runtimeEvents: number;
   readonly traceImports: number;
-  readonly behaviorComments: number;
   readonly codeBytes: number;
   readonly contentBytes: number;
 }
@@ -57,33 +62,13 @@ export interface DisassemblyRegenerationSummary {
   readonly changedFiles: readonly string[];
   readonly removedFiles: readonly string[];
   readonly roundTripSha256: string;
+  /** Measured processing phases, including child-process overhead and contained stage details. */
+  readonly timings: MaintenanceTimingSummary;
 }
-
-export const coverageFor = (
-  shards: AnalysisProjectShards,
-  manifestSha256: string,
-  source: SourceExportManifest,
-): CoverageSnapshot => ({
-  manifestSha256,
-  instructions: shards.analysis.filter((record) => record.kind === "cfg-node").length,
-  functions: shards.analysis.filter((record) => record.kind === "function").length,
-  runtimeRecords: shards.runtime.filter((record) => record.kind === "runtime-execution").length,
-  runtimeEvents: shards.runtime
-    .filter((record) => record.kind === "runtime-execution")
-    .reduce((total, record) => total + record.count, 0),
-  traceImports: shards.imports.filter((record) => record.format === "uttori-asm-instruction-trace")
-    .length,
-  behaviorComments: shards.comments.filter((record) => record.id.startsWith("behavior-comment:"))
-    .length,
-  codeBytes: source.spans
-    .filter((span) => span.role === "code")
-    .reduce((total, span) => total + span.end - span.start, 0),
-  contentBytes: source.rom.contentSize,
-});
 
 export const normalizedSeeds = (
   value: readonly DisassemblyEntrySeed[] | undefined,
-  snapshot: AnalysisProjectSnapshot,
+  snapshot: { readonly shards: Pick<AnalysisProjectShards, "evidence"> },
 ): readonly Snes65816EntryPoint[] => {
   if (!value?.length) return [];
   const evidence = new Set(snapshot.shards.evidence.map((record) => record.id));

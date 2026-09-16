@@ -261,7 +261,9 @@
         "import/no-named-as-default-member": "off",
         "jsdoc/require-param": "off",
         "jsdoc/require-returns": "off",
+        "security/detect-non-literal-regexp": "off",
         "typescript/no-explicit-any": "off",
+        "typescript/no-misused-spread": "off",
         "typescript/no-unnecessary-type-assertion": "off",
         "typescript/no-unsafe-argument": "off",
         "typescript/no-unsafe-assignment": "off",
@@ -269,6 +271,7 @@
         "typescript/no-unsafe-member-access": "off",
         "typescript/no-unsafe-return": "off",
         "typescript/require-await": "off",
+        "typescript/require-array-sort-compare": "off",
         "typescript/unbound-method": "off"
       }
     }

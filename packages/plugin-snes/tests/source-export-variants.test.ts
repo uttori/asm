@@ -4,6 +4,8 @@ import path from "node:path";
 
 import {
   RomImage,
+  writeAnalysisProject,
+  openAnalysisProjectStore,
   type AnalysisProject,
   type RuntimeInstructionRecord,
 } from "@uttori/asm-disassembler";
@@ -151,6 +153,38 @@ for (const scenario of [
       shards: { ...project.shards, analysis: [...project.shards.analysis].reverse() },
     };
     t.deepEqual(exportSnes65816Source(reordered, rom, sourceDirectory, options), exported);
+    const analysisDirectory = path.join(directory, "analysis");
+    const evidence = [...new Set(project.shards.runtime.flatMap((record) => record.evidence))].map(
+      (id) => ({
+        id,
+        source: "runtime" as const,
+        sourceId: "fixture",
+        confidence: "certain" as const,
+      }),
+    );
+    writeAnalysisProject(analysisDirectory, {
+      ...project,
+      shards: { ...project.shards, evidence },
+    });
+    const store = openAnalysisProjectStore(analysisDirectory);
+    try {
+      store.prepareAnnotationQueries();
+      const streamed = store.transaction(
+        () =>
+          exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+            ...options,
+            instructionGroups: store.instructionExportGroups(),
+          }),
+        false,
+      );
+      t.deepEqual(
+        streamed,
+        exported,
+        "SQL streaming preserves every byte, variant, span and generated file hash",
+      );
+    } finally {
+      store.close();
+    }
   });
 }
 
@@ -170,4 +204,61 @@ test("export still rejects incompatible instruction widths after a new capture",
   t.throws(() => exportSnes65816Source(candidate, rom, directory, options), {
     message: /replace 2 previously emitted code byte/,
   });
+});
+
+test("explicit instruction widths round trip and ignore unrelated captured M/X changes", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-export-explicit-widths-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const sourceDirectory = path.join(directory, "source");
+  const bytes = new Uint8Array(0x8000).fill(0xea);
+  const instructions = [
+    { bytes: [0xc2, 0x30], p: 0x30 }, // REP changes ambient width before an explicitly short immediate.
+    { bytes: [0xa9, 0x12], p: 0x20 },
+    { bytes: [0xa2, 0x34, 0x12], p: 0x20 },
+    { bytes: [0xe2, 0x30], p: 0 }, // SEP must not shorten the following explicit word operands.
+    { bytes: [0xa0, 0x78, 0x56], p: 0 },
+    { bytes: [0xa9, 0xbc, 0x9a], p: 0 },
+    { bytes: [0xea], p: 0x30 },
+    { bytes: [0x60], p: 0x30 },
+  ];
+  let offset = 0;
+  const runtime = instructions.map((instruction, index) => {
+    bytes.set(instruction.bytes, offset);
+    const record = capture(
+      `instruction-${index}`,
+      instruction.bytes,
+      { p: instruction.p },
+      0x808000 + offset,
+    );
+    offset += instruction.bytes.length;
+    return record;
+  });
+  const rom = new RomImage(bytes, { headerSize: 0 });
+  const romFile = path.join(directory, "rom.sfc");
+  fs.writeFileSync(romFile, bytes);
+  const options = { sourceProjectSha256: "a".repeat(64) };
+  const first = exportSnes65816Source(projectFor(rom, runtime), rom, sourceDirectory, options);
+  const bank = path.join(sourceDirectory, "banks/bank-000.asm");
+  const text = fs.readFileSync(bank, "utf8");
+  t.notRegex(text, /^\.[ai](?:8|16)\b/m);
+  for (const source of ["LDA.b #$12", "LDX.w #$1234", "LDY.w #$5678", "LDA.w #$9ABC"])
+    t.true(text.includes(source), source);
+  t.true(
+    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+      .equal,
+  );
+  const changed = runtime.map((record) =>
+    record.bytes.length === 1 ? { ...record, state: { ...record.state, p: 0 } } : record,
+  );
+  const second = exportSnes65816Source(projectFor(rom, changed), rom, sourceDirectory, options);
+  t.is(
+    fs.readFileSync(bank, "utf8"),
+    text,
+    "non-width-sensitive instructions do not rewrite source when captured flags change",
+  );
+  t.deepEqual(second.files, first.files);
+  t.true(
+    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+      .equal,
+  );
 });

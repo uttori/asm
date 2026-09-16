@@ -13,10 +13,25 @@ interface PendingProjection {
 export interface AnalysisWorkerOptions {
   readonly maxMemoryMiB?: (directory: string) => number;
   readonly timeoutMs?: number;
+  /** Separate edits, viewport previews, and bulk views so one timeout cannot cancel unrelated work. */
+  readonly isolateAnnotations?: boolean;
 }
+
+const interactiveOperations = new Set([
+  // ROM matching precedes overlays and form discovery; it must not queue behind bulk views either.
+  "manifest",
+  "annotationLookup",
+  "annotationSave",
+  "annotationRefresh",
+]);
+const previewOperations = new Set(["annotations", "debugAnnotations"]);
 
 /** Shared projection process: fatal heap errors cannot terminate the extension host. */
 export class AnalysisWorkerClient {
+  /** Lazily allocated; save and refresh share this process's guarded export snapshot. */
+  #annotations?: AnalysisWorkerClient;
+  /** Viewport requests are read-only and must never hold up a form, save, or project manifest. */
+  #previews?: AnalysisWorkerClient;
   #worker?: ChildProcess;
   #memoryMiB = 0;
   #nextId = 0;
@@ -37,12 +52,28 @@ export class AnalysisWorkerClient {
       | "ranges"
       | "annotationLookup"
       | "annotationSave"
+      | "annotationRefresh"
       | "sourceId"
-      | "baselineIds"
       | "sourceGroup"
       | "navigationTarget"
+      | "evidenceSelection"
+      | "evidenceRecord"
     > = {},
   ): Promise<T> {
+    if (this.options.isolateAnnotations && interactiveOperations.has(operation)) {
+      this.#annotations ??= new AnalysisWorkerClient(this.workerFile, {
+        ...this.options,
+        isolateAnnotations: false,
+      });
+      return this.#annotations.request(directory, operation, options);
+    }
+    if (this.options.isolateAnnotations && previewOperations.has(operation)) {
+      this.#previews ??= new AnalysisWorkerClient(this.workerFile, {
+        ...this.options,
+        isolateAnnotations: false,
+      });
+      return this.#previews.request(directory, operation, options);
+    }
     const key = JSON.stringify({ directory, operation, ...options });
     const previous = this.#inflight.get(key);
     if (previous) return previous as Promise<T>;
@@ -83,15 +114,18 @@ export class AnalysisWorkerClient {
       if (!this.#worker) this.#start(maxMemoryMiB);
       // Queueing behind another view does not consume this operation's execution budget.
       const timeoutMs = this.options.timeoutMs ?? 60_000;
-      pending.timer = setTimeout(
-        () =>
-          this.#fail(
-            new Error(
-              `Analysis ${pending.message.operation} process exceeded ${timeoutMs / 1000} seconds. Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Check project status before retrying an edit.`,
+      // Source publication must finish its synchronous write phase before cancellation;
+      // killing this worker on a timer could leave a partially written generated tree.
+      if (pending.message.operation !== "annotationRefresh")
+        pending.timer = setTimeout(
+          () =>
+            this.#fail(
+              new Error(
+                `Analysis ${pending.message.operation} process exceeded ${timeoutMs / 1000} seconds. Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Check project status before retrying an edit.`,
+              ),
             ),
-          ),
-        timeoutMs,
-      );
+          timeoutMs,
+        );
       this.#worker!.send(pending.message, (error) => {
         if (error && this.#active === pending) this.#fail(error);
       });
@@ -142,10 +176,14 @@ export class AnalysisWorkerClient {
   }
 
   invalidate(): void {
+    this.#annotations?.invalidate();
+    this.#previews?.invalidate();
     this.#inflight.clear();
     if (this.#worker) void this.request("", "clear").catch(() => undefined);
   }
   dispose(): void {
+    this.#annotations?.dispose();
+    this.#previews?.dispose();
     this.#fail(new Error("Analysis worker disposed."));
   }
   #fail(error: Error): void {
@@ -168,10 +206,10 @@ export const initializeAnalysisWorker = (
   extensionRoot: string,
   options?: AnalysisWorkerOptions,
 ): AnalysisWorkerClient =>
-  (client ??= new AnalysisWorkerClient(
-    path.join(extensionRoot, "out", "analysis-worker.cjs"),
-    options,
-  ));
+  (client ??= new AnalysisWorkerClient(path.join(extensionRoot, "out", "analysis-worker.cjs"), {
+    ...options,
+    isolateAnnotations: true,
+  }));
 export const analysisWorker = (): AnalysisWorkerClient => {
   if (!client) throw new Error("Analysis worker has not been initialized.");
   return client;

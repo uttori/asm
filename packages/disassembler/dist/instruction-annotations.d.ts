@@ -50,6 +50,8 @@ export interface InstructionMemoryAccessAnnotation {
 }
 /** Target-neutral annotations for one qualified instruction location. */
 export interface InstructionAnalysisAnnotation {
+    /** The editor omitted some variants or runtime detail records; stored evidence is unchanged. */
+    readonly detailsLimited?: boolean;
     readonly comments?: readonly ProjectComment[];
     readonly id: string;
     readonly addressSpace: string;

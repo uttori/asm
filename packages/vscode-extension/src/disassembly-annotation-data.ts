@@ -7,22 +7,37 @@ import { validateDebugMap, type DebugMap, type DebugMapSource } from "@uttori/as
 import {
   applyDisassemblyAnnotationEdit,
   canonicalJson,
-  commitAnalysisProjectViewUpdate,
+  commitAnalysisProjectAnnotationUpdate,
+  openAnalysisProjectStore,
+  assertAnalysisProjectRevision,
+  RomImage,
+  validateProjectRom,
+  validateSourceExportInputs,
   type AnalysisProjectSnapshot,
+  type InstructionExportRecord,
   type AnalysisProjectRevision,
   type DisassemblyAnnotationEditRequest,
   type DisassemblyAnnotationInverse,
   type ProjectComment,
   type ProjectLabel,
 } from "@uttori/asm-disassembler";
-import { loadSnesRamMap, snesSourceLabelNames, type SnesMapper } from "@uttori/asm-plugin-snes";
+import {
+  exportSnes65816Source,
+  SNES_MAPPERS,
+  loadSnesRamMap,
+  snesSourceLabelNames,
+  type ExportSnesProjectResult,
+  type SnesMapper,
+} from "@uttori/asm-plugin-snes";
 
 import {
   annotationLocationsForSource,
   annotationReferenceAt,
   namedAnnotationLocations,
   type DisassemblyAnnotationLocation,
+  type AnnotationNodeLookup,
 } from "./disassembly-annotation-location.js";
+import type { ResolvedTarget } from "./disassembly-maintenance-data.js";
 
 export interface AnnotationMapFile {
   readonly file: string;
@@ -57,6 +72,72 @@ export interface AnnotationSave {
   readonly sourceHash?: string;
   readonly sourceDirectory?: string;
 }
+
+/** Revision of a saved label/comment edit; intervening project writes invalidate source refresh. */
+export interface AnnotationRefresh {
+  /** Authoritative manifest SHA-256 after saving, including the publication counter. */
+  readonly after: string;
+}
+
+/** Undo data plus a guarded opportunity to reuse analysis when refreshing generated source. */
+export interface AnnotationSaveResult extends DisassemblyAnnotationInverse {
+  readonly refresh: AnnotationRefresh;
+}
+
+/** Paths and saved revision only; project records stay in the annotation worker. */
+export interface AnnotationRefreshInput {
+  readonly target: ResolvedTarget;
+  readonly receipt: AnnotationRefresh;
+}
+
+/**
+ * Render a small validated metadata view with SQL-backed instruction groups.
+ * Callers must verify the rebuilt ROM and recheck the revision before reporting completion.
+ * @param {AnalysisProjectSnapshot} snapshot Validated metadata and authoritative read revision.
+ * @param {AnnotationRefreshInput} input Saved revision, verified source paths and ROM binding.
+ * @param {Iterable} [instructionGroups] Complete ordered instruction groups from the same SQL read snapshot.
+ * @returns {ExportSnesProjectResult | undefined} Export result; undefined requires full regeneration.
+ */
+export const refreshDisassemblyAnnotation = (
+  snapshot: AnalysisProjectSnapshot,
+  input: AnnotationRefreshInput,
+  instructionGroups?: Iterable<readonly InstructionExportRecord[]>,
+): ExportSnesProjectResult | undefined => {
+  const { target, receipt } = input;
+  if (snapshot.revision.manifestSha256 !== receipt.after) return undefined;
+  if (snapshot.manifest.target !== "snes.sfc")
+    throw new Error("Annotation source refresh requires a SNES project.");
+  if (!SNES_MAPPERS.includes(snapshot.manifest.mapping.mapper as SnesMapper))
+    throw new Error(`Unsupported SNES mapper '${snapshot.manifest.mapping.mapper}'.`);
+  const store = openAnalysisProjectStore(target.projectDirectory);
+  try {
+    store.transaction(() => assertAnalysisProjectRevision(store, snapshot.revision), false);
+  } finally {
+    store.close();
+  }
+  try {
+    validateSourceExportInputs(target.sourceDirectory, target.sourceManifest);
+  } catch {
+    // RAM/structure changes can affect interpretation; apply them through full regeneration.
+    return undefined;
+  }
+  const rom = RomImage.load(target.romFile, { headerSize: snapshot.manifest.rom.headerSize });
+  validateProjectRom(snapshot.manifest, rom);
+  // Names/comments do not change decoding. Consume the SQL cursor inside its read snapshot;
+  // source export still checks generated-file hashes and prevents loss of known code.
+  const manifest = exportSnes65816Source(snapshot, rom, target.sourceDirectory, {
+    sourceProjectSha256: receipt.after,
+    instructionGroups,
+  });
+  return {
+    sourceDirectory: target.sourceDirectory,
+    manifest,
+    codeBytes: manifest.spans.reduce(
+      (total, span) => total + (span.role === "code" ? span.end - span.start : 0),
+      0,
+    ),
+  };
+};
 
 const hash = (bytes: string | Buffer): string => createHash("sha256").update(bytes).digest("hex");
 const maps = new Map<string, { signature: string; map: DebugMap }>();
@@ -104,9 +185,18 @@ const readSource = (
   return undefined;
 };
 
+/**
+ * Resolve an edit form from names/comments and the selected instruction boundaries.
+ * SQLite callers supply a node lookup inside their read transaction so unrelated CFG data stays on disk.
+ * @param {AnalysisProjectSnapshot} snapshot Validated editing metadata and its optimistic revision.
+ * @param {AnnotationLookup} input Debug-map files and optional hash-checked source selection.
+ * @param {AnnotationNodeLookup} [readNodes] Indexed boundary lookup; omitted callers supply full CFG metadata.
+ * @returns {AnnotationLookupResult} Editable choices tied to the source and project revision.
+ */
 export const lookupDisassemblyAnnotation = (
   snapshot: AnalysisProjectSnapshot,
   input: AnnotationLookup,
+  readNodes?: AnnotationNodeLookup,
 ): AnnotationLookupResult => {
   const fileSpaces = snapshot.manifest.addressSpaces
     .filter(({ kind }) => kind === "file")
@@ -152,6 +242,7 @@ export const lookupDisassemblyAnnotation = (
           snapshot.shards,
           texts,
           fileSpaces,
+          readNodes,
         ))
           found.push(location);
       }
@@ -205,7 +296,15 @@ export const lookupDisassemblyAnnotation = (
       location,
       label: location.labelId ? labels.get(location.labelId) : undefined,
       inlineComments: comments.get(`${location.addressSpace}:${location.address}`) ?? [],
-      hasInstruction: instructions.has(`${location.addressSpace}:${location.address}`),
+      hasInstruction: readNodes
+        ? readNodes({
+            addressSpace: location.addressSpace,
+            start: location.address,
+            ...(fileSpaces.includes(location.addressSpace)
+              ? { outputStart: location.address }
+              : {}),
+          }).length > 0
+        : instructions.has(`${location.addressSpace}:${location.address}`),
     })),
   };
 };
@@ -240,11 +339,11 @@ export const saveDisassemblyAnnotation = (
         ? loadSnesRamMap(input.sourceDirectory).variables.map(({ name }) => name)
         : [],
     );
-  const { runtime: _runtime, ...updates } = applied.project.shards;
-  const committed = commitAnalysisProjectViewUpdate(
-    directory,
-    { ...snapshot, view: snapshot.shards },
-    updates,
-  );
+  const { labels, comments, evidence } = applied.project.shards;
+  const committed = commitAnalysisProjectAnnotationUpdate(directory, snapshot.revision, {
+    labels,
+    comments,
+    evidence,
+  });
   return { inverse: applied.inverse, snapshot: { ...committed, shards: applied.project.shards } };
 };

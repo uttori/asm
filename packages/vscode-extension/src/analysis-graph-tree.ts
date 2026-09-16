@@ -473,7 +473,8 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
         result.push({
           id: `${projectId}:error`,
           label: path.basename(directory),
-          description: "invalid analysis project",
+          // Preserve the actual error in the tooltip without treating every worker failure as invalid data.
+          description: "could not load analysis project",
           tooltip: `${directory}\n${message}`,
           icon: "error",
           state: TreeItemCollapsibleState.None,

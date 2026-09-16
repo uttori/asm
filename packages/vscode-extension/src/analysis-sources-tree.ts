@@ -1,10 +1,10 @@
-/** Lazy, read-only source attribution and capture comparisons in the assembly sidebar. */
+/** Lazy, read-only source attribution in the assembly sidebar. */
 import * as path from "node:path";
 
 import type {
   AnalysisEvidenceSource,
   AnalysisProjectManifest,
-  AnalysisSourceComparison,
+  AnalysisSourceSummary,
   AnalysisSourceEntry,
   AnalysisSourceGroup,
 } from "@uttori/asm-disassembler";
@@ -13,7 +13,6 @@ import {
   ThemeIcon,
   TreeItem,
   TreeItemCollapsibleState,
-  window,
   type TreeDataProvider,
   type Command,
 } from "vscode";
@@ -40,14 +39,12 @@ export interface AnalysisSourcesTreeNode {
   readonly sourceTarget?: SourceTarget;
 }
 
-/** Source metadata loads immediately; full comparisons and result pages stay in the analysis process. */
+/** Source metadata loads immediately; SQL counts and result pages stay in the analysis process. */
 export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSourcesTreeNode> {
   static readonly viewId = "uttori-asm.sources";
   readonly #changed = new EventEmitter<AnalysisSourcesTreeNode | undefined | void>();
   readonly onDidChangeTreeData = this.#changed.event;
-  readonly #catalogs = new Map<string, AnalysisSourceCatalogProjection>();
   readonly #children = new Map<string, Promise<AnalysisSourcesTreeNode[]>>();
-  readonly #baselines = new Map<string, readonly string[]>();
   #epoch = 0;
 
   dispose(): void {
@@ -56,7 +53,6 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
 
   refresh(): void {
     this.#epoch++;
-    this.#catalogs.clear();
     this.#children.clear();
     this.#changed.fire();
   }
@@ -103,87 +99,11 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
     return pending;
   }
 
-  async compare(element?: unknown): Promise<void> {
-    try {
-      const target = await this.#selectSource(element);
-      if (!target) return;
-      const catalog = this.#catalogs.get(target.directory)!;
-      const selected = this.#baselines.get(this.#sourceKey(target));
-      const choices = catalog.sources.filter(
-        (source) => source.id !== target.source.id && source.kinds.includes("runtime"),
-      );
-      if (!choices.length) {
-        await window.showInformationMessage(
-          "Import another runtime capture to compare against this source.",
-        );
-        return;
-      }
-      const picked = await window.showQuickPick(
-        choices.map((source) => ({
-          label: source.name,
-          description: source.sha256?.slice(0, 12),
-          detail: source.format,
-          picked: selected === undefined || selected.includes(source.id),
-          sourceId: source.id,
-        })),
-        {
-          title: `Compare ${target.source.name}`,
-          placeHolder:
-            "Subtract instructions seen in these captures. Select none to see all instructions.",
-          canPickMany: true,
-        },
-      );
-      if (!picked) return;
-      this.#baselines.set(
-        this.#sourceKey(target),
-        picked.map(({ sourceId }) => sourceId),
-      );
-      this.refresh();
-    } catch (error) {
-      await window.showErrorMessage(`Could not compare sources: ${String(error)}`);
-    }
-  }
-
-  async resetComparison(element?: unknown): Promise<void> {
-    const target = await this.#selectSource(element);
-    if (!target) return;
-    this.#baselines.delete(this.#sourceKey(target));
-    this.refresh();
-  }
-
   #sourceKey(target: SourceTarget): string {
     return JSON.stringify([target.directory, target.source.id]);
   }
 
-  async #selectSource(element?: unknown): Promise<SourceTarget | undefined> {
-    if (!this.#catalogs.size) await this.getChildren();
-    const candidate =
-      element && typeof element === "object" && "sourceTarget" in element
-        ? (element.sourceTarget as SourceTarget)
-        : undefined;
-    const targets = [...this.#catalogs].flatMap(([directory, catalog]) =>
-      catalog.sources.map((source) => ({ directory, source })),
-    );
-    if (candidate)
-      return targets.find(
-        (target) =>
-          target.directory === candidate.directory && target.source.id === candidate.source?.id,
-      );
-    const selected = await window.showQuickPick(
-      targets
-        .filter(({ source }) => source.kinds.includes("runtime"))
-        .map((target) => ({
-          label: target.source.name,
-          description: target.directory,
-          target,
-        })),
-      { title: "Choose Source", placeHolder: "Choose the capture to inspect" },
-    );
-    return selected?.target;
-  }
-
   async #roots(): Promise<AnalysisSourcesTreeNode[]> {
-    const epoch = this.#epoch;
     const directories = await findAnalysisProjectDirectories();
     const groups = await Promise.all(
       directories.map(async (directory): Promise<AnalysisSourcesTreeNode> => {
@@ -192,7 +112,6 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
             directory,
             "sources",
           );
-          if (epoch === this.#epoch) this.#catalogs.set(directory, catalog);
           return {
             id: directory,
             label: path.basename(directory),
@@ -226,7 +145,6 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
       nameCounts.set(source.name, (nameCounts.get(source.name) ?? 0) + 1);
     const node = (source: AnalysisEvidenceSource): AnalysisSourcesTreeNode => {
       const target = { directory, source };
-      const custom = this.#baselines.has(this.#sourceKey(target));
       const warnings = source.reports.some(
         (report) => report.warnings.length || report.unsupported.length,
       );
@@ -238,12 +156,21 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
         description: [
           source.kinds.includes("runtime") ? "trace" : source.kinds.join(" / ") || "import",
           (nameCounts.get(source.name) ?? 0) > 1 ? source.sha256?.slice(0, 12) : "",
-          custom ? "custom comparison" : "",
           warnings ? "capture notes" : "",
         ]
           .filter(Boolean)
           .join(" · "),
-        tooltip: [source.name, source.format, source.sha256, directory].filter(Boolean).join("\n"),
+        tooltip: [
+          source.name,
+          source.format,
+          source.sha256,
+          source.lastImportedAt === undefined
+            ? undefined
+            : `Last imported: ${new Date(source.lastImportedAt).toISOString()}`,
+          directory,
+        ]
+          .filter(Boolean)
+          .join("\n"),
         icon,
         sourceTarget: target,
         load: () => this.#sourceChildren(target),
@@ -284,38 +211,11 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
 
   async #sourceChildren(target: SourceTarget): Promise<AnalysisSourcesTreeNode[]> {
     const id = this.#sourceKey(target);
-    const baselineIds = this.#baselines.get(id);
-    const { manifest, comparison: summary } = await analysisWorker().request<{
+    const { manifest, summary } = await analysisWorker().request<{
       manifest: AnalysisProjectManifest;
-      comparison: AnalysisSourceComparison;
-    }>(target.directory, "sourceSummary", { sourceId: target.source.id, baselineIds });
-    const children: AnalysisSourcesTreeNode[] = [
-      {
-        id: `${id}:comparison`,
-        label: "Compared with",
-        description:
-          baselineIds === undefined
-            ? `${count(summary.baseline.length)} other captures`
-            : `${count(summary.baseline.length)} selected captures`,
-        tooltip:
-          summary.baseline.map(({ name }) => name).join("\n") ||
-          "No baseline selected; all observed instructions are shown.",
-        icon: "git-compare",
-        command: {
-          command: "asm.sources.compare",
-          title: "Choose comparison captures",
-          arguments: [{ sourceTarget: target }],
-        },
-      },
-      {
-        id: `${id}:total`,
-        label: "Observed instructions",
-        description: count(summary.instructionCount),
-        tooltip:
-          "Distinct captured instruction addresses, qualified by architecture and address space. Execution counts and CPU-state variants do not inflate this total.",
-        icon: "list-flat",
-      },
-    ];
+      summary: AnalysisSourceSummary;
+    }>(target.directory, "sourceSummary", { sourceId: target.source.id });
+    const children: AnalysisSourcesTreeNode[] = [];
     const group = (
       name: AnalysisSourceGroup,
       label: string,
@@ -330,51 +230,32 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
         description,
         tooltip,
         icon,
-        ...(total
-          ? { load: () => this.#pages(target, manifest, baselineIds, name, 0, total) }
-          : {}),
+        ...(total ? { load: () => this.#pages(target, manifest, name, 0, total) } : {}),
       });
     };
     group(
-      "uniqueInstructions",
-      "Unique instructions",
-      summary.uniqueInstructionCount,
-      "diff-added",
-      count(summary.uniqueInstructionCount),
-      "Instruction starts captured here and absent from the selected comparison captures.",
-    );
-    group(
-      "codeRanges",
-      "Code at unique instructions",
-      summary.codeRangeCount,
-      "symbol-numeric",
-      `${count(summary.knownCodeBytes)} known bytes · ${count(summary.codeRangeCount)} ranges`,
-      "Merged known instruction extents in each architecture/address space. This is not a ROM-file byte delta. Unknown sizes are excluded.",
-    );
-    group(
-      "functions",
-      "Functions containing unique instructions",
-      summary.functionCount,
-      "symbol-function",
-      count(summary.functionCount),
-      `${count(summary.unownedInstructions)} unique instructions have no known owner; ${count(summary.ambiguousInstructions)} have ambiguous ownership. Other parts of these functions may be shared.`,
+      "instructions",
+      "Observed instructions",
+      summary.instructionCount,
+      "list-flat",
+      count(summary.instructionCount),
+      "Directly captured instruction addresses, qualified by architecture and address space. No capture subtraction or static-provenance inference.",
     );
     group(
       "memory",
-      "Unique memory access sites",
-      summary.uniqueMemoryCount,
+      "Memory observations",
+      summary.memoryCount,
       "references",
-      count(summary.uniqueMemoryCount),
-      "Instruction + target address, access type, width, actor and channel absent from the baseline. Changing values do not create new sites.",
+      count(summary.memoryCount),
+      "Persisted memory records, including distinct value/state variants. Expand to page through the records.",
     );
-    group("sharedInstructions", "Shared instructions", summary.sharedInstructionCount, "layers");
     group(
       "contributions",
       "Attributed metadata",
       summary.contributionCount,
       "note",
       count(summary.contributionCount),
-      "Labels, comments and classifications carrying this source's evidence. Attribution does not imply exclusivity.",
+      "Labels, comments, classifications and regions carrying this source's evidence.",
     );
     const details = [
       ...summary.source.reports.flatMap((report) =>
@@ -382,7 +263,10 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
           ([field, value]) => `${report.sourceName}: ${count(value)} ${field} imported`,
         ),
       ),
-      ...summary.notes,
+      ...summary.source.reports.flatMap((report) => [
+        ...report.warnings,
+        ...report.unsupported.map((loss) => `${loss.field}: ${loss.reason} (${loss.count})`),
+      ]),
     ];
     children.push({
       id: `${id}:notes`,
@@ -406,7 +290,6 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
   async #pages(
     target: SourceTarget,
     manifest: AnalysisProjectManifest,
-    baselineIds: readonly string[] | undefined,
     group: AnalysisSourceGroup,
     start: number,
     total: number,
@@ -416,7 +299,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
       const entries = await analysisWorker().request<AnalysisSourceEntry[]>(
         target.directory,
         "sourceEntries",
-        { sourceId: target.source.id, baselineIds, sourceGroup: group, offset: start },
+        { sourceId: target.source.id, sourceGroup: group, offset: start },
       );
       return entries.map((entry) => {
         const navigation: AnalysisGraphNavigationTarget | undefined =
@@ -438,7 +321,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
           label: entry.label,
           description: entry.description,
           tooltip: entry.detail,
-          icon: group === "functions" ? "symbol-function" : "location",
+          icon: "location",
           ...(navigation
             ? {
                 command: {
@@ -462,7 +345,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
         label: `${count(from + 1)}–${count(from + size)}`,
         description: `${count(size)} items`,
         icon: "list-selection",
-        load: () => this.#pages(target, manifest, baselineIds, group, from, size),
+        load: () => this.#pages(target, manifest, group, from, size),
       });
     }
     return pages;

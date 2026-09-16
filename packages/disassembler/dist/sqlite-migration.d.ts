@@ -1,7 +1,7 @@
 import type { ShardKind } from "./project-types.js";
 /** Migration stages are cancellable until publication; reported record counts are per table. */
 export interface SqliteMigrationProgress {
-    readonly phase: "copy" | "verify" | "indexes" | "publish";
+    readonly phase: "project" | "copy" | "verify" | "indexes" | "publish";
     readonly table?: ShardKind;
     readonly records?: number;
 }
@@ -18,14 +18,23 @@ export interface SqliteMigrationResult {
         readonly sha256: string;
     }>>;
     readonly warnings: readonly string[];
+    /** Expected conversion notices; these do not indicate a failed migration. */
+    readonly notes?: readonly string[];
+    /** Non-overlapping copy, projection, validation and index costs in wall-clock milliseconds. */
+    readonly timings?: readonly {
+        readonly step: string;
+        readonly durationMs: number;
+    }[];
 }
 /** Callbacks report progress only; cancellation is observed between bounded copy/verification batches. */
 export interface SqliteMigrationOptions {
+    /** Explicitly discard full register-index detail after retaining the original database as backup. */
+    readonly convertRuntime?: boolean;
     readonly signal?: AbortSignal;
     readonly onProgress?: (progress: SqliteMigrationProgress) => void;
 }
 /**
- * Convert a format-zero SQLite project into the compact format with exact per-table content digests.
+ * Convert supported SQLite layouts with per-table content digests; optional runtime projection is explicit.
  * The process gate blocks new clients; switching WAL to DELETE under exclusive locking also requires
  * existing SQLite readers to release the source. No source row or logical revision is changed.
  * @param {string} directory Existing project root, on a filesystem supporting same-directory hard links.

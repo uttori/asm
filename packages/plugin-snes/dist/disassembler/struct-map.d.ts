@@ -1,3 +1,4 @@
+import { type SnesStructInstructionUse } from "./struct-instruction-uses.js";
 /** Optional, user-owned layout and address bindings consumed by source export. */
 export declare const SNES_STRUCT_MAP_SOURCE = "struct-map.json";
 /** Generated native structs included by the exported assembler entry point. */
@@ -33,6 +34,8 @@ export interface SnesStructBinding {
 export interface LoadedSnesStructMap {
     readonly structures: readonly SnesStructLayout[];
     readonly bindings: readonly SnesStructBinding[];
+    /** Optional, explicitly justified operands and capture references at guarded instruction sites. */
+    readonly instructionUses?: readonly SnesStructInstructionUse[];
     readonly sourceBytes: Uint8Array;
 }
 /** One physical ROM field, including opaque gaps, ready for byte-preserving emission. */

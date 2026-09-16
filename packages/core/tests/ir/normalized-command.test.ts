@@ -14,7 +14,6 @@ import {
 import {
   cloneNormalizedCommand,
   createNormalizedCommand,
-  createPendingCommand,
   setCommandWords,
 } from "../../src/ir/normalized-command.js";
 import type { StructDefinition } from "../../src/services/struct-engine.js";
@@ -75,15 +74,6 @@ test("normalized command clones share readonly snapshots and copy on write", (t)
   t.is(command.source.normalized, "lda #$10");
   t.is(command.parsed.opcodeOperands?.operandText, "#$10");
   t.is(clone.parsed.opcodeOperands?.operandText, "#$20");
-});
-
-test("pending command preserves raw loop body input", (t) => {
-  const command = createPendingCommand("db $01 ; loop body", "loop.asm", 8);
-
-  t.is(command.source.file, "loop.asm");
-  t.is(command.source.line, 8);
-  t.is(command.source.raw, "db $01 ; loop body");
-  t.is(command.command, "db $01 ; loop body");
 });
 
 test("normalized command derives semantic payloads for conditions, ranges, assignments, and incbin", (t) => {
@@ -212,20 +202,6 @@ test("normalized command derives macro include data and label split semantics", 
   t.deepEqual(directive.parsed.directiveArgs, {
     name: "org",
     args: ["$808000"],
-  });
-});
-
-test("pending command can capture normalized loop-body semantics", (t) => {
-  const command = createPendingCommand("Label = 1 ; keep comment", "loop.asm", 9, "Label = 1", [
-    "Label",
-    "=",
-    "1",
-  ]);
-
-  t.is(command.command, "Label = 1");
-  t.deepEqual(command.parsed.assignment, {
-    target: "Label",
-    expression: parseExpressionNode("1"),
   });
 });
 

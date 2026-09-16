@@ -6,14 +6,15 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { AresRspDebugBackend } from "../packages/debug-sidecar-ares/src/ares-rsp-backend.js";
-import { GdbRspClient } from "../packages/debug-sidecar-ares/src/gdb-rsp-client.js";
-import { NodeTcpGdbRspTransport } from "../packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.js";
+
 import {
   LosslessCaptureFileRecorder,
   recoverCaptureFile,
 } from "../packages/debug-adapter/src/capture-file.js";
 import { validateCapturePosition } from "../packages/debug-adapter/src/capture-v2.js";
+import { AresRspDebugBackend } from "../packages/debug-sidecar-ares/src/ares-rsp-backend.js";
+import { GdbRspClient } from "../packages/debug-sidecar-ares/src/gdb-rsp-client.js";
+import { NodeTcpGdbRspTransport } from "../packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.js";
 import {
   readRuntimeTraceFileMetadata,
   readRuntimeTraceFileChunks,
@@ -188,6 +189,7 @@ try {
     firstCycle: bigint | undefined,
     lastCycle = 0n;
   const recovery = await recoverCaptureFile(summary.archive, (c) => {
+    assert(c.scope === "snes.65816.instructions", "Unexpected bus capture.");
     firstCycle ??= BigInt(c.instructions[0].cycle);
     lastCycle = BigInt(c.instructions.at(-1)!.cycle);
   });

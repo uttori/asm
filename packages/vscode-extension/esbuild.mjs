@@ -6,6 +6,15 @@ import { build } from "esbuild";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 await build({
+  entryPoints: [path.join(here, "src/live-bus-analysis-process.ts")],
+  outfile: path.join(here, "out/live-bus-analysis-process.cjs"),
+  bundle: true,
+  platform: "node",
+  format: "cjs",
+  target: "node20",
+  logLevel: "info",
+});
+await build({
   entryPoints: [path.join(here, "src/disassembly-maintenance-process.ts")],
   outfile: path.join(here, "out/disassembly-maintenance-process.cjs"),
   bundle: true,

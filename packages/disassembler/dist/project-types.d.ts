@@ -1,5 +1,6 @@
 import type { AssetValue } from "./asset-codec.js";
 import type { RomIdentity } from "./rom-image.js";
+import type { RuntimeBusFact } from "./runtime-bus-types.js";
 /** Manifest `format` field for a native analysis project. */
 export declare const ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 /** Current analysis-project schema. Only the current SQLite container is supported. */
@@ -367,8 +368,12 @@ export interface RuntimeControlTargetRecord extends RuntimeRecordBase {
     readonly flowKind: string;
     readonly indirect: boolean;
 }
+/** Aggregated bus activity, including accesses without an owning instruction. */
+export interface RuntimeBusAccessRecord extends RuntimeRecordBase, RuntimeBusFact {
+    readonly kind: "runtime-bus-access";
+}
 /** Normalized, emulator-neutral runtime fact stored independently from regenerated CFG output. */
-export type RuntimeEvidenceRecord = RuntimeInstructionRecord | RuntimeExecutionRecord | RuntimeMemoryAccessRecord | RuntimeCpuStateRecord | RuntimeCoverageRecord | RuntimeControlTargetRecord;
+export type RuntimeEvidenceRecord = RuntimeBusAccessRecord | RuntimeInstructionRecord | RuntimeExecutionRecord | RuntimeMemoryAccessRecord | RuntimeCpuStateRecord | RuntimeCoverageRecord | RuntimeControlTargetRecord;
 /** In-memory shard payload matching the on-disk `analysis/*.json` files. */
 export interface AnalysisProjectShards {
     readonly analysis: readonly AnalysisRecord[];

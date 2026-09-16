@@ -4,7 +4,7 @@ import path from "node:path";
 /** Same-filesystem staging directory and process gate for an explicit physical storage migration. */
 export const SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
 /** Retained original, created as a hard link only after the destination is verified. */
-export const SQLITE_MIGRATION_BACKUP = "analysis.sqlite.storage-v0.backup";
+export const SQLITE_MIGRATION_BACKUP = "analysis.sqlite.pre-retention.backup";
 
 /**
  * Reject new work while a migration owns the project. Its staging database has a different parent.

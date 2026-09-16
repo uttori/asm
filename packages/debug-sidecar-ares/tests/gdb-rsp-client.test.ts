@@ -118,3 +118,128 @@ test("RSP client enforces packet and receive-buffer bounds", async (t) => {
   t.true(client.closed);
   t.true(transport.closed);
 });
+
+test("large capture replies survive fragmentation, buffer reuse and transport-owned input", async (t) => {
+  const transport = new FakeTransport();
+  const client = new GdbRspClient({ transport, maxPacketBytes: 524288, maxBufferedBytes: 524292 });
+  t.teardown(() => client.close());
+  await client.start();
+  const payload = "0123456789abcdef".repeat(32768);
+  const bytes = Buffer.from(packet(payload), "ascii");
+  // Odd fragments split payload/checksum positions differently; single-byte input
+  // exercises growth and delimiter scanning without any timing-based assertion.
+  for (const width of [65536, 1023, 1]) {
+    const response = client.request("qUttoriCapture:read:test:1");
+    for (let offset = 0; offset < bytes.length; offset += width) {
+      const fragment = Buffer.from(bytes.subarray(offset, offset + width));
+      transport.feed(fragment);
+      fragment.fill(0); // A retained view into the caller's fragment would corrupt the packet.
+    }
+    t.is(await response, payload);
+    const small = client.request("p0");
+    transport.feed("+");
+    transport.feed("$");
+    transport.feed("1"); // Old '#' bytes in retained capacity must not terminate this packet.
+    transport.feed("2#63");
+    t.is(await small, "12");
+  }
+});
+
+test("coalesced stop replies and incomplete tails survive receive-buffer compaction", async (t) => {
+  const transport = new FakeTransport();
+  const client = new GdbRspClient({ transport, maxPacketBytes: 32, maxBufferedBytes: 40 });
+  const stops: GdbRspStop[] = [];
+  client.onStop((event) => stops.push(event));
+  t.teardown(() => client.close());
+  await client.start();
+  const response = client.request("g");
+  const payload = "ab".repeat(16);
+  const wire = packet(payload);
+  // First delivery consumes an unsolicited stop but retains the partial register reply.
+  // Its tail cannot fit at the old write offset, though the unconsumed packet fits the bound.
+  transport.feed(`noise+${packet("S05")}${wire.slice(0, 15)}`);
+  transport.feed(wire.slice(15));
+  t.is(await response, payload);
+  t.deepEqual(
+    stops.map((event) => event.payload),
+    ["S05"],
+  );
+  transport.feed(packet("T02"));
+  t.deepEqual(
+    stops.map((event) => event.payload),
+    ["S05", "T02"],
+  );
+});
+
+test("escape decoding handles every fragmentation boundary and rejects unsupported RLE", async (t) => {
+  // Escaped '#', '$', '*', '}' and an escaped wire '*' (decoded newline).
+  const encoded = "prefix}\x03}\x04}\x0a}\x5d}\x2asuffix";
+  const expected = "prefix#$*}\nsuffix";
+  const wire = packet(encoded);
+  for (let split = 0; split <= wire.length; split++) {
+    const transport = new FakeTransport();
+    const client = new GdbRspClient({ transport });
+    await client.start();
+    const response = client.request("qXfer:features:read:target.xml:0,fff");
+    transport.feed(wire.slice(0, split));
+    transport.feed(wire.slice(split));
+    t.is(await response, expected);
+    await client.close();
+  }
+  for (const [payload, message] of [
+    ["raw*run", /run-length/],
+    ["escaped}\x0a*run", /run-length/],
+    ["incomplete}", /escape sequence/],
+  ] as const) {
+    const transport = new FakeTransport();
+    const client = new GdbRspClient({ transport });
+    await client.start();
+    const response = client.request("g");
+    transport.feed(packet(payload));
+    await t.throwsAsync(response, { message });
+    t.true(client.closed);
+  }
+});
+
+test("both checksum bytes must be hexadecimal, with bad packets retried before acceptance", async (t) => {
+  const transport = new FakeTransport();
+  const client = new GdbRspClient({ transport });
+  t.teardown(() => client.close());
+  await client.start();
+  const response = client.request("g");
+  // 'aaa' sums to 0x23, while ASCII byte 1 sums to 0x01: parseInt('1g', 16)
+  // would wrongly accept the latter. High-bit bytes must not become ASCII digits.
+  for (const bad of ["$aaa#2g", "$\x01#1g", "$aaa# 3", "$aaa#-d", "$aaa#\xb2\xb3"]) {
+    transport.feed(Buffer.from(bad, "latin1"));
+    await flushWrites();
+    t.is(transport.writes.map(text).at(-1), "-");
+    t.false(client.closed);
+  }
+  transport.feed(packet("aaa"));
+  t.is(await response, "aaa");
+  const upper = client.request("g");
+  transport.feed(packet("zz", "F4"));
+  t.is(await upper, "zz");
+});
+
+test("framing enforces exact packet bounds and supports empty replies and reentrant stops", async (t) => {
+  const transport = new FakeTransport();
+  const client = new GdbRspClient({ transport, maxPacketBytes: 8, maxBufferedBytes: 24 });
+  t.teardown(() => client.close());
+  await client.start();
+  client.onStop(() => transport.feed(packet("OK")));
+  const response = client.request("g");
+  transport.feed(packet("S05"));
+  t.is(await response, "OK");
+  const empty = client.request("qUnknown");
+  for (const byte of packet("")) transport.feed(byte);
+  t.is(await empty, "");
+  const maximum = client.request("g");
+  transport.feed(packet("12345678"));
+  t.is(await maximum, "12345678");
+  const exceeded = client.request("g");
+  transport.feed("$12345678");
+  transport.feed("9");
+  await t.throwsAsync(exceeded, { message: "RSP packet exceeds 8 bytes." });
+  t.true(client.closed);
+});

@@ -1,0 +1,831 @@
+diff --git a/nall/nall/gdb/capture.hpp b/nall/nall/gdb/capture.hpp
+--- a/nall/nall/gdb/capture.hpp
++++ b/nall/nall/gdb/capture.hpp
+@@ -4,6 +4,8 @@
+ // No ares or transport dependencies; callers serialize access through the
+ // emulation thread or the frontend's guarded handoff.
+ #include <array>
++#include <algorithm>
++#include <utility>
+ #include <charconv>
+ #include <cstdint>
+ #include <cstring>
+@@ -267,6 +269,52 @@
+     return "E08";
+   }
+ 
++  // Native sinks copy at most one bounded batch on the emulation thread. Returned
++  // storage remains producer-owned until acknowledgeNative(), never writer-owned.
++  auto nativeChunk(size_t index) -> const Chunk* {
++    if(index >= size) return nullptr;
++    auto& chunk = queue[(head + index) % queue.size()];
++    if(!chunk.sealed) {
++      if(pending && !busOnly) return nullptr;
++      seal(chunk);
++    }
++    delivered = std::max(delivered, chunk.first + chunk.count - 1);
++    return &chunk;
++  }
++
++  // Release exactly the copied contiguous batch, only after the sink's fsync.
++  // A failed session can retain a durable prefix, but can never become complete.
++  auto acknowledgeNative(uint64_t sequence, uint64_t event) -> bool {
++    size_t count = 0;
++    while(count < size) {
++      const auto& chunk = queue[(head + count) % queue.size()];
++      if(!chunk.sealed || chunk.sequence > sequence) return false;
++      ++count;
++      if(chunk.sequence == sequence) {
++        if(event != chunk.first + chunk.count - 1 || event > delivered) return false;
++        acceptedChunk = sequence; accepted = event;
++        head = (head + count) % queue.size(); size -= count;
++        completeIfDrained();
++        return true;
++      }
++    }
++    return false;
++  }
++  // File publication is still part of the session after the producer drains.
++  // A sink failure at that boundary must keep execution fail-closed as well.
++  auto failNative(const std::string& reason) -> void {
++    if(state == "complete") state = "draining";
++    fail(reason);
++  }
++  auto incomplete() const -> bool { return state == "incomplete"; }
++  auto complete() const -> bool { return state == "complete"; }
++  auto scopeName() const -> const char* {
++    if(ppuEffects) return "snes.cpu-bus-ppu";
++    if(transfers) return "snes.cpu-bus-transfers";
++    return busOnly ? "snes.cpu-bus" : "snes.65816.instructions";
++  }
++  auto clockRatio() const -> std::pair<uint64_t, uint64_t> { return {clockNumerator, clockDenominator}; }
++
+   auto status() const -> std::string {
+     auto q = [](uint64_t v) { return "\"" + std::to_string(v) + "\""; };
+     auto scope = busOnly ? "snes.cpu-bus" : "snes.65816.instructions";
+diff --git a/nall/nall/gdb/capture-file.hpp b/nall/nall/gdb/capture-file.hpp
+new file mode 100644
+--- /dev/null
++++ b/nall/nall/gdb/capture-file.hpp
+@@ -0,0 +1,325 @@
++#pragma once
++
++#include <nall/gdb/capture.hpp>
++#include <atomic>
++#include <condition_variable>
++#include <filesystem>
++#include <memory>
++#include <chrono>
++#include <mutex>
++#include <thread>
++#include <fcntl.h>
++#include <cerrno>
++#if defined(_WIN32)
++#include <io.h>
++#include <sys/stat.h>
++#else
++#include <unistd.h>
++#endif
++
++namespace ares_capture {
++// Private downstream ACS2 file sink. Only service()/command() touch Capture, on
++// its owning thread. The worker owns disk I/O and one copied four-chunk batch;
++// it never touches emulation, debugger state, or producer queue storage.
++class FileCapture {
++public:
++#if defined(ARES_CAPTURE_FILE_TEST)
++  // Fault injection is compiled only into the standalone native sink tests.
++  static inline std::atomic<int> syncCalls{0}, failSyncAt{-1};
++  static inline std::atomic<bool> holdSync{false}, waitingSync{false};
++#endif
++private:
++  enum class Phase { Preparing, Idle, Writing, Complete, Incomplete };
++  static constexpr size_t batchChunks = 4;
++  // Four raw chunks plus bounded ACK2 frames fit inside Capture::overheadBytes.
++  static constexpr size_t batchBytes = batchChunks * (Capture::chunkBytes + 256);
++  struct Writer {
++    std::string path, partial, header, session, terminal;
++    std::vector<uint8_t> bytes;
++    uint64_t sequence{}, event{}, writtenBytes{}, batches{};
++    std::atomic<Phase> phase{Phase::Preparing};
++    std::atomic<bool> cancelled{false};
++    std::mutex mutex;
++    std::condition_variable wake;
++    bool job{}, quit{}, finish{}, cancel{};
++    std::thread thread;
++
++    Writer(std::string path, std::string header, std::string session)
++    : path(std::move(path)), partial(this->path + ".partial"), header(std::move(header)), session(std::move(session)) {
++      bytes.reserve(batchBytes);
++      thread = std::thread([this] { run(); });
++    }
++    ~Writer() {
++      // Destruction cannot free a buffer still used by write(). Cancellation
++      // leaves the exclusive partial artifact available for prefix recovery.
++      { std::lock_guard<std::mutex> lock(mutex); quit = true; }
++      wake.notify_one();
++      if(thread.joinable()) thread.join();
++    }
++    static auto sync(int fd) -> bool {
++#if defined(ARES_CAPTURE_FILE_TEST)
++      waitingSync = true;
++      while(holdSync.load()) std::this_thread::sleep_for(std::chrono::milliseconds(1));
++      waitingSync = false;
++      if(++syncCalls == failSyncAt.load()) return false;
++#endif
++#if defined(_WIN32)
++      return _commit(fd) == 0;
++#else
++      int result;
++      do { result = fsync(fd); } while(result < 0 && errno == EINTR);
++      return result == 0;
++#endif
++    }
++    static auto closeFile(int fd) -> void {
++#if defined(_WIN32)
++      _close(fd);
++#else
++      close(fd);
++#endif
++    }
++    auto writeAll(int fd, const uint8_t* data, size_t count) -> bool {
++      while(count) {
++#if defined(_WIN32)
++        auto amount = _write(fd, data, unsigned(count));
++#else
++        auto amount = write(fd, data, count);
++#endif
++        if(amount < 0 && errno == EINTR) continue;
++        if(amount <= 0) return false;
++        data += amount; count -= amount; writtenBytes += amount;
++      }
++      return true;
++    }
++    auto writeFrame(int fd, const char* magic, const std::string& json) -> bool {
++      auto frame = FileCapture::frame(magic, json);
++      return writeAll(fd, frame.data(), frame.size());
++    }
++    auto run() -> void {
++      int fd = -1;
++      try {
++        // Never truncate an existing destination, partial artifact, or symlink.
++        if(std::filesystem::symlink_status(std::filesystem::u8path(path)).type() != std::filesystem::file_type::not_found)
++          throw 0;
++#if defined(_WIN32)
++        fd = _wopen(std::filesystem::u8path(partial).c_str(), _O_WRONLY | _O_CREAT | _O_EXCL | _O_BINARY, _S_IREAD | _S_IWRITE);
++#else
++        fd = open(partial.c_str(), O_WRONLY | O_CREAT | O_EXCL, 0600);
++#endif
++        if(fd < 0 || !writeFrame(fd, "ACS2", header) || !sync(fd)) throw 0;
++        phase.store(Phase::Idle, std::memory_order_release);
++        for(;;) {
++          std::unique_lock<std::mutex> lock(mutex);
++          wake.wait(lock, [this] { return job || quit; });
++          if(quit || cancel) { phase.store(Phase::Incomplete, std::memory_order_release); break; }
++          job = false;
++          lock.unlock();
++          if(finish) {
++            if(cancelled.load()) throw 0;
++            if(!writeFrame(fd, "END2", terminal) || !sync(fd)) throw 0;
++            closeFile(fd); fd = -1;
++            // Hard-link publication is no-clobber even if another process races
++            // us after start. No directory power-loss durability is claimed.
++            if(cancelled.load()) throw 0;
++            std::filesystem::create_hard_link(std::filesystem::u8path(partial), std::filesystem::u8path(path));
++            std::error_code ignored;
++            std::filesystem::remove(std::filesystem::u8path(partial), ignored);
++            phase.store(Phase::Complete, std::memory_order_release);
++            return;
++          }
++          // ACT2/ACK2 pairs keep the existing bounded recovery format. One fsync
++          // covers all preceding bytes; only its success permits batch release.
++          // Recovery still validates every CRC and contiguous checkpoint, so a
++          // torn/reordered unsynced tail never skips a missing earlier chunk.
++          if(!writeAll(fd, bytes.data(), bytes.size()) || !sync(fd)) throw 0;
++          ++batches;
++          phase.store(Phase::Idle, std::memory_order_release);
++        }
++      } catch(...) { phase.store(Phase::Incomplete, std::memory_order_release); }
++      if(fd >= 0) closeFile(fd);
++    }
++  };
++  std::unique_ptr<Writer> writer;
++  uint64_t committedBytes{}, committedBatches{};
++
++public:
++  // A live file session owns delivery/acknowledgement exclusively. Streamed
++  // reads or a new start must not discard its retained queue or pending I/O.
++  auto owns() const -> bool {
++    return writer && writer->phase.load(std::memory_order_acquire) != Phase::Complete;
++  }
++  auto service(Capture& capture) -> void {
++    if(!writer) return;
++    auto& w = *writer;
++    auto phase = w.phase.load(std::memory_order_acquire);
++    if(phase == Phase::Incomplete) { capture.failNative("native-file-io-or-cancel"); return; }
++    if(phase != Phase::Idle) return;
++    // Acquire of Idle publishes the completed batch and worker counters. The
++    // next job's release through the mutex hands buffer ownership back.
++    committedBytes = w.writtenBytes; committedBatches = w.batches;
++    if(w.sequence) {
++      if(!capture.acknowledgeNative(w.sequence, w.event)) { capture.fail("native-file-ack"); }
++      w.sequence = w.event = 0;
++    }
++    w.bytes.clear();
++    if(capture.incomplete()) {
++      submit(w, false, true);
++      return;
++    }
++    for(size_t i = 0; i < batchChunks; ++i) {
++      auto* chunk = capture.nativeChunk(i);
++      if(!chunk) break;
++      w.bytes.insert(w.bytes.end(), chunk->bytes.begin(), chunk->bytes.begin() + chunk->used);
++      w.sequence = chunk->sequence; w.event = chunk->first + chunk->count - 1;
++      auto ack = frame("ACK2", "{\"session\":" + quote(w.session) + ",\"chunkThrough\":" + quote(std::to_string(w.sequence)) + ",\"eventThrough\":" + quote(std::to_string(w.event)) + "}");
++      w.bytes.insert(w.bytes.end(), ack.begin(), ack.end());
++    }
++    if(!w.bytes.empty()) submit(w, false, false);
++    else if(capture.complete()) {
++      w.terminal = capture.status();
++      submit(w, true, false);
++    }
++  }
++
++  auto command(Capture& capture, const std::string& request, bool halted) -> std::string {
++    auto fields = split(request);
++    if(fields.empty()) return "E01";
++    if(fields[0] == "capabilities" && fields.size() == 2) {
++      auto cap = capture.command(capability(fields[1]));
++      if(cap.empty() || cap[0] != '{') return "E01";
++      cap.pop_back(); return cap + ",\"nativeFile\":true}";
++    }
++    if(fields[0] == "start" && fields.size() == 7) {
++      if(!halted || owns()) return "E09";
++      std::string path, id, revision;
++      if(!unhex(fields[3], path, 4096) || !unhex(fields[5], id, 256) || !unhex(fields[6], revision, 1024)
++        || fields[4].size() != 64 || fields[4].find_first_not_of("0123456789abcdef") != std::string::npos
++        || !std::filesystem::u8path(path).is_absolute() || capability(fields[2]).empty()) return "E02";
++      writer.reset(); committedBytes = committedBatches = 0;
++      auto start = "start:" + fields[1];
++      if(fields[2] != "instructions") start += ":" + fields[2];
++      auto result = capture.command(start);
++      if(result.empty() || result[0] != '{') return result;
++      auto clock = capture.clockRatio();
++      auto header = "{\"format\":\"uttori-ares-capture\",\"version\":2,\"session\":" + quote(capture.sessionId()) +
++        ",\"scope\":" + quote(capture.scopeName()) + ",\"ownership\":\"durable-prefix\",\"compression\":\"none\",\"checksum\":\"crc32c\",\"maxChunkBytes\":262144,\"allocatedBytes\":" + std::to_string(capture.allocatedBytes()) +
++        ",\"clock\":{\"id\":\"snes.master\",\"numerator\":" + quote(std::to_string(clock.first)) + ",\"denominator\":" + quote(std::to_string(clock.second)) +
++        "},\"architecture\":\"snes.65816\",\"addressSpace\":\"snes.cpu\",\"romContentSha256\":" + quote(fields[4]) +
++        ",\"producer\":{\"id\":" + quote(id) + ",\"revision\":" + quote(revision) + "}}";
++      try { writer = std::make_unique<Writer>(path, header, capture.sessionId()); }
++      catch(...) { capture.fail("native-file-start"); return "E04"; }
++      return status(capture);
++    }
++    if(!writer || fields.size() != 2 || fields[1] != writer->session || fields[1] != capture.sessionId()) return "E05";
++    if(fields[0] != "status" && fields[0] != "stop" && fields[0] != "abort" && fields[0] != "release") return "E08";
++    if(fields[0] == "release") {
++      service(capture);
++      // A cancelled in-flight batch still owns storage. Do not report release
++      // until the worker has stopped; callers can retry while control stays live.
++      if(writer->phase.load(std::memory_order_acquire) != Phase::Incomplete) return "E09";
++      writer.reset();
++      return capture.command("release:" + fields[1]);
++    }
++    if(fields[0] == "abort" && writer->phase.load(std::memory_order_acquire) != Phase::Complete) {
++      writer->cancelled.store(true);
++      capture.failNative("consumer-aborted");
++    } else if(fields[0] != "status") capture.command(fields[0] + ":" + fields[1]);
++    service(capture);
++    return status(capture);
++  }
++
++private:
++  static auto submit(Writer& w, bool finish, bool cancel) -> void {
++    { std::lock_guard<std::mutex> lock(w.mutex);
++      w.finish = finish; w.cancel = cancel; w.job = true;
++      w.phase.store(Phase::Writing, std::memory_order_release);
++    }
++    w.wake.notify_one();
++  }
++  auto status(const Capture& capture) const -> std::string {
++    auto phase = writer->phase.load(std::memory_order_acquire);
++    auto result = capture.status();
++    // Producer drain alone is not file completion: END2 must be synced and the
++    // destination published before clients may import the archive.
++    if(phase != Phase::Complete && capture.complete()) {
++      auto at = result.find("\"state\":\"complete\"");
++      auto state = phase == Phase::Incomplete ? "\"state\":\"incomplete\"" : "\"state\":\"draining\"";
++      result.replace(at, 18, state);
++    }
++    const char* state = "writing";
++    if(phase == Phase::Preparing) state = "preparing";
++    if(phase == Phase::Complete) state = "complete";
++    if(phase == Phase::Incomplete || capture.incomplete()) state = "incomplete";
++    result.pop_back();
++    return result + ",\"fileState\":" + quote(state) + ",\"fileBytes\":" + quote(std::to_string(phase == Phase::Complete ? writer->writtenBytes : committedBytes)) + ",\"fileBatches\":" + quote(std::to_string(committedBatches)) + "}";
++  }
++  static auto capability(const std::string& scope) -> std::string {
++    if(scope == "instructions") return "capabilities";
++    if(scope == "bus") return "bus-capabilities";
++    if(scope == "bus-transfers") return "transfer-capabilities";
++    if(scope == "bus-ppu") return "ppu-capabilities";
++    return "";
++  }
++  static auto split(const std::string& value) -> std::vector<std::string> {
++    if(value.size() > 16384) return {};
++    std::vector<std::string> fields;
++    size_t start = 0;
++    for(size_t i = 0; i <= value.size(); ++i) if(i == value.size() || value[i] == ':') {
++      fields.push_back(value.substr(start, i - start)); start = i + 1;
++      if(fields.size() > 7) return {};
++    }
++    return fields;
++  }
++  static auto unhex(const std::string& value, std::string& out, size_t max) -> bool {
++    if(value.empty() || value.size() % 2 || value.size() > max * 2) return false;
++    const std::string digits = "0123456789abcdef";
++    for(size_t i = 0; i < value.size(); i += 2) {
++      auto hi = digits.find(value[i]), lo = digits.find(value[i + 1]);
++      if(hi == std::string::npos || lo == std::string::npos || !(hi || lo)) return false;
++      out += char(hi * 16 + lo);
++    }
++    // Metadata is emitted as UTF-8 JSON and paths cross the same wire encoding.
++    // Reject overlong forms, surrogates and truncated sequences before arming.
++    for(size_t i = 0; i < out.size();) {
++      uint32_t code = uint8_t(out[i++]), minimum = 0;
++      unsigned remaining = 0;
++      if(code < 0x80) continue;
++      if(code >= 0xc2 && code <= 0xdf) { code &= 0x1f; remaining = 1; minimum = 0x80; }
++      else if(code >= 0xe0 && code <= 0xef) { code &= 0x0f; remaining = 2; minimum = 0x800; }
++      else if(code >= 0xf0 && code <= 0xf4) { code &= 7; remaining = 3; minimum = 0x10000; }
++      else return false;
++      if(i + remaining > out.size()) return false;
++      while(remaining--) {
++        auto byte = uint8_t(out[i++]);
++        if((byte & 0xc0) != 0x80) return false;
++        code = (code << 6) | (byte & 0x3f);
++      }
++      if(code < minimum || code > 0x10ffff || (code >= 0xd800 && code <= 0xdfff)) return false;
++    }
++    return true;
++  }
++  static auto quote(const std::string& value) -> std::string {
++    std::string out = "\"";
++    const char* digits = "0123456789abcdef";
++    for(unsigned char c : value) {
++      if(c == '"' || c == '\\') { out += '\\'; out += c; }
++      else if(c < 32) { out += "\\u00"; out += digits[c >> 4]; out += digits[c & 15]; }
++      else out += c;
++    }
++    return out + '"';
++  }
++  static auto frame(const char* magic, const std::string& json) -> std::vector<uint8_t> {
++    std::vector<uint8_t> out(12 + json.size());
++    std::memcpy(out.data(), magic, 4);
++    uint32_t crc = ~uint32_t(0);
++    for(unsigned char byte : json) {
++      crc ^= byte;
++      for(unsigned bit = 0; bit < 8; ++bit) crc = (crc >> 1) ^ (0x82f63b78u & (0u - (crc & 1)));
++    }
++    crc = ~crc;
++    for(unsigned i = 0; i < 4; ++i) { out[4 + i] = json.size() >> (8 * i); out[8 + i] = crc >> (8 * i); }
++    std::memcpy(out.data() + 12, json.data(), json.size());
++    return out;
++  }
++};
++}
+diff --git a/nall/nall/gdb/server.hpp b/nall/nall/gdb/server.hpp
+--- a/nall/nall/gdb/server.hpp
++++ b/nall/nall/gdb/server.hpp
+@@ -4,6 +4,7 @@
+ #include <nall/gdb/watchpoint.hpp>
+ #include <array>
+ #include <nall/gdb/capture.hpp>
++#include <nall/gdb/capture-file.hpp>
+ #include <functional>
+ 
+ namespace nall::GDB {
+@@ -185,6 +186,11 @@
+ 
+     auto haltProgram() -> void;
+     auto resumeProgram() -> void;
++
++  public:
++    // Keep optional sink bookkeeping after existing debugger fields. Their
++    // offsets are read on every CPU/bus access, even with capture disabled.
++    ares_capture::FileCapture captureFile;
+ };
+ 
+ extern Server server;
+diff --git a/nall/nall/gdb/server.cpp b/nall/nall/gdb/server.cpp
+--- a/nall/nall/gdb/server.cpp
++++ b/nall/nall/gdb/server.cpp
+@@ -292,9 +292,19 @@
+       break;
+ 
+       case 'q':
+-        if(cmdName == "qUttoriCapture") {
++        if(cmdName == "qUttoriCapture" || cmdName == "qUttoriCaptureFile") {
+           if(!hooks.instructionTraceDetails || instructionTraceActive) return "E09";
+-          auto response = capture.command(std::string(cmd.data() + 15));
++          std::string response;
++          if(cmdName == "qUttoriCaptureFile") {
++            response = captureFile.command(capture, std::string(cmd.data() + 19), isHalted());
++          } else {
++            // File delivery owns the retained queue until publication or explicit
++            // failed-session release; a second consumer must never steal its ACK.
++            auto request = std::string(cmd.data() + 15);
++            if(captureFile.owns() && request != "capabilities" && request != "bus-capabilities"
++              && request != "transfer-capabilities" && request != "ppu-capabilities") return "E09";
++            response = capture.command(request);
++          }
+           // JSON includes RSP's escape marker '}'. Keep this private control
+           // payload hexadecimal, just like register and memory responses.
+           if(!response.empty() && response[0] == '{') {
+@@ -599,6 +609,9 @@
+   }
+ 
+   auto Server::updateLoop() -> void {
++    // Runs at scheduler exits, including backpressure and independent GDB stops.
++    // Disk writes/syncs stay on the worker; this only copies/reclaims a bounded batch.
++    captureFile.service(capture);
+     if(!isStarted())return;
+ 
+     if(requestDisconnect) {
+diff --git a/tests/gdb-capture/CMakeLists.txt b/tests/gdb-capture/CMakeLists.txt
+--- a/tests/gdb-capture/CMakeLists.txt
++++ b/tests/gdb-capture/CMakeLists.txt
+@@ -35,3 +35,14 @@
+ target_compile_options(gdb-capture-ppu-benchmark PRIVATE -fno-access-control)
+ set_target_properties(gdb-capture-ppu-benchmark PROPERTIES FOLDER tests PREFIX "")
+ ares_configure_executable(gdb-capture-ppu-benchmark)
++
++# Standalone C++ sink ownership/failure tests, without emulator or JS dependencies.
++add_executable(gdb-capture-file file-test.cpp)
++find_package(Threads REQUIRED)
++target_include_directories(gdb-capture-file PRIVATE ${CMAKE_SOURCE_DIR}/nall)
++target_link_libraries(gdb-capture-file PRIVATE Threads::Threads)
++target_compile_definitions(gdb-capture-file PRIVATE ARES_CAPTURE_FILE_TEST)
++set_target_properties(gdb-capture-file PROPERTIES FOLDER tests PREFIX "")
++ares_configure_executable(gdb-capture-file)
++add_test(NAME gdb-capture-file COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/file-test.sh $<TARGET_FILE:gdb-capture-file>)
++set_tests_properties(gdb-capture-file PROPERTIES TIMEOUT 30)
+diff --git a/tests/gdb-capture/ppu-benchmark.cpp b/tests/gdb-capture/ppu-benchmark.cpp
+--- a/tests/gdb-capture/ppu-benchmark.cpp
++++ b/tests/gdb-capture/ppu-benchmark.cpp
+@@ -18,15 +18,24 @@
+ // hex encoding and acknowledgements. No TCP, storage or consumer decoding is timed.
+ auto nall::main(Arguments args) -> void {
+   Host host; platform = &host;
+-  bool accurate = args.find("accurate"), baseline = args.find("baseline");
++  bool accurate = args.find("accurate"), baseline = args.find("baseline"), files = args.find("files");
+   ppu.setAccurate(accurate);
+   option("Deterministic Entropy", "true");
+   Node::System root;
+   assert(load(root, "[Nintendo] Super Famicom (NTSC)"));
+   std::ostringstream results;
+   results << "BENCH_BEGIN\n{\"ppu\":\"" << (accurate ? "accurate" : "performance") << "\",\"iterations\":200000,\"runs\":[\n";
++  auto outputDirectory = std::filesystem::temp_directory_path() / ("ares-file-bench-" + std::to_string(std::random_device{}()));
++  if(files) std::filesystem::create_directory(outputDirectory);
++  auto encode = [](const std::string& value) {
++    const char* digits = "0123456789abcdef"; std::string out;
++    for(unsigned char byte : value) { out += digits[byte >> 4]; out += digits[byte & 15]; }
++    return out;
++  };
++  unsigned modes = baseline ? 2 : 3;
++  if(files) modes = 4;
+   bool comma = false;
+-  for(bool blank : {true, false}) for(unsigned mode = 0; mode < (baseline ? 2 : 3); ++mode) for(unsigned sample = 0; sample < 6; ++sample) {
++  for(bool blank : {true, false}) for(unsigned mode = 0; mode < modes; ++mode) for(unsigned sample = 0; sample < 6; ++sample) {
+     server.capture = {}; root->power(false);
+     server.onConnect(); bool reply = true; server.processCommand("?", reply);
+     for(unsigned i = 0; !server.isHalted(); ++i) { assert(i < 64); root->run(); }
+@@ -49,7 +58,11 @@
+       scheduler.exit(Event::Step);
+     });
+     scheduler.power(cpu); root->run(); assert(setup && !done);
+-    if(mode) assert(server.capture.command(mode == 1 ? "start:4718656:bus" : "start:4718656:bus-ppu")[0] == '{');
++    auto output = outputDirectory / (std::to_string(blank) + "-" + std::to_string(sample) + ".act2");
++    if(mode == 3) {
++      auto request = "start:8388608:bus-ppu:" + encode(output.string()) + ":" + std::string(64, 'a') + ":61726573:62656e6368";
++      assert(server.captureFile.command(server.capture, request, true)[0] == '{');
++    } else if(mode) assert(server.capture.command(mode == 1 ? "start:4718656:bus" : "start:4718656:bus-ppu")[0] == '{');
+     uint64_t events = 0, bytes = 0;
+     auto drain = [&] {
+       while(server.capture.size) {
+@@ -62,8 +75,28 @@
+       }
+     };
+     const auto started = std::chrono::steady_clock::now();
+-    for(unsigned i = 0; !done; ++i) { assert(i < 10000); root->run(); if(mode) drain(); }
+-    if(mode) {
++    for(unsigned i = 0; !done; ++i) {
++      assert(i < 1000000); root->run();
++      if(mode == 3) {
++        server.captureFile.service(server.capture);
++        if(server.capture.incomplete()) std::cerr << server.capture.status() << '\n';
++        assert(!server.capture.incomplete());
++        // This harness has no frontend event loop. Let the OS schedule the I/O
++        // worker during backpressure instead of exhausting a busy-spin guard.
++        if(!server.capture.ready()) std::this_thread::sleep_for(std::chrono::microseconds(50));
++      }
++      else if(mode) drain();
++    }
++    if(mode == 3) {
++      auto status = server.captureFile.command(server.capture, "stop:" + server.capture.sessionId(), true);
++      for(unsigned i = 0; status.find("\"fileState\":\"complete\"") == std::string::npos; ++i) {
++        assert(i < 100000 && !server.capture.incomplete());
++        std::this_thread::sleep_for(std::chrono::microseconds(100));
++        status = server.captureFile.command(server.capture, "status:" + server.capture.sessionId(), true);
++      }
++      events = server.capture.produced; bytes = std::filesystem::file_size(output);
++      assert(events == 200000 && server.capture.complete());
++    } else if(mode) {
+       server.capture.command("stop:" + server.capture.sessionId()); drain();
+       assert(server.capture.state == "complete" && events == 200000);
+     }
+@@ -77,4 +110,5 @@
+   results << "\n]}\nBENCH_END\n";
+   std::cout << results.str();
+   root->unload();
++  if(files) std::filesystem::remove_all(outputDirectory);
+ }
+diff --git a/tests/gdb-capture/bus-test.cpp b/tests/gdb-capture/bus-test.cpp
+--- a/tests/gdb-capture/bus-test.cpp
++++ b/tests/gdb-capture/bus-test.cpp
+@@ -111,7 +111,8 @@
+ // Execute real channel methods on the emulation coroutine. The one-shot entry
+ // remains safe to resume for ordinary synchronized serialization afterwards.
+ auto run(Node::System root, const std::function<void()>& setup, const std::function<void()>& work,
+-         Reader* reader, const std::function<void()>& onHold = {}, std::vector<u8>* initial = nullptr) -> std::vector<u8> {
++         Reader* reader, const std::function<void()>& onHold = {}, std::vector<u8>* initial = nullptr,
++         const std::filesystem::path* nativeFile = nullptr) -> std::vector<u8> {
+   server.capture = {};
+   root->power(false);
+   // Enter the powered CPU once before replacing its test entry point. Thread's
+@@ -146,6 +147,11 @@
+     scheduler.exit(Event::Step);
+   });
+   scheduler.power(cpu);
++  if(nativeFile) {
++    auto path = nativeFile->string();
++    auto encoded = ares_capture::Capture::hex(reinterpret_cast<const uint8_t*>(path.data()), path.size());
++    assert(server.captureFile.command(server.capture, "start:4718656:bus-ppu:" + encoded + ":" + std::string(64, 'a') + ":61726573:73746174652d74657374", true)[0] == '{');
++  }
+   if(reader) {
+     auto start = reader->transfers ? "start:4718656:bus-transfers" : "start:4718656:bus";
+     if(reader->ppuEffects) start = "start:4718656:bus-ppu";
+@@ -153,7 +159,7 @@
+     assert(result.find("snes.cpu-bus") != std::string::npos);
+   }
+   for(unsigned limit = 0; !done; ++limit) {
+-    assert(limit < 10000 && "bus producer failed to yield or drain");
++    assert(limit < 1000000 && "bus producer failed to yield or drain");
+     root->run();
+     if(reader && server.capture.throttled && !held) {
+       held = true;
+@@ -166,12 +172,22 @@
+       if(onHold) onHold();
+     }
+     if(reader) reader->drain();
++    if(nativeFile) server.captureFile.service(server.capture);
+   }
+   if(reader) {
+     server.capture.command("stop:" + server.capture.sessionId());
+     reader->drain();
+     assert(server.capture.produced == reader->nextEvent - 1);
+     if(!server.capture.failed) assert(server.capture.state == "complete");
++  }
++  if(nativeFile) {
++    auto status = server.captureFile.command(server.capture, "stop:" + server.capture.sessionId(), true);
++    for(unsigned i = 0; status.find("\"fileState\":\"complete\"") == std::string::npos; ++i) {
++      assert(i < 100000 && !server.capture.incomplete());
++      std::this_thread::sleep_for(std::chrono::microseconds(100));
++      status = server.captureFile.command(server.capture, "status:" + server.capture.sessionId(), true);
++    }
++    assert(server.capture.produced == server.capture.accepted && server.capture.produced > 0);
+   }
+   if(onHold) assert(held);
+   return snapshot(root);
+@@ -452,6 +468,14 @@
+       if(replay[i][a] != memory[i]->read(a)) std::cerr << "replay blank=" << blank << " large=" << large << " target=" << i << " address=" << a << " expected=" << unsigned(replay[i][a]) << " actual=" << unsigned(memory[i]->read(a)) << '\n';
+       assert(replay[i][a] == memory[i]->read(a) && "native effects do not reproduce PPU memory");
+     }
++    // The writer must not advance any emulated processor while awaiting I/O.
++    // Replay exactly the same starting state through native-file backpressure.
++    auto path = std::filesystem::temp_directory_path() / ("ares-file-state-" + std::to_string(std::random_device{}()) + ".act2");
++    auto fileActual = run(root, setup, graphicsWork, nullptr, {}, &startState, &path);
++    assert(fileActual == expected && "native file capture changed serialized emulator state");
++    assert(std::filesystem::file_size(path) > 0);
++    std::filesystem::remove(path);
++
+   }
+ 
+   server.capture = {}; server.reset(); root->unload();
+diff --git a/tests/gdb-capture/file-test.cpp b/tests/gdb-capture/file-test.cpp
+new file mode 100644
+--- /dev/null
++++ b/tests/gdb-capture/file-test.cpp
+@@ -0,0 +1,193 @@
++#include <nall/gdb/capture-file.hpp>
++#undef NDEBUG
++#include <cassert>
++#include <fstream>
++#include <iostream>
++using namespace ares_capture;
++namespace fs = std::filesystem;
++
++auto hex(const std::string& value) -> std::string {
++  const char* digits = "0123456789abcdef";
++  std::string out;
++  for(unsigned char byte : value) { out += digits[byte >> 4]; out += digits[byte & 15]; }
++  return out;
++}
++auto waitFor(FileCapture& sink, Capture& capture, const std::string& expected) -> std::string {
++  for(unsigned i = 0; i < 10000; ++i) {
++    auto status = sink.command(capture, "status:" + capture.sessionId(), true);
++    if(status.find("\"fileState\":\"" + expected + "\"") != std::string::npos) return status;
++    std::this_thread::sleep_for(std::chrono::milliseconds(1));
++  }
++  assert(false && "native sink timeout"); return "";
++}
++auto release(FileCapture& sink, Capture& capture) -> void {
++  for(unsigned i = 0; i < 10000; ++i) {
++    auto result = sink.command(capture, "release:" + capture.sessionId(), true);
++    if(result != "E09") { assert(result[0] == '{' && !sink.owns() && capture.ready()); return; }
++    std::this_thread::sleep_for(std::chrono::milliseconds(1));
++  }
++  assert(false && "native sink failed to release");
++}
++auto start(FileCapture& sink, Capture& capture, const fs::path& path, const std::string& scope = "instructions") -> std::string {
++  auto request = "start:8388608:" + scope + ":" + hex(path.string()) + ":" + std::string(64, 'a') + ":" + hex("test\"producer") + ":" + hex("native-file-test");
++  assert(sink.command(capture, request, false) == "E09");
++  auto result = sink.command(capture, request, true);
++  assert(result[0] == '{');
++  return result;
++}
++auto produce(Capture& capture, unsigned count) -> void {
++  for(unsigned i = 0; i < count; ++i) {
++    assert(capture.ready());
++    capture.begin(0x808000, {}, i); capture.fetch(0xea); capture.end();
++  }
++}
++auto read(const fs::path& path) -> std::vector<uint8_t> {
++  std::ifstream in(path, std::ios::binary);
++  return std::vector<uint8_t>(std::istreambuf_iterator<char>(in), {});
++}
++auto le(const std::vector<uint8_t>& bytes, size_t offset, unsigned count) -> uint64_t {
++  uint64_t value = 0;
++  for(unsigned i = 0; i < count; ++i) value |= uint64_t(bytes.at(offset + i)) << (8 * i);
++  return value;
++}
++// Independent bitwise CRC reader: never trusts sink checkpoints without parsing
++// preceding ACT2 envelopes and all event sequence numbers.
++auto verify(const fs::path& path, uint64_t expected, bool complete) -> void {
++  auto bytes = read(path);
++  size_t offset = 0;
++  uint64_t events = 0, sequence = 0;
++  bool pending = false, terminal = false;
++  while(offset < bytes.size()) {
++    std::string magic(bytes.begin() + offset, bytes.begin() + offset + 4);
++    const bool chunk = magic == "ACT2";
++    size_t length = chunk ? 64 + le(bytes, offset + 48, 4) : 12 + le(bytes, offset + 4, 4);
++    assert(offset + length <= bytes.size());
++    uint32_t crc = ~uint32_t(0);
++    for(size_t i = chunk ? 0 : 12; i < length; ++i) {
++      uint8_t byte = bytes.at(offset + i);
++      if(chunk && i >= 56 && i < 60) byte = 0;
++      crc ^= byte;
++      for(unsigned bit = 0; bit < 8; ++bit) crc = (crc >> 1) ^ (0x82f63b78u & (0u - (crc & 1)));
++    }
++    assert(~crc == le(bytes, offset + (chunk ? 56 : 8), 4));
++    if(chunk) {
++      assert(!pending && !terminal && ++sequence == le(bytes, offset + 24, 8));
++      assert(events + 1 == le(bytes, offset + 32, 8));
++      unsigned count = 0;
++      for(size_t i = 64; i < length;) {
++        assert(++events == le(bytes, offset + i + 8, 8)); ++count;
++        i += le(bytes, offset + i + 4, 4);
++      }
++      assert(count == le(bytes, offset + 40, 4)); pending = true;
++    } else if(magic == "ACK2") { assert(pending); pending = false; }
++    else if(magic == "END2") { assert(!pending && offset + length == bytes.size()); terminal = true; }
++    else assert(magic == "ACS2" && offset == 0);
++    offset += length;
++  }
++  assert(events == expected && terminal == complete && !pending);
++}
++auto main(int argc, char** argv) -> int {
++  assert(argc == 2);
++  fs::path directory = fs::absolute(argv[1]); fs::create_directories(directory);
++  {
++    Capture capture; FileCapture sink;
++    assert(sink.command(capture, "start:8388608:instructions:c080:" + std::string(64, 'a') + ":61:62", true) == "E02");
++    assert(capture.sessionId().empty());
++  }
++  {
++    Capture capture; FileCapture sink;
++    auto path = directory / "complete.act2";
++    start(sink, capture, path); waitFor(sink, capture, "writing");
++    FileCapture::holdSync = true;
++    produce(capture, 20000); // More than four chunks: proves batched release.
++    sink.service(capture);
++    assert(capture.status().find("\"acceptedThrough\":\"0\"") != std::string::npos);
++    auto before = capture.occupiedBytes();
++    for(unsigned i = 0; i < 100; ++i) sink.service(capture);
++    assert(capture.occupiedBytes() == before); // Slow disk cannot release or lose data.
++    assert(sink.command(capture, "start:8388608:instructions:00:" + std::string(64, 'a') + ":61:62", true) == "E09");
++    FileCapture::holdSync = false;
++    sink.command(capture, "stop:" + capture.sessionId(), true);
++    auto status = waitFor(sink, capture, "complete");
++    assert(capture.complete() && capture.occupiedBytes() == 0 && !sink.owns());
++    assert(status.find("\"fileBatches\":\"2\"") != std::string::npos);
++    assert(!fs::exists(path.string() + ".partial")); verify(path, 20000, true);
++    // Empty rearm must publish a valid header/footer without inventing a chunk.
++    auto empty = directory / "empty.act2";
++    start(sink, capture, empty); waitFor(sink, capture, "writing");
++    sink.command(capture, "stop:" + capture.sessionId(), true); waitFor(sink, capture, "complete");
++    verify(empty, 0, true);
++  }
++  {
++    Capture capture; FileCapture sink;
++    auto path = directory / "slow-full.act2";
++    start(sink, capture, path); waitFor(sink, capture, "writing");
++    FileCapture::holdSync = true;
++    unsigned events = 0;
++    while(capture.ready()) {
++      capture.begin(0x808000, {}, events++); capture.fetch(0xea); capture.end();
++      assert(capture.occupiedBytes() <= capture.allocatedBytes());
++    }
++    assert(events > 20000);
++    sink.service(capture);
++    assert(!capture.ready());
++    FileCapture::holdSync = false;
++    sink.command(capture, "stop:" + capture.sessionId(), true); waitFor(sink, capture, "complete");
++    verify(path, events, true);
++  }
++  {
++    Capture capture; FileCapture sink;
++    auto path = directory / "sync-failed.act2";
++    start(sink, capture, path); waitFor(sink, capture, "writing");
++    FileCapture::failSyncAt = FileCapture::syncCalls + 1;
++    produce(capture, 100); sink.command(capture, "stop:" + capture.sessionId(), true);
++    waitFor(sink, capture, "incomplete");
++    assert(!capture.ready() && capture.occupiedBytes() > 0 && !fs::exists(path));
++    assert(capture.status().find("\"acceptedThrough\":\"0\"") != std::string::npos);
++    release(sink, capture);
++    FileCapture::failSyncAt = -1;
++  }
++  {
++    Capture capture; FileCapture sink;
++    auto path = directory / "collision.act2";
++    start(sink, capture, path); waitFor(sink, capture, "writing");
++    std::ofstream(path) << "preserve"; // Race the final publication after opening.
++    produce(capture, 100); sink.command(capture, "stop:" + capture.sessionId(), true);
++    auto status = waitFor(sink, capture, "incomplete");
++    assert(status.find("\"state\":\"incomplete\"") != std::string::npos);
++    assert(read(path) == std::vector<uint8_t>({'p','r','e','s','e','r','v','e'}));
++  }
++  for(const auto& name : {"existing", "missing/parent", "partial"}) {
++    Capture capture; FileCapture sink;
++    auto path = directory / name;
++    if(std::string(name) == "existing") std::ofstream(path) << "preserve";
++    if(std::string(name) == "partial") std::ofstream(path.string() + ".partial") << "preserve";
++    start(sink, capture, path); waitFor(sink, capture, "incomplete");
++    assert(capture.incomplete() && !capture.ready());
++  }
++  {
++    Capture capture; FileCapture sink;
++    auto path = directory / "cancel-finalize.act2";
++    start(sink, capture, path); waitFor(sink, capture, "writing");
++    FileCapture::holdSync = true;
++    sink.command(capture, "stop:" + capture.sessionId(), true);
++    for(unsigned i = 0; !FileCapture::waitingSync; ++i) {
++      assert(i < 10000); std::this_thread::sleep_for(std::chrono::milliseconds(1));
++    }
++    sink.command(capture, "abort:" + capture.sessionId(), true);
++    assert(sink.command(capture, "release:" + capture.sessionId(), true) == "E09");
++    assert(!capture.ready() && sink.owns());
++    FileCapture::holdSync = false;
++    release(sink, capture);
++    assert(!fs::exists(path));
++  }
++  {
++    Capture capture; FileCapture sink;
++    auto path = directory / "reset.act2";
++    start(sink, capture, path); waitFor(sink, capture, "writing");
++    produce(capture, 100); capture.fail("state-load"); sink.service(capture);
++    waitFor(sink, capture, "incomplete"); assert(!fs::exists(path));
++    release(sink, capture);
++  }
++  std::cout << "native file: batched ownership, slow sync, failure, no-clobber, empty rearm, cancellation passed\n";
++}
+diff --git a/tests/gdb-capture/file-test.sh b/tests/gdb-capture/file-test.sh
+new file mode 100755
+--- /dev/null
++++ b/tests/gdb-capture/file-test.sh
+@@ -0,0 +1,5 @@
++#!/bin/sh
++set -eu
++capture_test_dir=$(mktemp -d "${TMPDIR:-/tmp}/ares-capture-file.XXXXXX")
++trap 'rm -rf "$capture_test_dir"' EXIT HUP INT TERM
++"$1" "$capture_test_dir"

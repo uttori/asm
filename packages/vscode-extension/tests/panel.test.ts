@@ -84,10 +84,6 @@ test("Project loads external CSP-scoped assets and routes disassembly, heuristic
     previewHeuristics: "asm.heuristics.preview",
     startExecutionCapture: "asm.trace.start",
     stopExecutionCapture: "asm.trace.stopAnalyze",
-    captureIdle: "asm.capture.idle",
-    captureBehavior: "asm.capture.behavior",
-    captureReview: "asm.capture.review",
-    captureStop: "asm.capture.stop",
   };
   for (const [type, command] of Object.entries(routes)) {
     await h.provider.onMessage({ type });

@@ -58,8 +58,10 @@ export interface DebugAdapterSessionOptions {
   readonly debugMap?: DebugMap;
   readonly output?: Uint8Array;
   readonly sourceRoot?: string;
-  /** Optional presentation-only suffix for DAP and virtual-source disassembly rows. */
-  readonly instructionAnnotation?: (address: DebugAddress) => string | undefined;
+  /** Optional display suffix. Async providers can batch a page; failures leave instruction text intact. */
+  readonly instructionAnnotation?: (
+    address: DebugAddress,
+  ) => string | undefined | Promise<string | undefined>;
   readonly onMessage?: (message: DapProtocolMessage) => void;
   /** Live DAP hosts configure breakpoints after connection and before launch completes. */
   readonly configurationHandshake?: boolean;
@@ -212,7 +214,7 @@ export class DebugAdapterSession {
   readonly #backend: DebugBackend;
   readonly #map?: DebugMap;
   readonly #sourceRoot: string;
-  readonly #instructionAnnotation?: (address: DebugAddress) => string | undefined;
+  readonly #instructionAnnotation?: DebugAdapterSessionOptions["instructionAnnotation"];
   readonly #onMessage?: (message: DapProtocolMessage) => void;
   readonly #mapIssues: readonly string[];
   readonly #sourceBreakpoints = new Map<string, DebugAddress[]>();
@@ -1076,11 +1078,14 @@ export class DebugAdapterSession {
       { ...address, address: address.address + numeric(args.instructionOffset) },
       numeric(args.instructionCount),
     );
+    const texts = await Promise.all(
+      instructions.map((instruction) => this.#annotatedInstructionText(instruction)),
+    );
     return {
-      instructions: instructions.map((instruction) => ({
+      instructions: instructions.map((instruction, index) => ({
         address: formatDebugAddress(instruction.address),
         instructionBytes: bytesText(instruction),
-        instruction: this.#annotatedInstructionText(instruction),
+        instruction: texts[index],
         ...(instruction.symbol ? { symbol: instruction.symbol } : {}),
       })),
     };
@@ -1090,11 +1095,14 @@ export class DebugAdapterSession {
     const address = this.#virtualSources.get(sourceReference);
     if (!address) throw new Error("Unknown source reference.");
     const instructions = await this.#backend.disassemble(address, 32);
+    const texts = await Promise.all(
+      instructions.map((instruction) => this.#annotatedInstructionText(instruction)),
+    );
     const content = [
       ...VIRTUAL_DISASSEMBLY_HEADER,
       ...instructions.map(
-        (instruction) =>
-          `${formatDebugAddress(instruction.address)}  ${bytesText(instruction).padEnd(12)}  ${this.#annotatedInstructionText(instruction)}`,
+        (instruction, index) =>
+          `${formatDebugAddress(instruction.address)}  ${bytesText(instruction).padEnd(12)}  ${texts[index]}`,
       ),
     ].join("\n");
     return { content: `${content}\n`, mimeType: "text/x-uttori-asm" };
@@ -1109,10 +1117,10 @@ export class DebugAdapterSession {
       : undefined;
   }
 
-  #annotatedInstructionText(instruction: DebugInstruction): string {
+  async #annotatedInstructionText(instruction: DebugInstruction): Promise<string> {
     let annotation: string | undefined;
     try {
-      annotation = this.#instructionAnnotation?.(instruction.address);
+      annotation = await this.#instructionAnnotation?.(instruction.address);
     } catch {
       // Presentation metadata must never break debugger control or disassembly.
     }

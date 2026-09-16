@@ -470,10 +470,3 @@ export const transferCpu65816State = (
  * @returns {string} Canonical JSON used as a CFG node context key.
  */
 export const cpu65816StateKey = (state: Cpu65816AbstractState): string => JSON.stringify(state);
-
-/**
- * Constructs a `known` lattice value.
- * @param {number} value Exact observed register or flag value.
- * @returns {Cpu65816AbstractValue} `{ kind: "known", value }`.
- */
-export const knownCpu65816Value = (value: number): Cpu65816AbstractValue => known(value);

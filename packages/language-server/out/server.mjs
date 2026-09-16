@@ -2858,6 +2858,10 @@ var init_mathcore = __esm({
       arctan: "atan"
     };
     STRING_FIRST_ARG_FUNCTIONS = /* @__PURE__ */ new Set([
+      "countof",
+      "bytesof",
+      "startof",
+      "endof",
       "defined",
       "sizeof",
       "objectsize",
@@ -3858,6 +3862,16 @@ var init_mathcore = __esm({
             return name === "filesize" ? this.getHost().getFileSize(value) : this.getHost().getFileStatus(value);
           }
           // --- Preprocessor/Struct & Data Size Functions ---
+          case "countof":
+          case "bytesof":
+          case "startof":
+          case "endof": {
+            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+            const host = this.getHost();
+            if (!host.getExpressionStructMetadata)
+              throw new Error(`${name}() requires a struct metadata host.`);
+            return host.getExpressionStructMetadata(this.strArg(name, args[0]), name);
+          }
           case "defined":
           case "sizeof":
           case "objectsize":
@@ -10678,6 +10692,30 @@ var init_struct_engine = __esm({
   }
 });
 
+// packages/core/src/services/struct-metadata.ts
+function getStructMetadata(definition, property) {
+  const count = definition.indexRange?.count ?? 1;
+  const bytes = definition.size * count;
+  const start = definition.base + (definition.indexRange?.first ?? 0) * definition.size;
+  switch (property) {
+    case "countof":
+      return count;
+    case "bytesof":
+      return bytes;
+    case "startof":
+      return start;
+    case "endof":
+      return start + bytes;
+    default:
+      throw new Error(`Unknown struct metadata property '${String(property)}'.`);
+  }
+}
+var init_struct_metadata = __esm({
+  "packages/core/src/services/struct-metadata.ts"() {
+    "use strict";
+  }
+});
+
 // packages/core/src/services/symbol-scope-service.ts
 function fileBasename(file) {
   const normalized = file.replaceAll("\\", "/");
@@ -11589,6 +11627,7 @@ var init_assembler = __esm({
     init_output_writer_service();
     init_struct_engine();
     init_struct_initializer();
+    init_struct_metadata();
     init_symbol_scope_service();
     init_syntax_profile();
     TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
@@ -13118,6 +13157,11 @@ var init_assembler = __esm({
           return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
         },
         getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
+        getExpressionStructMetadata: (identifier, property) => {
+          const definition = this.structs.get(identifier);
+          if (!definition) throw new Error(`Unknown struct '${identifier}' for ${property}().`);
+          return getStructMetadata(definition, property);
+        },
         getFileSize: (filename) => {
           const resolvedPath = this.resolveReadablePath(filename);
           if (!resolvedPath) {
@@ -24216,7 +24260,7 @@ var init_address_identities = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/hardware-registers.ts
-var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, snesHardwareRegisterSymbols;
+var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
   "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
@@ -24559,9 +24603,6 @@ var init_hardware_registers = __esm({
     ];
     DMA_REGISTERS_BY_OFFSET = new Map(
       DMA_REGISTER_DEFINITIONS.map((definition) => [definition.offset, definition])
-    );
-    snesHardwareRegisterSymbols = Object.freeze(
-      Object.fromEntries(FIXED_REGISTER_DEFINITIONS.map(({ address: address3, symbol }) => [address3, symbol]))
     );
   }
 });

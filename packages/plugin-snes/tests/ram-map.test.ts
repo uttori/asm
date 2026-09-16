@@ -1,5 +1,4 @@
 import { test } from "../../../tests/ava-helper.js";
-
 import {
   canonicalSnesWramAddress,
   renderSnesRamDefines,
@@ -50,7 +49,7 @@ test("SNES RAM maps normalize, sort, and render documented definitions", (t) => 
   t.true(
     source
       .split("\n")
-      .filter((line) => /^RAM_[A-Z0-9_]+ = \$/.test(line))
+      .filter((line) => /^RAM_[\dA-Z_]+ = \$/.test(line))
       .every((line) => / ; \S/.test(line)),
   );
 });
@@ -95,4 +94,31 @@ test("CPU WRAM mirrors resolve to their canonical bank-7E addresses", (t) => {
   t.is(canonicalSnesWramAddress(0x801847), 0x7e1847);
   t.is(canonicalSnesWramAddress(0x7e1847), 0x7e1847);
   t.is(canonicalSnesWramAddress(0x402000), undefined);
+});
+
+test("SRAM map entries require an explicit memory kind and stay inside a cartridge window", (t) => {
+  const entry = {
+    name: "SRAM_LAST_SELECTED_FILE",
+    address: "$307FFF",
+    memory: "sram",
+    description: "Persistent zero-based file index, outside save-record checksums.",
+  };
+  const variables = validateSnesRamMap(map([entry]));
+  t.is(variables[0].memory, "sram");
+  t.regex(renderSnesRamDefines(variables), /^SRAM_LAST_SELECTED_FILE = \$307FFF ; Persistent/m);
+  t.throws(() => validateSnesRamMap(map([{ ...entry, memory: undefined }])), {
+    message: /outside canonical SNES WRAM/,
+  });
+  t.throws(() => validateSnesRamMap(map([{ ...entry, memory: "rom" }])), {
+    message: /must be 'wram' or 'sram'/,
+  });
+  t.throws(() => validateSnesRamMap(map([{ ...entry, size: 2 }])), {
+    message: /Invalid size/,
+  });
+  for (const address of ["$C00000", "$7E1000", "$3060000", "$305FFF", "$308000"]) {
+    t.throws(() => validateSnesRamMap(map([{ ...entry, address }])));
+  }
+  for (const address of [0x306000, 0xb07fff, 0x700000, 0xf07fff]) {
+    t.is(validateSnesRamMap(map([{ ...entry, address }]))[0].address, address);
+  }
 });

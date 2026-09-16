@@ -6,6 +6,7 @@ import {
   type RuntimeEvidenceRecord,
 } from "./project-types.js";
 import { RecordIdSet } from "./record-id-set.js";
+import { validateRuntimeBusFact } from "./runtime-bus-types.js";
 import { validateRuntimeInstructionDetails } from "./trace-detail.js";
 
 /**
@@ -183,6 +184,11 @@ export const createRuntimeRecordValidator = (
         throw new Error(`Runtime coverage '${record.id}' has an invalid half-open range.`);
       }
     }
+    if (record.kind === "runtime-bus-access") {
+      if (record.architecture !== "snes.65816")
+        throw new Error("Bus facts require the SNES 65816 architecture.");
+      validateRuntimeBusFact(record);
+    }
     if (record.kind === "runtime-memory-access") {
       if (
         (record.actor !== undefined && !["cpu", "dma", "hdma"].includes(record.actor)) ||
@@ -258,6 +264,8 @@ export const createRuntimeRecordValidator = (
         [record.instructionAddressSpace, record.instructionAddress],
         [record.accessedAddressSpace, record.accessedAddress],
       ];
+    } else if (record.kind === "runtime-bus-access") {
+      addresses = [[record.addressSpace, record.pc]];
     } else if (record.kind === "runtime-control-target") {
       addresses = [
         [record.fromAddressSpace, record.fromAddress],

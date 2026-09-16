@@ -1,0 +1,45 @@
+{
+  "date": "2026-09-13",
+  "platform": "macOS arm64",
+  "baseRevision": "be548251b537334f4f2054c7d86171da22fdc6ca",
+  "patchSha256": "6225e218c9faf2516c69b72016a6bc24c3b1c2e1e3441ed17669a452a29650ae",
+  "runtime": "Local Only/ares-capture-file-desktop-runtime",
+  "executableSha256": "d449d5232d0104a6acd1838a90c9d48804b29eeaf7100383a67de61acf93b80a",
+  "bundledSidecarSha256": "0bcb76e2c930d2ea1346778b0dbbe316ebd1a87bd7862ce63658eceec7254208",
+  "resourceHashesVerified": 116,
+  "patchReconstruction": "Six layers reconstruct all nine pinned final files; four standalone copies match.",
+  "nativeTests": {
+    "result": "9/9 passed",
+    "seconds": 16.81,
+    "cases": [
+      "gdb-states",
+      "gdb-states-accurate",
+      "gdb-capture",
+      "gdb-capture-accurate",
+      "gdb-capture-bus",
+      "gdb-capture-bus-accurate",
+      "gdb-capture-graphics",
+      "gdb-capture-graphics-accurate",
+      "gdb-capture-file"
+    ]
+  },
+  "standaloneShellTest": "C++17 with -Wall -Wextra -Werror; passed durable batches, slow/full queue, fault injection, no-clobber, empty rearm, invalid UTF-8, reset and cancellation/release",
+  "consumerTests": "Adapter, sidecar and editor contract tests passed; typechecks and lint passed.",
+  "measurements": [
+    "docs/performance/ares-ppu-stage-summary-2026-09-13.json",
+    "docs/performance/ares-native-file-fixed-work-2026-09-13.json",
+    "docs/performance/ares-native-file-identical-harness-capture-off-2026-09-13.json",
+    "docs/performance/ares-native-file-desktop-layout-final-2026-09-13.json",
+    "docs/performance/ares-native-file-instructions-2026-09-13.json",
+    "docs/performance/ares-native-file-stream-control-2026-09-13.json"
+  ],
+  "remainingGates": [
+    "Approximately 3.8% capture-off overhead in performance PPU; cause unresolved.",
+    "Full realtime on dense PPU fixture.",
+    "Live incremental import/indexing and offline decoding throughput.",
+    "Sustained storage/RSS/control-latency measurements and varied games.",
+    "Linux and Windows execution."
+  ],
+  "promoted": false,
+  "upstreamPrCreated": false
+}

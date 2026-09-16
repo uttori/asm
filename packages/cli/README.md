@@ -54,13 +54,13 @@ The importer stores its deterministic loss report in SQLite's imports table. Com
 
 Standalone `--instruction-trace` imports stream through SQLite without loading prior runtime history. Combined Mesen/native imports retain the existing atomic in-memory batch path; use separate commands for large captures.
 
-SQLite storage format 1 normalizes runtime identifiers and provenance and selectively compresses larger record payloads. Imports preserve prior runtime history; exact reimports do not rewrite records or run VACUUM. To upgrade the earlier SQLite layout, close clients using the project and run:
+SQLite storage format 2 shares runtime facts across captures, stores exact instruction/state pairs once, and retains compact per-capture counts and provenance. Imports preserve prior runtime history; exact reimports do not rewrite records or run VACUUM. To upgrade an earlier SQLite layout, close clients using the project and run:
 
 ```sh
 uttori-asm project-migrate game.analysis
 ```
 
-Migration streams and validates every record, verifies per-table content digests, and atomically publishes the new database without changing its logical revision. It retains `analysis.sqlite.storage-v0.backup`; archive or remove that original only after checking the migrated project. Running the command again recovers interrupted staging/publication when the prior process is no longer active. No JSON/shard migration path is provided.
+Migration streams and validates every record, verifies per-table content digests, and atomically publishes the new database without changing its logical revision. It retains `analysis.sqlite.pre-retention.backup`; archive or remove that original only after checking the migrated project. Running the command again recovers interrupted staging/publication when the prior process is no longer active. No JSON/shard migration path is provided.
 
 To reclaim unused pages in a current-format database during explicit maintenance:
 
@@ -103,7 +103,7 @@ uttori-asm evidence-import game.analysis --rom game.sfc \
 
 Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata and use the same `snes.cpu` CPU-bus identity as native analysis projects. An identical reimport does not rewrite the project.
 
-Native trace files are read incrementally with a default 2 GiB file-size limit. Use `--trace-max-mib 4096` to permit a 4 GiB capture. This avoids JavaScript's single-string size limit. Use `--trace-index 65816-disassembly` for large 65816 instruction captures: it preserves all PCs, fetched-byte and decoding-state variants, execution counts and bus observations in the analysis index, while full register history stays in the original capture. `--trace-index full` remains the default. The compact index stops at 2,000,000 records; full indexes allow up to 8,000,000 and require more memory. Budget overflow never commits a partial import. The editor equivalents are `asm.trace.maxImportSizeMiB` and `asm.trace.indexMode`.
+Native trace files are read incrementally with a default 2 GiB file-size limit. Use `--trace-max-mib 4096` to permit a 4 GiB capture. This avoids JavaScript's single-string size limit. Use `--trace-index 65816-disassembly` for large 65816 instruction captures: it preserves all PCs, fetched-byte and decoding-state variants, execution counts and bus observations in the analysis index, while full register history stays in the original capture. `--trace-index 65816-analysis` is now the default for native SNES CPU captures; other processors default to full. It normalizes aliases and retains only P width bits, E, D and DB, together with fetched bytes and the qualified PC. Explicit `full` retains general-register history. The compact index stops at 2,000,000 records; full indexes allow up to 8,000,000 and require more memory. Budget overflow never commits a partial import. The editor equivalents are `asm.trace.maxImportSizeMiB` and `asm.trace.indexMode`.
 
 Compact imports defer the detailed conflict/explanation report to avoid expanding every saved register observation during import. Run `evidence-report` separately when those diagnostics are needed, with enough memory for the project's full set of observations.
 
@@ -228,3 +228,22 @@ The distributable executable is generated at `out/cli.mjs`; declarations are gen
 
 Contributor setup, ownership, tests, and release expectations are in the repository
 [contributor guide](../../CONTRIBUTING.md) and [testing guide](../../docs/testing-and-release.md).
+
+### Storage policy and existing full imports
+
+```sh
+uttori-asm project-migrate game.analysis --convert-runtime
+uttori-asm project-storage game.analysis
+uttori-asm project-storage game.analysis --archive-max-mib 2048 --cache-max-mib 256
+uttori-asm project-storage game.analysis --pin-capture <capture-sha256>
+uttori-asm project-storage game.analysis --unpin-capture <capture-sha256> --expire-archives
+```
+
+Conversion retains the original database backup and validates the projected records before publication.
+The archive budget applies to managed copies, with pinned captures exempt. Original trace paths and the
+migration backup are not deleted or counted against it. Optional `--archive-max-days` and
+`--archive-max-captures` add age/count expiry. `--storage-max-mib` rejects whole new publications above a
+live-page budget (0 disables the ceiling). Expiry retains discovered code, decoding variants, execution
+counts, annotations and capture receipts. Reimporting the same capture under another profile reuses its
+retained facts, with a warning, instead of counting events twice. Import output includes storage deltas;
+migration output includes per-step durations. See the [storage contract](../disassembler/README.md#working-index-and-archive-retention).

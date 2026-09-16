@@ -1,10 +1,10 @@
 import { test } from "../../../tests/ava-helper.js";
+import { formatTraceEvent } from "../../../tests/helpers/assembler-trace.js";
 import {
   formatAddressForWidth,
   maximumAddressForWidth,
   normalizeAddressForWidth,
 } from "../src/address-width.js";
-import { formatTraceEvent } from "../src/debug-tracing.js";
 
 test("address-width helpers normalize and format target-sized addresses", (t) => {
   t.is(maximumAddressForWidth(16), 0xffff);

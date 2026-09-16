@@ -8,6 +8,7 @@ import type {
   RuntimeStateValue,
 } from "./project-types.js";
 import type { RuntimeEvidenceBatch } from "./runtime-evidence.js";
+import { project65816AnalysisState, RUNTIME_ANALYSIS_PROFILE } from "./runtime-trace-profile.js";
 import {
   validateRuntimeInstructionDetails,
   type RuntimeInstructionDetail,
@@ -52,7 +53,7 @@ export interface RuntimeInstructionTraceArtifact {
 export interface RuntimeInstructionTraceImportContext {
   readonly projectRomContentSha256: string;
   readonly sourceName: string;
-  /** Defaults to full snapshots; compact mode changes only the index, never the capture or its hash. */
+  /** Defaults to 65816-analysis for native SNES CPU captures, full for other CPUs; capture identity is unchanged. */
   readonly indexMode?: RuntimeTraceIndexMode;
   /**
    * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
@@ -65,7 +66,7 @@ export interface RuntimeInstructionTraceImportContext {
  * Full keeps all supplied registers. Compact preserves the joint 65816 decoding state and
  * execution counts; A/X/Y/S history remains in the capture and is unavailable from this index.
  */
-export type RuntimeTraceIndexMode = "full" | "65816-disassembly";
+export type RuntimeTraceIndexMode = "full" | "65816-disassembly" | "65816-analysis";
 /** Compact-index default; full snapshots retain a larger compatibility budget. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
@@ -116,6 +117,16 @@ const hex = (value: number): string => value.toString(16).toUpperCase().padStart
 
 /** Identity shared by all chunks of one trace. */
 export type RuntimeInstructionTraceMetadata = Omit<RuntimeInstructionTraceArtifact, "chunks">;
+
+/**
+ * Ordered chunks supplied directly by a producer or a bounded file reader. The reader must finish
+ * each synchronous consumer call and reject on incomplete envelopes or integrity failures; chunks are
+ * provisional until read() resolves. Consumers validate chunk contents and must not retain them.
+ */
+export interface RuntimeTraceSource {
+  readonly metadata: RuntimeInstructionTraceMetadata;
+  readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
+}
 
 /**
  * Validate the small trace envelope independently of its event stream.
@@ -270,8 +281,12 @@ export interface RuntimeTraceFactIndex {
 /** Optional external storage and record sink; sink output is provisional until finish returns. */
 export interface RuntimeTraceImporterStorage {
   readonly index: RuntimeTraceFactIndex;
+  /** Called after complete source validation, before emitting any provisional records. */
+  readonly onSource?: (sha256: string, profile: string) => void;
   /** Final records are emitted individually; batch.runtime is omitted when this sink is supplied. */
   readonly onRecord?: (record: RuntimeEvidenceRecord) => void;
+  /** Throttled provisional merge counts; reaching the total does not mean the transaction committed. */
+  readonly onMergeProgress?: (processedRecords: number, totalRecords: number) => void;
 }
 
 /**
@@ -298,7 +313,7 @@ const createMemoryFactIndex = (): RuntimeTraceFactIndex => {
 /** Incremental aggregation; any failed push permanently invalidates the pending import. */
 export interface RuntimeInstructionTraceImporter {
   /** Accept the next ordered chunk; invalid data or an exceeded record budget prevents finalization. */
-  push(value: unknown): void;
+  push(this: void, value: unknown): void;
   /** Consume the importer once, only after the caller has validated the entire file and its tail. */
   finish(): RuntimeInstructionTraceImportResult;
 }
@@ -328,12 +343,16 @@ export const createRuntimeInstructionTraceImporter = (
     );
   const sourceName = string(context.sourceName, "Instruction trace source name");
   const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
-  const indexMode = context.indexMode ?? "full";
-  if (!["full", "65816-disassembly"].includes(indexMode))
+  const native65816 = artifact.architecture === "snes.65816" && addressSpace === "snes.cpu";
+  const indexMode = context.indexMode ?? (native65816 ? "65816-analysis" : "full");
+  let indexProfile: string | undefined;
+  if (indexMode === "65816-disassembly") indexProfile = "65816-disassembly-v1";
+  if (indexMode === "65816-analysis") indexProfile = RUNTIME_ANALYSIS_PROFILE;
+  if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode))
     throw new Error("Unsupported runtime trace index mode.");
   // This projection follows the 65816 decoder's inputs; another CPU may need the omitted registers.
   if (
-    indexMode === "65816-disassembly" &&
+    indexMode !== "full" &&
     (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")
   )
     throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
@@ -386,13 +405,9 @@ export const createRuntimeInstructionTraceImporter = (
     const chunk = validateChunk(value);
     // Hash the original chunk before projecting its registers so both index modes identify the same capture.
     hash.update(chunks++ === 0 ? "[\n" : ",\n");
-    hash.update(
-      canonicalJson(chunk)
-        .trimEnd()
-        .split("\n")
-        .map((line) => `    ${line}`)
-        .join("\n"),
-    );
+    // canonicalJson always has one trailing newline. Indent its text directly instead of
+    // allocating one array entry and callback result for every line in a rich trace chunk.
+    hash.update(`    ${canonicalJson(chunk).slice(0, -1).replaceAll("\n", "\n    ")}`);
     droppedEvents = chunk.droppedEvents;
     complete = !chunk.active;
     unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
@@ -410,14 +425,14 @@ export const createRuntimeInstructionTraceImporter = (
       const base = { architecture: artifact.architecture, count: 1, evidence: [] };
       // Keep bytes and decoding state together: independent sets could pair self-modified code
       // with register values that were never observed when those bytes executed.
-      const state =
-        indexMode === "full"
-          ? detail.state
-          : Object.fromEntries(
-              Object.entries(detail.state).filter(([field]) =>
-                DISASSEMBLY_STATE_FIELDS.has(field.toLowerCase()),
-              ),
-            );
+      let state = detail.state;
+      if (indexMode === "65816-analysis") state = project65816AnalysisState(detail.state);
+      else if (indexMode === "65816-disassembly")
+        state = Object.fromEntries(
+          Object.entries(detail.state).filter(([field]) =>
+            DISASSEMBLY_STATE_FIELDS.has(field.toLowerCase()),
+          ),
+        );
       const content = canonicalJson({ address, bytes: detail.bytes, state });
       // Full snapshots may contain large or mostly unique register objects.
       // Keep their map keys fixed-size; compact states benefit from reusing the
@@ -482,14 +497,29 @@ export const createRuntimeInstructionTraceImporter = (
       .update(chunks ? "\n  ]" : "[]")
       .update(suffix)
       .digest("hex");
+    storage?.onSource?.(sourceSha256, indexProfile ?? "full");
     const evidenceId = `runtime:instruction-trace:${sourceSha256}`;
     const evidenceIds = [evidenceId];
     const executions: RuntimeEvidenceRecord[] = [];
     const facts: RuntimeEvidenceRecord[] = [];
+    let processedRecords = 0;
+    let lastProgress = performance.now();
+    storage?.onMergeProgress?.(0, indexRecords);
     const emit = (record: RuntimeEvidenceRecord): void => {
       if (storage?.onRecord) storage.onRecord(record);
       else if (record.kind === "runtime-execution") executions.push(record);
       else facts.push(record);
+      processedRecords++;
+      // Synchronous SQLite publication cannot run timer callbacks. Report from the work loop,
+      // checking the clock only periodically and always delivering the exact final count.
+      if (
+        storage?.onMergeProgress &&
+        (processedRecords === indexRecords ||
+          (processedRecords % 128 === 0 && performance.now() - lastProgress >= 1000))
+      ) {
+        storage.onMergeProgress(processedRecords, indexRecords);
+        lastProgress = performance.now();
+      }
     };
     // A disk sink receives one final record at a time, so finalization cannot allocate a second
     // full index while expanding byte/state pairs. Keep legacy ordering for in-memory callers.
@@ -554,8 +584,8 @@ export const createRuntimeInstructionTraceImporter = (
       },
     };
     const report: ImportReport = {
-      id: `import:instruction-trace:${sourceSha256}${indexMode === "full" ? "" : ":65816-disassembly-v1"}`,
-      ...(indexMode === "full" ? {} : { indexProfile: "65816-disassembly-v1" }),
+      id: `import:instruction-trace:${sourceSha256}${indexProfile ? `:${indexProfile}` : ""}`,
+      ...(indexProfile ? { indexProfile } : {}),
       format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
       sourceName,
       sourceSha256,
@@ -580,7 +610,9 @@ export const createRuntimeInstructionTraceImporter = (
         ...(indexMode === "full"
           ? []
           : [
-              "Disassembly index retains every PC/bytes/P/E/D/DB/PB/PC variant and exact execution counts. Other register snapshots remain in the original capture; this project index does not contain full register history. Captured bus observations are retained without projection.",
+              indexMode === "65816-analysis"
+                ? "Analysis index retains joint PC/bytes/decoder-state variants, exact counts and bus observations. Full register history requires an available capture archive."
+                : "Disassembly index retains every PC/bytes/P/E/D/DB/PB/PC variant and exact execution counts. Other register snapshots require the original capture.",
             ]),
         ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
         ...(detailedEvents < observedEvents

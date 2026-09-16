@@ -2,6 +2,10 @@ import * as fs from "node:fs";
 import path from "node:path";
 
 import { canonicalSnesWramAddress } from "./ram-map.js";
+import {
+  validateSnesStructInstructionUses,
+  type SnesStructInstructionUse,
+} from "./struct-instruction-uses.js";
 
 /** Optional, user-owned layout and address bindings consumed by source export. */
 export const SNES_STRUCT_MAP_SOURCE = "struct-map.json";
@@ -42,6 +46,8 @@ export interface SnesStructBinding {
 export interface LoadedSnesStructMap {
   readonly structures: readonly SnesStructLayout[];
   readonly bindings: readonly SnesStructBinding[];
+  /** Optional, explicitly justified operands and capture references at guarded instruction sites. */
+  readonly instructionUses?: readonly SnesStructInstructionUse[];
   readonly sourceBytes: Uint8Array;
 }
 
@@ -211,7 +217,12 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
         `ROM struct bindings '${previous.name}' and '${romBindings[index].name}' overlap.`,
       );
   }
-  return { structures, bindings };
+  const instructionUses = validateSnesStructInstructionUses(
+    file.instructionUses,
+    structures,
+    bindings,
+  );
+  return { structures, bindings, ...(instructionUses.length ? { instructionUses } : {}) };
 };
 
 /**

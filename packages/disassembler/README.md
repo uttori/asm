@@ -17,15 +17,18 @@ SQLite owns the authoritative manifest and monotonic revision. `analysis.json` i
 rename after commit so existing file watchers fire; readers use the database revision even if that
 refresh was interrupted. SchemaVersion remains 3. Legacy JSON arrays, gzip shards, generation
 folders, lock files, and manifest migrations are no longer supported. User configuration, debug maps,
-source-export manifests, and capture/trace interchange formats remain JSON.
+source-export manifests, and native trace interchange remain JSON. Lossless ACT2 capture readers
+can supply decoded chunks directly through `RuntimeTraceSource`.
 
-Physical SQLite storage format 1 is recorded in `PRAGMA user_version`, independently of semantic
-schema version 3 and the logical revision. Runtime prefixes and evidence sets are stored once,
-canonical hash suffixes use binary storage, and large metadata records use rowid tables. One
-versioned, checksummed DEFLATE codec compresses payloads of at least 256 bytes only when it saves
-at least 32 bytes and one eighth of the input. Smaller values remain TEXT. Decoded payloads are
-limited to 16 MiB per record; unknown codecs, invalid UTF-8, oversized output, and corrupt checksums
-are rejected. Complete runtime arrays are sorted by ID; streaming projections use storage order.
+Physical SQLite storage format 2 is recorded in `PRAGMA user_version`, independently of semantic
+schema version 3 and the logical revision. `runtime_facts` shares coordinates and payloads globally;
+`runtime_observations` retains each capture's identity, count and provenance. An exact instruction/state
+pair occupies one fact and relationship, with a virtual CPU-state row exposed by the `runtime` SQL
+view. Standalone state records remain independent. Point lookups index the negative virtual row IDs.
+Runtime prefixes/evidence sets are interned and hash suffixes use binary keys. Small runtime payloads
+use SQLite JSONB; larger records still use the bounded, checksummed DEFLATE codec when it saves space.
+Metadata and compressed export projections use the same codec. Complete runtime arrays retain their
+semantic shape and sort by ID; streaming consumers must not depend on physical row order.
 
 The semantic collections retain the in-memory `AnalysisProjectShards` shape. Database reads use
 stable ordering; rewrites preserve logical records rather than promising identical SQLite bytes.
@@ -51,9 +54,13 @@ rows are retained, and removal of evidence checks references from retained runti
 `compactAnalysisProject()` and `uttori-asm project-compact` checkpoint and VACUUM SQLite during
 explicit maintenance, pruning unused runtime dictionary entries after replacements. They check for
 temporary disk space and do not run after no-op imports. `migrateAnalysisProjectStorage()` and
-`uttori-asm project-migrate` explicitly upgrade the earlier SQLite layout with bounded record batches,
+`uttori-asm project-migrate` explicitly upgrade formats 0 and 1 with bounded record batches,
 semantic validation, content digests, crash recovery, and a retained original backup. Migration requires
 exclusive database access; a temporary process gate prevents new project work during publication.
+`--convert-runtime` additionally projects existing native trace detail to `65816-analysis-v2`; it
+preserves standalone states, other processors, bus observations, exact counts and capture provenance.
+The retained `analysis.sqlite.pre-retention.backup` contains the original full detail. This is explicit,
+because restoring omitted general-register history requires that backup or an available capture archive.
 Cached clients must reopen after the database inode changes. See the [storage audit](../../docs/performance/sqlite-som-storage-audit.md).
 
 For backups, use SQLite's backup
@@ -87,11 +94,17 @@ Existing field omissions retain their prior behavior. The edit retains earlier e
 an exact inverse for `revertDisassemblyAnnotationEdit()`; commit it through the normal optimistic
 transaction API. No ROM bytes or generated-source line numbers are used as annotation identities.
 
+`commitAnalysisProjectAnnotationUpdate()` publishes only labels, comments and appended evidence
+under the expected SQLite revision. It validates those tables against the authoritative manifest
+and requires every existing evidence record to remain unchanged, so saving a comment does not
+revalidate unrelated CFG records or scan runtime provenance. Broader edits and evidence removal
+continue to use the full transaction APIs.
+
 The generic static-analysis engine accepts target-provided decode, state-transfer, join, and address-entry callbacks. It deterministically emits CFG nodes and edges, function candidates, coverage, unresolved control flow, boundary conflicts, evidence paths, and explicit incomplete results when a work or call-context limit is reached. It never guesses through an ambiguous decode.
 
 ## Function and Call Graph
 
-`buildAnalysisCallGraph()` projects validated native analysis shards into deterministic function,
+`SqliteAnalysisStore.callGraph()` projects persisted native analysis records into deterministic function,
 call/interrupt, and unresolved-flow records. It derives function ownership only from persisted CFG
 evidence paths and exact function-entry addresses; missing callers, callees, or unresolved-site
 owners remain explicit orphan ids. Every location retains its named address space and known file
@@ -114,6 +127,41 @@ two equal numeric addresses describe the same memory. Opaque malformed effective
 is returned as a non-fatal diagnostic rather than rendered. Range joins use sorted indexes, keeping
 the model suitable for large runtime-coverage shards without an annotation-by-instruction scan.
 
+Editor previews use `prepareAnnotationQueries()` followed by `instructionAnnotationView(ranges)`
+inside a read transaction. Additive SQLite indexes select logical addresses and explicit output
+offsets before payload decoding. Initial setup extracts offsets from CFG/execution payloads once;
+SQL triggers queue only changed rows for later extraction. Derived columns live with their owning
+rows, so compaction and unrelated schema additions cannot detach offsets. A narrow offset/ID index
+orders compressed export projections without duplicating their entire payload in a covering index. Index setup is
+transactional and does not change the semantic revision.
+`annotationEditView()` and `annotationNodesAt()` load names/provenance and selected boundaries for
+label/comment forms without loading all CFG variants.
+
+Persisted views use `SqliteAnalysisStore` queries: source counts/pages, ROM coverage totals and
+200-row segment/detail pages, call ownership, processor hints, bounded navigation, and evidence
+inspection. Coverage and graph builds use temporary SQL tables and publish complete results under
+a short writer lock. Dependency triggers invalidate relevant caches; a comment edit does not rebuild
+runtime coverage, graph ownership, or decoder variants.
+
+`sourceExportView()` reads only editable metadata, functions, and conflicts. Pair it with
+`instructionExportGroups()` in the same read transaction to stream every instruction variant in ROM
+order. `runtimeInstructionVariants()` groups captured bytes and decoder state in SQL, then returns a
+cursor. Prepare it before opening its consuming read transaction. Reanalysis reads grouped execution
+seeds and selected MMIO accesses, while all original runtime facts remain in the database.
+
+`commitAnalysisProjectSelectedEdit()` patches only selected stable IDs and checks retained evidence
+before removal. Omitted CFG/runtime records are preserved. `commitRuntimeEvidenceBatch()` similarly
+merges offline imports against destination IDs without expanding the saved trace history. Full
+snapshot APIs remain available for callers explicitly requesting a complete in-memory project;
+normal editor queries, source regeneration, and offline imports do not use them.
+
+Viewport requests accept at most 2,000 ranges and locations. Previews retain at most 64 execution,
+CPU-state, or attributed-memory records per location, with shared record budgets for large pages.
+The view returns `limited` when a budget is reached and separate SQL execution totals covering all
+matching execution records. Hosts must apply those totals to the projection and disclose limited
+details; a bounded view must never replace the full analysis/export snapshot or be persisted as
+complete history.
+
 ## Runtime Evidence
 
 The runtime shard is emulator-neutral. Its discriminated records describe aggregated instruction execution, memory reads/writes, CPU state at an instruction address, half-open executed/operand/read/written coverage, and observed control targets. Emulator-specific formats stop at target-plugin importers.
@@ -123,6 +171,14 @@ Runtime `EvidenceRecord` entries can pin an artifact's format/version, SHA-256, 
 `mergeRuntimeEvidence()` only adds stable-id facts. Exact reimport is a no-op; a reused id with different content is rejected. Runtime-derived indirect target overrides are the one compositional exception: later captures union their targets and provenance without discarding earlier observations. `inspectRuntimeEvidence()` reports differing CPU-state, opcode, and instruction-size observations and explains the runtime provenance behind derived annotations and target overrides.
 
 `uttori-asm-instruction-trace` is the native versioned artifact for explicit live instruction recordings. It stores a ROM content identity, producer revision, architecture/address-space identity, and ordered bounded-pull chunks with cumulative loss metadata. `importRuntimeInstructionTrace()` verifies that identity and ordering, applies only caller-declared recorder-to-project address-space aliases, aggregates addresses into stable execution records, and returns a `RuntimeEvidenceBatch`; its source identity always hashes the unchanged artifact and it never mutates or persists a project. Callers must separately invoke `mergeRuntimeEvidence()` as an explicit user action or configured recording workflow.
+
+`importRuntimeTraceSourceIntoProject(source, directory, context, options)` accepts an in-memory
+producer or decoded archive stream. A `RuntimeTraceSource` provides `metadata` and
+`read(accept)`, calls the consumer synchronously for each ordered chunk, and rejects if the stream
+or its terminal integrity check fails. Chunks are indexed incrementally in SQLite and published
+atomically only after the reader completes. `createRuntimeTraceFileSource()` adapts existing JSON
+files to this interface and avoids validating/copying every rich chunk twice. The source owns its
+input byte budget; project import owns cancellation, index-record limits and revision checks.
 
 For large native captures, `importRuntimeTraceIntoProject()` aggregates chunks in connection-local
 SQLite temporary counters, then writes final columnar runtime rows directly into the project. There
@@ -197,3 +253,34 @@ gates, read the [architecture guide](../../docs/disassembler-architecture.md) an
 [contributor guide](../../CONTRIBUTING.md).
 
 Instruction trace artifacts can retain execution-time bytes/state and CPU/DMA/HDMA bus observations. See [captured RAM code and trace limits](../../docs/snes-function-heuristics-and-runtime-code.md).
+
+## Working-index and archive retention
+
+Native `snes.65816` / `snes.cpu` captures default to `65816-analysis` (`65816-analysis-v2` on disk).
+The projection preserves joint PC/bytes and current decoder inputs: normalized P width bits, E, D and
+DB, with program bank derived from the instruction address. Unknown/invalid state remains unknown;
+emulation mode forces the documented widths. Other processors default to full indexing. Explicit
+`full` and the older `65816-disassembly` projection remain available. Switching the default does not
+convert old data; use `project-migrate --convert-runtime` for that operation.
+
+Capture receipts survive detail expiry. Same-profile reimports repair missing facts through stable-ID
+checks; a different-profile reimport reuses the retained profile and reports that choice. It never
+reintroduces discarded full rows or increments lifetime counts. Pure in-memory batch merging still
+rejects incompatible profiles; SQLite receipt handling is the durable import API.
+
+`project-storage` displays budgets, facts/relationships, allocated database/WAL bytes, free pages,
+optional cache allocation, and the capture catalog. Its controls include `--archive-max-mib` (2048),
+`--archive-max-days` and `--archive-max-captures` (both disabled at 0), `--cache-max-mib` (256),
+`--storage-max-mib` (publication ceiling, disabled at 0), `--pin-capture`, `--unpin-capture`, and
+`--expire-archives`. Explicit database ceilings roll back entire publications; facts are never sampled
+or deleted to satisfy a budget.
+
+File imports can keep verified content-addressed copies in `analysis/archives`. Oldest unpinned managed
+copies expire under the archive limits; pins are exempt. Original capture files and the migration
+backup are outside that budget and are never deleted by this policy. The catalog distinguishes managed,
+external, expired and unavailable detail. A filename in an old report is not proof of a usable archive.
+
+Post-import maintenance evicts stale or over-budget disposable projections and attempts nonblocking WAL
+checkpoint/truncation. Active readers can defer truncation; the configured 64 MiB journal size limit
+controls recycled allocation, not a hard cap on an active transaction. Core editor/export indexes stay
+available. VACUUM remains explicit after large deletions; it does not run after every annotation save.

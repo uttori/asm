@@ -1097,7 +1097,7 @@ test("getnum - function calls", (t) => {
     () => {
       mathCore.getnum();
     },
-    { message: "Expected \',\' or \')\' in function call arguments: " },
+    { message: "Expected ',' or ')' in function call arguments: " },
   );
 
   mathCore.str = "sqrt(,)";

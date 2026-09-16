@@ -13,6 +13,10 @@ base and patch/file SHA-256 values. Reconstruction is checked byte-for-byte
 against the built checkout, `Local Only/ares-rich-state-load-fix`, on its new
 `codex/ares-capture-v2` branch. The previous branch remains available.
 
+The 2026-09-12 [bus capture increment](../capture-bus/README.md) adds a second
+source supplement to that checkout. Reconstruct its current source by applying
+both patches; this package still identifies the original instruction-only layer.
+
 `capture.hpp`, `send-all.hpp`, and `core-test.cpp` here are reviewable copies of
 the corresponding patch files. `queue-test.cpp` tests producer ownership,
 bounded reservation and send progress without ares. The outer TypeScript tests

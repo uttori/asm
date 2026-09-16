@@ -182,35 +182,6 @@ export function createNormalizedCommand(
 }
 
 /**
- * Creates a lightweight command node for deferred loop or macro collection.
- * @param {string} raw The unprocessed source line.
- * @param {string} file The current source file.
- * @param {number} line The current source line number.
- * @param {string} [normalized] Optional normalized form without inline comments.
- * @param {string[]} [words] Optional tokenized words for semantic payload derivation.
- * @returns {NormalizedCommand} The pending command node.
- */
-export function createPendingCommand(
-  raw: string,
-  file: string,
-  line: number,
-  normalized?: string,
-  words: string[] = [],
-): NormalizedCommand {
-  const command = (normalized ?? raw).trim();
-  return {
-    kind: classifyCommand(command, words),
-    source: createCommandProvenance(raw, normalized ?? raw, words, file, line),
-    command,
-    words,
-    keyword: words[0] ?? "",
-    labelName: deriveLabelName(words[0] ?? ""),
-    assignmentTarget: deriveAssignmentTarget(words),
-    parsed: deriveCommandSemantics(command, words),
-  };
-}
-
-/**
  * Creates an isolated execution copy so runtime preprocessing can mutate command
  * state without changing cached front-end program nodes.
  * @param {NormalizedCommand} command The command to clone.

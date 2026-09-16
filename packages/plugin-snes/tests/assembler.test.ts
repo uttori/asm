@@ -1,8 +1,8 @@
 import sinon from "sinon";
 
 import { test } from "../../../tests/ava-helper.js";
+import { createTraceCollector } from "../../../tests/helpers/assembler-trace.js";
 import { Assembler } from "../../../tests/test-assembler.js";
-import { createTraceCollector } from "../../core/src/debug-tracing.js";
 import { handleIncbin } from "../../core/src/directives/include-source.js";
 import { handleArch } from "../../core/src/directives/layout.js";
 import { parseExpressionNode } from "../../core/src/ir/expression-node.js";

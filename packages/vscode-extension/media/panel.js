@@ -93,23 +93,14 @@ window.addEventListener("message", ({ data }) => {
   trusted = data.trusted;
   $("trustNotice").hidden = trusted;
   $("projectName").textContent = data.projectName || "Assembly project";
-  $("projectTarget").textContent = status.target || metadata?.activeTarget || "No target selected";
   $("configAction").textContent = status.configFile
     ? "Open project configuration"
     : "Initialize project configuration";
   $("configAction").dataset.cmd = status.configFile ? "openConfig" : "initConfig";
-  $("summary").replaceChildren();
-  const summary = data.indexReady
-    ? [`${status.fileCount} files`, `${status.symbolCount} symbols`, `${status.errorCount} errors`]
-    : ["Waiting for source index"];
-  summary.forEach((text, index) => {
-    const badge = document.createElement("span");
-    badge.textContent = text;
-    if (index === 2 && status.errorCount) badge.className = "errors";
-    $("summary").append(badge);
-  });
   $("status").replaceChildren();
   const rows = [
+    ["Target", status.target || metadata?.activeTarget || "No target selected"],
+    ["Index", data.indexReady ? "Ready" : "Waiting for source index"],
     ["Files", status.fileCount],
     ["Symbols", status.symbolCount],
     ["Errors", status.errorCount],

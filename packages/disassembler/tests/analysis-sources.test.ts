@@ -1,15 +1,19 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+
 import { test } from "../../../tests/ava-helper.js";
 import {
-  AnalysisSourceIndex,
   buildAnalysisSourceCatalog,
+  openAnalysisProjectStore,
+  writeAnalysisProject,
   RomImage,
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   type AnalysisProject,
-  type AnalysisControlFlowNodeRecord,
   type RuntimeExecutionRecord,
   type RuntimeInstructionRecord,
-  type RuntimeMemoryAccessRecord,
 } from "../src/index.js";
 
 const fixture = (): AnalysisProject => ({
@@ -87,33 +91,6 @@ const instruction = (
   count: 20,
   evidence: [source],
 });
-const node = (
-  id: string,
-  address: number,
-  size: number,
-  evidencePath: string[] = [id],
-): AnalysisControlFlowNodeRecord => ({
-  id,
-  kind: "cfg-node",
-  addressSpace: "cpu",
-  address,
-  fileOffset: address,
-  size,
-  opcode: 0xea,
-  specificationId: "fixture.nop",
-  mnemonic: "NOP",
-  mode: "implied",
-  context: [],
-  incomingState: {},
-  outgoingState: {},
-  effectiveAddresses: [],
-  entryPoint: "fixture",
-  evidencePath,
-  evidence: ["a"],
-});
-const sourceId = (index: AnalysisSourceIndex, evidence: string): string =>
-  index.sources.find((source) => source.evidenceIds.includes(evidence))!.id;
-
 test("source identity uses artifact hashes, supports legacy imports, and preserves empty imports", (t) => {
   const { shards } = fixture();
   const imports = [
@@ -162,225 +139,132 @@ test("source identity uses artifact hashes, supports legacy imports, and preserv
   );
 });
 
-test("capture comparison subtracts direct PCs, deduplicates variants, and ignores propagated static provenance", (t) => {
+test("SQL source counts deduplicate instruction variants, keep qualified identities, and page before decoding", (t) => {
   const project = fixture();
-  const index = new AnalysisSourceIndex(project.manifest, {
-    ...project.shards,
-    runtime: [
-      execution("a", 0),
-      execution("a", 2, 2),
-      execution("b", 0),
-      execution("c", 2),
-      instruction("a", 2, [0xa9, 1]),
-      instruction("a", 2, [0xa9, 2], { a: 2 }),
-    ],
-    analysis: [node("static-only", 50, 1)],
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-sources-"));
+  const records = Array.from({ length: 450 }, (_, address) => execution("a", address));
+  writeAnalysisProject(directory, {
+    ...project,
+    shards: {
+      ...project.shards,
+      runtime: [
+        ...records,
+        instruction("a", 0, [0xea]),
+        execution("a", 0, 1, "ram"),
+        execution("b", 999),
+        {
+          id: "state",
+          kind: "runtime-cpu-state",
+          architecture: "fixture",
+          addressSpace: "cpu",
+          address: 0,
+          count: 1,
+          state: {},
+          evidence: ["a"],
+        },
+      ],
+      comments: [
+        {
+          id: "comment",
+          addressSpace: "cpu",
+          address: 0,
+          text: "Attributed",
+          evidence: ["a", "b"],
+        },
+      ],
+    },
   });
-  const a = sourceId(index, "a"),
-    b = sourceId(index, "b");
-  t.is(index.compare(a).uniqueInstructionCount, 0, "later capture can subsume chest code");
-  const comparison = index.compare(a, [b]);
-  t.is(comparison.instructionCount, 2);
-  t.is(comparison.uniqueInstructionCount, 1);
-  t.is(comparison.knownCodeBytes, 2);
-  t.true(comparison.notes.some((note) => note.includes("12 instruction events dropped")));
-  const page = index.page(a, "uniqueInstructions", 0, [b]);
-  t.is(page[0].address, 2);
-  t.regex(page[0].detail, /multiple variants/);
-  t.is(index.compare(a, []).uniqueInstructionCount, 2);
-  t.throws(() => index.compare(a, [a]), { message: /Invalid/ });
-  t.throws(() => index.compare("missing"), { message: /no longer exists/ });
-});
-
-test("byte extents use selected-source bytes or agreed analysis sizes and preserve address identities", (t) => {
-  const project = fixture();
-  const index = new AnalysisSourceIndex(project.manifest, {
-    ...project.shards,
-    runtime: [
-      execution("a", 0),
-      instruction("b", 0, [0xa9, 0xff]),
-      execution("a", 2, 2),
-      execution("a", 3, 2),
-      execution("a", 9),
-      execution("a", 10),
-      execution("a", 2, 1, "ram"),
-      execution("a", 2, 1, "cpu", "second"),
-      execution("a", 1023, 2, "rom.file"),
-    ],
-    analysis: [node("agreed", 0, 2), node("ambiguous1", 9, 2), node("ambiguous2", 9, 3)],
+  const store = openAnalysisProjectStore(directory);
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
   });
-  const a = sourceId(index, "a");
-  const result = index.compare(a, []);
+  const sql = new DatabaseSync(store.file);
+  try {
+    sql.exec(
+      "UPDATE runtime SET payload='malformed unrelated state' WHERE kind='runtime-cpu-state'",
+    );
+  } finally {
+    sql.close();
+  }
+  store.prepareSourceQueries();
+  store.prepareAnnotationQueries();
+  const catalog = store.sourceCatalog();
+  const a = catalog.sources.find((source) => source.evidenceIds.includes("a"))!.id;
+  const b = catalog.sources.find((source) => source.evidenceIds.includes("b"))!.id;
+  const summary = store.transaction(() => store.sourceSummary(a).summary, false);
+  t.is(summary.instructionCount, 451);
   t.is(
-    result.knownCodeBytes,
-    7,
-    "0–5 CPU plus distinct RAM and architecture byte; out-of-file range excluded",
+    summary.contributionCount,
+    1,
+    "multiple matching evidence links never double count one record",
   );
-  t.is(result.unknownSizeInstructions, 3);
-  t.is(result.codeRangeCount, 3);
-  const first = index.page(a, "uniqueInstructions", 0, []).find((entry) => entry.address === 0)!;
-  t.regex(first.description, /2 byte\(s\) \(analysis\)/);
-  t.regex(first.detail, /No execution-time bytes were saved/);
-  t.false(
-    first.detail.includes("A9 FF"),
-    "another capture cannot supply the selected source's bytes",
+  t.is(store.sourceSummary(b).summary.instructionCount, 1);
+  t.is(store.sourcePage(a, "instructions").length, 200);
+  t.is(store.sourcePage(a, "instructions", 400).length, 51);
+  t.is(store.sourcePage(a, "instructions", 200)[0].address, 200);
+  t.is(store.sourcePage(a, "contributions")[0].label, "Attributed");
+  t.throws(() => store.sourcePage(a, "instructions", -1), { message: /offset/ });
+  t.throws(() => store.sourceSummary("unknown"), { message: /Unknown analysis source/ });
+  store.transaction(() =>
+    store.replaceTables({
+      comments: [
+        { id: "comment", addressSpace: "cpu", address: 0, text: "Moved", evidence: ["b"] },
+      ],
+    }),
   );
+  store.prepareSourceQueries();
+  t.is(store.sourceSummary(a).summary.contributionCount, 0);
+  t.is(store.sourcePage(b, "contributions")[0].label, "Moved");
+  store.compact();
+  t.is(store.sourceSummary(b).summary.contributionCount, 1, "stable record IDs survive VACUUM");
 });
 
-test("aggregate execution coverage suppresses only matching architecture and space", (t) => {
+test("source catalog orders durable import receipts newest first across reimports and compaction", (t) => {
   const project = fixture();
-  const index = new AnalysisSourceIndex(project.manifest, {
-    ...project.shards,
-    runtime: [
-      execution("a", 2, 1),
-      execution("a", 3, 1),
-      execution("a", 2, 1, "ram"),
-      {
-        id: "coverage",
-        kind: "runtime-coverage",
-        architecture: "fixture",
-        addressSpace: "cpu",
-        start: 2,
-        end: 3,
-        coverage: "executed",
-        count: 1,
-        evidence: ["b"],
-      },
-      {
-        id: "read",
-        kind: "runtime-coverage",
-        architecture: "fixture",
-        addressSpace: "cpu",
-        start: 3,
-        end: 4,
-        coverage: "read",
-        count: 1,
-        evidence: ["b"],
-      },
-    ],
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-recency-"));
+  writeAnalysisProject(directory, project);
+  const store = openAnalysisProjectStore(directory);
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
   });
-  const a = sourceId(index, "a");
-  t.is(index.compare(a).sharedInstructionCount, 1);
+  store.transaction(() => {
+    for (const report of project.shards.imports.slice(0, 2))
+      store.recordCaptureReceipt({ ...report, format: "uttori-asm-instruction-trace" });
+  });
+  const sql = new DatabaseSync(store.file);
+  try {
+    sql
+      .prepare("UPDATE capture_catalog SET imported_at=?,last_seen_at=? WHERE sha256=?")
+      .run(100, 100, "a".repeat(64));
+    sql
+      .prepare("UPDATE capture_catalog SET imported_at=?,last_seen_at=? WHERE sha256=?")
+      .run(200, 200, "b".repeat(64));
+  } finally {
+    sql.close();
+  }
+  const hashes = () => store.sourceCatalog().sources.map(({ sha256 }) => sha256?.[0]);
   t.deepEqual(
-    index.page(a, "uniqueInstructions").map((entry) => [entry.addressSpace, entry.address]),
-    [
-      ["cpu", 3],
-      ["ram", 2],
-    ],
+    hashes(),
+    ["b", "a", "c"],
+    "recency precedes filenames; undated sources remain visible",
   );
-});
-
-test("unique instructions can belong to shared functions; missing and ambiguous owners remain explicit", (t) => {
-  const project = fixture();
-  const fn = (id: string, address: number) => ({
-    id,
-    kind: "function" as const,
-    addressSpace: "cpu",
-    address,
-    source: "entry" as const,
-    evidencePath: [],
-    evidence: ["a"],
-  });
-  const index = new AnalysisSourceIndex(project.manifest, {
-    ...project.shards,
-    runtime: [
-      execution("a", 0, 1),
-      execution("b", 0, 1),
-      execution("a", 1, 1),
-      execution("a", 2, 1),
-      execution("a", 3, 1),
-    ],
-    analysis: [
-      node("root", 0, 1),
-      node("other", 8, 1),
-      node("branch", 1, 1, ["root", "branch"]),
-      node("amb1", 2, 1, ["root", "amb1"]),
-      node("amb2", 2, 1, ["other", "amb2"]),
-      fn("fn", 0),
-      fn("otherfn", 8),
-    ],
-    labels: [
-      {
-        id: "label",
-        name: "ChestBranch",
-        sourceName: "ChestBranch",
-        addressSpace: "cpu",
-        address: 0,
-        evidence: ["a"],
-      },
-    ],
-  });
-  const a = sourceId(index, "a");
-  t.is(index.compare(a).functionCount, 1);
-  t.is(index.compare(a).unownedInstructions, 1);
-  t.is(index.compare(a).ambiguousInstructions, 1);
-  t.is(index.page(a, "functions")[0].label, "ChestBranch");
-  t.regex(index.page(a, "functions")[0].description, /1 unique/);
-  t.is(index.page(a, "contributions")[0].label, "ChestBranch");
-});
-
-test("memory comparison ignores changing values but keeps actor, access, channel and target distinct", (t) => {
-  const project = fixture();
-  const memory = (
-    id: string,
-    source: string,
-    changes: Partial<RuntimeMemoryAccessRecord> = {},
-  ): RuntimeMemoryAccessRecord => ({
-    id,
-    kind: "runtime-memory-access",
-    architecture: "fixture",
-    instructionAddressSpace: "cpu",
-    instructionAddress: 4,
-    accessedAddressSpace: "ram",
-    accessedAddress: 10,
-    access: "write",
-    width: 1,
-    actor: "cpu",
-    count: 1,
-    value: 1,
-    evidence: [source],
-    ...changes,
-  });
-  const index = new AnalysisSourceIndex(project.manifest, {
-    ...project.shards,
-    runtime: [
-      memory("a1", "a"),
-      memory("a2", "a", { value: 2 }),
-      memory("b1", "b", { value: 8 }),
-      memory("a3", "a", { accessedAddress: 11 }),
-      memory("a4", "a", { actor: "dma", channel: 0 }),
-      memory("a5", "a", { actor: "dma", channel: 1 }),
-    ],
-  });
-  t.is(index.compare(sourceId(index, "a")).uniqueMemoryCount, 3);
-  t.is(index.page(sourceId(index, "a"), "memory").length, 3);
-});
-
-test("source pages remain bounded and exclude static-only attribution from execution", (t) => {
-  const project = fixture();
-  const index = new AnalysisSourceIndex(project.manifest, {
-    ...project.shards,
-    runtime: Array.from({ length: 450 }, (_, address) => execution("a", address, 1)),
-    annotations: [
-      {
-        id: "static",
-        addressSpace: "cpu",
-        start: 600,
-        end: 900,
-        architecture: "fixture",
-        classification: "opcode",
-        evidence: ["b"],
-      },
-    ],
-    comments: [
-      { id: "comment", addressSpace: "cpu", address: 0, text: "Open chest", evidence: ["a"] },
-    ],
-  });
-  const a = sourceId(index, "a");
-  t.is(index.page(a, "uniqueInstructions").length, 200);
-  t.is(index.page(a, "uniqueInstructions", 400).length, 50);
-  t.is(index.page(a, "uniqueInstructions", 200)[0].address, 200);
-  t.is(index.compare(sourceId(index, "b")).instructionCount, 0);
-  t.is(index.compare(sourceId(index, "b")).contributionCount, 1);
-  t.throws(() => index.page(a, "uniqueInstructions", -1), { message: /offset/ });
+  t.deepEqual(
+    store.sourceCatalog().sources.map(({ lastImportedAt }) => lastImportedAt),
+    [200, 100, undefined],
+  );
+  store.transaction(() =>
+    store.recordCaptureReceipt({
+      ...project.shards.imports[0],
+      format: "uttori-asm-instruction-trace",
+    }),
+  );
+  t.deepEqual(
+    hashes(),
+    ["a", "b", "c"],
+    "an identical reimport moves its existing identity to the top",
+  );
+  store.compact();
+  t.deepEqual(hashes(), ["a", "b", "c"], "recency is independent of SQLite physical row order");
 });

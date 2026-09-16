@@ -1,6 +1,7 @@
 import { fork, type ChildProcess } from "node:child_process";
 
 import type { MaintenanceJobs, MaintenanceProgress } from "./disassembly-maintenance-jobs.js";
+import { MaintenanceLog, type MaintenanceLogSink } from "./disassembly-maintenance-log.js";
 
 export interface MaintenanceRunOptions {
   readonly maxMemoryMiB: number;
@@ -15,7 +16,10 @@ const cancelled = (message: string): Error =>
 export class DisassemblyMaintenanceClient {
   readonly #children = new Set<ChildProcess>();
   #disposed = false;
-  constructor(readonly processFile: string) {}
+  constructor(
+    readonly processFile: string,
+    readonly output?: MaintenanceLogSink,
+  ) {}
 
   run<K extends keyof MaintenanceJobs>(
     operation: K,
@@ -37,26 +41,42 @@ export class DisassemblyMaintenanceClient {
         stdio: ["ignore", "ignore", "pipe", "ipc"],
       });
       this.#children.add(child);
+      const project = "target" in input ? input.target.projectDirectory : input.projectDirectory;
+      const trace = "traceFile" in input ? `; capture=${input.traceFile}` : "";
+      const log = this.output
+        ? new MaintenanceLog(
+            this.output,
+            `${operation} pid=${child.pid ?? "pending"}; project=${project}${trace}; heap=${options.maxMemoryMiB} MiB`,
+          )
+        : undefined;
+      // This timer belongs to the responsive parent. A heartbeat explicitly reports silence,
+      // rather than inventing progress while the child is blocked in a synchronous statement.
+      const heartbeat = log ? setInterval(() => log.tick(), 10000) : undefined;
       let settled = false;
       let response: { value: MaintenanceJobs[K]["output"] } | { error: Error } | undefined;
       let stderr = "";
       child.stderr?.on("data", (chunk: Buffer) => {
         stderr = (stderr + chunk.toString()).slice(-8192);
+        log?.stderr(chunk.toString());
       });
       const finish = (error?: Error, value?: MaintenanceJobs[K]["output"]): void => {
         if (settled) return;
         settled = true;
+        clearInterval(heartbeat);
         options.signal?.removeEventListener("abort", cancel);
-        if (error) reject(error);
-        else if (options.signal?.aborted)
-          reject(
-            cancelled(
-              "Disassembly maintenance cancelled after finishing the current step. Check disassembly status before retrying.",
-            ),
+        if (!error && options.signal?.aborted)
+          error = cancelled(
+            "Disassembly maintenance cancelled after finishing the current step. Check disassembly status before retrying.",
           );
-        else resolve(value as MaintenanceJobs[K]["output"]);
+        log?.finish(error);
+        if (error) reject(error);
+        else resolve(value);
       };
       const cancel = (): void => {
+        log?.progress({
+          message:
+            "Cancellation requested; waiting for the current safe step. Check project status before retrying.",
+        });
         // Do not kill a writer between file operations. Async phases observe this immediately;
         // synchronous phases finish, then the caller stops before starting another phase.
         options.onProgress?.({
@@ -76,15 +96,15 @@ export class DisassemblyMaintenanceClient {
           error?: { message: string; stack?: string; name?: string };
           value?: MaintenanceJobs[K]["output"];
         }) => {
-          if (message.type === "progress" && message.progress && !options.signal?.aborted)
-            options.onProgress?.(message.progress);
-          else if (message.type === "error") {
+          if (message.type === "progress" && message.progress) {
+            log?.progress(message.progress);
+            if (!options.signal?.aborted) options.onProgress?.(message.progress);
+          } else if (message.type === "error") {
             const error = new Error(message.error?.message ?? "Disassembly maintenance failed.");
             if (message.error?.stack) error.stack = message.error.stack;
             if (message.error?.name) error.name = message.error.name;
             response = { error };
-          } else if (message.type === "result")
-            response = { value: message.value as MaintenanceJobs[K]["output"] };
+          } else if (message.type === "result") response = { value: message.value };
         },
       );
       child.on("error", (error) => finish(error));

@@ -122,7 +122,7 @@ test("sidecar request limits reject unsafe emulator work before dispatch", (t) =
 test("sidecar sessions are unpredictable and outgoing backpressure is bounded", (t) => {
   const first = createDebugSidecarSessionToken();
   const second = createDebugSidecarSessionToken();
-  t.regex(first, /^[A-Za-z0-9_-]{43}$/);
+  t.regex(first, /^[\w-]{43}$/);
   t.not(first, second);
 
   const queue = new DebugSidecarMessageQueue(

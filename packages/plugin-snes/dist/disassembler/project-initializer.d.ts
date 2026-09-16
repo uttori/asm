@@ -89,6 +89,8 @@ export interface ExportSnesProjectOptions extends SnesProjectOperationOptions {
     readonly force?: boolean;
     /** Explicitly permit previously emitted instructions to become raw bytes. */
     readonly allowCodeRegression?: boolean;
+    /** Reject concurrent changes before writing source derived from a particular saved edit. */
+    readonly expectedRevision?: string;
 }
 /** Structured source-export result. */
 export interface ExportSnesProjectResult {
@@ -171,7 +173,5 @@ export declare const verifySnesProjectRoundTrip: (options: VerifySnesProjectRoun
  * @returns {Promise<InitializeSnesDisassemblyWorkspaceResult>} Committed project stage results.
  */
 export declare const initializeSnesDisassemblyWorkspace: (options: InitializeSnesDisassemblyWorkspaceOptions) => Promise<InitializeSnesDisassemblyWorkspaceResult>;
-/** Public source-export manifest filename for wizard hosts. */
-export declare const SNES_SOURCE_EXPORT_MANIFEST = "generated-files.json";
 export {};
 //# sourceMappingURL=project-initializer.d.ts.map

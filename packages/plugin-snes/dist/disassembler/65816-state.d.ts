@@ -172,10 +172,4 @@ export declare const transferCpu65816State: (instruction: StaticInstruction, inp
  * @returns {string} Canonical JSON used as a CFG node context key.
  */
 export declare const cpu65816StateKey: (state: Cpu65816AbstractState) => string;
-/**
- * Constructs a `known` lattice value.
- * @param {number} value Exact observed register or flag value.
- * @returns {Cpu65816AbstractValue} `{ kind: "known", value }`.
- */
-export declare const knownCpu65816Value: (value: number) => Cpu65816AbstractValue;
 //# sourceMappingURL=65816-state.d.ts.map

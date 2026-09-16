@@ -20,6 +20,7 @@ import {
   validateCaptureCapabilities,
   type CaptureRequestV2,
   type CaptureResultV2,
+  type CaptureScopeV2,
 } from "@uttori/asm-debug-adapter";
 import {
   Cpu65816Decoder,
@@ -65,6 +66,13 @@ export interface AresRspBackendOptions {
   ) => AresGdbRspClient | GdbRspClient | Promise<AresGdbRspClient | GdbRspClient>;
   readonly terminate?: () => Promise<void>;
   readonly stopTimeoutMs?: number;
+  /** Set only by the manifest-verified local process host; binds file provenance
+   * and prevents native paths from being sent to an arbitrary remote RSP server. */
+  readonly nativeFileIdentity?: {
+    readonly romSha256: string;
+    readonly executableSha256: string;
+    readonly producerRevision?: string;
+  };
 }
 
 interface RegisterSnapshot {
@@ -185,7 +193,11 @@ export class AresRspDebugBackend implements DebugBackend {
   readonly protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #richTrace = false;
   #captureV2 = false;
+  readonly #nativeFileIdentity: AresRspBackendOptions["nativeFileIdentity"];
   #captureSession: string | undefined;
+  #captureNative = false;
+  #captureScope: CaptureScopeV2 | undefined;
+  #busCaptureSupported = false;
   get capabilities(): typeof ARES_RSP_CAPABILITIES {
     if (!this.#richTrace) return ARES_RSP_CAPABILITIES;
     return {
@@ -238,6 +250,7 @@ export class AresRspDebugBackend implements DebugBackend {
 
   /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
   constructor(options: AresRspBackendOptions) {
+    this.#nativeFileIdentity = options.nativeFileIdentity;
     this.#createClient = options.createClient;
     this.#terminate = options.terminate ?? (() => Promise.resolve());
     this.#stopTimeoutMs = options.stopTimeoutMs ?? 5_000;
@@ -274,6 +287,7 @@ export class AresRspDebugBackend implements DebugBackend {
       await client.start();
       const supported = await client.request("qSupported");
       this.#captureV2 = supported.split(";").includes("uttoriCaptureV2+");
+      this.#busCaptureSupported = false;
       if (
         !supported.includes("qXfer:features:read+") ||
         !supported.includes("xmlRegisters+") ||
@@ -308,10 +322,12 @@ export class AresRspDebugBackend implements DebugBackend {
     const client = this.#requireConnected();
     const terminate = options.terminate ?? true;
     if (this.#captureSession) {
-      await this.capture({ operation: "abort", session: this.#captureSession }).catch(
-        () => undefined,
-      );
+      await this.capture({
+        operation: this.#captureNative ? "file-abort" : "abort",
+        session: this.#captureSession,
+      }).catch(() => undefined);
       this.#captureSession = undefined;
+      this.#captureScope = undefined;
     }
     if (this.#trace?.active) await this.stopTrace();
     if (!terminate) {
@@ -370,6 +386,13 @@ export class AresRspDebugBackend implements DebugBackend {
     this.#stopped = false;
     this.#pendingStopReason = "step";
     this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
+    // Sidecar requests are serialized. A single DMA instruction can fill the bus
+    // queue, so waiting here would block the drain requests needed to finish it.
+    // Return after sending; the ordinary asynchronous stop event completes the step.
+    if (this.#captureSession && this.#captureScope !== "snes.65816.instructions") {
+      await client.step();
+      return;
+    }
     await this.#waitForStop(client, "instruction step", () => client.step());
   }
 
@@ -525,14 +548,126 @@ export class AresRspDebugBackend implements DebugBackend {
       throw new Error(
         "The active ares runtime does not support lossless capture v2. Install the capture-v2 runtime and restart debugging.",
       );
-    const fields: (string | number)[] = ["qUttoriCapture", request.operation];
-    if (request.operation === "start") fields.push(request.bufferBytes);
-    else if (request.operation !== "capabilities") {
+    if (
+      request.operation === "file-start" ||
+      request.operation === "file-capabilities" ||
+      request.operation === "file-status" ||
+      request.operation === "file-stop" ||
+      request.operation === "file-abort" ||
+      request.operation === "file-release"
+    ) {
+      const negotiation =
+        request.operation === "file-start" || request.operation === "file-capabilities";
+      const scope = negotiation ? (request.scope ?? "snes.65816.instructions") : this.#captureScope;
+      const scopes = {
+        "snes.65816.instructions": "instructions",
+        "snes.cpu-bus": "bus",
+        "snes.cpu-bus-transfers": "bus-transfers",
+        "snes.cpu-bus-ppu": "bus-ppu",
+      } as const;
+      const fields: (string | number)[] = ["qUttoriCaptureFile", request.operation.slice(5)];
+      if (request.operation === "file-start") {
+        this.#requireStopped();
+        const identity = this.#nativeFileIdentity;
+        if (!identity)
+          throw new Error("Native file capture requires a verified local runtime host.");
+        if (
+          request.romContentSha256 !== identity.romSha256 ||
+          request.producer.id !== "ares" ||
+          (request.producer.revision !== identity.executableSha256 &&
+            request.producer.revision !== identity.producerRevision)
+        )
+          throw new Error(
+            "Native capture identity does not match the verified ROM and executable.",
+          );
+        await this.capture({ operation: "file-capabilities", scope });
+        const encode = (value: string): string => Buffer.from(value, "utf8").toString("hex");
+        fields.push(
+          request.bufferBytes,
+          scopes[scope!],
+          encode(request.file),
+          request.romContentSha256,
+          encode(request.producer.id),
+          encode(request.producer.revision),
+        );
+        if (request.measureStages) fields.push("profile");
+      } else if (request.operation === "file-capabilities") fields.push(scopes[scope!]);
+      else fields.push(request.session);
+      const response = await client.request(fields.join(":"));
+      if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
+        throw new Error(
+          `Native file capture ${request.operation} is unsupported or rejected (${response.slice(0, 32)}). Use the capture-file runtime.`,
+        );
+      const value: unknown = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
+      if (request.operation === "file-capabilities") {
+        const capabilities = validateCaptureCapabilities(value, scope);
+        if (!capabilities.nativeFile)
+          throw new Error("Runtime did not confirm native file ownership.");
+        return capabilities;
+      }
+      const position = validateCapturePosition(
+        value,
+        request.operation === "file-start" ? undefined : request.session,
+      );
+      if (request.operation === "file-start") {
+        this.#captureSession = position.session;
+        this.#captureScope = scope;
+        this.#captureNative = true;
+        try {
+          validateCapturePosition(position, undefined, scope);
+        } catch (error) {
+          await this.capture({ operation: "file-abort", session: position.session }).catch(
+            () => undefined,
+          );
+          throw error;
+        }
+      } else if (position.state === "complete" || request.operation === "file-release") {
+        this.#captureSession = undefined;
+        this.#captureScope = undefined;
+      }
+      validateCapturePosition(position, undefined, scope);
+      return position;
+    }
+    const negotiation = request.operation === "start" || request.operation === "capabilities";
+    const requestedScope = negotiation ? (request.scope ?? "snes.65816.instructions") : undefined;
+    const ppu = requestedScope === "snes.cpu-bus-ppu";
+    const bus =
+      ppu || requestedScope === "snes.cpu-bus" || requestedScope === "snes.cpu-bus-transfers";
+    const transfers = requestedScope === "snes.cpu-bus-transfers";
+    // uttoriCaptureV2+ predates the bus stream. Probe its distinct capability packet
+    // before arming, including callers that bypass the file recorder's negotiation.
+    if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported))
+      await this.capture({ operation: "capabilities", scope: requestedScope });
+    let operation: string = request.operation;
+    if (request.operation === "capabilities" && bus)
+      operation = transfers ? "transfer-capabilities" : "bus-capabilities";
+    if (request.operation === "capabilities" && ppu) operation = "ppu-capabilities";
+    const fields: (string | number)[] = ["qUttoriCapture", operation];
+    if (request.operation === "start") {
+      fields.push(request.bufferBytes);
+      if (ppu) fields.push("bus-ppu");
+      else if (bus) fields.push(transfers ? "bus-transfers" : "bus");
+    } else if (request.operation !== "capabilities") {
       fields.push(request.session);
       if (request.operation === "read" || request.operation === "ack") fields.push(request.chunk);
       if (request.operation === "ack") fields.push(request.event);
     }
     const response = await client.request(fields.join(":"));
+    if (
+      request.operation === "capabilities" &&
+      bus &&
+      (!response || /^e[\da-f]{2}$/i.test(response))
+    ) {
+      let feature = transfers ? "transfer boundaries" : "bus capture";
+      let runtime = transfers ? "capture-transfer" : "capture-bus";
+      if (ppu) {
+        feature = "verified PPU effects";
+        runtime = "capture-ppu";
+      }
+      throw new Error(
+        `The active ares runtime does not support CPU/DMA/HDMA ${feature}. Use the ${runtime} runtime and restart debugging.`,
+      );
+    }
     if (/^e[\da-f]{2}$/i.test(response))
       throw new Error(`Capture ${request.operation} rejected (${response}).`);
     if (request.operation === "read") {
@@ -543,13 +678,36 @@ export class AresRspDebugBackend implements DebugBackend {
     if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
       throw new Error("Malformed capture control response.");
     const value: unknown = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
-    if (request.operation === "capabilities") return validateCaptureCapabilities(value);
+    if (request.operation === "capabilities") {
+      const capabilities = validateCaptureCapabilities(value, requestedScope);
+      if (bus && !transfers && !ppu) this.#busCaptureSupported = true;
+      return capabilities;
+    }
     const position = validateCapturePosition(
       value,
       request.operation === "start" ? undefined : request.session,
     );
-    if (request.operation === "start") this.#captureSession = position.session;
-    if (position.state === "complete") this.#captureSession = undefined;
+    if (request.operation === "start") {
+      this.#captureNative = false;
+      this.#captureSession = position.session;
+      this.#captureScope = position.scope ?? "snes.65816.instructions";
+      try {
+        validateCapturePosition(position, undefined, requestedScope);
+      } catch (error) {
+        // A valid but wrong-scope start may already own a native queue. Abort it
+        // before reporting failure so a rejected setup cannot keep producing.
+        await this.capture({ operation: "abort", session: position.session }).catch(
+          () => undefined,
+        );
+        throw error;
+      }
+    } else if (position.session === this.#captureSession) {
+      validateCapturePosition(position, this.#captureSession, this.#captureScope);
+    }
+    if (position.state === "complete") {
+      this.#captureSession = undefined;
+      this.#captureScope = undefined;
+    }
     return position;
   }
 

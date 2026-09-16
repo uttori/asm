@@ -621,12 +621,27 @@ bytes in deterministic `incbin` assets. The selected internal header, an optiona
 and all 16 native/emulation vector words are emitted as named, decoded `db`/`dw` source following
 the [SNESdev ROM-header](https://snes.nesdev.org/wiki/ROM_header) and
 [CPU-vector](https://snes.nesdev.org/wiki/CPU_vectors) layouts. Native instructions carry explicit
-`.b`/`.w`/`.l` operand qualification and `.a8`/`.a16`/`.i8`/`.i16` state transitions.
+`.b`/`.w`/`.l` operand qualification. Ambient `.a8`/`.a16`/`.i8`/`.i16` directives are
+not emitted: explicit operand sizes preserve the encoding without source churn from captured flag changes.
 `snes-defines.asm` covers the SNESdev PPU, MMIO, and DMA/HDMA tables with a hover comment on every
 register and compatibility aliases for older names. The CLI wraps this API with `uttori-asm export`
 and `uttori-asm verify-roundtrip`.
 
+The editable `ram-map.json` generates documented symbols in `ram-defines.asm` and
+substitutes them in known memory operands. Entries default to canonical WRAM
+(`$7E0000–$7FFFFF`); fixed CPU WRAM mirrors resolve to those entries. Declare
+`"memory": "sram"` explicitly for cartridge RAM, using its **CPU bus address**, for
+example `{ "name": "SRAM_LAST_SELECTED_FILE", "address": "$307FFF", "memory": "sram",
+"description": "Persistent zero-based file index." }`. SRAM entries must fit within
+a standard LoROM/HiROM SRAM window. They match only the declared CPU addresses:
+the map author must establish the actual cartridge mapping, size and aliases.
+They do not create ROM data or permit SRAM bindings in `struct-map.json`.
+
 An optional `struct-map.json` beside `main.asm` binds reusable layouts to RAM or ROM:
+
+Its optional `instructionUses` metadata accepts checked native expressions and records
+capture-backed data references in generated source. See the
+[instruction-use guide](../../docs/struct-instruction-uses.md) for byte checks, provenance and benchmarks.
 
 ```json
 {
@@ -870,7 +885,7 @@ struct Enemy extends Actor
 endstruct
 ```
 
-The parent reserves enough stride for its largest extension, so `Actor[3].Enemy.health` lands in the correct record. `sizeof(name)` returns the defined struct size; `objectsize(name)` follows the expression host's object-size rules. The regression-rich examples are in [`structs.asm`](../../fixtures/asar/tests/structs.asm) and the implementation is [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts).
+The parent reserves enough stride for its largest extension, so `Actor[3].Enemy.health` lands in the correct record. `countof(name)` returns the declared record count (one when unbounded), `bytesof(name)` its total byte extent, and `startof(name)` / `endof(name)` its physical first/exclusive-end addresses, accounting for a nonzero first index. `sizeof(name)` returns the defined struct size; `objectsize(name)` follows the expression host's object-size rules. The regression-rich examples are in [`structs.asm`](../../fixtures/asar/tests/structs.asm) and the implementation is [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts).
 
 ### Typed Fields & Named Initializers
 
@@ -1002,7 +1017,6 @@ bank sources are subject to the usual generated-file drift checks. Keep persiste
 and labels in the analysis project. The exporter never rewrites analysis evidence to enable
 record grouping.
 
-
 ## Defines, Expressions, & Functions
 
 ### Defines
@@ -1063,7 +1077,7 @@ Operators at the same level are left-associative. Parentheses override precedenc
 | Selection           | `min`, `max`, `clamp`, `safediv`, `select`                                                                                       |
 | Logical comparison  | `not`, `equal`, `notequal`, `less`, `lessequal`, `greater`, `greaterequal`, `and`, `or`, `nand`, `nor`, `xor`                    |
 | Address helpers     | `bank(value)`, `offset(from,to)`, `pc()`, `realbase()`                                                                           |
-| Strings and symbols | `stringsequal`, `stringsequalnocase`, `defined`, `sizeof`, `objectsize`, `datasize`                                              |
+| Strings and symbols | `stringsequal`, `stringsequalnocase`, `defined`, `sizeof`, `objectsize`, `datasize`, `countof`, `bytesof`, `startof`, `endof`    |
 | Files               | `filesize`, `getfilestatus`, `canreadfile1`...`canreadfile4`, `canreadfile`, `readfile1`...`readfile4`                           |
 
 File reads are little-endian. `readfileN(filename, position[, default])` accepts a fallback for an unavailable range. `canreadfile(filename, position, size)` handles an arbitrary byte count. `getfilestatus()` returns the host's status code; the supported fixture treats `0` as present.
@@ -1553,7 +1567,7 @@ If you think it should be working here, and not in the mentioned compatibility a
 | SPC directives                               | [`src/services/spc-runtime.ts`](./src/services/spc-runtime.ts)                                                                                                                                                                                                                           | [`spc.test.ts`](./tests/directives/spc.test.ts)                                                                                                                                                |
 | Defines/macros/structs                       | [`define-engine.ts`](../../packages/core/src/services/define-engine.ts), [`macro-engine.ts`](../../packages/core/src/services/macro-engine.ts), [`struct-engine.ts`](../../packages/core/src/services/struct-engine.ts)                                                                  | [`v140features.asm`](../../fixtures/asar/tests/v140features.asm), [`structs.asm`](../../fixtures/asar/tests/structs.asm)                                                                       |
 | Includes and binary ranges                   | [`include-source.ts`](../../packages/core/src/directives/include-source.ts)                                                                                                                                                                                                              | [`incbin.asm`](../../fixtures/asar/tests/incbin.asm), [`includeonce.asm`](../../fixtures/asar/tests/includeonce.asm)                                                                           |
-| Character tables and diagnostics             | [`misc.ts`](../../packages/core/src/directives/misc.ts)                                                                                                                                                                                                                                  | [`misc.test.ts`](../../packages/core/tests/directives/misc.test.ts)                                                                                                                                          |
+| Character tables and diagnostics             | [`misc.ts`](../../packages/core/src/directives/misc.ts)                                                                                                                                                                                                                                  | [`misc.test.ts`](../../packages/core/tests/directives/misc.test.ts)                                                                                                                            |
 | Deferred compatibility                       | [`fixtures/asar/tests/Unsupported`](../../fixtures/asar/tests/Unsupported)                                                                                                                                                                                                               | Each filename identifies an uncovered family                                                                                                                                                   |
 
 ## Instruction Catalogs

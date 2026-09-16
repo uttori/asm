@@ -5,26 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';"
-    />
+      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';" />
     <link rel="stylesheet" href="{{styleUri}}" />
-    <title>Assembly project</title>
+    <title>Assembly Project</title>
   </head>
   <body>
     <header class="project-header">
       <div class="heading-row">
-        <strong id="projectName">Assembly project</strong>
+        <strong id="projectName">Assembly Project</strong>
         <button
           class="quiet"
           data-cmd="refresh"
           title="Refresh project status"
-          aria-label="Refresh project status"
-        >
+          aria-label="Refresh project status">
           ↻
         </button>
       </div>
-      <p id="projectTarget" class="muted">Loading project…</p>
-      <div id="summary" class="summary" aria-label="Source analysis summary"></div>
     </header>
     <p id="trustNotice" class="notice" hidden>
       Trust this workspace to edit annotations, regenerate source, or capture execution.
@@ -34,83 +30,70 @@
       <section class="section" aria-labelledby="disassemblyHeading">
         <h2 id="disassemblyHeading">Disassembly</h2>
         <button class="primary full" data-cmd="regenerateDisassembly" data-trusted>
-          Analyze and regenerate
+          Analyze & Regenerate
         </button>
         <p class="hint">
           Update source from saved annotations, rules, and trace evidence. Verify the ROM round
           trip.
         </p>
         <div class="button-grid">
-          <button data-cmd="editAnnotation" data-trusted>Edit annotation</button>
-          <button data-cmd="openRamMap" data-trusted>RAM map</button>
+          <button data-cmd="editAnnotation" data-trusted>Edit Annotation</button>
+          <button data-cmd="openRamMap" data-trusted>RAM Map</button>
         </div>
-        <button class="quiet" data-cmd="disassemblyStatus">Check source status</button>
+        <button class="quiet" data-cmd="disassemblyStatus">Check Source Status</button>
       </section>
 
       <details id="heuristicsSection" open>
-        <summary>Heuristics <span class="detail-hint">Find routine roles</span></summary>
+        <summary>Heuristics <span class="detail-hint">Find Routine Roles</span></summary>
         <div class="section-content">
           <p class="hint">
             Preview role suggestions from existing analysis, then regenerate to apply their
             comments.
           </p>
           <div class="button-grid">
-            <button data-cmd="configureHeuristics" data-trusted>Edit rules</button>
-            <button data-cmd="previewHeuristics">Run preview</button>
+            <button data-cmd="configureHeuristics" data-trusted>Edit Rules</button>
+            <button data-cmd="previewHeuristics">Run Preview</button>
           </div>
         </div>
       </details>
 
       <details id="captureSection">
-        <summary>Runtime capture <span class="detail-hint">Gather evidence</span></summary>
+        <summary>Runtime Capture</summary>
         <div class="section-content">
-          <h3>Execution window</h3>
-          <p class="hint">Record an interval and identify the routines that ran.</p>
+          <p class="hint">Record a session and identify the routines that ran.</p>
           <div class="button-grid">
-            <button data-cmd="startExecutionCapture" data-trusted>Start recording</button>
-            <button data-cmd="stopExecutionCapture" data-trusted>Stop and analyze</button>
+            <button data-cmd="startExecutionCapture" data-trusted>Start Recording</button>
+            <button data-cmd="stopExecutionCapture" data-trusted>Stop & Analyze</button>
           </div>
           <button class="full" data-cmd="importRuntimeTrace" data-trusted>
-            Import saved trace
+            Import Saved Trace
           </button>
-          <h3>Compare a behavior</h3>
-          <p class="hint">Compare idle execution with an action in the game.</p>
-          <ol class="capture-steps">
-            <li><button data-cmd="captureIdle" data-trusted>Capture idle baseline</button></li>
-            <li><button data-cmd="captureBehavior" data-trusted>Capture behavior</button></li>
-            <li><button data-cmd="captureReview" data-trusted>Review and apply</button></li>
-          </ol>
-          <div class="button-grid">
-            <button data-cmd="captureStop" data-trusted>Stop capture</button>
-            <button class="quiet" data-cmd="captureGuide">Capture guide</button>
-          </div>
-          <button class="quiet" data-cmd="captureDemo" data-trusted>Try an idle demo</button>
         </div>
       </details>
 
       <details id="settingsSection">
-        <summary>Project settings <span class="detail-hint">Build and paths</span></summary>
+        <summary>Project Settings <span class="detail-hint">Build & Paths</span></summary>
         <div class="section-content">
           <button class="full" id="configAction" data-cmd="initConfig" data-trusted>
-            Initialize project configuration
+            Initialize Project Configuration
           </button>
           <label for="target">Target</label>
           <select id="target" data-trusted></select>
           <label for="architecture">Architecture</label>
           <select id="architecture" data-trusted></select>
-          <label for="buildOutput">Build output</label>
+          <label for="buildOutput">Build Output</label>
           <input id="buildOutput" placeholder="game.sfc" data-trusted />
           <h3>Entry points</h3>
           <div class="list" id="entryPoints"></div>
-          <button class="quiet" data-cmd="addEntryPoint" data-trusted>Add file…</button>
+          <button class="quiet" data-cmd="addEntryPoint" data-trusted>Add File…</button>
           <h3>Include paths</h3>
           <div class="list" id="includePaths"></div>
-          <button class="quiet" data-cmd="addIncludePath" data-trusted>Add folder…</button>
+          <button class="quiet" data-cmd="addIncludePath" data-trusted>Add Folder…</button>
         </div>
       </details>
 
       <details id="diagnosticsSection">
-        <summary>Index details</summary>
+        <summary>Index Details</summary>
         <dl class="status section-content" id="status"></dl>
       </details>
     </main>

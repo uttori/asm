@@ -2,7 +2,6 @@ import type { InstructionDescriptor } from "../architecture-types.js";
 import type { ExpressionFunctionDescriptor } from "../plugin/contracts.js";
 import {
   directiveCatalog,
-  findDirective,
   type DirectiveDescriptor,
   type DirectiveDocs,
   type DirectiveOperandDescriptor,
@@ -67,15 +66,6 @@ export function findInstruction(
 ): InstructionDescriptor | undefined {
   const upper = mnemonic.toUpperCase();
   return getInstructionCatalogMap(getInstructionCatalog(architecture, provider)).get(upper);
-}
-
-/**
- * Re-exports the directive lookup so providers depend on a single module.
- * @param {string} keyword The directive keyword.
- * @returns {DirectiveDescriptor | undefined} The descriptor, if known.
- */
-export function findDirectiveEntry(keyword: string): DirectiveDescriptor | undefined {
-  return findDirective(keyword);
 }
 
 /**

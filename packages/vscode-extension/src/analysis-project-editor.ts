@@ -11,10 +11,9 @@ import {
   applyStateEntryPointEdit,
   applyTargetResolutionEdit,
   canonicalJson,
-  commitAnalysisProjectViewUpdate,
-  explainProjectEvidence,
-  loadAnalysisProjectSnapshot,
-  loadAnalysisProjectViewSnapshot,
+  commitAnalysisProjectSelectedEdit,
+  openAnalysisProjectStore,
+  analysisProjectRevision,
   revertLabelRenameEdit,
   revertDisassemblyAnnotationEdit,
   revertRangeClassificationEdit,
@@ -44,17 +43,60 @@ import {
   findAnalysisProjectDirectories,
   type AnalysisCoverageEditTarget,
 } from "./coverage-tree.js";
-import type { AnnotationLookupResult } from "./disassembly-annotation-data.js";
+import type {
+  AnnotationLookupResult,
+  AnnotationRefresh,
+  AnnotationSaveResult,
+} from "./disassembly-annotation-data.js";
 import { openDisassemblyAnnotationForm } from "./disassembly-annotation-form.js";
 
 /**
  * Editing changes metadata only; runtime remains in SQLite through edits and undo/redo.
  * @param {string} directory Selected project root.
+ * @param {Pick<DisassemblyAnnotationEditRequest, "addressSpace" | "address">} [location] Instruction boundary needed to replay an annotation edit.
  * @returns {AnalysisProjectSnapshot} Metadata in the editor's record shape, paired with its revision.
  */
-const loadEditableSnapshot = (directory: string): AnalysisProjectSnapshot => {
-  const loaded = loadAnalysisProjectViewSnapshot(directory);
-  return { manifest: loaded.manifest, shards: loaded.view, revision: loaded.revision };
+const loadEditableSnapshot = (
+  directory: string,
+  location?: Pick<DisassemblyAnnotationEditRequest, "addressSpace" | "address">,
+): AnalysisProjectSnapshot => {
+  const store = openAnalysisProjectStore(directory);
+  try {
+    if (location) store.prepareAnnotationQueries();
+    return store.transaction(() => {
+      const manifest = store.manifest();
+      const shards = {
+        labels: store.loadTable("labels"),
+        comments: store.loadTable("comments"),
+        annotations: store.loadTable("annotations"),
+        regions: store.loadTable("regions"),
+        evidence: store.loadTable("evidence"),
+        imports: [],
+        runtime: [],
+        analysis: store.analysisByKinds([
+          "function",
+          "conflict",
+          "unresolved",
+          "target-override",
+          "target-set",
+        ]),
+      };
+      if (location) {
+        const output = manifest.addressSpaces.some(
+          (space) => space.id === location.addressSpace && space.kind === "file",
+        )
+          ? location.address
+          : undefined;
+        shards.analysis.push(
+          ...store.annotationNodesAt(location.addressSpace, location.address, output),
+        );
+      }
+      store.validateView(shards);
+      return { manifest, shards, revision: analysisProjectRevision(manifest) };
+    }, false);
+  } finally {
+    store.close();
+  }
 };
 
 /**
@@ -68,12 +110,7 @@ const commitEditableSnapshot = (
   snapshot: AnalysisProjectSnapshot,
   project: AnalysisProject,
 ): void => {
-  const { runtime: _runtime, ...updates } = project.shards;
-  commitAnalysisProjectViewUpdate(
-    directory,
-    { manifest: snapshot.manifest, view: snapshot.shards, revision: snapshot.revision },
-    updates,
-  );
+  commitAnalysisProjectSelectedEdit(directory, snapshot, project);
 };
 
 interface RangeHistoryEntry {
@@ -729,6 +766,7 @@ export class AnalysisProjectEditor {
         inlineComment: label?.inlineComment ?? "",
         instructionComment: inline?.text ?? "",
       };
+      let annotationRefresh: AnnotationRefresh = { after: resolved.revision.manifestSha256 };
       form.initialize(
         {
           location: `${path.basename(projectDirectory)} · ${location.addressSpace} ${hexadecimal(location.address)}`,
@@ -768,7 +806,7 @@ export class AnalysisProjectEditor {
             evidenceId: `manual.evidence.annotation.${this.editSuffix(resolved, { ...location, ...fields })}`,
             sourceId: "vscode.disassembly-annotation",
           };
-          const inverse = await analysisWorker().request<DisassemblyAnnotationInverse>(
+          const { refresh, ...inverse } = await analysisWorker().request<AnnotationSaveResult>(
             projectDirectory,
             "annotationSave",
             {
@@ -781,6 +819,7 @@ export class AnalysisProjectEditor {
               },
             },
           );
+          annotationRefresh = refresh;
           this.#undo.push({ kind: "annotation", projectDirectory, request, inverse });
           this.#redo.length = 0;
           await this.updateContexts();
@@ -792,6 +831,7 @@ export class AnalysisProjectEditor {
         async () => {
           await commands.executeCommand("asm.disassembly.regenerate", {
             projectDirectory,
+            annotationRefresh,
             ...(resolved.sourceDirectory ? { sourceDirectory: resolved.sourceDirectory } : {}),
           });
         },
@@ -889,17 +929,21 @@ export class AnalysisProjectEditor {
         false,
       );
       if (!projectDirectory) return;
-      const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
-      const preferred = new Set([
-        ...(target?.annotationIds.map((id) => `annotations:${id}`) ?? []),
-        ...(target?.analysisIds.map((id) => `analysis:${id}`) ?? []),
-        ...(target?.runtimeIds.map((id) => `runtime:${id}`) ?? []),
-        ...(target?.conflictIds.map((id) => `analysis:${id}`) ?? []),
-        ...(target?.regionIds.map((id) => `regions:${id}`) ?? []),
-      ]);
-      const choices = this.evidenceChoices(snapshot.shards).filter(
-        ({ key }) => preferred.size === 0 || preferred.has(key),
-      );
+      const snapshot = await analysisWorker().request<
+        Pick<AnalysisProjectSnapshot, "manifest" | "shards">
+      >(projectDirectory, "evidenceChoices", {
+        ...(target
+          ? {
+              evidenceSelection: {
+                annotations: target.annotationIds,
+                analysis: [...target.analysisIds, ...target.conflictIds],
+                runtime: target.runtimeIds,
+                regions: target.regionIds,
+              },
+            }
+          : {}),
+      });
+      const choices = this.evidenceChoices(snapshot.shards);
       if (choices.length === 0) {
         await window.showInformationMessage(
           target
@@ -910,13 +954,14 @@ export class AnalysisProjectEditor {
       }
       const selected = await window.showQuickPick(choices, {
         title: "Explain Analysis Evidence",
-        placeHolder: "Choose a persisted record to trace back to its evidence",
+        placeHolder:
+          "Choose a record (up to 200 per collection); open a coverage segment to narrow the list",
       });
       if (!selected) return;
-      const explanation = explainProjectEvidence(
-        snapshot.shards,
-        selected.shard,
-        selected.recordId,
+      const explanation = await analysisWorker().request<ProjectEvidenceExplanation>(
+        projectDirectory,
+        "explainEvidence",
+        { evidenceRecord: { kind: selected.shard, id: selected.recordId } },
       );
       const content = this.renderEvidenceExplanation(projectDirectory, explanation);
       const document = await workspace.openTextDocument({ language: "markdown", content });
@@ -934,7 +979,10 @@ export class AnalysisProjectEditor {
     }
     try {
       this.assertTrustedProject(entry.projectDirectory);
-      const snapshot = loadEditableSnapshot(entry.projectDirectory);
+      const snapshot = loadEditableSnapshot(
+        entry.projectDirectory,
+        entry.kind === "annotation" ? entry.request : undefined,
+      );
       const project = this.revertEdit(snapshot, entry);
       commitEditableSnapshot(entry.projectDirectory, snapshot, project);
       this.#undo.pop();
@@ -955,7 +1003,10 @@ export class AnalysisProjectEditor {
     }
     try {
       this.assertTrustedProject(entry.projectDirectory);
-      const snapshot = loadEditableSnapshot(entry.projectDirectory);
+      const snapshot = loadEditableSnapshot(
+        entry.projectDirectory,
+        entry.kind === "annotation" ? entry.request : undefined,
+      );
       const reapplied = this.reapplyEdit(snapshot, entry);
       commitEditableSnapshot(entry.projectDirectory, snapshot, reapplied.project);
       this.#redo.pop();
@@ -1134,6 +1185,12 @@ export class AnalysisProjectEditor {
         : explanation.evidence.map(indentedJson).join("\n\n"),
       "",
       "## Reverse references",
+      ...(explanation.referencedByTotal === undefined
+        ? []
+        : [
+            `Showing ${explanation.referencedBy.length} of ${explanation.referencedByTotal} references.`,
+            "",
+          ]),
       "",
       explanation.referencedBy.length === 0
         ? "No project records reference this evidence."

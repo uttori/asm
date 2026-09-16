@@ -854,7 +854,7 @@ test("asar directive operands have hover docs", (t) => {
   hoverWord(2, "bankcross", /bankcross/i);
   hoverWord(2, "full", /\*\*full\*\*/);
   hoverWord(3, "dp", /\*\*dp\*\*/);
-  hoverWord(3, "ram", /direct-page|DP/i);
+  hoverWord(3, "ram", /direct-page|dp/i);
   hoverWord(4, "spc700-inline", /spc700-inline/);
   hoverWord(5, "nested", /\*\*nested\*\*/);
   hoverWord(5, "on", /nested/i);

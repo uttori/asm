@@ -4,16 +4,14 @@ import path from "node:path";
 import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
 import {
   ANALYSIS_PROJECT_FORMAT,
-  ANALYSIS_PROJECT_MANIFEST,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
-  SOURCE_EXPORT_MANIFEST,
   RomImage,
   compareByteImages,
-  loadAnalysisProjectView,
-  loadAnalysisProjectViewSnapshot,
+  openAnalysisProjectStore,
+  analysisProjectRevision,
+  assertAnalysisProjectRevision,
   commitAnalysisProjectViewUpdate,
   loadSourceExportManifest,
-  sourceExportSha256,
   validateAnalysisProject,
   validateProjectRom,
   validateSourceExportFiles,
@@ -48,13 +46,14 @@ import {
   validateSnesHeuristicConfiguration,
   type SnesHeuristicConfiguration,
 } from "./function-heuristics.js";
+import { snesHardwareDefines } from "./hardware-registers.js";
 import {
   detectSnesRom,
   SNES_MAPPERS,
   type SnesMapper,
   type SnesRomDetection,
 } from "./rom-header.js";
-import { analyzeSnesRuntimeCode, createSnesRuntimeAnalysisProjection } from "./runtime-code.js";
+import { analyzeSnesRuntimeCode } from "./runtime-code.js";
 import { exportSnes65816Source } from "./source-export.js";
 import { SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR } from "./spc700-address-space.js";
 import { SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR } from "./superfx-address-space.js";
@@ -169,6 +168,8 @@ export interface ExportSnesProjectOptions extends SnesProjectOperationOptions {
   readonly force?: boolean;
   /** Explicitly permit previously emitted instructions to become raw bytes. */
   readonly allowCodeRegression?: boolean;
+  /** Reject concurrent changes before writing source derived from a particular saved edit. */
+  readonly expectedRevision?: string;
 }
 
 /** Structured source-export result. */
@@ -462,12 +463,57 @@ export const analyzeSnesProject = (
   options: AnalyzeSnesProjectOptions,
 ): AnalyzeSnesProjectResult => {
   throwIfCancelled(options.signal);
-  report(options, "analyze", "Running bounded conservative 65816 analysis.");
+  report(options, "analyze", "Preparing SQL instruction indexes.");
   const projectDirectory = path.resolve(options.projectDirectory);
-  const loaded = loadAnalysisProjectViewSnapshot(
-    projectDirectory,
-    createSnesRuntimeAnalysisProjection,
-  );
+  const store = openAnalysisProjectStore(projectDirectory);
+  let previousCode: { start: number; end: number }[] = [];
+  const loaded = (() => {
+    try {
+      const revision = analysisProjectRevision(store.manifest());
+      store.prepareAnnotationQueries();
+      report(options, "analyze", "Grouping captured instruction variants in SQLite.");
+      store.runtimeInstructionVariants(
+        ARCHITECTURE_ID,
+        SNES_CPU_ADDRESS_SPACE,
+        ["p", "P", "e", "E", "db", "DB", "d", "D"],
+        { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } },
+      );
+      report(
+        options,
+        "analyze",
+        "Loading metadata, execution seeds, MMIO observations and known code.",
+      );
+      return store.transaction(() => {
+        assertAnalysisProjectRevision(store, revision);
+        const manifest = store.manifest();
+        const registers = [...new Set(snesHardwareDefines().map(([, address]) => address))];
+        const addresses = [];
+        for (let bank = 0; bank < 256; bank++)
+          if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf))
+            for (const low of registers) addresses.push((bank << 16) | low);
+        const view: AnalysisProjectShards = {
+          labels: store.loadTable("labels"),
+          comments: store.loadTable("comments"),
+          annotations: store.loadTable("annotations"),
+          regions: store.loadTable("regions"),
+          evidence: store.loadTable("evidence"),
+          imports: [],
+          analysis: store.analysisByKinds(["target-override", "target-set"]),
+          runtime: [
+            ...store.runtimeExecutionSeeds(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE),
+            ...store.runtimeMemoryAtAddresses(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, addresses),
+          ],
+        };
+        // Reanalysis consumes decoder variants, seed totals and MMIO roles. All original facts stay
+        // authoritative in SQLite and are excluded from the metadata-only commit below.
+        store.validateView(view);
+        previousCode = store.codeRanges();
+        return { manifest, view, revision };
+      }, false);
+    } finally {
+      store.close();
+    }
+  })();
   report(options, "analyze", "Building static analysis from the validated runtime view.");
   const rom = RomImage.load(path.resolve(options.romFile), {
     headerSize: loaded.manifest.rom.headerSize,
@@ -565,11 +611,28 @@ export const analyzeSnesProject = (
   });
   throwIfCancelled(options.signal);
   report(options, "analyze", "Decoding captured instruction variants.");
-  const capturedRecords = analyzeSnesRuntimeCode(
-    loaded.view,
-    rom,
-    loaded.manifest.mapping.mapper as SnesMapper,
-  );
+  const capturedStore = openAnalysisProjectStore(projectDirectory);
+  const capturedRecords = (() => {
+    try {
+      const variants = capturedStore.runtimeInstructionVariants(
+        ARCHITECTURE_ID,
+        SNES_CPU_ADDRESS_SPACE,
+        ["p", "P", "e", "E", "db", "DB", "d", "D"],
+        { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } },
+      );
+      return capturedStore.transaction(() => {
+        assertAnalysisProjectRevision(capturedStore, loaded.revision);
+        return analyzeSnesRuntimeCode(
+          loaded.view,
+          rom,
+          loaded.manifest.mapping.mapper as SnesMapper,
+          variants,
+        );
+      }, false);
+    } finally {
+      capturedStore.close();
+    }
+  })();
   const romBytes = rom.bytes();
   const analysisRecords = [
     ...editableRecords,
@@ -592,7 +655,7 @@ export const analyzeSnesProject = (
           ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
           : [],
       );
-    const lost = lostCodeRanges(codeRanges(loaded.view.analysis), codeRanges(analysisRecords));
+    const lost = lostCodeRanges(previousCode, codeRanges(analysisRecords));
     if (lost.length > 0) {
       const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
       throw new Error(
@@ -668,33 +731,45 @@ export const analyzeSnesProject = (
  */
 export const exportSnesProject = (options: ExportSnesProjectOptions): ExportSnesProjectResult => {
   throwIfCancelled(options.signal);
-  report(options, "export", "Exporting deterministic native 65816 source.");
+  report(options, "export", "Preparing SQL export indexes and metadata.");
   const projectDirectory = path.resolve(options.projectDirectory);
   const sourceDirectory = path.resolve(options.sourceDirectory);
-  // Source export consumes regenerated metadata; full register history remains on disk.
-  const snapshot = loadAnalysisProjectView(projectDirectory);
-  const loaded = { manifest: snapshot.manifest, shards: snapshot.view };
-  const rom = RomImage.load(path.resolve(options.romFile), {
-    headerSize: loaded.manifest.rom.headerSize,
-  });
-  validateProjectRom(loaded.manifest, rom);
-  if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper)) {
-    throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+  const store = openAnalysisProjectStore(projectDirectory);
+  try {
+    store.prepareAnnotationQueries();
+    return store.transaction(() => {
+      const loaded = store.sourceExportView();
+      const revision = analysisProjectRevision(loaded.manifest);
+      if (
+        options.expectedRevision !== undefined &&
+        options.expectedRevision !== revision.manifestSha256
+      )
+        throw new Error("Analysis changed before source refresh. Run regeneration again.");
+      const rom = RomImage.load(path.resolve(options.romFile), {
+        headerSize: loaded.manifest.rom.headerSize,
+      });
+      validateProjectRom(loaded.manifest, rom);
+      if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper as SnesMapper))
+        throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+      report(options, "export", "Generating native source, binary assets and file manifests.");
+      const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
+        force: options.force,
+        allowCodeRegression: options.allowCodeRegression,
+        sourceProjectSha256: revision.manifestSha256,
+        instructionGroups: store.instructionExportGroups(),
+      });
+      throwIfCancelled(options.signal);
+      return {
+        sourceDirectory,
+        manifest,
+        codeBytes: manifest.spans
+          .filter((span) => span.role === "code")
+          .reduce((total, span) => total + span.end - span.start, 0),
+      };
+    }, false);
+  } finally {
+    store.close();
   }
-  const projectManifest = fs.readFileSync(path.join(projectDirectory, ANALYSIS_PROJECT_MANIFEST));
-  const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
-    force: options.force,
-    allowCodeRegression: options.allowCodeRegression,
-    sourceProjectSha256: sourceExportSha256(projectManifest),
-  });
-  throwIfCancelled(options.signal);
-  return {
-    sourceDirectory,
-    manifest,
-    codeBytes: manifest.spans
-      .filter((span) => span.role === "code")
-      .reduce((total, span) => total + span.end - span.start, 0),
-  };
 };
 
 /**
@@ -706,7 +781,7 @@ export const verifySnesProjectRoundTrip = async (
   options: VerifySnesProjectRoundTripOptions,
 ): Promise<VerifySnesProjectRoundTripResult> => {
   throwIfCancelled(options.signal);
-  report(options, "verify", "Rebuilding and verifying the exported source byte-for-byte.");
+  report(options, "verify", "Validating generated files, inputs and ROM identity.");
   const sourceDirectory = path.resolve(options.sourceDirectory);
   const manifest = loadSourceExportManifest(sourceDirectory);
   validateSourceExportFiles(sourceDirectory, manifest);
@@ -724,6 +799,7 @@ export const verifySnesProjectRoundTrip = async (
   }
   // This dynamic import avoids making the target-owned initializer depend on the CLI host while
   // still reusing the exact bundled plugin registration exported by this package.
+  report(options, "verify", "Preparing the assembler environment.");
   const { createSnesAssemblerEnvironment } = await import("../index.js");
   throwIfCancelled(options.signal);
   const environment = await createSnesAssemblerEnvironment();
@@ -738,9 +814,13 @@ export const verifySnesProjectRoundTrip = async (
   try {
     assembler.setIncludePaths([sourceDirectory]);
     assembler.setCurrentFile(entrySource);
+    report(options, "verify", "Parsing generated assembly and includes.");
     const source = fs.readFileSync(entrySource, "utf8");
-    assembler.assembleProgram(assembler.buildProgramModel(source, entrySource, 0));
+    const program = assembler.buildProgramModel(source, entrySource, 0);
+    report(options, "verify", "Assembling the ROM.");
+    assembler.assembleProgram(program);
     throwIfCancelled(options.signal);
+    report(options, "verify", "Writing build outputs and comparing ROM bytes.");
     const content = Buffer.from(assembler.getBinaryOutput());
     const contentOutput = path.join(sourceDirectory, manifest.contentOutput);
     const finalOutput = path.join(sourceDirectory, manifest.finalOutput);
@@ -768,6 +848,7 @@ export const verifySnesProjectRoundTrip = async (
     }
     let debugMap: string | undefined;
     if (options.emitDebugMap ?? true) {
+      report(options, "verify", "Generating the debug map.");
       debugMap = `${contentOutput}.debug.json`;
       fs.writeFileSync(
         debugMap,
@@ -877,6 +958,3 @@ export const initializeSnesDisassemblyWorkspace = async (
     throw error;
   }
 };
-
-/** Public source-export manifest filename for wizard hosts. */
-export const SNES_SOURCE_EXPORT_MANIFEST = SOURCE_EXPORT_MANIFEST;

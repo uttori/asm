@@ -162,7 +162,7 @@ test("CLI parses analysis project commands and validates mapper/header options",
   t.is(evidence.traceMaxMiB, 4096);
   t.is(evidence.traceIndex, "65816-disassembly");
   t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-index=sample"]), {
-    message: /full or 65816-disassembly/,
+    message: /full, 65816-disassembly, or 65816-analysis/,
   });
   t.throws(() => parseCliArguments(["evidence-import", "game.analysis", "--trace-max-mib=0"]), {
     message: /positive integer/,
@@ -283,8 +283,8 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
     t.is(await runCli(nativeArguments), 0);
     t.is(await fs.readFile(path.join(project, "analysis.json"), "utf8"), manifestBefore);
     t.deepEqual(loadAnalysisProject(project).shards.runtime, runtimeBefore);
-    // A profile conflict must leave the earlier combined import untouched in the disk path too.
-    t.is(await runCli([...nativeArguments.slice(0, -1), "--trace-index=full"]), 1);
+    // The receipt reuses the retained profile and leaves the earlier combined import untouched.
+    t.is(await runCli([...nativeArguments.slice(0, -1), "--trace-index=full"]), 0);
     t.deepEqual(loadAnalysisProject(project), imported);
 
     t.is(await runCli(["evidence-report", project, reportFile]), 0);
@@ -295,7 +295,7 @@ test("CLI imports, reports, reimports, and exports MesenCE offline evidence", as
     t.true(report.runtimeRecords > 0);
     t.true(report.explanations.length > 0);
     t.is(await runCli(["mesen-labels-export", project, exportedLabels, "--rom", romFile]), 0);
-    t.regex(await fs.readFile(exportedLabels, "utf8"), /SnesPrgRom:0000:TraceEntry/);
+    t.regex(await fs.readFile(exportedLabels, "utf8"), /SnesPrgRom:0{4}:TraceEntry/);
 
     t.is(await runCli(["analyze", project, "--rom", romFile]), 0);
     const analyzed = loadAnalysisProject(project);
@@ -438,7 +438,8 @@ test("CLI exports deterministic native source and verifies a complete copier-hea
     const bank = await fs.readFile(path.join(source, "banks/bank-000.asm"), "utf8");
     t.regex(main, /lorom\narch 65816\n\.smart off/);
     t.regex(bank, /; Synthetic reset entry\nL_Entry_Point_:/);
-    t.regex(bank, /\.a8\n\.i8\n  LDA\.b #\$42/);
+    t.regex(bank, /  LDA\.b #\$42/);
+    t.notRegex(bank, /^\.[ai](?:8|16)\b/m);
     t.is((bank.match(/^org /gm) ?? []).length, 1);
     t.regex(bank, /; Stop after loading the fixture value\./);
     t.is(await runCli(["verify-roundtrip", source, "--rom", rom]), 0);

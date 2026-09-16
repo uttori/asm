@@ -20,15 +20,7 @@ const REQUIRED_COMMANDS = [
   "asm.coverage.refresh",
   "asm.analysisGraph.refresh",
   "asm.sources.refresh",
-  "asm.sources.compare",
-  "asm.sources.resetComparison",
   "asm.trace.start",
-  "asm.capture.idle",
-  "asm.capture.behavior",
-  "asm.capture.stop",
-  "asm.capture.review",
-  "asm.capture.demo",
-  "asm.capture.guide",
   "asm.trace.stop",
   "asm.trace.stopAnalyze",
   "asm.trace.importRegenerate",
@@ -291,21 +283,6 @@ export async function run(): Promise<void> {
   for (const command of REQUIRED_COMMANDS) {
     assert.ok(commands.has(command), `Command '${command}' was not registered.`);
   }
-  await vscode.commands.executeCommand("asm.capture.demo");
-  assert.match(
-    vscode.window.activeTextEditor?.document.getText() ?? "",
-    /Idle capture demo — synthetic/,
-  );
-  assert.match(
-    vscode.window.activeTextEditor?.document.getText() ?? "",
-    /Second identical apply changed anything: false/,
-  );
-  await vscode.commands.executeCommand("asm.capture.guide");
-  assert.match(
-    vscode.window.activeTextEditor?.document.getText() ?? "",
-    /Idle-subtracted behavior capture/,
-  );
-
   const sourceUri = vscode.Uri.joinPath(folder.uri, "main.asm");
   const document = await vscode.workspace.openTextDocument(sourceUri);
   await vscode.window.showTextDocument(document);

@@ -10852,7 +10852,7 @@ var init_address_identities = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/hardware-registers.ts
-var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, snesHardwareRegisterSymbols;
+var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
   "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
@@ -11195,9 +11195,6 @@ var init_hardware_registers = __esm({
     ];
     DMA_REGISTERS_BY_OFFSET = new Map(
       DMA_REGISTER_DEFINITIONS.map((definition) => [definition.offset, definition])
-    );
-    snesHardwareRegisterSymbols = Object.freeze(
-      Object.fromEntries(FIXED_REGISTER_DEFINITIONS.map(({ address: address4, symbol }) => [address4, symbol]))
     );
   }
 });
@@ -12696,6 +12693,11 @@ var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
 // packages/debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
+var captureScope = (value) => {
+  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
+    throw new Error("Unsupported capture scope.");
+  return value;
+};
 var captureU64 = (value) => {
   if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64)
     throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
@@ -12708,15 +12710,51 @@ var captureSession = (value) => {
 };
 var validateCaptureRequest = (value) => {
   if (!value || typeof value !== "object") throw new Error("Invalid capture request.");
+  if (value.operation === "file-capabilities") {
+    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key)))
+      throw new Error("Unsupported native file capability field.");
+    if (value.scope !== void 0) captureScope(value.scope);
+    return;
+  }
+  if (value.operation === "file-start") {
+    if (Object.keys(value).some(
+      (key) => ![
+        "operation",
+        "scope",
+        "bufferBytes",
+        "file",
+        "romContentSha256",
+        "producer",
+        "measureStages"
+      ].includes(key)
+    ))
+      throw new Error("Unsupported native file start field.");
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean")
+      throw new Error("Native file profiling must be boolean.");
+    validateCaptureRequest({
+      operation: "start",
+      bufferBytes: value.bufferBytes,
+      scope: value.scope
+    });
+    const bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
+    if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key) => !["id", "revision"].includes(key)))
+      throw new Error(
+        "Native file capture requires an absolute bounded path and exact ROM/producer identity."
+      );
+    return;
+  }
   let fields = ["operation", "session"];
-  if (value.operation === "capabilities") fields = ["operation"];
-  if (value.operation === "start") fields = ["operation", "bufferBytes"];
+  if (value.operation === "capabilities") fields = ["operation", "scope"];
+  if (value.operation === "start") fields = ["operation", "bufferBytes", "scope"];
   if (value.operation === "read") fields = ["operation", "session", "chunk"];
   if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
   if (Object.keys(value).some((key) => !fields.includes(key)))
     throw new Error(
-      "Unsupported capture negotiation field; this version supports only lossless 65816 instructions with durable ownership."
+      "Unsupported capture negotiation field; capture requires an explicit supported stream with durable ownership."
     );
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) captureScope(value.scope);
+  }
   if (value.operation === "capabilities") return;
   if (value.operation === "start") {
     if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024)
@@ -12724,7 +12762,17 @@ var validateCaptureRequest = (value) => {
     return;
   }
   captureSession(value.session);
-  if (["status", "stop", "abort", "release"].includes(value.operation)) return;
+  if ([
+    "status",
+    "stop",
+    "abort",
+    "release",
+    "file-status",
+    "file-stop",
+    "file-abort",
+    "file-release"
+  ].includes(value.operation))
+    return;
   if (value.operation === "read" || value.operation === "ack") {
     if (!captureU64(value.chunk)) throw new Error("Capture chunk sequence starts at one.");
     if (value.operation === "ack" && !captureU64(value.event))
@@ -12733,26 +12781,36 @@ var validateCaptureRequest = (value) => {
   }
   throw new Error("Unsupported capture operation.");
 };
-var validateCaptureCapabilities = (value) => {
+var validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
+  captureScope(scope);
+  let reserve = 71;
+  if (scope === "snes.cpu-bus") reserve = 64;
+  if (scope === "snes.cpu-bus-transfers") reserve = 80;
+  if (scope === "snes.cpu-bus-ppu") reserve = 88;
   const expected = {
     version: 2,
-    scope: "snes.65816.instructions",
+    scope,
     mode: "lossless",
     ownership: "durable-prefix",
     maxChunkBytes: 262144,
-    requiredReserveBytes: 71,
+    requiredReserveBytes: reserve,
     overheadBytes: 4194304,
     resumeSession: false
   };
   if (!value || typeof value !== "object" || Object.entries(expected).some(([key, item]) => value[key] !== item))
     throw new Error("Unsupported capture scope, reserve, or ownership contract.");
+  if (value.nativeFile === true)
+    return { ...expected, nativeFile: true };
   return expected;
 };
-var validateCapturePosition = (value, session) => {
+var validateCapturePosition = (value, session, scope) => {
   if (!value || typeof value !== "object") throw new Error("Invalid capture position.");
   const p = value;
   captureSession(p.session);
   if (session !== void 0 && p.session !== session) throw new Error("Capture session changed.");
+  if (p.scope !== void 0) captureScope(p.scope);
+  if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope))
+    throw new Error("Capture scope changed or was not confirmed by the producer.");
   if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
     p.state
   ))
@@ -12786,6 +12844,11 @@ var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
   for (let bit2 = 0; bit2 < 8; bit2++) crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
   return crc >>> 0;
 });
+var crcSlices = [crcTable];
+for (let slice = 1; slice < 8; slice++)
+  crcSlices.push(
+    Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
+  );
 
 // packages/debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
@@ -13317,7 +13380,7 @@ import path from "node:path";
 var asError2 = (error) => error instanceof Error ? error : new Error(String(error));
 var checksum = (payload) => {
   let value = 0;
-  for (const byte of payload) value = value + byte & 255;
+  for (let index = 0; index < payload.length; index++) value = value + payload[index] & 255;
   return value;
 };
 var escapedPayload = (payload) => {
@@ -13332,20 +13395,32 @@ var escapedPayload = (payload) => {
   return Uint8Array.from(result);
 };
 var unescapePayload = (payload) => {
-  const result = [];
+  if (!payload.includes(125)) {
+    if (payload.includes(42))
+      throw new Error("RSP run-length encoded payloads are not supported on the ares channel.");
+    return payload.toString("ascii");
+  }
+  const result = Buffer.allocUnsafe(payload.length);
+  let length = 0;
   for (let index = 0; index < payload.length; index++) {
     const byte = payload[index];
     if (byte === 42)
       throw new Error("RSP run-length encoded payloads are not supported on the ares channel.");
     if (byte !== 125) {
-      result.push(byte);
+      result[length++] = byte;
       continue;
     }
     const escaped = payload[++index];
     if (escaped === void 0) throw new Error("RSP payload ends inside an escape sequence.");
-    result.push(escaped ^ 32);
+    result[length++] = escaped ^ 32;
   }
-  return Buffer.from(result).toString("ascii");
+  return result.toString("ascii", 0, length);
+};
+var hexDigit = (byte) => {
+  if (byte >= 48 && byte <= 57) return byte - 48;
+  if (byte >= 65 && byte <= 70) return byte - 65 + 10;
+  if (byte >= 97 && byte <= 102) return byte - 97 + 10;
+  return -1;
 };
 var stop = (payload) => {
   if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) return void 0;
@@ -13361,6 +13436,11 @@ var GdbRspClient = class {
   #dataSubscription;
   #closeSubscription;
   #buffer = Buffer.alloc(0);
+  /** Unconsumed bytes occupy [start, end); capacity grows geometrically within the receive bound. */
+  #start = 0;
+  #end = 0;
+  /** First unchecked position for '#', or the delimiter while awaiting checksum bytes. */
+  #scan = 1;
   #pending;
   #writeTail = Promise.resolve();
   #started = false;
@@ -13493,35 +13573,35 @@ var GdbRspClient = class {
   #receive(data) {
     if (this.#closed) return;
     try {
-      if (this.#buffer.length + data.length > this.#maxBufferedBytes)
-        throw new Error(`RSP receive buffer exceeds ${this.#maxBufferedBytes} bytes.`);
-      this.#buffer = Buffer.concat([this.#buffer, data]);
-      while (this.#buffer.length) {
-        const first = this.#buffer[0];
-        if (first === 43 || first === 45) {
-          this.#buffer = this.#buffer.subarray(1);
-          continue;
+      this.#append(data);
+      while (this.#start < this.#end) {
+        if (this.#buffer[this.#start] !== 36) {
+          const next = this.#buffer.subarray(this.#start, this.#end).indexOf(36);
+          if (next < 0) {
+            this.#start = this.#end;
+            break;
+          }
+          this.#start += next;
+          this.#scan = this.#start + 1;
         }
-        if (first !== 36) {
-          this.#buffer = this.#buffer.subarray(1);
-          continue;
-        }
-        const hash = this.#buffer.indexOf(35, 1);
-        if (hash < 0) {
-          if (this.#buffer.length > this.#maxPacketBytes + 4)
+        const offset = this.#buffer.subarray(this.#scan, this.#end).indexOf(35);
+        if (offset < 0) {
+          this.#scan = this.#end;
+          if (this.#end - this.#start - 1 > this.#maxPacketBytes)
             throw new Error(`RSP packet exceeds ${this.#maxPacketBytes} bytes.`);
           return;
         }
-        if (hash - 1 > this.#maxPacketBytes)
+        const hash = this.#scan + offset;
+        this.#scan = hash;
+        if (hash - this.#start - 1 > this.#maxPacketBytes)
           throw new Error(`RSP packet exceeds ${this.#maxPacketBytes} bytes.`);
-        if (this.#buffer.length < hash + 3) return;
-        const payload = this.#buffer.subarray(1, hash);
-        const expected = Number.parseInt(
-          this.#buffer.subarray(hash + 1, hash + 3).toString("ascii"),
-          16
-        );
-        this.#buffer = this.#buffer.subarray(hash + 3);
-        if (!Number.isInteger(expected) || expected !== checksum(payload)) {
+        if (this.#end < hash + 3) return;
+        const payload = this.#buffer.subarray(this.#start + 1, hash);
+        const high = hexDigit(this.#buffer[hash + 1]);
+        const low = hexDigit(this.#buffer[hash + 2]);
+        this.#start = hash + 3;
+        this.#scan = this.#start + 1;
+        if (high < 0 || low < 0 || (high << 4 | low) !== checksum(payload)) {
           void this.#write(Uint8Array.of(45)).catch(
             (error) => this.#fail(asError2(error))
           );
@@ -13530,9 +13610,37 @@ var GdbRspClient = class {
         void this.#write(Uint8Array.of(43)).catch((error) => this.#fail(asError2(error)));
         this.#deliver(unescapePayload(payload));
       }
+      this.#start = this.#end = 0;
+      this.#scan = 1;
     } catch (error) {
       this.#fail(asError2(error));
     }
+  }
+  /** Append one owned transport fragment without repeatedly copying its accumulated prefix.
+   * @param {Uint8Array} data Incoming bytes; the transport may reuse them after this call returns.
+   * @returns {void} Grows/compacts only when tail capacity is exhausted; exceeding the bound throws.
+   */
+  #append(data) {
+    const used = this.#end - this.#start;
+    const required = used + data.length;
+    if (required > this.#maxBufferedBytes)
+      throw new Error(`RSP receive buffer exceeds ${this.#maxBufferedBytes} bytes.`);
+    if (this.#end + data.length > this.#buffer.length) {
+      if (required > this.#buffer.length) {
+        const capacity = Math.min(
+          this.#maxBufferedBytes,
+          Math.max(required, 4096, this.#buffer.length * 2)
+        );
+        const next = Buffer.allocUnsafe(capacity);
+        this.#buffer.copy(next, 0, this.#start, this.#end);
+        this.#buffer = next;
+      } else this.#buffer.copy(this.#buffer, 0, this.#start, this.#end);
+      this.#scan -= this.#start;
+      this.#start = 0;
+      this.#end = used;
+    }
+    this.#buffer.set(data, this.#end);
+    this.#end += data.length;
   }
   #deliver(payload) {
     const stopped = stop(payload);
@@ -13561,6 +13669,9 @@ var GdbRspClient = class {
   #fail(error, closeTransport = true) {
     if (this.#closed) return;
     this.#closed = true;
+    this.#buffer = Buffer.alloc(0);
+    this.#start = this.#end = 0;
+    this.#scan = 1;
     this.#closeError = error;
     this.#dataSubscription.dispose();
     this.#closeSubscription.dispose();
@@ -14346,7 +14457,11 @@ var AresRspDebugBackend = class {
   protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
   #richTrace = false;
   #captureV2 = false;
+  #nativeFileIdentity;
   #captureSession;
+  #captureNative = false;
+  #captureScope;
+  #busCaptureSupported = false;
   get capabilities() {
     if (!this.#richTrace) return ARES_RSP_CAPABILITIES;
     return {
@@ -14390,6 +14505,7 @@ var AresRspDebugBackend = class {
   #trace;
   /** @param {AresRspBackendOptions} options RSP client/process lifecycle hooks. */
   constructor(options) {
+    this.#nativeFileIdentity = options.nativeFileIdentity;
     this.#createClient = options.createClient;
     this.#terminate = options.terminate ?? (() => Promise.resolve());
     this.#stopTimeoutMs = options.stopTimeoutMs ?? 5e3;
@@ -14425,6 +14541,7 @@ var AresRspDebugBackend = class {
       await client.start();
       const supported = await client.request("qSupported");
       this.#captureV2 = supported.split(";").includes("uttoriCaptureV2+");
+      this.#busCaptureSupported = false;
       if (!supported.includes("qXfer:features:read+") || !supported.includes("xmlRegisters+") || !supported.includes("uttoriNamedMemory+") || !supported.includes("uttoriInstructionTrace+"))
         throw new Error("ares RSP server does not advertise the required debugger extensions.");
       const target = await this.#readTargetDescription(client);
@@ -14450,10 +14567,12 @@ var AresRspDebugBackend = class {
     const client = this.#requireConnected();
     const terminate = options.terminate ?? true;
     if (this.#captureSession) {
-      await this.capture({ operation: "abort", session: this.#captureSession }).catch(
-        () => void 0
-      );
+      await this.capture({
+        operation: this.#captureNative ? "file-abort" : "abort",
+        session: this.#captureSession
+      }).catch(() => void 0);
       this.#captureSession = void 0;
+      this.#captureScope = void 0;
     }
     if (this.#trace?.active) await this.stopTrace();
     if (!terminate) {
@@ -14507,6 +14626,10 @@ var AresRspDebugBackend = class {
     this.#stopped = false;
     this.#pendingStopReason = "step";
     this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
+    if (this.#captureSession && this.#captureScope !== "snes.65816.instructions") {
+      await client.step();
+      return;
+    }
     await this.#waitForStop(client, "instruction step", () => client.step());
   }
   /** @inheritdoc */
@@ -14650,14 +14773,106 @@ var AresRspDebugBackend = class {
       throw new Error(
         "The active ares runtime does not support lossless capture v2. Install the capture-v2 runtime and restart debugging."
       );
-    const fields = ["qUttoriCapture", request.operation];
-    if (request.operation === "start") fields.push(request.bufferBytes);
-    else if (request.operation !== "capabilities") {
+    if (request.operation === "file-start" || request.operation === "file-capabilities" || request.operation === "file-status" || request.operation === "file-stop" || request.operation === "file-abort" || request.operation === "file-release") {
+      const negotiation2 = request.operation === "file-start" || request.operation === "file-capabilities";
+      const scope = negotiation2 ? request.scope ?? "snes.65816.instructions" : this.#captureScope;
+      const scopes = {
+        "snes.65816.instructions": "instructions",
+        "snes.cpu-bus": "bus",
+        "snes.cpu-bus-transfers": "bus-transfers",
+        "snes.cpu-bus-ppu": "bus-ppu"
+      };
+      const fields2 = ["qUttoriCaptureFile", request.operation.slice(5)];
+      if (request.operation === "file-start") {
+        this.#requireStopped();
+        const identity = this.#nativeFileIdentity;
+        if (!identity)
+          throw new Error("Native file capture requires a verified local runtime host.");
+        if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision)
+          throw new Error(
+            "Native capture identity does not match the verified ROM and executable."
+          );
+        await this.capture({ operation: "file-capabilities", scope });
+        const encode = (value3) => Buffer.from(value3, "utf8").toString("hex");
+        fields2.push(
+          request.bufferBytes,
+          scopes[scope],
+          encode(request.file),
+          request.romContentSha256,
+          encode(request.producer.id),
+          encode(request.producer.revision)
+        );
+        if (request.measureStages) fields2.push("profile");
+      } else if (request.operation === "file-capabilities") fields2.push(scopes[scope]);
+      else fields2.push(request.session);
+      const response2 = await client.request(fields2.join(":"));
+      if (response2.length > 8193 || response2.length % 2 !== 1 || !/^J[\da-f]+$/.test(response2))
+        throw new Error(
+          `Native file capture ${request.operation} is unsupported or rejected (${response2.slice(0, 32)}). Use the capture-file runtime.`
+        );
+      const value2 = JSON.parse(Buffer.from(response2.slice(1), "hex").toString("utf8"));
+      if (request.operation === "file-capabilities") {
+        const capabilities = validateCaptureCapabilities(value2, scope);
+        if (!capabilities.nativeFile)
+          throw new Error("Runtime did not confirm native file ownership.");
+        return capabilities;
+      }
+      const position2 = validateCapturePosition(
+        value2,
+        request.operation === "file-start" ? void 0 : request.session
+      );
+      if (request.operation === "file-start") {
+        this.#captureSession = position2.session;
+        this.#captureScope = scope;
+        this.#captureNative = true;
+        try {
+          validateCapturePosition(position2, void 0, scope);
+        } catch (error) {
+          await this.capture({ operation: "file-abort", session: position2.session }).catch(
+            () => void 0
+          );
+          throw error;
+        }
+      } else if (position2.state === "complete" || request.operation === "file-release") {
+        this.#captureSession = void 0;
+        this.#captureScope = void 0;
+      }
+      validateCapturePosition(position2, void 0, scope);
+      return position2;
+    }
+    const negotiation = request.operation === "start" || request.operation === "capabilities";
+    const requestedScope = negotiation ? request.scope ?? "snes.65816.instructions" : void 0;
+    const ppu = requestedScope === "snes.cpu-bus-ppu";
+    const bus = ppu || requestedScope === "snes.cpu-bus" || requestedScope === "snes.cpu-bus-transfers";
+    const transfers = requestedScope === "snes.cpu-bus-transfers";
+    if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported))
+      await this.capture({ operation: "capabilities", scope: requestedScope });
+    let operation = request.operation;
+    if (request.operation === "capabilities" && bus)
+      operation = transfers ? "transfer-capabilities" : "bus-capabilities";
+    if (request.operation === "capabilities" && ppu) operation = "ppu-capabilities";
+    const fields = ["qUttoriCapture", operation];
+    if (request.operation === "start") {
+      fields.push(request.bufferBytes);
+      if (ppu) fields.push("bus-ppu");
+      else if (bus) fields.push(transfers ? "bus-transfers" : "bus");
+    } else if (request.operation !== "capabilities") {
       fields.push(request.session);
       if (request.operation === "read" || request.operation === "ack") fields.push(request.chunk);
       if (request.operation === "ack") fields.push(request.event);
     }
     const response = await client.request(fields.join(":"));
+    if (request.operation === "capabilities" && bus && (!response || /^e[\da-f]{2}$/i.test(response))) {
+      let feature = transfers ? "transfer boundaries" : "bus capture";
+      let runtime = transfers ? "capture-transfer" : "capture-bus";
+      if (ppu) {
+        feature = "verified PPU effects";
+        runtime = "capture-ppu";
+      }
+      throw new Error(
+        `The active ares runtime does not support CPU/DMA/HDMA ${feature}. Use the ${runtime} runtime and restart debugging.`
+      );
+    }
     if (/^e[\da-f]{2}$/i.test(response))
       throw new Error(`Capture ${request.operation} rejected (${response}).`);
     if (request.operation === "read") {
@@ -14668,13 +14883,34 @@ var AresRspDebugBackend = class {
     if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
       throw new Error("Malformed capture control response.");
     const value = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
-    if (request.operation === "capabilities") return validateCaptureCapabilities(value);
+    if (request.operation === "capabilities") {
+      const capabilities = validateCaptureCapabilities(value, requestedScope);
+      if (bus && !transfers && !ppu) this.#busCaptureSupported = true;
+      return capabilities;
+    }
     const position = validateCapturePosition(
       value,
       request.operation === "start" ? void 0 : request.session
     );
-    if (request.operation === "start") this.#captureSession = position.session;
-    if (position.state === "complete") this.#captureSession = void 0;
+    if (request.operation === "start") {
+      this.#captureNative = false;
+      this.#captureSession = position.session;
+      this.#captureScope = position.scope ?? "snes.65816.instructions";
+      try {
+        validateCapturePosition(position, void 0, requestedScope);
+      } catch (error) {
+        await this.capture({ operation: "abort", session: position.session }).catch(
+          () => void 0
+        );
+        throw error;
+      }
+    } else if (position.session === this.#captureSession) {
+      validateCapturePosition(position, this.#captureSession, this.#captureScope);
+    }
+    if (position.state === "complete") {
+      this.#captureSession = void 0;
+      this.#captureScope = void 0;
+    }
     return position;
   }
   async startTrace(options) {
@@ -14931,6 +15167,11 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   });
   const backend = new AresRspDebugBackend({
     createClient: (connect) => host.createClient(connect),
+    nativeFileIdentity: {
+      romSha256: manifest.romSha256,
+      executableSha256: manifest.executableSha256,
+      producerRevision: `${manifest.forkRevision}:${manifest.patchSha256}:${manifest.executableSha256}`
+    },
     terminate: () => host.terminate()
   });
   let ending = false;

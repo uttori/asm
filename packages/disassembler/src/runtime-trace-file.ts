@@ -2,12 +2,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
 
-import {
-  createExecutionWindowAccumulator,
-  type ExecutionWindowSummary,
-} from "./execution-window.js";
 import { canonicalJson } from "./project-store.js";
-import type { AnalysisProjectShards } from "./project-types.js";
 import {
   createRuntimeInstructionTraceImporter,
   createRuntimeTraceChunkValidator,
@@ -16,6 +11,7 @@ import {
   type RuntimeInstructionTraceImportContext,
   type RuntimeInstructionTraceImportResult,
   type RuntimeInstructionTraceMetadata,
+  type RuntimeTraceSource,
 } from "./runtime-trace.js";
 
 /** Default file-size budget, independent of static-analysis work. */
@@ -253,22 +249,22 @@ export const readRuntimeTraceFileMetadata = async (
 };
 
 /**
- * Yield validated chunks and check the complete JSON envelope before successful completion.
+ * Yield parsed chunks and check the complete JSON envelope before successful completion.
+ * Consumers validate chunk contents once; this reader owns JSON syntax and envelope integrity.
  * @param {string} file Trace path.
  * @param {RuntimeInstructionTraceMetadata} metadata Expected recording identity.
  * @param {RuntimeTraceFileOptions} options Read limits and cancellation.
- * @returns {AsyncGenerator<RuntimeInstructionTraceChunk>} Validated ordered events.
- * @yields {RuntimeInstructionTraceChunk} One validated trace chunk.
+ * @returns {AsyncGenerator<unknown>} Parsed values in file order.
+ * @yields {unknown} One unvalidated trace chunk.
  */
-export async function* readRuntimeTraceFileChunks(
+async function* traceFileChunks(
   file: string,
   metadata: RuntimeInstructionTraceMetadata,
   options: RuntimeTraceFileOptions = {},
-): AsyncGenerator<RuntimeInstructionTraceChunk> {
+): AsyncGenerator<unknown> {
   const properties: Record<string, unknown> = {};
-  const validateChunk = createRuntimeTraceChunkValidator();
   for await (const entry of traceEntries(file, options)) {
-    if (entry.kind === "chunk") yield validateChunk(entry.value);
+    if (entry.kind === "chunk") yield entry.value;
     else
       Object.defineProperty(properties, entry.key, {
         value: entry.value,
@@ -283,6 +279,42 @@ export async function* readRuntimeTraceFileChunks(
 }
 
 /**
+ * Read and normalize ordered chunks for callers that need standalone validated data.
+ * @param {string} file Trace JSON path.
+ * @param {RuntimeInstructionTraceMetadata} metadata Expected envelope identity.
+ * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
+ * @yields {RuntimeInstructionTraceChunk} One normalized chunk; the tail is checked on exhaustion.
+ */
+export async function* readRuntimeTraceFileChunks(
+  file: string,
+  metadata: RuntimeInstructionTraceMetadata,
+  options: RuntimeTraceFileOptions = {},
+): AsyncGenerator<RuntimeInstructionTraceChunk> {
+  const validateChunk = createRuntimeTraceChunkValidator();
+  for await (const chunk of traceFileChunks(file, metadata, options)) yield validateChunk(chunk);
+}
+
+/**
+ * Open a bounded JSON source for an importer that already validates every chunk. Keeping validation
+ * at the consumer avoids cloning all addresses, bytes, registers and bus accesses twice per read.
+ * @param {string} file Trace JSON path.
+ * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
+ * @returns {Promise<RuntimeTraceSource>} Metadata plus a reader that checks the complete envelope.
+ */
+export const createRuntimeTraceFileSource = async (
+  file: string,
+  options: RuntimeTraceFileOptions = {},
+): Promise<RuntimeTraceSource> => {
+  const metadata = await readRuntimeTraceFileMetadata(file, options);
+  return {
+    metadata,
+    read: async (accept) => {
+      for await (const chunk of traceFileChunks(file, metadata, options)) accept(chunk);
+    },
+  };
+};
+
+/**
  * Import a native trace without allocating a file-sized string or retaining earlier chunks.
  * @param {string} file Trace path.
  * @param {RuntimeInstructionTraceImportContext} context Selected project identity.
@@ -294,28 +326,8 @@ export const importRuntimeInstructionTraceFile = async (
   context: RuntimeInstructionTraceImportContext,
   options: RuntimeTraceFileOptions = {},
 ): Promise<RuntimeInstructionTraceImportResult> => {
-  const metadata = await readRuntimeTraceFileMetadata(file, options);
-  const importer = createRuntimeInstructionTraceImporter(metadata, context);
-  for await (const chunk of readRuntimeTraceFileChunks(file, metadata, options))
-    importer.push(chunk);
+  const source = await createRuntimeTraceFileSource(file, options);
+  const importer = createRuntimeInstructionTraceImporter(source.metadata, context);
+  await source.read(importer.push);
   return importer.finish();
-};
-
-/**
- * Attribute a large recording to saved routines using the same bounded file reader.
- * @param {string} file Trace path.
- * @param {AnalysisProjectShards} shards Analysis after regeneration (or preserved analysis).
- * @param {RuntimeTraceFileOptions} options Read budget and cancellation.
- * @returns {Promise<ExecutionWindowSummary>} Routine report without retaining the recording.
- */
-export const summarizeExecutionWindowFile = async (
-  file: string,
-  shards: AnalysisProjectShards,
-  options: RuntimeTraceFileOptions = {},
-): Promise<ExecutionWindowSummary> => {
-  const metadata = await readRuntimeTraceFileMetadata(file, options);
-  const summary = createExecutionWindowAccumulator(metadata, shards);
-  for await (const chunk of readRuntimeTraceFileChunks(file, metadata, options))
-    summary.push(chunk);
-  return summary.finish();
 };

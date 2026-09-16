@@ -8,7 +8,7 @@ import type { AssemblySymbolDefinition, AssemblySymbolReference } from "../../sr
 import { MemoryAssemblyFileProvider } from "../../src/file-provider.js";
 import {
   findInstruction,
-  findDirectiveEntry,
+  findDirectiveInCatalog,
   findDirectiveOperand,
   buildCompletionEntries,
 } from "../../src/lsp/catalog.js";
@@ -68,8 +68,8 @@ test("instruction and directive catalogs expose documented entries", (t) => {
   t.is(lda?.mnemonic, "LDA");
   t.true(lda!.modes.some((mode) => mode.mode === "immediate"));
 
-  t.truthy(findDirectiveEntry("org"));
-  t.truthy(findDirectiveEntry("incsrc"));
+  t.truthy(findDirectiveInCatalog("org", index.directiveCatalog));
+  t.truthy(findDirectiveInCatalog("incsrc", index.directiveCatalog));
 
   const check = index.directiveCatalog.find((entry) => entry.keyword === "check");
   t.is(

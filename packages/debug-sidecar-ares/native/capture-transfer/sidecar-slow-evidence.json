@@ -1,0 +1,74 @@
+{
+  "transfers": [
+    {
+      "actor": "dma",
+      "channel": 0,
+      "complete": 8,
+      "interrupted": 0,
+      "leadingPartial": 0,
+      "trailingPartial": 0,
+      "bothPartial": 0,
+      "attemptedSlots": 262144,
+      "reads": 262144,
+      "writes": 262144
+    },
+    {
+      "actor": "hdma",
+      "channel": 1,
+      "complete": 33,
+      "interrupted": 0,
+      "leadingPartial": 0,
+      "trailingPartial": 0,
+      "bothPartial": 0,
+      "attemptedSlots": 33,
+      "reads": 33,
+      "writes": 33
+    },
+    {
+      "actor": "hdma",
+      "channel": 2,
+      "complete": 12,
+      "interrupted": 0,
+      "leadingPartial": 0,
+      "trailingPartial": 0,
+      "bothPartial": 0,
+      "attemptedSlots": 12,
+      "reads": 12,
+      "writes": 12
+    }
+  ],
+  "omittedWindows": 0,
+  "fixtureSha256": "b4e4ea317d9c8083bf95b0e7f0eb7b5b1fbd869621615f0f71e8901618470a9b",
+  "executableSha256": "9b0224912df7e1770ce91166b77d9c46b5124fee07d7fe8e1b265828996f5888",
+  "bundledSidecarSha256": "484953287fa2a67d7222cd0ccc810fdf151af052be8d891b49701d0d8ee21ce9",
+  "scope": "snes.cpu-bus-transfers",
+  "consumer": "15ms-delay-per-read",
+  "checks": [
+    "verified runtime launch",
+    "DAP capture forwarding",
+    "bundled stdio sidecar",
+    "full 256 KiB chunks",
+    "durable writer and final drain",
+    "long DMA step drains while awaiting asynchronous stop",
+    "independent debugger pause retained",
+    "direct and indirect HDMA attribution"
+  ],
+  "observedEvents": 524719,
+  "droppedEvents": 0,
+  "throttleCount": "15",
+  "stepEvents": 67186,
+  "actors": {
+    "cpu": 160,
+    "dma": 524288,
+    "hdma": 165
+  },
+  "phases": [
+    "cpu",
+    "dma",
+    "hdma-indirect",
+    "hdma-table",
+    "hdma-transfer"
+  ],
+  "elapsedMs": 6078.284708,
+  "emulatedMasterClocks": "2163322"
+}

@@ -25,8 +25,6 @@ export interface SnesHardwareRegister {
  * @returns {SnesHardwareRegister | undefined} Volatile register identity, or `undefined` if not MMIO.
  */
 export declare const identifySnesHardwareRegister: (address: number) => SnesHardwareRegister | undefined;
-/** 16-bit PPU/CPU/APU/joypad register names keyed by `$2100`–`$421F` offsets. */
-export declare const snesHardwareRegisterSymbols: Readonly<Record<number, string>>;
 /** Stable source filename emitted beside every generated SNES disassembly. */
 export declare const SNES_HARDWARE_DEFINES_SOURCE = "snes-defines.asm";
 /**

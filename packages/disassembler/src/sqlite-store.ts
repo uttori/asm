@@ -3,7 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync, type StatementSync } from "node:sqlite";
 
-import { canonicalJson } from "./canonical-json.js";
+import { buildAnalysisSourceCatalog, type AnalysisSourceGroup } from "./analysis-sources.js";
+import { canonicalJson, canonicalValue } from "./canonical-json.js";
+import { explainProjectEvidence, type ProjectEvidenceExplanation } from "./project-edit.js";
 import {
   ANALYSIS_PROJECT_MANIFEST,
   type AnalysisProjectManifest,
@@ -18,7 +20,30 @@ import {
   type RuntimeEvidenceRecord,
   type ShardKind,
 } from "./project-types.js";
+import { validateLoadedShards } from "./project-validation.js";
+import {
+  mergeRuntimeEvidence,
+  inspectRuntimeEvidence,
+  type RuntimeEvidenceBatch,
+  type RuntimeEvidenceConflict,
+} from "./runtime-evidence.js";
 import type { RuntimeTraceFactIndex, RuntimeTraceIndexedFact } from "./runtime-trace.js";
+import {
+  annotationQueryIndexesReady,
+  ensureAnnotationQueryIndexes,
+  readSqliteAnnotationView,
+  type AnnotationQueryRange,
+  type SqliteAnnotationView,
+  type InstructionExportRecord,
+} from "./sqlite-annotation-query.js";
+import {
+  cachedCoverage,
+  prepareCoverage,
+  coveragePage,
+  coverageSignature,
+  publishCoverage,
+} from "./sqlite-coverage-query.js";
+import { prepareGraph, publishGraph } from "./sqlite-graph-query.js";
 import { assertNoSqliteMigration, sqliteFileIdentity } from "./sqlite-maintenance.js";
 import {
   encodeSqlitePayload,
@@ -26,17 +51,36 @@ import {
   sqliteRuntimeIdentity,
 } from "./sqlite-payload.js";
 import {
-  runtimeColumns,
-  runtimeFromRow,
-  analysisAddress,
-  compareRuntimeRecordIds,
-} from "./sqlite-records.js";
+  installQueryCache,
+  readQueryCache,
+  writeQueryCache,
+  upgradeQueryCacheStorage,
+} from "./sqlite-query-cache.js";
+import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds } from "./sqlite-records.js";
+import { RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter } from "./sqlite-runtime-storage.js";
+import {
+  prepareSourceQueries,
+  sourceQueriesReady,
+  readSourceSummary,
+  readSourcePage,
+} from "./sqlite-source-query.js";
+import {
+  CAPTURE_CATALOG_SCHEMA,
+  readStoragePolicy,
+  validateStoragePolicy,
+  storageSnapshot,
+  enforceDatabaseBudget,
+  maintainStorageCaches,
+  optionalCacheBytes,
+  type AnalysisStoragePolicy,
+} from "./sqlite-storage-policy.js";
+import { TraceCache, type TraceIndexMetrics } from "./trace-cache.js";
 
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
 export const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
-export const ANALYSIS_SQLITE_STORAGE_VERSION = 1;
+export const ANALYSIS_SQLITE_STORAGE_VERSION = 2;
 
 const SCHEMA = `
 PRAGMA journal_mode=WAL;
@@ -98,30 +142,9 @@ CREATE TABLE IF NOT EXISTS runtime_evidence (
   id INTEGER PRIMARY KEY,
   value TEXT NOT NULL UNIQUE
 );
-CREATE TABLE IF NOT EXISTS runtime (
-  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
-  id BLOB NOT NULL,
-  kind TEXT NOT NULL,
-  architecture TEXT NOT NULL,
-  count INTEGER NOT NULL,
-  address_space TEXT,
-  address INTEGER,
-  start INTEGER,
-  "end" INTEGER,
-  from_address_space TEXT,
-  from_address INTEGER,
-  to_address_space TEXT,
-  to_address INTEGER,
-  instruction_address_space TEXT,
-  instruction_address INTEGER,
-  accessed_address_space TEXT,
-  accessed_address INTEGER,
-  coverage TEXT,
-  evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id),
-  payload BLOB,
-  UNIQUE (prefix_id, id)
-);
-PRAGMA user_version=1;
+${RUNTIME_STORAGE_SCHEMA}
+${CAPTURE_CATALOG_SCHEMA}
+PRAGMA user_version=2;
 `;
 
 // Metadata queries only order records by location. Analysis records are loaded by stable ID;
@@ -131,8 +154,10 @@ const SCHEMA_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS comments_addr ON comments (address_space, address)",
   'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
   'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
-  "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime (kind, address_space, address, start)",
-  "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'",
+  // Point lookups through the virtual-state branch need an index on its exposed negative ID.
+  "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_id IS NOT NULL",
+  "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
+  "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'",
 ] as const;
 
 /** Joins retain bounded SQLite cursors; no project-sized dictionary is loaded on the JS heap. */
@@ -177,7 +202,7 @@ export class SqliteAnalysisStore {
   readonly #insertAnnotation: StatementSync;
   readonly #insertAnalysis: StatementSync;
   readonly #insertImport: StatementSync;
-  readonly #insertRuntime: StatementSync;
+  readonly #runtimeWriter: SqliteRuntimeWriter;
   readonly #findRuntime: StatementSync;
   readonly #dictionaryStatements = new Map<
     string,
@@ -199,6 +224,10 @@ export class SqliteAnalysisStore {
       throw new Error(`Analysis database does not exist: ${file}`);
     this.file = file;
     this.#database = new DatabaseSync(file, { open: true });
+    // SQL can inspect legacy compressed payloads without transferring full records to JS callers.
+    this.#database.function("analysis_json", { deterministic: true }, (value) =>
+      value === null ? "{}" : decodeSqlitePayload(value),
+    );
     this.#fileIdentity = sqliteFileIdentity(file);
     try {
       const empty =
@@ -216,7 +245,7 @@ export class SqliteAnalysisStore {
           `Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`,
         );
       this.#database.exec(
-        "PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE;",
+        "PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE; PRAGMA journal_size_limit=67108864;",
       );
       this.#insertEvidence = this.#database.prepare(
         "INSERT INTO evidence (id, payload) VALUES (?, ?)",
@@ -247,14 +276,7 @@ export class SqliteAnalysisStore {
       }
       this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
         WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
-      this.#insertRuntime = this.#database.prepare(
-        `INSERT INTO runtime (
-          prefix_id, id, kind, architecture, count, address_space, address, start, "end",
-          from_address_space, from_address, to_address_space, to_address,
-          instruction_address_space, instruction_address, accessed_address_space, accessed_address,
-          coverage, evidence_id, payload
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      );
+      this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
     } catch (error) {
       this.#database.close();
       throw error;
@@ -370,33 +392,11 @@ export class SqliteAnalysisStore {
     if (kind === "imports") {
       const record = value as ImportReport;
       this.#insertImport.run(record.id, encodeSqlitePayload(JSON.stringify(record)));
+      this.recordCaptureReceipt(record);
       return;
     }
     const record = value as RuntimeEvidenceRecord;
-    const columns = runtimeColumns(record);
-    const identity = sqliteRuntimeIdentity(record.id);
-    this.#insertRuntime.run(
-      this.#intern("runtime_prefixes", identity.prefix),
-      identity.suffix,
-      record.kind,
-      record.architecture,
-      record.count,
-      columns.addressSpace,
-      columns.address,
-      columns.start,
-      columns.end,
-      columns.fromAddressSpace,
-      columns.fromAddress,
-      columns.toAddressSpace,
-      columns.toAddress,
-      columns.instructionAddressSpace,
-      columns.instructionAddress,
-      columns.accessedAddressSpace,
-      columns.accessedAddress,
-      columns.coverage,
-      this.#intern("runtime_evidence", JSON.stringify(record.evidence)),
-      columns.payload === null ? null : encodeSqlitePayload(columns.payload),
-    );
+    this.#runtimeWriter.insert(record, (table, value) => this.#intern(table, value));
   }
 
   /**
@@ -415,7 +415,12 @@ export class SqliteAnalysisStore {
     this.#clearDictionaryCache();
     this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
     try {
+      // Repair legacy cache key storage before any per-record invalidation triggers execute.
+      // Read-only transactions never acquire a writer lock merely to update a disposable cache.
+      if (write) upgradeQueryCacheStorage(this.#database);
+      const revision = write ? this.revision() : 0;
       const result = action();
+      if (write && this.revision() !== revision) enforceDatabaseBudget(this.#database);
       this.#database.exec("COMMIT");
       this.#clearDictionaryCache();
       return result;
@@ -429,9 +434,13 @@ export class SqliteAnalysisStore {
    * Index trace chunks in a connection-local disk table. This transaction never reads or writes
    * main, allowing other project writers to proceed during asynchronous capture parsing.
    * @param {Function} action Async parser using only the supplied temporary counter index.
+   * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
    * @returns {Promise} Parser result after temporary counters commit; the index lives until connection close.
    */
-  async indexTrace<T>(action: (index: RuntimeTraceFactIndex) => Promise<T>): Promise<T> {
+  async indexTrace<T>(
+    action: (index: RuntimeTraceFactIndex) => Promise<T>,
+    metrics?: TraceIndexMetrics,
+  ): Promise<T> {
     this.#database.exec(`CREATE TEMP TABLE trace_facts (
       id TEXT PRIMARY KEY, payload TEXT NOT NULL, count INTEGER NOT NULL
     ) WITHOUT ROWID; BEGIN;`);
@@ -440,23 +449,68 @@ export class SqliteAnalysisStore {
     );
     const insert = this.#database.prepare("INSERT INTO temp.trace_facts VALUES (?, ?, 1)");
     const values = this.#database.prepare("SELECT payload, count FROM temp.trace_facts");
+    const incrementMany = this.#database.prepare(
+      "UPDATE temp.trace_facts SET count=count+? WHERE id=?",
+    );
+    // Hot traces revisit a small working set millions of times. Keep at most
+    // 4096 counter deltas; payloads and the full distinct index remain on disk.
+    const pending = new TraceCache<{ count: number }>(metrics);
+    const flushEntry = (key: string, count: number): void => {
+      if (!count) return;
+      incrementMany.run(count, key);
+      if (metrics) metrics.sqlStatements++;
+    };
+    const flush = (): void => {
+      for (const [key, entry] of pending.entries()) flushEntry(key, entry.count);
+      pending.clear();
+    };
     const index: RuntimeTraceFactIndex = {
       add: (key, create) => {
+        const entry = pending.get(key);
+        if (entry !== undefined) {
+          if (!Number.isSafeInteger(entry.count + 1))
+            throw new Error("Trace count exceeds exact integer range.");
+          // Keep the same entry on hits: no replacement allocation or Map rewrite
+          // is needed for the repeated-key path that dominates dense captures.
+          entry.count++;
+          return false;
+        }
+        // Flush only the displaced delta. A scan just beyond capacity must not
+        // discard the other 4095 counters or materialize their payloads again.
+        // Zero means no deferred repeats yet: the miss's own observation is
+        // counted by UPDATE or INSERT below, so initializing to one would double it.
+        const displaced = pending.insert(key, { count: 0 });
+        if (displaced) flushEntry(displaced.key, displaced.value.count);
+        if (metrics) metrics.sqlStatements++;
+        // A cache miss may still be a disk-index hit. UPDATE first keeps create()
+        // lazy; an eager UPSERT payload would serialize repeats unnecessarily.
+        // A speculative membership filter was benchmarked without a useful gain.
         if (increment.run(key).changes !== 0) return false;
         insert.run(key, JSON.stringify(create()));
+        if (metrics) {
+          metrics.sqlStatements++;
+          metrics.payloads++;
+        }
         return true;
       },
       values: function* () {
+        // Reconcile deferred counts before streaming rows; the complete distinct
+        // set stays on disk instead of being materialized just to finalize it.
+        flush();
         for (const row of values.iterate())
           yield {
             fact: parseRecord<RuntimeTraceIndexedFact>(row.payload),
             count: Number(row.count),
           };
       },
-      clear: () => this.#database.exec("DELETE FROM temp.trace_facts"),
+      clear: () => {
+        pending.clear();
+        this.#database.exec("DELETE FROM temp.trace_facts");
+      },
     };
     try {
       const result = await action(index);
+      flush();
       this.#database.exec("COMMIT");
       this.#clearDictionaryCache();
       return result;
@@ -469,6 +523,61 @@ export class SqliteAnalysisStore {
   /** Require mutations to belong to an explicitly owned atomic publication. */
   #requireTransaction(): void {
     if (!this.#database.isTransaction) throw new Error("Analysis mutation requires a transaction.");
+  }
+
+  /** Apply a selected metadata edit by stable ID; omitted records are never deleted.
+   * Validation and optimistic revision checks belong to the publication API.
+   * @param {AnalysisProjectShards} before Original selected view.
+   * @param {AnalysisProjectShards} after Edited selected view.
+   */
+  patchMetadata(before: AnalysisProjectShards, after: AnalysisProjectShards): void {
+    this.#requireTransaction();
+    for (const kind of [
+      "analysis",
+      "annotations",
+      "labels",
+      "comments",
+      "regions",
+      "evidence",
+      "imports",
+    ] as const) {
+      const previous = new Map(before[kind].map((record) => [record.id, record]));
+      const next = new Map(after[kind].map((record) => [record.id, record]));
+      const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
+      const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
+      for (const id of new Set([...previous.keys(), ...next.keys()])) {
+        const prior = previous.get(id),
+          record = next.get(id);
+        if (canonicalJson(prior) === canonicalJson(record)) continue;
+        const stored = find.get(id);
+        if (
+          canonicalJson(stored ? parseRecord(stored.payload) : undefined) !== canonicalJson(prior)
+        )
+          throw new Error(`Selected ${kind} record '${id}' changed; reload before editing.`);
+        remove.run(id);
+        if (record) this.#insertRecord(kind, record);
+      }
+    }
+    // Undo can remove newly-created provenance. Check retained references in SQL before committing;
+    // ordinary edits append evidence and never scan the retained analysis/runtime history.
+    const retained = new Set(after.evidence.map((record) => record.id));
+    const removed = before.evidence
+      .filter((record) => !retained.has(record.id))
+      .map((record) => record.id);
+    if (removed.length) {
+      const ids = JSON.stringify(removed);
+      for (const table of ["analysis", "annotations", "labels", "comments", "regions"]) {
+        if (
+          this.#database
+            .prepare(
+              `SELECT 1 FROM ${table} r,json_each(analysis_json(r.payload),'$.evidence') e WHERE e.value IN (SELECT value FROM json_each(?)) LIMIT 1`,
+            )
+            .get(ids)
+        )
+          throw new Error("Cannot remove evidence still referenced by retained project records.");
+      }
+      this.validateRuntimeEvidence();
+    }
   }
 
   /**
@@ -500,14 +609,22 @@ export class SqliteAnalysisStore {
         continue;
       }
       this.#database.exec("DELETE FROM temp.replacement_ids");
-      const find = this.#database.prepare(`SELECT * FROM ${kind} WHERE id=?`);
+      // Derived export columns can be large; comparison needs only the authoritative payload.
+      const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
       const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
       for (const record of shards[kind] ?? []) {
         remember.run(record.id);
         const prior = find.get(record.id);
         if (prior) {
-          const before = parseRecord(prior.payload);
-          if (canonicalJson(before) === canonicalJson(record)) continue;
+          // Reanalysis usually reproduces the same serialized record. Compare its decoded JSON
+          // before parsing/sorting both objects; retain canonical comparison for reordered keys.
+          const json = decodeSqlitePayload(prior.payload);
+          if (json === JSON.stringify(record)) continue;
+          const before: unknown = JSON.parse(json);
+          // Comparison is internal: preserve canonical key/undefined semantics without allocating
+          // the pretty-printed identity format for every large CFG context twice.
+          if (JSON.stringify(canonicalValue(before)) === JSON.stringify(canonicalValue(record)))
+            continue;
           remove.run(record.id);
         }
         this.#insertRecord(kind, record);
@@ -519,39 +636,35 @@ export class SqliteAnalysisStore {
   }
 
   /**
-   * Replace runtime by integer storage IDs, keeping the temporary retention set compact.
+   * Replace runtime by interned external identities, including virtual paired-state records.
    * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
    */
   #replaceRuntime(records: readonly RuntimeEvidenceRecord[]): void {
     this.#database.exec(
-      "CREATE TEMP TABLE IF NOT EXISTS replacement_runtime_ids (id INTEGER PRIMARY KEY); DELETE FROM replacement_runtime_ids",
+      "CREATE TEMP TABLE IF NOT EXISTS replacement_runtime_ids (prefix TEXT, id BLOB, PRIMARY KEY(prefix,id)) WITHOUT ROWID; DELETE FROM replacement_runtime_ids",
     );
-    const remember = this.#database.prepare("INSERT INTO temp.replacement_runtime_ids VALUES (?)");
-    const seen = this.#database.prepare("SELECT 1 FROM temp.replacement_runtime_ids WHERE id=?");
+    const remember = this.#database.prepare(
+      "INSERT OR IGNORE INTO temp.replacement_runtime_ids VALUES (?,?)",
+    );
     const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
     for (const record of records) {
       const identity = sqliteRuntimeIdentity(record.id);
-      let prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-      // Detect repetition before replacement can assign a different rowid to the same semantic ID.
-      if (prior && seen.get(prior.storage_rowid))
+      // Pairing may replace a standalone state's rowid; external IDs remain stable throughout.
+      if (!remember.run(identity.prefix, identity.suffix).changes)
         throw new Error(`Duplicate runtime record ID '${record.id}'.`);
-      if (prior && canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record)) {
-        remove.run(prior.storage_rowid);
-        prior = undefined;
-      }
-      if (!prior) {
-        this.#insertRecord("runtime", record);
-        prior = this.#findRuntime.get(identity.prefix, identity.suffix)!;
-      }
-      remember.run(prior.storage_rowid);
+      const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
+      if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record)) continue;
+      if (prior) remove.run(prior.storage_rowid);
+      this.#insertRecord("runtime", record);
     }
-    this.#database.exec(
-      "DELETE FROM runtime WHERE rowid NOT IN (SELECT id FROM temp.replacement_runtime_ids)",
-    );
+    this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
+      SELECT 1 FROM temp.replacement_runtime_ids keep JOIN runtime_prefixes p ON p.value=keep.prefix
+      WHERE p.id=runtime.prefix_id AND keep.id=runtime.id)`);
   }
 
   /**
-   * Append validated migration rows without materializing a complete table or comparing absent IDs.
+   * Append validated migration rows without materializing a complete table. Runtime IDs are checked
+   * through the logical view because paired states share physical storage with an instruction.
    * @param {ShardKind} kind Destination semantic table.
    * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
    */
@@ -560,7 +673,12 @@ export class SqliteAnalysisStore {
     records: Iterable<AnalysisProjectShards[K][number]>,
   ): void {
     this.#requireTransaction();
-    for (const record of records) this.#insertRecord(kind, record);
+    for (const record of records) {
+      if (kind === "runtime") {
+        if (!this.insertRuntime(record as RuntimeEvidenceRecord))
+          throw new Error(`Duplicate runtime record ID '${record.id}'.`);
+      } else this.#insertRecord(kind, record);
+    }
   }
 
   /**
@@ -582,6 +700,38 @@ export class SqliteAnalysisStore {
     }
     this.#insertRecord("runtime", record);
     return true;
+  }
+
+  /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
+   * New namespaces need no per-record existence query; SQL uniqueness still rejects repeated IDs.
+   * Existing/partially pruned sources use full idempotency and collision checks for every record.
+   * The callback must not escape its transaction; any insertion error must abort the whole batch.
+   * @param {string} prefix Exact ID prefix including its final colon.
+   * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
+   */
+  runtimeBatchInserter(prefix: string): (record: RuntimeEvidenceRecord) => boolean {
+    this.#requireTransaction();
+    if (!prefix || !prefix.endsWith(":")) throw new Error("Invalid runtime batch prefix.");
+    // Query the logical view so paired states count as existing observations too.
+    // Receipts alone cannot prove completeness: pruning can remove some or all
+    // observations without removing their capture's provenance.
+    const existing = this.#database
+      .prepare(
+        "SELECT 1 FROM runtime WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) LIMIT 1",
+      )
+      .get(prefix);
+    return (record) => {
+      this.#requireTransaction();
+      if (!record.id.startsWith(prefix) || record.id.lastIndexOf(":") !== prefix.length - 1)
+        throw new Error("Runtime record escaped its batch prefix.");
+      // Retained rows require exact comparison; missing rows in a partial import
+      // must be repaired. A matching source hash is not permission to skip either.
+      if (existing) return this.insertRuntime(record);
+      // The caller emits a distinct temporary index under a freshly checked
+      // namespace. The surrounding writer transaction excludes competing inserts.
+      this.#insertRecord("runtime", record);
+      return true;
+    };
   }
 
   /** Reject evidence removal that would leave retained runtime facts orphaned, without loading them. */
@@ -653,32 +803,6 @@ export class SqliteAnalysisStore {
   }
 
   /**
-   * Read runtime observations at a selected location, including containing coverage ranges.
-   * @param {string} addressSpace Logical address-space ID.
-   * @param {number} address Nonnegative address in that space.
-   * @returns {IterableIterator} Cursor over matching point and interval facts.
-   * @yields {RuntimeEvidenceRecord} A fact associated with the selected location.
-   */
-  *runtimeAt(addressSpace: string, address: number): IterableIterator<RuntimeEvidenceRecord> {
-    const query = this.#database.prepare(`
-      ${RUNTIME_SELECT} WHERE r.kind IN ('runtime-execution', 'runtime-instruction', 'runtime-cpu-state')
-        AND r.address_space=? AND r.address=?
-      UNION ALL ${RUNTIME_SELECT} WHERE r.kind='runtime-coverage' AND r.address_space=? AND r.address IS NULL AND r.start<=? AND r."end">?
-      UNION ALL ${RUNTIME_SELECT} WHERE r.kind='runtime-memory-access' AND r.instruction_address_space=? AND r.instruction_address=?
-    `);
-    for (const row of query.iterate(
-      addressSpace,
-      address,
-      addressSpace,
-      address,
-      address,
-      addressSpace,
-      address,
-    ))
-      yield runtimeFromRow(row);
-  }
-
-  /**
    * Stream runtime facts without retaining the complete table.
    * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
    * @yields {RuntimeEvidenceRecord} One runtime fact.
@@ -710,6 +834,744 @@ export class SqliteAnalysisStore {
       .iterate())
       records.push(parseRecord(row.payload));
     return records as AnalysisProjectShards[K];
+  }
+
+  /** Validate a query view against this read snapshot, including every included provenance reference.
+   * @param {AnalysisProjectShards} shards Selected records, with unused collections empty.
+   */
+  validateView(shards: AnalysisProjectShards): void {
+    validateLoadedShards(shards, this.manifest());
+  }
+
+  /** Merge an already-parsed offline batch by stable IDs without loading saved runtime history.
+   * The caller owns revision checking and publication in the surrounding writer transaction.
+   * @param {RuntimeEvidenceBatch} batch Imported facts and metadata.
+   * @returns {object} Whether anything changed and per-collection additions/updates.
+   */
+  mergeEvidenceBatch(batch: RuntimeEvidenceBatch) {
+    this.#requireTransaction();
+    const base: AnalysisProjectShards = {
+      analysis: [],
+      annotations: this.loadTable("annotations"),
+      labels: this.loadTable("labels"),
+      comments: this.loadTable("comments"),
+      regions: this.loadTable("regions"),
+      evidence: this.loadTable("evidence"),
+      imports: this.loadTable("imports"),
+      runtime: [],
+    };
+    const ids = JSON.stringify((batch.analysis ?? []).map((record) => record.id));
+    const analysis = this.#database
+      .prepare("SELECT payload FROM analysis WHERE id IN (SELECT value FROM json_each(?))")
+      .all(ids)
+      .map((row) => parseRecord<AnalysisRecord>(row.payload));
+    const before = { ...base, analysis };
+    const merged = mergeRuntimeEvidence(before, { ...batch, runtime: [] });
+    this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
+    this.patchMetadata(before, merged.shards);
+    let runtime = 0;
+    for (const record of batch.runtime ?? []) if (this.insertRuntime(record)) runtime++;
+    return {
+      changed: merged.changed || runtime > 0,
+      added: { ...merged.added, runtime },
+      updated: merged.updated,
+    };
+  }
+
+  /** Produce an explicit complete evidence report one qualified PC at a time.
+   * Only report output accumulates; unused instruction/memory histories and CFG contexts are never loaded.
+   * @returns {object} Runtime record count, conflicts, and metadata explanations.
+   */
+  inspectEvidence() {
+    const shards: AnalysisProjectShards = {
+      analysis: this.analysisByKinds(["target-override"]),
+      annotations: this.loadTable("annotations"),
+      evidence: this.loadTable("evidence"),
+      labels: [],
+      comments: [],
+      regions: [],
+      imports: [],
+      runtime: [],
+    };
+    const conflicts: RuntimeEvidenceConflict[] = [];
+    const rows = this.#database.prepare(
+      `${RUNTIME_SELECT} WHERE r.kind IN ('runtime-execution','runtime-cpu-state') AND r.address_space=? AND r.address=? AND r.architecture=?`,
+    );
+    const sites = this.#database.prepare(
+      "SELECT DISTINCT architecture,address_space,address FROM runtime WHERE kind IN ('runtime-execution','runtime-cpu-state')",
+    );
+    for (const site of sites.iterate()) {
+      const runtime: RuntimeEvidenceRecord[] = [];
+      for (const row of rows.iterate(site.address_space, site.address, site.architecture))
+        runtime.push(runtimeFromRow(row));
+      for (const conflict of inspectRuntimeEvidence({ ...shards, runtime }).conflicts)
+        conflicts.push(conflict);
+    }
+    conflicts.sort((a, b) => a.id.localeCompare(b.id));
+    return {
+      runtimeRecords: Number(this.#database.prepare("SELECT count(*) AS n FROM runtime").get()!.n),
+      conflicts,
+      explanations: inspectRuntimeEvidence(shards).explanations,
+    };
+  }
+
+  /** Select record choices before decoding; explicit IDs bypass unrelated history entirely.
+   * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs; omitted lists the first 200 records per collection.
+   * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
+   */
+  evidenceChoices(selected?: Partial<Record<ShardKind, readonly string[]>>): AnalysisProjectShards {
+    const shards: AnalysisProjectShards = {
+      analysis: [],
+      annotations: [],
+      labels: [],
+      comments: [],
+      regions: [],
+      runtime: [],
+      imports: [],
+      evidence: this.loadTable("evidence"),
+    };
+    for (const kind of [
+      "analysis",
+      "annotations",
+      "labels",
+      "comments",
+      "regions",
+      "runtime",
+      "imports",
+    ] as const) {
+      const records: unknown[] = [];
+      const ids = selected?.[kind];
+      if (selected && !ids?.length) continue;
+      if (kind === "runtime") {
+        if (ids) {
+          const find = this.#database.prepare(
+            `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`,
+          );
+          for (const id of ids.slice(0, 200)) {
+            const identity = sqliteRuntimeIdentity(id);
+            const row = find.get(identity.prefix, identity.suffix);
+            if (row) records.push(runtimeFromRow(row));
+          }
+        } else
+          for (const row of this.#database.prepare(`${RUNTIME_SELECT} LIMIT 200`).iterate())
+            records.push(runtimeFromRow(row));
+      } else {
+        const sql = ids
+          ? `SELECT payload FROM ${kind} WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 200`
+          : `SELECT payload FROM ${kind} ORDER BY id LIMIT 200`;
+        const parameters = ids ? [JSON.stringify(ids)] : [];
+        for (const row of this.#database.prepare(sql).iterate(...parameters))
+          records.push(parseRecord(row.payload));
+      }
+      Object.assign(shards, { [kind]: records });
+    }
+    return shards;
+  }
+
+  /** Explain one record with an exact reference count and a bounded reverse-reference preview.
+   * @param {ShardKind} kind Selected collection.
+   * @param {string} id Stable semantic record ID.
+   * @returns {ProjectEvidenceExplanation} Full direct provenance/conflicts, at most 200 reverse links.
+   */
+  explainEvidence(kind: ShardKind, id: string): ProjectEvidenceExplanation {
+    // Metadata reverse links are a persistent SQL index. Runtime already has dictionary/source
+    // indexes, so explaining evidence never decodes CPU-state or memory-history payloads.
+    const signature = "1";
+    if (!readQueryCache(this.#database, "evidence_links", signature)) {
+      this.transaction(() => {
+        installQueryCache(this.#database, "evidence_links", [
+          "analysis",
+          "annotations",
+          "labels",
+          "comments",
+          "regions",
+        ]);
+        this.#database.exec(
+          "CREATE TABLE IF NOT EXISTS query_evidence_links(evidence TEXT,collection TEXT,id TEXT,PRIMARY KEY(evidence,collection,id)) WITHOUT ROWID;DELETE FROM query_evidence_links;",
+        );
+        for (const table of ["analysis", "annotations", "labels", "comments", "regions"])
+          this.#database.exec(
+            `INSERT OR IGNORE INTO query_evidence_links SELECT e.value,'${table}',r.id FROM ${table} r,json_each(analysis_json(r.payload),'$.evidence') e`,
+          );
+        writeQueryCache(this.#database, "evidence_links", signature, true);
+      });
+    }
+    return this.transaction(() => {
+      const shards = this.evidenceChoices({ [kind]: [id] });
+      const view = {
+        ...shards,
+        analysis: [
+          ...shards.analysis,
+          ...this.analysisByKinds(["conflict"]).filter(
+            (record) => !shards.analysis.some((other) => other.id === record.id),
+          ),
+        ],
+      };
+      const base = explainProjectEvidence(view, kind, id);
+      const evidenceIds = JSON.stringify(base.evidence.map((record) => record.id));
+
+      const metadata =
+        "SELECT collection||':'||id AS reference FROM query_evidence_links WHERE evidence IN (SELECT value FROM json_each(?)) GROUP BY collection,id";
+      const runtime =
+        "SELECT 'runtime:'||p.value||CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END AS reference FROM runtime_evidence e JOIN runtime r ON r.evidence_id=e.id JOIN runtime_prefixes p ON p.id=r.prefix_id WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?)))";
+      const metadataRows = this.#database
+        .prepare(`${metadata} ORDER BY reference LIMIT 200`)
+        .all(evidenceIds);
+      const runtimeRows = this.#database
+        .prepare(`${runtime} ORDER BY r.prefix_id,r.id LIMIT 200`)
+        .all(evidenceIds);
+      const referencedBy = [...metadataRows, ...runtimeRows]
+        .map((row) => String(row.reference))
+        .sort((a, b) => a.localeCompare(b))
+        .slice(0, 200);
+      const metadataCount = Number(
+        this.#database.prepare(`SELECT count(*) AS n FROM (${metadata})`).get(evidenceIds)!.n,
+      );
+      const runtimeCount = Number(
+        this.#database
+          .prepare(`SELECT count(*) AS n FROM runtime r WHERE r.evidence_id IN
+        (SELECT e.id FROM runtime_evidence e WHERE EXISTS(SELECT 1 FROM json_each(e.value) value WHERE value.value IN (SELECT value FROM json_each(?))))`)
+          .get(evidenceIds)!.n,
+      );
+      const referencedByTotal = metadataCount + runtimeCount;
+      return { ...base, referencedBy, referencedByTotal };
+    }, false);
+  }
+
+  /** Exact coverage totals; build only when classifications, code, or runtime facts changed.
+   * @returns {object} Persisted summary and detail count.
+   */
+  coverageSummary() {
+    const cached = cachedCoverage(this.#database, this.manifest());
+    if (cached) return cached;
+    this.prepareAnnotationQueries();
+    try {
+      this.cachedProjection(
+        "coverage",
+        coverageSignature(this.manifest()),
+        ["analysis", "annotations", "regions", "runtime"],
+        () => prepareCoverage(this.#database, this.manifest()),
+        () => publishCoverage(this.#database),
+      );
+      const published = cachedCoverage(this.#database, this.manifest());
+      if (!published) throw new Error("Project changed while building coverage; refresh the view.");
+      return published;
+    } finally {
+      this.#database.exec(
+        "DROP TABLE IF EXISTS temp.query_coverage_segments;DROP TABLE IF EXISTS temp.query_coverage_details",
+      );
+    }
+  }
+
+  /** Read at most 200 coverage rows from a current projection.
+   * @param {"segments" | "details"} kind Collection to page.
+   * @param {number} offset Nonnegative row offset.
+   * @returns {unknown[]} Persisted rows, never the full ROM map.
+   */
+  coveragePage(kind: "segments" | "details", offset = 0): unknown[] {
+    this.coverageSummary();
+    return this.transaction(() => coveragePage(this.#database, kind, offset), false);
+  }
+
+  /** Persisted call graph plus current labels, without retaining CFG contexts between requests.
+   * @returns {object} Functions, calls, unresolved sites, and ownership.
+   */
+  callGraph() {
+    let graph;
+    try {
+      graph = this.cachedProjection(
+        "graph",
+        "2",
+        ["analysis"],
+        () => prepareGraph(this.#database),
+        () => publishGraph(this.#database),
+      );
+      const published = readQueryCache<typeof graph>(this.#database, "graph", "2");
+      if (!published)
+        throw new Error("Analysis changed while building the graph; refresh the view.");
+      graph = published;
+    } finally {
+      this.#database.exec(
+        "DROP TABLE IF EXISTS temp.query_graph_nodes;DROP TABLE IF EXISTS temp.query_graph_edges",
+      );
+    }
+    const labels = this.loadTable("labels");
+    return {
+      ...graph,
+      functions: graph.functions.map((fn) => ({
+        ...fn,
+        labels: labels
+          .filter((label) => label.addressSpace === fn.addressSpace && label.address === fn.address)
+          .map(({ id, name }) => ({ id, name }))
+          .sort((a, b) => a.id.localeCompare(b.id)),
+      })),
+    };
+  }
+
+  /** Cache a compact target-specific result; callers declare every persisted input it consumes.
+   * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
+   * Concurrent input changes discard cache publication; results still belong to one read snapshot.
+   * @param {string} key Internal stable query name.
+   * @param {string} signature Layout/configuration fingerprint.
+   * @param {readonly ShardKind[]} dependencies Source collections.
+   * @param {Function} compute Synchronous reader; must not open another transaction.
+   * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
+   * @returns {T} Current projected value.
+   */
+  cachedProjection<T>(
+    key: string,
+    signature: string,
+    dependencies: readonly ShardKind[],
+    compute: () => T,
+    publish?: () => void,
+  ): T {
+    const cached = readQueryCache<T>(this.#database, key, signature);
+    if (cached !== undefined) return cached;
+    const pending = `pending:${randomUUID()}`;
+    this.transaction(() => {
+      installQueryCache(this.#database, key, dependencies);
+      writeQueryCache(this.#database, key, pending, null);
+    });
+    const result = this.transaction(compute, false);
+    // Releasing the read snapshot before the short publication avoids SQLITE_BUSY_SNAPSHOT when
+    // unrelated editor writes occur during a long computation. Dependency triggers erase the token
+    // if an input changes; another reader's newer result also wins over this publication.
+    this.transaction(() => {
+      if (
+        this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key)
+          ?.signature === pending
+      ) {
+        publish?.();
+        writeQueryCache(this.#database, key, signature, result);
+      }
+    });
+    return result;
+  }
+
+  /** CPU architectures at one PC from indexed scalar columns; register payloads are untouched.
+   * @param {string} space Exact logical address space.
+   * @param {number} address Instruction address.
+   * @returns {string[]} Distinct observed architecture IDs.
+   */
+  runtimeArchitecturesAt(space: string, address: number): string[] {
+    return this.#database
+      .prepare(
+        "SELECT architecture FROM query_runtime_architectures WHERE address_space=? AND address=? ORDER BY architecture",
+      )
+      .all(space, address)
+      .map((row) => String(row.architecture));
+  }
+
+  /** Build distinct processor/location hints once instead of rescanning hot-PC register rows per function. */
+  prepareRuntimeArchitectures(): void {
+    try {
+      this.cachedProjection(
+        "runtime_architectures",
+        "2",
+        ["runtime"],
+        () => {
+          this.#database
+            .exec(`CREATE TEMP TABLE runtime_architectures_pending(address_space TEXT,address INTEGER,architecture TEXT,PRIMARY KEY(address_space,address,architecture)) WITHOUT ROWID;
+          INSERT OR IGNORE INTO temp.runtime_architectures_pending SELECT address_space,address,architecture FROM runtime NOT INDEXED WHERE kind IN ('runtime-execution','runtime-instruction','runtime-cpu-state');`);
+          return true;
+        },
+        () => {
+          this.#database
+            .exec(`CREATE TABLE IF NOT EXISTS query_runtime_architectures(address_space TEXT,address INTEGER,architecture TEXT,PRIMARY KEY(address_space,address,architecture)) WITHOUT ROWID;
+          DELETE FROM query_runtime_architectures;
+          INSERT INTO query_runtime_architectures SELECT * FROM temp.runtime_architectures_pending;`);
+        },
+      );
+      if (!readQueryCache(this.#database, "runtime_architectures", "2"))
+        throw new Error("Runtime changed while building processor hints; refresh the view.");
+    } finally {
+      this.#database.exec("DROP TABLE IF EXISTS temp.runtime_architectures_pending");
+    }
+  }
+
+  /** Select a bounded CFG navigation window through its address index.
+   * @param {string} space Exact logical address space.
+   * @param {number} address Selected PC.
+   * @param {readonly string[]} architectures Optional specification prefixes.
+   * @returns {AnalysisRecord[]} Four preceding and 28 following variants, in address order.
+   */
+  navigationNodes(
+    space: string,
+    address: number,
+    architectures: readonly string[],
+  ): AnalysisRecord[] {
+    const matches = architectures.length
+      ? " AND EXISTS(SELECT 1 FROM json_each(?) h WHERE json_extract(analysis_json(payload),'$.specificationId')=h.value OR substr(json_extract(analysis_json(payload),'$.specificationId'),1,length(h.value)+1)=h.value||'.')"
+      : "";
+    const parameters: (string | number)[] = [space, address];
+    if (architectures.length) parameters.push(JSON.stringify(architectures));
+    const before = this.#database
+      .prepare(
+        `SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address<? ${matches} ORDER BY address DESC,id DESC LIMIT 4`,
+      )
+      .all(...parameters)
+      .reverse();
+    const after = this.#database
+      .prepare(
+        `SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address>=? ${matches} ORDER BY address,id LIMIT ?`,
+      )
+      .all(...parameters, 32 - before.length);
+    return [...before, ...after].map((row) => parseRecord<AnalysisRecord>(row.payload));
+  }
+
+  /** Explicit known-code intervals, grouped in SQL for the incomplete-analysis preservation guard.
+   * @returns {Array} Half-open ROM-content intervals.
+   */
+  codeRanges(): { start: number; end: number }[] {
+    return this.#database
+      .prepare(
+        "SELECT file_offset AS start,MAX(file_offset+size) AS end FROM query_instruction_nodes WHERE file_offset IS NOT NULL GROUP BY file_offset",
+      )
+      .all()
+      .map((row) => ({ start: Number(row.start), end: Number(row.end) }));
+  }
+
+  /** Select processor MMIO observations before decoding payloads.
+   * @param {string} architecture Exact runtime architecture.
+   * @param {string} space Instruction and accessed logical space.
+   * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
+   * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations; counts/provenance stay exact.
+   * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
+   */
+  *runtimeMemoryAtAddresses(
+    architecture: string,
+    space: string,
+    addresses: readonly number[],
+  ): IterableIterator<RuntimeEvidenceRecord> {
+    // Values do not affect register-role detection. Keep access/actor/channel, site and provenance paired.
+    const sql = `WITH candidates AS MATERIALIZED (SELECT r.*,analysis_json(r.payload) AS json FROM runtime r
+      WHERE r.kind='runtime-memory-access' AND r.architecture=? AND r.instruction_address_space=? AND r.accessed_address_space=?
+      AND r.accessed_address IN (SELECT value FROM json_each(?))), grouped AS (
+      SELECT *,SUM(count) AS total FROM candidates GROUP BY instruction_address,accessed_address,evidence_id,
+      json_extract(json,'$.access'),json_extract(json,'$.actor'),json_extract(json,'$.channel'))
+      SELECT g.*,p.value AS id_prefix,e.value AS evidence FROM grouped g JOIN runtime_prefixes p ON p.id=g.prefix_id JOIN runtime_evidence e ON e.id=g.evidence_id`;
+    for (const row of this.#database
+      .prepare(sql)
+      .iterate(architecture, space, space, JSON.stringify(addresses)))
+      yield runtimeFromRow({ ...row, count: row.total });
+  }
+
+  /** Decode-state variants aggregated in SQL; raw register histories never become a JS array.
+   * The signature includes the ordered state fields and architecture. Aliases remain distinct so
+   * the target decoder retains its original precedence and validation rules.
+   * @param {string} architecture Exact instruction architecture.
+   * @param {string} space Exact instruction address space.
+   * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
+   * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+   * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
+   * Prepare before starting the consuming read transaction.
+   */
+  runtimeInstructionVariants(
+    architecture: string,
+    space: string,
+    stateFields: readonly string[],
+    masks: Readonly<Record<string, { readonly max: number; readonly mask: number }>> = {},
+  ): IterableIterator<RuntimeEvidenceRecord> {
+    if (stateFields.some((field) => !/^\w+$/.test(field)))
+      throw new Error("Invalid instruction state field.");
+    const signature = JSON.stringify([3, architecture, space, stateFields, masks]);
+    try {
+      this.cachedProjection(
+        "instruction_variants",
+        signature,
+        ["runtime"],
+        () => {
+          // The sort contains compact keys and row references, not complete register snapshots.
+          // JSON keys preserve the distinction between booleans, numbers, null and missing fields.
+          this.#database.function(
+            "analysis_instruction_variant",
+            { deterministic: true },
+            (value) => {
+              const record = parseRecord<{
+                bytes: readonly number[];
+                state: Record<string, unknown>;
+              }>(value);
+              const state: Record<string, unknown> = {};
+              for (const key of stateFields) {
+                const value = record.state[key],
+                  mask = masks[key];
+                if (
+                  mask &&
+                  typeof value === "number" &&
+                  Number.isInteger(value) &&
+                  value >= 0 &&
+                  value <= mask.max
+                )
+                  state[key] = value & mask.mask;
+                else if (value !== undefined) state[key] = value;
+              }
+              return JSON.stringify([record.bytes, state]);
+            },
+          );
+          this.#database.exec(
+            "CREATE TEMP TABLE instruction_variants_pending(payload TEXT NOT NULL)",
+          );
+          const insert = this.#database.prepare(
+            "INSERT INTO temp.instruction_variants_pending VALUES(?)",
+          );
+          const rows = this.#database.prepare(`WITH grouped AS (
+          SELECT MIN(rowid) AS sample,SUM(count) AS total FROM runtime WHERE kind='runtime-instruction' AND architecture=? AND address_space=?
+          GROUP BY address,evidence_id,analysis_instruction_variant(payload))
+          SELECT r.*,g.total,p.value AS id_prefix,e.value AS evidence FROM grouped g JOIN runtime r ON r.rowid=g.sample JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id`);
+          for (const row of rows.iterate(architecture, space)) {
+            const record = runtimeFromRow({ ...row, count: row.total });
+            if (record.kind === "runtime-instruction")
+              insert.run(
+                JSON.stringify({
+                  ...record,
+                  state: Object.fromEntries(
+                    Object.entries(record.state).filter(([key]) => stateFields.includes(key)),
+                  ),
+                }),
+              );
+          }
+          return true;
+        },
+        () => {
+          this.#database
+            .exec(`CREATE TABLE IF NOT EXISTS query_runtime_variants(payload TEXT NOT NULL);
+          DELETE FROM query_runtime_variants;
+          INSERT INTO query_runtime_variants SELECT payload FROM temp.instruction_variants_pending;`);
+        },
+      );
+      if (!readQueryCache(this.#database, "instruction_variants", signature))
+        throw new Error("Runtime changed while building instruction variants; retry reanalysis.");
+    } finally {
+      this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
+    }
+    const statement = this.#database.prepare(
+      "SELECT payload FROM query_runtime_variants ORDER BY rowid",
+    );
+    // Call preparation before opening the consuming read transaction. Each decoded record is
+    // owned by that iteration; the complete variant set never passes through a JSON string/array.
+    return (function* () {
+      for (const row of statement.iterate())
+        yield JSON.parse(String(row.payload)) as RuntimeEvidenceRecord;
+    })();
+  }
+
+  /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
+   * @param {string} architecture Target processor.
+   * @param {string} space Logical CPU address space.
+   * @returns {RuntimeEvidenceRecord[]} Execution facts reduced to the fields used for seed selection.
+   */
+  runtimeExecutionSeeds(architecture: string, space: string): RuntimeEvidenceRecord[] {
+    return this.#database
+      .prepare(`SELECT r.address,SUM(r.count) AS count,r.evidence_id,e.value AS evidence FROM runtime r JOIN runtime_evidence e ON e.id=r.evidence_id
+      WHERE r.kind='runtime-execution' AND r.architecture=? AND r.address_space=? GROUP BY r.address,r.evidence_id`)
+      .all(architecture, space)
+      .map((row) => ({
+        id: `query:execution:${String(row.address)}:${String(row.evidence_id)}`,
+        kind: "runtime-execution",
+        architecture,
+        addressSpace: space,
+        address: Number(row.address),
+        count: Number(row.count),
+        evidence: JSON.parse(String(row.evidence)) as string[],
+      }));
+  }
+
+  /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
+  prepareAnnotationQueries(): void {
+    if (annotationQueryIndexesReady(this.#database)) return;
+    this.transaction(() => ensureAnnotationQueryIndexes(this.#database));
+  }
+
+  /** Prepare direct source attribution indexes without decoding runtime payloads. */
+  prepareSourceQueries(): void {
+    if (!sourceQueriesReady(this.#database))
+      this.transaction(() => prepareSourceQueries(this.#database));
+  }
+
+  /** Validated source identities from small catalog tables in the caller's read snapshot.
+   * @returns {object} Manifest and sources ordered by their most recent successful import.
+   */
+  sourceCatalog() {
+    const manifest = this.manifest();
+    const shards = {
+      imports: this.loadTable("imports"),
+      evidence: this.loadTable("evidence"),
+      analysis: [],
+      labels: [],
+      comments: [],
+      annotations: [],
+      regions: [],
+      runtime: [],
+    };
+    validateLoadedShards(shards, manifest);
+    const importTimes = new Map(
+      this.#database
+        .prepare("SELECT sha256,last_seen_at FROM capture_catalog")
+        .all()
+        .map((row) => [String(row.sha256), Number(row.last_seen_at)] as const),
+    );
+    return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
+  }
+
+  /** Exact SQL counts for a catalog source; no baseline or inferred static execution.
+   * @param {string} sourceId Catalog source ID.
+   * @returns {object} Manifest and source counts.
+   */
+  sourceSummary(sourceId: string) {
+    const { manifest, sources } = this.sourceCatalog();
+    const source = sources.find(({ id }) => id === sourceId);
+    if (!source) throw new Error("Unknown analysis source.");
+    return { manifest, summary: readSourceSummary(this.#database, source) };
+  }
+
+  /** At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
+   * @param {string} sourceId Catalog source ID.
+   * @param {AnalysisSourceGroup} group Contribution category.
+   * @param {number} offset Nonnegative page offset.
+   * @returns {Array} Bounded source records.
+   */
+  sourcePage(sourceId: string, group: AnalysisSourceGroup, offset = 0) {
+    const source = this.sourceCatalog().sources.find(({ id }) => id === sourceId);
+    if (!source) throw new Error("Unknown analysis source.");
+    return readSourcePage(this.#database, source, group, offset);
+  }
+
+  /**
+   * Read names, comments and provenance for editing without materializing instruction variants.
+   * @returns {object} Validated editing metadata from the caller's read transaction.
+   */
+  annotationEditView(): { manifest: AnalysisProjectManifest; shards: AnalysisProjectShards } {
+    const manifest = this.manifest();
+    const shards = {
+      labels: this.loadTable("labels"),
+      comments: this.loadTable("comments"),
+      evidence: this.loadTable("evidence"),
+      analysis: this.analysisByKinds(["function"]),
+      annotations: [],
+      regions: [],
+      imports: [],
+      runtime: [],
+    };
+    validateLoadedShards(shards, manifest);
+    return { manifest, shards };
+  }
+
+  /** Small export metadata; instruction candidates are supplied separately by an ordered SQL cursor.
+   * @returns {object} Validated manifest, metadata, and an empty runtime collection.
+   */
+  sourceExportView(): { manifest: AnalysisProjectManifest; shards: AnalysisProjectShards } {
+    const manifest = this.manifest();
+    const shards = {
+      labels: this.loadTable("labels"),
+      comments: this.loadTable("comments"),
+      evidence: this.loadTable("evidence"),
+      regions: this.loadTable("regions"),
+      annotations: this.loadTable("annotations"),
+      analysis: this.analysisByKinds(["function", "conflict"]),
+      imports: [],
+      runtime: [],
+    };
+    validateLoadedShards(shards, manifest);
+    return { manifest, shards };
+  }
+
+  /**
+   * Stream one file-offset group at a time; do not retain the complete CFG to plan source.
+   * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
+   * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
+   * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
+   */
+  *instructionExportGroups(): IterableIterator<readonly InstructionExportRecord[]> {
+    const spaces = new Map(
+      this.manifest().addressSpaces.map((space) => [space.id, 2 ** space.addressBits]),
+    );
+    const evidence = new Set(this.loadTable("evidence").map(({ id }) => id));
+    let previous: number | undefined;
+    let group: InstructionExportRecord[] = [];
+    for (const row of this.#database
+      .prepare(
+        "SELECT file_offset,data FROM query_instruction_nodes WHERE file_offset IS NOT NULL ORDER BY file_offset",
+      )
+      .iterate()) {
+      const offset = Number(row.file_offset);
+      if (previous !== undefined && previous !== offset) {
+        yield group;
+        group = [];
+      }
+      const record = parseRecord<InstructionExportRecord>(row.data);
+      if (
+        typeof record.id !== "string" ||
+        !record.id ||
+        !Number.isSafeInteger(record.address) ||
+        record.address < 0 ||
+        record.address >= (spaces.get(record.addressSpace) ?? 0) ||
+        !Number.isSafeInteger(record.size) ||
+        record.size < 1 ||
+        !Number.isSafeInteger(record.opcode) ||
+        typeof record.specificationId !== "string" ||
+        !record.incomingState ||
+        typeof record.incomingState !== "object" ||
+        !Array.isArray(record.evidence) ||
+        record.evidence.some((id: unknown) => typeof id !== "string" || !evidence.has(id))
+      )
+        throw new Error("Invalid indexed export instruction or missing provenance.");
+      group.push(record);
+      previous = offset;
+    }
+    if (group.length) yield group;
+  }
+
+  /**
+   * Read and validate only the requested instruction metadata and bounded runtime details.
+   * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
+   * @returns {SqliteAnnotationView} Small view; consume inside the caller's read transaction.
+   */
+  instructionAnnotationView(ranges: readonly AnnotationQueryRange[]): SqliteAnnotationView {
+    const manifest = this.manifest();
+    const result = readSqliteAnnotationView(this.#database, manifest, ranges);
+    validateLoadedShards(result.shards, manifest);
+    return result;
+  }
+
+  /**
+   * Read selected metadata kinds through the address index instead of loading the complete CFG.
+   * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
+   * @returns {AnalysisRecord[]} Matching rows in stable ID order.
+   */
+  analysisByKinds(kinds: readonly AnalysisRecord["kind"][]): AnalysisRecord[] {
+    if (!kinds.length) return [];
+    const records: AnalysisRecord[] = [];
+    for (const row of this.#database
+      .prepare(
+        `SELECT payload FROM analysis WHERE kind IN (${kinds.map(() => "?").join(",")}) ORDER BY id`,
+      )
+      .iterate(...kinds))
+      records.push(parseRecord<AnalysisRecord>(row.payload));
+    return records;
+  }
+
+  /**
+   * Resolve an edit boundary to representative CFG nodes, one per qualified location.
+   * Call after preparing query indexes and consume inside a read transaction.
+   * @param {string} addressSpace Exact debug-map/native address space.
+   * @param {number} address Instruction start in that space.
+   * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
+   * @returns {AnalysisProjectShards["analysis"]} Location representatives; state variants need not be loaded to edit a comment.
+   */
+  annotationNodesAt(
+    addressSpace: string,
+    address: number,
+    outputOffset?: number,
+  ): AnalysisProjectShards["analysis"] {
+    // File coordinates must use the compact output index; a kind-only plan scans every node
+    // before the annotation form can resolve even one instruction boundary.
+    const rows = this.#database
+      .prepare(`SELECT payload FROM analysis WHERE rowid IN (
+      SELECT MIN(rowid) FROM analysis WHERE kind='cfg-node' AND address_space=? AND address=? GROUP BY address_space,address
+      UNION SELECT MIN(rowid) FROM analysis INDEXED BY query_instruction_output
+      WHERE kind='cfg-node' AND query_file_offset=? GROUP BY address_space,address)`)
+      .all(addressSpace, address, outputOffset ?? null);
+    return rows.map((row) => parseRecord<AnalysisRecord>(row.payload));
   }
 
   /**
@@ -807,6 +1669,32 @@ export class SqliteAnalysisStore {
   }
 
   /**
+   * Count analysis kinds without inflating or parsing their compressed payloads.
+   * @returns {Readonly<Record<string, number>>} Counts by analysis record discriminator.
+   */
+  analysisCounts(): Readonly<Record<string, number>> {
+    const result: Record<string, number> = {};
+    for (const row of this.#database
+      .prepare("SELECT kind, COUNT(*) AS n FROM analysis GROUP BY kind")
+      .iterate())
+      result[String(row.kind)] = Number(row.n);
+    return result;
+  }
+
+  /**
+   * Summarize per-PC execution facts using stored columns, without reading register history.
+   * @returns {object} Fact count and total observed executions in the owning transaction.
+   */
+  runtimeExecutionCounts(): { records: number; events: number } {
+    const row = this.#database
+      .prepare(
+        "SELECT COUNT(*) AS records, COALESCE(SUM(count), 0) AS events FROM runtime WHERE kind='runtime-execution'",
+      )
+      .get();
+    return { records: Number(row?.records ?? 0), events: Number(row?.events ?? 0) };
+  }
+
+  /**
    * Atomically refresh the watcher hint after commit. SQLite is authoritative: a failed hint write
    * is reported as a warning, never as a failed import that could cause an unsafe retry.
    * @param {string} directory Project root for the watcher hint.
@@ -850,6 +1738,137 @@ export class SqliteAnalysisStore {
       `);
     });
     this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
+  }
+
+  /** Current persisted policy; defaults do not write or change the semantic revision.
+   * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
+   */
+  storagePolicy(): AnalysisStoragePolicy {
+    return readStoragePolicy(this.#database);
+  }
+
+  /** Update only explicit policy fields in the caller's writer transaction.
+   * @param {Partial<AnalysisStoragePolicy>} patch Explicit limits, in bytes/days/counts.
+   * @returns {AnalysisStoragePolicy} Complete policy saved without changing the edit revision.
+   */
+  setStoragePolicy(patch: Partial<AnalysisStoragePolicy>): AnalysisStoragePolicy {
+    this.#requireTransaction();
+    const policy = validateStoragePolicy({ ...this.storagePolicy(), ...patch });
+    this.#database
+      .prepare("INSERT OR REPLACE INTO meta VALUES('storage-policy',?)")
+      .run(JSON.stringify(policy));
+    return policy;
+  }
+
+  /** Storage accounting avoids decoding runtime or analysis payloads.
+   * @returns {object} Physical allocation and logical retention counts.
+   */
+  storageSnapshot() {
+    return storageSnapshot(this.#database, this.file);
+  }
+
+  /** Optional projection allocation, including secondary indexes; reserved for explicit accounting.
+   * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
+   */
+  storageCacheBytes(): number {
+    return optionalCacheBytes(this.#database);
+  }
+
+  /** Durable receipt lookup survives archive expiry and cache eviction.
+   * @param {string} sha256 Canonical capture identity.
+   * @returns {object | undefined} Retained receipt, including archive availability.
+   */
+  captureReceipt(sha256: string) {
+    return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha256);
+  }
+
+  /** Catalog rows contain small provenance/availability metadata, never capture contents.
+   * @returns {object[]} Small capture metadata rows in import order.
+   */
+  captureCatalog() {
+    return this.#database
+      .prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256")
+      .all();
+  }
+
+  /** Record the first successful import atomically with its facts; later detail expiry retains this receipt.
+   * @param {ImportReport} report Successfully validated native trace import.
+   */
+  recordCaptureReceipt(report: ImportReport): void {
+    this.#requireTransaction();
+    if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format)) return;
+    const now = Date.now();
+    this.#database
+      .prepare(`INSERT INTO capture_catalog(sha256,profile,source_name,imported_at,last_seen_at,observed_events,dropped_events)
+      VALUES(?,?,?,?,?,?,?) ON CONFLICT(sha256) DO UPDATE SET last_seen_at=excluded.last_seen_at`)
+      .run(
+        report.sourceSha256,
+        report.indexProfile ?? "full",
+        report.sourceName,
+        now,
+        now,
+        report.imported.busEvents ?? report.imported.executionEvents ?? 0,
+        report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0,
+      );
+  }
+
+  /** Save verified archive metadata, or mark expired detail while keeping the import identity.
+   * @param {string} sha256 Canonical capture identity already committed.
+   * @param {object} value Verified location/hash/size or explicit detail unavailability.
+   */
+  updateCaptureArchive(
+    sha256: string,
+    value: {
+      originalPath?: string;
+      name?: string;
+      hash?: string;
+      bytes: number;
+      availability: string;
+    },
+  ): void {
+    this.#requireTransaction();
+    if (!this.captureReceipt(sha256)) throw new Error("Unknown capture identity.");
+    this.#database
+      .prepare(
+        "UPDATE capture_catalog SET original_path=COALESCE(?,original_path),archive_name=?,archive_sha256=?,archive_bytes=?,availability=? WHERE sha256=?",
+      )
+      .run(
+        value.originalPath ?? null,
+        value.name ?? null,
+        value.hash ?? null,
+        value.bytes,
+        value.availability,
+        sha256,
+      );
+  }
+
+  /** Pinned detail is exempt from automatic byte, age and count expiry.
+   * @param {string} sha256 Canonical identity of an existing capture receipt.
+   * @param {boolean} pinned Whether automatic archive expiry must preserve it.
+   */
+  pinCapture(sha256: string, pinned: boolean): void {
+    this.#requireTransaction();
+    if (
+      !this.#database
+        .prepare("UPDATE capture_catalog SET pinned=? WHERE sha256=?")
+        .run(Number(pinned), sha256).changes
+    )
+      throw new Error("Unknown capture identity.");
+  }
+
+  /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
+   * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.
+   */
+  maintainStorage() {
+    const caches = this.transaction(() => maintainStorageCaches(this.#database));
+    const previousTimeout = Number(this.#database.prepare("PRAGMA busy_timeout").get()!.timeout);
+    try {
+      this.#database.exec("PRAGMA busy_timeout=0; PRAGMA wal_checkpoint(PASSIVE)");
+      const checkpoint = this.#database.prepare("PRAGMA wal_checkpoint(TRUNCATE)").get();
+      return { ...caches, checkpointBusy: Number(checkpoint?.busy ?? 0) !== 0 };
+    } finally {
+      this.#database.exec(`PRAGMA busy_timeout=${previousTimeout}`);
+    }
   }
 
   /** Close prepared statements and the database. */

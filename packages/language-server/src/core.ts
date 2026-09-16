@@ -4,7 +4,6 @@ export {
   WorkspaceIndex,
   OverlayFileProvider,
   findInstruction,
-  findDirectiveEntry,
   findDirectiveInCatalog,
   findDirectiveOperand,
   buildCompletionEntries,

@@ -12,7 +12,7 @@ import {
   type RomCoverageMap,
   type RomCoverageSegment,
   type InstructionAnalysisAnnotation,
-  type AnalysisSourceComparison,
+  type AnalysisSourceSummary,
   type AnalysisSourceEntry,
   type AnalysisEvidenceSource,
 } from "@uttori/asm-disassembler";
@@ -100,7 +100,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
         "sources",
       ));
       t.is(sources.length, 1, "source listing needs no runtime or CFG table");
-      await t.throwsAsync(
+      await t.notThrowsAsync(
         client.request(projectDirectory, "sourceSummary", { sourceId: sources[0].id }),
       );
     } finally {
@@ -108,18 +108,18 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       database.close();
     }
     const sourceId = sources![0].id;
-    const sourceSummary = await client.request<{ comparison: AnalysisSourceComparison }>(
+    const sourceSummary = await client.request<{ summary: AnalysisSourceSummary }>(
       projectDirectory,
       "sourceSummary",
       { sourceId },
     );
-    t.is(sourceSummary.comparison.uniqueInstructionCount, 300);
-    t.is(sourceSummary.comparison.contributionCount, 600);
+    t.is(sourceSummary.summary.instructionCount, 300);
+    t.is(sourceSummary.summary.contributionCount, 600);
     t.is(
       (
         await client.request<AnalysisSourceEntry[]>(projectDirectory, "sourceEntries", {
           sourceId,
-          sourceGroup: "uniqueInstructions",
+          sourceGroup: "instructions",
         })
       ).length,
       200,
@@ -128,7 +128,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
       (
         await client.request<AnalysisSourceEntry[]>(projectDirectory, "sourceEntries", {
           sourceId,
-          sourceGroup: "uniqueInstructions",
+          sourceGroup: "instructions",
           offset: 200,
         })
       ).length,
@@ -213,14 +213,14 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     client.invalidate();
     t.is(
       (
-        await client.request<{ comparison: AnalysisSourceComparison }>(
+        await client.request<{ summary: AnalysisSourceSummary }>(
           projectDirectory,
           "sourceSummary",
           { sourceId },
         )
-      ).comparison.contributionCount,
+      ).summary.contributionCount,
       0,
-      "source comparisons follow committed shard revisions",
+      "source counts follow committed database revisions",
     );
     t.is(
       (await client.request<RomCoverageMap>(projectDirectory, "coverage")).summary.classifiedBytes,
@@ -253,6 +253,72 @@ const fakeProcess = (directory: string): string => {
   );
   return file;
 };
+
+test("annotation source publication survives the read-projection timeout", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-write-timeout-"));
+  const client = new AnalysisWorkerClient(fakeProcess(directory), { timeoutMs: 100 });
+  try {
+    const exported = await client.request<{ pid: number }>("busy", "annotationRefresh");
+    const next = await client.request<{ pid: number }>("ready", "manifest");
+    t.is(next.pid, exported.pid, "the worker finishes publication before serving the next read");
+  } finally {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("interactive annotations bypass bulk work and retain their process when a bulk view fails", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-projection-isolation-"));
+  const client = new AnalysisWorkerClient(fakeProcess(directory), {
+    isolateAnnotations: true,
+    timeoutMs: 1000,
+  });
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const bulk = client.request<{ pid: number }>("busy", "coverage");
+  const annotations = client.request<{ pid: number }>("ready", "annotations");
+  t.is(
+    await Promise.race([bulk.then(() => "bulk"), annotations.then(() => "annotations")]),
+    "annotations",
+  );
+  const [background, preview] = await Promise.all([bulk, annotations]);
+  t.not(background.pid, preview.pid);
+  const editor = await client.request<{ pid: number }>("ready", "manifest");
+  t.not(editor.pid, preview.pid);
+  t.not(editor.pid, background.pid);
+  t.is((await client.request<{ pid: number }>("ready", "annotationSave")).pid, editor.pid);
+  await t.throwsAsync(client.request("crash", "coverage"));
+  t.is(
+    (await client.request<{ pid: number }>("ready", "annotationRefresh")).pid,
+    editor.pid,
+    "bulk failure preserves the editor's saved snapshot and pending refresh",
+  );
+});
+
+test("a viewport timeout cannot reject a concurrent project load or annotation edit", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-preview-isolation-"));
+  const client = new AnalysisWorkerClient(fakeProcess(directory), {
+    isolateAnnotations: true,
+    timeoutMs: 1000,
+  });
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const timedOut = t.throwsAsync(client.request("timeout", "annotations"), {
+    message: /Analysis annotations process exceeded/,
+  });
+  const manifest = await client.request<{ pid: number }>("ready", "manifest");
+  const edit = await client.request<{ pid: number }>("ready", "annotationLookup");
+  t.is(edit.pid, manifest.pid);
+  await timedOut;
+  const saved = await client.request<{ pid: number }>("ready", "annotationSave");
+  t.is(saved.pid, edit.pid, "preview failure leaves the edit worker and its queue intact");
+  const preview = await client.request<{ pid: number }>("ready", "debugAnnotations");
+  t.not(preview.pid, saved.pid, "preview requests restart in their own worker");
+});
 
 test("projection process gives queued pages their own timeout and keeps the parent responsive", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-projection-queue-"));

@@ -543,7 +543,7 @@ test("cached annotation data detects same-manifest SQLite edits and replaced deb
   const database = new DatabaseSync(path.join(h.directory, "analysis.sqlite"));
   database.exec("INSERT INTO labels VALUES ('invalid', 'snes.cpu', 0, 'Invalid', 'invalid json')");
   await h.editor.editAnnotation();
-  t.regex(h.panels[1].messages.at(-1)!.message, /JSON|unexpected token/i);
+  t.regex(h.panels[1].messages.at(-1)!.message, /json|unexpected token/i);
   t.false(h.panels[1].messages.some(({ type }) => type === "initialize"));
   database.exec("DELETE FROM labels WHERE id='invalid'");
   database.close();

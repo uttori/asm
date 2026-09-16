@@ -411,7 +411,8 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
         result.push({
           id: `${projectId}:error`,
           label: path.basename(directory),
-          description: "invalid analysis project",
+          // Loading can fail because a worker timed out or the database is busy; that is not corruption.
+          description: "could not load analysis project",
           tooltip: `${directory}\n${message}`,
           icon: "error",
           state: TreeItemCollapsibleState.None,

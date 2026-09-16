@@ -69,6 +69,7 @@ export const formatInstructionAnnotationSummary = (
   const parts: string[] = [];
   parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text }) => text));
   if (annotation.executionCount > 0) parts.push(`▶ ${annotation.executionCount}×`);
+  if (annotation.detailsLimited) parts.push("details limited");
   const coverage = annotation.runtimeCoverage.map(({ coverage }) => coverage);
   if (coverage.length > 0) parts.push(`coverage ${coverage.join("/")}`);
   parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
@@ -81,7 +82,7 @@ export const formatInstructionAnnotationSummary = (
 };
 
 /**
- * Complete plain-text hover/source detail retaining identities and provenance.
+ * Plain-text hover/source detail retaining supplied identities and provenance, including preview limits.
  * @param {InstructionAnalysisAnnotation} annotation Projected instruction analysis.
  * @returns {string} Multiline target-neutral annotation detail.
  */
@@ -95,11 +96,16 @@ export const formatInstructionAnnotationDetails = (
       : "Output offsets: none persisted",
     `Architectures: ${annotation.architectures.join(", ") || "none persisted"}`,
     `Execution observations: ${annotation.executionCount}`,
+    ...(annotation.detailsLimited
+      ? [
+          "Some detail records are omitted from this preview. Execution totals include all observations.",
+        ]
+      : []),
     ...(annotation.comments ?? []).map(
       ({ text, evidence }) => `Comment: ${text}\nEvidence: ${evidence.join(", ")}`,
     ),
   ];
-  // Detail views retain all observations, unlike the clipped summary. Append one line at a time
+  // Retain all supplied preview observations, unlike the clipped summary. Append one line at a time
   // because a single hot instruction can have more observations than V8 allows call arguments.
   if (annotation.runtimeCoverage.length > 0) {
     lines.push("Runtime coverage:");

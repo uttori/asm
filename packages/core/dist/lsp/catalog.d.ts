@@ -23,12 +23,6 @@ export type CatalogEntry = {
  */
 export declare function getInstructionCatalog(architecture: string, provider?: InstructionCatalogProvider): readonly InstructionDescriptor[];
 export declare function findInstruction(mnemonic: string, architecture: string, provider?: InstructionCatalogProvider): InstructionDescriptor | undefined;
-/**
- * Re-exports the directive lookup so providers depend on a single module.
- * @param {string} keyword The directive keyword.
- * @returns {DirectiveDescriptor | undefined} The descriptor, if known.
- */
-export declare function findDirectiveEntry(keyword: string): DirectiveDescriptor | undefined;
 export declare function findDirectiveInCatalog(keyword: string, directives?: readonly DirectiveDescriptor[], directivePrefixes?: readonly string[]): DirectiveDescriptor | undefined;
 /**
  * Resolves a nested directive operand under the cursor (`bankcross` or `full`

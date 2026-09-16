@@ -12,7 +12,7 @@ import {
   sourceExportSha256,
   projectSourceLabelNames,
   validateSourceExportFiles,
-  type AnalysisControlFlowNodeRecord,
+  type InstructionExportRecord,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
   type IntervalAnnotation,
@@ -53,6 +53,12 @@ import {
 } from "./ram-map.js";
 import { parseSnesInternalRomHeader, type SnesMapper } from "./rom-header.js";
 import {
+  applySnesStructInstructionOperand,
+  indexSnesStructInstructionUses,
+  renderSnesStructUseComments,
+  type SnesStructInstructionUse,
+} from "./struct-instruction-uses.js";
+import {
   indexSnesStructFields,
   loadSnesStructMap,
   planSnesStructRomFields,
@@ -76,14 +82,17 @@ export interface SnesSourceExportOptions {
   readonly allowCodeRegression?: boolean;
   /** SHA-256 of the analysis project that produced this export (provenance). */
   readonly sourceProjectSha256: string;
+  /** Complete variants grouped in ascending explicit file-offset order; consumed inside the caller's SQL read snapshot. */
+  readonly instructionGroups?: Iterable<readonly InstructionExportRecord[]>;
 }
 
 interface PlannedInstruction {
   readonly start: number;
   readonly end: number;
   readonly source: string;
-  readonly state: Cpu65816DecodeState;
   readonly nodeIds: readonly string[];
+  /** Curated capture alternatives and layout reasoning, emitted only at accepted instructions. */
+  readonly structComments?: readonly string[];
 }
 
 interface PlannedSpan {
@@ -339,7 +348,7 @@ const decodeState = (record: Readonly<Record<string, unknown>>): Cpu65816DecodeS
 /**
  * Formats one decoded instruction with explicit native operand-width qualification.
  * @param {DecodedInstruction} instruction Decoded 65816 instruction.
- * @param {ReadonlyMap<number, SnesRamMapVariable>} [ramVariables] Canonical WRAM locations to name.
+ * @param {ReadonlyMap<number, SnesRamMapVariable>} [ramVariables] Canonical WRAM and explicit SRAM CPU locations to name.
  * @param {number} [sourceAddress] Canonical address where generated source places the instruction.
  * @param {ReadonlyMap<number, string>} [sourceLabels] Explicit names at exact exported addresses.
  * @param {ReadonlyMap<number, string>} [structFields] Native struct expressions at known data addresses.
@@ -404,9 +413,9 @@ export const formatSnes65816SourceInstruction = (
   )?.address;
   const canonicalRamAddress =
     dataAddress === undefined ? undefined : canonicalSnesWramAddress(dataAddress);
-  const ramVariable =
-    canonicalRamAddress === undefined ? undefined : ramVariables?.get(canonicalRamAddress);
   const namedAddress = canonicalRamAddress ?? dataAddress;
+  // WRAM has fixed bus mirrors; SRAM names only match the CPU window declared in the map.
+  const ramVariable = namedAddress === undefined ? undefined : ramVariables?.get(namedAddress);
   const indexed = [
     "absoluteLongIndexedX",
     "absoluteIndexedX",
@@ -424,7 +433,7 @@ export const formatSnes65816SourceInstruction = (
       .toString(16)
       .toUpperCase()
       .padStart(rawWidth * 2, "0")}`;
-    const variableOffset = ramVariable ? canonicalRamAddress! - ramVariable.address : 0;
+    const variableOffset = ramVariable ? namedAddress! - ramVariable.address : 0;
     const variableExpression =
       structField ??
       (variableOffset === 0
@@ -618,12 +627,12 @@ const renderedMetadata = (
 
 /**
  * Reports whether project evidence requires one CFG instruction to remain raw bytes.
- * @param {AnalysisControlFlowNodeRecord} node Candidate instruction and its ROM extent.
+ * @param {InstructionExportRecord} node Candidate instruction and its ROM extent.
  * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
  * @returns {boolean} `true` when any non-code classification overlaps the instruction.
  */
 const rejectedByAnnotation = (
-  node: AnalysisControlFlowNodeRecord,
+  node: InstructionExportRecord,
   annotations: HalfOpenIntervalIndex<IntervalAnnotation>,
 ): boolean => {
   const rawClassifications = new Set([
@@ -661,11 +670,13 @@ const rejectedByAnnotation = (
  * @param {AnalysisProjectShards} shards Validated project evidence.
  * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Metadata keyed by ROM file offset.
  * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations Reusable file-space annotation index.
- * @param {ReadonlyMap<number, SnesRamMapVariable>} ramVariables Canonical WRAM locations to name.
+ * @param {ReadonlyMap<number, SnesRamMapVariable>} ramVariables Canonical WRAM and explicit SRAM CPU locations to name.
  * @param {StructuredRomLayout | undefined} structure Header/vector interval excluded from code.
  * @param {ReadonlyMap<number, string>} [sourceLabels] Friendly names at exact exported addresses.
  * @param {ReadonlyMap<number, string>} [structFields] Addressed struct fields for RAM and ROM data.
  * @param {ReadonlyMap<number, string>} [indexedStructFields] Addressed fields including biased array bases.
+ * @param {Iterable} [instructionGroups] Complete SQL-ordered groups, avoiding a full CFG array.
+ * @param {ReadonlyMap<number, SnesStructInstructionUse>} [instructionUses] Byte-checked explicit uses by ROM offset.
  * @returns {ReadonlyMap<number, PlannedInstruction>} Safe instructions keyed by start offset.
  */
 const planInstructions = (
@@ -679,6 +690,8 @@ const planInstructions = (
   sourceLabels?: ReadonlyMap<number, string>,
   structFields?: ReadonlyMap<number, string>,
   indexedStructFields?: ReadonlyMap<number, string>,
+  instructionGroups?: Iterable<readonly InstructionExportRecord[]>,
+  instructionUses?: ReadonlyMap<number, SnesStructInstructionUse>,
 ): ReadonlyMap<number, PlannedInstruction> => {
   const decoder = new Cpu65816Decoder();
   const source = new Uint8ArrayDecoderSource(rom.bytes());
@@ -700,30 +713,46 @@ const planInstructions = (
     }
     return low < metadataOffsets.length && metadataOffsets[low] < end;
   };
-  const groups = new Map<number, AnalysisControlFlowNodeRecord[]>();
-  for (const record of shards.analysis) {
-    if (
-      record.kind !== "cfg-node" ||
-      record.fileOffset === undefined ||
-      record.fileOffset < 0 ||
-      record.fileOffset + record.size > rom.length ||
-      (structure !== undefined &&
-        record.fileOffset < structure.end &&
-        structure.start < record.fileOffset + record.size) ||
-      conflictNodes.has(record.id) ||
-      rejectedByAnnotation(record, annotations)
-    ) {
-      continue;
+  const fallbackGroups = (): Iterable<readonly InstructionExportRecord[]> => {
+    const grouped = new Map<number, InstructionExportRecord[]>();
+    for (const record of shards.analysis) {
+      if (record.kind !== "cfg-node" || record.fileOffset === undefined || record.fileOffset < 0)
+        continue;
+      const group = grouped.get(record.fileOffset) ?? [];
+      group.push(record);
+      grouped.set(record.fileOffset, group);
     }
-    if (hasInteriorMetadata(record.fileOffset, record.fileOffset + record.size)) {
-      continue;
-    }
-    groups.set(record.fileOffset, [...(groups.get(record.fileOffset) ?? []), record]);
-  }
-
+    return [...grouped].sort(([a], [b]) => a - b).map(([, records]) => records);
+  };
   const candidates = new Map<number, PlannedInstruction>();
   const context = createSnesAddressContext(mapper);
-  for (const [offset, records] of [...groups].sort(([left], [right]) => left - right)) {
+  let previousOffset = -1;
+  // SQL callers hold only the current offset's variants; in-memory callers retain the same semantic path.
+  for (const group of instructionGroups ?? fallbackGroups()) {
+    if (!group.length) continue;
+    const offset = group[0].fileOffset;
+    if (
+      offset === undefined ||
+      offset <= previousOffset ||
+      group.some((record) => record.fileOffset !== offset)
+    )
+      throw new Error("Export instruction groups must have distinct, ascending file offsets.");
+    previousOffset = offset;
+    const records = group.filter(
+      (record) =>
+        record.fileOffset !== undefined &&
+        record.fileOffset >= 0 &&
+        record.fileOffset + record.size <= rom.length &&
+        !(
+          structure !== undefined &&
+          record.fileOffset < structure.end &&
+          structure.start < record.fileOffset + record.size
+        ) &&
+        !conflictNodes.has(record.id) &&
+        !rejectedByAnnotation(record, annotations) &&
+        !hasInteriorMetadata(record.fileOffset, record.fileOffset + record.size),
+    );
+    if (!records.length) continue;
     const sourceAddress = snesRomAddressSpace.fromOutputOffset(offset, context);
     if (sourceAddress < 0) continue;
     const variants = records
@@ -741,7 +770,6 @@ const planInstructions = (
         }
         return {
           record,
-          state,
           instruction: result.instruction,
           source: formatSnes65816SourceInstruction(
             result.instruction,
@@ -785,12 +813,23 @@ const planInstructions = (
       if (numericSources.some((source) => source !== numericSources[0])) continue;
       renderedSource = numericSources[0];
     }
+    const use = instructionUses?.get(offset);
+    if (use) {
+      // Every context must agree with the explicit operand contract. Observed accesses remain
+      // comments even when a different DBR/direct-page context forced the numeric fallback above.
+      for (const variant of resolved)
+        renderedSource = applySnesStructInstructionOperand(
+          variant.instruction,
+          renderedSource,
+          use,
+        );
+    }
     candidates.set(offset, {
       start: offset,
       end: offset + first.record.size,
       source: renderedSource,
-      state: first.state,
       nodeIds: resolved.map((entry) => entry.record.id),
+      ...(use ? { structComments: renderSnesStructUseComments(use) } : {}),
     });
   }
 
@@ -987,16 +1026,6 @@ const writeFile = (
   files.push({ path: relative, kind, size: value.length, sha256: sourceExportSha256(value) });
 };
 
-const widthDirective = (
-  flag: Cpu65816DecodeState["m"],
-  sixteen: string,
-  eight: string,
-): string[] => {
-  if (flag === 0) return [sixteen];
-  if (flag === 1) return [eight];
-  return [];
-};
-
 const regionIdsFor = (
   start: number,
   end: number,
@@ -1049,6 +1078,11 @@ export const exportSnes65816Source = (
   );
   const structFields = indexSnesStructFields(structMap);
   const indexedStructFields = indexSnesStructFields(structMap, true);
+  const instructionUses = indexSnesStructInstructionUses(
+    structMap?.instructionUses,
+    rom,
+    (address) => toFileOffset(SNES_CPU_ADDRESS_SPACE, address, mapper, rom.length),
+  );
   const structNames = [
     ...(structMap?.structures.map(({ id }) => id) ?? []),
     ...(structMap?.bindings.map(({ name }) => name) ?? []),
@@ -1091,7 +1125,17 @@ export const exportSnes65816Source = (
     sourceLabels,
     structFields,
     indexedStructFields,
+    options.instructionGroups,
+    instructionUses,
   );
+  // Rejected, overlapping and undecoded sites cannot silently acquire authoritative-looking uses.
+  // Do this after instruction conflict resolution and before any generated file is written.
+  for (const [offset, use] of instructionUses ?? []) {
+    if (!instructions.has(offset))
+      throw new Error(
+        `Struct instruction use at ${hex(use.address)} requires an accepted instruction.`,
+      );
+  }
   const fieldPlan = planSpans(
     rom,
     mapper,
@@ -1141,7 +1185,6 @@ export const exportSnes65816Source = (
     bankSources.push(bankPath);
     const lines = [`; Generated bank ${bank.toString(16).toUpperCase().padStart(3, "0")}.`];
     let nextAddress: number | undefined;
-    let previousState: Cpu65816DecodeState | undefined;
     let table: { name: string; nextIndex: number } | undefined;
     for (const [spanIndex, span] of bankSpans.entries()) {
       const address = snesRomAddressSpace.fromOutputOffset(span.start, context);
@@ -1162,7 +1205,6 @@ export const exportSnes65816Source = (
       }
       if (nextAddress !== address) {
         lines.push("", `org ${hex(address)}`);
-        previousState = undefined;
       }
       if (named.length) {
         lines.push("");
@@ -1170,16 +1212,15 @@ export const exportSnes65816Source = (
         for (const line of named) lines.push(line);
       }
       if (span.instruction) {
-        const state = span.instruction.state;
-        if (previousState?.m !== state.m) lines.push(...widthDirective(state.m, ".a16", ".a8"));
-        if (previousState?.x !== state.x) lines.push(...widthDirective(state.x, ".i16", ".i8"));
+        // Explicit operand-size suffixes fix the encoding. Emitting ambient M/X directives here
+        // would make identical instructions churn whenever the preferred captured state changes.
+        for (const comment of span.instruction.structComments ?? []) lines.push(`; ${comment}`);
         const inline = (metadata.get(span.start) ?? []).flatMap((line) =>
           line.instructionComment ? [line.instructionComment] : [],
         );
         lines.push(
           `  ${span.instruction.source}${inline.length ? ` ; ${inline.join(" | ")}` : ""}`,
         );
-        previousState = state;
         spans.push({
           id: `code:${span.start.toString(16).padStart(6, "0")}`,
           source: "analysis",
@@ -1272,7 +1313,9 @@ export const exportSnes65816Source = (
           regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
         });
       } else {
-        const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${span.end.toString(16).padStart(6, "0")}.bin`;
+        // Filenames show the first and last included bytes; spans and reads stay half-open.
+        const lastByte = span.end - 1;
+        const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${lastByte.toString(16).padStart(6, "0")}.bin`;
         const bytes = rom.read(span.start, span.end - span.start)!;
         writeFile(directory, assetPath, bytes, "asset", files);
         lines.push(`  incbin "../${assetPath}"`);
@@ -1410,7 +1453,10 @@ export const exportSnes65816Source = (
               path: SNES_STRUCT_MAP_SOURCE,
               kind: "metadata" as const,
               size: structMap.sourceBytes.length,
-              records: structMap.structures.length + structMap.bindings.length,
+              records:
+                structMap.structures.length +
+                structMap.bindings.length +
+                (structMap.instructionUses?.length ?? 0),
               sha256: sourceExportSha256(structMap.sourceBytes),
             },
           ]

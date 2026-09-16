@@ -1,4 +1,4 @@
-import type { AnalysisProjectShards, ProjectLabel } from "./project-types.js";
+import type { ProjectLabel } from "./project-types.js";
 /** One persisted function candidate with deterministic graph relationships. */
 export interface AnalysisCallGraphFunction {
     readonly id: string;
@@ -52,12 +52,4 @@ export interface AnalysisCallGraph {
     readonly orphanCallIds: readonly string[];
     readonly orphanUnresolvedIds: readonly string[];
 }
-/**
- * Builds a deterministic function/call view without inventing functions or resolving a mapper.
- * Function ownership walks each CFG node's persisted evidence path backwards to the nearest
- * function-entry address. Missing ownership remains explicit in the orphan lists.
- * @param {AnalysisProjectShards} shards Validated native project shards.
- * @returns {AnalysisCallGraph} Functions, resolved calls, unresolved sites, and orphan ids.
- */
-export declare const buildAnalysisCallGraph: (shards: AnalysisProjectShards) => AnalysisCallGraph;
 //# sourceMappingURL=analysis-graph.d.ts.map

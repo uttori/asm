@@ -122,6 +122,11 @@ export interface ExpressionHost {
   getCurrentBaseAddress(): number;
   isDefined(identifier: string): number;
   getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
+  /** Optional for non-assembler hosts; reflects declared bounds, never reads emitted data. */
+  getExpressionStructMetadata?(
+    identifier: string,
+    property: import("./services/struct-metadata.js").StructMetadataProperty,
+  ): number;
   getFileSize(filename: string): number;
   getFileStatus(filename: string): number;
   canReadFile(filename: string, position: number, size: number): number;

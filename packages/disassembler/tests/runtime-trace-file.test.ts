@@ -8,10 +8,7 @@ import {
   canonicalJson,
   importRuntimeInstructionTrace,
   importRuntimeInstructionTraceFile,
-  summarizeExecutionWindow,
-  summarizeExecutionWindowFile,
   validateRuntimeInstructionTrace,
-  type AnalysisProjectShards,
   type RuntimeInstructionTraceArtifact,
 } from "../src/index.js";
 
@@ -42,18 +39,8 @@ const artifact: RuntimeInstructionTraceArtifact = {
   ],
 };
 const context = { projectRomContentSha256: artifact.romContentSha256, sourceName: "trace.json" };
-const shards: AnalysisProjectShards = {
-  analysis: [],
-  annotations: [],
-  labels: [],
-  comments: [],
-  regions: [],
-  runtime: [],
-  evidence: [],
-  imports: [],
-};
 
-test("streamed import preserves canonical hashes, rich facts and execution reports across JSON layouts", async (t) => {
+test("streamed import preserves canonical hashes, rich facts across JSON layouts", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "uttori-trace-stream-"));
   t.teardown(() => rm(directory, { recursive: true, force: true }));
   const file = path.join(directory, "trace.json");
@@ -75,10 +62,6 @@ test("streamed import preserves canonical hashes, rich facts and execution repor
   ]) {
     await writeFile(file, text);
     t.deepEqual(await importRuntimeInstructionTraceFile(file, context), expected);
-    t.deepEqual(
-      await summarizeExecutionWindowFile(file, shards),
-      summarizeExecutionWindow(artifact, shards),
-    );
   }
   await writeFile(file, canonicalJson({ ...artifact, chunks: [] }));
   const empty = await importRuntimeInstructionTraceFile(file, context);
@@ -96,7 +79,7 @@ test("streamed trace values cross read boundaries and honor size budgets and can
   const file = path.join(directory, "trace.json");
   const large = {
     ...artifact,
-    producer: { id: "ares", revision: `${" ".repeat(65500)}🎮\\\"end` },
+    producer: { id: "ares", revision: `${" ".repeat(65500)}🎮\\"end` },
   };
   const text = JSON.stringify(large);
   await writeFile(file, text);

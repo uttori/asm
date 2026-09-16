@@ -108,6 +108,11 @@ export const runAresSidecar = async (
   });
   const backend = new AresRspDebugBackend({
     createClient: (connect) => host.createClient(connect),
+    nativeFileIdentity: {
+      romSha256: manifest.romSha256,
+      executableSha256: manifest.executableSha256,
+      producerRevision: `${manifest.forkRevision}:${manifest.patchSha256}:${manifest.executableSha256}`,
+    },
     terminate: () => host.terminate(),
   });
   let ending = false;

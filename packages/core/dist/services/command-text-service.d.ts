@@ -82,20 +82,5 @@ export declare function isLabelIdentifierPart(char: string): boolean;
  * @returns {boolean} `true` when the token is a bare label-style reference.
  */
 export declare function isBareLabelReference(input: string): boolean;
-/**
- * Self-contained command text helpers exposed as a static-style module object.
- */
-export declare const CommandTextService: {
-    readonly getDefineVariable: typeof getDefineVariable;
-    readonly isBareLabelReference: typeof isBareLabelReference;
-    readonly isLabelIdentifierPart: typeof isLabelIdentifierPart;
-    readonly isLabelIdentifierStart: typeof isLabelIdentifierStart;
-    readonly preprocessBlockCommands: typeof preprocessBlockCommands;
-    readonly removeInlineComment: typeof removeInlineComment;
-    readonly splitCommandIntoWords: typeof splitCommandIntoWords;
-    readonly splitInlineCommands: typeof splitInlineCommands;
-    readonly splitSourcedInlineCommands: typeof splitSourcedInlineCommands;
-    readonly splitRespectingFunctions: typeof splitRespectingFunctions;
-};
 import { type SyntaxProfile } from "../syntax-profile.js";
 //# sourceMappingURL=command-text-service.d.ts.map

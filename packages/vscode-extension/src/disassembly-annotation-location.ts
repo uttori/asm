@@ -13,6 +13,13 @@ export interface DisassemblyAnnotationLocation {
   readonly name?: string;
 }
 
+/** SQLite-backed resolution of only the current source line; output offsets must be explicit. */
+export type AnnotationNodeLookup = (range: {
+  readonly addressSpace: string;
+  readonly start: number;
+  readonly outputStart?: number;
+}) => readonly AnalysisControlFlowNodeRecord[];
+
 /**
  * A symbol operand under the cursor; definitions, opcodes, numeric operands and comments are excluded.
  * @param {string} text Current source text.
@@ -82,6 +89,7 @@ export const namedAnnotationLocations = (
  * @param {AnalysisProjectShards} shards Validated native metadata.
  * @param {ReadonlyMap<number, string>} sources Other hash-checked sources for cross-file references.
  * @param {readonly string[]} fileAddressSpaces Native spaces explicitly declared as file offsets.
+ * @param {AnnotationNodeLookup} [readNodes] Optional bounded SQLite lookup, replacing a full CFG scan.
  * @returns {readonly DisassemblyAnnotationLocation[]} Exact native address choices; empty when unresolved.
  */
 export const annotationLocationsForSource = (
@@ -93,6 +101,7 @@ export const annotationLocationsForSource = (
   shards: AnalysisProjectShards,
   sources: ReadonlyMap<number, string> = new Map([[sourceId, text]]),
   fileAddressSpaces: readonly string[] = [],
+  readNodes?: AnnotationNodeLookup,
 ): readonly DisassemblyAnnotationLocation[] => {
   const lines = text.split(/\r?\n/);
   const named = namedAnnotationLocations(shards);
@@ -114,6 +123,7 @@ export const annotationLocationsForSource = (
             shards,
             sources,
             fileAddressSpaces,
+            readNodes,
           ))
             locations.push(location);
         }
@@ -139,12 +149,14 @@ export const annotationLocationsForSource = (
         fileAddressSpaces.includes(entry.addressSpace) &&
         entry.address === range.outputStart,
     );
-    const native = shards.analysis.filter(
-      (record): record is AnalysisControlFlowNodeRecord =>
-        record.kind === "cfg-node" &&
-        ((record.addressSpace === range.addressSpace && record.address === range.start) ||
-          (range.outputStart !== undefined && record.fileOffset === range.outputStart)),
-    );
+    const native = readNodes
+      ? readNodes(range)
+      : shards.analysis.filter(
+          (record): record is AnalysisControlFlowNodeRecord =>
+            record.kind === "cfg-node" &&
+            ((record.addressSpace === range.addressSpace && record.address === range.start) ||
+              (range.outputStart !== undefined && record.fileOffset === range.outputStart)),
+        );
     const matches = native.length
       ? native.map((record) => ({ addressSpace: record.addressSpace, address: record.address }))
       : [{ addressSpace: range.addressSpace, address: range.start }];

@@ -87,6 +87,7 @@ import {
 } from "./services/program-model-builder.js";
 import { StructEngine, type StructDefinition } from "./services/struct-engine.js";
 import { parseStructInitializer, splitInitializerList } from "./services/struct-initializer.js";
+import { getStructMetadata } from "./services/struct-metadata.js";
 import {
   SymbolScopeService,
   parseUnnamedLabelReference,
@@ -1937,6 +1938,11 @@ export class Assembler {
     },
     getExpressionObjectSize: (identifier, baseOnly) =>
       this.getExpressionObjectSize(identifier, baseOnly),
+    getExpressionStructMetadata: (identifier, property) => {
+      const definition = this.structs.get(identifier);
+      if (!definition) throw new Error(`Unknown struct '${identifier}' for ${property}().`);
+      return getStructMetadata(definition, property);
+    },
     getFileSize: (filename) => {
       const resolvedPath = this.resolveReadablePath(filename);
       if (!resolvedPath) {

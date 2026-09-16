@@ -5,19 +5,17 @@ import {
   ANALYSIS_PROJECT_MANIFEST,
   RomImage,
   SOURCE_EXPORT_MANIFEST,
-  readRuntimeTraceFileMetadata,
   loadSourceExportManifest,
   parseAnalysisProjectManifest,
   validateSourceExportFiles,
   validateSourceExportInputs,
   type AnalysisProjectManifest,
-  type AnalysisProjectShards,
-  type ExecutionWindowSummary,
   type SourceExportManifest,
 } from "@uttori/asm-disassembler";
 import {
   SNES_RAM_MAP_SOURCE,
   loadSnesRamMap,
+  type ExportSnesProjectResult,
   type SnesFunctionRole,
 } from "@uttori/asm-plugin-snes";
 import {
@@ -51,7 +49,13 @@ export type {
 } from "./disassembly-maintenance-data.js";
 
 import { analysisWorker } from "./analysis-worker-client.js";
+import { renderBusTraceReport } from "./bus-trace-report.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
+import type { MaintenanceJobs, TraceImportSummary } from "./disassembly-maintenance-jobs.js";
+import { renderDisassemblyStorage } from "./disassembly-storage-report.js";
+import { DisassemblyTimings, renderMaintenanceTimings } from "./disassembly-timings.js";
+import { createEditorRuntimeBusSource } from "./runtime-bus-source.js";
+import { createEditorRuntimeTraceSource } from "./runtime-trace-source.js";
 import { rememberedSnesRom, rememberSnesRom } from "./snes-rom-bindings.js";
 
 /** Re-run static analysis, rewrite generated source, and prove an exact ROM round trip. */
@@ -60,6 +64,8 @@ export const REGENERATE_DISASSEMBLY_COMMAND = "asm.disassembly.regenerate";
 export const DISASSEMBLY_STATUS_COMMAND = "asm.disassembly.status";
 /** Import a saved instruction trace, use observed PCs as code seeds, and regenerate source. */
 export const IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
+/** Import CPU/DMA/HDMA access evidence and display channel/phase activity. */
+export const IMPORT_BUS_TRACE_COMMAND = "asm.trace.importBus";
 /** Open the user-owned RAM map consumed by source regeneration. */
 export const OPEN_RAM_MAP_COMMAND = "asm.ramMap.open";
 export const CONFIGURE_HEURISTICS_COMMAND = "asm.heuristics.configure";
@@ -80,55 +86,6 @@ const hexAddress = (address: number): string =>
   `$${address.toString(16).toUpperCase().padStart(6, "0")}`;
 
 const markdownCell = (value: string): string => value.replaceAll("|", "\\|").replaceAll("\n", " ");
-
-const addressList = (addresses: readonly number[], limit = 200): string => {
-  const visible = addresses.slice(0, limit).map(hexAddress).join(", ");
-  const omitted = addresses.length - Math.min(addresses.length, limit);
-  return `${visible || "None"}${omitted ? ` (${omitted} more omitted from this view)` : ""}`;
-};
-
-/**
- * Renders routines observed in one explicit execution window and preserves attribution gaps.
- * @param {ExecutionWindowSummary} summary Dynamic PC attribution against the current call graph.
- * @returns {string} Markdown section suitable for the trace-import report.
- */
-export const renderExecutionWindowReport = (summary: ExecutionWindowSummary): string => {
-  const routineRows = summary.routines.map(
-    (routine) =>
-      `| ${routine.firstSequence} | ${markdownCell(routine.name)} | ${hexAddress(routine.address)} | ${markdownCell(routine.source)} | ${routine.instructionEvents} | ${routine.uniqueInstructionAddresses} | ${routine.executionSpans} |`,
-  );
-  return `${[
-    "## Executed routines (function candidates)",
-    "",
-    `- Capture state: ${summary.complete ? "stopped cleanly" : "incomplete"}`,
-    `- Instruction events: ${summary.observedEvents}`,
-    `- Unique instruction PCs: ${summary.uniqueInstructionAddresses}`,
-    `- Identified routines: ${summary.routines.length}`,
-    `- Uniquely attributed events: ${summary.attributedEvents}`,
-    `- Events at PCs without a known routine owner: ${summary.unownedEvents}`,
-    `- Events at PCs with conflicting routine owners: ${summary.ambiguousEvents}`,
-    `- Producer-dropped events: ${summary.droppedEvents}`,
-    "",
-    "| First event | Routine | Entry | Boundary source | Dynamic instructions | Unique PCs | Execution spans |",
-    "| ---: | --- | --- | --- | ---: | ---: | ---: |",
-    ...(routineRows.length
-      ? routineRows
-      : ["| — | No statically evidenced routine could be attributed | — | — | 0 | 0 | 0 |"]),
-    "",
-    "Execution spans are contiguous runs attributed to a routine; they are useful navigation hints, not certified invocation counts. A PC trace cannot reconstruct a complete call stack across interrupts, tail calls, dropped events, or unknown code.",
-    "",
-    "### PCs without a known routine owner",
-    "",
-    addressList(summary.unownedAddresses),
-    "",
-    "### PCs with conflicting routine owners",
-    "",
-    addressList(summary.ambiguousAddresses),
-    "",
-    "Unknown and ambiguous PCs are reported rather than promoted to invented function boundaries. Add or correct labels, entry points, and indirect-flow targets, regenerate, then import the trace again to improve attribution.",
-    "",
-  ].join("\n")}\n`;
-};
 
 /**
  * Renders a human-readable, testable before/after regeneration report.
@@ -160,10 +117,14 @@ export const renderDisassemblyRegenerationReport = (
     `- Static instruction nodes: ${summary.before.instructions} → ${summary.after.instructions} (${signed(instructionDelta)})`,
     `- Source emitted as code: ${formatBytes(summary.before.codeBytes)} → ${formatBytes(summary.after.codeBytes)} (${signed(codeDelta)} bytes)`,
     `- Code coverage: ${percent(summary.before.codeBytes, summary.before.contentBytes)} → ${percent(summary.after.codeBytes, summary.after.contentBytes)}`,
-    `- Function candidates: ${summary.before.functions} → ${summary.after.functions}`,
     `- Analysis status: ${summary.analysis.status}; ${summary.analysis.conflicts} conflict(s), ${summary.analysis.unresolved} unresolved flow(s)`,
     `- Runtime execution facts retained: ${summary.after.runtimeRecords} address(es), ${summary.after.runtimeEvents} event(s)`,
     `- Exact round trip: yes (${summary.roundTripSha256})`,
+    "",
+    ...(summary.before.storage && summary.after.storage
+      ? [renderDisassemblyStorage(summary.before.storage, summary.after.storage), ""]
+      : []),
+    renderMaintenanceTimings(summary.timings),
     "",
     "## Generated file changes",
     "",
@@ -172,6 +133,29 @@ export const renderDisassemblyRegenerationReport = (
     "A positive code-byte delta means analysis converted ROM bytes from generated `incbin` assets into native instructions. A zero delta can still be correct when the observed PCs were already code or conservative decoding found conflicts.",
     "",
   ].join("\n")}\n`;
+};
+
+/**
+ * Summarize the committed import without reading the capture again for routine ownership.
+ * @param {TraceImportSummary} imported Counts and warnings from the completed import.
+ * @param {string} traceFile Original capture path shown in the report.
+ * @returns {string} Compact import section, also retained when regeneration fails.
+ */
+const renderTraceImportReport = (imported: TraceImportSummary, traceFile: string): string => {
+  const merge = imported.changed
+    ? `${imported.added.runtime} runtime address(es) and ${imported.added.evidence} evidence record(s) added`
+    : "the identical trace evidence was already present";
+  return [
+    "## Trace import",
+    "",
+    ...(imported.warnings ?? []).map((warning) => `- ${warning}`),
+    `- File: ${traceFile}`,
+    `- Observed events: ${imported.observedEvents}`,
+    `- Unique observed PCs: ${imported.executionRecords}`,
+    `- Producer-dropped events: ${imported.droppedEvents}`,
+    `- Merge: ${merge}`,
+    "",
+  ].join("\n");
 };
 
 const showMarkdown = async (content: string): Promise<void> => {
@@ -236,6 +220,17 @@ const chooseProject = async (
       { title: "Choose the analysis project to update" },
     )
   )?.choice;
+};
+
+/** Select a matching workspace project before an opt-in live bus recording starts.
+ * @param {string} romContentSha256 Verified debug-session ROM identity.
+ * @returns {Promise<string | undefined>} Matching project directory, or cancellation/no match.
+ */
+export const chooseLiveBusProject = async (
+  romContentSha256: string,
+): Promise<string | undefined> => {
+  if (!workspace.isTrusted) throw new Error("Live bus analysis requires a trusted workspace.");
+  return (await chooseProject(undefined, romContentSha256))?.directory;
 };
 
 const sourceMatches = (
@@ -376,10 +371,83 @@ const resolveTarget = async (
   return romFile ? { ...resolved, romFile } : undefined;
 };
 
+/** Explicit editor settings override the persisted policy; unset settings leave CLI/project choices intact.
+ * @param {string} directory Source workspace used to resolve settings.
+ * @returns {object} Explicit policy overrides in bytes, days and counts.
+ */
+const traceStoragePolicy = (directory: string) => {
+  const config = workspace.getConfiguration("asm", Uri.file(directory));
+  const policy: Record<string, number> = {};
+  for (const [setting, key, multiplier] of [
+    ["trace.archiveMaxMiB", "archiveMaxBytes", 1024 ** 2],
+    ["trace.archiveMaxAgeDays", "archiveMaxAgeDays", 1],
+    ["trace.archiveMaxCaptures", "archiveMaxCaptures", 1],
+    ["analysis.cacheMaxMiB", "cacheMaxBytes", 1024 ** 2],
+    ["analysis.storageMaxMiB", "databaseMaxBytes", 1024 ** 2],
+  ] as const) {
+    const inspected = config.inspect<number>(setting);
+    const value =
+      inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? inspected?.globalValue;
+    if (value !== undefined) policy[key] = value * multiplier;
+  }
+  return policy;
+};
+
+/** Leave an unset profile to the importer so other processors retain their full state.
+ * @param {string} directory Workspace owning the capture import settings.
+ * @returns {import("@uttori/asm-disassembler").RuntimeTraceIndexMode | undefined} Explicit profile override.
+ */
+const configuredTraceIndex = (directory: string) => {
+  const config = workspace.getConfiguration("asm", Uri.file(directory));
+  const setting =
+    config.inspect<import("@uttori/asm-disassembler").RuntimeTraceIndexMode>("trace.indexMode");
+  return setting?.workspaceFolderValue ?? setting?.workspaceValue ?? setting?.globalValue;
+};
+
+/** Stable report labels for process operations; elapsed time includes the entire child lifetime. */
+const maintenanceStepNames: Record<keyof MaintenanceJobs, string> = {
+  prepare: "Read baseline counts and validate generated files",
+  coverage: "Read updated SQL counts",
+  analyze: "Analyze code and publish SQLite changes",
+  export: "Generate source and binary assets",
+  refresh: "Refresh source from saved analysis",
+  revision: "Check final project revision",
+  verify: "Assemble and verify every ROM byte",
+  import: "Parse trace and import into SQLite",
+  importBus: "Parse bus capture and import into SQLite",
+};
+
+/**
+ * Keep worker stage measurements under their parent phase, including failed or cancelled jobs.
+ * @param {DisassemblyTimings} timings Collector for this user operation.
+ * @param {DisassemblyMaintenanceClient} client Process runner whose complete lifetime is timed.
+ * @param {K} operation Phase to execute.
+ * @param {MaintenanceJobs[K]["input"]} input Paths and phase options.
+ * @param {MaintenanceRunOptions} options Cancellation, heap limit and user-facing progress.
+ * @returns {Promise<MaintenanceJobs[K]["output"]>} Original phase result.
+ */
+const runTimedJob = <K extends keyof MaintenanceJobs>(
+  timings: DisassemblyTimings,
+  client: DisassemblyMaintenanceClient,
+  operation: K,
+  input: MaintenanceJobs[K]["input"],
+  options: MaintenanceRunOptions,
+): Promise<MaintenanceJobs[K]["output"]> =>
+  timings.measure(maintenanceStepNames[operation], (recordStage) =>
+    client.run(operation, input, {
+      ...options,
+      onProgress: (progress) => {
+        if (progress.timing) recordStage(progress.timing);
+        else options.onProgress?.(progress);
+      },
+    }),
+  );
+
 const regenerate = async (
   client: DisassemblyMaintenanceClient,
   resolved: ResolvedTarget,
   seeds: readonly DisassemblyEntrySeed[] | undefined,
+  timings: DisassemblyTimings,
 ): Promise<DisassemblyRegenerationSummary> => {
   const maxWorkItems = workspace
     .getConfiguration("asm", Uri.file(resolved.sourceDirectory))
@@ -389,7 +457,9 @@ const regenerate = async (
   return withMaintenanceProgress(
     "Assembly: analyzing and regenerating disassembly",
     async (options) => {
-      const { before, entryPoints } = await client.run(
+      const { before, entryPoints } = await runTimedJob(
+        timings,
+        client,
         "prepare",
         { target: resolved, seeds },
         options,
@@ -397,29 +467,40 @@ const regenerate = async (
       options.onProgress?.({
         message: `Analyzing from ${entryPoints.length} runtime code seed(s)…`,
       });
-      const analysis = await client.run(
+      const analysis = await runTimedJob(
+        timings,
+        client,
         "analyze",
         { target: resolved, entryPoints, maxWorkItems },
         options,
       );
       options.onProgress?.({ message: "Writing generated source…" });
-      const exported = await client.run("export", resolved, options);
+      const exported = await runTimedJob(timings, client, "export", resolved, options);
       options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
-      const roundTrip = await client.run("verify", resolved, options);
+      const roundTrip = await runTimedJob(timings, client, "verify", resolved, options);
       if (!roundTrip.comparison.equal)
         throw new Error(
           `Generated source differed at ROM offset ${roundTrip.comparison.firstDifference}.`,
         );
       options.onProgress?.({ message: "Summarizing updated analysis…" });
-      const after = await client.run(
+      const after = await runTimedJob(
+        timings,
+        client,
         "coverage",
         { ...resolved, sourceManifest: exported.manifest },
         options,
       );
-      if (after.manifestSha256 !== exported.manifest.sourceProjectSha256)
-        throw new Error(
-          "Analysis changed while source was being regenerated. Run regeneration again to use the latest edits.",
-        );
+      const changes = await timings.measure(
+        "Check final revision and compare generated file manifests",
+        () => {
+          // Keep a rejected publication check visible as a failed report step, even after verification.
+          if (after.manifestSha256 !== exported.manifest.sourceProjectSha256)
+            throw new Error(
+              "Analysis changed while source was being regenerated. Run regeneration again to use the latest edits.",
+            );
+          return fileChanges(resolved.sourceManifest, exported.manifest);
+        },
+      );
       return {
         projectDirectory: resolved.projectDirectory,
         sourceDirectory: resolved.sourceDirectory,
@@ -429,8 +510,9 @@ const regenerate = async (
         entrySeeds: entryPoints.length,
         ramVariables:
           exported.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0,
-        ...fileChanges(resolved.sourceManifest, exported.manifest),
+        ...changes,
         roundTripSha256: roundTrip.comparison.actualSha256,
+        timings: timings.snapshot(),
       };
     },
     resolved.sourceDirectory,
@@ -486,7 +568,6 @@ const statusReport = async (
     `- Source emitted as code: ${formatBytes(coverage.codeBytes)} / ${formatBytes(coverage.contentBytes)} (${percent(coverage.codeBytes, coverage.contentBytes)})`,
     `- Runtime execution facts: ${coverage.runtimeRecords} address(es), ${coverage.runtimeEvents} event(s)`,
     `- Imported instruction traces: ${coverage.traceImports}`,
-    `- Behavior-association comments: ${coverage.behaviorComments}`,
     "",
     current
       ? "The generated disassembly reflects the current analysis revision."
@@ -506,11 +587,11 @@ const traceFileFrom = async (argument?: unknown): Promise<string | undefined> =>
   )
     return (argument as { fsPath: string }).fsPath;
   const selected = await window.showOpenDialog({
-    title: "Select an Uttori ASM instruction trace",
+    title: "Select an Uttori ASM trace capture",
     canSelectFiles: true,
     canSelectFolders: false,
     canSelectMany: false,
-    filters: { "Uttori ASM instruction trace": ["json"] },
+    filters: { "Uttori ASM trace capture": ["act2", "json"] },
   });
   return selected?.[0]?.fsPath;
 };
@@ -544,7 +625,21 @@ const withMaintenanceProgress = async <T>(
             .getConfiguration("asm", Uri.file(sourceDirectory))
             .get<number>("analysis.maxMemoryMiB", 4096),
           signal: cancellation.signal,
-          onProgress: ({ message, bytesRead: read = 0, totalBytes: total = 0 }) => {
+          onProgress: ({
+            message,
+            processedRecords,
+            totalRecords,
+            bytesRead: read = 0,
+            totalBytes: total = 0,
+            timing,
+          }) => {
+            if (timing) return;
+            if (processedRecords !== undefined && totalRecords !== undefined) {
+              progress.report({
+                message: `Merging runtime facts: ${processedRecords.toLocaleString()} / ${totalRecords.toLocaleString()} records…`,
+              });
+              return;
+            }
             if (message) {
               progress.report({ message });
               return;
@@ -578,11 +673,19 @@ export const registerDisassemblyMaintenance = (
 ): readonly Disposable[] => {
   const client = new DisassemblyMaintenanceClient(
     path.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs"),
+    outputChannel,
   );
   let busy = false;
   const run = async (operation: () => Promise<void>): Promise<void> => {
     if (busy) {
-      void window.showInformationMessage("A disassembly maintenance operation is already running.");
+      void window
+        .showInformationMessage(
+          "A disassembly maintenance operation is already running.",
+          "Show Output",
+        )
+        .then((choice) => {
+          if (choice === "Show Output") outputChannel?.show(true);
+        });
       return;
     }
     busy = true;
@@ -591,7 +694,11 @@ export const registerDisassemblyMaintenance = (
         const message = error instanceof Error ? error.message : String(error);
         const details = error instanceof Error ? (error.stack ?? message) : message;
         outputChannel?.error(`Disassembly maintenance failed: ${details}`);
-        void window.showErrorMessage(`Assembly disassembly update: ${message}`);
+        void window
+          .showErrorMessage(`Assembly disassembly update: ${message}`, "Show Output")
+          .then((choice) => {
+            if (choice === "Show Output") outputChannel?.show(true);
+          });
       })
       .finally(() => {
         busy = false;
@@ -599,6 +706,7 @@ export const registerDisassemblyMaintenance = (
   };
   return [
     client,
+    commands.registerCommand("asm.analysis.showOutput", () => outputChannel?.show(true)),
     commands.registerCommand(
       REGENERATE_DISASSEMBLY_COMMAND,
       (target?: DisassemblyMaintenanceTarget) =>
@@ -607,7 +715,56 @@ export const registerDisassemblyMaintenance = (
             throw new Error("Analysis and source regeneration require a trusted workspace.");
           const resolved = await resolveTarget(context, target);
           if (!resolved) return;
-          const summary = await regenerate(client, resolved, target?.entrySeeds);
+          const timings = new DisassemblyTimings();
+          if (target?.annotationRefresh && !target.entrySeeds?.length) {
+            const receipt = target.annotationRefresh;
+            const refreshed = await withMaintenanceProgress(
+              "Assembly: refreshing disassembly annotation",
+              async (options) => {
+                options.signal?.throwIfAborted();
+                options.onProgress?.({ message: "Updating source using saved analysis…" });
+                const exported = await timings.measure(
+                  "Refresh annotation source from saved analysis",
+                  () =>
+                    analysisWorker().request<ExportSnesProjectResult | undefined>(
+                      resolved.projectDirectory,
+                      "annotationRefresh",
+                      {
+                        annotationRefresh: { target: resolved, receipt },
+                      },
+                    ),
+                );
+                options.signal?.throwIfAborted();
+                if (!exported) return false;
+                options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
+                const verified = await runTimedJob(timings, client, "verify", resolved, options);
+                const revision = await runTimedJob(timings, client, "revision", resolved, options);
+                if (
+                  !verified.comparison.equal ||
+                  revision !== receipt.after ||
+                  exported.manifest.sourceProjectSha256 !== revision
+                )
+                  throw new Error(
+                    "Analysis changed during source refresh. Run regeneration again.",
+                  );
+                refresh();
+                const changes = await timings.measure("Compare generated file manifests", () =>
+                  fileChanges(resolved.sourceManifest, exported.manifest),
+                );
+                outputChannel?.info(
+                  `Annotation source refreshed using existing analysis; ${changes.changedFiles.length} file(s) changed; exact ROM round trip verified (${verified.comparison.actualSha256}).`,
+                );
+                outputChannel?.info(renderMaintenanceTimings(timings.snapshot()));
+                void window.showInformationMessage(
+                  "Assembly: annotation source updated using existing analysis; exact round trip verified.",
+                );
+                return true;
+              },
+              resolved.sourceDirectory,
+            );
+            if (refreshed) return;
+          }
+          const summary = await regenerate(client, resolved, target?.entrySeeds, timings);
           refresh();
           outputChannel?.info(
             `Disassembly updated: ${summary.before.codeBytes} -> ${summary.after.codeBytes} code bytes; ${summary.changedFiles.length} file(s) changed.`,
@@ -727,24 +884,70 @@ export const registerDisassemblyMaintenance = (
         if (resolved) await showMarkdown(await statusReport(client, resolved));
       }),
     ),
+    commands.registerCommand(IMPORT_BUS_TRACE_COMMAND, (argument?: unknown) =>
+      run(async () => {
+        if (!workspace.isTrusted)
+          throw new Error("Bus capture import requires a trusted workspace.");
+        const traceFile = await traceFileFrom(argument);
+        if (!traceFile) return;
+        // Read bounded identity before selecting the project whose configured byte budget applies.
+        const { metadata } = await createEditorRuntimeBusSource(traceFile, {
+          maxBytes: Number.MAX_SAFE_INTEGER,
+        });
+        const selected = await chooseProject(undefined, metadata.romContentSha256);
+        if (!selected) {
+          void window.showInformationMessage(
+            "Assembly: no matching analysis project selected. Open or create a project for this capture's ROM first.",
+          );
+          return;
+        }
+        const result = await withMaintenanceProgress(
+          "Assembly: importing bus activity",
+          (options) =>
+            client.run(
+              "importBus",
+              {
+                projectDirectory: selected.directory,
+                romContentSha256: metadata.romContentSha256,
+                traceFile,
+                maxBytes: traceImportMaxBytes(selected.directory),
+                storagePolicy: traceStoragePolicy(selected.directory),
+              },
+              options,
+            ),
+          selected.directory,
+        );
+        refresh();
+        for (const warning of result.warnings) outputChannel?.warn(warning);
+        outputChannel?.info(
+          `Bus capture imported: ${result.observedEvents} access(es), ${result.added.runtime} new fact(s).`,
+        );
+        await showMarkdown(renderBusTraceReport(result));
+      }),
+    ),
     commands.registerCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, (argument?: unknown) =>
       run(async () => {
         if (!workspace.isTrusted)
           throw new Error("Trace import and source regeneration require a trusted workspace.");
         const traceFile = await traceFileFrom(argument);
         if (!traceFile) return;
+        const timings = new DisassemblyTimings();
         // Read only the identity to select the project whose size setting applies.
-        const trace = await readRuntimeTraceFileMetadata(traceFile, {
-          maxBytes: Number.MAX_SAFE_INTEGER,
-        });
+        const { metadata: trace } = await timings.measure("Read trace identity", () =>
+          createEditorRuntimeTraceSource(traceFile, { maxBytes: Number.MAX_SAFE_INTEGER }),
+        );
         const resolved = await resolveTarget(context, {}, trace.romContentSha256);
         if (!resolved) return;
-        validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
+        await timings.measure("Validate generated files before import", () =>
+          validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest),
+        );
         const maxBytes = traceImportMaxBytes(resolved.sourceDirectory);
         const imported = await withMaintenanceProgress(
           "Assembly: importing runtime trace",
           (options) =>
-            client.run(
+            runTimedJob(
+              timings,
+              client,
               "import",
               {
                 target: resolved,
@@ -752,104 +955,63 @@ export const registerDisassemblyMaintenance = (
                 maxBytes,
                 architecture: trace.architecture,
                 addressSpace: trace.addressSpace,
-                indexMode: workspace
-                  .getConfiguration("asm", Uri.file(resolved.sourceDirectory))
-                  .get("trace.indexMode", "full"),
+                indexMode: configuredTraceIndex(resolved.sourceDirectory),
+                storagePolicy: traceStoragePolicy(resolved.sourceDirectory),
               },
               options,
             ),
           resolved.sourceDirectory,
         );
+        for (const warning of imported.warnings ?? []) outputChannel?.warn(warning);
         const seeds = imported.seeds;
         let summary: DisassemblyRegenerationSummary;
         try {
-          summary = await regenerate(client, resolved, seeds);
+          summary = await regenerate(client, resolved, seeds, timings);
         } catch (error) {
           refresh();
           if (error instanceof Error && error.name === "AbortError") throw error;
           outputChannel?.error(
             `Disassembly regeneration failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
           );
-          const executionReport = await withMaintenanceProgress(
-            "Assembly: summarizing execution capture",
-            (options) =>
-              client.run(
-                "execution",
-                { projectDirectory: resolved.projectDirectory, traceFile, maxBytes },
-                options,
-              ),
-            resolved.sourceDirectory,
-          )
-            .then(renderExecutionWindowReport)
-            .catch(
-              (reportError: unknown) =>
-                `Routine report unavailable: ${reportError instanceof Error ? reportError.message : String(reportError)}`,
-            );
           const message = error instanceof Error ? error.message : String(error);
           await showMarkdown(
             `${[
               "# Execution capture report",
               "",
+              renderTraceImportReport(imported, traceFile),
+              "",
               "## Disassembly regeneration did not complete",
               "",
               message,
               "",
-              "The trace evidence was imported. Analysis and export guards preserve previous results when an update would discard known code; other failures may leave source unverified. The error above identifies the failed step. Routine attribution from the saved analysis is preserved below.",
+              "The trace evidence was imported. Analysis and export guards preserve previous results when an update would discard known code; other failures may leave source unverified. The error above identifies the failed step.",
               "",
-              executionReport,
+              renderMaintenanceTimings(timings.snapshot()),
+              "",
             ].join("\n")}\n`,
           );
           throw error;
         }
-        const execution = await withMaintenanceProgress(
-          "Assembly: summarizing execution capture",
-          (options) =>
-            client.run(
-              "execution",
-              { projectDirectory: resolved.projectDirectory, traceFile, maxBytes },
-              options,
-            ),
-          resolved.sourceDirectory,
-        );
         refresh();
-        const mergeDetail = imported.changed
-          ? `${imported.added.runtime} runtime address(es) and ${imported.added.evidence} evidence record(s) added`
-          : "the identical trace evidence was already present";
-        const report = `${renderDisassemblyRegenerationReport(summary).replace(
+        const report = renderDisassemblyRegenerationReport({
+          ...summary,
+          before: {
+            ...summary.before,
+            storage: imported.storage?.before ?? summary.before.storage,
+          },
+          timings: timings.snapshot(),
+        }).replace(
           "## Result\n\n",
-          `## Trace import\n\n- File: ${traceFile}\n- Observed events: ${imported.observedEvents}\n- Unique observed PCs: ${imported.executionRecords}\n- Producer-dropped events: ${imported.droppedEvents}\n- Merge: ${mergeDetail}\n\n## Result\n\n`,
-        )}\n${renderExecutionWindowReport(execution)}`;
+          () => `${renderTraceImportReport(imported, traceFile)}\n## Result\n\n`,
+        );
         outputChannel?.info(
-          `Trace imported: ${imported.observedEvents} event(s), ${execution.routines.length} routine candidate(s), ${seeds.length} code seed(s), ${summary.after.codeBytes - summary.before.codeBytes} code-byte delta.`,
+          `Trace imported: ${imported.observedEvents} event(s), ${seeds.length} code seed(s), ${summary.after.codeBytes - summary.before.codeBytes} code-byte delta.`,
         );
         await showMarkdown(report);
         void window.showInformationMessage(
-          `Assembly: trace imported and disassembly rebuilt; ${execution.routines.length} routine candidate(s), ${seeds.length} unique code seed(s), ${signed(summary.after.codeBytes - summary.before.codeBytes)} emitted code bytes.`,
+          `Assembly: trace imported and disassembly rebuilt; ${seeds.length} unique code seed(s), ${signed(summary.after.codeBytes - summary.before.codeBytes)} emitted code bytes.`,
         );
       }),
     ),
   ];
-};
-
-/**
- * Creates runtime-backed analysis seeds for selected behavior-capture addresses.
- * @param {AnalysisProjectShards} shards Current project records containing runtime evidence.
- * @param {readonly number[]} addresses Reviewed instruction addresses.
- * @returns {readonly DisassemblyEntrySeed[]} Stable, evidence-linked analysis seeds.
- */
-export const behaviorEntrySeeds = (
-  shards: AnalysisProjectShards,
-  addresses: readonly number[],
-): readonly DisassemblyEntrySeed[] => {
-  const selected = new Set(addresses);
-  const evidence = new Map<number, Set<string>>();
-  for (const record of shards.runtime) {
-    if (record.kind !== "runtime-execution" || !selected.has(record.address)) continue;
-    const ids = evidence.get(record.address) ?? new Set<string>();
-    for (const id of record.evidence) ids.add(id);
-    evidence.set(record.address, ids);
-  }
-  return [...selected]
-    .sort((left, right) => left - right)
-    .map((address) => ({ address, evidence: [...(evidence.get(address) ?? [])].sort() }));
 };

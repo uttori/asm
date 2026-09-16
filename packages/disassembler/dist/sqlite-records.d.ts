@@ -9,8 +9,10 @@ export declare const compareRuntimeRecordIds: (left: RuntimeEvidenceRecord, righ
 /**
  * Store searchable coordinates as columns and variant-only fields as a bounded payload.
  * Unused coordinate columns stay null so one record kind cannot masquerade as another.
+ * Canonicalize payloads here once: the writer reuses this exact text for hashing
+ * and encoding, avoiding a JSON stringify/parse/canonicalize round trip per fact.
  * @param {RuntimeEvidenceRecord} record Validated semantic runtime fact.
- * @returns {object} Column bindings with absent variant fields omitted from the payload.
+ * @returns {object} Column bindings with canonical payload text; absent variant fields remain omitted.
  */
 export declare const runtimeColumns: (record: RuntimeEvidenceRecord) => {
     addressSpace: string | null;

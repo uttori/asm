@@ -1,5 +1,6 @@
 import type { AssetValue } from "./asset-codec.js";
 import type { RomIdentity } from "./rom-image.js";
+import type { RuntimeBusFact } from "./runtime-bus-types.js";
 
 /** Manifest `format` field for a native analysis project. */
 export const ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
@@ -435,8 +436,14 @@ export interface RuntimeControlTargetRecord extends RuntimeRecordBase {
   readonly indirect: boolean;
 }
 
+/** Aggregated bus activity, including accesses without an owning instruction. */
+export interface RuntimeBusAccessRecord extends RuntimeRecordBase, RuntimeBusFact {
+  readonly kind: "runtime-bus-access";
+}
+
 /** Normalized, emulator-neutral runtime fact stored independently from regenerated CFG output. */
 export type RuntimeEvidenceRecord =
+  | RuntimeBusAccessRecord
   | RuntimeInstructionRecord
   | RuntimeExecutionRecord
   | RuntimeMemoryAccessRecord

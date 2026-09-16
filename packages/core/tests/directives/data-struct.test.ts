@@ -35,6 +35,34 @@ endstruct`;
 
 for (const incremental of [false, true]) {
   const mode = incremental ? "incremental" : "cached program";
+  test(`struct reflection distinguishes record size, count and physical extent (${mode})`, (t) => {
+    const assembler = assemble(
+      `lorom
+org $808000
+struct Maps $808004
+  .offset: dw
+endstruct count 3 firstindex 1
+struct Single $9000
+  .value: db
+endstruct align 4
+dw sizeof(Maps), countof(Maps), bytesof(Maps)
+dl startof(Maps), endof(Maps)
+dw countof(Single), bytesof(Single), startof(Single), endof(Single)
+dw (endof(Maps) - startof(Maps)) / countof(Maps)`,
+      incremental,
+    );
+    t.deepEqual(
+      [...assembler.getBinaryOutput()],
+      [2, 0, 3, 0, 6, 0, 6, 128, 128, 12, 128, 128, 1, 0, 4, 0, 0, 144, 4, 144, 2, 0],
+    );
+    for (const expression of [
+      "countof(Missing)",
+      "bytesof(Maps.offset)",
+      "startof()",
+      "endof(Maps, Maps)",
+    ])
+      t.throws(() => assemble(`${header}\ndw ${expression}`, incremental));
+  });
   test(`typed fields are non-emitting and named records use layout order (${mode})`, (t) => {
     const assembler = assemble(
       `lorom

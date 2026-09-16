@@ -10,7 +10,6 @@ import {
   type RomImage,
   type RuntimeInstructionRecord,
   type RuntimeEvidenceRecord,
-  type RuntimeRecordProjection,
 } from "@uttori/asm-disassembler";
 
 import { Cpu65816Decoder, type Cpu65816DecodeState } from "../architectures/65816-decoder.js";
@@ -46,74 +45,18 @@ const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeSta
 };
 
 /**
- * Reduce full register history to distinct instruction decoding variants for regeneration.
- * CPU-state records are redundant here. Bytes, decoding state and evidence remain paired; original
- * records and all other registers stay in the untouched runtime shard, never in this derived view.
- * @returns {RuntimeRecordProjection} One-use reducer preserving all distinct decoding variants.
- */
-export const createSnesRuntimeAnalysisProjection = (): RuntimeRecordProjection => {
-  const records: RuntimeEvidenceRecord[] = [];
-  const variants = new Map<
-    string,
-    {
-      record: RuntimeInstructionRecord;
-      count: number;
-      evidence: Set<string>;
-    }
-  >();
-  return {
-    push: (record) => {
-      if (record.kind === "runtime-cpu-state") return;
-      if (record.kind !== "runtime-instruction") {
-        records.push(record);
-        return;
-      }
-      if (record.architecture !== "snes.65816" || record.addressSpace !== "snes.cpu") return;
-      const key = canonicalJson({
-        address: record.address,
-        bytes: record.bytes,
-        state: runtimeDecodeState(record),
-      });
-      const prior = variants.get(key);
-      if (prior) {
-        prior.count += record.count;
-        for (const id of record.evidence) prior.evidence.add(id);
-        return;
-      }
-      variants.set(key, {
-        record: {
-          ...record,
-          // Retain both aliases when present so lowercase precedence is unchanged on re-decode.
-          state: Object.fromEntries(
-            Object.entries(record.state).filter(([field]) =>
-              ["p", "e", "db", "d"].includes(field.toLowerCase()),
-            ),
-          ),
-        },
-        count: record.count,
-        evidence: new Set(record.evidence),
-      });
-    },
-    finish: () => {
-      for (const { record, count, evidence } of variants.values())
-        records.push({ ...record, count, evidence: [...evidence].sort() });
-      variants.clear();
-      return records;
-    },
-  };
-};
-
-/**
  * Decode captured code from any CPU bus location, including WRAM and cartridge RAM.
  * @param {AnalysisProjectShards} shards Captured instructions and evidence.
  * @param {RomImage} rom Verified cartridge image.
  * @param {SnesMapper} mapper Address mapper for checking ROM provenance.
+ * @param {Iterable<RuntimeEvidenceRecord>} [runtime] SQL instruction-variant cursor, consumed within its read snapshot.
  * @returns {readonly AnalysisRecord[]} Captured CFG variants and explicit conflicts.
  */
 export const analyzeSnesRuntimeCode = (
   shards: AnalysisProjectShards,
   rom: RomImage,
   mapper: SnesMapper,
+  runtime: Iterable<RuntimeEvidenceRecord> = shards.runtime,
 ): readonly AnalysisRecord[] => {
   const decoder = new Cpu65816Decoder();
   const context = createSnesAddressContext(mapper);
@@ -121,7 +64,7 @@ export const analyzeSnesRuntimeCode = (
   const nodes = new Map<string, AnalysisControlFlowNodeRecord>();
   const instructions = new Map<string, DecodedInstruction>();
   const records: AnalysisRecord[] = [];
-  for (const sample of shards.runtime) {
+  for (const sample of runtime) {
     if (
       sample.kind !== "runtime-instruction" ||
       sample.architecture !== "snes.65816" ||

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, rm, stat, readdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -7,6 +7,7 @@ import test from "ava";
 
 import {
   LosslessCaptureFileRecorder,
+  NativeCaptureFileRecorder,
   recoverCaptureFile,
   exportCaptureJson,
 } from "../src/capture-file.js";
@@ -174,7 +175,12 @@ test("native bounded queue and TypeScript decoder agree on ACT2 framing and CRC"
   }
 });
 
-const fixture = async (file: string, failAck = false) => {
+const fixture = async (
+  file: string,
+  failAck = false,
+  format: "json" | "act2" = "json",
+  measureStages = false,
+) => {
   let accepted = 0,
     stopped = false,
     aborted = false;
@@ -192,7 +198,8 @@ const fixture = async (file: string, failAck = false) => {
             : "",
       };
     if (request.operation === "ack") {
-      const recovery = await recoverCaptureFile(`${file}.act2.partial`);
+      const archive = format === "act2" ? file : `${file}.act2`;
+      const recovery = await recoverCaptureFile(`${archive}.partial`);
       checkpointCounts.push(recovery.eventThrough);
       if (failAck) throw new Error("Simulated lost acknowledgement");
       accepted++;
@@ -215,9 +222,31 @@ const fixture = async (file: string, failAck = false) => {
       stopped && accepted === 2 ? "complete" : "recording",
     );
   };
-  const recorder = await LosslessCaptureFileRecorder.create({ ...metadata, file, transport });
+  const recorder = await LosslessCaptureFileRecorder.create({
+    ...metadata,
+    file,
+    transport,
+    format,
+    measureStages,
+  });
   return { recorder, checkpointCounts, aborted: () => aborted };
 };
+
+test("direct ACT2 recording stops with only the durable archive and preserves existing destinations", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "ares-direct-writer-"));
+  t.teardown(() => rm(directory, { recursive: true, force: true }));
+  const file = path.join(directory, "trace.act2");
+  const recording = await fixture(file, false, "act2");
+  const summary = await recording.recorder.stop();
+  t.is(summary.file, file);
+  t.is(summary.archive, file);
+  t.deepEqual(recording.checkpointCounts, ["1", "2"]);
+  t.deepEqual(await readdir(directory), ["trace.act2"]);
+  t.true((await recoverCaptureFile(file)).complete);
+  const before = await readFile(file);
+  await t.throwsAsync(fixture(file, false, "act2"), { message: /already exists/ });
+  t.deepEqual(await readFile(file), before);
+});
 
 test("durable writer checkpoints before ack, drains on stop, and exports both RAM variants", async (t) => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "ares-writer-"));
@@ -286,4 +315,85 @@ test("ack failure leaves a recoverable durable prefix and stops production witho
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test("opt-in capture profiling accounts bounded stage totals without changing archive identity", async (t) => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "ares-profile-"));
+  t.teardown(() => rm(directory, { recursive: true, force: true }));
+  const plain = await (
+    await fixture(path.join(directory, "plain.act2"), false, "act2")
+  ).recorder.stop();
+  const timed = await (
+    await fixture(path.join(directory, "timed.act2"), false, "act2", true)
+  ).recorder.stop();
+  t.is(plain.timings, undefined);
+  t.is(timed.timings?.bytes, 264);
+  t.is(timed.timings?.stages.dataSync.calls, 2);
+  t.is(timed.timings?.stages.checkpointSync.calls, 2);
+  t.is(timed.timings?.stages.ack.calls, 2);
+  t.true(
+    timed.timings!.elapsedMs >=
+      Object.values(timed.timings!.stages).reduce((sum, stage) => sum + stage.totalMs, 0),
+  );
+  t.deepEqual(await readFile(plain.archive), await readFile(timed.archive));
+});
+
+test("native recorder waits for publication and sends control only", async (t) => {
+  const operations: string[] = [];
+  let stopped = false,
+    drained = false;
+  const transport: CaptureTransportV2 = async (request) => {
+    operations.push(request.operation);
+    if (request.operation === "file-capabilities") return { ...capabilities, nativeFile: true };
+    if (request.operation === "file-stop") stopped = true;
+    const complete = stopped && drained;
+    const state = stopped ? "draining" : "armed";
+    if (stopped) drained = true;
+    return {
+      ...position("0", "0", complete ? "complete" : state),
+      fileState: complete ? "complete" : "writing",
+      fileBytes: "100",
+      fileBatches: "0",
+    };
+  };
+  const recorder = await NativeCaptureFileRecorder.create({
+    ...metadata,
+    file: "/native-only/trace.act2",
+    transport,
+  });
+  const summary = await recorder.stop();
+  t.true(summary.complete);
+  t.is(summary.archive, "/native-only/trace.act2");
+  t.true(operations.every((operation) => operation.startsWith("file-")));
+  t.true(operations.includes("file-stop"));
+});
+
+test("native recorder fails closed on writer error and rejects silent sink fallback", async (t) => {
+  await t.throwsAsync(
+    NativeCaptureFileRecorder.create({
+      ...metadata,
+      file: "/capture.act2",
+      transport: async () => capabilities,
+    }),
+    { message: /does not support native/ },
+  );
+  const operations: string[] = [];
+  const transport: CaptureTransportV2 = async (request) => {
+    operations.push(request.operation);
+    if (request.operation === "file-capabilities") return { ...capabilities, nativeFile: true };
+    const failed = request.operation !== "file-start";
+    return {
+      ...position("0", "0", failed ? "incomplete" : "armed"),
+      fileState: failed ? "incomplete" : "writing",
+      fileBytes: "100",
+      fileBatches: "0",
+    };
+  };
+  const recorder = await NativeCaptureFileRecorder.create({
+    ...metadata,
+    file: "/capture.act2",
+    transport,
+  });
+  await t.throwsAsync(recorder.completion, { message: /Native capture incomplete/ });
+  t.true(operations.includes("file-abort"));
 });

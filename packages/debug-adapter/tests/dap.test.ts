@@ -5,6 +5,7 @@ import * as path from "node:path";
 import { AddressToLineMapping, createDebugMap } from "@uttori/asm-core";
 
 import { test } from "../../../tests/ava-helper.js";
+import { busCapabilities, busScope } from "../../../tests/helpers/capture-bus.js";
 import {
   DapMessageParser,
   DebugAdapterSession,
@@ -105,6 +106,31 @@ const setup = (
   });
   return { directory, source, output, map, backend, session };
 };
+
+test("DAP forwards explicit bus scope and rejects unsupported capture negotiation", async (t) => {
+  const fixture = setup();
+  t.teardown(() => {
+    fixture.session.dispose();
+    fs.rmSync(fixture.directory, { recursive: true, force: true });
+  });
+  const seen: unknown[] = [];
+  (fixture.backend as DebugBackend).capture = async (capture) => {
+    seen.push(capture);
+    return busCapabilities;
+  };
+  const args = { operation: "capabilities", scope: busScope };
+  t.deepEqual(
+    response(await fixture.session.dispatch(request(1, "uttori/capture", args))).body,
+    busCapabilities,
+  );
+  t.deepEqual(seen, [args]);
+  t.false(
+    response(
+      await fixture.session.dispatch(request(2, "uttori/capture", { ...args, scope: "bus" })),
+    ).success,
+  );
+  t.is(seen.length, 1);
+});
 
 test("live DAP handshake connects before initialized and configures breakpoints before stopping", async (t) => {
   const messages: DapProtocolMessage[] = [];
@@ -666,8 +692,11 @@ test("DAP adds host annotations to disassembly without changing backend instruct
     debugMap: fixture.map,
     output: fixture.output,
     sourceRoot: fixture.directory,
-    instructionAnnotation: ({ architecture, address }) =>
-      architecture === "snes.spc700" && address === 0x200 ? "▶ 3× · state p=$20" : undefined,
+    instructionAnnotation: async ({ architecture, address }) => {
+      await Promise.resolve();
+      if (architecture === "snes.spc700" && address === 0x200) return "▶ 3× · state p=$20";
+      throw new Error("Optional annotation database unavailable");
+    },
   });
   t.teardown(() => {
     fixture.session.dispose();
@@ -699,6 +728,19 @@ test("DAP adds host annotations to disassembly without changing backend instruct
     ),
   ).body as { content: string };
   t.regex(source.content, /nop ; ▶ 3× · state p=\$20/);
+  const withoutAnnotations = response(
+    await session.dispatch(
+      request(5, "disassemble", {
+        memoryReference: formatDebugAddress({
+          architecture: "snes.65816",
+          addressSpace: "snes.cpu",
+          address: 0x008000,
+        }),
+        instructionCount: 1,
+      }),
+    ),
+  );
+  t.true(withoutAnnotations.success, "a rejected optional query does not break disassembly");
 });
 
 test("debug-map replay stepping advances the highlighted native source line", async (t) => {

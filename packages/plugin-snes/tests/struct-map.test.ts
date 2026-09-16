@@ -253,7 +253,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   t.regex(bank, /High byte remains annotated\.\n  assert pc\(\) == Table\.word \+ \$1/);
   t.regex(
     bank,
-    /dataStruct Table\[1\], \{ byte = \$EA, word = \$EAEA, pointer = \$EAEAEA, __gap_6 = \[\$EA\], dword = \$EAEAEAEA, __gap_b = \[\$EA\] \}/,
+    /dataStruct Table\[1], { byte = \$EA, word = \$EAEA, pointer = \$EAEAEA, __gap_6 = \[\$EA], dword = \$EAEAEAEA, __gap_b = \[\$EA] }/,
   );
   t.is(
     first.spans
@@ -298,7 +298,7 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   const groupedBank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
   t.regex(
     groupedBank,
-    /dataStructs Table\n    \[1\] = .*\n    \[2\] = .*\n  endDataStructs\n\n; Fourth record\.\n  dataStructs Table\n    \[3\] = .*\n    \[4\] = .*\n  endDataStructs/,
+    /dataStructs Table\n    \[1] = .*\n    \[2] = .*\n  endDataStructs\n\n; Fourth record\.\n  dataStructs Table\n    \[3] = .*\n    \[4] = .*\n  endDataStructs/,
   );
   t.is(
     grouped.spans
@@ -342,13 +342,13 @@ test("explicit field types distinguish arrays from scalars and validate their by
   };
   const map = { ...validateSnesStructMap(typed), sourceBytes: new Uint8Array() };
   const defines = renderSnesStructDefines(map);
-  t.regex(defines, /\.word: db\[2\]/);
+  t.regex(defines, /\.word: db\[2]/);
   t.regex(defines, /endstruct count 2 firstindex 0/);
   const fields = planSnesStructRomFields(map, 0x8000, (offset) => 0x808000 + offset);
   const record = fields[0].record!;
   const bytes = Uint8Array.from({ length: 12 }, (_, index) => index * 19 + 1);
   const literal = renderSnesStructInitializer(record, bytes);
-  t.regex(literal, /word = \[\$14, \$27\]/);
+  t.regex(literal, /word = \[\$14, \$27]/);
   t.deepEqual(
     assemble([
       "lorom",

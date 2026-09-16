@@ -112,6 +112,10 @@ const NUMERIC_UNARY_ALIASES: Readonly<Record<string, string>> = {
 };
 
 const STRING_FIRST_ARG_FUNCTIONS = new Set([
+  "countof",
+  "bytesof",
+  "startof",
+  "endof",
   "defined",
   "sizeof",
   "objectsize",
@@ -1329,6 +1333,16 @@ export class MathCore {
           : this.getHost().getFileStatus(value);
       }
       // --- Preprocessor/Struct & Data Size Functions ---
+      case "countof":
+      case "bytesof":
+      case "startof":
+      case "endof": {
+        if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+        const host = this.getHost();
+        if (!host.getExpressionStructMetadata)
+          throw new Error(`${name}() requires a struct metadata host.`);
+        return host.getExpressionStructMetadata(this.strArg(name, args[0]), name);
+      }
       case "defined":
       case "sizeof":
       case "objectsize":

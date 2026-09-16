@@ -1,6 +1,12 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+
 import { test } from "../../../tests/ava-helper.js";
 import {
-  buildAnalysisCallGraph,
+  openAnalysisProjectStore,
+  writeAnalysisProject,
+  RomImage,
   type AnalysisControlFlowNodeRecord,
   type AnalysisProjectShards,
 } from "../src/index.js";
@@ -41,12 +47,38 @@ const emptyShards = (): AnalysisProjectShards => ({
   imports: [],
 });
 
+/** Exercise the same persisted graph projection used by the editor, including its query cache. */
+const graphFor = (shards: AnalysisProjectShards) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-call-graph-"));
+  try {
+    writeAnalysisProject(directory, {
+      manifest: {
+        format: "uttori-asm-analysis",
+        schemaVersion: 3,
+        target: "fixture",
+        rom: new RomImage(new Uint8Array(256), { headerSize: 0 }).identity,
+        mapping: { mapper: "fixture", source: "override", candidates: [] },
+        addressSpaces: [{ id: "fixture.cpu", name: "CPU", kind: "cpu", addressBits: 16 }],
+      },
+      shards,
+    });
+    const store = openAnalysisProjectStore(directory);
+    try {
+      return store.callGraph();
+    } finally {
+      store.close();
+    }
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+};
+
 test("analysis call graph links functions, resolved calls, mirrors, and unresolved ownership", (t) => {
   const root = node("node:0", 0, 0x20, ["node:0"]);
   const callSite = node("node:1", 1, 0x21, ["node:0", "node:1"]);
   const callee = node("node:4", 4, 0x24, ["node:0", "node:1", "node:4"]);
   const unresolvedSite = node("node:5", 5, 0x25, ["node:0", "node:1", "node:4", "node:5"]);
-  const graph = buildAnalysisCallGraph({
+  const graph = graphFor({
     ...emptyShards(),
     labels: [
       {
@@ -161,7 +193,7 @@ test("analysis call graph links functions, resolved calls, mirrors, and unresolv
 });
 
 test("analysis call graph does not invent ownership when evidence paths are absent", (t) => {
-  const graph = buildAnalysisCallGraph({
+  const graph = graphFor({
     ...emptyShards(),
     analysis: [
       node("node:8", 8, 8, []),

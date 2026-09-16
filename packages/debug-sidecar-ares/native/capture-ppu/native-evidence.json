@@ -1,0 +1,44 @@
+{
+  "date": "2026-09-13",
+  "source": {
+    "baseRevision": "be548251b537334f4f2054c7d86171da22fdc6ca",
+    "patchSha256": "2efe1eb41056698ad3becbef0f4c188f32b4c8867abc8dd9944bc335e18bbbd5",
+    "parentPatches": {
+      "capture-v2": "e104c0b125e918ad320d50a308b6c8ca2806a2b042beac5de26480f1ad210f19",
+      "capture-bus": "dc2939a9d6e39233f5cc2344a742c944fd4d8b7bb82ee3dd19d26c3a51d9ca69",
+      "capture-transfer": "ae1eebd7e85d2885b3870498afbb81c12744c7e2d3e8f78b46448e6aa3a13c76",
+      "capture-graphics": "37f2c3e6fa7d175ad16cd7b239e37f20dfe1a3999c04cbe516a941321f30eeaa"
+    },
+    "files": {
+      "nall/nall/gdb/capture.hpp": "20e5d98202a5f8f2cb74a61f541cd891263638864d7f141d244b74ceac1996f2",
+      "ares/sfc/cpu/memory.cpp": "5e139c0c275d59611ff7b3e8d3e8ba57c419fc1d01978f862cbd256a5a70b128",
+      "ares/sfc/ppu/ppu.cpp": "e371ce31a25c378dc8638d0d93accc3754fdc3064066a41146223adf1c3e5a9f",
+      "ares/sfc/ppu/io.cpp": "3b025583dbf0dfaf21937d613cf640e35258d141d6760a54d22dd22fe9fec269",
+      "ares/sfc/ppu-performance/ppu.cpp": "a16024c09e6a21a665cc442e8dcc3a4c8b1f16729d3bb72b0e983b7722e733c8",
+      "ares/sfc/ppu-performance/io.cpp": "3b0a640d4b1fe4851447806f5e46e92edc781b076213e87ef956ee58c079e782",
+      "tests/gdb-capture/bus-test.cpp": "6e813f6b3bb52513caffe8ac4c6648fe23634382c807efdddc92575ba6c99d78",
+      "tests/gdb-capture/CMakeLists.txt": "18c1f015b0ffd076812bc6e2c6cba24dfaf8c55c3db7b71a84e698044326a814",
+      "tests/gdb-capture/ppu-benchmark.cpp": "106ac6bb1eb27af845330ca845523671d73b950dec00af7e17e44ff5cf983b4b"
+    }
+  },
+  "checks": [
+    "five-patch reconstruction matches all nine files",
+    "CMake/CTest: eight gdb capture/state tests, both PPUs",
+    "64/128 KiB VRAM, forced blank, active rendering, vblank",
+    "physical PPU memory replay including duplicate OAM writes",
+    "full serialized machine equivalence: capture off versus PPU capture",
+    "CPU, DMA and HDMA writes through the real coroutine",
+    "minimum two-slot queue: held clocks, draining, CRC checked independently",
+    "C++17 shell wire fixture: mixed 64/88-byte records and missing-hook failure",
+    "ACT2 decoder, SQL reopen, duplicate import and archive-expiry retention",
+    "desktop normal/delayed consumer: zero loss, long DMA step and pause control"
+  ],
+  "executables": {
+    "gdb-capture": "ce490fa8aac8e9949a737300dc9dabdfbea59801a2c0fb5c42965e51e24178a2",
+    "gdb-capture-bus": "06f68d161fa511a161b90d1f7852e4599acb5ff2769d79a0fe9305320fbcdd2e",
+    "gdb-capture-graphics": "1f01b4c70e56e2919333e7d822c579cb52ec571f2d96851e070c585d49f246ee",
+    "gdb-capture-ppu-benchmark": "0ff87d6641648e014fc2c6367292c4295992b0b43af89f2b16307d57c153f0af",
+    "gdb-states": "635c768f2d61a824d434d88a01ced9300b7f551c9d9a2db783519c9ddf6de72b"
+  },
+  "desktopExecutableSha256": "f8693d762c1838e8f3739af555601e7f7712205b16da75df86ee49d12b0634df"
+}

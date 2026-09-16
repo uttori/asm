@@ -2,10 +2,9 @@ import { test } from "../../../tests/ava-helper.js";
 import {
   createTraceCollector,
   formatTraceEvent,
-  type AssemblerTraceCommandEvent,
-  type AssemblerTraceWriteEvent,
   type TraceCollectorOptions,
-} from "../src/debug-tracing.js";
+} from "../../../tests/helpers/assembler-trace.js";
+import type { AssemblerTraceCommandEvent, AssemblerTraceWriteEvent } from "../src/debug-tracing.js";
 
 const write: AssemblerTraceWriteEvent = {
   type: "write",

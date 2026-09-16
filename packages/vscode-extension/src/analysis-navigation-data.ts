@@ -3,7 +3,6 @@ import {
   type AnalysisProjectSnapshot,
   type AnalysisControlFlowNodeRecord,
   type RuntimeInstructionRecord,
-  type RuntimeEvidenceRecord,
 } from "@uttori/asm-disassembler";
 
 import { formatInstructionAnnotationSummary } from "./analysis-annotation-format.js";
@@ -18,13 +17,13 @@ export interface AnalysisNavigationProjection {
  * Build a small disassembly window in the analysis process, preserving exact architecture/space.
  * @param {Pick<AnalysisProjectSnapshot, "manifest" | "shards">} project Validated native snapshot.
  * @param {AnalysisGraphNavigationTarget} target Exact navigation identity.
- * @param {Function} [runtimeAt] SQLite location lookup, avoiding a full runtime materialization.
+ * @param {ReadonlyMap} [executionCounts] Exact SQL totals for bounded runtime previews.
  * @returns {AnalysisNavigationProjection} At most 32 CFG rows plus 32 saved instruction variants.
  */
 export const projectAnalysisNavigation = (
   project: Pick<AnalysisProjectSnapshot, "manifest" | "shards">,
   target: AnalysisGraphNavigationTarget,
-  runtimeAt?: (space: string, address: number) => Iterable<RuntimeEvidenceRecord>,
+  executionCounts?: ReadonlyMap<string, number>,
 ): AnalysisNavigationProjection => {
   if (
     project.manifest.target !== target.target ||
@@ -60,19 +59,7 @@ export const projectAnalysisNavigation = (
     if (space === target.addressSpace) return [...addresses];
     return fileSpaces.has(space) ? [...offsets] : [];
   };
-  // SQLite callers fetch only the visible locations; array callers retain the same projection rules.
-  function* runtimeCandidates(): IterableIterator<RuntimeEvidenceRecord> {
-    if (!runtimeAt) {
-      yield* project.shards.runtime;
-      return;
-    }
-    for (const address of addresses) yield* runtimeAt(target.addressSpace, address);
-    for (const space of fileSpaces) {
-      if (space === target.addressSpace) continue;
-      for (const offset of offsets) yield* runtimeAt(space, offset);
-    }
-  }
-  const runtime = [...runtimeCandidates()].filter((record) => {
+  const runtime = project.shards.runtime.filter((record) => {
     if (!matchesArchitecture(record.architecture)) return false;
     if (record.kind === "runtime-memory-access")
       return (
@@ -101,7 +88,15 @@ export const projectAnalysisNavigation = (
   const summaries = new Map(
     projection.instructions
       .filter((record) => record.addressSpace === target.addressSpace)
-      .map((record) => [record.address, formatInstructionAnnotationSummary(record)]),
+      .map((record) => [
+        record.address,
+        formatInstructionAnnotationSummary({
+          ...record,
+          executionCount:
+            executionCounts?.get(`${record.addressSpace}:${record.address}`) ??
+            record.executionCount,
+        }),
+      ]),
   );
   const lines = visible.map((node) => {
     const bytes = (

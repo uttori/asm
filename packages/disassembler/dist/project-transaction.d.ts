@@ -97,6 +97,22 @@ export declare const commitAnalysisProjectTransaction: (directory: string, expec
  */
 export declare const commitAnalysisProjectViewUpdate: (directory: string, snapshot: AnalysisProjectViewSnapshot, updates: Partial<Omit<AnalysisProjectShards, "runtime">>) => CommittedAnalysisProjectTransaction;
 /**
+ * Publish label/comment edits without loading or revalidating unrelated analysis and runtime.
+ * Existing provenance is immutable here, so retained records cannot lose evidence references.
+ * @param {string} directory Existing project root.
+ * @param {AnalysisProjectRevision} expected Revision on which the edit was based.
+ * @param {object} updates Complete labels, comments and evidence tables; evidence may only be appended.
+ * @returns {CommittedAnalysisProjectTransaction} Atomically published identity; failures roll back.
+ */
+export declare const commitAnalysisProjectAnnotationUpdate: (directory: string, expected: AnalysisProjectRevision, updates: Pick<AnalysisProjectShards, "labels" | "comments" | "evidence">) => CommittedAnalysisProjectTransaction;
+/** Publish a reversible edit to a selected SQL view without replacing omitted records.
+ * @param {string} directory Existing project root.
+ * @param {AnalysisProjectSnapshot} snapshot Selected original records and their revision.
+ * @param {AnalysisProject} project Edited selected view.
+ * @returns {CommittedAnalysisProjectTransaction} Atomically committed identity.
+ */
+export declare const commitAnalysisProjectSelectedEdit: (directory: string, snapshot: AnalysisProjectSnapshot, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
+/**
  * Create or replace a complete project; editing clients should use an explicit snapshot revision.
  * @param {string} directory Destination project root.
  * @param {AnalysisProject} project Complete replacement including runtime.

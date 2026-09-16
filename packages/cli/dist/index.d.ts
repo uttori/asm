@@ -1,5 +1,6 @@
+import { type AnalysisStoragePolicy } from "@uttori/asm-disassembler";
 import { type SnesMapper } from "@uttori/asm-plugin-snes";
-export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-compact" | "project-migrate" | "project-validate" | "verify-roundtrip";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-compact" | "project-storage" | "project-migrate" | "project-validate" | "verify-roundtrip";
 export interface CliArguments {
     readonly command: CliCommand;
     readonly input?: string;
@@ -23,7 +24,12 @@ export interface CliArguments {
     readonly mesenLabels?: string;
     readonly instructionTrace?: string;
     readonly traceMaxMiB?: number;
-    readonly traceIndex?: "full" | "65816-disassembly";
+    readonly traceIndex?: "full" | "65816-disassembly" | "65816-analysis";
+    readonly convertRuntime?: boolean;
+    readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
+    readonly pinCapture?: string;
+    readonly unpinCapture?: string;
+    readonly expireArchives?: boolean;
     readonly entryPoints: readonly number[];
     readonly maxWorkItems?: number;
     readonly maxCallDepth?: number;

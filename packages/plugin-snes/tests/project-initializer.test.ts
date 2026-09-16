@@ -75,7 +75,7 @@ test("shared initializer commits a verified workspace with analysis and editor f
     t.regex(defines, /^NLTR7 = \$437A ; DMA\/HDMA channel 7:/m);
     t.regex(defines, /^UNUSED7_MIRROR = \$437F ; DMA\/HDMA channel 7:/m);
     t.regex(defines, /^JOY_START = \$1000 ; Controller Start-button bit\.$/m);
-    const assignments = defines.split("\n").filter((line) => /^[A-Z][A-Z0-9_]+ = \$/.test(line));
+    const assignments = defines.split("\n").filter((line) => /^[A-Z][\dA-Z_]+ = \$/.test(line));
     t.true(assignments.length > snesHardwareDefineRecords().length);
     t.true(
       assignments.every((line) => / ; \S/.test(line)),
@@ -91,7 +91,7 @@ test("shared initializer commits a verified workspace with analysis and editor f
     t.regex(bank, /  NOP\n  NOP\n  STP/);
     t.regex(
       bank,
-      /SNES_HEADER_TITLE:\n  db "FIXTURE ROM          " ; Cartridge title "FIXTURE ROM"\./,
+      /SNES_HEADER_TITLE:\n {2}db "FIXTURE ROM {10}" ; Cartridge title "FIXTURE ROM"\./,
     );
     t.regex(bank, /SNES_HEADER_MAP_MODE:\n  db \$20 ; SlowROM, LoROM map mode\./);
     t.regex(bank, /SNES_HEADER_CHECKSUM:\n  dw \$1234 ; ROM checksum \(valid pair\)\./);
