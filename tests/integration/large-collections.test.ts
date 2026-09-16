@@ -21,6 +21,7 @@ for (const scenario of [
     const { stdout } = await promisify(execFile)(
       process.execPath,
       [
+        "--conditions=uttori-source",
         "--import=tsx",
         fileURLToPath(new URL("../helpers/large-collections.ts", import.meta.url)),
         scenario,

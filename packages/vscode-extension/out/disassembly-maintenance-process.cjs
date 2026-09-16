@@ -41,10 +41,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// packages/disassembler/src/asset-codec.ts
+// ../disassembler/src/asset-codec.ts
 var import_node_crypto, isAsciiAlphaNumeric, isStableId, assertStableId, assertNonNegativeInteger, canonicalizeAssetValue, stableText, sha256, sameBytes, assertSafeExtractedPath, normalizeReferences, normalizeChildren, normalizeInspection, inspectionValue, normalizeFiles, normalizeDecoded, decodedFingerprint, AssetCodecRegistry, validateRequest, validateInspectedRange, isAncestor, planAssets, codecForAsset, decodePlannedAsset, encodePlannedAsset, verifyAssetPlan;
 var init_asset_codec = __esm({
-  "packages/disassembler/src/asset-codec.ts"() {
+  "../disassembler/src/asset-codec.ts"() {
     "use strict";
     import_node_crypto = require("node:crypto");
     isAsciiAlphaNumeric = (character) => {
@@ -489,10 +489,10 @@ var init_asset_codec = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/common.ts
+// ../disassembler/src/asset-codecs/common.ts
 var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
 var init_common = __esm({
-  "packages/disassembler/src/asset-codecs/common.ts"() {
+  "../disassembler/src/asset-codecs/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
@@ -614,10 +614,10 @@ var init_common = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/index-table.ts
+// ../disassembler/src/asset-codecs/index-table.ts
 var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor, indexTableAssetCodec;
 var init_index_table = __esm({
-  "packages/disassembler/src/asset-codecs/index-table.ts"() {
+  "../disassembler/src/asset-codecs/index-table.ts"() {
     "use strict";
     init_common();
     INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
@@ -735,10 +735,10 @@ var init_index_table = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/pointer-table.ts
+// ../disassembler/src/asset-codecs/pointer-table.ts
 var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor2, pointerTableAssetCodec;
 var init_pointer_table = __esm({
-  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
+  "../disassembler/src/asset-codecs/pointer-table.ts"() {
     "use strict";
     init_common();
     POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
@@ -879,10 +879,10 @@ var init_pointer_table = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/raw.ts
+// ../disassembler/src/asset-codecs/raw.ts
 var import_node_crypto2, RAW_ASSET_CODEC_ID, rawAssetCodec;
 var init_raw = __esm({
-  "packages/disassembler/src/asset-codecs/raw.ts"() {
+  "../disassembler/src/asset-codecs/raw.ts"() {
     "use strict";
     import_node_crypto2 = require("node:crypto");
     init_common();
@@ -919,10 +919,10 @@ var init_raw = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/scalar-array.ts
+// ../disassembler/src/asset-codecs/scalar-array.ts
 var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
 var init_scalar_array = __esm({
-  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
+  "../disassembler/src/asset-codecs/scalar-array.ts"() {
     "use strict";
     init_common();
     SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
@@ -970,10 +970,10 @@ var init_scalar_array = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/struct-array.ts
+// ../disassembler/src/asset-codecs/struct-array.ts
 var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
 var init_struct_array = __esm({
-  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
+  "../disassembler/src/asset-codecs/struct-array.ts"() {
     "use strict";
     init_common();
     STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
@@ -1145,10 +1145,10 @@ var init_struct_array = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/text.ts
+// ../disassembler/src/asset-codecs/text.ts
 var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
 var init_text = __esm({
-  "packages/disassembler/src/asset-codecs/text.ts"() {
+  "../disassembler/src/asset-codecs/text.ts"() {
     "use strict";
     init_common();
     TEXT_ASSET_CODEC_ID = "uttori.asset.text";
@@ -1305,10 +1305,10 @@ var init_text = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/index.ts
+// ../disassembler/src/asset-codecs/index.ts
 var builtinAssetCodecs, createBuiltinAssetCodecRegistry;
 var init_asset_codecs = __esm({
-  "packages/disassembler/src/asset-codecs/index.ts"() {
+  "../disassembler/src/asset-codecs/index.ts"() {
     "use strict";
     init_asset_codec();
     init_index_table();
@@ -1341,10 +1341,10 @@ var init_asset_codecs = __esm({
   }
 });
 
-// packages/disassembler/src/asset-preview.ts
+// ../disassembler/src/asset-preview.ts
 var import_node_crypto3, isAsciiAlphaNumeric2, isStableId2, sha2562, sameBytes2, normalizeFiles2, AssetPreviewRegistry, renderVerifiedAssetPreview;
 var init_asset_preview = __esm({
-  "packages/disassembler/src/asset-preview.ts"() {
+  "../disassembler/src/asset-preview.ts"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
     init_asset_codec();
@@ -1449,17 +1449,17 @@ var init_asset_preview = __esm({
   }
 });
 
-// packages/disassembler/src/analysis-graph.ts
+// ../disassembler/src/analysis-graph.ts
 var init_analysis_graph = __esm({
-  "packages/disassembler/src/analysis-graph.ts"() {
+  "../disassembler/src/analysis-graph.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/compression-codec.ts
+// ../disassembler/src/compression-codec.ts
 var import_node_crypto4, isAsciiAlphaNumeric3, isStableId3, sameBytes3, sha2563, assertBytes, normalizeOptions, validateConstraints, CompressionCodecRegistry, decodeDeterministically, encodeDeterministically, verifyCompressionCodec, reencodeCompressedRange;
 var init_compression_codec = __esm({
-  "packages/disassembler/src/compression-codec.ts"() {
+  "../disassembler/src/compression-codec.ts"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     isAsciiAlphaNumeric3 = (character) => {
@@ -1642,10 +1642,10 @@ var init_compression_codec = __esm({
   }
 });
 
-// packages/disassembler/src/coverage-map.ts
+// ../disassembler/src/coverage-map.ts
 var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
 var init_coverage_map = __esm({
-  "packages/disassembler/src/coverage-map.ts"() {
+  "../disassembler/src/coverage-map.ts"() {
     "use strict";
     CLASSIFICATION_ORDER = [
       "opcode",
@@ -1977,10 +1977,10 @@ var init_coverage_map = __esm({
   }
 });
 
-// packages/disassembler/src/canonical-json.ts
+// ../disassembler/src/canonical-json.ts
 var canonicalValue, canonicalJson;
 var init_canonical_json = __esm({
-  "packages/disassembler/src/canonical-json.ts"() {
+  "../disassembler/src/canonical-json.ts"() {
     "use strict";
     canonicalValue = (value) => {
       if (Array.isArray(value)) return value.map(canonicalValue);
@@ -2009,10 +2009,10 @@ var init_canonical_json = __esm({
   }
 });
 
-// packages/disassembler/src/instruction-annotations.ts
+// ../disassembler/src/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
-  "packages/disassembler/src/instruction-annotations.ts"() {
+  "../disassembler/src/instruction-annotations.ts"() {
     "use strict";
     init_canonical_json();
     sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
@@ -2360,10 +2360,10 @@ var init_instruction_annotations = __esm({
   }
 });
 
-// packages/disassembler/src/interval-index.ts
+// ../disassembler/src/interval-index.ts
 var HalfOpenIntervalIndex;
 var init_interval_index = __esm({
-  "packages/disassembler/src/interval-index.ts"() {
+  "../disassembler/src/interval-index.ts"() {
     "use strict";
     HalfOpenIntervalIndex = class {
       #entries;
@@ -2432,10 +2432,10 @@ var init_interval_index = __esm({
   }
 });
 
-// packages/disassembler/src/analysis-sources.ts
+// ../disassembler/src/analysis-sources.ts
 var sorted, key, buildAnalysisSourceCatalog;
 var init_analysis_sources = __esm({
-  "packages/disassembler/src/analysis-sources.ts"() {
+  "../disassembler/src/analysis-sources.ts"() {
     "use strict";
     sorted = (values) => [...new Set(values)].sort();
     key = (...values) => JSON.stringify(values);
@@ -2491,10 +2491,10 @@ var init_analysis_sources = __esm({
   }
 });
 
-// packages/disassembler/src/project-labels.ts
+// ../disassembler/src/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
-  "packages/disassembler/src/project-labels.ts"() {
+  "../disassembler/src/project-labels.ts"() {
     "use strict";
     validateSourceLabelName = (name) => {
       if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name))
@@ -2528,10 +2528,10 @@ var init_project_labels = __esm({
   }
 });
 
-// packages/disassembler/src/project-types.ts
+// ../disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
 var init_project_types = __esm({
-  "packages/disassembler/src/project-types.ts"() {
+  "../disassembler/src/project-types.ts"() {
     "use strict";
     ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
     ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
@@ -2539,10 +2539,10 @@ var init_project_types = __esm({
   }
 });
 
-// packages/disassembler/src/record-id-set.ts
+// ../disassembler/src/record-id-set.ts
 var import_node_fs, import_node_os, import_node_path, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
-  "packages/disassembler/src/record-id-set.ts"() {
+  "../disassembler/src/record-id-set.ts"() {
     "use strict";
     import_node_fs = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
@@ -2598,10 +2598,10 @@ var init_record_id_set = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-ppu.ts
+// ../disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect, createRuntimePPUAccumulator;
 var init_runtime_ppu = __esm({
-  "packages/disassembler/src/runtime-ppu.ts"() {
+  "../disassembler/src/runtime-ppu.ts"() {
     "use strict";
     normalizeRuntimePPUEffect = (effect, access) => {
       const port = access.address & 65535;
@@ -2674,10 +2674,10 @@ var init_runtime_ppu = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-bus-types.ts
+// ../disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact;
 var init_runtime_bus_types = __esm({
-  "packages/disassembler/src/runtime-bus-types.ts"() {
+  "../disassembler/src/runtime-bus-types.ts"() {
     "use strict";
     init_runtime_ppu();
     validateRuntimeBusFact = (fact) => {
@@ -2704,10 +2704,10 @@ var init_runtime_bus_types = __esm({
   }
 });
 
-// packages/disassembler/src/trace-detail.ts
+// ../disassembler/src/trace-detail.ts
 var isArray, validateRuntimeInstructionDetails;
 var init_trace_detail = __esm({
-  "packages/disassembler/src/trace-detail.ts"() {
+  "../disassembler/src/trace-detail.ts"() {
     "use strict";
     isArray = (value) => Array.isArray(value);
     validateRuntimeInstructionDetails = (value, count) => {
@@ -2740,10 +2740,10 @@ var init_trace_detail = __esm({
   }
 });
 
-// packages/disassembler/src/project-validation.ts
+// ../disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId4, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, validateLoadedShards;
 var init_project_validation = __esm({
-  "packages/disassembler/src/project-validation.ts"() {
+  "../disassembler/src/project-validation.ts"() {
     "use strict";
     init_project_types();
     init_record_id_set();
@@ -3128,10 +3128,10 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var import_node_crypto5, fs2, import_node_path2, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, commitAnalysisProjectAnnotationUpdate, commitAnalysisProjectSelectedEdit, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
-  "packages/disassembler/src/project-transaction.ts"() {
+  "../disassembler/src/project-transaction.ts"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     fs2 = __toESM(require("node:fs"), 1);
@@ -3294,10 +3294,10 @@ var init_project_transaction = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-payload.ts
+// ../disassembler/src/sqlite-payload.ts
 var import_node_util, import_node_zlib, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES, utf8, encodeSqlitePayload, decodeSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
-  "packages/disassembler/src/sqlite-payload.ts"() {
+  "../disassembler/src/sqlite-payload.ts"() {
     "use strict";
     import_node_util = require("node:util");
     import_node_zlib = require("node:zlib");
@@ -3361,10 +3361,10 @@ var init_sqlite_payload = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-records.ts
+// ../disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
-  "packages/disassembler/src/sqlite-records.ts"() {
+  "../disassembler/src/sqlite-records.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -3640,10 +3640,10 @@ var init_sqlite_records = __esm({
   }
 });
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var fs3, import_node_path3, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
-  "packages/disassembler/src/project-store.ts"() {
+  "../disassembler/src/project-store.ts"() {
     "use strict";
     fs3 = __toESM(require("node:fs"), 1);
     import_node_path3 = __toESM(require("node:path"), 1);
@@ -3723,10 +3723,10 @@ var init_project_store = __esm({
   }
 });
 
-// packages/disassembler/src/project-edit.ts
+// ../disassembler/src/project-edit.ts
 var RANGE_CLASSIFICATIONS, isStableId5, manifestWithoutShards, assertStableId2, recordMatches, sortedUnique, sortedUniqueNumbers, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, conflictIdFor, evidenceReferences, applyRangeClassificationEdit, revertRangeClassificationEdit, STATE_FIELD_MAXIMUMS, validateManualState, stateConflictFields, applyStateEntryPointEdit, revertStateEntryPointEdit, applyTargetResolutionEdit, revertTargetResolutionEdit, applyLabelRenameEdit, revertLabelRenameEdit, applyDisassemblyAnnotationEdit, revertDisassemblyAnnotationEdit, explainProjectEvidence;
 var init_project_edit = __esm({
-  "packages/disassembler/src/project-edit.ts"() {
+  "../disassembler/src/project-edit.ts"() {
     "use strict";
     init_project_labels();
     init_project_store();
@@ -4356,10 +4356,10 @@ var init_project_edit = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-evidence.ts
+// ../disassembler/src/runtime-evidence.ts
 var emptyCounts, sortedUnique2, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
-  "packages/disassembler/src/runtime-evidence.ts"() {
+  "../disassembler/src/runtime-evidence.ts"() {
     "use strict";
     init_project_store();
     emptyCounts = () => ({
@@ -4587,10 +4587,10 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-annotation-query.ts
+// ../disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView;
 var init_sqlite_annotation_query = __esm({
-  "packages/disassembler/src/sqlite-annotation-query.ts"() {
+  "../disassembler/src/sqlite-annotation-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -4913,10 +4913,10 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-query-cache.ts
+// ../disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA, upgradeQueryCacheStorage, installQueryCache, readQueryCache, writeQueryCache;
 var init_sqlite_query_cache = __esm({
-  "packages/disassembler/src/sqlite-query-cache.ts"() {
+  "../disassembler/src/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
     upgradeQueryCacheStorage = (db) => {
@@ -4968,10 +4968,10 @@ var init_sqlite_query_cache = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-coverage-query.ts
+// ../disassembler/src/sqlite-coverage-query.ts
 var decode2, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage;
 var init_sqlite_coverage_query = __esm({
-  "packages/disassembler/src/sqlite-coverage-query.ts"() {
+  "../disassembler/src/sqlite-coverage-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_query_cache();
@@ -5277,10 +5277,10 @@ var init_sqlite_coverage_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-graph-query.ts
+// ../disassembler/src/sqlite-graph-query.ts
 var decode3, unique, numbers, prepareGraph, publishGraph;
 var init_sqlite_graph_query = __esm({
-  "packages/disassembler/src/sqlite-graph-query.ts"() {
+  "../disassembler/src/sqlite-graph-query.ts"() {
     "use strict";
     init_sqlite_payload();
     decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
@@ -5455,10 +5455,10 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-maintenance.ts
+// ../disassembler/src/sqlite-maintenance.ts
 var import_node_fs2, import_node_path4, SQLITE_MIGRATION_DIRECTORY, SQLITE_MIGRATION_BACKUP, assertNoSqliteMigration, sqliteFileIdentity, syncSqlitePath;
 var init_sqlite_maintenance = __esm({
-  "packages/disassembler/src/sqlite-maintenance.ts"() {
+  "../disassembler/src/sqlite-maintenance.ts"() {
     "use strict";
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_path4 = __toESM(require("node:path"), 1);
@@ -5485,10 +5485,10 @@ var init_sqlite_maintenance = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-runtime-storage.ts
+// ../disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto6, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
-  "packages/disassembler/src/sqlite-runtime-storage.ts"() {
+  "../disassembler/src/sqlite-runtime-storage.ts"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     init_canonical_json();
@@ -5693,10 +5693,10 @@ END;
   }
 });
 
-// packages/disassembler/src/sqlite-source-query.ts
+// ../disassembler/src/sqlite-source-query.ts
 var collections, sourceEvidence, sourceRuntime, instructionKinds, hex, sourceQueriesReady, prepareSourceQueries, readSourceSummary, readSourcePage;
 var init_sqlite_source_query = __esm({
-  "packages/disassembler/src/sqlite-source-query.ts"() {
+  "../disassembler/src/sqlite-source-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -5834,10 +5834,10 @@ var init_sqlite_source_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-storage-policy.ts
+// ../disassembler/src/sqlite-storage-policy.ts
 var import_node_fs3, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
-  "packages/disassembler/src/sqlite-storage-policy.ts"() {
+  "../disassembler/src/sqlite-storage-policy.ts"() {
     "use strict";
     import_node_fs3 = __toESM(require("node:fs"), 1);
     DEFAULT_ANALYSIS_STORAGE_POLICY = {
@@ -5947,10 +5947,10 @@ var init_sqlite_storage_policy = __esm({
   }
 });
 
-// packages/disassembler/src/trace-cache.ts
+// ../disassembler/src/trace-cache.ts
 var TraceCache;
 var init_trace_cache = __esm({
-  "packages/disassembler/src/trace-cache.ts"() {
+  "../disassembler/src/trace-cache.ts"() {
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
@@ -6017,10 +6017,10 @@ var init_trace_cache = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var import_node_crypto7, import_node_fs4, import_node_path5, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
-  "packages/disassembler/src/sqlite-store.ts"() {
+  "../disassembler/src/sqlite-store.ts"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     import_node_fs4 = __toESM(require("node:fs"), 1);
@@ -7546,10 +7546,10 @@ PRAGMA user_version=2;
   }
 });
 
-// packages/disassembler/src/runtime-trace-profile.ts
+// ../disassembler/src/runtime-trace-profile.ts
 var RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState;
 var init_runtime_trace_profile = __esm({
-  "packages/disassembler/src/runtime-trace-profile.ts"() {
+  "../disassembler/src/runtime-trace-profile.ts"() {
     "use strict";
     RUNTIME_ANALYSIS_PROFILE = "65816-analysis-v2";
     project65816AnalysisState = (state) => {
@@ -7572,14 +7572,14 @@ var init_runtime_trace_profile = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-runtime-conversion.ts
+// ../disassembler/src/sqlite-runtime-conversion.ts
 function* convertedRuntimeRecords(db) {
   for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate())
     yield { ...JSON.parse(String(row.payload)), count: Number(row.count) };
 }
 var import_node_crypto8, import_promises, migrationRuntimeQuery, RuntimeDigest, prepareRuntimeConversion;
 var init_sqlite_runtime_conversion = __esm({
-  "packages/disassembler/src/sqlite-runtime-conversion.ts"() {
+  "../disassembler/src/sqlite-runtime-conversion.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
     import_promises = require("node:timers/promises");
@@ -7655,7 +7655,7 @@ var init_sqlite_runtime_conversion = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-migration.ts
+// ../disassembler/src/sqlite-migration.ts
 function* legacyRecords(database, kind, version, convert = false) {
   if (kind === "runtime") {
     if (convert) yield* convertedRuntimeRecords(database);
@@ -7674,7 +7674,7 @@ function* legacyRecords(database, kind, version, convert = false) {
 }
 var import_node_crypto9, import_node_fs5, import_node_path6, import_node_perf_hooks, import_node_sqlite3, import_promises2, TABLES, RESERVE_BYTES, writeJournal, processAlive, sourceManifest, recoverMigration, migrateAnalysisProjectStorage;
 var init_sqlite_migration = __esm({
-  "packages/disassembler/src/sqlite-migration.ts"() {
+  "../disassembler/src/sqlite-migration.ts"() {
     "use strict";
     import_node_crypto9 = require("node:crypto");
     import_node_fs5 = __toESM(require("node:fs"), 1);
@@ -8037,10 +8037,10 @@ var init_sqlite_migration = __esm({
   }
 });
 
-// packages/disassembler/src/rom-image.ts
+// ../disassembler/src/rom-image.ts
 var import_node_crypto10, fs8, sha2564, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
-  "packages/disassembler/src/rom-image.ts"() {
+  "../disassembler/src/rom-image.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
     fs8 = __toESM(require("node:fs"), 1);
@@ -8140,10 +8140,10 @@ var init_rom_image = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace.ts
+// ../disassembler/src/runtime-trace.ts
 var import_node_crypto11, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2565, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
-  "packages/disassembler/src/runtime-trace.ts"() {
+  "../disassembler/src/runtime-trace.ts"() {
     "use strict";
     import_node_crypto11 = require("node:crypto");
     init_project_store();
@@ -8542,7 +8542,7 @@ var init_runtime_trace = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace-file.ts
+// ../disassembler/src/runtime-trace-file.ts
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
@@ -8722,7 +8722,7 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
 }
 var import_node_fs6, import_promises3, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
-  "packages/disassembler/src/runtime-trace-file.ts"() {
+  "../disassembler/src/runtime-trace-file.ts"() {
     "use strict";
     import_node_fs6 = require("node:fs");
     import_promises3 = require("node:fs/promises");
@@ -8770,10 +8770,10 @@ var init_runtime_trace_file = __esm({
   }
 });
 
-// packages/disassembler/src/source-export.ts
+// ../disassembler/src/source-export.ts
 var import_node_crypto12, fs9, import_node_path7, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
-  "packages/disassembler/src/source-export.ts"() {
+  "../disassembler/src/source-export.ts"() {
     "use strict";
     import_node_crypto12 = require("node:crypto");
     fs9 = __toESM(require("node:fs"), 1);
@@ -8879,10 +8879,10 @@ var init_source_export = __esm({
   }
 });
 
-// packages/disassembler/src/static-analysis.ts
+// ../disassembler/src/static-analysis.ts
 var hexAddress, contextKey, nodeIdFor, sortedUnique3, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
-  "packages/disassembler/src/static-analysis.ts"() {
+  "../disassembler/src/static-analysis.ts"() {
     "use strict";
     hexAddress = (address5) => address5.toString(16).padStart(6, "0");
     contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`).join("/");
@@ -9291,10 +9291,10 @@ var init_static_analysis = __esm({
   }
 });
 
-// packages/disassembler/src/capture-archives.ts
+// ../disassembler/src/capture-archives.ts
 var import_node_crypto13, import_node_fs7, import_node_path8, import_node_stream, import_promises4, captureFileIdentity, archiveDirectory, archiveImportedCapture, expireCaptureArchives;
 var init_capture_archives = __esm({
-  "packages/disassembler/src/capture-archives.ts"() {
+  "../disassembler/src/capture-archives.ts"() {
     "use strict";
     import_node_crypto13 = require("node:crypto");
     import_node_fs7 = __toESM(require("node:fs"), 1);
@@ -9430,10 +9430,10 @@ var init_capture_archives = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace-project.ts
+// ../disassembler/src/runtime-trace-project.ts
 var importRuntimeTraceIntoProject, importRuntimeTraceSourceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
-  "packages/disassembler/src/runtime-trace-project.ts"() {
+  "../disassembler/src/runtime-trace-project.ts"() {
     "use strict";
     init_capture_archives();
     init_project_store();
@@ -9610,10 +9610,10 @@ var init_runtime_trace_project = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-graphics.ts
+// ../disassembler/src/runtime-graphics.ts
 var mapVram, createRuntimeGraphicsAccumulator;
 var init_runtime_graphics = __esm({
-  "packages/disassembler/src/runtime-graphics.ts"() {
+  "../disassembler/src/runtime-graphics.ts"() {
     "use strict";
     mapVram = (address5, mapping) => {
       if (mapping === 0) return address5;
@@ -9815,10 +9815,10 @@ var init_runtime_graphics = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-transfer.ts
+// ../disassembler/src/runtime-transfer.ts
 var validateRuntimeTransferBoundary, createRuntimeTransferAccumulator;
 var init_runtime_transfer = __esm({
-  "packages/disassembler/src/runtime-transfer.ts"() {
+  "../disassembler/src/runtime-transfer.ts"() {
     "use strict";
     validateRuntimeTransferBoundary = (marker) => {
       const { configuration: c } = marker;
@@ -9975,10 +9975,10 @@ var init_runtime_transfer = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var import_node_crypto14, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
-  "packages/disassembler/src/runtime-bus-trace.ts"() {
+  "../disassembler/src/runtime-bus-trace.ts"() {
     "use strict";
     import_node_crypto14 = require("node:crypto");
     init_runtime_bus_types();
@@ -10327,10 +10327,10 @@ ${JSON.stringify(meta)}
   }
 });
 
-// packages/disassembler/src/runtime-bus-project.ts
+// ../disassembler/src/runtime-bus-project.ts
 var import_node_path9, importRuntimeBusTraceSourceIntoProject;
 var init_runtime_bus_project = __esm({
-  "packages/disassembler/src/runtime-bus-project.ts"() {
+  "../disassembler/src/runtime-bus-project.ts"() {
     "use strict";
     import_node_path9 = __toESM(require("node:path"), 1);
     init_capture_archives();
@@ -10479,7 +10479,7 @@ var init_runtime_bus_project = __esm({
   }
 });
 
-// packages/disassembler/src/index.ts
+// ../disassembler/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   ANALYSIS_PROJECT_FORMAT: () => ANALYSIS_PROJECT_FORMAT,
@@ -10606,7 +10606,7 @@ __export(src_exports, {
   writeAnalysisProject: () => writeAnalysisProject
 });
 var init_src = __esm({
-  "packages/disassembler/src/index.ts"() {
+  "../disassembler/src/index.ts"() {
     "use strict";
     init_asset_codec();
     init_asset_codecs();
@@ -10644,7 +10644,7 @@ var init_src = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
     throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
@@ -10659,15 +10659,15 @@ function normalizeAddressForWidth(address5, addressWidth) {
   return (address5 % modulus + modulus) % modulus;
 }
 var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+  "../core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
+  "../core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
@@ -10703,10 +10703,10 @@ var init_crc32 = __esm({
   }
 });
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 var import_node_crypto15, fs11, sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
+  "../core/src/addressToLine.ts"() {
     "use strict";
     import_node_crypto15 = require("node:crypto");
     fs11 = __toESM(require("node:fs"), 1);
@@ -10824,10 +10824,10 @@ var init_addressToLine = __esm({
   }
 });
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var ArchitectureRegistry;
 var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
+  "../core/src/architecture-registry.ts"() {
     "use strict";
     ArchitectureRegistry = class {
       definitions = /* @__PURE__ */ new Map();
@@ -10878,7 +10878,7 @@ var init_architecture_registry = __esm({
   }
 });
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -10930,12 +10930,12 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
+  "../core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 function createAssemblySourceLocation(file, line, span) {
   return {
     file,
@@ -10973,7 +10973,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
 }
 var AssemblyError;
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "../core/src/diagnostics.ts"() {
     "use strict";
     init_source_location();
     AssemblyError = class extends Error {
@@ -11002,10 +11002,10 @@ var init_diagnostics = __esm({
   }
 });
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
+  "../core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -11022,10 +11022,10 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/directives/data.ts
+// ../core/src/directives/data.ts
 var handleDataDirective, registerDataDirectives;
 var init_data = __esm({
-  "packages/core/src/directives/data.ts"() {
+  "../core/src/directives/data.ts"() {
     "use strict";
     handleDataDirective = ({ runtime }, words) => {
       runtime.handleDataDirective(words[0], words.slice(1));
@@ -11036,10 +11036,10 @@ var init_data = __esm({
   }
 });
 
-// packages/core/src/directives/fill-pad.ts
+// ../core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
 var init_fill_pad = __esm({
-  "packages/core/src/directives/fill-pad.ts"() {
+  "../core/src/directives/fill-pad.ts"() {
     "use strict";
     FILL_PATTERN_SIZE = 12;
     PATTERN_WIDTH = {
@@ -11138,10 +11138,10 @@ var init_fill_pad = __esm({
   }
 });
 
-// packages/core/src/directives/flow-control.ts
+// ../core/src/directives/flow-control.ts
 var handleRelativeLabel, registerFlowControlDirectives;
 var init_flow_control = __esm({
-  "packages/core/src/directives/flow-control.ts"() {
+  "../core/src/directives/flow-control.ts"() {
     "use strict";
     handleRelativeLabel = ({ session }, _words, raw) => {
       session.symbolScope.handleRelativeLabel(raw);
@@ -11152,7 +11152,7 @@ var init_flow_control = __esm({
   }
 });
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text2) {
   if (!node.span) {
     node.span = createSourceSpan(0, text2.length);
@@ -11538,7 +11538,7 @@ function isBinaryOperator(value) {
 }
 var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
 var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
+  "../core/src/ir/expression-node.ts"() {
     "use strict";
     init_source_location();
     binaryPrecedence = {
@@ -11795,10 +11795,10 @@ var init_expression_node = __esm({
   }
 });
 
-// packages/core/src/directives/include-source.ts
+// ../core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES, NUMERIC_INCBIN_TARGET, expandIncludeFilename, resolveIncludeTarget, splitIncbinArrow, parseIncbinFilenameAndRange, applyEofEnd, findTopLevelHyphen, assertIncbinMathParensBalanced, parseIncbinUnprefixedHex, parseDeprecatedHyphenIncbinRange, evaluateIncbinRange, assertIncbinBounds, handleIncbin, handleIncsrc, handleInclude, registerIncludeSourceDirectives;
 var init_include_source = __esm({
-  "packages/core/src/directives/include-source.ts"() {
+  "../core/src/directives/include-source.ts"() {
     "use strict";
     init_expression_node();
     IDENTITY_INCLUDE_DEFINES = {
@@ -12072,10 +12072,10 @@ var init_include_source = __esm({
   }
 });
 
-// packages/core/src/directives/layout.ts
+// ../core/src/directives/layout.ts
 var handlePushBase, handlePullBase, handleArch, registerGenericLayoutDirectives, registerLayoutDirectives;
 var init_layout = __esm({
-  "packages/core/src/directives/layout.ts"() {
+  "../core/src/directives/layout.ts"() {
     "use strict";
     handlePushBase = ({ session }) => {
       session.pushBaseStack.push(session.currentTargetAddress);
@@ -12152,7 +12152,7 @@ var init_layout = __esm({
   }
 });
 
-// packages/core/src/services/struct-initializer.ts
+// ../core/src/services/struct-initializer.ts
 function splitInitializerList(text2) {
   const entries3 = [];
   const stack = [];
@@ -12217,15 +12217,15 @@ function isOpenStructInitializer(text2) {
   return depth > 0;
 }
 var init_struct_initializer = __esm({
-  "packages/core/src/services/struct-initializer.ts"() {
+  "../core/src/services/struct-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
+  "../core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -12260,7 +12260,7 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 function isLabelIdentifierStart(char) {
   const code = char.charCodeAt(0);
   return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
@@ -12333,7 +12333,7 @@ function isBareLabelReference(input) {
 }
 var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
 var init_command_text_service = __esm({
-  "packages/core/src/services/command-text-service.ts"() {
+  "../core/src/services/command-text-service.ts"() {
     "use strict";
     init_struct_initializer();
     init_syntax_profile();
@@ -12528,10 +12528,10 @@ var init_command_text_service = __esm({
   }
 });
 
-// packages/core/src/directives/misc.ts
+// ../core/src/directives/misc.ts
 var handlePullTable, handlePushTable, stripLeadingKeyword, unwrapQuoted, formatPrintArgs, handleAssert, handleError, hex6, invalidTableLine, parseAsarTableLine, handleClearTable, handleTable, handleWarnpc, registerMiscDirectives;
 var init_misc = __esm({
-  "packages/core/src/directives/misc.ts"() {
+  "../core/src/directives/misc.ts"() {
     "use strict";
     init_command_text_service();
     handlePullTable = ({ session }) => {
@@ -12694,7 +12694,7 @@ var init_misc = __esm({
   }
 });
 
-// packages/core/src/directives/namespace.ts
+// ../core/src/directives/namespace.ts
 function enterNamespace(session, name) {
   if (session.namespaceNestingEnabled) {
     session.namespaceNestingPath.push(name);
@@ -12709,7 +12709,7 @@ function enterNamespace(session, name) {
 }
 var handlePushNamespace, handlePullNamespace, handleNamespace, registerNamespaceDirectives;
 var init_namespace = __esm({
-  "packages/core/src/directives/namespace.ts"() {
+  "../core/src/directives/namespace.ts"() {
     "use strict";
     handlePushNamespace = ({ session }) => {
       session.namespaceStack.push(session.currentNamespace);
@@ -12781,10 +12781,10 @@ var init_namespace = __esm({
   }
 });
 
-// packages/core/src/directives/struct-binary.ts
+// ../core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives;
 var init_struct_binary = __esm({
-  "packages/core/src/directives/struct-binary.ts"() {
+  "../core/src/directives/struct-binary.ts"() {
     "use strict";
     registerStructBinaryDirectives = (registry, context) => {
       registry.register("struct", context, ({ session }, words) => {
@@ -12806,10 +12806,10 @@ var init_struct_binary = __esm({
   }
 });
 
-// packages/core/src/directives/registry.ts
+// ../core/src/directives/registry.ts
 var DirectiveRegistry, createDirectiveRegistry;
 var init_registry = __esm({
-  "packages/core/src/directives/registry.ts"() {
+  "../core/src/directives/registry.ts"() {
     "use strict";
     init_directive_groups();
     init_data();
@@ -12934,7 +12934,7 @@ var init_registry = __esm({
   }
 });
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 function stripWrappingQuotes(filename) {
   if (filename.startsWith('"') && filename.endsWith('"') || filename.startsWith("'") && filename.endsWith("'") || filename.startsWith("`") && filename.endsWith("`")) {
     return filename.slice(1, -1);
@@ -12943,7 +12943,7 @@ function stripWrappingQuotes(filename) {
 }
 var import_node_fs8, import_node_path10, NodeAssemblyFileProvider;
 var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
+  "../core/src/file-provider.ts"() {
     "use strict";
     import_node_fs8 = __toESM(require("node:fs"), 1);
     import_node_path10 = __toESM(require("node:path"), 1);
@@ -13019,7 +13019,7 @@ var init_file_provider = __esm({
   }
 });
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
   metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
@@ -13055,13 +13055,13 @@ function measureInternalPhase(name, callback) {
 }
 var import_node_perf_hooks2, activeInstrumentation;
 var init_internal_instrumentation = __esm({
-  "packages/core/src/internal-instrumentation.ts"() {
+  "../core/src/internal-instrumentation.ts"() {
     "use strict";
     import_node_perf_hooks2 = require("node:perf_hooks");
   }
 });
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
   if (!collectSourceMetadata) {
     return {
@@ -13351,7 +13351,7 @@ function splitCommaArguments(input) {
 }
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
+  "../core/src/ir/normalized-command.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_source_location();
@@ -13361,7 +13361,7 @@ var init_normalized_command = __esm({
   }
 });
 
-// packages/core/src/mathcore.ts
+// ../core/src/mathcore.ts
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -13394,7 +13394,7 @@ function isWordChar(code) {
 }
 var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
 var init_mathcore = __esm({
-  "packages/core/src/mathcore.ts"() {
+  "../core/src/mathcore.ts"() {
     "use strict";
     init_diagnostics();
     init_internal_instrumentation();
@@ -14576,7 +14576,7 @@ var init_mathcore = __esm({
   }
 });
 
-// packages/core/src/operand-syntax.ts
+// ../core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -14598,15 +14598,15 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
+  "../core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/operand-resolver.ts
+// ../core/src/operand-resolver.ts
 var OperandResolver;
 var init_operand_resolver = __esm({
-  "packages/core/src/operand-resolver.ts"() {
+  "../core/src/operand-resolver.ts"() {
     "use strict";
     init_expression_node();
     init_operand_syntax();
@@ -15000,22 +15000,22 @@ var init_operand_resolver = __esm({
   }
 });
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
+  "../core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var PluginError;
 var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
+  "../core/src/plugin/diagnostics.ts"() {
     "use strict";
     PluginError = class extends Error {
       code;
@@ -15038,10 +15038,10 @@ var init_diagnostics2 = __esm({
   }
 });
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "packages/core/src/lsp/directive-catalog.ts"() {
+  "../core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group, operands) => ({
       keyword,
@@ -15221,10 +15221,10 @@ var init_directive_catalog = __esm({
   }
 });
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var canonical, toMap, targetInvalid, ResolvedToolingCatalog, AssemblerEnvironment;
 var init_environment = __esm({
-  "packages/core/src/plugin/environment.ts"() {
+  "../core/src/plugin/environment.ts"() {
     "use strict";
     init_directive_groups();
     init_directive_catalog();
@@ -15637,9 +15637,9 @@ var init_environment = __esm({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports2, module2) {
+  "../../node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -15669,9 +15669,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports2, module2) {
+  "../../node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -15679,9 +15679,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports2, module2) {
+  "../../node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -15767,9 +15767,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports2, module2) {
+  "../../node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -15786,9 +15786,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports2, module2) {
+  "../../node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -15811,9 +15811,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports2, module2) {
+  "../../node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -16103,9 +16103,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports2, module2) {
+  "../../node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -16125,9 +16125,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports2, module2) {
+  "../../node_modules/semver/functions/valid.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -16138,9 +16138,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports2, module2) {
+  "../../node_modules/semver/functions/clean.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -16151,9 +16151,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports2, module2) {
+  "../../node_modules/semver/functions/inc.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier2, identifierBase) => {
@@ -16175,9 +16175,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports2, module2) {
+  "../../node_modules/semver/functions/diff.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -16219,9 +16219,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports2, module2) {
+  "../../node_modules/semver/functions/major.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -16229,9 +16229,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports2, module2) {
+  "../../node_modules/semver/functions/minor.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -16239,9 +16239,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports2, module2) {
+  "../../node_modules/semver/functions/patch.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -16249,9 +16249,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports2, module2) {
+  "../../node_modules/semver/functions/prerelease.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -16262,9 +16262,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -16272,9 +16272,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/rcompare.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -16282,9 +16282,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -16292,9 +16292,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare-build.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -16306,9 +16306,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports2, module2) {
+  "../../node_modules/semver/functions/sort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -16316,9 +16316,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports2, module2) {
+  "../../node_modules/semver/functions/rsort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -16326,9 +16326,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -16336,9 +16336,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -16346,9 +16346,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -16356,9 +16356,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -16366,9 +16366,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -16376,9 +16376,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -16386,9 +16386,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports2, module2) {
+  "../../node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -16436,9 +16436,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports2, module2) {
+  "../../node_modules/semver/functions/coerce.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -16482,9 +16482,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports2, module2) {
+  "../../node_modules/semver/functions/truncate.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -16523,9 +16523,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports2, module2) {
+  "../../node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -16561,9 +16561,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports2, module2) {
+  "../../node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -16946,9 +16946,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports2, module2) {
+  "../../node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -17059,9 +17059,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports2, module2) {
+  "../../node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -17076,9 +17076,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -17086,9 +17086,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -17115,9 +17115,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -17144,9 +17144,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/min-version.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -17203,9 +17203,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/valid.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -17219,9 +17219,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/outside.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -17288,9 +17288,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/gtr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -17298,9 +17298,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/ltr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -17308,9 +17308,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/intersects.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -17322,9 +17322,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/simplify.js"(exports2, module2) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -17372,9 +17372,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/subset.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -17534,9 +17534,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports2, module2) {
+  "../../node_modules/semver/index.js"(exports2, module2) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -17631,10 +17631,10 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver, noopLogger, isLowerAlphaNumeric, isValidId, isValidContributionId, isRecord, isArray2, isEmptyOptions, deepFreeze, validateText, validateManifest, validatePlugin, validateContributionId, validateAliases, PluginManager;
 var init_manager = __esm({
-  "packages/core/src/plugin/manager.ts"() {
+  "../core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
     init_directive_groups();
@@ -18198,10 +18198,10 @@ var init_manager = __esm({
   }
 });
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var PluginSessionStateStore;
 var init_session_state = __esm({
-  "packages/core/src/plugin/session-state.ts"() {
+  "../core/src/plugin/session-state.ts"() {
     "use strict";
     init_diagnostics2();
     PluginSessionStateStore = class {
@@ -18334,9 +18334,9 @@ var init_session_state = __esm({
   }
 });
 
-// packages/core/src/plugin/index.ts
+// ../core/src/plugin/index.ts
 var init_plugin = __esm({
-  "packages/core/src/plugin/index.ts"() {
+  "../core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -18346,10 +18346,10 @@ var init_plugin = __esm({
   }
 });
 
-// packages/core/src/services/program-model-builder.ts
+// ../core/src/services/program-model-builder.ts
 var ProgramModelBuilder;
 var init_program_model_builder = __esm({
-  "packages/core/src/services/program-model-builder.ts"() {
+  "../core/src/services/program-model-builder.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -18660,10 +18660,10 @@ var init_program_model_builder = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService;
 var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
+  "../core/src/services/assembly-front-end-service.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -18791,10 +18791,10 @@ var init_assembly_front_end_service = __esm({
   }
 });
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var CommandLoweringService;
 var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
+  "../core/src/services/command-lowering-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     CommandLoweringService = class {
@@ -18968,10 +18968,10 @@ var init_command_lowering_service = __esm({
   }
 });
 
-// packages/core/src/services/define-engine.ts
+// ../core/src/services/define-engine.ts
 var DefineEngine;
 var init_define_engine = __esm({
-  "packages/core/src/services/define-engine.ts"() {
+  "../core/src/services/define-engine.ts"() {
     "use strict";
     init_normalized_command();
     DefineEngine = class {
@@ -19317,10 +19317,10 @@ var init_define_engine = __esm({
   }
 });
 
-// packages/core/src/services/directive-runtime-service.ts
+// ../core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService;
 var init_directive_runtime_service = __esm({
-  "packages/core/src/services/directive-runtime-service.ts"() {
+  "../core/src/services/directive-runtime-service.ts"() {
     "use strict";
     init_address_width();
     init_command_text_service();
@@ -19580,10 +19580,10 @@ var init_directive_runtime_service = __esm({
   }
 });
 
-// packages/core/src/services/front-end-command-service.ts
+// ../core/src/services/front-end-command-service.ts
 var FrontEndCommandService;
 var init_front_end_command_service = __esm({
-  "packages/core/src/services/front-end-command-service.ts"() {
+  "../core/src/services/front-end-command-service.ts"() {
     "use strict";
     init_expression_node();
     init_normalized_command();
@@ -19766,10 +19766,10 @@ var init_front_end_command_service = __esm({
   }
 });
 
-// packages/core/src/services/include-source-service.ts
+// ../core/src/services/include-source-service.ts
 var IncludeSourceService;
 var init_include_source_service = __esm({
-  "packages/core/src/services/include-source-service.ts"() {
+  "../core/src/services/include-source-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     IncludeSourceService = class {
@@ -19959,10 +19959,10 @@ var init_include_source_service = __esm({
   }
 });
 
-// packages/core/src/services/macro-engine.ts
+// ../core/src/services/macro-engine.ts
 var MacroEngine;
 var init_macro_engine = __esm({
-  "packages/core/src/services/macro-engine.ts"() {
+  "../core/src/services/macro-engine.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -20602,10 +20602,10 @@ var init_macro_engine = __esm({
   }
 });
 
-// packages/core/src/services/output-writer-service.ts
+// ../core/src/services/output-writer-service.ts
 var OutputWriterService;
 var init_output_writer_service = __esm({
-  "packages/core/src/services/output-writer-service.ts"() {
+  "../core/src/services/output-writer-service.ts"() {
     "use strict";
     init_address_width();
     OutputWriterService = class {
@@ -20797,10 +20797,10 @@ var init_output_writer_service = __esm({
   }
 });
 
-// packages/core/src/services/data-struct-engine.ts
+// ../core/src/services/data-struct-engine.ts
 var DataStructEngine;
 var init_data_struct_engine = __esm({
-  "packages/core/src/services/data-struct-engine.ts"() {
+  "../core/src/services/data-struct-engine.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -20962,10 +20962,10 @@ var init_data_struct_engine = __esm({
   }
 });
 
-// packages/core/src/services/struct-engine.ts
+// ../core/src/services/struct-engine.ts
 var StructEngine;
 var init_struct_engine = __esm({
-  "packages/core/src/services/struct-engine.ts"() {
+  "../core/src/services/struct-engine.ts"() {
     "use strict";
     init_address_width();
     init_normalized_command();
@@ -21282,7 +21282,7 @@ var init_struct_engine = __esm({
   }
 });
 
-// packages/core/src/services/struct-metadata.ts
+// ../core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count = definition.indexRange?.count ?? 1;
   const bytes = definition.size * count;
@@ -21301,12 +21301,12 @@ function getStructMetadata(definition, property) {
   }
 }
 var init_struct_metadata = __esm({
-  "packages/core/src/services/struct-metadata.ts"() {
+  "../core/src/services/struct-metadata.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/symbol-scope-service.ts
+// ../core/src/services/symbol-scope-service.ts
 function fileBasename(file) {
   const normalized = file.replaceAll("\\", "/");
   const slash = normalized.lastIndexOf("/");
@@ -21325,7 +21325,7 @@ function parseUnnamedLabelReference(token) {
 }
 var SymbolScopeService;
 var init_symbol_scope_service = __esm({
-  "packages/core/src/services/symbol-scope-service.ts"() {
+  "../core/src/services/symbol-scope-service.ts"() {
     "use strict";
     init_syntax_profile();
     SymbolScopeService = class {
@@ -22188,10 +22188,10 @@ var init_symbol_scope_service = __esm({
   }
 });
 
-// packages/core/src/assembler.ts
+// ../core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES, Assembler;
 var init_assembler = __esm({
-  "packages/core/src/assembler.ts"() {
+  "../core/src/assembler.ts"() {
     "use strict";
     init_address_width();
     init_addressToLine();
@@ -25401,10 +25401,10 @@ var init_assembler = __esm({
   }
 });
 
-// packages/core/src/architecture-types.ts
+// ../core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "packages/core/src/architecture-types.ts"() {
+  "../core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -25429,10 +25429,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "packages/core/src/decoder-types.ts"() {
+  "../core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -25473,10 +25473,10 @@ var init_decoder_types = __esm({
   }
 });
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var import_node_crypto16, import_node_path11, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2566, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+  "../core/src/debug-map.ts"() {
     "use strict";
     import_node_crypto16 = require("node:crypto");
     import_node_path11 = __toESM(require("node:path"), 1);
@@ -25560,65 +25560,65 @@ var init_debug_map = __esm({
   }
 });
 
-// packages/core/src/ir/assembly-tree.ts
+// ../core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "packages/core/src/ir/assembly-tree.ts"() {
+  "../core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/overlay-file-provider.ts
+// ../core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "packages/core/src/lsp/overlay-file-provider.ts"() {
+  "../core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/root-analysis-cache.ts
+// ../core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "packages/core/src/lsp/root-analysis-cache.ts"() {
+  "../core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/workspace-index.ts
+// ../core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "packages/core/src/lsp/workspace-index.ts"() {
+  "../core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/position-lookup.ts
+// ../core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "packages/core/src/lsp/position-lookup.ts"() {
+  "../core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/instruction-catalog.ts
+// ../core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "packages/core/src/lsp/instruction-catalog.ts"() {
+  "../core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/catalog.ts
+// ../core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "packages/core/src/lsp/catalog.ts"() {
+  "../core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/project-outline.ts
+// ../core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "packages/core/src/lsp/project-outline.ts"() {
+  "../core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/index.ts
+// ../core/src/lsp/index.ts
 var init_lsp = __esm({
-  "packages/core/src/lsp/index.ts"() {
+  "../core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -25631,9 +25631,9 @@ var init_lsp = __esm({
   }
 });
 
-// packages/core/src/index.ts
+// ../core/src/index.ts
 var init_src2 = __esm({
-  "packages/core/src/index.ts"() {
+  "../core/src/index.ts"() {
     "use strict";
     init_assembler();
     init_struct_metadata();
@@ -25661,7 +25661,7 @@ var init_src2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -25685,7 +25685,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
+  "../plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -25952,7 +25952,7 @@ var init_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction2) {
   if (instruction2.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as 65816.`);
@@ -26045,7 +26045,7 @@ function formatCpu65816Instruction(instruction2) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor, buildInstruction, Cpu65816Decoder, hex3;
 var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+  "../plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -26323,7 +26323,7 @@ var init_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -26347,7 +26347,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
+  "../plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -26587,7 +26587,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -26652,7 +26652,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
+  "../plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -27026,10 +27026,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -27040,7 +27040,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/operand-classifiers.ts
+// ../plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -27240,16 +27240,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src2();
   }
 });
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "packages/plugin-snes/src/architectures/65816.ts"() {
+  "../plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src2();
     init_instruction_catalog2();
@@ -29205,7 +29205,7 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 function formatSpc700Instruction(instruction2) {
   if (instruction2.architecture !== "snes.spc700") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as SPC700.`);
@@ -29215,7 +29215,7 @@ function formatSpc700Instruction(instruction2) {
 }
 var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder, hex4, formatOperands;
 var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width2) => {
@@ -29604,10 +29604,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/split-operands.ts
+// ../plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "packages/plugin-snes/src/architectures/split-operands.ts"() {
+  "../plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text2) => text2 ? [text2] : [];
     splitCommaOperands = (text2) => text2 ? text2.split(",").map((operand) => operand.trim()) : [];
@@ -29631,7 +29631,7 @@ var init_split_operands = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700.ts
+// ../plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -29728,7 +29728,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "packages/plugin-snes/src/architectures/spc700.ts"() {
+  "../plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src2();
     init_instruction_catalog2();
@@ -31628,7 +31628,7 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 function formatSuperFxInstruction(instruction2) {
   if (instruction2.architecture !== "snes.superfx") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as SuperFX.`);
@@ -31677,7 +31677,7 @@ function formatSuperFxInstruction(instruction2) {
 }
 var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex5;
 var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -31965,10 +31965,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "packages/plugin-snes/src/asar/compatibility.ts"() {
+  "../plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -32044,10 +32044,10 @@ var init_compatibility = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx.ts
+// ../plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "packages/plugin-snes/src/architectures/superfx.ts"() {
+  "../plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src2();
     init_compatibility();
@@ -32832,7 +32832,7 @@ var init_superfx = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -32916,13 +32916,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
+  "../plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -32978,13 +32978,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "packages/plugin-snes/src/directives/freespace.ts"() {
+  "../plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -33042,7 +33042,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout2 = __esm({
-  "packages/plugin-snes/src/directives/layout.ts"() {
+  "../plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -33058,10 +33058,10 @@ var init_layout2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "packages/plugin-snes/src/services/spc-runtime.ts"() {
+  "../plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -33186,17 +33186,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "packages/plugin-snes/src/directives/spc.ts"() {
+  "../plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -33207,7 +33207,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "packages/plugin-snes/src/session-state.ts"() {
+  "../plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -33216,10 +33216,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "packages/plugin-snes/src/target/address-space.ts"() {
+  "../plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -33386,10 +33386,10 @@ var init_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
+  "../plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -34011,10 +34011,10 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var unknown, known, joinValue, sameEntry, joinStack, normalize, unknownCpu65816State, resetCpu65816State, nativeVectorCpu65816State, emulationVectorCpu65816State, joinCpu65816States, flagOverride, applyCpu65816StateOverride, enterCpu65816Address, decoderFlag, cpu65816DecodeState, adjustStackPointer, push, pull, pushedBytes, pulledBytes, loseStackPrecision, sourceValue, CARRY_UNKNOWN_MNEMONICS, transferCpu65816State, cpu65816StateKey;
 var init_state = __esm({
-  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
+  "../plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
     unknown = () => ({ kind: "unknown" });
     known = (value) => ({ kind: "known", value });
@@ -34260,10 +34260,10 @@ var init_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE, SNES_CPU_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, createSnesAddressContext, mirrorsForOffset, identifySnesFileOffset, identifySnesCpuAddress;
 var init_address_identities = __esm({
-  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
+  "../plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     init_address_space();
     SNES_FILE_ADDRESS_SPACE = "rom.file";
@@ -34342,10 +34342,10 @@ var init_address_identities = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTER_ALIASES, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, identifySnesHardwareRegister, hex7, SNES_HARDWARE_DEFINES_SOURCE, snesHardwareDefineRecords, snesHardwareDefines, CONTROLLER_MASKS, INTERRUPT_STATUS_MASKS, renderConstants, renderSnesHardwareDefines;
 var init_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -34820,10 +34820,10 @@ var init_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS, SNES_CPU_VECTOR_DEFINITIONS, HEADER_OFFSETS, snesInternalHeaderOffset, asciiField, sizeBytes, mapModeName, regionName, chipsetDescription, parseSnesInternalRomHeader, HEADER_SPECS, defaultAddressContext, scoreCandidate, detectSnesRom;
 var init_rom_header = __esm({
-  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
+  "../plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
     init_address_space();
     SNES_MAPPERS = [
@@ -35210,10 +35210,10 @@ var init_rom_header = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var DATA_CLASSIFICATIONS, EVIDENCE_RANK, vectorState, readVector, stateOverrideFor, controlTargetKind, controlsFor2, isIndexedOrIndirect, unresolvedAddressExplanation, mappedAddressExplanation, mappedRomOffset, effectiveAddressesFor, knownBoolean, knownNumber, annotationState2, recordsFor, annotationsFor, analyzeSnes65816;
 var init_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
     init_src2();
     init_src();
@@ -35726,10 +35726,10 @@ var init_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 var import_node_crypto17, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
 var init_dizraw_import = __esm({
-  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
     import_node_crypto17 = require("node:crypto");
     SUBSTITUTIONS = [
@@ -36105,10 +36105,10 @@ var init_dizraw_import = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+// ../plugin-snes/src/disassembler/mesen-runtime.ts
 var import_node_crypto18, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2567, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
 var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     import_node_crypto18 = require("node:crypto");
     init_src2();
@@ -36736,10 +36736,10 @@ var init_mesen_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var import_node_crypto19, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
 var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     import_node_crypto19 = require("node:crypto");
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
@@ -36821,10 +36821,10 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
+// ../plugin-snes/src/disassembler/mesen-labels.ts
 var import_node_crypto20, LABEL_PATTERN, MEMORY_TYPES, sha2568, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
 var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
     import_node_crypto20 = require("node:crypto");
     init_address_identities();
@@ -37123,10 +37123,10 @@ var init_mesen_labels = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
+// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
 var assertInteger, readLittleEndian3, decodeFrameworkRelativePointerTable, deriveFrameworkAssetExtractionRanges, decodeFrameworkSamplePointers, deriveFrameworkSampleExtractionRanges;
 var init_framework_asset_helpers = __esm({
-  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
     assertInteger = (value, name) => {
       if (!Number.isSafeInteger(value) || value < 0) {
@@ -37256,10 +37256,10 @@ var init_framework_asset_helpers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/code-preservation.ts
+// ../plugin-snes/src/disassembler/code-preservation.ts
 var union, lostCodeRanges;
 var init_code_preservation = __esm({
-  "packages/plugin-snes/src/disassembler/code-preservation.ts"() {
+  "../plugin-snes/src/disassembler/code-preservation.ts"() {
     "use strict";
     union = (ranges) => {
       const merged = [];
@@ -37295,10 +37295,10 @@ var init_code_preservation = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 var fs13, import_node_path12, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
-  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
+  "../plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
     fs13 = __toESM(require("node:fs"), 1);
     import_node_path12 = __toESM(require("node:path"), 1);
@@ -37519,7 +37519,7 @@ var init_ram_map = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-expressions.ts
+// ../plugin-snes/src/disassembler/struct-expressions.ts
 function describeSnesStructAccess(binding, address5, width2) {
   const { structure } = binding;
   if (address5 < binding.address || address5 + width2 > binding.address + binding.count * structure.size)
@@ -37561,7 +37561,7 @@ function describeSnesStructAccess(binding, address5, width2) {
 }
 var SnesStructExpressionResolver;
 var init_struct_expressions = __esm({
-  "packages/plugin-snes/src/disassembler/struct-expressions.ts"() {
+  "../plugin-snes/src/disassembler/struct-expressions.ts"() {
     "use strict";
     init_src2();
     SnesStructExpressionResolver = class {
@@ -37746,10 +37746,10 @@ var init_struct_expressions = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
+// ../plugin-snes/src/disassembler/struct-instruction-uses.ts
 var record2, integer2, text, hex10, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, renderSnesStructUseComments;
 var init_struct_instruction_uses = __esm({
-  "packages/plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
+  "../plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
     "use strict";
     init_struct_expressions();
     record2 = (value) => {
@@ -37884,10 +37884,10 @@ var init_struct_instruction_uses = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-map.ts
+// ../plugin-snes/src/disassembler/struct-map.ts
 var fs14, import_node_path13, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer3, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
-  "packages/plugin-snes/src/disassembler/struct-map.ts"() {
+  "../plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
     fs14 = __toESM(require("node:fs"), 1);
     import_node_path13 = __toESM(require("node:path"), 1);
@@ -38182,10 +38182,10 @@ var init_struct_map = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 var fs15, import_node_path14, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
-  "packages/plugin-snes/src/disassembler/source-export.ts"() {
+  "../plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
     fs15 = __toESM(require("node:fs"), 1);
     import_node_path14 = __toESM(require("node:path"), 1);
@@ -39168,10 +39168,10 @@ var init_source_export2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress, identifySpc700HardwareRegister;
 var init_spc700_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -39204,10 +39204,10 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-state.ts
+// ../plugin-snes/src/disassembler/spc700-state.ts
 var unknown2, known3, unknownSpc700State, applySpc700StateOverride, joinDirectPage, sameStackEntry, joinStack2, joinSpc700States, spc700StateKey, spc700DecodeState, push2, pop, transferSpc700State;
 var init_spc700_state = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
+  "../plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
     unknown2 = () => ({ kind: "unknown" });
     known3 = (value) => ({ kind: "known", value });
@@ -39278,10 +39278,10 @@ var init_spc700_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-analysis.ts
+// ../plugin-snes/src/disassembler/spc700-analysis.ts
 var DATA_CLASSIFICATIONS2, EVIDENCE_RANK2, intervalContains, stateOverrideFor2, readWord, controlTargetKind2, controlsFor3, isIndexedOrIndirect2, effectiveAddressesFor2, annotationState3, recordsFor2, annotationsFor2, analyzeSpc700Aram;
 var init_spc700_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
     init_src2();
     init_src();
@@ -39701,10 +39701,10 @@ var init_spc700_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-upload.ts
+// ../plugin-snes/src/disassembler/spc700-upload.ts
 var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex13, materializeSpc700UploadBlock, spc700UploadProjectRecords;
 var init_spc700_upload = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
     init_address_identities();
     init_spc700_address_space();
@@ -39895,10 +39895,10 @@ var init_spc700_upload = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-state.ts
+// ../plugin-snes/src/disassembler/superfx-state.ts
 var known4, unknown3, initialSuperFxState, joinValue2, joinSuperFxStates, decodeValue, superFxDecodeState, enterSuperFxAddress, detailNumber, transferSuperFxState, superFxStateKey;
 var init_superfx_state = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
+  "../plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
     known4 = (value) => ({ kind: "known", value });
     unknown3 = () => ({ kind: "unknown" });
@@ -39966,10 +39966,10 @@ var init_superfx_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/processor-source-export.ts
+// ../plugin-snes/src/disassembler/processor-source-export.ts
 var hex14, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
 var init_processor_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
     init_src2();
     init_spc700_decoder();
@@ -40062,10 +40062,10 @@ var init_processor_source_export = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
+// ../plugin-snes/src/disassembler/function-heuristics.ts
 var import_node_crypto21, isArray3, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     import_node_crypto21 = require("node:crypto");
     init_src();
@@ -40537,10 +40537,10 @@ var init_function_heuristics = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 var import_node_crypto22, runtimeDecodeState, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+  "../plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
     import_node_crypto22 = require("node:crypto");
     init_src2();
@@ -40751,10 +40751,10 @@ var init_runtime_code = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var import_node_crypto23, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
 var init_superfx_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     import_node_crypto23 = require("node:crypto");
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
@@ -40811,10 +40811,10 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var fs16, import_node_path15, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace;
 var init_project_initializer = __esm({
-  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
+  "../plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
     fs16 = __toESM(require("node:fs"), 1);
     import_node_path15 = __toESM(require("node:path"), 1);
@@ -41447,10 +41447,10 @@ var init_project_initializer = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-analysis.ts
+// ../plugin-snes/src/disassembler/superfx-analysis.ts
 var DATA_CLASSIFICATIONS3, contains, applyEntryState, controlsFor4, effectiveAddressesFor3, recordsFor3, annotationsFor3, analyzeSuperFxRom;
 var init_superfx_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
     init_src2();
     init_src();
@@ -41738,10 +41738,10 @@ var init_superfx_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
+// ../plugin-snes/src/assets/common.ts
 var objectValue2, optionsFor2, integerOption2, stringOption2, readBytes, resolveCount, resolveGrid, decodedObject2, arrayValue, integerValue, defaultPath, jsonFile2;
 var init_common2 = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
+  "../plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue2 = (value, label) => {
       if (value === void 0) return {};
@@ -41838,10 +41838,10 @@ var init_common2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/brr.ts
+// ../plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
+  "../plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common2();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -41954,10 +41954,10 @@ var init_brr = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/palette.ts
+// ../plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
+  "../plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common2();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -42015,10 +42015,10 @@ var init_palette = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tilemap.ts
+// ../plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
+  "../plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common2();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -42150,10 +42150,10 @@ var init_tilemap = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tiles.ts
+// ../plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
+  "../plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common2();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -42320,10 +42320,10 @@ var init_tiles = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/previews.ts
+// ../plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue3, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer, registerSnesAssetPreviewRenderers;
 var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
+  "../plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -42456,10 +42456,10 @@ var init_previews = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/index.ts
+// ../plugin-snes/src/assets/index.ts
 var snesAssetCodecs, registerSnesAssetCodecs;
 var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
+  "../plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -42490,7 +42490,7 @@ var init_assets = __esm({
   }
 });
 
-// packages/plugin-snes/src/index.ts
+// ../plugin-snes/src/index.ts
 var src_exports2 = {};
 __export(src_exports2, {
   ASAR_COMPAT_NO_OP_DIRECTIVES: () => ASAR_COMPAT_NO_OP_DIRECTIVES,
@@ -42673,7 +42673,7 @@ async function createSnesAssemblerEnvironment() {
 }
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin, src_default;
 var init_src3 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+  "../plugin-snes/src/index.ts"() {
     "use strict";
     init_src2();
     init_decoder();
@@ -43168,19 +43168,19 @@ var init_src3 = __esm({
   }
 });
 
-// packages/debug-adapter/src/contracts.ts
+// ../debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION;
 var init_contracts2 = __esm({
-  "packages/debug-adapter/src/contracts.ts"() {
+  "../debug-adapter/src/contracts.ts"() {
     "use strict";
     DEBUG_BACKEND_PROTOCOL_VERSION = 1;
   }
 });
 
-// packages/debug-adapter/src/conformance.ts
+// ../debug-adapter/src/conformance.ts
 var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
 var init_conformance = __esm({
-  "packages/debug-adapter/src/conformance.ts"() {
+  "../debug-adapter/src/conformance.ts"() {
     "use strict";
     init_contracts2();
     DEBUG_BACKEND_CONFORMANCE_VERSION = 1;
@@ -43461,10 +43461,10 @@ var init_conformance = __esm({
   }
 });
 
-// packages/debug-adapter/src/debug-expression.ts
+// ../debug-adapter/src/debug-expression.ts
 var MAX_EXPRESSION_CHARACTERS, MAX_EXPRESSION_DEPTH, MAX_SHIFT, MAX_EXPONENT, MAX_MAGNITUDE, binaryPrecedence2, checked, parseDigits, digitPattern, tokenize, DebugExpressionParser, evaluateDebugExpression, formatDebugExpressionValue;
 var init_debug_expression = __esm({
-  "packages/debug-adapter/src/debug-expression.ts"() {
+  "../debug-adapter/src/debug-expression.ts"() {
     "use strict";
     MAX_EXPRESSION_CHARACTERS = 256;
     MAX_EXPRESSION_DEPTH = 32;
@@ -43719,7 +43719,7 @@ var init_debug_expression = __esm({
   }
 });
 
-// packages/debug-adapter/src/capture-v2.ts
+// ../debug-adapter/src/capture-v2.ts
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
@@ -43806,7 +43806,7 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
 }
 var maxU64, captureScope, captureU64, captureSession, validateCaptureRequest, validateCaptureCapabilities, validateCapturePosition, crcTable, crcSlices, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "packages/debug-adapter/src/capture-v2.ts"() {
+  "../debug-adapter/src/capture-v2.ts"() {
     "use strict";
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
@@ -44123,10 +44123,10 @@ var init_capture_v2 = __esm({
   }
 });
 
-// packages/debug-adapter/src/dap.ts
+// ../debug-adapter/src/dap.ts
 var import_node_async_hooks, import_node_path16, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
-  "packages/debug-adapter/src/dap.ts"() {
+  "../debug-adapter/src/dap.ts"() {
     "use strict";
     import_node_async_hooks = require("node:async_hooks");
     import_node_path16 = __toESM(require("node:path"), 1);
@@ -45101,10 +45101,10 @@ var init_dap = __esm({
   }
 });
 
-// packages/debug-adapter/src/mock-script.ts
+// ../debug-adapter/src/mock-script.ts
 var addressFor, instructionFor, createDebugMapReplayScript;
 var init_mock_script = __esm({
-  "packages/debug-adapter/src/mock-script.ts"() {
+  "../debug-adapter/src/mock-script.ts"() {
     "use strict";
     init_debug_map();
     addressFor = (range) => ({
@@ -45182,7 +45182,7 @@ var init_mock_script = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-protocol.ts
+// ../debug-adapter/src/sidecar-protocol.ts
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value))
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
@@ -45221,7 +45221,7 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
 }
 var import_node_crypto24, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord2, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
-  "packages/debug-adapter/src/sidecar-protocol.ts"() {
+  "../debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
     import_node_crypto24 = require("node:crypto");
     DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
@@ -45404,10 +45404,10 @@ var init_sidecar_protocol = __esm({
   }
 });
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var import_node_child_process, DEBUG_SIDECAR_SESSION_ENV, positiveInteger2, NodeStdioSidecarTransport;
 var init_node_stdio_transport = __esm({
-  "packages/debug-adapter/src/node-stdio-transport.ts"() {
+  "../debug-adapter/src/node-stdio-transport.ts"() {
     "use strict";
     import_node_child_process = require("node:child_process");
     init_sidecar_protocol();
@@ -45568,10 +45568,10 @@ var init_node_stdio_transport = __esm({
   }
 });
 
-// packages/debug-adapter/src/trace-buffer.ts
+// ../debug-adapter/src/trace-buffer.ts
 var positiveInteger3, identity, DebugTraceBuffer;
 var init_trace_buffer = __esm({
-  "packages/debug-adapter/src/trace-buffer.ts"() {
+  "../debug-adapter/src/trace-buffer.ts"() {
     "use strict";
     positiveInteger3 = (value, context) => {
       if (!Number.isSafeInteger(value) || value <= 0)
@@ -45665,10 +45665,10 @@ var init_trace_buffer = __esm({
   }
 });
 
-// packages/debug-adapter/src/replay-backend.ts
+// ../debug-adapter/src/replay-backend.ts
 var REPLAY_TRACE_BUFFER_EVENTS, REPLAY_TRACE_BATCH_EVENTS, REPLAY_STEP_KINDS, replayArchitectureCapabilities, addressKey, addressesEqual, assertCount, ReplayDebugBackend;
 var init_replay_backend = __esm({
-  "packages/debug-adapter/src/replay-backend.ts"() {
+  "../debug-adapter/src/replay-backend.ts"() {
     "use strict";
     init_contracts2();
     init_trace_buffer();
@@ -46031,10 +46031,10 @@ var init_replay_backend = __esm({
   }
 });
 
-// packages/debug-adapter/src/trace-detail-validation.ts
+// ../debug-adapter/src/trace-detail-validation.ts
 var isArray4, validateDebugTraceDetails;
 var init_trace_detail_validation = __esm({
-  "packages/debug-adapter/src/trace-detail-validation.ts"() {
+  "../debug-adapter/src/trace-detail-validation.ts"() {
     "use strict";
     isArray4 = (value) => Array.isArray(value);
     validateDebugTraceDetails = (value, count) => {
@@ -46061,10 +46061,10 @@ var init_trace_detail_validation = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-backend.ts
+// ../debug-adapter/src/sidecar-backend.ts
 var stopReasons, stepKinds, record3, array, string2, boolean, integer4, positiveInteger4, address3, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register4, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
 var init_sidecar_backend = __esm({
-  "packages/debug-adapter/src/sidecar-backend.ts"() {
+  "../debug-adapter/src/sidecar-backend.ts"() {
     "use strict";
     init_contracts2();
     init_trace_detail_validation();
@@ -46642,10 +46642,10 @@ var init_sidecar_backend = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-client.ts
+// ../debug-adapter/src/sidecar-client.ts
 var asError, DebugSidecarClient;
 var init_sidecar_client = __esm({
-  "packages/debug-adapter/src/sidecar-client.ts"() {
+  "../debug-adapter/src/sidecar-client.ts"() {
     "use strict";
     init_sidecar_protocol();
     asError = (error) => error instanceof Error ? error : new Error(String(error));
@@ -46813,10 +46813,10 @@ var init_sidecar_client = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-server.ts
+// ../debug-adapter/src/sidecar-server.ts
 var stepKinds2, record4, integer5, positiveInteger5, string3, optionalPositiveInteger, boolean2, address4, addresses2, asError2, DebugSidecarServer;
 var init_sidecar_server = __esm({
-  "packages/debug-adapter/src/sidecar-server.ts"() {
+  "../debug-adapter/src/sidecar-server.ts"() {
     "use strict";
     init_contracts2();
     init_sidecar_protocol();
@@ -47123,10 +47123,10 @@ var init_sidecar_server = __esm({
   }
 });
 
-// packages/debug-adapter/src/capture-file-reader.ts
+// ../debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "packages/debug-adapter/src/capture-file-reader.ts"() {
+  "../debug-adapter/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -47177,10 +47177,10 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var import_promises5, import_promises6, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
 var init_capture_file = __esm({
-  "packages/debug-adapter/src/capture-file.ts"() {
+  "../debug-adapter/src/capture-file.ts"() {
     "use strict";
     import_promises5 = require("node:fs/promises");
     import_promises6 = require("node:timers/promises");
@@ -48013,7 +48013,7 @@ var init_capture_file = __esm({
   }
 });
 
-// packages/debug-adapter/src/index.ts
+// ../debug-adapter/src/index.ts
 var src_exports3 = {};
 __export(src_exports3, {
   DEBUG_BACKEND_CONFORMANCE_SCENARIOS: () => DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
@@ -48063,7 +48063,7 @@ __export(src_exports3, {
   validateCaptureRequest: () => validateCaptureRequest
 });
 var init_src4 = __esm({
-  "packages/debug-adapter/src/index.ts"() {
+  "../debug-adapter/src/index.ts"() {
     "use strict";
     init_conformance();
     init_contracts2();
@@ -48082,13 +48082,13 @@ var init_src4 = __esm({
   }
 });
 
-// packages/vscode-extension/src/disassembly-maintenance-jobs.ts
+// src/disassembly-maintenance-jobs.ts
 var path17 = __toESM(require("node:path"));
 var import_node_perf_hooks3 = require("node:perf_hooks");
 init_src();
 init_src3();
 
-// packages/vscode-extension/src/disassembly-maintenance-data.ts
+// src/disassembly-maintenance-data.ts
 var MAX_RUNTIME_ENTRY_SEEDS = 1e5;
 var normalizedSeeds = (value, snapshot) => {
   if (!value?.length) return [];
@@ -48114,7 +48114,7 @@ var normalizedSeeds = (value, snapshot) => {
   }));
 };
 
-// packages/vscode-extension/src/runtime-bus-source.ts
+// src/runtime-bus-source.ts
 var createEditorRuntimeBusSource = async (file, options = {}) => {
   const { canonicalJson: canonicalJson2, DEFAULT_RUNTIME_TRACE_MAX_BYTES: DEFAULT_RUNTIME_TRACE_MAX_BYTES2, validateRuntimeBusTraceMetadata: validateRuntimeBusTraceMetadata2 } = await Promise.resolve().then(() => (init_src(), src_exports));
   const { readCaptureFileHeader: readCaptureFileHeader2, recoverCaptureFile: recoverCaptureFile2 } = await Promise.resolve().then(() => (init_src4(), src_exports3));
@@ -48148,7 +48148,7 @@ var createEditorRuntimeBusSource = async (file, options = {}) => {
   };
 };
 
-// packages/vscode-extension/src/runtime-trace-source.ts
+// src/runtime-trace-source.ts
 var import_promises7 = require("node:fs/promises");
 var createEditorRuntimeTraceSource = async (file, options = {}) => {
   const {
@@ -48212,7 +48212,7 @@ var createEditorRuntimeTraceSource = async (file, options = {}) => {
   };
 };
 
-// packages/vscode-extension/src/disassembly-maintenance-jobs.ts
+// src/disassembly-maintenance-jobs.ts
 var maintenanceSnapshot = (target) => {
   const store = openAnalysisProjectStore(target.projectDirectory);
   try {
@@ -48397,7 +48397,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
   throw new Error("Unknown disassembly maintenance operation.");
 };
 
-// packages/vscode-extension/src/disassembly-maintenance-process.ts
+// src/disassembly-maintenance-process.ts
 var cancellation = new AbortController();
 var started = false;
 process.on("disconnect", () => process.exit(0));

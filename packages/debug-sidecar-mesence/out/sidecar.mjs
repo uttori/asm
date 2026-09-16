@@ -12909,7 +12909,6 @@ var init_src2 = __esm({
 // packages/debug-sidecar-mesence/src/sidecar.ts
 import { readFile } from "node:fs/promises";
 import path2 from "node:path";
-import { fileURLToPath } from "node:url";
 
 // packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
@@ -15113,8 +15112,7 @@ var runMesenSidecar = async (arguments_, environment = process.env) => {
     });
   }
 };
-var invokedDirectly = process.argv[1] !== void 0 && path2.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-if (invokedDirectly) {
+if (import.meta.main) {
   const arguments_ = process.argv.slice(2);
   if (arguments_.includes("--help")) {
     await write(process.stdout, usage);

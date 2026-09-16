@@ -32,10 +32,6 @@ var __commonJS = (cb, mod) => function __require2() {
     throw mod = 0, e;
   }
 };
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -52,9 +48,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
     throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
@@ -69,15 +64,15 @@ function normalizeAddressForWidth(address3, addressWidth) {
   return (address3 % modulus + modulus) % modulus;
 }
 var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+  "../core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
+  "../core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
@@ -113,12 +108,12 @@ var init_crc32 = __esm({
   }
 });
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 var sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
+  "../core/src/addressToLine.ts"() {
     "use strict";
     init_crc32();
     sourceIdentity = (filename) => {
@@ -234,10 +229,10 @@ var init_addressToLine = __esm({
   }
 });
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var ArchitectureRegistry;
 var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
+  "../core/src/architecture-registry.ts"() {
     "use strict";
     ArchitectureRegistry = class {
       definitions = /* @__PURE__ */ new Map();
@@ -288,7 +283,7 @@ var init_architecture_registry = __esm({
   }
 });
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -340,12 +335,12 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
+  "../core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 function createAssemblySourceLocation(file, line, span) {
   return {
     file,
@@ -383,7 +378,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
 }
 var AssemblyError;
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "../core/src/diagnostics.ts"() {
     "use strict";
     init_source_location();
     AssemblyError = class extends Error {
@@ -412,10 +407,10 @@ var init_diagnostics = __esm({
   }
 });
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
+  "../core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -432,10 +427,10 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/directives/data.ts
+// ../core/src/directives/data.ts
 var handleDataDirective, registerDataDirectives;
 var init_data = __esm({
-  "packages/core/src/directives/data.ts"() {
+  "../core/src/directives/data.ts"() {
     "use strict";
     handleDataDirective = ({ runtime }, words) => {
       runtime.handleDataDirective(words[0], words.slice(1));
@@ -446,10 +441,10 @@ var init_data = __esm({
   }
 });
 
-// packages/core/src/directives/fill-pad.ts
+// ../core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
 var init_fill_pad = __esm({
-  "packages/core/src/directives/fill-pad.ts"() {
+  "../core/src/directives/fill-pad.ts"() {
     "use strict";
     FILL_PATTERN_SIZE = 12;
     PATTERN_WIDTH = {
@@ -548,10 +543,10 @@ var init_fill_pad = __esm({
   }
 });
 
-// packages/core/src/directives/flow-control.ts
+// ../core/src/directives/flow-control.ts
 var handleRelativeLabel, registerFlowControlDirectives;
 var init_flow_control = __esm({
-  "packages/core/src/directives/flow-control.ts"() {
+  "../core/src/directives/flow-control.ts"() {
     "use strict";
     handleRelativeLabel = ({ session }, _words, raw) => {
       session.symbolScope.handleRelativeLabel(raw);
@@ -562,7 +557,7 @@ var init_flow_control = __esm({
   }
 });
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text) {
   if (!node.span) {
     node.span = createSourceSpan(0, text.length);
@@ -948,7 +943,7 @@ function isBinaryOperator(value) {
 }
 var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
 var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
+  "../core/src/ir/expression-node.ts"() {
     "use strict";
     init_source_location();
     binaryPrecedence = {
@@ -1205,10 +1200,10 @@ var init_expression_node = __esm({
   }
 });
 
-// packages/core/src/directives/include-source.ts
+// ../core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES, NUMERIC_INCBIN_TARGET, expandIncludeFilename, resolveIncludeTarget, splitIncbinArrow, parseIncbinFilenameAndRange, applyEofEnd, findTopLevelHyphen, assertIncbinMathParensBalanced, parseIncbinUnprefixedHex, parseDeprecatedHyphenIncbinRange, evaluateIncbinRange, assertIncbinBounds, handleIncbin, handleIncsrc, handleInclude, registerIncludeSourceDirectives;
 var init_include_source = __esm({
-  "packages/core/src/directives/include-source.ts"() {
+  "../core/src/directives/include-source.ts"() {
     "use strict";
     init_expression_node();
     IDENTITY_INCLUDE_DEFINES = {
@@ -1482,10 +1477,10 @@ var init_include_source = __esm({
   }
 });
 
-// packages/core/src/directives/layout.ts
+// ../core/src/directives/layout.ts
 var handlePushBase, handlePullBase, handleArch, registerGenericLayoutDirectives, registerLayoutDirectives;
 var init_layout = __esm({
-  "packages/core/src/directives/layout.ts"() {
+  "../core/src/directives/layout.ts"() {
     "use strict";
     handlePushBase = ({ session }) => {
       session.pushBaseStack.push(session.currentTargetAddress);
@@ -1562,7 +1557,7 @@ var init_layout = __esm({
   }
 });
 
-// packages/core/src/services/struct-initializer.ts
+// ../core/src/services/struct-initializer.ts
 function splitInitializerList(text) {
   const entries3 = [];
   const stack = [];
@@ -1627,15 +1622,15 @@ function isOpenStructInitializer(text) {
   return depth > 0;
 }
 var init_struct_initializer = __esm({
-  "packages/core/src/services/struct-initializer.ts"() {
+  "../core/src/services/struct-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
+  "../core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -1670,7 +1665,7 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 function isLabelIdentifierStart(char) {
   const code = char.charCodeAt(0);
   return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
@@ -1743,7 +1738,7 @@ function isBareLabelReference(input) {
 }
 var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
 var init_command_text_service = __esm({
-  "packages/core/src/services/command-text-service.ts"() {
+  "../core/src/services/command-text-service.ts"() {
     "use strict";
     init_struct_initializer();
     init_syntax_profile();
@@ -1938,10 +1933,10 @@ var init_command_text_service = __esm({
   }
 });
 
-// packages/core/src/directives/misc.ts
+// ../core/src/directives/misc.ts
 var handlePullTable, handlePushTable, stripLeadingKeyword, unwrapQuoted, formatPrintArgs, handleAssert, handleError, hex6, invalidTableLine, parseAsarTableLine, handleClearTable, handleTable, handleWarnpc, registerMiscDirectives;
 var init_misc = __esm({
-  "packages/core/src/directives/misc.ts"() {
+  "../core/src/directives/misc.ts"() {
     "use strict";
     init_command_text_service();
     handlePullTable = ({ session }) => {
@@ -2104,7 +2099,7 @@ var init_misc = __esm({
   }
 });
 
-// packages/core/src/directives/namespace.ts
+// ../core/src/directives/namespace.ts
 function enterNamespace(session, name) {
   if (session.namespaceNestingEnabled) {
     session.namespaceNestingPath.push(name);
@@ -2119,7 +2114,7 @@ function enterNamespace(session, name) {
 }
 var handlePushNamespace, handlePullNamespace, handleNamespace, registerNamespaceDirectives;
 var init_namespace = __esm({
-  "packages/core/src/directives/namespace.ts"() {
+  "../core/src/directives/namespace.ts"() {
     "use strict";
     handlePushNamespace = ({ session }) => {
       session.namespaceStack.push(session.currentNamespace);
@@ -2191,10 +2186,10 @@ var init_namespace = __esm({
   }
 });
 
-// packages/core/src/directives/struct-binary.ts
+// ../core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives;
 var init_struct_binary = __esm({
-  "packages/core/src/directives/struct-binary.ts"() {
+  "../core/src/directives/struct-binary.ts"() {
     "use strict";
     registerStructBinaryDirectives = (registry, context) => {
       registry.register("struct", context, ({ session }, words) => {
@@ -2216,10 +2211,10 @@ var init_struct_binary = __esm({
   }
 });
 
-// packages/core/src/directives/registry.ts
+// ../core/src/directives/registry.ts
 var DirectiveRegistry, createDirectiveRegistry;
 var init_registry = __esm({
-  "packages/core/src/directives/registry.ts"() {
+  "../core/src/directives/registry.ts"() {
     "use strict";
     init_directive_groups();
     init_data();
@@ -2344,7 +2339,7 @@ var init_registry = __esm({
   }
 });
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 import fs2 from "node:fs";
 import path from "node:path";
 function stripWrappingQuotes(filename) {
@@ -2355,7 +2350,7 @@ function stripWrappingQuotes(filename) {
 }
 var NodeAssemblyFileProvider;
 var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
+  "../core/src/file-provider.ts"() {
     "use strict";
     NodeAssemblyFileProvider = class {
       /**
@@ -2429,7 +2424,7 @@ var init_file_provider = __esm({
   }
 });
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 import { performance } from "node:perf_hooks";
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
@@ -2466,12 +2461,12 @@ function measureInternalPhase(name, callback) {
 }
 var activeInstrumentation;
 var init_internal_instrumentation = __esm({
-  "packages/core/src/internal-instrumentation.ts"() {
+  "../core/src/internal-instrumentation.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
   if (!collectSourceMetadata) {
     return {
@@ -2761,7 +2756,7 @@ function splitCommaArguments(input) {
 }
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
+  "../core/src/ir/normalized-command.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_source_location();
@@ -2771,7 +2766,7 @@ var init_normalized_command = __esm({
   }
 });
 
-// packages/core/src/mathcore.ts
+// ../core/src/mathcore.ts
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -2804,7 +2799,7 @@ function isWordChar(code) {
 }
 var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
 var init_mathcore = __esm({
-  "packages/core/src/mathcore.ts"() {
+  "../core/src/mathcore.ts"() {
     "use strict";
     init_diagnostics();
     init_internal_instrumentation();
@@ -3986,7 +3981,7 @@ var init_mathcore = __esm({
   }
 });
 
-// packages/core/src/operand-syntax.ts
+// ../core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -4008,15 +4003,15 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
+  "../core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/operand-resolver.ts
+// ../core/src/operand-resolver.ts
 var OperandResolver;
 var init_operand_resolver = __esm({
-  "packages/core/src/operand-resolver.ts"() {
+  "../core/src/operand-resolver.ts"() {
     "use strict";
     init_expression_node();
     init_operand_syntax();
@@ -4410,22 +4405,22 @@ var init_operand_resolver = __esm({
   }
 });
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 function definePlugin(plugin3) {
   return plugin3;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
+  "../core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var PluginError;
 var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
+  "../core/src/plugin/diagnostics.ts"() {
     "use strict";
     PluginError = class extends Error {
       code;
@@ -4448,10 +4443,10 @@ var init_diagnostics2 = __esm({
   }
 });
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "packages/core/src/lsp/directive-catalog.ts"() {
+  "../core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax2, group, operands) => ({
       keyword,
@@ -4631,10 +4626,10 @@ var init_directive_catalog = __esm({
   }
 });
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var canonical, toMap, targetInvalid, ResolvedToolingCatalog, AssemblerEnvironment;
 var init_environment = __esm({
-  "packages/core/src/plugin/environment.ts"() {
+  "../core/src/plugin/environment.ts"() {
     "use strict";
     init_directive_groups();
     init_directive_catalog();
@@ -5047,9 +5042,9 @@ var init_environment = __esm({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports, module) {
+  "../../node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -5079,9 +5074,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports, module) {
+  "../../node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -5089,9 +5084,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports, module) {
+  "../../node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -5177,9 +5172,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports, module) {
+  "../../node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -5196,9 +5191,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports, module) {
+  "../../node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -5221,9 +5216,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports, module) {
+  "../../node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -5513,9 +5508,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports, module) {
+  "../../node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -5535,9 +5530,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports, module) {
+  "../../node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -5548,9 +5543,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports, module) {
+  "../../node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -5561,9 +5556,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports, module) {
+  "../../node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier, identifierBase) => {
@@ -5585,9 +5580,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports, module) {
+  "../../node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -5629,9 +5624,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports, module) {
+  "../../node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -5639,9 +5634,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports, module) {
+  "../../node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -5649,9 +5644,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports, module) {
+  "../../node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -5659,9 +5654,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports, module) {
+  "../../node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -5672,9 +5667,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports, module) {
+  "../../node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -5682,9 +5677,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports, module) {
+  "../../node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -5692,9 +5687,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -5702,9 +5697,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -5716,9 +5711,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports, module) {
+  "../../node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -5726,9 +5721,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports, module) {
+  "../../node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -5736,9 +5731,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports, module) {
+  "../../node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -5746,9 +5741,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports, module) {
+  "../../node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -5756,9 +5751,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports, module) {
+  "../../node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -5766,9 +5761,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports, module) {
+  "../../node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -5776,9 +5771,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports, module) {
+  "../../node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -5786,9 +5781,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports, module) {
+  "../../node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -5796,9 +5791,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports, module) {
+  "../../node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -5846,9 +5841,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports, module) {
+  "../../node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -5892,9 +5887,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports, module) {
+  "../../node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -5933,9 +5928,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports, module) {
+  "../../node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -5971,12 +5966,12 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports, module) {
+  "../../node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
-    var Range4 = class _Range {
+    var Range3 = class _Range {
       constructor(range, options) {
         options = parseOptions(options);
         if (range instanceof _Range) {
@@ -6115,7 +6110,7 @@ var require_range = __commonJS({
         return false;
       }
     };
-    module.exports = Range4;
+    module.exports = Range3;
     var LRU = require_lrucache();
     var cache = new LRU();
     var parseOptions = require_parse_options();
@@ -6356,9 +6351,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports, module) {
+  "../../node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -6427,12 +6422,12 @@ var require_comparator = __commonJS({
           if (this.value === "") {
             return true;
           }
-          return new Range4(comp.value, options).test(this.value);
+          return new Range3(comp.value, options).test(this.value);
         } else if (comp.operator === "") {
           if (comp.value === "") {
             return true;
           }
-          return new Range4(this.value, options).test(comp.semver);
+          return new Range3(this.value, options).test(comp.semver);
         }
         options = parseOptions(options);
         if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
@@ -6465,18 +6460,18 @@ var require_comparator = __commonJS({
     var cmp = require_cmp();
     var debug = require_debug();
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports, module) {
+  "../../node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var satisfies = (version, range, options) => {
       try {
-        range = new Range4(range, options);
+        range = new Range3(range, options);
       } catch (er) {
         return false;
       }
@@ -6486,28 +6481,28 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
-    var Range4 = require_range();
-    var toComparators = (range, options) => new Range4(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
+    var Range3 = require_range();
+    var toComparators = (range, options) => new Range3(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
     module.exports = toComparators;
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var maxSatisfying = (versions, range, options) => {
       let max = null;
       let maxSV = null;
       let rangeObj = null;
       try {
-        rangeObj = new Range4(range, options);
+        rangeObj = new Range3(range, options);
       } catch (er) {
         return null;
       }
@@ -6525,18 +6520,18 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var minSatisfying = (versions, range, options) => {
       let min = null;
       let minSV = null;
       let rangeObj = null;
       try {
-        rangeObj = new Range4(range, options);
+        rangeObj = new Range3(range, options);
       } catch (er) {
         return null;
       }
@@ -6554,15 +6549,15 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var gt = require_gt();
     var minVersion = (range, loose) => {
-      range = new Range4(range, loose);
+      range = new Range3(range, loose);
       let minver = new SemVer("0.0.0");
       if (range.test(minver)) {
         return minver;
@@ -6613,14 +6608,14 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports, module) {
+  "../../node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var validRange = (range, options) => {
       try {
-        return new Range4(range, options).range || "*";
+        return new Range3(range, options).range || "*";
       } catch (er) {
         return null;
       }
@@ -6629,14 +6624,14 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports, module) {
+  "../../node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
     var { ANY } = Comparator;
-    var Range4 = require_range();
+    var Range3 = require_range();
     var satisfies = require_satisfies();
     var gt = require_gt();
     var lt = require_lt();
@@ -6644,7 +6639,7 @@ var require_outside = __commonJS({
     var gte = require_gte();
     var outside = (version, range, hilo, options) => {
       version = new SemVer(version, options);
-      range = new Range4(range, options);
+      range = new Range3(range, options);
       let gtfn, ltefn, ltfn, comp, ecomp;
       switch (hilo) {
         case ">":
@@ -6698,9 +6693,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports, module) {
+  "../../node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -6708,9 +6703,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports, module) {
+  "../../node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -6718,23 +6713,23 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports, module) {
+  "../../node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var intersects = (r1, r2, options) => {
-      r1 = new Range4(r1, options);
-      r2 = new Range4(r2, options);
+      r1 = new Range3(r1, options);
+      r2 = new Range3(r2, options);
       return r1.intersects(r2, options);
     };
     module.exports = intersects;
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports, module) {
+  "../../node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -6782,11 +6777,11 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports, module) {
+  "../../node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var Comparator = require_comparator();
     var { ANY } = Comparator;
     var satisfies = require_satisfies();
@@ -6795,8 +6790,8 @@ var require_subset = __commonJS({
       if (sub === dom) {
         return true;
       }
-      sub = new Range4(sub, options);
-      dom = new Range4(dom, options);
+      sub = new Range3(sub, options);
+      dom = new Range3(dom, options);
       let sawNonNull = false;
       OUTER: for (const simpleSub of sub.set) {
         for (const simpleDom of dom.set) {
@@ -6944,9 +6939,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports, module) {
+  "../../node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -6977,7 +6972,7 @@ var require_semver2 = __commonJS({
     var coerce = require_coerce();
     var truncate = require_truncate();
     var Comparator = require_comparator();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var satisfies = require_satisfies();
     var toComparators = require_to_comparators();
     var maxSatisfying = require_max_satisfying();
@@ -7016,7 +7011,7 @@ var require_semver2 = __commonJS({
       coerce,
       truncate,
       Comparator,
-      Range: Range4,
+      Range: Range3,
       satisfies,
       toComparators,
       maxSatisfying,
@@ -7041,10 +7036,10 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver, noopLogger, isLowerAlphaNumeric, isValidId, isValidContributionId, isRecord, isArray, isEmptyOptions, deepFreeze, validateText, validateManifest, validatePlugin, validateContributionId, validateAliases, PluginManager;
 var init_manager = __esm({
-  "packages/core/src/plugin/manager.ts"() {
+  "../core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
     init_directive_groups();
@@ -7608,10 +7603,10 @@ var init_manager = __esm({
   }
 });
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var PluginSessionStateStore;
 var init_session_state = __esm({
-  "packages/core/src/plugin/session-state.ts"() {
+  "../core/src/plugin/session-state.ts"() {
     "use strict";
     init_diagnostics2();
     PluginSessionStateStore = class {
@@ -7744,9 +7739,9 @@ var init_session_state = __esm({
   }
 });
 
-// packages/core/src/plugin/index.ts
+// ../core/src/plugin/index.ts
 var init_plugin = __esm({
-  "packages/core/src/plugin/index.ts"() {
+  "../core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -7756,10 +7751,10 @@ var init_plugin = __esm({
   }
 });
 
-// packages/core/src/services/program-model-builder.ts
+// ../core/src/services/program-model-builder.ts
 var ProgramModelBuilder;
 var init_program_model_builder = __esm({
-  "packages/core/src/services/program-model-builder.ts"() {
+  "../core/src/services/program-model-builder.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -8070,10 +8065,10 @@ var init_program_model_builder = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService;
 var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
+  "../core/src/services/assembly-front-end-service.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -8201,10 +8196,10 @@ var init_assembly_front_end_service = __esm({
   }
 });
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var CommandLoweringService;
 var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
+  "../core/src/services/command-lowering-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     CommandLoweringService = class {
@@ -8378,10 +8373,10 @@ var init_command_lowering_service = __esm({
   }
 });
 
-// packages/core/src/services/define-engine.ts
+// ../core/src/services/define-engine.ts
 var DefineEngine;
 var init_define_engine = __esm({
-  "packages/core/src/services/define-engine.ts"() {
+  "../core/src/services/define-engine.ts"() {
     "use strict";
     init_normalized_command();
     DefineEngine = class {
@@ -8727,10 +8722,10 @@ var init_define_engine = __esm({
   }
 });
 
-// packages/core/src/services/directive-runtime-service.ts
+// ../core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService;
 var init_directive_runtime_service = __esm({
-  "packages/core/src/services/directive-runtime-service.ts"() {
+  "../core/src/services/directive-runtime-service.ts"() {
     "use strict";
     init_address_width();
     init_command_text_service();
@@ -8990,10 +8985,10 @@ var init_directive_runtime_service = __esm({
   }
 });
 
-// packages/core/src/services/front-end-command-service.ts
+// ../core/src/services/front-end-command-service.ts
 var FrontEndCommandService;
 var init_front_end_command_service = __esm({
-  "packages/core/src/services/front-end-command-service.ts"() {
+  "../core/src/services/front-end-command-service.ts"() {
     "use strict";
     init_expression_node();
     init_normalized_command();
@@ -9176,10 +9171,10 @@ var init_front_end_command_service = __esm({
   }
 });
 
-// packages/core/src/services/include-source-service.ts
+// ../core/src/services/include-source-service.ts
 var IncludeSourceService;
 var init_include_source_service = __esm({
-  "packages/core/src/services/include-source-service.ts"() {
+  "../core/src/services/include-source-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     IncludeSourceService = class {
@@ -9369,10 +9364,10 @@ var init_include_source_service = __esm({
   }
 });
 
-// packages/core/src/services/macro-engine.ts
+// ../core/src/services/macro-engine.ts
 var MacroEngine;
 var init_macro_engine = __esm({
-  "packages/core/src/services/macro-engine.ts"() {
+  "../core/src/services/macro-engine.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -10012,10 +10007,10 @@ var init_macro_engine = __esm({
   }
 });
 
-// packages/core/src/services/output-writer-service.ts
+// ../core/src/services/output-writer-service.ts
 var OutputWriterService;
 var init_output_writer_service = __esm({
-  "packages/core/src/services/output-writer-service.ts"() {
+  "../core/src/services/output-writer-service.ts"() {
     "use strict";
     init_address_width();
     OutputWriterService = class {
@@ -10207,10 +10202,10 @@ var init_output_writer_service = __esm({
   }
 });
 
-// packages/core/src/services/data-struct-engine.ts
+// ../core/src/services/data-struct-engine.ts
 var DataStructEngine;
 var init_data_struct_engine = __esm({
-  "packages/core/src/services/data-struct-engine.ts"() {
+  "../core/src/services/data-struct-engine.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -10372,10 +10367,10 @@ var init_data_struct_engine = __esm({
   }
 });
 
-// packages/core/src/services/struct-engine.ts
+// ../core/src/services/struct-engine.ts
 var StructEngine;
 var init_struct_engine = __esm({
-  "packages/core/src/services/struct-engine.ts"() {
+  "../core/src/services/struct-engine.ts"() {
     "use strict";
     init_address_width();
     init_normalized_command();
@@ -10692,7 +10687,7 @@ var init_struct_engine = __esm({
   }
 });
 
-// packages/core/src/services/struct-metadata.ts
+// ../core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count = definition.indexRange?.count ?? 1;
   const bytes = definition.size * count;
@@ -10711,12 +10706,12 @@ function getStructMetadata(definition, property) {
   }
 }
 var init_struct_metadata = __esm({
-  "packages/core/src/services/struct-metadata.ts"() {
+  "../core/src/services/struct-metadata.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/symbol-scope-service.ts
+// ../core/src/services/symbol-scope-service.ts
 function fileBasename(file) {
   const normalized = file.replaceAll("\\", "/");
   const slash = normalized.lastIndexOf("/");
@@ -10735,7 +10730,7 @@ function parseUnnamedLabelReference(token) {
 }
 var SymbolScopeService;
 var init_symbol_scope_service = __esm({
-  "packages/core/src/services/symbol-scope-service.ts"() {
+  "../core/src/services/symbol-scope-service.ts"() {
     "use strict";
     init_syntax_profile();
     SymbolScopeService = class {
@@ -11598,10 +11593,10 @@ var init_symbol_scope_service = __esm({
   }
 });
 
-// packages/core/src/assembler.ts
+// ../core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES, Assembler;
 var init_assembler = __esm({
-  "packages/core/src/assembler.ts"() {
+  "../core/src/assembler.ts"() {
     "use strict";
     init_address_width();
     init_addressToLine();
@@ -14811,10 +14806,10 @@ var init_assembler = __esm({
   }
 });
 
-// packages/core/src/architecture-types.ts
+// ../core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "packages/core/src/architecture-types.ts"() {
+  "../core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -14839,19 +14834,19 @@ var init_architecture_types = __esm({
   }
 });
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var init_decoder_types = __esm({
-  "packages/core/src/decoder-types.ts"() {
+  "../core/src/decoder-types.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 import { createHash as createHash2 } from "node:crypto";
 import path2 from "node:path";
 var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, createDebugMap;
 var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+  "../core/src/debug-map.ts"() {
     "use strict";
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
     DEBUG_MAP_SCHEMA_VERSION = 1;
@@ -14899,18 +14894,18 @@ var init_debug_map = __esm({
   }
 });
 
-// packages/core/src/ir/assembly-tree.ts
+// ../core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "packages/core/src/ir/assembly-tree.ts"() {
+  "../core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/overlay-file-provider.ts
+// ../core/src/lsp/overlay-file-provider.ts
 import path3 from "node:path";
 var OverlayFileProvider;
 var init_overlay_file_provider = __esm({
-  "packages/core/src/lsp/overlay-file-provider.ts"() {
+  "../core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
     init_file_provider();
     OverlayFileProvider = class {
@@ -15016,7 +15011,7 @@ var init_overlay_file_provider = __esm({
   }
 });
 
-// packages/core/src/lsp/root-analysis-cache.ts
+// ../core/src/lsp/root-analysis-cache.ts
 import { createHash as createHash3 } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync as readFileSync2, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path4 from "node:path";
@@ -15037,7 +15032,7 @@ function identitiesMatch(stored, current) {
 }
 var CACHE_VERSION, RootAnalysisCache;
 var init_root_analysis_cache = __esm({
-  "packages/core/src/lsp/root-analysis-cache.ts"() {
+  "../core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
     init_internal_instrumentation();
     CACHE_VERSION = 1;
@@ -15164,11 +15159,11 @@ var init_root_analysis_cache = __esm({
   }
 });
 
-// packages/core/src/lsp/workspace-index.ts
+// ../core/src/lsp/workspace-index.ts
 import path5 from "node:path";
 var WorkspaceIndex;
 var init_workspace_index = __esm({
-  "packages/core/src/lsp/workspace-index.ts"() {
+  "../core/src/lsp/workspace-index.ts"() {
     "use strict";
     init_assembler();
     init_internal_instrumentation();
@@ -15852,7 +15847,7 @@ var init_workspace_index = __esm({
   }
 });
 
-// packages/core/src/lsp/position-lookup.ts
+// ../core/src/lsp/position-lookup.ts
 function locationRange(location) {
   if (location.range) {
     return location.range;
@@ -15940,20 +15935,20 @@ function rangeWidth(range) {
   return lineSpan * 1e6 + columnSpan;
 }
 var init_position_lookup = __esm({
-  "packages/core/src/lsp/position-lookup.ts"() {
+  "../core/src/lsp/position-lookup.ts"() {
     "use strict";
     init_source_location();
   }
 });
 
-// packages/core/src/lsp/instruction-catalog.ts
+// ../core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "packages/core/src/lsp/instruction-catalog.ts"() {
+  "../core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/catalog.ts
+// ../core/src/lsp/catalog.ts
 function getInstructionCatalog(architecture, provider) {
   return provider?.getInstructionCatalog(architecture) ?? [];
 }
@@ -16091,7 +16086,7 @@ function buildCompletionEntries(architecture, provider, directives = directiveCa
 }
 var instructionCatalogMapCache, directiveCatalogMapCache;
 var init_catalog = __esm({
-  "packages/core/src/lsp/catalog.ts"() {
+  "../core/src/lsp/catalog.ts"() {
     "use strict";
     init_directive_catalog();
     instructionCatalogMapCache = /* @__PURE__ */ new WeakMap();
@@ -16099,16 +16094,16 @@ var init_catalog = __esm({
   }
 });
 
-// packages/core/src/lsp/project-outline.ts
+// ../core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "packages/core/src/lsp/project-outline.ts"() {
+  "../core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/index.ts
+// ../core/src/lsp/index.ts
 var init_lsp = __esm({
-  "packages/core/src/lsp/index.ts"() {
+  "../core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -16121,9 +16116,9 @@ var init_lsp = __esm({
   }
 });
 
-// packages/core/src/index.ts
+// ../core/src/index.ts
 var init_src = __esm({
-  "packages/core/src/index.ts"() {
+  "../core/src/index.ts"() {
     "use strict";
     init_assembler();
     init_architecture_types();
@@ -16150,7 +16145,7 @@ var init_src = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -16174,7 +16169,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries2, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
+  "../plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax2, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -16441,10 +16436,10 @@ var init_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder;
 var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+  "../plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -16721,7 +16716,7 @@ var init_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -16745,7 +16740,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries3, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
+  "../plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax2, size) => ({
       id,
@@ -16985,7 +16980,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -17050,7 +17045,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
+  "../plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -17424,10 +17419,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -17438,7 +17433,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/operand-classifiers.ts
+// ../plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -17638,16 +17633,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src();
   }
 });
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "packages/plugin-snes/src/architectures/65816.ts"() {
+  "../plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -19603,10 +19598,10 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
 var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width) => {
@@ -19870,10 +19865,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/split-operands.ts
+// ../plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "packages/plugin-snes/src/architectures/split-operands.ts"() {
+  "../plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text) => text ? [text] : [];
     splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
@@ -19897,7 +19892,7 @@ var init_split_operands = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700.ts
+// ../plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -19994,7 +19989,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "packages/plugin-snes/src/architectures/spc700.ts"() {
+  "../plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -21894,10 +21889,10 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
 var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -22184,10 +22179,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "packages/plugin-snes/src/asar/compatibility.ts"() {
+  "../plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -22263,10 +22258,10 @@ var init_compatibility = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx.ts
+// ../plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "packages/plugin-snes/src/architectures/superfx.ts"() {
+  "../plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src();
     init_compatibility();
@@ -23051,7 +23046,7 @@ var init_superfx = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -23135,13 +23130,13 @@ function handlePopcpu2(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
+  "../plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -23197,13 +23192,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "packages/plugin-snes/src/directives/freespace.ts"() {
+  "../plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -23261,7 +23256,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout2 = __esm({
-  "packages/plugin-snes/src/directives/layout.ts"() {
+  "../plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -23277,10 +23272,10 @@ var init_layout2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "packages/plugin-snes/src/services/spc-runtime.ts"() {
+  "../plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -23405,17 +23400,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "packages/plugin-snes/src/directives/spc.ts"() {
+  "../plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -23426,7 +23421,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "packages/plugin-snes/src/session-state.ts"() {
+  "../plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -23435,10 +23430,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "packages/plugin-snes/src/target/address-space.ts"() {
+  "../plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -23605,10 +23600,10 @@ var init_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
+  "../plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax2, operands) => ({
       keyword,
@@ -24230,17 +24225,17 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var init_state = __esm({
-  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
+  "../plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_address_identities = __esm({
-  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
+  "../plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     SNES_WRAM_ADDRESS_SPACE = "snes.wram";
     SNES_SRAM_ADDRESS_SPACE = "snes.sram";
@@ -24259,10 +24254,10 @@ var init_address_identities = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -24607,40 +24602,40 @@ var init_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var init_rom_header = __esm({
-  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
+  "../plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var init_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 var init_dizraw_import = __esm({
-  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+// ../plugin-snes/src/disassembler/mesen-runtime.ts
 var CDL_HEADER;
 var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     CDL_HEADER = new TextEncoder().encode("CDLv2");
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -24652,38 +24647,38 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
+// ../plugin-snes/src/disassembler/mesen-labels.ts
 var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
+// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
 var init_framework_asset_helpers = __esm({
-  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 var init_ram_map = __esm({
-  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
+  "../plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 var init_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/source-export.ts"() {
+  "../plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress;
 var init_spc700_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -24715,45 +24710,45 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-state.ts
+// ../plugin-snes/src/disassembler/spc700-state.ts
 var init_spc700_state = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
+  "../plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-analysis.ts
+// ../plugin-snes/src/disassembler/spc700-analysis.ts
 var init_spc700_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-upload.ts
+// ../plugin-snes/src/disassembler/spc700-upload.ts
 var init_spc700_upload = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-state.ts
+// ../plugin-snes/src/disassembler/superfx-state.ts
 var init_superfx_state = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
+  "../plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/processor-source-export.ts
+// ../plugin-snes/src/disassembler/processor-source-export.ts
 var init_processor_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
+// ../plugin-snes/src/disassembler/function-heuristics.ts
 var builtins, SNES_HEURISTIC_RULE_IDS;
 var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     builtins = [
       {
@@ -24814,17 +24809,17 @@ var init_function_heuristics = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+  "../plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR;
 var init_superfx_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -24836,24 +24831,24 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var init_project_initializer = __esm({
-  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
+  "../plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-analysis.ts
+// ../plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
+// ../plugin-snes/src/assets/common.ts
 var objectValue, optionsFor, integerOption, stringOption, readBytes, resolveCount, resolveGrid, decodedObject, arrayValue, integerValue, defaultPath, jsonFile;
 var init_common = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
+  "../plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0) return {};
@@ -24950,10 +24945,10 @@ var init_common = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/brr.ts
+// ../plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
+  "../plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -25066,10 +25061,10 @@ var init_brr = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/palette.ts
+// ../plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
+  "../plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -25127,10 +25122,10 @@ var init_palette = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tilemap.ts
+// ../plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
+  "../plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -25262,10 +25257,10 @@ var init_tilemap = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tiles.ts
+// ../plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
+  "../plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -25432,10 +25427,10 @@ var init_tiles = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/previews.ts
+// ../plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue2, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer;
 var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
+  "../plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -25567,10 +25562,10 @@ var init_previews = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/index.ts
+// ../plugin-snes/src/assets/index.ts
 var snesAssetCodecs;
 var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
+  "../plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -25597,10 +25592,10 @@ var init_assets = __esm({
   }
 });
 
-// packages/plugin-snes/src/index.ts
+// ../plugin-snes/src/index.ts
 var SNES_TARGET_ID, toolingFor, directive2, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin2, src_default2;
 var init_src2 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+  "../plugin-snes/src/index.ts"() {
     "use strict";
     init_src();
     init_decoder();
@@ -26092,9 +26087,9 @@ var init_src2 = __esm({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/utils/is.js
+// ../../node_modules/vscode-languageserver/lib/common/utils/is.js
 var require_is = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/utils/is.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/utils/is.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolean = boolean;
@@ -26136,9 +26131,9 @@ var require_is = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/is.js
+// ../../node_modules/vscode-jsonrpc/lib/common/is.js
 var require_is2 = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/is.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/is.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolean = boolean;
@@ -26172,9 +26167,9 @@ var require_is2 = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messages.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messages.js
 var require_messages = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messages.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messages.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -26557,9 +26552,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/linkedMap.js
+// ../../node_modules/vscode-jsonrpc/lib/common/linkedMap.js
 var require_linkedMap = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LRUCache = exports.LinkedMap = exports.Touch = void 0;
@@ -26941,9 +26936,9 @@ var require_linkedMap = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/disposable.js
+// ../../node_modules/vscode-jsonrpc/lib/common/disposable.js
 var require_disposable = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Disposable = void 0;
@@ -26959,9 +26954,9 @@ var require_disposable = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/ral.js
+// ../../node_modules/vscode-jsonrpc/lib/common/ral.js
 var require_ral = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/ral.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/ral.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var _ral;
@@ -26984,9 +26979,9 @@ var require_ral = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/events.js
+// ../../node_modules/vscode-jsonrpc/lib/common/events.js
 var require_events = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/events.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/events.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -27121,9 +27116,9 @@ var require_events = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/cancellation.js
+// ../../node_modules/vscode-jsonrpc/lib/common/cancellation.js
 var require_cancellation = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -27168,7 +27163,7 @@ var require_cancellation = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CancellationTokenSource = exports.CancellationToken = void 0;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var events_1 = require_events();
     var CancellationToken;
     (function(CancellationToken2) {
@@ -27182,7 +27177,7 @@ var require_cancellation = __commonJS({
       });
       function is(value) {
         const candidate = value;
-        return candidate && (candidate === CancellationToken2.None || candidate === CancellationToken2.Cancelled || Is2.boolean(candidate.isCancellationRequested) && !!candidate.onCancellationRequested);
+        return candidate && (candidate === CancellationToken2.None || candidate === CancellationToken2.Cancelled || Is.boolean(candidate.isCancellationRequested) && !!candidate.onCancellationRequested);
       }
       CancellationToken2.is = is;
     })(CancellationToken || (exports.CancellationToken = CancellationToken = {}));
@@ -27250,9 +27245,9 @@ var require_cancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
+// ../../node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
 var require_sharedArrayCancellation = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SharedArrayReceiverStrategy = exports.SharedArraySenderStrategy = void 0;
@@ -27329,9 +27324,9 @@ var require_sharedArrayCancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/semaphore.js
+// ../../node_modules/vscode-jsonrpc/lib/common/semaphore.js
 var require_semaphore = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -27403,9 +27398,9 @@ var require_semaphore = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageReader.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messageReader.js
 var require_messageReader = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -27450,14 +27445,14 @@ var require_messageReader = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ReadableStreamMessageReader = exports.AbstractMessageReader = exports.MessageReader = void 0;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var events_1 = require_events();
     var semaphore_1 = require_semaphore();
     var MessageReader;
     (function(MessageReader2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.listen) && Is2.func(candidate.dispose) && Is2.func(candidate.onError) && Is2.func(candidate.onClose) && Is2.func(candidate.onPartialMessage);
+        return candidate && Is.func(candidate.listen) && Is.func(candidate.dispose) && Is.func(candidate.onError) && Is.func(candidate.onClose) && Is.func(candidate.onPartialMessage);
       }
       MessageReader2.is = is;
     })(MessageReader || (exports.MessageReader = MessageReader = {}));
@@ -27497,7 +27492,7 @@ var require_messageReader = __commonJS({
         if (error instanceof Error) {
           return error;
         } else {
-          return new Error(`Reader received error. Reason: ${Is2.string(error.message) ? error.message : "unknown"}`);
+          return new Error(`Reader received error. Reason: ${Is.string(error.message) ? error.message : "unknown"}`);
         }
       }
     };
@@ -27645,9 +27640,9 @@ ${JSON.stringify(Object.fromEntries(headers))}`));
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageWriter.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messageWriter.js
 var require_messageWriter = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -27692,7 +27687,7 @@ var require_messageWriter = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WriteableStreamMessageWriter = exports.AbstractMessageWriter = exports.MessageWriter = void 0;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var semaphore_1 = require_semaphore();
     var events_1 = require_events();
     var ContentLength = "Content-Length: ";
@@ -27701,7 +27696,7 @@ var require_messageWriter = __commonJS({
     (function(MessageWriter2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.dispose) && Is2.func(candidate.onClose) && Is2.func(candidate.onError) && Is2.func(candidate.write);
+        return candidate && Is.func(candidate.dispose) && Is.func(candidate.onClose) && Is.func(candidate.onError) && Is.func(candidate.write);
       }
       MessageWriter2.is = is;
     })(MessageWriter || (exports.MessageWriter = MessageWriter = {}));
@@ -27732,7 +27727,7 @@ var require_messageWriter = __commonJS({
         if (error instanceof Error) {
           return error;
         } else {
-          return new Error(`Writer received error. Reason: ${Is2.string(error.message) ? error.message : "unknown"}`);
+          return new Error(`Writer received error. Reason: ${Is.string(error.message) ? error.message : "unknown"}`);
         }
       }
     };
@@ -27803,9 +27798,9 @@ var require_messageWriter = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
 var require_messageBuffer = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.AbstractMessageBuffer = void 0;
@@ -27954,9 +27949,9 @@ ${header}`);
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/connection.js
+// ../../node_modules/vscode-jsonrpc/lib/common/connection.js
 var require_connection = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/connection.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/connection.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -28002,7 +27997,7 @@ var require_connection = __commonJS({
     exports.ConnectionOptions = exports.MessageStrategy = exports.CancellationStrategy = exports.CancellationSenderStrategy = exports.CancellationReceiverStrategy = exports.RequestCancellationReceiverStrategy = exports.IdCancellationReceiverStrategy = exports.ConnectionStrategy = exports.ConnectionError = exports.ConnectionErrors = exports.LogTraceNotification = exports.SetTraceNotification = exports.TraceFormat = exports.TraceValues = exports.TraceValue = exports.Trace = exports.NullLogger = exports.ProgressType = exports.ProgressToken = void 0;
     exports.createMessageConnection = createMessageConnection;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var messages_1 = require_messages();
     var linkedMap_1 = require_linkedMap();
     var events_1 = require_events();
@@ -28036,7 +28031,7 @@ var require_connection = __commonJS({
     var StarRequestHandler;
     (function(StarRequestHandler2) {
       function is(value) {
-        return Is2.func(value);
+        return Is.func(value);
       }
       StarRequestHandler2.is = is;
     })(StarRequestHandler || (StarRequestHandler = {}));
@@ -28067,7 +28062,7 @@ var require_connection = __commonJS({
     exports.TraceValues = TraceValue;
     (function(Trace2) {
       function fromString(value) {
-        if (!Is2.string(value)) {
+        if (!Is.string(value)) {
           return Trace2.Off;
         }
         value = value.toLowerCase();
@@ -28108,7 +28103,7 @@ var require_connection = __commonJS({
     })(TraceFormat || (exports.TraceFormat = TraceFormat = {}));
     (function(TraceFormat2) {
       function fromString(value) {
-        if (!Is2.string(value)) {
+        if (!Is.string(value)) {
           return TraceFormat2.Text;
         }
         value = value.toLowerCase();
@@ -28147,7 +28142,7 @@ var require_connection = __commonJS({
     (function(ConnectionStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.cancelUndispatched);
+        return candidate && Is.func(candidate.cancelUndispatched);
       }
       ConnectionStrategy2.is = is;
     })(ConnectionStrategy || (exports.ConnectionStrategy = ConnectionStrategy = {}));
@@ -28155,7 +28150,7 @@ var require_connection = __commonJS({
     (function(IdCancellationReceiverStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && (candidate.kind === void 0 || candidate.kind === "id") && Is2.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is2.func(candidate.dispose));
+        return candidate && (candidate.kind === void 0 || candidate.kind === "id") && Is.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is.func(candidate.dispose));
       }
       IdCancellationReceiverStrategy2.is = is;
     })(IdCancellationReceiverStrategy || (exports.IdCancellationReceiverStrategy = IdCancellationReceiverStrategy = {}));
@@ -28163,7 +28158,7 @@ var require_connection = __commonJS({
     (function(RequestCancellationReceiverStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && candidate.kind === "request" && Is2.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is2.func(candidate.dispose));
+        return candidate && candidate.kind === "request" && Is.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is.func(candidate.dispose));
       }
       RequestCancellationReceiverStrategy2.is = is;
     })(RequestCancellationReceiverStrategy || (exports.RequestCancellationReceiverStrategy = RequestCancellationReceiverStrategy = {}));
@@ -28190,7 +28185,7 @@ var require_connection = __commonJS({
       });
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.sendCancellation) && Is2.func(candidate.cleanup);
+        return candidate && Is.func(candidate.sendCancellation) && Is.func(candidate.cleanup);
       }
       CancellationSenderStrategy2.is = is;
     })(CancellationSenderStrategy || (exports.CancellationSenderStrategy = CancellationSenderStrategy = {}));
@@ -28210,7 +28205,7 @@ var require_connection = __commonJS({
     (function(MessageStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.handleMessage);
+        return candidate && Is.func(candidate.handleMessage);
       }
       MessageStrategy2.is = is;
     })(MessageStrategy || (exports.MessageStrategy = MessageStrategy = {}));
@@ -28218,7 +28213,7 @@ var require_connection = __commonJS({
     (function(ConnectionOptions2) {
       function is(value) {
         const candidate = value;
-        return candidate && (CancellationStrategy.is(candidate.cancellationStrategy) || ConnectionStrategy.is(candidate.connectionStrategy) || MessageStrategy.is(candidate.messageStrategy) || Is2.number(candidate.maxParallelism));
+        return candidate && (CancellationStrategy.is(candidate.cancellationStrategy) || ConnectionStrategy.is(candidate.connectionStrategy) || MessageStrategy.is(candidate.messageStrategy) || Is.number(candidate.maxParallelism));
       }
       ConnectionOptions2.is = is;
     })(ConnectionOptions || (exports.ConnectionOptions = ConnectionOptions = {}));
@@ -28470,7 +28465,7 @@ var require_connection = __commonJS({
           } catch (error) {
             if (error instanceof messages_1.ResponseError) {
               await reply(error, requestMessage.method, startTime);
-            } else if (error && Is2.string(error.message)) {
+            } else if (error && Is.string(error.message)) {
               await replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InternalError, `Request ${requestMessage.method} failed with message: ${error.message}`), requestMessage.method, startTime);
             } else {
               await replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InternalError, `Request ${requestMessage.method} failed unexpectedly without providing any details.`), requestMessage.method, startTime);
@@ -28590,7 +28585,7 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
         logger.error(`Received message which is neither a response nor a notification message:
 ${JSON.stringify(message, null, 4)}`);
         const responseMessage = message;
-        if (Is2.string(responseMessage.id) || Is2.number(responseMessage.id)) {
+        if (Is.string(responseMessage.id) || Is.number(responseMessage.id)) {
           const key = responseMessage.id;
           const responseHandler = responsePromises.get(key);
           if (responseHandler) {
@@ -28819,7 +28814,7 @@ ${JSON.stringify(message, null, 4)}`);
           throwIfClosedOrDisposed();
           let method;
           let messageParams;
-          if (Is2.string(type)) {
+          if (Is.string(type)) {
             method = type;
             const first = args[0];
             let paramStart = 0;
@@ -28863,10 +28858,10 @@ ${JSON.stringify(message, null, 4)}`);
         onNotification: (type, handler) => {
           throwIfClosedOrDisposed();
           let method;
-          if (Is2.func(type)) {
+          if (Is.func(type)) {
             starNotificationHandler = type;
           } else if (handler) {
-            if (Is2.string(type)) {
+            if (Is.string(type)) {
               method = type;
               notificationHandlers.set(type, { type: void 0, handler });
             } else {
@@ -28919,7 +28914,7 @@ ${JSON.stringify(message, null, 4)}`);
           let method;
           let messageParams;
           let token = void 0;
-          if (Is2.string(type)) {
+          if (Is.string(type)) {
             method = type;
             const first = args[0];
             const last = args[args.length - 1];
@@ -29010,7 +29005,7 @@ ${JSON.stringify(message, null, 4)}`);
           if (StarRequestHandler.is(type)) {
             method = void 0;
             starRequestHandler = type;
-          } else if (Is2.string(type)) {
+          } else if (Is.string(type)) {
             method = null;
             if (handler !== void 0) {
               method = type;
@@ -29044,7 +29039,7 @@ ${JSON.stringify(message, null, 4)}`);
           let _sendNotification = false;
           let _traceFormat = TraceFormat.Text;
           if (sendNotificationOrTraceOptions !== void 0) {
-            if (Is2.boolean(sendNotificationOrTraceOptions)) {
+            if (Is.boolean(sendNotificationOrTraceOptions)) {
               _sendNotification = sendNotificationOrTraceOptions;
             } else {
               _sendNotification = sendNotificationOrTraceOptions.sendNotification || false;
@@ -29083,10 +29078,10 @@ ${JSON.stringify(message, null, 4)}`);
           requestTokens = /* @__PURE__ */ new Map();
           knownCanceledRequests = /* @__PURE__ */ new Set();
           messageQueue = new linkedMap_1.LinkedMap();
-          if (Is2.func(messageWriter.dispose)) {
+          if (Is.func(messageWriter.dispose)) {
             messageWriter.dispose();
           }
-          if (Is2.func(messageReader.dispose)) {
+          if (Is.func(messageReader.dispose)) {
             messageReader.dispose();
           }
         },
@@ -29120,9 +29115,9 @@ ${JSON.stringify(message, null, 4)}`);
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/api.js
+// ../../node_modules/vscode-jsonrpc/lib/common/api.js
 var require_api = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/api.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/common/api.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -29334,1578 +29329,1634 @@ var require_api = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-types/lib/esm/main.js
-var main_exports = {};
-__export(main_exports, {
-  AnnotatedTextEdit: () => AnnotatedTextEdit,
-  ApplyKind: () => ApplyKind,
-  ChangeAnnotation: () => ChangeAnnotation,
-  ChangeAnnotationIdentifier: () => ChangeAnnotationIdentifier,
-  CodeAction: () => CodeAction,
-  CodeActionContext: () => CodeActionContext,
-  CodeActionKind: () => CodeActionKind,
-  CodeActionTag: () => CodeActionTag,
-  CodeActionTriggerKind: () => CodeActionTriggerKind,
-  CodeDescription: () => CodeDescription,
-  CodeLens: () => CodeLens,
-  Color: () => Color,
-  ColorInformation: () => ColorInformation,
-  ColorPresentation: () => ColorPresentation,
-  Command: () => Command,
-  CompletionItem: () => CompletionItem,
-  CompletionItemKind: () => CompletionItemKind,
-  CompletionItemLabelDetails: () => CompletionItemLabelDetails,
-  CompletionItemTag: () => CompletionItemTag,
-  CompletionList: () => CompletionList,
-  CreateFile: () => CreateFile,
-  DeleteFile: () => DeleteFile,
-  Diagnostic: () => Diagnostic,
-  DiagnosticRelatedInformation: () => DiagnosticRelatedInformation,
-  DiagnosticSeverity: () => DiagnosticSeverity,
-  DiagnosticTag: () => DiagnosticTag,
-  DocumentHighlight: () => DocumentHighlight,
-  DocumentHighlightKind: () => DocumentHighlightKind,
-  DocumentLink: () => DocumentLink,
-  DocumentSymbol: () => DocumentSymbol,
-  DocumentUri: () => DocumentUri,
-  EOL: () => EOL,
-  FoldingRange: () => FoldingRange,
-  FoldingRangeKind: () => FoldingRangeKind,
-  FormattingOptions: () => FormattingOptions,
-  Hover: () => Hover,
-  InlayHint: () => InlayHint,
-  InlayHintKind: () => InlayHintKind,
-  InlayHintLabelPart: () => InlayHintLabelPart,
-  InlineCompletionContext: () => InlineCompletionContext,
-  InlineCompletionItem: () => InlineCompletionItem,
-  InlineCompletionList: () => InlineCompletionList,
-  InlineCompletionTriggerKind: () => InlineCompletionTriggerKind,
-  InlineValueContext: () => InlineValueContext,
-  InlineValueEvaluatableExpression: () => InlineValueEvaluatableExpression,
-  InlineValueText: () => InlineValueText,
-  InlineValueVariableLookup: () => InlineValueVariableLookup,
-  InsertReplaceEdit: () => InsertReplaceEdit,
-  InsertTextFormat: () => InsertTextFormat,
-  InsertTextMode: () => InsertTextMode,
-  LanguageKind: () => LanguageKind,
-  Location: () => Location,
-  LocationLink: () => LocationLink,
-  MarkedString: () => MarkedString,
-  MarkupContent: () => MarkupContent,
-  MarkupKind: () => MarkupKind,
-  OptionalVersionedTextDocumentIdentifier: () => OptionalVersionedTextDocumentIdentifier,
-  ParameterInformation: () => ParameterInformation,
-  Position: () => Position,
-  Range: () => Range,
-  RenameFile: () => RenameFile,
-  SelectedCompletionInfo: () => SelectedCompletionInfo,
-  SelectionRange: () => SelectionRange,
-  SemanticTokenModifiers: () => SemanticTokenModifiers,
-  SemanticTokenTypes: () => SemanticTokenTypes,
-  SemanticTokens: () => SemanticTokens,
-  SignatureInformation: () => SignatureInformation,
-  SnippetTextEdit: () => SnippetTextEdit,
-  StringValue: () => StringValue,
-  SymbolInformation: () => SymbolInformation,
-  SymbolKind: () => SymbolKind,
-  SymbolTag: () => SymbolTag,
-  TextDocument: () => TextDocument2,
-  TextDocumentEdit: () => TextDocumentEdit,
-  TextDocumentIdentifier: () => TextDocumentIdentifier,
-  TextDocumentItem: () => TextDocumentItem,
-  TextEdit: () => TextEdit,
-  URI: () => URI,
-  VersionedTextDocumentIdentifier: () => VersionedTextDocumentIdentifier,
-  WorkspaceChange: () => WorkspaceChange,
-  WorkspaceEdit: () => WorkspaceEdit,
-  WorkspaceFolder: () => WorkspaceFolder,
-  WorkspaceSymbol: () => WorkspaceSymbol,
-  integer: () => integer,
-  uinteger: () => uinteger
-});
-var DocumentUri, URI, integer, uinteger, Position, Range, Location, LocationLink, Color, ColorInformation, ColorPresentation, FoldingRangeKind, FoldingRange, DiagnosticRelatedInformation, DiagnosticSeverity, DiagnosticTag, CodeDescription, Diagnostic, Command, TextEdit, ChangeAnnotation, ChangeAnnotationIdentifier, AnnotatedTextEdit, TextDocumentEdit, CreateFile, RenameFile, DeleteFile, WorkspaceEdit, TextEditChangeImpl, SnippetTextEdit, ChangeAnnotations, WorkspaceChange, TextDocumentIdentifier, VersionedTextDocumentIdentifier, OptionalVersionedTextDocumentIdentifier, LanguageKind, TextDocumentItem, MarkupKind, MarkupContent, CompletionItemKind, InsertTextFormat, CompletionItemTag, InsertReplaceEdit, InsertTextMode, ApplyKind, CompletionItemLabelDetails, CompletionItem, CompletionList, MarkedString, Hover, ParameterInformation, SignatureInformation, DocumentHighlightKind, DocumentHighlight, SymbolKind, SymbolTag, SymbolInformation, WorkspaceSymbol, DocumentSymbol, CodeActionKind, CodeActionTriggerKind, CodeActionContext, CodeActionTag, CodeAction, CodeLens, FormattingOptions, DocumentLink, SelectionRange, SemanticTokenTypes, SemanticTokenModifiers, SemanticTokens, InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression, InlineValueContext, InlayHintKind, InlayHintLabelPart, InlayHint, StringValue, InlineCompletionItem, InlineCompletionList, InlineCompletionTriggerKind, SelectedCompletionInfo, InlineCompletionContext, WorkspaceFolder, EOL, TextDocument2, FullTextDocument2, Is;
-var init_main = __esm({
-  "node_modules/vscode-languageserver-types/lib/esm/main.js"() {
-    "use strict";
-    (function(DocumentUri2) {
-      function is(value) {
-        return typeof value === "string";
+// ../../node_modules/vscode-languageserver-types/lib/umd/main.js
+var require_main = __commonJS({
+  "../../node_modules/vscode-languageserver-types/lib/umd/main.js"(exports, module) {
+    (function(factory) {
+      if (typeof module === "object" && typeof module.exports === "object") {
+        var v = factory(__require, exports);
+        if (v !== void 0) module.exports = v;
+      } else if (typeof define === "function" && define.amd) {
+        define(["require", "exports"], factory);
       }
-      DocumentUri2.is = is;
-    })(DocumentUri || (DocumentUri = {}));
-    (function(URI2) {
-      function is(value) {
-        return typeof value === "string";
-      }
-      URI2.is = is;
-    })(URI || (URI = {}));
-    (function(integer2) {
-      integer2.MIN_VALUE = -2147483648;
-      integer2.MAX_VALUE = 2147483647;
-      function is(value) {
-        return typeof value === "number" && integer2.MIN_VALUE <= value && value <= integer2.MAX_VALUE;
-      }
-      integer2.is = is;
-    })(integer || (integer = {}));
-    (function(uinteger2) {
-      uinteger2.MIN_VALUE = 0;
-      uinteger2.MAX_VALUE = 2147483647;
-      function is(value) {
-        return typeof value === "number" && uinteger2.MIN_VALUE <= value && value <= uinteger2.MAX_VALUE;
-      }
-      uinteger2.is = is;
-    })(uinteger || (uinteger = {}));
-    (function(Position3) {
-      function create(line, character) {
-        if (line === Number.MAX_VALUE) {
-          line = uinteger.MAX_VALUE;
+    })(function(require2, exports2) {
+      "use strict";
+      Object.defineProperty(exports2, "__esModule", { value: true });
+      exports2.TextDocument = exports2.EOL = exports2.WorkspaceFolder = exports2.InlineCompletionContext = exports2.SelectedCompletionInfo = exports2.InlineCompletionTriggerKind = exports2.InlineCompletionList = exports2.InlineCompletionItem = exports2.StringValue = exports2.InlayHint = exports2.InlayHintLabelPart = exports2.InlayHintKind = exports2.InlineValueContext = exports2.InlineValueEvaluatableExpression = exports2.InlineValueVariableLookup = exports2.InlineValueText = exports2.SemanticTokens = exports2.SemanticTokenModifiers = exports2.SemanticTokenTypes = exports2.SelectionRange = exports2.DocumentLink = exports2.FormattingOptions = exports2.CodeLens = exports2.CodeAction = exports2.CodeActionTag = exports2.CodeActionContext = exports2.CodeActionTriggerKind = exports2.CodeActionKind = exports2.DocumentSymbol = exports2.WorkspaceSymbol = exports2.SymbolInformation = exports2.SymbolTag = exports2.SymbolKind = exports2.DocumentHighlight = exports2.DocumentHighlightKind = exports2.SignatureInformation = exports2.ParameterInformation = exports2.Hover = exports2.MarkedString = exports2.CompletionList = exports2.CompletionItem = exports2.CompletionItemLabelDetails = exports2.ApplyKind = exports2.InsertTextMode = exports2.InsertReplaceEdit = exports2.CompletionItemTag = exports2.InsertTextFormat = exports2.CompletionItemKind = exports2.MarkupContent = exports2.MarkupKind = exports2.TextDocumentItem = exports2.LanguageKind = exports2.OptionalVersionedTextDocumentIdentifier = exports2.VersionedTextDocumentIdentifier = exports2.TextDocumentIdentifier = exports2.WorkspaceChange = exports2.SnippetTextEdit = exports2.WorkspaceEdit = exports2.DeleteFile = exports2.RenameFile = exports2.CreateFile = exports2.TextDocumentEdit = exports2.AnnotatedTextEdit = exports2.ChangeAnnotationIdentifier = exports2.ChangeAnnotation = exports2.TextEdit = exports2.Command = exports2.Diagnostic = exports2.CodeDescription = exports2.DiagnosticTag = exports2.DiagnosticSeverity = exports2.DiagnosticRelatedInformation = exports2.FoldingRange = exports2.FoldingRangeKind = exports2.ColorPresentation = exports2.ColorInformation = exports2.Color = exports2.LocationLink = exports2.Location = exports2.Range = exports2.Position = exports2.uinteger = exports2.integer = exports2.URI = exports2.DocumentUri = void 0;
+      var DocumentUri;
+      (function(DocumentUri2) {
+        function is(value) {
+          return typeof value === "string";
         }
-        if (character === Number.MAX_VALUE) {
-          character = uinteger.MAX_VALUE;
+        DocumentUri2.is = is;
+      })(DocumentUri || (exports2.DocumentUri = DocumentUri = {}));
+      var URI;
+      (function(URI2) {
+        function is(value) {
+          return typeof value === "string";
         }
-        return { line, character };
-      }
-      Position3.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.uinteger(candidate.line) && Is.uinteger(candidate.character);
-      }
-      Position3.is = is;
-    })(Position || (Position = {}));
-    (function(Range4) {
-      function create(one, two, three, four) {
-        if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
-          return { start: Position.create(one, two), end: Position.create(three, four) };
-        } else if (Position.is(one) && Position.is(two)) {
-          return { start: one, end: two };
-        } else {
-          throw new Error(`Range#create called with invalid arguments[${one}, ${two}, ${three}, ${four}]`);
+        URI2.is = is;
+      })(URI || (exports2.URI = URI = {}));
+      var integer;
+      (function(integer2) {
+        integer2.MIN_VALUE = -2147483648;
+        integer2.MAX_VALUE = 2147483647;
+        function is(value) {
+          return typeof value === "number" && integer2.MIN_VALUE <= value && value <= integer2.MAX_VALUE;
         }
-      }
-      Range4.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Position.is(candidate.start) && Position.is(candidate.end);
-      }
-      Range4.is = is;
-    })(Range || (Range = {}));
-    (function(Location3) {
-      function create(uri, range) {
-        return { uri, range };
-      }
-      Location3.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
-      }
-      Location3.is = is;
-    })(Location || (Location = {}));
-    (function(LocationLink3) {
-      function create(targetUri, targetRange, targetSelectionRange, originSelectionRange) {
-        return { targetUri, targetRange, targetSelectionRange, originSelectionRange };
-      }
-      LocationLink3.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range.is(candidate.targetSelectionRange) && (Range.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
-      }
-      LocationLink3.is = is;
-    })(LocationLink || (LocationLink = {}));
-    (function(Color2) {
-      function create(red, green, blue, alpha) {
-        return {
-          red,
-          green,
-          blue,
-          alpha
-        };
-      }
-      Color2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.numberRange(candidate.red, 0, 1) && Is.numberRange(candidate.green, 0, 1) && Is.numberRange(candidate.blue, 0, 1) && Is.numberRange(candidate.alpha, 0, 1);
-      }
-      Color2.is = is;
-    })(Color || (Color = {}));
-    (function(ColorInformation2) {
-      function create(range, color) {
-        return {
-          range,
-          color
-        };
-      }
-      ColorInformation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && Color.is(candidate.color);
-      }
-      ColorInformation2.is = is;
-    })(ColorInformation || (ColorInformation = {}));
-    (function(ColorPresentation2) {
-      function create(label, textEdit, additionalTextEdits) {
-        return {
-          label,
-          textEdit,
-          additionalTextEdits
-        };
-      }
-      ColorPresentation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.undefined(candidate.textEdit) || TextEdit.is(candidate)) && (Is.undefined(candidate.additionalTextEdits) || Is.typedArray(candidate.additionalTextEdits, TextEdit.is));
-      }
-      ColorPresentation2.is = is;
-    })(ColorPresentation || (ColorPresentation = {}));
-    (function(FoldingRangeKind2) {
-      FoldingRangeKind2.Comment = "comment";
-      FoldingRangeKind2.Imports = "imports";
-      FoldingRangeKind2.Region = "region";
-    })(FoldingRangeKind || (FoldingRangeKind = {}));
-    (function(FoldingRange2) {
-      function create(startLine, endLine, startCharacter, endCharacter, kind, collapsedText) {
-        const result = {
-          startLine,
-          endLine
-        };
-        if (Is.defined(startCharacter)) {
-          result.startCharacter = startCharacter;
+        integer2.is = is;
+      })(integer || (exports2.integer = integer = {}));
+      var uinteger;
+      (function(uinteger2) {
+        uinteger2.MIN_VALUE = 0;
+        uinteger2.MAX_VALUE = 2147483647;
+        function is(value) {
+          return typeof value === "number" && uinteger2.MIN_VALUE <= value && value <= uinteger2.MAX_VALUE;
         }
-        if (Is.defined(endCharacter)) {
-          result.endCharacter = endCharacter;
-        }
-        if (Is.defined(kind)) {
-          result.kind = kind;
-        }
-        if (Is.defined(collapsedText)) {
-          result.collapsedText = collapsedText;
-        }
-        return result;
-      }
-      FoldingRange2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.uinteger(candidate.startLine) && Is.uinteger(candidate.startLine) && (Is.undefined(candidate.startCharacter) || Is.uinteger(candidate.startCharacter)) && (Is.undefined(candidate.endCharacter) || Is.uinteger(candidate.endCharacter)) && (Is.undefined(candidate.kind) || Is.string(candidate.kind));
-      }
-      FoldingRange2.is = is;
-    })(FoldingRange || (FoldingRange = {}));
-    (function(DiagnosticRelatedInformation2) {
-      function create(location, message) {
-        return {
-          location,
-          message
-        };
-      }
-      DiagnosticRelatedInformation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Location.is(candidate.location) && Is.string(candidate.message);
-      }
-      DiagnosticRelatedInformation2.is = is;
-    })(DiagnosticRelatedInformation || (DiagnosticRelatedInformation = {}));
-    (function(DiagnosticSeverity4) {
-      DiagnosticSeverity4.Error = 1;
-      DiagnosticSeverity4.Warning = 2;
-      DiagnosticSeverity4.Information = 3;
-      DiagnosticSeverity4.Hint = 4;
-    })(DiagnosticSeverity || (DiagnosticSeverity = {}));
-    (function(DiagnosticTag2) {
-      DiagnosticTag2.Unnecessary = 1;
-      DiagnosticTag2.Deprecated = 2;
-    })(DiagnosticTag || (DiagnosticTag = {}));
-    (function(CodeDescription2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.href);
-      }
-      CodeDescription2.is = is;
-    })(CodeDescription || (CodeDescription = {}));
-    (function(Diagnostic4) {
-      function create(range, message, severity, code, source, relatedInformation) {
-        const result = { range, message };
-        if (Is.defined(severity)) {
-          result.severity = severity;
-        }
-        if (Is.defined(code)) {
-          result.code = code;
-        }
-        if (Is.defined(source)) {
-          result.source = source;
-        }
-        if (Is.defined(relatedInformation)) {
-          result.relatedInformation = relatedInformation;
-        }
-        return result;
-      }
-      Diagnostic4.create = create;
-      function is(value) {
-        var _a;
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(candidate.range) && (Is.string(candidate.message) || MarkupContent.is(candidate.message)) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
-      }
-      Diagnostic4.is = is;
-      function is3_17(value) {
-        return Is.string(value.message);
-      }
-      Diagnostic4.is3_17 = is3_17;
-      function getMessageString(diagnostic) {
-        if (Is.string(diagnostic.message)) {
-          return diagnostic.message;
-        } else if (MarkupContent.is(diagnostic.message)) {
-          return diagnostic.message.value;
-        } else {
-          throw new Error(`Unknown message type ${typeof diagnostic.message}`);
-        }
-      }
-      Diagnostic4.getMessageString = getMessageString;
-    })(Diagnostic || (Diagnostic = {}));
-    (function(Command2) {
-      function create(title, command, ...args) {
-        const result = { title, command };
-        if (Is.defined(args) && args.length > 0) {
-          result.arguments = args;
-        }
-        return result;
-      }
-      Command2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.title) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip)) && Is.string(candidate.command);
-      }
-      Command2.is = is;
-    })(Command || (Command = {}));
-    (function(TextEdit3) {
-      function replace(range, newText) {
-        return { range, newText };
-      }
-      TextEdit3.replace = replace;
-      function insert(position, newText) {
-        return { range: { start: position, end: position }, newText };
-      }
-      TextEdit3.insert = insert;
-      function del(range) {
-        return { range, newText: "" };
-      }
-      TextEdit3.del = del;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range.is(candidate.range);
-      }
-      TextEdit3.is = is;
-    })(TextEdit || (TextEdit = {}));
-    (function(ChangeAnnotation2) {
-      function create(label, needsConfirmation, description) {
-        const result = { label };
-        if (needsConfirmation !== void 0) {
-          result.needsConfirmation = needsConfirmation;
-        }
-        if (description !== void 0) {
-          result.description = description;
-        }
-        return result;
-      }
-      ChangeAnnotation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.boolean(candidate.needsConfirmation) || candidate.needsConfirmation === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
-      }
-      ChangeAnnotation2.is = is;
-    })(ChangeAnnotation || (ChangeAnnotation = {}));
-    (function(ChangeAnnotationIdentifier2) {
-      function is(value) {
-        const candidate = value;
-        return Is.string(candidate);
-      }
-      ChangeAnnotationIdentifier2.is = is;
-    })(ChangeAnnotationIdentifier || (ChangeAnnotationIdentifier = {}));
-    (function(AnnotatedTextEdit2) {
-      function replace(range, newText, annotation) {
-        return { range, newText, annotationId: annotation };
-      }
-      AnnotatedTextEdit2.replace = replace;
-      function insert(position, newText, annotation) {
-        return { range: { start: position, end: position }, newText, annotationId: annotation };
-      }
-      AnnotatedTextEdit2.insert = insert;
-      function del(range, annotation) {
-        return { range, newText: "", annotationId: annotation };
-      }
-      AnnotatedTextEdit2.del = del;
-      function is(value) {
-        const candidate = value;
-        return TextEdit.is(candidate) && (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      AnnotatedTextEdit2.is = is;
-    })(AnnotatedTextEdit || (AnnotatedTextEdit = {}));
-    (function(TextDocumentEdit2) {
-      function create(textDocument, edits) {
-        return { textDocument, edits };
-      }
-      TextDocumentEdit2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && OptionalVersionedTextDocumentIdentifier.is(candidate.textDocument) && Array.isArray(candidate.edits);
-      }
-      TextDocumentEdit2.is = is;
-    })(TextDocumentEdit || (TextDocumentEdit = {}));
-    (function(CreateFile2) {
-      function create(uri, options, annotation) {
-        const result = {
-          kind: "create",
-          uri
-        };
-        if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
-          result.options = options;
-        }
-        if (annotation !== void 0) {
-          result.annotationId = annotation;
-        }
-        return result;
-      }
-      CreateFile2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && candidate.kind === "create" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      CreateFile2.is = is;
-    })(CreateFile || (CreateFile = {}));
-    (function(RenameFile2) {
-      function create(oldUri, newUri, options, annotation) {
-        const result = {
-          kind: "rename",
-          oldUri,
-          newUri
-        };
-        if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
-          result.options = options;
-        }
-        if (annotation !== void 0) {
-          result.annotationId = annotation;
-        }
-        return result;
-      }
-      RenameFile2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && candidate.kind === "rename" && Is.string(candidate.oldUri) && Is.string(candidate.newUri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      RenameFile2.is = is;
-    })(RenameFile || (RenameFile = {}));
-    (function(DeleteFile2) {
-      function create(uri, options, annotation) {
-        const result = {
-          kind: "delete",
-          uri
-        };
-        if (options !== void 0 && (options.recursive !== void 0 || options.ignoreIfNotExists !== void 0)) {
-          result.options = options;
-        }
-        if (annotation !== void 0) {
-          result.annotationId = annotation;
-        }
-        return result;
-      }
-      DeleteFile2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && candidate.kind === "delete" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.recursive === void 0 || Is.boolean(candidate.options.recursive)) && (candidate.options.ignoreIfNotExists === void 0 || Is.boolean(candidate.options.ignoreIfNotExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      DeleteFile2.is = is;
-    })(DeleteFile || (DeleteFile = {}));
-    (function(WorkspaceEdit3) {
-      function is(value) {
-        const candidate = value;
-        return candidate && (candidate.changes !== void 0 || candidate.documentChanges !== void 0) && (candidate.documentChanges === void 0 || candidate.documentChanges.every((change) => {
-          if (Is.string(change.kind)) {
-            return CreateFile.is(change) || RenameFile.is(change) || DeleteFile.is(change);
-          } else {
-            return TextDocumentEdit.is(change);
+        uinteger2.is = is;
+      })(uinteger || (exports2.uinteger = uinteger = {}));
+      var Position2;
+      (function(Position3) {
+        function create(line, character) {
+          if (line === Number.MAX_VALUE) {
+            line = uinteger.MAX_VALUE;
           }
-        }));
-      }
-      WorkspaceEdit3.is = is;
-    })(WorkspaceEdit || (WorkspaceEdit = {}));
-    TextEditChangeImpl = class {
-      constructor(edits, changeAnnotations) {
-        this.edits = edits;
-        this.changeAnnotations = changeAnnotations;
-      }
-      insert(position, newText, annotation) {
-        let edit;
-        let id;
-        if (annotation === void 0) {
-          edit = TextEdit.insert(position, newText);
-        } else if (ChangeAnnotationIdentifier.is(annotation)) {
-          id = annotation;
-          edit = AnnotatedTextEdit.insert(position, newText, annotation);
-        } else {
-          this.assertChangeAnnotations(this.changeAnnotations);
-          id = this.changeAnnotations.manage(annotation);
-          edit = AnnotatedTextEdit.insert(position, newText, id);
+          if (character === Number.MAX_VALUE) {
+            character = uinteger.MAX_VALUE;
+          }
+          return { line, character };
         }
-        this.edits.push(edit);
-        if (id !== void 0) {
-          return id;
+        Position3.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.uinteger(candidate.line) && Is.uinteger(candidate.character);
         }
-      }
-      replace(range, newText, annotation) {
-        let edit;
-        let id;
-        if (annotation === void 0) {
-          edit = TextEdit.replace(range, newText);
-        } else if (ChangeAnnotationIdentifier.is(annotation)) {
-          id = annotation;
-          edit = AnnotatedTextEdit.replace(range, newText, annotation);
-        } else {
-          this.assertChangeAnnotations(this.changeAnnotations);
-          id = this.changeAnnotations.manage(annotation);
-          edit = AnnotatedTextEdit.replace(range, newText, id);
+        Position3.is = is;
+      })(Position2 || (exports2.Position = Position2 = {}));
+      var Range3;
+      (function(Range4) {
+        function create(one, two, three, four) {
+          if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
+            return { start: Position2.create(one, two), end: Position2.create(three, four) };
+          } else if (Position2.is(one) && Position2.is(two)) {
+            return { start: one, end: two };
+          } else {
+            throw new Error("Range#create called with invalid arguments[".concat(one, ", ").concat(two, ", ").concat(three, ", ").concat(four, "]"));
+          }
         }
-        this.edits.push(edit);
-        if (id !== void 0) {
-          return id;
+        Range4.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Position2.is(candidate.start) && Position2.is(candidate.end);
         }
-      }
-      delete(range, annotation) {
-        let edit;
-        let id;
-        if (annotation === void 0) {
-          edit = TextEdit.del(range);
-        } else if (ChangeAnnotationIdentifier.is(annotation)) {
-          id = annotation;
-          edit = AnnotatedTextEdit.del(range, annotation);
-        } else {
-          this.assertChangeAnnotations(this.changeAnnotations);
-          id = this.changeAnnotations.manage(annotation);
-          edit = AnnotatedTextEdit.del(range, id);
+        Range4.is = is;
+      })(Range3 || (exports2.Range = Range3 = {}));
+      var Location2;
+      (function(Location3) {
+        function create(uri, range) {
+          return { uri, range };
         }
-        this.edits.push(edit);
-        if (id !== void 0) {
-          return id;
+        Location3.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
         }
-      }
-      add(edit) {
-        this.edits.push(edit);
-      }
-      all() {
-        return this.edits;
-      }
-      clear() {
-        this.edits.splice(0, this.edits.length);
-      }
-      assertChangeAnnotations(value) {
-        if (value === void 0) {
-          throw new Error(`Text edit change is not configured to manage change annotations.`);
+        Location3.is = is;
+      })(Location2 || (exports2.Location = Location2 = {}));
+      var LocationLink2;
+      (function(LocationLink3) {
+        function create(targetUri, targetRange, targetSelectionRange, originSelectionRange) {
+          return { targetUri, targetRange, targetSelectionRange, originSelectionRange };
         }
-      }
-    };
-    (function(SnippetTextEdit2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && StringValue.isSnippet(candidate.snippet) && (candidate.annotationId === void 0 || (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId)));
-      }
-      SnippetTextEdit2.is = is;
-    })(SnippetTextEdit || (SnippetTextEdit = {}));
-    ChangeAnnotations = class {
-      constructor(annotations) {
-        this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
-        this._counter = 0;
-        this._size = 0;
-      }
-      all() {
-        return this._annotations;
-      }
-      get size() {
-        return this._size;
-      }
-      manage(idOrAnnotation, annotation) {
-        let id;
-        if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
-          id = idOrAnnotation;
-        } else {
-          id = this.nextId();
-          annotation = idOrAnnotation;
+        LocationLink3.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range3.is(candidate.targetSelectionRange) && (Range3.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
         }
-        if (this._annotations[id] !== void 0) {
-          throw new Error(`Id ${id} is already in use.`);
+        LocationLink3.is = is;
+      })(LocationLink2 || (exports2.LocationLink = LocationLink2 = {}));
+      var Color;
+      (function(Color2) {
+        function create(red, green, blue, alpha) {
+          return {
+            red,
+            green,
+            blue,
+            alpha
+          };
         }
-        if (annotation === void 0) {
-          throw new Error(`No annotation provided for id ${id}`);
+        Color2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.numberRange(candidate.red, 0, 1) && Is.numberRange(candidate.green, 0, 1) && Is.numberRange(candidate.blue, 0, 1) && Is.numberRange(candidate.alpha, 0, 1);
         }
-        this._annotations[id] = annotation;
-        this._size++;
-        return id;
-      }
-      nextId() {
-        this._counter++;
-        return this._counter.toString();
-      }
-    };
-    WorkspaceChange = class {
-      constructor(workspaceEdit) {
-        this._textEditChanges = /* @__PURE__ */ Object.create(null);
-        if (workspaceEdit !== void 0) {
-          this._workspaceEdit = workspaceEdit;
-          if (workspaceEdit.documentChanges) {
-            this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
-            workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-            workspaceEdit.documentChanges.forEach((change) => {
-              if (TextDocumentEdit.is(change)) {
-                const textEditChange = new TextEditChangeImpl(change.edits, this._changeAnnotations);
-                this._textEditChanges[change.textDocument.uri] = textEditChange;
+        Color2.is = is;
+      })(Color || (exports2.Color = Color = {}));
+      var ColorInformation;
+      (function(ColorInformation2) {
+        function create(range, color) {
+          return {
+            range,
+            color
+          };
+        }
+        ColorInformation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && Color.is(candidate.color);
+        }
+        ColorInformation2.is = is;
+      })(ColorInformation || (exports2.ColorInformation = ColorInformation = {}));
+      var ColorPresentation;
+      (function(ColorPresentation2) {
+        function create(label, textEdit, additionalTextEdits) {
+          return {
+            label,
+            textEdit,
+            additionalTextEdits
+          };
+        }
+        ColorPresentation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.undefined(candidate.textEdit) || TextEdit2.is(candidate)) && (Is.undefined(candidate.additionalTextEdits) || Is.typedArray(candidate.additionalTextEdits, TextEdit2.is));
+        }
+        ColorPresentation2.is = is;
+      })(ColorPresentation || (exports2.ColorPresentation = ColorPresentation = {}));
+      var FoldingRangeKind;
+      (function(FoldingRangeKind2) {
+        FoldingRangeKind2.Comment = "comment";
+        FoldingRangeKind2.Imports = "imports";
+        FoldingRangeKind2.Region = "region";
+      })(FoldingRangeKind || (exports2.FoldingRangeKind = FoldingRangeKind = {}));
+      var FoldingRange;
+      (function(FoldingRange2) {
+        function create(startLine, endLine, startCharacter, endCharacter, kind, collapsedText) {
+          var result = {
+            startLine,
+            endLine
+          };
+          if (Is.defined(startCharacter)) {
+            result.startCharacter = startCharacter;
+          }
+          if (Is.defined(endCharacter)) {
+            result.endCharacter = endCharacter;
+          }
+          if (Is.defined(kind)) {
+            result.kind = kind;
+          }
+          if (Is.defined(collapsedText)) {
+            result.collapsedText = collapsedText;
+          }
+          return result;
+        }
+        FoldingRange2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.uinteger(candidate.startLine) && Is.uinteger(candidate.startLine) && (Is.undefined(candidate.startCharacter) || Is.uinteger(candidate.startCharacter)) && (Is.undefined(candidate.endCharacter) || Is.uinteger(candidate.endCharacter)) && (Is.undefined(candidate.kind) || Is.string(candidate.kind));
+        }
+        FoldingRange2.is = is;
+      })(FoldingRange || (exports2.FoldingRange = FoldingRange = {}));
+      var DiagnosticRelatedInformation;
+      (function(DiagnosticRelatedInformation2) {
+        function create(location, message) {
+          return {
+            location,
+            message
+          };
+        }
+        DiagnosticRelatedInformation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Location2.is(candidate.location) && Is.string(candidate.message);
+        }
+        DiagnosticRelatedInformation2.is = is;
+      })(DiagnosticRelatedInformation || (exports2.DiagnosticRelatedInformation = DiagnosticRelatedInformation = {}));
+      var DiagnosticSeverity3;
+      (function(DiagnosticSeverity4) {
+        DiagnosticSeverity4.Error = 1;
+        DiagnosticSeverity4.Warning = 2;
+        DiagnosticSeverity4.Information = 3;
+        DiagnosticSeverity4.Hint = 4;
+      })(DiagnosticSeverity3 || (exports2.DiagnosticSeverity = DiagnosticSeverity3 = {}));
+      var DiagnosticTag;
+      (function(DiagnosticTag2) {
+        DiagnosticTag2.Unnecessary = 1;
+        DiagnosticTag2.Deprecated = 2;
+      })(DiagnosticTag || (exports2.DiagnosticTag = DiagnosticTag = {}));
+      var CodeDescription;
+      (function(CodeDescription2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.href);
+        }
+        CodeDescription2.is = is;
+      })(CodeDescription || (exports2.CodeDescription = CodeDescription = {}));
+      var Diagnostic3;
+      (function(Diagnostic4) {
+        function create(range, message, severity, code, source, relatedInformation) {
+          var result = { range, message };
+          if (Is.defined(severity)) {
+            result.severity = severity;
+          }
+          if (Is.defined(code)) {
+            result.code = code;
+          }
+          if (Is.defined(source)) {
+            result.source = source;
+          }
+          if (Is.defined(relatedInformation)) {
+            result.relatedInformation = relatedInformation;
+          }
+          return result;
+        }
+        Diagnostic4.create = create;
+        function is(value) {
+          var _a;
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(candidate.range) && (Is.string(candidate.message) || MarkupContent.is(candidate.message)) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
+        }
+        Diagnostic4.is = is;
+        function is3_17(value) {
+          return Is.string(value.message);
+        }
+        Diagnostic4.is3_17 = is3_17;
+        function getMessageString(diagnostic) {
+          if (Is.string(diagnostic.message)) {
+            return diagnostic.message;
+          } else if (MarkupContent.is(diagnostic.message)) {
+            return diagnostic.message.value;
+          } else {
+            throw new Error("Unknown message type ".concat(typeof diagnostic.message));
+          }
+        }
+        Diagnostic4.getMessageString = getMessageString;
+      })(Diagnostic3 || (exports2.Diagnostic = Diagnostic3 = {}));
+      var Command;
+      (function(Command2) {
+        function create(title, command) {
+          var args = [];
+          for (var _i = 2; _i < arguments.length; _i++) {
+            args[_i - 2] = arguments[_i];
+          }
+          var result = { title, command };
+          if (Is.defined(args) && args.length > 0) {
+            result.arguments = args;
+          }
+          return result;
+        }
+        Command2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.title) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip)) && Is.string(candidate.command);
+        }
+        Command2.is = is;
+      })(Command || (exports2.Command = Command = {}));
+      var TextEdit2;
+      (function(TextEdit3) {
+        function replace(range, newText) {
+          return { range, newText };
+        }
+        TextEdit3.replace = replace;
+        function insert(position, newText) {
+          return { range: { start: position, end: position }, newText };
+        }
+        TextEdit3.insert = insert;
+        function del(range) {
+          return { range, newText: "" };
+        }
+        TextEdit3.del = del;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range3.is(candidate.range);
+        }
+        TextEdit3.is = is;
+      })(TextEdit2 || (exports2.TextEdit = TextEdit2 = {}));
+      var ChangeAnnotation;
+      (function(ChangeAnnotation2) {
+        function create(label, needsConfirmation, description) {
+          var result = { label };
+          if (needsConfirmation !== void 0) {
+            result.needsConfirmation = needsConfirmation;
+          }
+          if (description !== void 0) {
+            result.description = description;
+          }
+          return result;
+        }
+        ChangeAnnotation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.boolean(candidate.needsConfirmation) || candidate.needsConfirmation === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
+        }
+        ChangeAnnotation2.is = is;
+      })(ChangeAnnotation || (exports2.ChangeAnnotation = ChangeAnnotation = {}));
+      var ChangeAnnotationIdentifier;
+      (function(ChangeAnnotationIdentifier2) {
+        function is(value) {
+          var candidate = value;
+          return Is.string(candidate);
+        }
+        ChangeAnnotationIdentifier2.is = is;
+      })(ChangeAnnotationIdentifier || (exports2.ChangeAnnotationIdentifier = ChangeAnnotationIdentifier = {}));
+      var AnnotatedTextEdit;
+      (function(AnnotatedTextEdit2) {
+        function replace(range, newText, annotation) {
+          return { range, newText, annotationId: annotation };
+        }
+        AnnotatedTextEdit2.replace = replace;
+        function insert(position, newText, annotation) {
+          return { range: { start: position, end: position }, newText, annotationId: annotation };
+        }
+        AnnotatedTextEdit2.insert = insert;
+        function del(range, annotation) {
+          return { range, newText: "", annotationId: annotation };
+        }
+        AnnotatedTextEdit2.del = del;
+        function is(value) {
+          var candidate = value;
+          return TextEdit2.is(candidate) && (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        AnnotatedTextEdit2.is = is;
+      })(AnnotatedTextEdit || (exports2.AnnotatedTextEdit = AnnotatedTextEdit = {}));
+      var TextDocumentEdit;
+      (function(TextDocumentEdit2) {
+        function create(textDocument, edits) {
+          return { textDocument, edits };
+        }
+        TextDocumentEdit2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && OptionalVersionedTextDocumentIdentifier.is(candidate.textDocument) && Array.isArray(candidate.edits);
+        }
+        TextDocumentEdit2.is = is;
+      })(TextDocumentEdit || (exports2.TextDocumentEdit = TextDocumentEdit = {}));
+      var CreateFile;
+      (function(CreateFile2) {
+        function create(uri, options, annotation) {
+          var result = {
+            kind: "create",
+            uri
+          };
+          if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
+            result.options = options;
+          }
+          if (annotation !== void 0) {
+            result.annotationId = annotation;
+          }
+          return result;
+        }
+        CreateFile2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && candidate.kind === "create" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        CreateFile2.is = is;
+      })(CreateFile || (exports2.CreateFile = CreateFile = {}));
+      var RenameFile;
+      (function(RenameFile2) {
+        function create(oldUri, newUri, options, annotation) {
+          var result = {
+            kind: "rename",
+            oldUri,
+            newUri
+          };
+          if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
+            result.options = options;
+          }
+          if (annotation !== void 0) {
+            result.annotationId = annotation;
+          }
+          return result;
+        }
+        RenameFile2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && candidate.kind === "rename" && Is.string(candidate.oldUri) && Is.string(candidate.newUri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        RenameFile2.is = is;
+      })(RenameFile || (exports2.RenameFile = RenameFile = {}));
+      var DeleteFile;
+      (function(DeleteFile2) {
+        function create(uri, options, annotation) {
+          var result = {
+            kind: "delete",
+            uri
+          };
+          if (options !== void 0 && (options.recursive !== void 0 || options.ignoreIfNotExists !== void 0)) {
+            result.options = options;
+          }
+          if (annotation !== void 0) {
+            result.annotationId = annotation;
+          }
+          return result;
+        }
+        DeleteFile2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && candidate.kind === "delete" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.recursive === void 0 || Is.boolean(candidate.options.recursive)) && (candidate.options.ignoreIfNotExists === void 0 || Is.boolean(candidate.options.ignoreIfNotExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        DeleteFile2.is = is;
+      })(DeleteFile || (exports2.DeleteFile = DeleteFile = {}));
+      var WorkspaceEdit2;
+      (function(WorkspaceEdit3) {
+        function is(value) {
+          var candidate = value;
+          return candidate && (candidate.changes !== void 0 || candidate.documentChanges !== void 0) && (candidate.documentChanges === void 0 || candidate.documentChanges.every(function(change) {
+            if (Is.string(change.kind)) {
+              return CreateFile.is(change) || RenameFile.is(change) || DeleteFile.is(change);
+            } else {
+              return TextDocumentEdit.is(change);
+            }
+          }));
+        }
+        WorkspaceEdit3.is = is;
+      })(WorkspaceEdit2 || (exports2.WorkspaceEdit = WorkspaceEdit2 = {}));
+      var TextEditChangeImpl = (
+        /** @class */
+        (function() {
+          function TextEditChangeImpl2(edits, changeAnnotations) {
+            this.edits = edits;
+            this.changeAnnotations = changeAnnotations;
+          }
+          TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
+            var edit;
+            var id;
+            if (annotation === void 0) {
+              edit = TextEdit2.insert(position, newText);
+            } else if (ChangeAnnotationIdentifier.is(annotation)) {
+              id = annotation;
+              edit = AnnotatedTextEdit.insert(position, newText, annotation);
+            } else {
+              this.assertChangeAnnotations(this.changeAnnotations);
+              id = this.changeAnnotations.manage(annotation);
+              edit = AnnotatedTextEdit.insert(position, newText, id);
+            }
+            this.edits.push(edit);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
+            var edit;
+            var id;
+            if (annotation === void 0) {
+              edit = TextEdit2.replace(range, newText);
+            } else if (ChangeAnnotationIdentifier.is(annotation)) {
+              id = annotation;
+              edit = AnnotatedTextEdit.replace(range, newText, annotation);
+            } else {
+              this.assertChangeAnnotations(this.changeAnnotations);
+              id = this.changeAnnotations.manage(annotation);
+              edit = AnnotatedTextEdit.replace(range, newText, id);
+            }
+            this.edits.push(edit);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          TextEditChangeImpl2.prototype.delete = function(range, annotation) {
+            var edit;
+            var id;
+            if (annotation === void 0) {
+              edit = TextEdit2.del(range);
+            } else if (ChangeAnnotationIdentifier.is(annotation)) {
+              id = annotation;
+              edit = AnnotatedTextEdit.del(range, annotation);
+            } else {
+              this.assertChangeAnnotations(this.changeAnnotations);
+              id = this.changeAnnotations.manage(annotation);
+              edit = AnnotatedTextEdit.del(range, id);
+            }
+            this.edits.push(edit);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          TextEditChangeImpl2.prototype.add = function(edit) {
+            this.edits.push(edit);
+          };
+          TextEditChangeImpl2.prototype.all = function() {
+            return this.edits;
+          };
+          TextEditChangeImpl2.prototype.clear = function() {
+            this.edits.splice(0, this.edits.length);
+          };
+          TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
+            if (value === void 0) {
+              throw new Error("Text edit change is not configured to manage change annotations.");
+            }
+          };
+          return TextEditChangeImpl2;
+        })()
+      );
+      var SnippetTextEdit;
+      (function(SnippetTextEdit2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && StringValue.isSnippet(candidate.snippet) && (candidate.annotationId === void 0 || (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId)));
+        }
+        SnippetTextEdit2.is = is;
+      })(SnippetTextEdit || (exports2.SnippetTextEdit = SnippetTextEdit = {}));
+      var ChangeAnnotations = (
+        /** @class */
+        (function() {
+          function ChangeAnnotations2(annotations) {
+            this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
+            this._counter = 0;
+            this._size = 0;
+          }
+          ChangeAnnotations2.prototype.all = function() {
+            return this._annotations;
+          };
+          Object.defineProperty(ChangeAnnotations2.prototype, "size", {
+            get: function() {
+              return this._size;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
+            var id;
+            if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
+              id = idOrAnnotation;
+            } else {
+              id = this.nextId();
+              annotation = idOrAnnotation;
+            }
+            if (this._annotations[id] !== void 0) {
+              throw new Error("Id ".concat(id, " is already in use."));
+            }
+            if (annotation === void 0) {
+              throw new Error("No annotation provided for id ".concat(id));
+            }
+            this._annotations[id] = annotation;
+            this._size++;
+            return id;
+          };
+          ChangeAnnotations2.prototype.nextId = function() {
+            this._counter++;
+            return this._counter.toString();
+          };
+          return ChangeAnnotations2;
+        })()
+      );
+      var WorkspaceChange = (
+        /** @class */
+        (function() {
+          function WorkspaceChange2(workspaceEdit) {
+            var _this = this;
+            this._textEditChanges = /* @__PURE__ */ Object.create(null);
+            if (workspaceEdit !== void 0) {
+              this._workspaceEdit = workspaceEdit;
+              if (workspaceEdit.documentChanges) {
+                this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
+                workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+                workspaceEdit.documentChanges.forEach(function(change) {
+                  if (TextDocumentEdit.is(change)) {
+                    var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
+                    _this._textEditChanges[change.textDocument.uri] = textEditChange;
+                  }
+                });
+              } else if (workspaceEdit.changes) {
+                Object.keys(workspaceEdit.changes).forEach(function(key) {
+                  var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
+                  _this._textEditChanges[key] = textEditChange;
+                });
               }
-            });
-          } else if (workspaceEdit.changes) {
-            Object.keys(workspaceEdit.changes).forEach((key) => {
-              const textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key]);
-              this._textEditChanges[key] = textEditChange;
-            });
+            } else {
+              this._workspaceEdit = {};
+            }
           }
-        } else {
-          this._workspaceEdit = {};
+          Object.defineProperty(WorkspaceChange2.prototype, "edit", {
+            /**
+             * Returns the underlying {@link WorkspaceEdit} literal
+             * use to be returned from a workspace edit operation like rename.
+             */
+            get: function() {
+              this.initDocumentChanges();
+              if (this._changeAnnotations !== void 0) {
+                if (this._changeAnnotations.size === 0) {
+                  this._workspaceEdit.changeAnnotations = void 0;
+                } else {
+                  this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+                }
+              }
+              return this._workspaceEdit;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          WorkspaceChange2.prototype.getTextEditChange = function(key) {
+            if (OptionalVersionedTextDocumentIdentifier.is(key)) {
+              this.initDocumentChanges();
+              if (this._workspaceEdit.documentChanges === void 0) {
+                throw new Error("Workspace edit is not configured for document changes.");
+              }
+              var textDocument = { uri: key.uri, version: key.version };
+              var result = this._textEditChanges[textDocument.uri];
+              if (!result) {
+                var edits = [];
+                var textDocumentEdit = {
+                  textDocument,
+                  edits
+                };
+                this._workspaceEdit.documentChanges.push(textDocumentEdit);
+                result = new TextEditChangeImpl(edits, this._changeAnnotations);
+                this._textEditChanges[textDocument.uri] = result;
+              }
+              return result;
+            } else {
+              this.initChanges();
+              if (this._workspaceEdit.changes === void 0) {
+                throw new Error("Workspace edit is not configured for normal text edit changes.");
+              }
+              var result = this._textEditChanges[key];
+              if (!result) {
+                var edits = [];
+                this._workspaceEdit.changes[key] = edits;
+                result = new TextEditChangeImpl(edits);
+                this._textEditChanges[key] = result;
+              }
+              return result;
+            }
+          };
+          WorkspaceChange2.prototype.initDocumentChanges = function() {
+            if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+              this._changeAnnotations = new ChangeAnnotations();
+              this._workspaceEdit.documentChanges = [];
+              this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+            }
+          };
+          WorkspaceChange2.prototype.initChanges = function() {
+            if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+              this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
+            }
+          };
+          WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
+            this.initDocumentChanges();
+            if (this._workspaceEdit.documentChanges === void 0) {
+              throw new Error("Workspace edit is not configured for document changes.");
+            }
+            var annotation;
+            if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+              annotation = optionsOrAnnotation;
+            } else {
+              options = optionsOrAnnotation;
+            }
+            var operation;
+            var id;
+            if (annotation === void 0) {
+              operation = CreateFile.create(uri, options);
+            } else {
+              id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+              operation = CreateFile.create(uri, options, id);
+            }
+            this._workspaceEdit.documentChanges.push(operation);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
+            this.initDocumentChanges();
+            if (this._workspaceEdit.documentChanges === void 0) {
+              throw new Error("Workspace edit is not configured for document changes.");
+            }
+            var annotation;
+            if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+              annotation = optionsOrAnnotation;
+            } else {
+              options = optionsOrAnnotation;
+            }
+            var operation;
+            var id;
+            if (annotation === void 0) {
+              operation = RenameFile.create(oldUri, newUri, options);
+            } else {
+              id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+              operation = RenameFile.create(oldUri, newUri, options, id);
+            }
+            this._workspaceEdit.documentChanges.push(operation);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
+            this.initDocumentChanges();
+            if (this._workspaceEdit.documentChanges === void 0) {
+              throw new Error("Workspace edit is not configured for document changes.");
+            }
+            var annotation;
+            if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+              annotation = optionsOrAnnotation;
+            } else {
+              options = optionsOrAnnotation;
+            }
+            var operation;
+            var id;
+            if (annotation === void 0) {
+              operation = DeleteFile.create(uri, options);
+            } else {
+              id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+              operation = DeleteFile.create(uri, options, id);
+            }
+            this._workspaceEdit.documentChanges.push(operation);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          return WorkspaceChange2;
+        })()
+      );
+      exports2.WorkspaceChange = WorkspaceChange;
+      var TextDocumentIdentifier;
+      (function(TextDocumentIdentifier2) {
+        function create(uri) {
+          return { uri };
         }
-      }
-      /**
-       * Returns the underlying {@link WorkspaceEdit} literal
-       * use to be returned from a workspace edit operation like rename.
-       */
-      get edit() {
-        this.initDocumentChanges();
-        if (this._changeAnnotations !== void 0) {
-          if (this._changeAnnotations.size === 0) {
-            this._workspaceEdit.changeAnnotations = void 0;
+        TextDocumentIdentifier2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri);
+        }
+        TextDocumentIdentifier2.is = is;
+      })(TextDocumentIdentifier || (exports2.TextDocumentIdentifier = TextDocumentIdentifier = {}));
+      var VersionedTextDocumentIdentifier;
+      (function(VersionedTextDocumentIdentifier2) {
+        function create(uri, version) {
+          return { uri, version };
+        }
+        VersionedTextDocumentIdentifier2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && Is.integer(candidate.version);
+        }
+        VersionedTextDocumentIdentifier2.is = is;
+      })(VersionedTextDocumentIdentifier || (exports2.VersionedTextDocumentIdentifier = VersionedTextDocumentIdentifier = {}));
+      var OptionalVersionedTextDocumentIdentifier;
+      (function(OptionalVersionedTextDocumentIdentifier2) {
+        function create(uri, version) {
+          return { uri, version };
+        }
+        OptionalVersionedTextDocumentIdentifier2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && (candidate.version === null || Is.integer(candidate.version));
+        }
+        OptionalVersionedTextDocumentIdentifier2.is = is;
+      })(OptionalVersionedTextDocumentIdentifier || (exports2.OptionalVersionedTextDocumentIdentifier = OptionalVersionedTextDocumentIdentifier = {}));
+      var LanguageKind;
+      (function(LanguageKind2) {
+        LanguageKind2.ABAP = "abap";
+        LanguageKind2.WindowsBat = "bat";
+        LanguageKind2.BibTeX = "bibtex";
+        LanguageKind2.Clojure = "clojure";
+        LanguageKind2.Coffeescript = "coffeescript";
+        LanguageKind2.C = "c";
+        LanguageKind2.CPP = "cpp";
+        LanguageKind2.CSharp = "csharp";
+        LanguageKind2.CSS = "css";
+        LanguageKind2.D = "d";
+        LanguageKind2.Delphi = "pascal";
+        LanguageKind2.Diff = "diff";
+        LanguageKind2.Dart = "dart";
+        LanguageKind2.Dockerfile = "dockerfile";
+        LanguageKind2.Elixir = "elixir";
+        LanguageKind2.Erlang = "erlang";
+        LanguageKind2.FSharp = "fsharp";
+        LanguageKind2.GitCommit = "git-commit";
+        LanguageKind2.GitRebase = "git-rebase";
+        LanguageKind2.Go = "go";
+        LanguageKind2.Groovy = "groovy";
+        LanguageKind2.Handlebars = "handlebars";
+        LanguageKind2.Haskell = "haskell";
+        LanguageKind2.HTML = "html";
+        LanguageKind2.Ini = "ini";
+        LanguageKind2.Java = "java";
+        LanguageKind2.JavaScript = "javascript";
+        LanguageKind2.JavaScriptReact = "javascriptreact";
+        LanguageKind2.JSON = "json";
+        LanguageKind2.LaTeX = "latex";
+        LanguageKind2.Less = "less";
+        LanguageKind2.Lua = "lua";
+        LanguageKind2.Makefile = "makefile";
+        LanguageKind2.Markdown = "markdown";
+        LanguageKind2.ObjectiveC = "objective-c";
+        LanguageKind2.ObjectiveCPP = "objective-cpp";
+        LanguageKind2.Pascal = "pascal";
+        LanguageKind2.Perl = "perl";
+        LanguageKind2.Perl6 = "perl6";
+        LanguageKind2.PHP = "php";
+        LanguageKind2.Plaintext = "plaintext";
+        LanguageKind2.Powershell = "powershell";
+        LanguageKind2.Pug = "jade";
+        LanguageKind2.Python = "python";
+        LanguageKind2.R = "r";
+        LanguageKind2.Razor = "razor";
+        LanguageKind2.Ruby = "ruby";
+        LanguageKind2.Rust = "rust";
+        LanguageKind2.SCSS = "scss";
+        LanguageKind2.SASS = "sass";
+        LanguageKind2.Scala = "scala";
+        LanguageKind2.ShaderLab = "shaderlab";
+        LanguageKind2.ShellScript = "shellscript";
+        LanguageKind2.SQL = "sql";
+        LanguageKind2.Swift = "swift";
+        LanguageKind2.TypeScript = "typescript";
+        LanguageKind2.TypeScriptReact = "typescriptreact";
+        LanguageKind2.TeX = "tex";
+        LanguageKind2.VisualBasic = "vb";
+        LanguageKind2.XML = "xml";
+        LanguageKind2.XSL = "xsl";
+        LanguageKind2.YAML = "yaml";
+      })(LanguageKind || (exports2.LanguageKind = LanguageKind = {}));
+      var TextDocumentItem;
+      (function(TextDocumentItem2) {
+        function create(uri, languageId, version, text) {
+          return { uri, languageId, version, text };
+        }
+        TextDocumentItem2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && Is.string(candidate.languageId) && Is.integer(candidate.version) && Is.string(candidate.text);
+        }
+        TextDocumentItem2.is = is;
+      })(TextDocumentItem || (exports2.TextDocumentItem = TextDocumentItem = {}));
+      var MarkupKind2;
+      (function(MarkupKind3) {
+        MarkupKind3.PlainText = "plaintext";
+        MarkupKind3.Markdown = "markdown";
+        function is(value) {
+          var candidate = value;
+          return candidate === MarkupKind3.PlainText || candidate === MarkupKind3.Markdown;
+        }
+        MarkupKind3.is = is;
+      })(MarkupKind2 || (exports2.MarkupKind = MarkupKind2 = {}));
+      var MarkupContent;
+      (function(MarkupContent2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(value) && MarkupKind2.is(candidate.kind) && Is.string(candidate.value);
+        }
+        MarkupContent2.is = is;
+      })(MarkupContent || (exports2.MarkupContent = MarkupContent = {}));
+      var CompletionItemKind2;
+      (function(CompletionItemKind3) {
+        CompletionItemKind3.Text = 1;
+        CompletionItemKind3.Method = 2;
+        CompletionItemKind3.Function = 3;
+        CompletionItemKind3.Constructor = 4;
+        CompletionItemKind3.Field = 5;
+        CompletionItemKind3.Variable = 6;
+        CompletionItemKind3.Class = 7;
+        CompletionItemKind3.Interface = 8;
+        CompletionItemKind3.Module = 9;
+        CompletionItemKind3.Property = 10;
+        CompletionItemKind3.Unit = 11;
+        CompletionItemKind3.Value = 12;
+        CompletionItemKind3.Enum = 13;
+        CompletionItemKind3.Keyword = 14;
+        CompletionItemKind3.Snippet = 15;
+        CompletionItemKind3.Color = 16;
+        CompletionItemKind3.File = 17;
+        CompletionItemKind3.Reference = 18;
+        CompletionItemKind3.Folder = 19;
+        CompletionItemKind3.EnumMember = 20;
+        CompletionItemKind3.Constant = 21;
+        CompletionItemKind3.Struct = 22;
+        CompletionItemKind3.Event = 23;
+        CompletionItemKind3.Operator = 24;
+        CompletionItemKind3.TypeParameter = 25;
+      })(CompletionItemKind2 || (exports2.CompletionItemKind = CompletionItemKind2 = {}));
+      var InsertTextFormat;
+      (function(InsertTextFormat2) {
+        InsertTextFormat2.PlainText = 1;
+        InsertTextFormat2.Snippet = 2;
+      })(InsertTextFormat || (exports2.InsertTextFormat = InsertTextFormat = {}));
+      var CompletionItemTag;
+      (function(CompletionItemTag2) {
+        CompletionItemTag2.Deprecated = 1;
+      })(CompletionItemTag || (exports2.CompletionItemTag = CompletionItemTag = {}));
+      var InsertReplaceEdit;
+      (function(InsertReplaceEdit2) {
+        function create(newText, insert, replace) {
+          return { newText, insert, replace };
+        }
+        InsertReplaceEdit2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && Is.string(candidate.newText) && Range3.is(candidate.insert) && Range3.is(candidate.replace);
+        }
+        InsertReplaceEdit2.is = is;
+      })(InsertReplaceEdit || (exports2.InsertReplaceEdit = InsertReplaceEdit = {}));
+      var InsertTextMode;
+      (function(InsertTextMode2) {
+        InsertTextMode2.asIs = 1;
+        InsertTextMode2.adjustIndentation = 2;
+      })(InsertTextMode || (exports2.InsertTextMode = InsertTextMode = {}));
+      var ApplyKind;
+      (function(ApplyKind2) {
+        ApplyKind2.Replace = 1;
+        ApplyKind2.Merge = 2;
+      })(ApplyKind || (exports2.ApplyKind = ApplyKind = {}));
+      var CompletionItemLabelDetails;
+      (function(CompletionItemLabelDetails2) {
+        function is(value) {
+          var candidate = value;
+          return candidate && (Is.string(candidate.detail) || candidate.detail === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
+        }
+        CompletionItemLabelDetails2.is = is;
+      })(CompletionItemLabelDetails || (exports2.CompletionItemLabelDetails = CompletionItemLabelDetails = {}));
+      var CompletionItem2;
+      (function(CompletionItem3) {
+        function create(label) {
+          return { label };
+        }
+        CompletionItem3.create = create;
+      })(CompletionItem2 || (exports2.CompletionItem = CompletionItem2 = {}));
+      var CompletionList;
+      (function(CompletionList2) {
+        function create(items, isIncomplete) {
+          return { items: items ? items : [], isIncomplete: !!isIncomplete };
+        }
+        CompletionList2.create = create;
+      })(CompletionList || (exports2.CompletionList = CompletionList = {}));
+      var MarkedString;
+      (function(MarkedString2) {
+        function fromPlainText(plainText) {
+          return plainText.replace(/[\\`*_{}[\]()#+\-.!]/g, "\\$&");
+        }
+        MarkedString2.fromPlainText = fromPlainText;
+        function is(value) {
+          var candidate = value;
+          return Is.string(candidate) || Is.objectLiteral(candidate) && Is.string(candidate.language) && Is.string(candidate.value);
+        }
+        MarkedString2.is = is;
+      })(MarkedString || (exports2.MarkedString = MarkedString = {}));
+      var Hover2;
+      (function(Hover3) {
+        function is(value) {
+          var candidate = value;
+          return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range3.is(value.range));
+        }
+        Hover3.is = is;
+      })(Hover2 || (exports2.Hover = Hover2 = {}));
+      var ParameterInformation;
+      (function(ParameterInformation2) {
+        function create(label, documentation) {
+          return documentation ? { label, documentation } : { label };
+        }
+        ParameterInformation2.create = create;
+      })(ParameterInformation || (exports2.ParameterInformation = ParameterInformation = {}));
+      var SignatureInformation2;
+      (function(SignatureInformation3) {
+        function create(label, documentation) {
+          var parameters = [];
+          for (var _i = 2; _i < arguments.length; _i++) {
+            parameters[_i - 2] = arguments[_i];
+          }
+          var result = { label };
+          if (Is.defined(documentation)) {
+            result.documentation = documentation;
+          }
+          if (Is.defined(parameters)) {
+            result.parameters = parameters;
           } else {
-            this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-          }
-        }
-        return this._workspaceEdit;
-      }
-      getTextEditChange(key) {
-        if (OptionalVersionedTextDocumentIdentifier.is(key)) {
-          this.initDocumentChanges();
-          if (this._workspaceEdit.documentChanges === void 0) {
-            throw new Error("Workspace edit is not configured for document changes.");
-          }
-          const textDocument = { uri: key.uri, version: key.version };
-          let result = this._textEditChanges[textDocument.uri];
-          if (!result) {
-            const edits = [];
-            const textDocumentEdit = {
-              textDocument,
-              edits
-            };
-            this._workspaceEdit.documentChanges.push(textDocumentEdit);
-            result = new TextEditChangeImpl(edits, this._changeAnnotations);
-            this._textEditChanges[textDocument.uri] = result;
+            result.parameters = [];
           }
           return result;
-        } else {
-          this.initChanges();
-          if (this._workspaceEdit.changes === void 0) {
-            throw new Error("Workspace edit is not configured for normal text edit changes.");
-          }
-          let result = this._textEditChanges[key];
-          if (!result) {
-            const edits = [];
-            this._workspaceEdit.changes[key] = edits;
-            result = new TextEditChangeImpl(edits);
-            this._textEditChanges[key] = result;
+        }
+        SignatureInformation3.create = create;
+      })(SignatureInformation2 || (exports2.SignatureInformation = SignatureInformation2 = {}));
+      var DocumentHighlightKind;
+      (function(DocumentHighlightKind2) {
+        DocumentHighlightKind2.Text = 1;
+        DocumentHighlightKind2.Read = 2;
+        DocumentHighlightKind2.Write = 3;
+      })(DocumentHighlightKind || (exports2.DocumentHighlightKind = DocumentHighlightKind = {}));
+      var DocumentHighlight;
+      (function(DocumentHighlight2) {
+        function create(range, kind) {
+          var result = { range };
+          if (Is.number(kind)) {
+            result.kind = kind;
           }
           return result;
         }
-      }
-      initDocumentChanges() {
-        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-          this._changeAnnotations = new ChangeAnnotations();
-          this._workspaceEdit.documentChanges = [];
-          this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-        }
-      }
-      initChanges() {
-        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-          this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
-        }
-      }
-      createFile(uri, optionsOrAnnotation, options) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        let annotation;
-        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-          annotation = optionsOrAnnotation;
-        } else {
-          options = optionsOrAnnotation;
-        }
-        let operation;
-        let id;
-        if (annotation === void 0) {
-          operation = CreateFile.create(uri, options);
-        } else {
-          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-          operation = CreateFile.create(uri, options, id);
-        }
-        this._workspaceEdit.documentChanges.push(operation);
-        if (id !== void 0) {
-          return id;
-        }
-      }
-      renameFile(oldUri, newUri, optionsOrAnnotation, options) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        let annotation;
-        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-          annotation = optionsOrAnnotation;
-        } else {
-          options = optionsOrAnnotation;
-        }
-        let operation;
-        let id;
-        if (annotation === void 0) {
-          operation = RenameFile.create(oldUri, newUri, options);
-        } else {
-          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-          operation = RenameFile.create(oldUri, newUri, options, id);
-        }
-        this._workspaceEdit.documentChanges.push(operation);
-        if (id !== void 0) {
-          return id;
-        }
-      }
-      deleteFile(uri, optionsOrAnnotation, options) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        let annotation;
-        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-          annotation = optionsOrAnnotation;
-        } else {
-          options = optionsOrAnnotation;
-        }
-        let operation;
-        let id;
-        if (annotation === void 0) {
-          operation = DeleteFile.create(uri, options);
-        } else {
-          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-          operation = DeleteFile.create(uri, options, id);
-        }
-        this._workspaceEdit.documentChanges.push(operation);
-        if (id !== void 0) {
-          return id;
-        }
-      }
-    };
-    (function(TextDocumentIdentifier2) {
-      function create(uri) {
-        return { uri };
-      }
-      TextDocumentIdentifier2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri);
-      }
-      TextDocumentIdentifier2.is = is;
-    })(TextDocumentIdentifier || (TextDocumentIdentifier = {}));
-    (function(VersionedTextDocumentIdentifier2) {
-      function create(uri, version) {
-        return { uri, version };
-      }
-      VersionedTextDocumentIdentifier2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && Is.integer(candidate.version);
-      }
-      VersionedTextDocumentIdentifier2.is = is;
-    })(VersionedTextDocumentIdentifier || (VersionedTextDocumentIdentifier = {}));
-    (function(OptionalVersionedTextDocumentIdentifier2) {
-      function create(uri, version) {
-        return { uri, version };
-      }
-      OptionalVersionedTextDocumentIdentifier2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && (candidate.version === null || Is.integer(candidate.version));
-      }
-      OptionalVersionedTextDocumentIdentifier2.is = is;
-    })(OptionalVersionedTextDocumentIdentifier || (OptionalVersionedTextDocumentIdentifier = {}));
-    (function(LanguageKind2) {
-      LanguageKind2.ABAP = "abap";
-      LanguageKind2.WindowsBat = "bat";
-      LanguageKind2.BibTeX = "bibtex";
-      LanguageKind2.Clojure = "clojure";
-      LanguageKind2.Coffeescript = "coffeescript";
-      LanguageKind2.C = "c";
-      LanguageKind2.CPP = "cpp";
-      LanguageKind2.CSharp = "csharp";
-      LanguageKind2.CSS = "css";
-      LanguageKind2.D = "d";
-      LanguageKind2.Delphi = "pascal";
-      LanguageKind2.Diff = "diff";
-      LanguageKind2.Dart = "dart";
-      LanguageKind2.Dockerfile = "dockerfile";
-      LanguageKind2.Elixir = "elixir";
-      LanguageKind2.Erlang = "erlang";
-      LanguageKind2.FSharp = "fsharp";
-      LanguageKind2.GitCommit = "git-commit";
-      LanguageKind2.GitRebase = "git-rebase";
-      LanguageKind2.Go = "go";
-      LanguageKind2.Groovy = "groovy";
-      LanguageKind2.Handlebars = "handlebars";
-      LanguageKind2.Haskell = "haskell";
-      LanguageKind2.HTML = "html";
-      LanguageKind2.Ini = "ini";
-      LanguageKind2.Java = "java";
-      LanguageKind2.JavaScript = "javascript";
-      LanguageKind2.JavaScriptReact = "javascriptreact";
-      LanguageKind2.JSON = "json";
-      LanguageKind2.LaTeX = "latex";
-      LanguageKind2.Less = "less";
-      LanguageKind2.Lua = "lua";
-      LanguageKind2.Makefile = "makefile";
-      LanguageKind2.Markdown = "markdown";
-      LanguageKind2.ObjectiveC = "objective-c";
-      LanguageKind2.ObjectiveCPP = "objective-cpp";
-      LanguageKind2.Pascal = "pascal";
-      LanguageKind2.Perl = "perl";
-      LanguageKind2.Perl6 = "perl6";
-      LanguageKind2.PHP = "php";
-      LanguageKind2.Plaintext = "plaintext";
-      LanguageKind2.Powershell = "powershell";
-      LanguageKind2.Pug = "jade";
-      LanguageKind2.Python = "python";
-      LanguageKind2.R = "r";
-      LanguageKind2.Razor = "razor";
-      LanguageKind2.Ruby = "ruby";
-      LanguageKind2.Rust = "rust";
-      LanguageKind2.SCSS = "scss";
-      LanguageKind2.SASS = "sass";
-      LanguageKind2.Scala = "scala";
-      LanguageKind2.ShaderLab = "shaderlab";
-      LanguageKind2.ShellScript = "shellscript";
-      LanguageKind2.SQL = "sql";
-      LanguageKind2.Swift = "swift";
-      LanguageKind2.TypeScript = "typescript";
-      LanguageKind2.TypeScriptReact = "typescriptreact";
-      LanguageKind2.TeX = "tex";
-      LanguageKind2.VisualBasic = "vb";
-      LanguageKind2.XML = "xml";
-      LanguageKind2.XSL = "xsl";
-      LanguageKind2.YAML = "yaml";
-    })(LanguageKind || (LanguageKind = {}));
-    (function(TextDocumentItem2) {
-      function create(uri, languageId, version, text) {
-        return { uri, languageId, version, text };
-      }
-      TextDocumentItem2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && Is.string(candidate.languageId) && Is.integer(candidate.version) && Is.string(candidate.text);
-      }
-      TextDocumentItem2.is = is;
-    })(TextDocumentItem || (TextDocumentItem = {}));
-    (function(MarkupKind3) {
-      MarkupKind3.PlainText = "plaintext";
-      MarkupKind3.Markdown = "markdown";
-      function is(value) {
-        const candidate = value;
-        return candidate === MarkupKind3.PlainText || candidate === MarkupKind3.Markdown;
-      }
-      MarkupKind3.is = is;
-    })(MarkupKind || (MarkupKind = {}));
-    (function(MarkupContent2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(value) && MarkupKind.is(candidate.kind) && Is.string(candidate.value);
-      }
-      MarkupContent2.is = is;
-    })(MarkupContent || (MarkupContent = {}));
-    (function(CompletionItemKind3) {
-      CompletionItemKind3.Text = 1;
-      CompletionItemKind3.Method = 2;
-      CompletionItemKind3.Function = 3;
-      CompletionItemKind3.Constructor = 4;
-      CompletionItemKind3.Field = 5;
-      CompletionItemKind3.Variable = 6;
-      CompletionItemKind3.Class = 7;
-      CompletionItemKind3.Interface = 8;
-      CompletionItemKind3.Module = 9;
-      CompletionItemKind3.Property = 10;
-      CompletionItemKind3.Unit = 11;
-      CompletionItemKind3.Value = 12;
-      CompletionItemKind3.Enum = 13;
-      CompletionItemKind3.Keyword = 14;
-      CompletionItemKind3.Snippet = 15;
-      CompletionItemKind3.Color = 16;
-      CompletionItemKind3.File = 17;
-      CompletionItemKind3.Reference = 18;
-      CompletionItemKind3.Folder = 19;
-      CompletionItemKind3.EnumMember = 20;
-      CompletionItemKind3.Constant = 21;
-      CompletionItemKind3.Struct = 22;
-      CompletionItemKind3.Event = 23;
-      CompletionItemKind3.Operator = 24;
-      CompletionItemKind3.TypeParameter = 25;
-    })(CompletionItemKind || (CompletionItemKind = {}));
-    (function(InsertTextFormat2) {
-      InsertTextFormat2.PlainText = 1;
-      InsertTextFormat2.Snippet = 2;
-    })(InsertTextFormat || (InsertTextFormat = {}));
-    (function(CompletionItemTag2) {
-      CompletionItemTag2.Deprecated = 1;
-    })(CompletionItemTag || (CompletionItemTag = {}));
-    (function(InsertReplaceEdit2) {
-      function create(newText, insert, replace) {
-        return { newText, insert, replace };
-      }
-      InsertReplaceEdit2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && Is.string(candidate.newText) && Range.is(candidate.insert) && Range.is(candidate.replace);
-      }
-      InsertReplaceEdit2.is = is;
-    })(InsertReplaceEdit || (InsertReplaceEdit = {}));
-    (function(InsertTextMode2) {
-      InsertTextMode2.asIs = 1;
-      InsertTextMode2.adjustIndentation = 2;
-    })(InsertTextMode || (InsertTextMode = {}));
-    (function(ApplyKind2) {
-      ApplyKind2.Replace = 1;
-      ApplyKind2.Merge = 2;
-    })(ApplyKind || (ApplyKind = {}));
-    (function(CompletionItemLabelDetails2) {
-      function is(value) {
-        const candidate = value;
-        return candidate && (Is.string(candidate.detail) || candidate.detail === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
-      }
-      CompletionItemLabelDetails2.is = is;
-    })(CompletionItemLabelDetails || (CompletionItemLabelDetails = {}));
-    (function(CompletionItem3) {
-      function create(label) {
-        return { label };
-      }
-      CompletionItem3.create = create;
-    })(CompletionItem || (CompletionItem = {}));
-    (function(CompletionList2) {
-      function create(items, isIncomplete) {
-        return { items: items ? items : [], isIncomplete: !!isIncomplete };
-      }
-      CompletionList2.create = create;
-    })(CompletionList || (CompletionList = {}));
-    (function(MarkedString2) {
-      function fromPlainText(plainText) {
-        return plainText.replace(/[\\`*_{}[\]()#+\-.!]/g, "\\$&");
-      }
-      MarkedString2.fromPlainText = fromPlainText;
-      function is(value) {
-        const candidate = value;
-        return Is.string(candidate) || Is.objectLiteral(candidate) && Is.string(candidate.language) && Is.string(candidate.value);
-      }
-      MarkedString2.is = is;
-    })(MarkedString || (MarkedString = {}));
-    (function(Hover3) {
-      function is(value) {
-        const candidate = value;
-        return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range.is(value.range));
-      }
-      Hover3.is = is;
-    })(Hover || (Hover = {}));
-    (function(ParameterInformation2) {
-      function create(label, documentation) {
-        return documentation ? { label, documentation } : { label };
-      }
-      ParameterInformation2.create = create;
-    })(ParameterInformation || (ParameterInformation = {}));
-    (function(SignatureInformation3) {
-      function create(label, documentation, ...parameters) {
-        const result = { label };
-        if (Is.defined(documentation)) {
-          result.documentation = documentation;
-        }
-        if (Is.defined(parameters)) {
-          result.parameters = parameters;
-        } else {
-          result.parameters = [];
-        }
-        return result;
-      }
-      SignatureInformation3.create = create;
-    })(SignatureInformation || (SignatureInformation = {}));
-    (function(DocumentHighlightKind2) {
-      DocumentHighlightKind2.Text = 1;
-      DocumentHighlightKind2.Read = 2;
-      DocumentHighlightKind2.Write = 3;
-    })(DocumentHighlightKind || (DocumentHighlightKind = {}));
-    (function(DocumentHighlight2) {
-      function create(range, kind) {
-        const result = { range };
-        if (Is.number(kind)) {
-          result.kind = kind;
-        }
-        return result;
-      }
-      DocumentHighlight2.create = create;
-    })(DocumentHighlight || (DocumentHighlight = {}));
-    (function(SymbolKind3) {
-      SymbolKind3.File = 1;
-      SymbolKind3.Module = 2;
-      SymbolKind3.Namespace = 3;
-      SymbolKind3.Package = 4;
-      SymbolKind3.Class = 5;
-      SymbolKind3.Method = 6;
-      SymbolKind3.Property = 7;
-      SymbolKind3.Field = 8;
-      SymbolKind3.Constructor = 9;
-      SymbolKind3.Enum = 10;
-      SymbolKind3.Interface = 11;
-      SymbolKind3.Function = 12;
-      SymbolKind3.Variable = 13;
-      SymbolKind3.Constant = 14;
-      SymbolKind3.String = 15;
-      SymbolKind3.Number = 16;
-      SymbolKind3.Boolean = 17;
-      SymbolKind3.Array = 18;
-      SymbolKind3.Object = 19;
-      SymbolKind3.Key = 20;
-      SymbolKind3.Null = 21;
-      SymbolKind3.EnumMember = 22;
-      SymbolKind3.Struct = 23;
-      SymbolKind3.Event = 24;
-      SymbolKind3.Operator = 25;
-      SymbolKind3.TypeParameter = 26;
-    })(SymbolKind || (SymbolKind = {}));
-    (function(SymbolTag2) {
-      SymbolTag2.Deprecated = 1;
-    })(SymbolTag || (SymbolTag = {}));
-    (function(SymbolInformation3) {
-      function create(name, kind, range, uri, containerName) {
-        const result = {
-          name,
-          kind,
-          location: { uri, range }
-        };
-        if (containerName) {
-          result.containerName = containerName;
-        }
-        return result;
-      }
-      SymbolInformation3.create = create;
-    })(SymbolInformation || (SymbolInformation = {}));
-    (function(WorkspaceSymbol2) {
-      function create(name, kind, uri, range) {
-        return range !== void 0 ? { name, kind, location: { uri, range } } : { name, kind, location: { uri } };
-      }
-      WorkspaceSymbol2.create = create;
-    })(WorkspaceSymbol || (WorkspaceSymbol = {}));
-    (function(DocumentSymbol3) {
-      function create(name, detail, kind, range, selectionRange, children) {
-        const result = {
-          name,
-          detail,
-          kind,
-          range,
-          selectionRange
-        };
-        if (children !== void 0) {
-          result.children = children;
-        }
-        return result;
-      }
-      DocumentSymbol3.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range.is(candidate.range) && Range.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
-      }
-      DocumentSymbol3.is = is;
-    })(DocumentSymbol || (DocumentSymbol = {}));
-    (function(CodeActionKind2) {
-      CodeActionKind2.Empty = "";
-      CodeActionKind2.QuickFix = "quickfix";
-      CodeActionKind2.Refactor = "refactor";
-      CodeActionKind2.RefactorExtract = "refactor.extract";
-      CodeActionKind2.RefactorInline = "refactor.inline";
-      CodeActionKind2.RefactorMove = "refactor.move";
-      CodeActionKind2.RefactorRewrite = "refactor.rewrite";
-      CodeActionKind2.Source = "source";
-      CodeActionKind2.SourceOrganizeImports = "source.organizeImports";
-      CodeActionKind2.SourceFixAll = "source.fixAll";
-      CodeActionKind2.Notebook = "notebook";
-    })(CodeActionKind || (CodeActionKind = {}));
-    (function(CodeActionTriggerKind2) {
-      CodeActionTriggerKind2.Invoked = 1;
-      CodeActionTriggerKind2.Automatic = 2;
-    })(CodeActionTriggerKind || (CodeActionTriggerKind = {}));
-    (function(CodeActionContext2) {
-      function create(diagnostics, only, triggerKind) {
-        const result = { diagnostics };
-        if (only !== void 0 && only !== null) {
-          result.only = only;
-        }
-        if (triggerKind !== void 0 && triggerKind !== null) {
-          result.triggerKind = triggerKind;
-        }
-        return result;
-      }
-      CodeActionContext2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.typedArray(candidate.diagnostics, Diagnostic.is) && (candidate.only === void 0 || Is.typedArray(candidate.only, Is.string)) && (candidate.triggerKind === void 0 || candidate.triggerKind === CodeActionTriggerKind.Invoked || candidate.triggerKind === CodeActionTriggerKind.Automatic);
-      }
-      CodeActionContext2.is = is;
-    })(CodeActionContext || (CodeActionContext = {}));
-    (function(CodeActionTag2) {
-      CodeActionTag2.LLMGenerated = 1;
-      function is(value) {
-        return Is.defined(value) && value === CodeActionTag2.LLMGenerated;
-      }
-      CodeActionTag2.is = is;
-    })(CodeActionTag || (CodeActionTag = {}));
-    (function(CodeAction2) {
-      function create(title, kindOrCommandOrEdit, kind) {
-        const result = { title };
-        let checkKind = true;
-        if (typeof kindOrCommandOrEdit === "string") {
-          checkKind = false;
-          result.kind = kindOrCommandOrEdit;
-        } else if (Command.is(kindOrCommandOrEdit)) {
-          result.command = kindOrCommandOrEdit;
-        } else {
-          result.edit = kindOrCommandOrEdit;
-        }
-        if (checkKind && kind !== void 0) {
-          result.kind = kind;
-        }
-        return result;
-      }
-      CodeAction2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && Is.string(candidate.title) && (candidate.diagnostics === void 0 || Is.typedArray(candidate.diagnostics, Diagnostic.is)) && (candidate.kind === void 0 || Is.string(candidate.kind)) && (candidate.edit !== void 0 || candidate.command !== void 0) && (candidate.command === void 0 || Command.is(candidate.command)) && (candidate.isPreferred === void 0 || Is.boolean(candidate.isPreferred)) && (candidate.edit === void 0 || WorkspaceEdit.is(candidate.edit)) && (candidate.tags === void 0 || Is.typedArray(candidate.tags, CodeActionTag.is));
-      }
-      CodeAction2.is = is;
-    })(CodeAction || (CodeAction = {}));
-    (function(CodeLens2) {
-      function create(range, data) {
-        const result = { range };
-        if (Is.defined(data)) {
-          result.data = data;
-        }
-        return result;
-      }
-      CodeLens2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
-      }
-      CodeLens2.is = is;
-    })(CodeLens || (CodeLens = {}));
-    (function(FormattingOptions2) {
-      function create(tabSize, insertSpaces) {
-        return { tabSize, insertSpaces };
-      }
-      FormattingOptions2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.uinteger(candidate.tabSize) && Is.boolean(candidate.insertSpaces);
-      }
-      FormattingOptions2.is = is;
-    })(FormattingOptions || (FormattingOptions = {}));
-    (function(DocumentLink2) {
-      function create(range, target, data) {
-        return { range, target, data };
-      }
-      DocumentLink2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
-      }
-      DocumentLink2.is = is;
-    })(DocumentLink || (DocumentLink = {}));
-    (function(SelectionRange2) {
-      function create(range, parent) {
-        return { range, parent };
-      }
-      SelectionRange2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
-      }
-      SelectionRange2.is = is;
-    })(SelectionRange || (SelectionRange = {}));
-    (function(SemanticTokenTypes3) {
-      SemanticTokenTypes3["namespace"] = "namespace";
-      SemanticTokenTypes3["type"] = "type";
-      SemanticTokenTypes3["class"] = "class";
-      SemanticTokenTypes3["enum"] = "enum";
-      SemanticTokenTypes3["interface"] = "interface";
-      SemanticTokenTypes3["struct"] = "struct";
-      SemanticTokenTypes3["typeParameter"] = "typeParameter";
-      SemanticTokenTypes3["parameter"] = "parameter";
-      SemanticTokenTypes3["variable"] = "variable";
-      SemanticTokenTypes3["property"] = "property";
-      SemanticTokenTypes3["enumMember"] = "enumMember";
-      SemanticTokenTypes3["event"] = "event";
-      SemanticTokenTypes3["function"] = "function";
-      SemanticTokenTypes3["method"] = "method";
-      SemanticTokenTypes3["macro"] = "macro";
-      SemanticTokenTypes3["keyword"] = "keyword";
-      SemanticTokenTypes3["modifier"] = "modifier";
-      SemanticTokenTypes3["comment"] = "comment";
-      SemanticTokenTypes3["string"] = "string";
-      SemanticTokenTypes3["number"] = "number";
-      SemanticTokenTypes3["regexp"] = "regexp";
-      SemanticTokenTypes3["operator"] = "operator";
-      SemanticTokenTypes3["decorator"] = "decorator";
-      SemanticTokenTypes3["label"] = "label";
-    })(SemanticTokenTypes || (SemanticTokenTypes = {}));
-    (function(SemanticTokenModifiers3) {
-      SemanticTokenModifiers3["declaration"] = "declaration";
-      SemanticTokenModifiers3["definition"] = "definition";
-      SemanticTokenModifiers3["readonly"] = "readonly";
-      SemanticTokenModifiers3["static"] = "static";
-      SemanticTokenModifiers3["deprecated"] = "deprecated";
-      SemanticTokenModifiers3["abstract"] = "abstract";
-      SemanticTokenModifiers3["async"] = "async";
-      SemanticTokenModifiers3["modification"] = "modification";
-      SemanticTokenModifiers3["documentation"] = "documentation";
-      SemanticTokenModifiers3["defaultLibrary"] = "defaultLibrary";
-    })(SemanticTokenModifiers || (SemanticTokenModifiers = {}));
-    (function(SemanticTokens3) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && (candidate.resultId === void 0 || typeof candidate.resultId === "string") && Array.isArray(candidate.data) && (candidate.data.length === 0 || typeof candidate.data[0] === "number");
-      }
-      SemanticTokens3.is = is;
-    })(SemanticTokens || (SemanticTokens = {}));
-    (function(InlineValueText2) {
-      function create(range, text) {
-        return { range, text };
-      }
-      InlineValueText2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.string(candidate.text);
-      }
-      InlineValueText2.is = is;
-    })(InlineValueText || (InlineValueText = {}));
-    (function(InlineValueVariableLookup2) {
-      function create(range, variableName, caseSensitiveLookup) {
-        return { range, variableName, caseSensitiveLookup };
-      }
-      InlineValueVariableLookup2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
-      }
-      InlineValueVariableLookup2.is = is;
-    })(InlineValueVariableLookup || (InlineValueVariableLookup = {}));
-    (function(InlineValueEvaluatableExpression2) {
-      function create(range, expression) {
-        return { range, expression };
-      }
-      InlineValueEvaluatableExpression2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
-      }
-      InlineValueEvaluatableExpression2.is = is;
-    })(InlineValueEvaluatableExpression || (InlineValueEvaluatableExpression = {}));
-    (function(InlineValueContext2) {
-      function create(frameId, stoppedLocation) {
-        return { frameId, stoppedLocation };
-      }
-      InlineValueContext2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(value.stoppedLocation);
-      }
-      InlineValueContext2.is = is;
-    })(InlineValueContext || (InlineValueContext = {}));
-    (function(InlayHintKind2) {
-      InlayHintKind2.Type = 1;
-      InlayHintKind2.Parameter = 2;
-      function is(value) {
-        return value === 1 || value === 2;
-      }
-      InlayHintKind2.is = is;
-    })(InlayHintKind || (InlayHintKind = {}));
-    (function(InlayHintLabelPart2) {
-      function create(value) {
-        return { value };
-      }
-      InlayHintLabelPart2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.location === void 0 || Location.is(candidate.location)) && (candidate.command === void 0 || Command.is(candidate.command));
-      }
-      InlayHintLabelPart2.is = is;
-    })(InlayHintLabelPart || (InlayHintLabelPart = {}));
-    (function(InlayHint2) {
-      function create(position, label, kind) {
-        const result = { position, label };
-        if (kind !== void 0) {
-          result.kind = kind;
-        }
-        return result;
-      }
-      InlayHint2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Position.is(candidate.position) && (Is.string(candidate.label) || Is.typedArray(candidate.label, InlayHintLabelPart.is)) && (candidate.kind === void 0 || InlayHintKind.is(candidate.kind)) && candidate.textEdits === void 0 || Is.typedArray(candidate.textEdits, TextEdit.is) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.paddingLeft === void 0 || Is.boolean(candidate.paddingLeft)) && (candidate.paddingRight === void 0 || Is.boolean(candidate.paddingRight));
-      }
-      InlayHint2.is = is;
-    })(InlayHint || (InlayHint = {}));
-    (function(StringValue2) {
-      function createSnippet(value) {
-        return { kind: "snippet", value };
-      }
-      StringValue2.createSnippet = createSnippet;
-      function isSnippet(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && candidate.kind === "snippet" && Is.string(candidate.value);
-      }
-      StringValue2.isSnippet = isSnippet;
-    })(StringValue || (StringValue = {}));
-    (function(InlineCompletionItem2) {
-      function create(insertText, filterText, range, command) {
-        return { insertText, filterText, range, command };
-      }
-      InlineCompletionItem2.create = create;
-    })(InlineCompletionItem || (InlineCompletionItem = {}));
-    (function(InlineCompletionList2) {
-      function create(items) {
-        return { items };
-      }
-      InlineCompletionList2.create = create;
-    })(InlineCompletionList || (InlineCompletionList = {}));
-    (function(InlineCompletionTriggerKind2) {
-      InlineCompletionTriggerKind2.Invoked = 1;
-      InlineCompletionTriggerKind2.Automatic = 2;
-    })(InlineCompletionTriggerKind || (InlineCompletionTriggerKind = {}));
-    (function(SelectedCompletionInfo2) {
-      function create(range, text) {
-        return { range, text };
-      }
-      SelectedCompletionInfo2.create = create;
-    })(SelectedCompletionInfo || (SelectedCompletionInfo = {}));
-    (function(InlineCompletionContext2) {
-      function create(triggerKind, selectedCompletionInfo) {
-        return { triggerKind, selectedCompletionInfo };
-      }
-      InlineCompletionContext2.create = create;
-    })(InlineCompletionContext || (InlineCompletionContext = {}));
-    (function(WorkspaceFolder2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && URI.is(candidate.uri) && Is.string(candidate.name);
-      }
-      WorkspaceFolder2.is = is;
-    })(WorkspaceFolder || (WorkspaceFolder = {}));
-    EOL = ["\n", "\r\n", "\r"];
-    (function(TextDocument3) {
-      function create(uri, languageId, version, content) {
-        return new FullTextDocument2(uri, languageId, version, content);
-      }
-      TextDocument3.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && (Is.undefined(candidate.languageId) || Is.string(candidate.languageId)) && Is.uinteger(candidate.lineCount) && Is.func(candidate.getText) && Is.func(candidate.positionAt) && Is.func(candidate.offsetAt) ? true : false;
-      }
-      TextDocument3.is = is;
-      function applyEdits(document, edits) {
-        let text = document.getText();
-        const sortedEdits = mergeSort2(edits, (a, b) => {
-          const diff = a.range.start.line - b.range.start.line;
-          if (diff === 0) {
-            return a.range.start.character - b.range.start.character;
+        DocumentHighlight2.create = create;
+      })(DocumentHighlight || (exports2.DocumentHighlight = DocumentHighlight = {}));
+      var SymbolKind2;
+      (function(SymbolKind3) {
+        SymbolKind3.File = 1;
+        SymbolKind3.Module = 2;
+        SymbolKind3.Namespace = 3;
+        SymbolKind3.Package = 4;
+        SymbolKind3.Class = 5;
+        SymbolKind3.Method = 6;
+        SymbolKind3.Property = 7;
+        SymbolKind3.Field = 8;
+        SymbolKind3.Constructor = 9;
+        SymbolKind3.Enum = 10;
+        SymbolKind3.Interface = 11;
+        SymbolKind3.Function = 12;
+        SymbolKind3.Variable = 13;
+        SymbolKind3.Constant = 14;
+        SymbolKind3.String = 15;
+        SymbolKind3.Number = 16;
+        SymbolKind3.Boolean = 17;
+        SymbolKind3.Array = 18;
+        SymbolKind3.Object = 19;
+        SymbolKind3.Key = 20;
+        SymbolKind3.Null = 21;
+        SymbolKind3.EnumMember = 22;
+        SymbolKind3.Struct = 23;
+        SymbolKind3.Event = 24;
+        SymbolKind3.Operator = 25;
+        SymbolKind3.TypeParameter = 26;
+      })(SymbolKind2 || (exports2.SymbolKind = SymbolKind2 = {}));
+      var SymbolTag;
+      (function(SymbolTag2) {
+        SymbolTag2.Deprecated = 1;
+      })(SymbolTag || (exports2.SymbolTag = SymbolTag = {}));
+      var SymbolInformation2;
+      (function(SymbolInformation3) {
+        function create(name, kind, range, uri, containerName) {
+          var result = {
+            name,
+            kind,
+            location: { uri, range }
+          };
+          if (containerName) {
+            result.containerName = containerName;
           }
-          return diff;
-        });
-        let lastModifiedOffset = text.length;
-        for (let i = sortedEdits.length - 1; i >= 0; i--) {
-          const e = sortedEdits[i];
-          const startOffset = document.offsetAt(e.range.start);
-          const endOffset = document.offsetAt(e.range.end);
-          if (endOffset <= lastModifiedOffset) {
-            text = text.substring(0, startOffset) + e.newText + text.substring(endOffset, text.length);
+          return result;
+        }
+        SymbolInformation3.create = create;
+      })(SymbolInformation2 || (exports2.SymbolInformation = SymbolInformation2 = {}));
+      var WorkspaceSymbol;
+      (function(WorkspaceSymbol2) {
+        function create(name, kind, uri, range) {
+          return range !== void 0 ? { name, kind, location: { uri, range } } : { name, kind, location: { uri } };
+        }
+        WorkspaceSymbol2.create = create;
+      })(WorkspaceSymbol || (exports2.WorkspaceSymbol = WorkspaceSymbol = {}));
+      var DocumentSymbol2;
+      (function(DocumentSymbol3) {
+        function create(name, detail, kind, range, selectionRange, children) {
+          var result = {
+            name,
+            detail,
+            kind,
+            range,
+            selectionRange
+          };
+          if (children !== void 0) {
+            result.children = children;
+          }
+          return result;
+        }
+        DocumentSymbol3.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range3.is(candidate.range) && Range3.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
+        }
+        DocumentSymbol3.is = is;
+      })(DocumentSymbol2 || (exports2.DocumentSymbol = DocumentSymbol2 = {}));
+      var CodeActionKind;
+      (function(CodeActionKind2) {
+        CodeActionKind2.Empty = "";
+        CodeActionKind2.QuickFix = "quickfix";
+        CodeActionKind2.Refactor = "refactor";
+        CodeActionKind2.RefactorExtract = "refactor.extract";
+        CodeActionKind2.RefactorInline = "refactor.inline";
+        CodeActionKind2.RefactorMove = "refactor.move";
+        CodeActionKind2.RefactorRewrite = "refactor.rewrite";
+        CodeActionKind2.Source = "source";
+        CodeActionKind2.SourceOrganizeImports = "source.organizeImports";
+        CodeActionKind2.SourceFixAll = "source.fixAll";
+        CodeActionKind2.Notebook = "notebook";
+      })(CodeActionKind || (exports2.CodeActionKind = CodeActionKind = {}));
+      var CodeActionTriggerKind;
+      (function(CodeActionTriggerKind2) {
+        CodeActionTriggerKind2.Invoked = 1;
+        CodeActionTriggerKind2.Automatic = 2;
+      })(CodeActionTriggerKind || (exports2.CodeActionTriggerKind = CodeActionTriggerKind = {}));
+      var CodeActionContext;
+      (function(CodeActionContext2) {
+        function create(diagnostics, only, triggerKind) {
+          var result = { diagnostics };
+          if (only !== void 0 && only !== null) {
+            result.only = only;
+          }
+          if (triggerKind !== void 0 && triggerKind !== null) {
+            result.triggerKind = triggerKind;
+          }
+          return result;
+        }
+        CodeActionContext2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.typedArray(candidate.diagnostics, Diagnostic3.is) && (candidate.only === void 0 || Is.typedArray(candidate.only, Is.string)) && (candidate.triggerKind === void 0 || candidate.triggerKind === CodeActionTriggerKind.Invoked || candidate.triggerKind === CodeActionTriggerKind.Automatic);
+        }
+        CodeActionContext2.is = is;
+      })(CodeActionContext || (exports2.CodeActionContext = CodeActionContext = {}));
+      var CodeActionTag;
+      (function(CodeActionTag2) {
+        CodeActionTag2.LLMGenerated = 1;
+        function is(value) {
+          return Is.defined(value) && value === CodeActionTag2.LLMGenerated;
+        }
+        CodeActionTag2.is = is;
+      })(CodeActionTag || (exports2.CodeActionTag = CodeActionTag = {}));
+      var CodeAction;
+      (function(CodeAction2) {
+        function create(title, kindOrCommandOrEdit, kind) {
+          var result = { title };
+          var checkKind = true;
+          if (typeof kindOrCommandOrEdit === "string") {
+            checkKind = false;
+            result.kind = kindOrCommandOrEdit;
+          } else if (Command.is(kindOrCommandOrEdit)) {
+            result.command = kindOrCommandOrEdit;
           } else {
-            throw new Error("Overlapping edit");
+            result.edit = kindOrCommandOrEdit;
           }
-          lastModifiedOffset = startOffset;
+          if (checkKind && kind !== void 0) {
+            result.kind = kind;
+          }
+          return result;
         }
-        return text;
-      }
-      TextDocument3.applyEdits = applyEdits;
-      function mergeSort2(data, compare) {
-        if (data.length <= 1) {
-          return data;
+        CodeAction2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && Is.string(candidate.title) && (candidate.diagnostics === void 0 || Is.typedArray(candidate.diagnostics, Diagnostic3.is)) && (candidate.kind === void 0 || Is.string(candidate.kind)) && (candidate.edit !== void 0 || candidate.command !== void 0) && (candidate.command === void 0 || Command.is(candidate.command)) && (candidate.isPreferred === void 0 || Is.boolean(candidate.isPreferred)) && (candidate.edit === void 0 || WorkspaceEdit2.is(candidate.edit)) && (candidate.tags === void 0 || Is.typedArray(candidate.tags, CodeActionTag.is));
         }
-        const p = data.length / 2 | 0;
-        const left = data.slice(0, p);
-        const right = data.slice(p);
-        mergeSort2(left, compare);
-        mergeSort2(right, compare);
-        let leftIdx = 0;
-        let rightIdx = 0;
-        let i = 0;
-        while (leftIdx < left.length && rightIdx < right.length) {
-          const ret = compare(left[leftIdx], right[rightIdx]);
-          if (ret <= 0) {
+        CodeAction2.is = is;
+      })(CodeAction || (exports2.CodeAction = CodeAction = {}));
+      var CodeLens;
+      (function(CodeLens2) {
+        function create(range, data) {
+          var result = { range };
+          if (Is.defined(data)) {
+            result.data = data;
+          }
+          return result;
+        }
+        CodeLens2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
+        }
+        CodeLens2.is = is;
+      })(CodeLens || (exports2.CodeLens = CodeLens = {}));
+      var FormattingOptions;
+      (function(FormattingOptions2) {
+        function create(tabSize, insertSpaces) {
+          return { tabSize, insertSpaces };
+        }
+        FormattingOptions2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.uinteger(candidate.tabSize) && Is.boolean(candidate.insertSpaces);
+        }
+        FormattingOptions2.is = is;
+      })(FormattingOptions || (exports2.FormattingOptions = FormattingOptions = {}));
+      var DocumentLink;
+      (function(DocumentLink2) {
+        function create(range, target, data) {
+          return { range, target, data };
+        }
+        DocumentLink2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
+        }
+        DocumentLink2.is = is;
+      })(DocumentLink || (exports2.DocumentLink = DocumentLink = {}));
+      var SelectionRange;
+      (function(SelectionRange2) {
+        function create(range, parent) {
+          return { range, parent };
+        }
+        SelectionRange2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
+        }
+        SelectionRange2.is = is;
+      })(SelectionRange || (exports2.SelectionRange = SelectionRange = {}));
+      var SemanticTokenTypes2;
+      (function(SemanticTokenTypes3) {
+        SemanticTokenTypes3["namespace"] = "namespace";
+        SemanticTokenTypes3["type"] = "type";
+        SemanticTokenTypes3["class"] = "class";
+        SemanticTokenTypes3["enum"] = "enum";
+        SemanticTokenTypes3["interface"] = "interface";
+        SemanticTokenTypes3["struct"] = "struct";
+        SemanticTokenTypes3["typeParameter"] = "typeParameter";
+        SemanticTokenTypes3["parameter"] = "parameter";
+        SemanticTokenTypes3["variable"] = "variable";
+        SemanticTokenTypes3["property"] = "property";
+        SemanticTokenTypes3["enumMember"] = "enumMember";
+        SemanticTokenTypes3["event"] = "event";
+        SemanticTokenTypes3["function"] = "function";
+        SemanticTokenTypes3["method"] = "method";
+        SemanticTokenTypes3["macro"] = "macro";
+        SemanticTokenTypes3["keyword"] = "keyword";
+        SemanticTokenTypes3["modifier"] = "modifier";
+        SemanticTokenTypes3["comment"] = "comment";
+        SemanticTokenTypes3["string"] = "string";
+        SemanticTokenTypes3["number"] = "number";
+        SemanticTokenTypes3["regexp"] = "regexp";
+        SemanticTokenTypes3["operator"] = "operator";
+        SemanticTokenTypes3["decorator"] = "decorator";
+        SemanticTokenTypes3["label"] = "label";
+      })(SemanticTokenTypes2 || (exports2.SemanticTokenTypes = SemanticTokenTypes2 = {}));
+      var SemanticTokenModifiers2;
+      (function(SemanticTokenModifiers3) {
+        SemanticTokenModifiers3["declaration"] = "declaration";
+        SemanticTokenModifiers3["definition"] = "definition";
+        SemanticTokenModifiers3["readonly"] = "readonly";
+        SemanticTokenModifiers3["static"] = "static";
+        SemanticTokenModifiers3["deprecated"] = "deprecated";
+        SemanticTokenModifiers3["abstract"] = "abstract";
+        SemanticTokenModifiers3["async"] = "async";
+        SemanticTokenModifiers3["modification"] = "modification";
+        SemanticTokenModifiers3["documentation"] = "documentation";
+        SemanticTokenModifiers3["defaultLibrary"] = "defaultLibrary";
+      })(SemanticTokenModifiers2 || (exports2.SemanticTokenModifiers = SemanticTokenModifiers2 = {}));
+      var SemanticTokens2;
+      (function(SemanticTokens3) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && (candidate.resultId === void 0 || typeof candidate.resultId === "string") && Array.isArray(candidate.data) && (candidate.data.length === 0 || typeof candidate.data[0] === "number");
+        }
+        SemanticTokens3.is = is;
+      })(SemanticTokens2 || (exports2.SemanticTokens = SemanticTokens2 = {}));
+      var InlineValueText;
+      (function(InlineValueText2) {
+        function create(range, text) {
+          return { range, text };
+        }
+        InlineValueText2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate !== void 0 && candidate !== null && Range3.is(candidate.range) && Is.string(candidate.text);
+        }
+        InlineValueText2.is = is;
+      })(InlineValueText || (exports2.InlineValueText = InlineValueText = {}));
+      var InlineValueVariableLookup;
+      (function(InlineValueVariableLookup2) {
+        function create(range, variableName, caseSensitiveLookup) {
+          return { range, variableName, caseSensitiveLookup };
+        }
+        InlineValueVariableLookup2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate !== void 0 && candidate !== null && Range3.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
+        }
+        InlineValueVariableLookup2.is = is;
+      })(InlineValueVariableLookup || (exports2.InlineValueVariableLookup = InlineValueVariableLookup = {}));
+      var InlineValueEvaluatableExpression;
+      (function(InlineValueEvaluatableExpression2) {
+        function create(range, expression) {
+          return { range, expression };
+        }
+        InlineValueEvaluatableExpression2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate !== void 0 && candidate !== null && Range3.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
+        }
+        InlineValueEvaluatableExpression2.is = is;
+      })(InlineValueEvaluatableExpression || (exports2.InlineValueEvaluatableExpression = InlineValueEvaluatableExpression = {}));
+      var InlineValueContext;
+      (function(InlineValueContext2) {
+        function create(frameId, stoppedLocation) {
+          return { frameId, stoppedLocation };
+        }
+        InlineValueContext2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(value.stoppedLocation);
+        }
+        InlineValueContext2.is = is;
+      })(InlineValueContext || (exports2.InlineValueContext = InlineValueContext = {}));
+      var InlayHintKind;
+      (function(InlayHintKind2) {
+        InlayHintKind2.Type = 1;
+        InlayHintKind2.Parameter = 2;
+        function is(value) {
+          return value === 1 || value === 2;
+        }
+        InlayHintKind2.is = is;
+      })(InlayHintKind || (exports2.InlayHintKind = InlayHintKind = {}));
+      var InlayHintLabelPart;
+      (function(InlayHintLabelPart2) {
+        function create(value) {
+          return { value };
+        }
+        InlayHintLabelPart2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.location === void 0 || Location2.is(candidate.location)) && (candidate.command === void 0 || Command.is(candidate.command));
+        }
+        InlayHintLabelPart2.is = is;
+      })(InlayHintLabelPart || (exports2.InlayHintLabelPart = InlayHintLabelPart = {}));
+      var InlayHint;
+      (function(InlayHint2) {
+        function create(position, label, kind) {
+          var result = { position, label };
+          if (kind !== void 0) {
+            result.kind = kind;
+          }
+          return result;
+        }
+        InlayHint2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Position2.is(candidate.position) && (Is.string(candidate.label) || Is.typedArray(candidate.label, InlayHintLabelPart.is)) && (candidate.kind === void 0 || InlayHintKind.is(candidate.kind)) && candidate.textEdits === void 0 || Is.typedArray(candidate.textEdits, TextEdit2.is) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.paddingLeft === void 0 || Is.boolean(candidate.paddingLeft)) && (candidate.paddingRight === void 0 || Is.boolean(candidate.paddingRight));
+        }
+        InlayHint2.is = is;
+      })(InlayHint || (exports2.InlayHint = InlayHint = {}));
+      var StringValue;
+      (function(StringValue2) {
+        function createSnippet(value) {
+          return { kind: "snippet", value };
+        }
+        StringValue2.createSnippet = createSnippet;
+        function isSnippet(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && candidate.kind === "snippet" && Is.string(candidate.value);
+        }
+        StringValue2.isSnippet = isSnippet;
+      })(StringValue || (exports2.StringValue = StringValue = {}));
+      var InlineCompletionItem;
+      (function(InlineCompletionItem2) {
+        function create(insertText, filterText, range, command) {
+          return { insertText, filterText, range, command };
+        }
+        InlineCompletionItem2.create = create;
+      })(InlineCompletionItem || (exports2.InlineCompletionItem = InlineCompletionItem = {}));
+      var InlineCompletionList;
+      (function(InlineCompletionList2) {
+        function create(items) {
+          return { items };
+        }
+        InlineCompletionList2.create = create;
+      })(InlineCompletionList || (exports2.InlineCompletionList = InlineCompletionList = {}));
+      var InlineCompletionTriggerKind;
+      (function(InlineCompletionTriggerKind2) {
+        InlineCompletionTriggerKind2.Invoked = 1;
+        InlineCompletionTriggerKind2.Automatic = 2;
+      })(InlineCompletionTriggerKind || (exports2.InlineCompletionTriggerKind = InlineCompletionTriggerKind = {}));
+      var SelectedCompletionInfo;
+      (function(SelectedCompletionInfo2) {
+        function create(range, text) {
+          return { range, text };
+        }
+        SelectedCompletionInfo2.create = create;
+      })(SelectedCompletionInfo || (exports2.SelectedCompletionInfo = SelectedCompletionInfo = {}));
+      var InlineCompletionContext;
+      (function(InlineCompletionContext2) {
+        function create(triggerKind, selectedCompletionInfo) {
+          return { triggerKind, selectedCompletionInfo };
+        }
+        InlineCompletionContext2.create = create;
+      })(InlineCompletionContext || (exports2.InlineCompletionContext = InlineCompletionContext = {}));
+      var WorkspaceFolder;
+      (function(WorkspaceFolder2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && URI.is(candidate.uri) && Is.string(candidate.name);
+        }
+        WorkspaceFolder2.is = is;
+      })(WorkspaceFolder || (exports2.WorkspaceFolder = WorkspaceFolder = {}));
+      exports2.EOL = ["\n", "\r\n", "\r"];
+      var TextDocument2;
+      (function(TextDocument3) {
+        function create(uri, languageId, version, content) {
+          return new FullTextDocument2(uri, languageId, version, content);
+        }
+        TextDocument3.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && (Is.undefined(candidate.languageId) || Is.string(candidate.languageId)) && Is.uinteger(candidate.lineCount) && Is.func(candidate.getText) && Is.func(candidate.positionAt) && Is.func(candidate.offsetAt) ? true : false;
+        }
+        TextDocument3.is = is;
+        function applyEdits(document, edits) {
+          var text = document.getText();
+          var sortedEdits = mergeSort2(edits, function(a, b) {
+            var diff = a.range.start.line - b.range.start.line;
+            if (diff === 0) {
+              return a.range.start.character - b.range.start.character;
+            }
+            return diff;
+          });
+          var lastModifiedOffset = text.length;
+          for (var i = sortedEdits.length - 1; i >= 0; i--) {
+            var e = sortedEdits[i];
+            var startOffset = document.offsetAt(e.range.start);
+            var endOffset = document.offsetAt(e.range.end);
+            if (endOffset <= lastModifiedOffset) {
+              text = text.substring(0, startOffset) + e.newText + text.substring(endOffset, text.length);
+            } else {
+              throw new Error("Overlapping edit");
+            }
+            lastModifiedOffset = startOffset;
+          }
+          return text;
+        }
+        TextDocument3.applyEdits = applyEdits;
+        function mergeSort2(data, compare) {
+          if (data.length <= 1) {
+            return data;
+          }
+          var p = data.length / 2 | 0;
+          var left = data.slice(0, p);
+          var right = data.slice(p);
+          mergeSort2(left, compare);
+          mergeSort2(right, compare);
+          var leftIdx = 0;
+          var rightIdx = 0;
+          var i = 0;
+          while (leftIdx < left.length && rightIdx < right.length) {
+            var ret = compare(left[leftIdx], right[rightIdx]);
+            if (ret <= 0) {
+              data[i++] = left[leftIdx++];
+            } else {
+              data[i++] = right[rightIdx++];
+            }
+          }
+          while (leftIdx < left.length) {
             data[i++] = left[leftIdx++];
-          } else {
+          }
+          while (rightIdx < right.length) {
             data[i++] = right[rightIdx++];
           }
+          return data;
         }
-        while (leftIdx < left.length) {
-          data[i++] = left[leftIdx++];
-        }
-        while (rightIdx < right.length) {
-          data[i++] = right[rightIdx++];
-        }
-        return data;
-      }
-    })(TextDocument2 || (TextDocument2 = {}));
-    FullTextDocument2 = class {
-      constructor(uri, languageId, version, content) {
-        this._uri = uri;
-        this._languageId = languageId;
-        this._version = version;
-        this._content = content;
-        this._lineOffsets = void 0;
-      }
-      get uri() {
-        return this._uri;
-      }
-      get languageId() {
-        return this._languageId;
-      }
-      get version() {
-        return this._version;
-      }
-      getText(range) {
-        if (range) {
-          const start = this.offsetAt(range.start);
-          const end = this.offsetAt(range.end);
-          return this._content.substring(start, end);
-        }
-        return this._content;
-      }
-      update(event, version) {
-        this._content = event.text;
-        this._version = version;
-        this._lineOffsets = void 0;
-      }
-      getLineOffsets() {
-        if (this._lineOffsets === void 0) {
-          const lineOffsets = [];
-          const text = this._content;
-          let isLineStart = true;
-          for (let i = 0; i < text.length; i++) {
-            if (isLineStart) {
-              lineOffsets.push(i);
-              isLineStart = false;
+      })(TextDocument2 || (exports2.TextDocument = TextDocument2 = {}));
+      var FullTextDocument2 = (
+        /** @class */
+        (function() {
+          function FullTextDocument3(uri, languageId, version, content) {
+            this._uri = uri;
+            this._languageId = languageId;
+            this._version = version;
+            this._content = content;
+            this._lineOffsets = void 0;
+          }
+          Object.defineProperty(FullTextDocument3.prototype, "uri", {
+            get: function() {
+              return this._uri;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          Object.defineProperty(FullTextDocument3.prototype, "languageId", {
+            get: function() {
+              return this._languageId;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          Object.defineProperty(FullTextDocument3.prototype, "version", {
+            get: function() {
+              return this._version;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          FullTextDocument3.prototype.getText = function(range) {
+            if (range) {
+              var start = this.offsetAt(range.start);
+              var end = this.offsetAt(range.end);
+              return this._content.substring(start, end);
             }
-            const ch = text.charAt(i);
-            isLineStart = ch === "\r" || ch === "\n";
-            if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
-              i++;
+            return this._content;
+          };
+          FullTextDocument3.prototype.update = function(event, version) {
+            this._content = event.text;
+            this._version = version;
+            this._lineOffsets = void 0;
+          };
+          FullTextDocument3.prototype.getLineOffsets = function() {
+            if (this._lineOffsets === void 0) {
+              var lineOffsets = [];
+              var text = this._content;
+              var isLineStart = true;
+              for (var i = 0; i < text.length; i++) {
+                if (isLineStart) {
+                  lineOffsets.push(i);
+                  isLineStart = false;
+                }
+                var ch = text.charAt(i);
+                isLineStart = ch === "\r" || ch === "\n";
+                if (ch === "\r" && i + 1 < text.length && text.charAt(i + 1) === "\n") {
+                  i++;
+                }
+              }
+              if (isLineStart && text.length > 0) {
+                lineOffsets.push(text.length);
+              }
+              this._lineOffsets = lineOffsets;
             }
-          }
-          if (isLineStart && text.length > 0) {
-            lineOffsets.push(text.length);
-          }
-          this._lineOffsets = lineOffsets;
+            return this._lineOffsets;
+          };
+          FullTextDocument3.prototype.positionAt = function(offset) {
+            offset = Math.max(Math.min(offset, this._content.length), 0);
+            var lineOffsets = this.getLineOffsets();
+            var low = 0, high = lineOffsets.length;
+            if (high === 0) {
+              return Position2.create(0, offset);
+            }
+            while (low < high) {
+              var mid = Math.floor((low + high) / 2);
+              if (lineOffsets[mid] > offset) {
+                high = mid;
+              } else {
+                low = mid + 1;
+              }
+            }
+            var line = low - 1;
+            return Position2.create(line, offset - lineOffsets[line]);
+          };
+          FullTextDocument3.prototype.offsetAt = function(position) {
+            var lineOffsets = this.getLineOffsets();
+            if (position.line >= lineOffsets.length) {
+              return this._content.length;
+            } else if (position.line < 0) {
+              return 0;
+            }
+            var lineOffset = lineOffsets[position.line];
+            var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+            return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
+          };
+          Object.defineProperty(FullTextDocument3.prototype, "lineCount", {
+            get: function() {
+              return this.getLineOffsets().length;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          return FullTextDocument3;
+        })()
+      );
+      var Is;
+      (function(Is2) {
+        var toString = Object.prototype.toString;
+        function defined(value) {
+          return typeof value !== "undefined";
         }
-        return this._lineOffsets;
-      }
-      positionAt(offset) {
-        offset = Math.max(Math.min(offset, this._content.length), 0);
-        const lineOffsets = this.getLineOffsets();
-        let low = 0, high = lineOffsets.length;
-        if (high === 0) {
-          return Position.create(0, offset);
+        Is2.defined = defined;
+        function undefined2(value) {
+          return typeof value === "undefined";
         }
-        while (low < high) {
-          const mid = Math.floor((low + high) / 2);
-          if (lineOffsets[mid] > offset) {
-            high = mid;
-          } else {
-            low = mid + 1;
-          }
+        Is2.undefined = undefined2;
+        function boolean(value) {
+          return value === true || value === false;
         }
-        const line = low - 1;
-        return Position.create(line, offset - lineOffsets[line]);
-      }
-      offsetAt(position) {
-        const lineOffsets = this.getLineOffsets();
-        if (position.line >= lineOffsets.length) {
-          return this._content.length;
-        } else if (position.line < 0) {
-          return 0;
+        Is2.boolean = boolean;
+        function string(value) {
+          return toString.call(value) === "[object String]";
         }
-        const lineOffset = lineOffsets[position.line];
-        const nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-        return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
-      }
-      get lineCount() {
-        return this.getLineOffsets().length;
-      }
-    };
-    (function(Is2) {
-      const toString = Object.prototype.toString;
-      function defined(value) {
-        return typeof value !== "undefined";
-      }
-      Is2.defined = defined;
-      function undefined2(value) {
-        return typeof value === "undefined";
-      }
-      Is2.undefined = undefined2;
-      function boolean(value) {
-        return value === true || value === false;
-      }
-      Is2.boolean = boolean;
-      function string(value) {
-        return toString.call(value) === "[object String]";
-      }
-      Is2.string = string;
-      function number(value) {
-        return toString.call(value) === "[object Number]";
-      }
-      Is2.number = number;
-      function numberRange(value, min, max) {
-        return toString.call(value) === "[object Number]" && min <= value && value <= max;
-      }
-      Is2.numberRange = numberRange;
-      function integer2(value) {
-        return toString.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
-      }
-      Is2.integer = integer2;
-      function uinteger2(value) {
-        return toString.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
-      }
-      Is2.uinteger = uinteger2;
-      function func(value) {
-        return toString.call(value) === "[object Function]";
-      }
-      Is2.func = func;
-      function objectLiteral(value) {
-        return value !== null && typeof value === "object";
-      }
-      Is2.objectLiteral = objectLiteral;
-      function typedArray(value, check) {
-        return Array.isArray(value) && value.every(check);
-      }
-      Is2.typedArray = typedArray;
-    })(Is || (Is = {}));
+        Is2.string = string;
+        function number(value) {
+          return toString.call(value) === "[object Number]";
+        }
+        Is2.number = number;
+        function numberRange(value, min, max) {
+          return toString.call(value) === "[object Number]" && min <= value && value <= max;
+        }
+        Is2.numberRange = numberRange;
+        function integer2(value) {
+          return toString.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
+        }
+        Is2.integer = integer2;
+        function uinteger2(value) {
+          return toString.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
+        }
+        Is2.uinteger = uinteger2;
+        function func(value) {
+          return toString.call(value) === "[object Function]";
+        }
+        Is2.func = func;
+        function objectLiteral(value) {
+          return value !== null && typeof value === "object";
+        }
+        Is2.objectLiteral = objectLiteral;
+        function typedArray(value, check) {
+          return Array.isArray(value) && value.every(check);
+        }
+        Is2.typedArray = typedArray;
+      })(Is || (Is = {}));
+    });
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/messages.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/messages.js
 var require_messages2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CM = exports.ProtocolNotificationType = exports.ProtocolNotificationType0 = exports.ProtocolRequestType = exports.ProtocolRequestType0 = exports.RegistrationType = exports.MessageDirection = void 0;
@@ -30986,9 +31037,9 @@ var require_messages2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
 var require_is3 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolean = boolean;
@@ -31030,9 +31081,9 @@ var require_is3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
 var require_protocol_implementation = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ImplementationRequest = void 0;
@@ -31047,9 +31098,9 @@ var require_protocol_implementation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
 var require_protocol_typeDefinition = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TypeDefinitionRequest = void 0;
@@ -31064,9 +31115,9 @@ var require_protocol_typeDefinition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
 var require_protocol_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DidChangeWorkspaceFoldersNotification = exports.WorkspaceFoldersRequest = void 0;
@@ -31088,9 +31139,9 @@ var require_protocol_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
 var require_protocol_configuration = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ConfigurationRequest = void 0;
@@ -31105,9 +31156,9 @@ var require_protocol_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
 var require_protocol_colorProvider = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ColorPresentationRequest = exports.DocumentColorRequest = void 0;
@@ -31129,9 +31180,9 @@ var require_protocol_colorProvider = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
 var require_protocol_foldingRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FoldingRangeRefreshRequest = exports.FoldingRangeRequest = void 0;
@@ -31153,9 +31204,9 @@ var require_protocol_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
 var require_protocol_declaration = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DeclarationRequest = void 0;
@@ -31170,9 +31221,9 @@ var require_protocol_declaration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
 var require_protocol_selectionRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SelectionRangeRequest = void 0;
@@ -31187,9 +31238,9 @@ var require_protocol_selectionRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
 var require_protocol_progress = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WorkDoneProgressCancelNotification = exports.WorkDoneProgressCreateRequest = exports.WorkDoneProgress = void 0;
@@ -31219,9 +31270,9 @@ var require_protocol_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
 var require_protocol_callHierarchy = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CallHierarchyOutgoingCallsRequest = exports.CallHierarchyIncomingCallsRequest = exports.CallHierarchyPrepareRequest = void 0;
@@ -31250,9 +31301,9 @@ var require_protocol_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
 var require_protocol_semanticTokens = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SemanticTokensRefreshRequest = exports.SemanticTokensRangeRequest = exports.SemanticTokensDeltaRequest = exports.SemanticTokensRequest = exports.SemanticTokensRegistrationType = exports.TokenFormat = void 0;
@@ -31300,9 +31351,9 @@ var require_protocol_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
 var require_protocol_showDocument = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShowDocumentRequest = void 0;
@@ -31317,9 +31368,9 @@ var require_protocol_showDocument = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
 var require_protocol_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LinkedEditingRangeRequest = void 0;
@@ -31334,9 +31385,9 @@ var require_protocol_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
 var require_protocol_fileOperations = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WillDeleteFilesRequest = exports.DidDeleteFilesNotification = exports.DidRenameFilesNotification = exports.WillRenameFilesRequest = exports.DidCreateFilesNotification = exports.WillCreateFilesRequest = exports.FileOperationPatternKind = void 0;
@@ -31391,9 +31442,9 @@ var require_protocol_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
 var require_protocol_moniker = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MonikerRequest = exports.MonikerKind = exports.UniquenessLevel = void 0;
@@ -31422,9 +31473,9 @@ var require_protocol_moniker = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
 var require_protocol_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TypeHierarchySubtypesRequest = exports.TypeHierarchySupertypesRequest = exports.TypeHierarchyPrepareRequest = void 0;
@@ -31451,9 +31502,9 @@ var require_protocol_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
 var require_protocol_inlineValue = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InlineValueRefreshRequest = exports.InlineValueRequest = void 0;
@@ -31475,9 +31526,9 @@ var require_protocol_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
 var require_protocol_inlayHint = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InlayHintRefreshRequest = exports.InlayHintResolveRequest = exports.InlayHintRequest = void 0;
@@ -31506,9 +31557,9 @@ var require_protocol_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
 var require_protocol_diagnostic = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -31550,13 +31601,13 @@ var require_protocol_diagnostic = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiagnosticRefreshRequest = exports.WorkspaceDiagnosticRequest = exports.DocumentDiagnosticRequest = exports.DocumentDiagnosticReportKind = exports.DiagnosticServerCancellationData = void 0;
     var vscode_jsonrpc_1 = require_api();
-    var Is2 = __importStar(require_is3());
+    var Is = __importStar(require_is3());
     var messages_1 = require_messages2();
     var DiagnosticServerCancellationData;
     (function(DiagnosticServerCancellationData2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.boolean(candidate.retriggerRequest);
+        return candidate && Is.boolean(candidate.retriggerRequest);
       }
       DiagnosticServerCancellationData2.is = is;
     })(DiagnosticServerCancellationData || (exports.DiagnosticServerCancellationData = DiagnosticServerCancellationData = {}));
@@ -31591,9 +31642,9 @@ var require_protocol_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
 var require_protocol_notebook = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -31634,8 +31685,8 @@ var require_protocol_notebook = __commonJS({
     })();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DidCloseNotebookDocumentNotification = exports.DidSaveNotebookDocumentNotification = exports.DidChangeNotebookDocumentNotification = exports.NotebookCellArrayChange = exports.DidOpenNotebookDocumentNotification = exports.NotebookDocumentSyncRegistrationType = exports.NotebookDocument = exports.NotebookCell = exports.ExecutionSummary = exports.NotebookCellKind = void 0;
-    var vscode_languageserver_types_1 = (init_main(), __toCommonJS(main_exports));
-    var Is2 = __importStar(require_is3());
+    var vscode_languageserver_types_1 = require_main();
+    var Is = __importStar(require_is3());
     var messages_1 = require_messages2();
     var NotebookCellKind;
     (function(NotebookCellKind2) {
@@ -31658,7 +31709,7 @@ var require_protocol_notebook = __commonJS({
       ExecutionSummary2.create = create;
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.executionOrder) && (candidate.success === void 0 || Is2.boolean(candidate.success));
+        return Is.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.executionOrder) && (candidate.success === void 0 || Is.boolean(candidate.success));
       }
       ExecutionSummary2.is = is;
       function equals(one, other) {
@@ -31680,7 +31731,7 @@ var require_protocol_notebook = __commonJS({
       NotebookCell2.create = create;
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && NotebookCellKind.is(candidate.kind) && vscode_languageserver_types_1.DocumentUri.is(candidate.document) && (candidate.metadata === void 0 || Is2.objectLiteral(candidate.metadata));
+        return Is.objectLiteral(candidate) && NotebookCellKind.is(candidate.kind) && vscode_languageserver_types_1.DocumentUri.is(candidate.document) && (candidate.metadata === void 0 || Is.objectLiteral(candidate.metadata));
       }
       NotebookCell2.is = is;
       function diff(one, two) {
@@ -31731,7 +31782,7 @@ var require_protocol_notebook = __commonJS({
             }
           }
         }
-        if (Is2.objectLiteral(one) && Is2.objectLiteral(other)) {
+        if (Is.objectLiteral(one) && Is.objectLiteral(other)) {
           const oneKeys = Object.keys(one);
           const otherKeys = Object.keys(other);
           if (oneKeys.length !== otherKeys.length) {
@@ -31760,7 +31811,7 @@ var require_protocol_notebook = __commonJS({
       NotebookDocument2.create = create;
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && Is2.string(candidate.uri) && vscode_languageserver_types_1.integer.is(candidate.version) && Is2.typedArray(candidate.cells, NotebookCell.is);
+        return Is.objectLiteral(candidate) && Is.string(candidate.uri) && vscode_languageserver_types_1.integer.is(candidate.version) && Is.typedArray(candidate.cells, NotebookCell.is);
       }
       NotebookDocument2.is = is;
     })(NotebookDocument || (exports.NotebookDocument = NotebookDocument = {}));
@@ -31781,7 +31832,7 @@ var require_protocol_notebook = __commonJS({
     (function(NotebookCellArrayChange2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.start) && vscode_languageserver_types_1.uinteger.is(candidate.deleteCount) && (candidate.cells === void 0 || Is2.typedArray(candidate.cells, NotebookCell.is));
+        return Is.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.start) && vscode_languageserver_types_1.uinteger.is(candidate.deleteCount) && (candidate.cells === void 0 || Is.typedArray(candidate.cells, NotebookCell.is));
       }
       NotebookCellArrayChange2.is = is;
       function create(start, deleteCount, cells) {
@@ -31817,9 +31868,9 @@ var require_protocol_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
 var require_protocol_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InlineCompletionRequest = void 0;
@@ -31834,9 +31885,9 @@ var require_protocol_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
 var require_protocol_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TextDocumentContentRefreshRequest = exports.TextDocumentContentRequest = void 0;
@@ -31857,9 +31908,9 @@ var require_protocol_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.js
 var require_protocol = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -31903,8 +31954,8 @@ var require_protocol = __commonJS({
     exports.UniquenessLevel = exports.WillDeleteFilesRequest = exports.DidDeleteFilesNotification = exports.WillRenameFilesRequest = exports.DidRenameFilesNotification = exports.WillCreateFilesRequest = exports.DidCreateFilesNotification = exports.FileOperationPatternKind = exports.LinkedEditingRangeRequest = exports.ShowDocumentRequest = exports.SemanticTokensRegistrationType = exports.SemanticTokensRefreshRequest = exports.SemanticTokensRangeRequest = exports.SemanticTokensDeltaRequest = exports.SemanticTokensRequest = exports.TokenFormat = exports.CallHierarchyPrepareRequest = exports.CallHierarchyOutgoingCallsRequest = exports.CallHierarchyIncomingCallsRequest = exports.WorkDoneProgressCancelNotification = exports.WorkDoneProgressCreateRequest = exports.WorkDoneProgress = exports.SelectionRangeRequest = exports.DeclarationRequest = exports.FoldingRangeRefreshRequest = exports.FoldingRangeRequest = exports.ColorPresentationRequest = exports.DocumentColorRequest = exports.ConfigurationRequest = exports.DidChangeWorkspaceFoldersNotification = exports.WorkspaceFoldersRequest = exports.TypeDefinitionRequest = exports.ImplementationRequest = exports.ApplyWorkspaceEditRequest = exports.ExecuteCommandRequest = exports.PrepareRenameRequest = exports.RenameRequest = exports.PrepareSupportDefaultBehavior = exports.DocumentOnTypeFormattingRequest = exports.DocumentRangesFormattingRequest = exports.DocumentRangeFormattingRequest = exports.DocumentFormattingRequest = exports.DocumentLinkResolveRequest = exports.DocumentLinkRequest = exports.CodeLensRefreshRequest = exports.CodeLensResolveRequest = exports.CodeLensRequest = exports.WorkspaceSymbolResolveRequest = exports.WorkspaceSymbolRequest = exports.CodeActionResolveRequest = void 0;
     exports.TextDocumentContentRefreshRequest = exports.TextDocumentContentRequest = exports.InlineCompletionRequest = exports.DidCloseNotebookDocumentNotification = exports.DidSaveNotebookDocumentNotification = exports.DidChangeNotebookDocumentNotification = exports.NotebookCellArrayChange = exports.DidOpenNotebookDocumentNotification = exports.NotebookDocumentSyncRegistrationType = exports.NotebookDocument = exports.NotebookCell = exports.ExecutionSummary = exports.NotebookCellKind = exports.DiagnosticRefreshRequest = exports.WorkspaceDiagnosticRequest = exports.DocumentDiagnosticRequest = exports.DocumentDiagnosticReportKind = exports.DiagnosticServerCancellationData = exports.InlayHintRefreshRequest = exports.InlayHintResolveRequest = exports.InlayHintRequest = exports.InlineValueRefreshRequest = exports.InlineValueRequest = exports.TypeHierarchySupertypesRequest = exports.TypeHierarchySubtypesRequest = exports.TypeHierarchyPrepareRequest = exports.MonikerRequest = exports.MonikerKind = void 0;
     var messages_1 = require_messages2();
-    var vscode_languageserver_types_1 = (init_main(), __toCommonJS(main_exports));
-    var Is2 = __importStar(require_is3());
+    var vscode_languageserver_types_1 = require_main();
+    var Is = __importStar(require_is3());
     var protocol_implementation_1 = require_protocol_implementation();
     Object.defineProperty(exports, "ImplementationRequest", { enumerable: true, get: function() {
       return protocol_implementation_1.ImplementationRequest;
@@ -32114,7 +32165,7 @@ var require_protocol = __commonJS({
     (function(TextDocumentFilter2) {
       function is(value) {
         const candidate = value;
-        return Is2.string(candidate) || (Is2.string(candidate.language) || Is2.string(candidate.scheme) || GlobPattern.is(candidate.pattern));
+        return Is.string(candidate) || (Is.string(candidate.language) || Is.string(candidate.scheme) || GlobPattern.is(candidate.pattern));
       }
       TextDocumentFilter2.is = is;
     })(TextDocumentFilter || (exports.TextDocumentFilter = TextDocumentFilter = {}));
@@ -32122,7 +32173,7 @@ var require_protocol = __commonJS({
     (function(NotebookDocumentFilter2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (Is2.string(candidate.notebookType) || Is2.string(candidate.scheme) || Is2.string(candidate.pattern));
+        return Is.objectLiteral(candidate) && (Is.string(candidate.notebookType) || Is.string(candidate.scheme) || Is.string(candidate.pattern));
       }
       NotebookDocumentFilter2.is = is;
     })(NotebookDocumentFilter || (exports.NotebookDocumentFilter = NotebookDocumentFilter = {}));
@@ -32130,7 +32181,7 @@ var require_protocol = __commonJS({
     (function(NotebookCellTextDocumentFilter2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (Is2.string(candidate.notebook) || NotebookDocumentFilter.is(candidate.notebook)) && (candidate.language === void 0 || Is2.string(candidate.language));
+        return Is.objectLiteral(candidate) && (Is.string(candidate.notebook) || NotebookDocumentFilter.is(candidate.notebook)) && (candidate.language === void 0 || Is.string(candidate.language));
       }
       NotebookCellTextDocumentFilter2.is = is;
     })(NotebookCellTextDocumentFilter || (exports.NotebookCellTextDocumentFilter = NotebookCellTextDocumentFilter = {}));
@@ -32141,7 +32192,7 @@ var require_protocol = __commonJS({
           return false;
         }
         for (const elem of value) {
-          if (!Is2.string(elem) && !TextDocumentFilter.is(elem) && !NotebookCellTextDocumentFilter.is(elem)) {
+          if (!Is.string(elem) && !TextDocumentFilter.is(elem) && !NotebookCellTextDocumentFilter.is(elem)) {
             return false;
           }
         }
@@ -32188,7 +32239,7 @@ var require_protocol = __commonJS({
     (function(StaticRegistrationOptions2) {
       function hasId(value) {
         const candidate = value;
-        return candidate && Is2.string(candidate.id) && candidate.id.length > 0;
+        return candidate && Is.string(candidate.id) && candidate.id.length > 0;
       }
       StaticRegistrationOptions2.hasId = hasId;
     })(StaticRegistrationOptions || (exports.StaticRegistrationOptions = StaticRegistrationOptions = {}));
@@ -32204,12 +32255,12 @@ var require_protocol = __commonJS({
     (function(WorkDoneProgressOptions2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (candidate.workDoneProgress === void 0 || Is2.boolean(candidate.workDoneProgress));
+        return Is.objectLiteral(candidate) && (candidate.workDoneProgress === void 0 || Is.boolean(candidate.workDoneProgress));
       }
       WorkDoneProgressOptions2.is = is;
       function hasWorkDoneProgress(value) {
         const candidate = value;
-        return candidate && Is2.boolean(candidate.workDoneProgress);
+        return candidate && Is.boolean(candidate.workDoneProgress);
       }
       WorkDoneProgressOptions2.hasWorkDoneProgress = hasWorkDoneProgress;
     })(WorkDoneProgressOptions || (exports.WorkDoneProgressOptions = WorkDoneProgressOptions = {}));
@@ -32366,7 +32417,7 @@ var require_protocol = __commonJS({
     (function(RelativePattern2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (vscode_languageserver_types_1.URI.is(candidate.baseUri) || vscode_languageserver_types_1.WorkspaceFolder.is(candidate.baseUri)) && Is2.string(candidate.pattern);
+        return Is.objectLiteral(candidate) && (vscode_languageserver_types_1.URI.is(candidate.baseUri) || vscode_languageserver_types_1.WorkspaceFolder.is(candidate.baseUri)) && Is.string(candidate.pattern);
       }
       RelativePattern2.is = is;
     })(RelativePattern || (exports.RelativePattern = RelativePattern = {}));
@@ -32374,7 +32425,7 @@ var require_protocol = __commonJS({
     (function(GlobPattern2) {
       function is(value) {
         const candidate = value;
-        return Is2.string(candidate) || RelativePattern.is(candidate);
+        return Is.string(candidate) || RelativePattern.is(candidate);
       }
       GlobPattern2.is = is;
     })(GlobPattern || (exports.GlobPattern = GlobPattern = {}));
@@ -32585,9 +32636,9 @@ var require_protocol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/connection.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/connection.js
 var require_connection2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.createProtocolConnection = createProtocolConnection;
@@ -32601,9 +32652,9 @@ var require_connection2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/api.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/api.js
 var require_api2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -32624,7 +32675,7 @@ var require_api2 = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LSPErrorCodes = exports.createProtocolConnection = void 0;
     __exportStar(require_api(), exports);
-    __exportStar((init_main(), __toCommonJS(main_exports)), exports);
+    __exportStar(require_main(), exports);
     __exportStar(require_messages2(), exports);
     __exportStar(require_protocol(), exports);
     var connection_1 = require_connection2();
@@ -32643,9 +32694,9 @@ var require_api2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/utils/uuid.js
+// ../../node_modules/vscode-languageserver/lib/common/utils/uuid.js
 var require_uuid = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/utils/uuid.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/utils/uuid.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.empty = void 0;
@@ -32735,9 +32786,9 @@ var require_uuid = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/progress.js
+// ../../node_modules/vscode-languageserver/lib/common/progress.js
 var require_progress = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/progress.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/progress.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ProgressFeature = void 0;
@@ -32902,9 +32953,9 @@ var require_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/configuration.js
+// ../../node_modules/vscode-languageserver/lib/common/configuration.js
 var require_configuration = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/configuration.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/configuration.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -32946,13 +32997,13 @@ var require_configuration = __commonJS({
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ConfigurationFeature = void 0;
     var vscode_languageserver_protocol_1 = require_api2();
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var ConfigurationFeature = (Base) => {
       return class extends Base {
         getConfiguration(arg) {
           if (!arg) {
             return this._getConfiguration({});
-          } else if (Is2.string(arg)) {
+          } else if (Is.string(arg)) {
             return this._getConfiguration({ section: arg });
           } else {
             return this._getConfiguration(arg);
@@ -32976,9 +33027,9 @@ var require_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/workspaceFolder.js
+// ../../node_modules/vscode-languageserver/lib/common/workspaceFolder.js
 var require_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/workspaceFolder.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/workspaceFolder.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.WorkspaceFoldersFeature = void 0;
@@ -33025,9 +33076,9 @@ var require_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/callHierarchy.js
+// ../../node_modules/vscode-languageserver/lib/common/callHierarchy.js
 var require_callHierarchy = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/callHierarchy.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/callHierarchy.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CallHierarchyFeature = void 0;
@@ -33061,9 +33112,9 @@ var require_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/semanticTokens.js
+// ../../node_modules/vscode-languageserver/lib/common/semanticTokens.js
 var require_semanticTokens = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/semanticTokens.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/semanticTokens.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SemanticTokensBuilder = exports.SemanticTokensDiff = exports.SemanticTokensFeature = void 0;
@@ -33300,9 +33351,9 @@ var require_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/showDocument.js
+// ../../node_modules/vscode-languageserver/lib/common/showDocument.js
 var require_showDocument = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/showDocument.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/showDocument.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ShowDocumentFeature = void 0;
@@ -33318,9 +33369,9 @@ var require_showDocument = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/fileOperations.js
+// ../../node_modules/vscode-languageserver/lib/common/fileOperations.js
 var require_fileOperations = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/fileOperations.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/fileOperations.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FileOperationsFeature = void 0;
@@ -33363,9 +33414,9 @@ var require_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/linkedEditingRange.js
+// ../../node_modules/vscode-languageserver/lib/common/linkedEditingRange.js
 var require_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/linkedEditingRange.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/linkedEditingRange.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.LinkedEditingRangeFeature = void 0;
@@ -33383,9 +33434,9 @@ var require_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/typeHierarchy.js
+// ../../node_modules/vscode-languageserver/lib/common/typeHierarchy.js
 var require_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/typeHierarchy.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/typeHierarchy.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TypeHierarchyFeature = void 0;
@@ -33419,9 +33470,9 @@ var require_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/inlineValue.js
+// ../../node_modules/vscode-languageserver/lib/common/inlineValue.js
 var require_inlineValue = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/inlineValue.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/inlineValue.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InlineValueFeature = void 0;
@@ -33446,9 +33497,9 @@ var require_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/foldingRange.js
+// ../../node_modules/vscode-languageserver/lib/common/foldingRange.js
 var require_foldingRange = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/foldingRange.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/foldingRange.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.FoldingRangeFeature = void 0;
@@ -33474,9 +33525,9 @@ var require_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/inlayHint.js
+// ../../node_modules/vscode-languageserver/lib/common/inlayHint.js
 var require_inlayHint = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/inlayHint.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/inlayHint.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InlayHintFeature = void 0;
@@ -33506,9 +33557,9 @@ var require_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/diagnostic.js
+// ../../node_modules/vscode-languageserver/lib/common/diagnostic.js
 var require_diagnostic = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/diagnostic.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/diagnostic.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiagnosticFeature = void 0;
@@ -33538,9 +33589,9 @@ var require_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/textDocuments.js
+// ../../node_modules/vscode-languageserver/lib/common/textDocuments.js
 var require_textDocuments = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/textDocuments.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/textDocuments.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TextDocuments = void 0;
@@ -33711,9 +33762,9 @@ var require_textDocuments = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/notebook.js
+// ../../node_modules/vscode-languageserver/lib/common/notebook.js
 var require_notebook = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/notebook.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/notebook.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NotebookDocuments = exports.NotebookSyncFeature = void 0;
@@ -33980,9 +34031,9 @@ var require_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/moniker.js
+// ../../node_modules/vscode-languageserver/lib/common/moniker.js
 var require_moniker = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/moniker.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/moniker.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MonikerFeature = void 0;
@@ -34005,9 +34056,9 @@ var require_moniker = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/inlineCompletion.js
+// ../../node_modules/vscode-languageserver/lib/common/inlineCompletion.js
 var require_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/inlineCompletion.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/inlineCompletion.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.InlineCompletionFeature = void 0;
@@ -34029,9 +34080,9 @@ var require_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/textDocumentContent.js
+// ../../node_modules/vscode-languageserver/lib/common/textDocumentContent.js
 var require_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/textDocumentContent.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/textDocumentContent.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TextDocumentContentFeature = void 0;
@@ -34056,9 +34107,9 @@ var require_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/server.js
+// ../../node_modules/vscode-languageserver/lib/common/server.js
 var require_server = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/server.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/server.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -34110,7 +34161,7 @@ var require_server = __commonJS({
     exports.combineFeatures = combineFeatures;
     exports.createConnection = createConnection2;
     var vscode_languageserver_protocol_1 = require_api2();
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var UUID = __importStar(require_uuid());
     var progress_1 = require_progress();
     var configuration_1 = require_configuration();
@@ -34251,7 +34302,7 @@ var require_server = __commonJS({
       _registrations = [];
       _registered = /* @__PURE__ */ new Set();
       add(type, registerOptions) {
-        const method = Is2.string(type) ? type : type.method;
+        const method = Is.string(type) ? type : type.method;
         if (this._registered.has(method)) {
           throw new Error(`${method} is already added to this registration`);
         }
@@ -34307,7 +34358,7 @@ var require_server = __commonJS({
         });
       }
       disposeSingle(arg) {
-        const method = Is2.string(arg) ? arg : arg.method;
+        const method = Is.string(arg) ? arg : arg.method;
         const unregistration = this._unregistrations.get(method);
         if (!unregistration) {
           return false;
@@ -34348,7 +34399,7 @@ var require_server = __commonJS({
         }
       }
       registerSingle1(unregistration, type, registerOptions) {
-        const method = Is2.string(type) ? type : type.method;
+        const method = Is.string(type) ? type : type.method;
         const id = UUID.generateUuid();
         const params = {
           registrations: [{ id, method, registerOptions: registerOptions || {} }]
@@ -34365,7 +34416,7 @@ var require_server = __commonJS({
         });
       }
       registerSingle2(type, registerOptions) {
-        const method = Is2.string(type) ? type : type.method;
+        const method = Is.string(type) ? type : type.method;
         const id = UUID.generateUuid();
         const params = {
           registrations: [{ id, method, registerOptions: registerOptions || {} }]
@@ -34613,7 +34664,7 @@ var require_server = __commonJS({
       function asPromise(value) {
         if (value instanceof Promise) {
           return value;
-        } else if (Is2.thenable(value)) {
+        } else if (Is.thenable(value)) {
           return new Promise((resolve, reject) => {
             value.then((resolved) => resolve(resolved), (error) => reject(error));
           });
@@ -34626,10 +34677,10 @@ var require_server = __commonJS({
       let exitHandler = void 0;
       const protocolConnection = {
         listen: () => connection2.listen(),
-        sendRequest: (type, ...params) => connection2.sendRequest(Is2.string(type) ? type : type.method, ...params),
+        sendRequest: (type, ...params) => connection2.sendRequest(Is.string(type) ? type : type.method, ...params),
         onRequest: (type, handler) => connection2.onRequest(type, handler),
         sendNotification: (type, param) => {
-          const method = Is2.string(type) ? type : type.method;
+          const method = Is.string(type) ? type : type.method;
           return connection2.sendNotification(method, param);
         },
         onNotification: (type, handler) => connection2.onNotification(type, handler),
@@ -34787,7 +34838,7 @@ var require_server = __commonJS({
       }
       connection2.onRequest(vscode_languageserver_protocol_1.InitializeRequest.type, (params) => {
         watchDog.initialize(params);
-        if (Is2.string(params.trace)) {
+        if (Is.string(params.trace)) {
           tracer.trace = vscode_languageserver_protocol_1.Trace.fromString(params.trace);
         }
         for (const remote of allRemotes) {
@@ -34809,9 +34860,9 @@ var require_server = __commonJS({
               result2.capabilities = capabilities;
             }
             if (capabilities.textDocumentSync === void 0 || capabilities.textDocumentSync === null) {
-              capabilities.textDocumentSync = Is2.number(protocolConnection.__textDocumentSync) ? protocolConnection.__textDocumentSync : vscode_languageserver_protocol_1.TextDocumentSyncKind.None;
-            } else if (!Is2.number(capabilities.textDocumentSync) && !Is2.number(capabilities.textDocumentSync.change)) {
-              capabilities.textDocumentSync.change = Is2.number(protocolConnection.__textDocumentSync) ? protocolConnection.__textDocumentSync : vscode_languageserver_protocol_1.TextDocumentSyncKind.None;
+              capabilities.textDocumentSync = Is.number(protocolConnection.__textDocumentSync) ? protocolConnection.__textDocumentSync : vscode_languageserver_protocol_1.TextDocumentSyncKind.None;
+            } else if (!Is.number(capabilities.textDocumentSync) && !Is.number(capabilities.textDocumentSync.change)) {
+              capabilities.textDocumentSync.change = Is.number(protocolConnection.__textDocumentSync) ? protocolConnection.__textDocumentSync : vscode_languageserver_protocol_1.TextDocumentSyncKind.None;
             }
             for (const remote of allRemotes) {
               remote.fillServerCapabilities(capabilities);
@@ -34855,9 +34906,9 @@ var require_server = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/node/files.js
+// ../../node_modules/vscode-languageserver/lib/node/files.js
 var require_files = __commonJS({
-  "node_modules/vscode-languageserver/lib/node/files.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/node/files.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -35123,9 +35174,9 @@ var require_files = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/node/ril.js
+// ../../node_modules/vscode-jsonrpc/lib/node/ril.js
 var require_ril = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/node/ril.js"(exports) {
+  "../../node_modules/vscode-jsonrpc/lib/node/ril.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = __require("util");
@@ -35281,9 +35332,9 @@ var require_ril = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/node/main.js
-var require_main = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/node/main.js"(exports) {
+// ../../node_modules/vscode-jsonrpc/lib/node/main.js
+var require_main2 = __commonJS({
+  "../../node_modules/vscode-jsonrpc/lib/node/main.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -35576,9 +35627,9 @@ var require_main = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/node/main.js
-var require_main2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports) {
+// ../../node_modules/vscode-languageserver-protocol/lib/node/main.js
+var require_main3 = __commonJS({
+  "../../node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -35598,8 +35649,8 @@ var require_main2 = __commonJS({
     };
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.createProtocolConnection = createProtocolConnection;
-    var node_1 = require_main();
-    __exportStar(require_main(), exports);
+    var node_1 = require_main2();
+    __exportStar(require_main2(), exports);
     __exportStar(require_api2(), exports);
     function createProtocolConnection(input, output, logger, options) {
       return (0, node_1.createMessageConnection)(input, output, logger, options);
@@ -35607,9 +35658,9 @@ var require_main2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/common/api.js
+// ../../node_modules/vscode-languageserver/lib/common/api.js
 var require_api3 = __commonJS({
-  "node_modules/vscode-languageserver/lib/common/api.js"(exports) {
+  "../../node_modules/vscode-languageserver/lib/common/api.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -35652,9 +35703,9 @@ var require_api3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver/lib/node/main.js
-var require_main3 = __commonJS({
-  "node_modules/vscode-languageserver/lib/node/main.js"(exports) {
+// ../../node_modules/vscode-languageserver/lib/node/main.js
+var require_main4 = __commonJS({
+  "../../node_modules/vscode-languageserver/lib/node/main.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -35700,11 +35751,11 @@ var require_main3 = __commonJS({
     exports.Files = void 0;
     exports.createConnection = createConnection2;
     var node_util_1 = __require("node:util");
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var server_1 = require_server();
     var fm = __importStar(require_files());
-    var node_1 = require_main2();
-    __exportStar(require_main2(), exports);
+    var node_1 = require_main3();
+    __exportStar(require_main3(), exports);
     __exportStar(require_api3(), exports);
     var Files;
     (function(Files2) {
@@ -35761,7 +35812,7 @@ var require_main3 = __commonJS({
     var watchDog = {
       initialize: (params) => {
         const processId = params.processId;
-        if (Is2.number(processId) && exitTimer === void 0) {
+        if (Is.number(processId) && exitTimer === void 0) {
           setInterval(() => {
             try {
               process.kill(processId, 0);
@@ -35853,7 +35904,7 @@ var require_main3 = __commonJS({
       if (!output) {
         throw new Error("Connection output stream is not set. " + commandLineMessage);
       }
-      if (Is2.func(input.read) && Is2.func(input.on)) {
+      if (Is.func(input.read) && Is.func(input.on)) {
         const inputStream = input;
         inputStream.on("end", () => {
           endProtocolConnection();
@@ -35931,17 +35982,17 @@ ${stack}`);
   }
 });
 
-// packages/language-server/src/server.ts
+// ../language-server/src/server.ts
 init_src();
 init_debug_map();
 import { createHash as createHash4 } from "node:crypto";
 import fs6 from "node:fs";
 import path11 from "node:path";
 
-// packages/plugin-65xx/src/index.ts
+// ../plugin-65xx/src/index.ts
 init_src();
 
-// packages/plugin-65xx/src/instructions/catalog.ts
+// ../plugin-65xx/src/instructions/catalog.ts
 var syntax = {
   implied: "",
   accumulator: "A",
@@ -36025,7 +36076,7 @@ function buildInstructionCatalog(forms) {
   }));
 }
 
-// packages/plugin-65xx/src/instructions/schema.ts
+// ../plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
   if (expression.allOf?.some((feature) => !features.has(feature))) return false;
   if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) return false;
@@ -36118,7 +36169,7 @@ function getOperandFields(codec) {
   return [];
 }
 
-// packages/plugin-65xx/src/instructions/variant-tables.generated.ts
+// ../plugin-65xx/src/instructions/variant-tables.generated.ts
 var ca65EaTable = [
   [
     0,
@@ -37677,7 +37728,7 @@ var ca65VariantTables = {
   ]
 };
 
-// packages/plugin-65xx/src/instructions/variants.ts
+// ../plugin-65xx/src/instructions/variants.ts
 var commonModes = {
   0: { mode: "implied" },
   1: { mode: "accumulator" },
@@ -37940,7 +37991,7 @@ var variantFormsByCpuId = Object.freeze({
   [mitsubishiM740Cpu.id]: mitsubishiM740Forms
 });
 
-// packages/plugin-65xx/src/instructions/opcodes.ts
+// ../plugin-65xx/src/instructions/opcodes.ts
 var rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
   "BPL:rel ORA:iny JAM:imp SLO:iny NOP:zpx ORA:zpx ASL:zpx SLO:zpx CLC:imp ORA:aby NOP:imp SLO:aby NOP:abx ORA:abx ASL:abx SLO:abx",
@@ -38242,7 +38293,7 @@ function getCpuAssemblyForms(cpu) {
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
-// packages/plugin-65xx/src/architecture.ts
+// ../plugin-65xx/src/architecture.ts
 var directToAbsolute = {
   zeroPage: "absolute",
   zeroPageIndexedX: "absoluteIndexedX",
@@ -38637,7 +38688,7 @@ var Arch65xx = class {
   }
 };
 
-// packages/plugin-65xx/src/ca65-profile.ts
+// ../plugin-65xx/src/ca65-profile.ts
 init_src();
 var CA65_65XX_SESSION_STATE_ID = "65xx.ca65-session-state";
 var ca65SessionStateKey = {
@@ -38799,7 +38850,7 @@ var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
   macroParameterPrefix: "\\"
 });
 
-// packages/plugin-65xx/src/directives/ca65.ts
+// ../plugin-65xx/src/directives/ca65.ts
 function unquote(token) {
   if (token.length >= 2) {
     const quote = token[0];
@@ -39087,7 +39138,7 @@ function handleUnsupportedCa65(words) {
   );
 }
 
-// packages/plugin-65xx/src/operands/classifier.ts
+// ../plugin-65xx/src/operands/classifier.ts
 function classify65xxOperand(resolver, operand) {
   const raw = operand.trim();
   const sizePrefix = parseCa65AddressSizePrefix(raw);
@@ -39225,7 +39276,7 @@ function parseCa65AddressSizePrefix(operand) {
   return { rest, force: 3 };
 }
 
-// packages/plugin-65xx/src/session-state.ts
+// ../plugin-65xx/src/session-state.ts
 var NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 var nes65xxSessionStateKey = {
   id: NES_65XX_SESSION_STATE_ID
@@ -39248,7 +39299,7 @@ function resetNes65xxStageState(state) {
   state.segmentRunStart = 0;
 }
 
-// packages/plugin-65xx/src/linker-config.ts
+// ../plugin-65xx/src/linker-config.ts
 var DEFAULT_LINKER_CONFIG = `MEMORY {
     ROM: start = $8000, size = $8000, file = %O, fill = yes, fillval = $FF ;
 }
@@ -39421,7 +39472,7 @@ function parseYesNo(raw) {
   return void 0;
 }
 
-// packages/plugin-65xx/src/target/nes.ts
+// ../plugin-65xx/src/target/nes.ts
 var NES_65XX_TARGET_ID = "65xx.nes";
 var NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 var NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
@@ -39548,7 +39599,7 @@ function normalizeHeader(configured, imageSize) {
   return header;
 }
 
-// packages/plugin-65xx/src/index.ts
+// ../plugin-65xx/src/index.ts
 var RAW_65XX_TARGET_ID = "65xx.raw";
 var FLAT_65XX_ADDRESS_SPACE_ID = "65xx.flat16";
 var RAW_65XX_OUTPUT_FORMAT_ID = "65xx.raw-output";
@@ -39991,7 +40042,7 @@ var plugin = definePlugin({
 });
 var src_default = plugin;
 
-// packages/plugin-loader-node/src/configuration.ts
+// ../plugin-loader-node/src/configuration.ts
 init_plugin();
 import { existsSync as existsSync2, promises as fs3 } from "node:fs";
 import path6 from "node:path";
@@ -40118,7 +40169,7 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
   throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
 };
 
-// packages/plugin-loader-node/src/loader.ts
+// ../plugin-loader-node/src/loader.ts
 init_plugin();
 import { realpath } from "node:fs/promises";
 import path7 from "node:path";
@@ -40433,10 +40484,10 @@ var NodePluginLoader = class {
   }
 };
 
-// packages/language-server/src/server.ts
+// ../language-server/src/server.ts
 init_src2();
 
-// node_modules/vscode-languageserver-textdocument/lib/esm/main.js
+// ../../node_modules/vscode-languageserver-textdocument/lib/esm/main.js
 var FullTextDocument = class _FullTextDocument {
   constructor(uri, languageId, version, content) {
     this._uri = uri;
@@ -40582,11 +40633,11 @@ var FullTextDocument = class _FullTextDocument {
   }
 };
 var TextDocument;
-(function(TextDocument3) {
+(function(TextDocument2) {
   function create(uri, languageId, version, content) {
     return new FullTextDocument(uri, languageId, version, content);
   }
-  TextDocument3.create = create;
+  TextDocument2.create = create;
   function update(document, changes, version) {
     if (document instanceof FullTextDocument) {
       document.update(changes, version);
@@ -40595,7 +40646,7 @@ var TextDocument;
       throw new Error("TextDocument.update: document must be created by TextDocument.create");
     }
   }
-  TextDocument3.update = update;
+  TextDocument2.update = update;
   function applyEdits(document, edits) {
     const text = document.getText();
     const sortedEdits = mergeSort(edits.map(getWellformedEdit), (a, b) => {
@@ -40622,7 +40673,7 @@ var TextDocument;
     spans.push(text.substr(lastModifiedOffset));
     return spans.join("");
   }
-  TextDocument3.applyEdits = applyEdits;
+  TextDocument2.applyEdits = applyEdits;
 })(TextDocument || (TextDocument = {}));
 function mergeSort(data, compare) {
   if (data.length <= 1) {
@@ -40684,10 +40735,10 @@ function getWellformedEdit(textEdit) {
   return textEdit;
 }
 
-// packages/language-server/src/server.ts
-var import_node = __toESM(require_main3(), 1);
+// ../language-server/src/server.ts
+var import_node = __toESM(require_main4(), 1);
 
-// packages/language-server/src/build.ts
+// ../language-server/src/build.ts
 import fs4 from "node:fs";
 import path8 from "node:path";
 var temporaryArtifactSequence = 0;
@@ -40796,10 +40847,10 @@ function formatElapsed(startedAt) {
   return `${Date.now() - startedAt}ms`;
 }
 
-// packages/language-server/src/core.ts
+// ../language-server/src/core.ts
 init_src();
 
-// packages/language-server/src/project-environment.ts
+// ../language-server/src/project-environment.ts
 init_src();
 import { existsSync as existsSync3 } from "node:fs";
 import path9 from "node:path";
@@ -40902,7 +40953,7 @@ var ProjectEnvironmentController = class {
   }
 };
 
-// packages/language-server/src/providers.ts
+// ../language-server/src/providers.ts
 var import_vscode_languageserver = __toESM(require_api3(), 1);
 import fs5 from "node:fs";
 import path10 from "node:path";
@@ -42057,7 +42108,7 @@ function referenceTokenType(kind) {
   }
 }
 
-// packages/language-server/src/server.ts
+// ../language-server/src/server.ts
 var connection = (0, import_node.createConnection)(import_node.ProposedFeatures.all);
 var documents = new import_node.TextDocuments(TextDocument);
 var environmentController = new ProjectEnvironmentController({

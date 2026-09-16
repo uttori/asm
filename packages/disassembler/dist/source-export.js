@@ -1,0 +1,152 @@
+import { createHash } from "node:crypto";
+import * as fs from "node:fs";
+import path from "node:path";
+import { canonicalJson } from "./canonical-json.js";
+/** Manifest `format` field for a generated source-export tree. */
+export const SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
+/** Current source-export manifest schema; unknown versions are rejected on load. */
+export const SOURCE_EXPORT_SCHEMA_VERSION = 1;
+/** Filename of the export manifest written next to `main.asm`. */
+export const SOURCE_EXPORT_MANIFEST = "generated-files.json";
+/**
+ * SHA-256 of UTF-8 text or raw bytes, hex-encoded.
+ * @param {string | Uint8Array} value Content to hash.
+ * @returns {string} 64-character lowercase hex digest.
+ */
+export const sourceExportSha256 = (value) => createHash("sha256").update(value).digest("hex");
+/**
+ * Deterministic JSON: sorted object keys, dropped `undefined`, trailing newline.
+ * @param {unknown} value Manifest or config object.
+ * @returns {string} Canonical JSON text.
+ */
+export const canonicalSourceExportJson = (value) => canonicalJson(value);
+/**
+ * Asserts that a path is safe for use in a source export manifest.
+ * @param {string} relative The path to assert.
+ * @returns {void}
+ */
+const assertSafePath = (relative) => {
+    if (relative === "" ||
+        path.isAbsolute(relative) ||
+        relative.split(/[/\\]/).some((part) => part === ".." || part === "")) {
+        throw new Error(`Unsafe generated-file path '${relative}'.`);
+    }
+};
+/**
+ * Loads `generated-files.json` and checks format, schema, unique safe paths, and span bounds.
+ * @param {string} directory Export directory containing the manifest.
+ * @returns {SourceExportManifest} Validated manifest.
+ */
+export const loadSourceExportManifest = (directory) => {
+    const manifest = JSON.parse(fs.readFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), "utf8"));
+    if (manifest.format !== SOURCE_EXPORT_FORMAT)
+        throw new Error("Invalid source-export format.");
+    if (manifest.schemaVersion !== SOURCE_EXPORT_SCHEMA_VERSION) {
+        throw new Error(`Unsupported source-export schema ${String(manifest.schemaVersion)}.`);
+    }
+    const paths = new Set();
+    for (const file of manifest.files) {
+        assertSafePath(file.path);
+        if (paths.has(file.path))
+            throw new Error(`Duplicate generated-file path '${file.path}'.`);
+        paths.add(file.path);
+    }
+    const inputPaths = new Set();
+    for (const input of manifest.inputs ?? []) {
+        assertSafePath(input.path);
+        if (paths.has(input.path) || inputPaths.has(input.path))
+            throw new Error(`Duplicate source-export input path '${input.path}'.`);
+        inputPaths.add(input.path);
+    }
+    for (const span of manifest.spans) {
+        if (span.end <= span.start)
+            throw new Error(`Invalid source span '${span.id}'.`);
+        if (!paths.has(span.file))
+            throw new Error(`Source span '${span.id}' names an unknown file.`);
+    }
+    const contentSpans = manifest.spans
+        .filter((span) => span.role !== "copier-header")
+        .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    let cursor = 0;
+    for (const span of contentSpans) {
+        if (span.start !== cursor) {
+            throw new Error(`Source spans do not own every content byte exactly once at offset ${cursor}.`);
+        }
+        cursor = span.end;
+    }
+    if (cursor !== manifest.rom.contentSize) {
+        throw new Error(`Source spans cover ${cursor} content bytes, expected ${manifest.rom.contentSize}.`);
+    }
+    const copierSpans = manifest.spans.filter((span) => span.role === "copier-header");
+    if ((manifest.rom.headerSize === 0 && copierSpans.length !== 0) ||
+        (manifest.rom.headerSize === 512 &&
+            (copierSpans.length !== 1 || copierSpans[0].start !== 0 || copierSpans[0].end !== 512))) {
+        throw new Error("Source-export copier-header ownership does not match the ROM identity.");
+    }
+    return manifest;
+};
+/**
+ * Verifies every listed file still matches its recorded size and SHA-256.
+ * Used as the `--force` preflight so a drifted export is not silently overwritten.
+ * @param {string} directory Export directory.
+ * @param {SourceExportManifest} [manifest] Loaded manifest; defaults to reading the directory.
+ * @returns {void}
+ */
+export const validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+    for (const file of manifest.files) {
+        const absolute = path.join(directory, file.path);
+        if (!fs.existsSync(absolute))
+            throw new Error(`Generated file '${file.path}' is missing.`);
+        const bytes = fs.readFileSync(absolute);
+        if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
+            throw new Error(`Generated file '${file.path}' was modified after export.`);
+        }
+    }
+};
+/**
+ * Verifies every user-owned export input still matches the bytes consumed by the last generation.
+ * Input drift is expected and should trigger regeneration; unlike generated-file drift it does not
+ * prevent source export from proceeding.
+ * @param {string} directory Export directory.
+ * @param {SourceExportManifest} [manifest] Loaded manifest; defaults to reading the directory.
+ * @returns {void}
+ */
+export const validateSourceExportInputs = (directory, manifest = loadSourceExportManifest(directory)) => {
+    for (const input of manifest.inputs ?? []) {
+        const absolute = path.join(directory, input.path);
+        if (!fs.existsSync(absolute))
+            throw new Error(`Source input '${input.path}' is missing.`);
+        const bytes = fs.readFileSync(absolute);
+        if (bytes.length !== input.size || sourceExportSha256(bytes) !== input.sha256) {
+            throw new Error(`Source input '${input.path}' changed after the last export.`);
+        }
+    }
+};
+/**
+ * Compares two images without throwing; used for round-trip rebuild reports.
+ * @param {Uint8Array} expected Source ROM content (or other oracle).
+ * @param {Uint8Array} actual Rebuilt bytes.
+ * @returns {ByteComparison} Equality, hashes, and first mismatch index.
+ */
+export const compareByteImages = (expected, actual) => {
+    const common = Math.min(expected.length, actual.length);
+    let firstDifference;
+    for (let index = 0; index < common; index++) {
+        if (expected[index] !== actual[index]) {
+            firstDifference = index;
+            break;
+        }
+    }
+    if (firstDifference === undefined && expected.length !== actual.length) {
+        firstDifference = common;
+    }
+    return {
+        equal: firstDifference === undefined,
+        expectedLength: expected.length,
+        actualLength: actual.length,
+        expectedSha256: sourceExportSha256(expected),
+        actualSha256: sourceExportSha256(actual),
+        ...(firstDifference === undefined ? {} : { firstDifference }),
+    };
+};
+//# sourceMappingURL=source-export.js.map

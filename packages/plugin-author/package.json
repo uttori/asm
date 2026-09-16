@@ -1,5 +1,8 @@
 {
   "name": "uttori-asm-plugin-author-example",
   "private": true,
-  "type": "module"
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  }
 }

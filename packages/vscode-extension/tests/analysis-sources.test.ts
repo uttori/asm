@@ -13,6 +13,7 @@ import type {
 const bundle = await build({
   entryPoints: ["packages/vscode-extension/src/analysis-sources-tree.ts"],
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
   write: false,

@@ -57,7 +57,7 @@ The registration lives in [`src/index.ts`](./src/index.ts). CPU tables live in [
 
 ## Install & Assemble
 
-The workspace requires Node.js 20 or newer. From a source checkout:
+The workspace requires Node.js 26 or newer. From a source checkout:
 
 ```sh
 npm install

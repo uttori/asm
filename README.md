@@ -38,7 +38,9 @@ The current toolchain can:
 
 ## Requirements & Installation
 
-- Node.js v26 or newer for the assembler packages, CLI, bundled editor tools, and development suite.
+- Node.js v26 or newer for npm packages, standalone tools, and the development suite.
+- The VS Code extension uses the editor's embedded runtime; its bundles support the Node 24 runtime
+  in VS Code 1.128 without requiring a separate Node installation.
 
 ```sh
 git clone https://github.com/uttori/asm.git
@@ -47,7 +49,12 @@ npm install
 npm test
 ```
 
-The packages are ESM and currently expose TypeScript source as their runtime import. Use a TypeScript-aware runtime or bundler. This repository uses `tsx` during development.
+The packages expose compiled ESM JavaScript and TypeScript declarations. Installed applications run
+with ordinary Node.js; no TypeScript loader is required. The `@uttori/asm-disassembler/canonical-json`
+subpath also supports `require()` on Node 26. Repository scripts use `tsx` with the explicit
+`uttori-source` export condition so development tests exercise current source rather than stale
+generated output. `npm run make-types` rebuilds both JavaScript and declarations under each package's
+`dist/` directory; package `prepack` hooks rebuild their own output before publication.
 
 ## Generic Core Usage
 
@@ -342,25 +349,25 @@ See the [65xx plugin README](packages/plugin-65xx/README.md) for extensive 65xx 
 
 ## Development
 
-| Command                     | Purpose                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| `npm test`                  | Run all AVA tests (excludes optional external fixtures)                                |
-| `npm run typecheck`         | Type-check root, workspaces, scripts, and the author example                           |
-| `npm run check:boundaries`  | Enforce core/plugin/LSP ownership boundaries                                           |
-| `npm run test:coverage`     | Run source coverage                                                                    |
-| `npm run test:fuzz`         | Run deterministic hostile-input decoder/project/trace/protocol fuzzing                 |
-| `npm run test:roundtrip`    | Run native decoder, source-export, CLI, and byte-rebuild round trips                   |
-| `npm run verify`            | Run formatting, lint, boundaries, types, declarations, coverage, LSP, and editor gates |
-| `npm run pack:check`        | Assert required runtime files and the loader schema exist in package dry-runs          |
-| `npm run cli:build`         | Build the distributable `uttori-asm` executable                                        |
-| `npm run cli:smoke`         | Launch the bundled executable and verify its help path                                 |
-| `npm run fixture:asar`      | Run the Asar fixture harness                                                           |
-| `npm run fixture:slideshow` | Run the slideshow integration fixture                                                  |
-| `npm run benchmark:smoke`   | Run in-repo correctness-checked smoke benchmarks                                       |
-| `npm run vscode:smoke`      | Launch VS Code 1.128.0 and exercise real extension activation, LSP, views, and build   |
-| `npm run fixtures:status`   | Report external submodule, ROM, and worktree readiness                                 |
-| `npm run test:external`     | Run Chou / Yoshi / SMRPG / TMNT / Zelda parity tests                                   |
-| `npm run ci:external`       | Strict preflight, serial external tests, clean-worktree check                          |
+| Command                     | Purpose                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `npm test`                  | Run all AVA tests (excludes optional external fixtures)                                 |
+| `npm run typecheck`         | Type-check root, workspaces, scripts, and the author example                            |
+| `npm run check:boundaries`  | Enforce core/plugin/LSP ownership boundaries                                            |
+| `npm run test:coverage`     | Run source coverage                                                                     |
+| `npm run test:fuzz`         | Run deterministic hostile-input decoder/project/trace/protocol fuzzing                  |
+| `npm run test:roundtrip`    | Run native decoder, source-export, CLI, and byte-rebuild round trips                    |
+| `npm run verify`            | Run formatting, lint, boundaries, types, declarations, coverage, LSP, and editor gates  |
+| `npm run pack:check`        | Build, inspect, install, and exercise all nine real npm archives outside the repository |
+| `npm run cli:build`         | Build the distributable `uttori-asm` executable                                         |
+| `npm run cli:smoke`         | Launch the bundled executable and verify its help path                                  |
+| `npm run fixture:asar`      | Run the Asar fixture harness                                                            |
+| `npm run fixture:slideshow` | Run the slideshow integration fixture                                                   |
+| `npm run benchmark:smoke`   | Run in-repo correctness-checked smoke benchmarks                                        |
+| `npm run vscode:smoke`      | Launch VS Code 1.128.0 and exercise real extension activation, LSP, views, and build    |
+| `npm run fixtures:status`   | Report external submodule, ROM, and worktree readiness                                  |
+| `npm run test:external`     | Run Chou / Yoshi / SMRPG / TMNT / Zelda parity tests                                    |
+| `npm run ci:external`       | Strict preflight, serial external tests, clean-worktree check                           |
 
 Core verification is `npm run verify`, `npm run pack:check`, `npm run test:roundtrip`, `npm run fixture:asar`, `npm run fixture:slideshow`, and `npm run benchmark:smoke`. Those gates do not initialize submodules or require local ROMs. The Extension Host smoke downloads a pinned VS Code build but still uses only a temporary synthetic workspace.
 
@@ -393,6 +400,9 @@ There are explicit Chou and SMRPG benchmark commands, they will fail with setup 
 ## Contributing
 
 Start with [CONTRIBUTING.md](CONTRIBUTING.md), then read the [disassembler architecture](docs/disassembler-architecture.md) and [testing/release guide](docs/testing-and-release.md) for the part you are changing. The contributor guide includes a beginner glossary, package ownership, change recipes, security/license boundaries, performance-comment requirements, private-fixture rules, troubleshooting, and a review checklist.
+
+Track package documentation, runtime compatibility, and publishing work in the
+[v1.0.0 release checklist](docs/v1.0.0-release-plan.md).
 
 ## License
 

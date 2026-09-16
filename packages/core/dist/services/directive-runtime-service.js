@@ -1,0 +1,283 @@
+import { normalizeAddressForWidth } from "../address-width.js";
+import { splitRespectingFunctions } from "./command-text-service.js";
+export class DirectiveRuntimeService {
+    host;
+    constructor(host) {
+        this.host = host;
+    }
+    /**
+     * Handles character mapping like `"A" = 0x42` and assigns the value to the character in `characterMappings`.
+     * @param {string[]} words The character mapping command words.
+     * @throws {Error} If the format is incorrect.
+     */
+    handleCharacterMapping(words) {
+        if (words.length !== 3) {
+            throw new Error("Character mapping requires format: 'char' = value");
+        }
+        const token = words[0];
+        const quoted = /^'([\S\s])'$/.exec(token) ?? /^"([\S\s])"$/.exec(token);
+        const char = quoted ? quoted[1] : token.replace(/["']/g, "");
+        if (char.length !== 1) {
+            throw new Error("Character mapping requires format: 'char' = value");
+        }
+        const value = this.host.operandResolver.getnum(words[2]);
+        this.host.characterMappings.set(char, value);
+    }
+    /**
+     * Processes a string and maps characters to their corresponding values in `characterMappings`.
+     * If a character is not found in `characterMappings`, its charCode is used instead.
+     * @param {string} input The string to process.
+     * @returns {number[]} An array of numbers representing the mapped characters.
+     */
+    processStringWithMapping(input) {
+        return Array.from(input).map((char) => this.host.characterMappings.get(char) ?? char.charCodeAt(0));
+    }
+    /**
+     * Handles `org`.
+     * @param {string[]} params The directive parameters.
+     */
+    handleOrg(params) {
+        if (params.length !== 1) {
+            throw new Error("ORG requires a single address parameter.");
+        }
+        const addressStr = params[0].trim();
+        let addr;
+        if (/^\$[\da-f]+$/i.test(addressStr)) {
+            addr = parseInt(addressStr.substring(1), 16);
+        }
+        else if (/^-?\d+$/.test(addressStr)) {
+            addr = parseInt(addressStr, 10);
+        }
+        else {
+            try {
+                // Asar accepts `org !Size-$01` and bitwise header-location math.
+                // Evaluate through math so leftover junk still errors instead of
+                // silently becoming 0 during definition collection.
+                addr = this.host.operandResolver.deps.evaluateMath(this.host.resolvedefines(addressStr));
+            }
+            catch {
+                throw new Error(`Invalid ORG address: ${params[0]}`);
+            }
+        }
+        const maxAddress = 2 ** this.host.addressWidth - 1;
+        if (Number.isNaN(addr) || addr < 0 || addr > maxAddress) {
+            throw new Error(`Invalid ORG address: ${params[0]}`);
+        }
+        this.host.setWritePosition(addr);
+    }
+    /**
+     * Handles data directives.
+     * @param {string} type The data directive keyword.
+     * @param {string[]} params The directive parameters.
+     */
+    handleDataDirective(type, params) {
+        if (!Array.isArray(params) || params.length === 0) {
+            throw new Error(`${type.toUpperCase()} directive requires at least one parameter.`);
+        }
+        // Support SNASM-style aliases while keeping one canonical byte-width table.
+        if (type.toLowerCase() === "dc.b") {
+            type = "db";
+        }
+        else if (type.toLowerCase() === "dc.w") {
+            type = "dw";
+        }
+        else if (type.toLowerCase() === "dc.l") {
+            type = "dl";
+        }
+        const lengthMap = {
+            db: 1,
+            dw: 2,
+            dl: 3,
+            dd: 4,
+        };
+        const len = lengthMap[type.toLowerCase()];
+        if (!len) {
+            throw new Error(`Invalid data directive: ${type}`);
+        }
+        if (this.host.isDefinitionCollectionStage) {
+            this.estimateDataDirectiveSize(len, params);
+            return;
+        }
+        // Reverse storage keeps source order when popping and avoids shifting a large data list.
+        // Expanded defines are pushed in reverse too, so they finish before the following operand.
+        const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+        while (pendingValues.length > 0) {
+            let value = (pendingValues.pop() ?? "").trim();
+            if (value.startsWith('"') || value.startsWith("'")) {
+                // String literals go through define expansion first, then through the
+                // active character mapping table one character at a time.
+                const unquoted = value.slice(1, -1);
+                const expandedString = this.host.defineEngine.resolveDefinesInStringLiteral(unquoted);
+                const mappedChars = this.processStringWithMapping(expandedString);
+                for (const charValue of mappedChars) {
+                    this.writeDataByLength(len, charValue);
+                }
+                continue;
+            }
+            if (value.startsWith("#")) {
+                value = value.substring(1);
+            }
+            // Recursively resolve defines until the token stops changing. This
+            // preserves existing behavior for define chains used inside data lists.
+            let resolved = value;
+            let previousResolved = "";
+            while (resolved !== previousResolved) {
+                previousResolved = resolved;
+                resolved = this.host.resolvedefines(resolved);
+            }
+            const expandedValues = splitRespectingFunctions(resolved);
+            if (expandedValues.length > 1) {
+                // A define can expand beyond V8's argument limit; never spread its tokens into a call.
+                for (let index = expandedValues.length - 1; index >= 0; index--)
+                    pendingValues.push(expandedValues[index]);
+                continue;
+            }
+            let num;
+            // Struct member references look like labels but need struct-specific
+            // indexing and extension rules before falling back to numeric parsing.
+            if (this.host.structEngine.hasStructReference(resolved)) {
+                const structValue = this.host.structEngine.resolveStructLabel(resolved);
+                if (typeof structValue === "number" && !Number.isNaN(structValue)) {
+                    this.writeDataByLength(len, structValue);
+                    continue;
+                }
+                num = structValue;
+            }
+            else {
+                num = this.host.operandResolver.getnum(resolved);
+            }
+            if (Number.isNaN(num)) {
+                // As a final fallback, treat the value as a static label reference.
+                num = this.host.symbolScope.getLabelValue(resolved, true);
+            }
+            if (Number.isNaN(num)) {
+                throw new Error("Unable to determine value:");
+            }
+            this.writeDataByLength(len, num);
+        }
+        if (this.host.collectSourceMetadata) {
+            this.host.addAddressToLine(normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth));
+        }
+    }
+    /**
+     * Writes a value using the data directive byte width.
+     * @param {number} len The byte width.
+     * @param {number} value The value to write.
+     */
+    writeDataByLength(len, value) {
+        if (typeof len !== "number") {
+            len = Number.parseInt(len, 10);
+            if (Number.isNaN(len)) {
+                throw new Error("writeDataByLength: len is NaN");
+            }
+        }
+        switch (len) {
+            case 1:
+                this.host.write1(value);
+                break;
+            case 2:
+                this.host.write2(value);
+                break;
+            case 3:
+                this.host.write3(value);
+                break;
+            case 4:
+                this.host.write4(value);
+                break;
+            default:
+                throw new Error(`Unsupported data length ${len}`);
+        }
+    }
+    /**
+     * Estimates data size with the same expansion order as emission, without resolving final values.
+     * @param {number} len Bytes per numeric item (1–4); string characters each occupy one item.
+     * @param {string[]} params Source operands, including defines that may expand to data lists.
+     */
+    estimateDataDirectiveSize(len, params) {
+        // Match emission's reverse stack: expanded lists retain source order with constant-time pops.
+        const pendingValues = splitRespectingFunctions(params.join(" ")).reverse();
+        let estimatedItems = 0;
+        while (pendingValues.length > 0) {
+            let value = (pendingValues.pop() ?? "").trim();
+            if (!value) {
+                continue;
+            }
+            if (value.startsWith('"') || value.startsWith("'")) {
+                const unquoted = value.slice(1, -1);
+                try {
+                    // Pass 0 needs byte counts, not final values. If defines in a string
+                    // are known, use the expanded length; otherwise fall back to literal
+                    // length so layout can keep moving.
+                    estimatedItems += this.host.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
+                }
+                catch {
+                    estimatedItems += unquoted.length;
+                }
+                continue;
+            }
+            if (value.startsWith("#")) {
+                value = value.substring(1);
+            }
+            let resolved = value;
+            let previousResolved = "";
+            try {
+                while (resolved !== previousResolved) {
+                    previousResolved = resolved;
+                    resolved = this.host.resolvedefines(resolved);
+                }
+            }
+            catch {
+                // Pass 0 only needs byte counts, so unresolved symbols still consume one item.
+            }
+            const expandedValues = splitRespectingFunctions(resolved);
+            if (expandedValues.length > 1) {
+                // Count every expanded value without passing an input-sized list as call arguments.
+                for (let index = expandedValues.length - 1; index >= 0; index--)
+                    pendingValues.push(expandedValues[index]);
+                continue;
+            }
+            estimatedItems += 1;
+        }
+        this.host.step(estimatedItems * len);
+        if (this.host.collectSourceMetadata) {
+            this.host.addAddressToLine(normalizeAddressForWidth(this.host.currentTargetBaseAddress, this.host.addressWidth));
+        }
+    }
+    /**
+     * Pushes the current PC state.
+     */
+    handlePushPC() {
+        if (this.host.pushpcnum >= 256) {
+            throw new Error("PushPC stack overflow.");
+        }
+        // Save both logical and base cursors. `base` can decouple emitted PC from
+        // the visible logical address, so restoring only one pair would corrupt later
+        // layout.
+        this.host.pushpcStack.push({
+            currentTargetAddress: this.host.currentTargetAddress,
+            currentTargetStartAddress: this.host.currentTargetStartAddress,
+            currentTargetBaseAddress: this.host.currentTargetBaseAddress,
+            currentTargetBaseStartAddress: this.host.currentTargetBaseStartAddress,
+        });
+        this.host.pushpcnum++;
+    }
+    /**
+     * Restores the previous PC state.
+     */
+    handlePullPC() {
+        if (this.host.pushpcnum === 0) {
+            throw new Error("PullPC without PushPC.");
+        }
+        const state = this.host.pushpcStack.pop();
+        // Restore exactly the state captured by `pushpc`; directives such as
+        // `incbin -> label` depend on this to resume emission at the original site.
+        if (state) {
+            this.host.currentTargetAddress = state.currentTargetAddress;
+            this.host.currentTargetStartAddress = state.currentTargetStartAddress;
+            this.host.currentTargetBaseAddress = state.currentTargetBaseAddress;
+            this.host.currentTargetBaseStartAddress = state.currentTargetBaseStartAddress;
+        }
+        this.host.pushpcnum--;
+    }
+}
+//# sourceMappingURL=directive-runtime-service.js.map

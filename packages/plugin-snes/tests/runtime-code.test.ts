@@ -106,7 +106,11 @@ test("large captured graphs preserve every node and conditional edge", async (t)
   // Use a normal Node child so the regression exercises the same call-argument limit.
   const { stdout } = await promisify(execFile)(
     process.execPath,
-    ["--import=tsx", fileURLToPath(new URL("./fixtures/large-runtime-code.ts", import.meta.url))],
+    [
+      "--conditions=uttori-source",
+      "--import=tsx",
+      fileURLToPath(new URL("./fixtures/large-runtime-code.ts", import.meta.url)),
+    ],
     { timeout: 60_000 },
   );
   t.deepEqual(JSON.parse(stdout), {

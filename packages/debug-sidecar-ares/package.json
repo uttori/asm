@@ -14,20 +14,24 @@
   ],
   "type": "module",
   "sideEffects": false,
-  "module": "src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
-      "import": "./src/index.ts"
+      "import": "./dist/index.js"
     },
     "./profile": {
+      "uttori-source": "./src/profile.ts",
       "types": "./dist/profile.d.ts",
-      "import": "./src/profile.ts"
+      "import": "./dist/profile.js"
     },
     "./runtime-manifest": {
+      "uttori-source": "./src/ares-process-host.ts",
       "types": "./dist/ares-process-host.d.ts",
-      "import": "./src/ares-process-host.ts"
+      "import": "./dist/ares-process-host.js"
     }
   },
   "scripts": {
@@ -37,7 +41,8 @@
     "native:check": "sh native/tests/check.sh",
     "pack:check": "npm pack --dry-run",
     "smoke": "node out/sidecar.mjs --help",
-    "desktop-rsp:check": "tsc -p tests/desktop-rsp/tsconfig.json && oxlint tests/desktop-rsp/*.mjs && oxfmt --check tests/desktop-rsp"
+    "desktop-rsp:check": "tsc -p tests/desktop-rsp/tsconfig.json && oxlint tests/desktop-rsp/*.mjs && oxfmt --check tests/desktop-rsp",
+    "prepack": "node ../../scripts/clean-workspace-build.ts --workspace debug-sidecar-ares && npm run make-types && npm run build"
   },
   "dependencies": {
     "@uttori/asm-core": "1.0.0",

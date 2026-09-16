@@ -13,6 +13,7 @@ import type { projectAnalysisNavigation as ProjectNavigation } from "../src/anal
 const bundle = await build({
   entryPoints: ["packages/vscode-extension/src/analysis-navigation-data.ts"],
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "esm",
   write: false,

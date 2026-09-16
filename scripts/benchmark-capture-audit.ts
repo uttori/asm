@@ -623,7 +623,14 @@ if (caseIndex >= 0) {
       const value = await new Promise<Record<string, unknown>>((resolve, reject) => {
         const child = spawn(
           process.execPath,
-          ["--expose-gc", "--import=tsx", ownFile, "--case", scenario.name],
+          [
+            "--expose-gc",
+            "--conditions=uttori-source",
+            "--import=tsx",
+            ownFile,
+            "--case",
+            scenario.name,
+          ],
           { stdio: ["ignore", "pipe", "pipe"] },
         );
         let stdout = "",

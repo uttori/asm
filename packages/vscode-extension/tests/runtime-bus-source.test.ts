@@ -88,6 +88,7 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
     entryPoints: [path.resolve("packages/vscode-extension/src/disassembly-maintenance-process.ts")],
     outfile: processFile,
     bundle: true,
+    conditions: ["uttori-source"],
     platform: "node",
     format: "cjs",
     logLevel: "silent",

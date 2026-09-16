@@ -1,26 +1,31 @@
-import { cpSync, existsSync, mkdirSync } from "node:fs";
+import { chmodSync, cpSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { build } from "esbuild";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// VS Code 1.128 embeds Node 24. Standalone tools target Node 26; every executable shipped
+// inside the VSIX is built separately for the editor's runtime, including forked workers.
+const editorRuntime = "node24";
 await build({
   entryPoints: [path.join(here, "src/live-bus-analysis-process.ts")],
   outfile: path.join(here, "out/live-bus-analysis-process.cjs"),
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
-  target: "node20",
+  target: editorRuntime,
   logLevel: "info",
 });
 await build({
   entryPoints: [path.join(here, "src/disassembly-maintenance-process.ts")],
   outfile: path.join(here, "out/disassembly-maintenance-process.cjs"),
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
-  target: "node20",
+  target: editorRuntime,
   logLevel: "info",
 });
 mkdirSync(path.join(here, "schemas"), { recursive: true });
@@ -33,9 +38,10 @@ await build({
   entryPoints: [path.join(here, "src/analysis-worker.ts")],
   outfile: path.join(here, "out/analysis-worker.cjs"),
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
-  target: "node20",
+  target: editorRuntime,
   logLevel: "info",
 });
 
@@ -43,9 +49,10 @@ await build({
   entryPoints: [path.join(here, "src/extension.ts")],
   outfile: path.join(here, "out/extension.js"),
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
-  target: "node20",
+  target: editorRuntime,
   // `vscode` is provided by the host at runtime and must not be bundled.
   external: ["vscode"],
   logLevel: "info",
@@ -58,38 +65,46 @@ await build({
   entryPoints: [path.join(here, "tests-host/index.ts")],
   outfile: path.join(here, "tests-host/out/index.cjs"),
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
-  target: "node20",
+  target: editorRuntime,
   external: ["vscode"],
   logLevel: "info",
 });
 
-// Ship the language-server bundle alongside the extension so it can be launched
-// over stdio. Run `npm run lsp:build` first to produce this file.
-const serverBundle = path.resolve(here, "../language-server/out/server.mjs");
-const serverDestination = path.join(here, "server", "server.mjs");
-if (existsSync(serverBundle)) {
-  mkdirSync(path.dirname(serverDestination), { recursive: true });
-  cpSync(serverBundle, serverDestination);
-  console.log(`Copied language server bundle to ${serverDestination}`);
-} else {
-  console.warn(`Language server bundle missing at ${serverBundle}; run "npm run lsp:build" first.`);
-}
-
-// Ship the MIT protocol translators with the extension. Emulator executables,
-// runtime resources, and their licenses remain separately managed inputs.
-const sidecars = [
-  ["ares", path.resolve(here, "../debug-sidecar-ares/out/sidecar.mjs")],
-  ["mesence", path.resolve(here, "../debug-sidecar-mesence/out/sidecar.mjs")],
+// Build from source on every package operation: copying an optional pre-existing bundle can
+// silently ship a stale server or omit it entirely. Native emulator artifacts remain external.
+const embeddedExecutables = [
+  ["../language-server/src/server.ts", "server/server.mjs", true],
+  ["../debug-sidecar-ares/src/sidecar.ts", "sidecars/ares.mjs", false],
+  ["../debug-sidecar-mesence/src/sidecar.ts", "sidecars/mesence.mjs", false],
 ];
-for (const [name, source] of sidecars) {
-  const destination = path.join(here, "sidecars", `${name}.mjs`);
-  if (existsSync(source)) {
-    mkdirSync(path.dirname(destination), { recursive: true });
-    cpSync(source, destination);
-    console.log(`Copied ${name} debug sidecar to ${destination}`);
-  } else {
-    console.warn(`Debug sidecar missing at ${source}; run "npm run sidecar:build" first.`);
+for (const [source, destination, needsRequireShim] of embeddedExecutables) {
+  const outfile = path.join(here, destination);
+  const banner = ["#!/usr/bin/env node"];
+  if (needsRequireShim) {
+    // vscode-languageserver contains CommonJS dependencies even though our server entry is ESM.
+    banner.push(
+      "import { createRequire as __createRequire } from 'node:module';",
+      "import { fileURLToPath as __fileURLToPath } from 'node:url';",
+      "import { dirname as __dirname_fn } from 'node:path';",
+      "const require = __createRequire(import.meta.url);",
+      "const __filename = __fileURLToPath(import.meta.url);",
+      "const __dirname = __dirname_fn(__filename);",
+    );
   }
+  await build({
+    entryPoints: [path.resolve(here, source)],
+    outfile,
+    bundle: true,
+    conditions: ["uttori-source"],
+    platform: "node",
+    format: "esm",
+    target: editorRuntime,
+    logOverride: { "import-is-undefined": "error" },
+    banner: { js: banner.join("\n") },
+    logLevel: "info",
+  });
+  chmodSync(outfile, 0o755);
 }

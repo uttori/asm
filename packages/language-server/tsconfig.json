@@ -12,7 +12,8 @@
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node"],
+    "customConditions": ["uttori-source"]
   },
   "include": ["src/**/*.ts"]
 }

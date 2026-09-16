@@ -106,7 +106,7 @@ The deeper dependency and data-flow description is in
 2. Add or update a test that fails for the missing behavior.
 3. Change the smallest owning package; avoid moving target knowledge upward.
 4. Run the focused test and the package type/lint checks.
-5. Regenerate declarations with `npm run make-types` when a public TypeScript surface changes.
+5. Regenerate compiled JavaScript and declarations with `npm run make-types` when a public surface changes.
 6. Run the repository and package gates appropriate to the risk.
 7. Update the relevant public documentation in the same change.
 
@@ -117,6 +117,16 @@ The worktree may contain unrelated work. Do not reset, delete, reformat, or rege
 your change merely to make `git status` shorter.
 
 ## TypeScript and documentation expectations
+
+Public npm exports resolve to compiled ESM in `dist/`. The explicit `uttori-source` condition selects
+TypeScript source for repository development. Root scripts, AVA workers, source subprocesses, and
+esbuild use that condition; direct development commands should include `--conditions=uttori-source`
+alongside `--import=tsx`. Consumer verification deliberately enables neither. Keep this distinction
+so tests cannot pass against stale output or mask an installed-package resolution error.
+
+Builds and standalone tools require Node 26. The extension and its embedded executables target the
+Node 24 runtime shipped by the minimum supported VS Code. `npm run vscode:smoke` type-checks against
+that editor's own API declarations and checks SQLite in the real Extension Host.
 
 - The repository uses ESM and strict TypeScript. Source imports include the emitted `.js` suffix.
 - Prefer explicit immutable types and `readonly` collections at package boundaries.

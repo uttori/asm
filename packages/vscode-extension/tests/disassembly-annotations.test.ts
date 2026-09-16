@@ -27,6 +27,7 @@ const bundled = await build({
   },
   write: false,
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
   external: ["vscode"],
@@ -36,6 +37,7 @@ await build({
   entryPoints: [path.resolve("packages/vscode-extension/src/analysis-worker.ts")],
   outfile: path.join(workerRoot, "out/analysis-worker.cjs"),
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
   logLevel: "silent",
@@ -45,6 +47,7 @@ const locationBundle = await build({
   entryPoints: [path.resolve("packages/vscode-extension/src/disassembly-annotation-location.ts")],
   write: false,
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "esm",
 });

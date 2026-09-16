@@ -29,6 +29,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     entryPoints: [path.resolve("packages/vscode-extension/src/analysis-worker.ts")],
     outfile: workerFile,
     bundle: true,
+    conditions: ["uttori-source"],
     platform: "node",
     format: "cjs",
     logLevel: "silent",

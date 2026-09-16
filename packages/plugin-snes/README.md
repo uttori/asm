@@ -93,7 +93,7 @@ the GPL Extras remain test oracles rather than implementation source.
 
 ## Install & Assemble
 
-The workspace requires Node.js 20 or newer. From a source checkout:
+The workspace requires Node.js 26 or newer. From a source checkout:
 
 ```sh
 npm install

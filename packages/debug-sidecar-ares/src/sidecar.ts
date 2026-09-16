@@ -1,6 +1,5 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import {
   DEBUG_SIDECAR_SESSION_ENV,
@@ -148,10 +147,9 @@ export const runAresSidecar = async (
   }
 };
 
-const invokedDirectly =
-  process.argv[1] !== undefined && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
-
-if (invokedDirectly) {
+// npm bin shims and macOS temporary-directory aliases need Node's resolved entry identity.
+// Importing the library API must never start a protocol server as a side effect.
+if (import.meta.main) {
   const arguments_ = process.argv.slice(2);
   if (arguments_.includes("--help")) {
     await write(process.stdout, usage);

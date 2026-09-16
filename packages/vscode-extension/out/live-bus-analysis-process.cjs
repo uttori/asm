@@ -23,12 +23,12 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/vscode-extension/src/live-bus-analysis-process.ts
+// src/live-bus-analysis-process.ts
 var live_bus_analysis_process_exports = {};
 module.exports = __toCommonJS(live_bus_analysis_process_exports);
 var import_promises4 = require("node:timers/promises");
 
-// packages/debug-adapter/src/capture-v2.ts
+// ../debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
   if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
@@ -331,11 +331,11 @@ var decodePPUEffect = (b, offset, port) => {
   };
 };
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var import_promises = require("node:fs/promises");
 var import_promises2 = require("node:timers/promises");
 
-// packages/debug-adapter/src/capture-file-reader.ts
+// ../debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader = class {
   #read;
   #windowBytes;
@@ -383,7 +383,7 @@ var CaptureFrameReader = class {
   }
 };
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var metadataValid = (m) => {
   if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision)
     throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
@@ -602,7 +602,7 @@ var nativePosition = (value, session, scope) => {
   return position;
 };
 
-// packages/disassembler/src/canonical-json.ts
+// ../disassembler/src/canonical-json.ts
 var canonicalValue = (value) => {
   if (Array.isArray(value)) return value.map(canonicalValue);
   if (value !== null && typeof value === "object") {
@@ -628,13 +628,13 @@ var canonicalValue = (value) => {
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var import_node_crypto3 = require("node:crypto");
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var import_node_path4 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
 
-// packages/disassembler/src/analysis-sources.ts
+// ../disassembler/src/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].sort();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -687,19 +687,19 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var import_node_crypto = require("node:crypto");
 
-// packages/disassembler/src/project-types.ts
+// ../disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/record-id-set.ts
+// ../disassembler/src/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
@@ -752,7 +752,7 @@ var RecordIdSet = class {
   }
 };
 
-// packages/disassembler/src/runtime-ppu.ts
+// ../disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect = (effect, access) => {
   const port = access.address & 65535;
   let target = "vram";
@@ -822,7 +822,7 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime-bus-types.ts
+// ../disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact = (fact) => {
   if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context))
     throw new Error("Invalid bus access coordinates, value, direction or context.");
@@ -845,7 +845,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// packages/disassembler/src/trace-detail.ts
+// ../disassembler/src/trace-detail.ts
 var isArray = (value) => Array.isArray(value);
 var validateRuntimeInstructionDetails = (value, count) => {
   if (!Array.isArray(value) || value.length !== count)
@@ -875,7 +875,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
   });
 };
 
-// packages/disassembler/src/project-validation.ts
+// ../disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest = (manifest) => {
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
@@ -1253,7 +1253,7 @@ var validateLoadedShards = (shards, project) => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 var ANALYSIS_PROJECT_REVISION_VERSION = 1;
 var AnalysisProjectStaleError = class extends Error {
@@ -1279,7 +1279,7 @@ var assertAnalysisProjectRevision = (store, expected) => {
     throw new AnalysisProjectStaleError(expected, actual);
 };
 
-// packages/disassembler/src/sqlite-payload.ts
+// ../disassembler/src/sqlite-payload.ts
 var import_node_util = require("node:util");
 var import_node_zlib = require("node:zlib");
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
@@ -1340,7 +1340,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/sqlite-records.ts
+// ../disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) return -1;
   if (left.id > right.id) return 1;
@@ -1611,7 +1611,7 @@ var analysisAddress = (record) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var parseAnalysisProjectManifest = (input) => {
   if (!input || typeof input !== "object") throw new Error("Invalid analysis project manifest.");
   const manifest = input;
@@ -1631,7 +1631,7 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/project-edit.ts
+// ../disassembler/src/project-edit.ts
 var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
@@ -1662,7 +1662,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/runtime-evidence.ts
+// ../disassembler/src/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1886,7 +1886,7 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/sqlite-annotation-query.ts
+// ../disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 var decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
 var runtimeSelect = (pairedState = false) => {
@@ -2204,7 +2204,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   };
 };
 
-// packages/disassembler/src/sqlite-query-cache.ts
+// ../disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var upgradeQueryCacheStorage = (db) => {
   const schema = db.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='query_cache'").get();
@@ -2253,7 +2253,7 @@ var writeQueryCache = (db, key2, signature, value) => {
   );
 };
 
-// packages/disassembler/src/sqlite-coverage-query.ts
+// ../disassembler/src/sqlite-coverage-query.ts
 var decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
 var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 var cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
@@ -2554,7 +2554,7 @@ var coveragePage = (db, kind, offset) => {
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
 
-// packages/disassembler/src/sqlite-graph-query.ts
+// ../disassembler/src/sqlite-graph-query.ts
 var decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
 var unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 var numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
@@ -2725,7 +2725,7 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/sqlite-maintenance.ts
+// ../disassembler/src/sqlite-maintenance.ts
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 var SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
@@ -2748,7 +2748,7 @@ var syncSqlitePath = (file) => {
   }
 };
 
-// packages/disassembler/src/sqlite-runtime-storage.ts
+// ../disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto2 = require("node:crypto");
 var RUNTIME_STORAGE_SCHEMA = `
 CREATE TABLE runtime_facts (
@@ -2947,7 +2947,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/sqlite-source-query.ts
+// ../disassembler/src/sqlite-source-query.ts
 var collections = ["labels", "comments", "annotations", "regions"];
 var sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
@@ -3080,7 +3080,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/sqlite-storage-policy.ts
+// ../disassembler/src/sqlite-storage-policy.ts
 var import_node_fs3 = __toESM(require("node:fs"), 1);
 var DEFAULT_ANALYSIS_STORAGE_POLICY = {
   archiveMaxBytes: 2 * 1024 ** 3,
@@ -3187,7 +3187,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/trace-cache.ts
+// ../disassembler/src/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map; hits never reorder either structure. */
@@ -3251,7 +3251,7 @@ var TraceCache = class {
   }
 };
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 2;
 var SCHEMA = `
@@ -4753,7 +4753,7 @@ var SqliteAnalysisStore = class {
   }
 };
 
-// packages/disassembler/src/capture-archives.ts
+// ../disassembler/src/capture-archives.ts
 var import_node_crypto4 = require("node:crypto");
 var import_node_fs5 = __toESM(require("node:fs"), 1);
 var import_node_path5 = __toESM(require("node:path"), 1);
@@ -4885,10 +4885,10 @@ var expireCaptureArchives = (store) => {
   return { expired, warnings };
 };
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var import_node_crypto5 = require("node:crypto");
 
-// packages/disassembler/src/runtime-graphics.ts
+// ../disassembler/src/runtime-graphics.ts
 var mapVram = (address, mapping) => {
   if (mapping === 0) return address;
   const bits = mapping + 4;
@@ -5087,7 +5087,7 @@ var createRuntimeGraphicsAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime-transfer.ts
+// ../disassembler/src/runtime-transfer.ts
 var validateRuntimeTransferBoundary = (marker) => {
   const { configuration: c } = marker;
   if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536)
@@ -5241,7 +5241,7 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
 var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 var unsigned = (value) => {
@@ -5581,7 +5581,7 @@ ${JSON.stringify(meta)}
   return { push, finish };
 };
 
-// packages/disassembler/src/runtime-bus-project.ts
+// ../disassembler/src/runtime-bus-project.ts
 var import_node_path6 = __toESM(require("node:path"), 1);
 var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, options = {}) => {
   options.signal?.throwIfAborted();
@@ -5721,7 +5721,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   }
 };
 
-// packages/vscode-extension/src/live-bus-analysis-process.ts
+// src/live-bus-analysis-process.ts
 var cancellation = new AbortController();
 var latest;
 var started = false;

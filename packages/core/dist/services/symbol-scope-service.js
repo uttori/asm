@@ -1,0 +1,948 @@
+import { ASAR_SYNTAX_PROFILE } from "../syntax-profile.js";
+export class SymbolScopeService {
+    host;
+    constructor(host) {
+        this.host = host;
+    }
+    /**
+     * Returns the current ca65-style object file name (last `.asm` on the include stack).
+     * @returns {string} The object-file basename, or empty when unknown.
+     */
+    objectFileKey() {
+        const chain = [...this.host.includeStack, this.host.currentFile];
+        for (let index = chain.length - 1; index >= 0; index--) {
+            const base = fileBasename(chain[index] ?? "");
+            if (base.toLowerCase().endsWith(".asm")) {
+                return base;
+            }
+        }
+        return fileBasename(this.host.currentFile);
+    }
+    /**
+     * Qualifies a symbol for the active syntax profile's file-local rule.
+     * Exported/imported names and cheap/sublabels stay unqualified.
+     * @param {string} name The source symbol name.
+     * @returns {string} The storage key.
+     */
+    qualifySymbolName(name) {
+        const profile = this.host.syntaxProfile ?? ASAR_SYNTAX_PROFILE;
+        if (!profile.fileLocalSymbols) {
+            return name;
+        }
+        if (this.host.globalSymbols.has(name)) {
+            return name;
+        }
+        if (name.startsWith(".") || name.startsWith("@") || name.includes("::")) {
+            return name;
+        }
+        const unit = this.objectFileKey();
+        return unit ? `${unit}::${name}` : name;
+    }
+    /**
+     * Adds a namespace inside a file-local qualifier (`unit::Namespace_Label`).
+     * @param {string} namespacePrefix The flattened namespace prefix.
+     * @param {string} label The already-qualified or plain label.
+     * @returns {string} The namespace-qualified storage key.
+     */
+    qualifyNamespaceAlias(namespacePrefix, label) {
+        if (this.host.syntaxProfile.fileLocalSymbols) {
+            const separator = label.indexOf("::");
+            if (separator !== -1) {
+                return `${label.slice(0, separator + 2)}${namespacePrefix}_${label.slice(separator + 2)}`;
+            }
+        }
+        return `${namespacePrefix}_${label}`;
+    }
+    /**
+     * Maps a cheap-local `@name` onto the existing single-dot sublabel form.
+     * @param {string} name The label token, without a trailing colon.
+     * @returns {string} The rewritten name.
+     */
+    toCheapDotLabel(name) {
+        const prefix = this.host.syntaxProfile?.cheapLocalPrefix ?? "";
+        if (prefix && name.startsWith(prefix) && name.length > prefix.length) {
+            return `.${name.slice(prefix.length)}`;
+        }
+        return name;
+    }
+    /**
+     * Finds nearest hierarchy ancestor.
+     * @param {string} label The label.
+     * @returns {string | null} The result.
+     */
+    findNearestHierarchyAncestor(label) {
+        for (let i = label.length - 1; i >= 0; i--) {
+            if (label[i] !== "_") {
+                continue;
+            }
+            const candidate = label.slice(0, i);
+            if (!candidate) {
+                continue;
+            }
+            const entry = this.host.labelTable.get(candidate);
+            if (entry?.modifiesHierarchy) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+    /**
+     * Gets hierarchy chain.
+     * @param {string} label The label.
+     * @returns {string[]} The result.
+     */
+    getHierarchyChain(label) {
+        const rootLabel = this.host.currentGlobalParentLabel;
+        const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
+        const chain = [label];
+        let cursor = label;
+        while (true) {
+            const explicitParent = this.host.labelParents.get(cursor);
+            const parent = explicitParent === undefined ? this.findNearestHierarchyAncestor(cursor) : explicitParent;
+            if (!parent) {
+                break;
+            }
+            chain.unshift(parent);
+            // Labels such as `arthur_sprites` can coexist with unrelated globals like
+            // `arthur`. Once we have climbed back to the active global root, stop so
+            // shorter prefix labels do not hijack nested local ancestry.
+            if (rootApplies && parent === rootLabel) {
+                break;
+            }
+            cursor = parent;
+        }
+        return chain;
+    }
+    /**
+     * Gets ancestor prefixes.
+     * @param {string} label The label.
+     * @returns {string[]} The result.
+     */
+    getAncestorPrefixes(label) {
+        const prefixes = [];
+        for (let i = label.length - 1; i >= 0; i--) {
+            if (label[i] !== "_") {
+                continue;
+            }
+            const candidate = label.slice(0, i);
+            if (candidate) {
+                prefixes.push(candidate);
+            }
+        }
+        return prefixes;
+    }
+    /**
+     * Gets scoped parent label.
+     * @param {number} dotCount The dot count.
+     * @returns {string} The result.
+     */
+    getScopedParentLabel(dotCount) {
+        const current = this.host.currentParentLabel;
+        if (dotCount === 1) {
+            if (this.host.currentGlobalParentLabel) {
+                return this.host.currentGlobalParentLabel;
+            }
+            if (this.host.currentParentIsGlobal) {
+                // Global labels such as `stage1_earthquake_tiles` legitimately contain
+                // underscores. Preserve the full global label as the parent for `.child`
+                // definitions instead of treating those underscores as hierarchy breaks.
+                return current;
+            }
+            const chain = this.getHierarchyChain(current);
+            return chain[0] ?? current;
+        }
+        if (this.host.currentParentIsGlobal) {
+            return current;
+        }
+        const chain = this.getHierarchyChain(current);
+        const targetDepth = dotCount - 1;
+        return chain[targetDepth] ?? current;
+    }
+    /**
+     * Checks if a label is in scope.
+     * @param {string} identifier The label to check.
+     * @returns {boolean} `true` if the label is in scope, `false` otherwise.
+     */
+    hasLabelInScope(identifier) {
+        const qualified = this.qualifySymbolName(identifier);
+        return (this.host.labelTable.has(identifier) ||
+            (qualified !== identifier && this.host.labelTable.has(qualified)) ||
+            (this.host.currentNamespace
+                ? this.host.labelTable.has(`${this.host.currentNamespace}_${identifier}`)
+                : false));
+    }
+    /**
+     * Handles a relative label.
+     * @param {string} label The label to handle.
+     * @returns {number} The address of the label.
+     */
+    handleRelativeLabel(label) {
+        const isPositive = label.includes("+");
+        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const targetAddress = this.host.currentTargetAddress;
+        const isMacroLocal = label.startsWith("?");
+        if (this.host.enforceResolvedLabels) {
+            if (isPositive) {
+                if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+                    throw new Error(`Error: Undefined forward label '${label}'.`);
+                }
+            }
+            else if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+                throw new Error(`Error: Undefined backward label '${label}'.`);
+            }
+            return targetAddress;
+        }
+        if (isPositive) {
+            if (!this.host.forwardLabels[depth])
+                this.host.forwardLabels[depth] = [];
+            if (isMacroLocal && this.host.inMacroExpansion) {
+                this.host.forwardLabels[depth].push({
+                    addr: targetAddress,
+                    macroInstance: this.host.macroLabelInstance,
+                });
+            }
+            else {
+                this.host.forwardLabels[depth].push({ addr: targetAddress });
+            }
+        }
+        else {
+            if (!this.host.backwardLabels[depth])
+                this.host.backwardLabels[depth] = [];
+            if (isMacroLocal && this.host.inMacroExpansion) {
+                this.host.backwardLabels[depth].push({
+                    addr: targetAddress,
+                    macroInstance: this.host.macroLabelInstance,
+                });
+            }
+            else {
+                this.host.backwardLabels[depth].push({ addr: targetAddress });
+            }
+        }
+        return targetAddress;
+    }
+    /**
+     * Records a ca65 unnamed label (`:`). Stored at Asar depth 0 so `+`/`-` streams stay intact.
+     * `:+` / `:++` skip N labels in this single stream rather than using Asar's per-depth tables.
+     * @returns {number} The address of the unnamed label.
+     */
+    handleUnnamedLabel() {
+        const targetAddress = this.host.currentTargetAddress;
+        if (this.host.enforceResolvedLabels) {
+            if (!this.host.forwardLabels[0] || this.host.forwardLabels[0].length === 0) {
+                throw new Error("Error: Undefined unnamed label ':'.");
+            }
+            return targetAddress;
+        }
+        if (!this.host.forwardLabels[0])
+            this.host.forwardLabels[0] = [];
+        if (!this.host.backwardLabels[0])
+            this.host.backwardLabels[0] = [];
+        const entry = { addr: targetAddress, unit: this.objectFileKey() };
+        this.host.forwardLabels[0].push(entry);
+        this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
+        return targetAddress;
+    }
+    /**
+     * Resolves a ca65 unnamed-label reference (`:+`, `:++`, `:-`, `:--`).
+     * @param {string} label The reference token.
+     * @param {number} [currentAddressOverride] PC to search from.
+     * @returns {number} The target address.
+     */
+    findUnnamedLabel(label, currentAddressOverride) {
+        const parsed = parseUnnamedLabelReference(label);
+        if (!parsed) {
+            throw new Error(`Error: Invalid unnamed label '${label}'.`);
+        }
+        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+        if (!this.host.enforceResolvedLabels) {
+            return 0;
+        }
+        const table = parsed.direction === 1 ? this.host.forwardLabels[0] : this.host.backwardLabels[0];
+        if (!table || table.length === 0) {
+            throw new Error(`Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`);
+        }
+        const unit = this.objectFileKey();
+        const ordered = table
+            .filter((entry) => !entry.unit || entry.unit === unit)
+            .filter((entry) => parsed.direction === 1 ? entry.addr > currentAddress : entry.addr < currentAddress)
+            .map((entry) => entry.addr)
+            .sort((left, right) => (parsed.direction === 1 ? left - right : right - left));
+        if (ordered.length < parsed.count) {
+            throw new Error(`Error: No unnamed label '${label}' found ${parsed.direction === 1 ? "after" : "before"} ${currentAddress.toString(16)}.`);
+        }
+        return ordered[parsed.count - 1];
+    }
+    /**
+     * Finds the next label.
+     * @param {string} label The label to find.
+     * @param {number} currentAddressOverride The current address to override.
+     * @returns {number} The address of the next label.
+     */
+    findNextLabel(label, currentAddressOverride) {
+        const isPositive = label.includes("+");
+        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+        const isMacroLocal = label.startsWith("?");
+        if (!this.host.enforceResolvedLabels) {
+            return 0;
+        }
+        if (!this.host.forwardLabels[depth] || this.host.forwardLabels[depth].length === 0) {
+            throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
+        }
+        const possibleTargets = this.host.forwardLabels[depth]
+            .filter((entry) => {
+            if (isMacroLocal && this.host.inMacroExpansion) {
+                return (entry.addr > currentAddress && entry.macroInstance === this.host.macroLabelInstance);
+            }
+            // Inline constructs such as `bcs + : +:` define the target label at the
+            // branch reference address itself (right after the branch instruction),
+            // so treat same-address forward labels as valid next targets.
+            return entry.addr >= currentAddress && !entry.macroInstance;
+        })
+            .map((entry) => entry.addr);
+        if (possibleTargets.length === 0) {
+            throw new Error(`Error: No + label '${label}' found after ${currentAddress.toString(16)}.`);
+        }
+        // Generated source can define more local labels than V8 permits as function arguments.
+        return possibleTargets.reduce((nearest, address) => Math.min(nearest, address), Infinity);
+    }
+    /**
+     * Finds the previous label.
+     * @param {string} label The label to find.
+     * @param {number} currentAddressOverride The current address to override.
+     * @returns {number} The address of the previous label.
+     */
+    findPreviousLabel(label, currentAddressOverride) {
+        const isPositive = label.includes("+");
+        const depth = isPositive ? (label.match(/\+/g) || []).length : (label.match(/-/g) || []).length;
+        const currentAddress = currentAddressOverride ?? this.host.currentTargetAddress;
+        const isMacroLocal = label.startsWith("?");
+        if (this.host.isDefinitionCollectionStage) {
+            return 0;
+        }
+        if (!this.host.backwardLabels[depth] || this.host.backwardLabels[depth].length === 0) {
+            throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
+        }
+        const possibleTargets = this.host.backwardLabels[depth]
+            .filter((entry) => {
+            if (isMacroLocal && this.host.inMacroExpansion) {
+                return (entry.addr < currentAddress && entry.macroInstance === this.host.macroLabelInstance);
+            }
+            return entry.addr < currentAddress && !entry.macroInstance;
+        })
+            .map((entry) => entry.addr);
+        if (possibleTargets.length === 0) {
+            throw new Error(`Error: No - label '${label}' found before ${currentAddress.toString(16)}.`);
+        }
+        // Fold candidates without changing nearest-label selection or expanding the call stack.
+        return possibleTargets.reduce((nearest, address) => Math.max(nearest, address), -Infinity);
+    }
+    /**
+     * Sets a label.
+     * @param {string} label The label to set.
+     * @param {number} value The value of the label.
+     * @param {boolean} isStatic Whether the label is static.
+     * @param {boolean} isMacroLabel Whether the label is a macro label.
+     * @param {boolean} isGlobal Whether the label is global.
+     * @param {boolean} modifiesHierarchy Whether the label modifies the hierarchy.
+     */
+    setLabel(label, value, isStatic = false, isMacroLabel = false, isGlobal = false, modifiesHierarchy = true) {
+        let fullLabel = label;
+        let directScopeLabel = null;
+        if (isMacroLabel && (label.startsWith("?") || label.startsWith("#"))) {
+            const prefix = label.charAt(0);
+            const labelName = label.substring(1);
+            const macroModifiesHierarchy = prefix !== "#";
+            if (prefix === "?") {
+                if (labelName.startsWith(".")) {
+                    let recentMainLabel = "";
+                    for (const [key, entry] of this.host.labelTable.entries()) {
+                        if (entry.isMacroLabel &&
+                            key.startsWith(`:macro_${this.host.macroLabelInstance}_`) &&
+                            !key.includes("_SubLabel_")) {
+                            const labelPart = key.substring(`:macro_${this.host.macroLabelInstance}_`.length);
+                            if (!labelPart.startsWith(".")) {
+                                recentMainLabel = labelPart;
+                            }
+                        }
+                    }
+                    fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+                    if (recentMainLabel) {
+                        const subLabelWithoutDot = labelName.substring(1);
+                        const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${recentMainLabel}_${subLabelWithoutDot}`;
+                        const subAddr = value !== undefined ? value : this.host.currentTargetAddress;
+                        this.host.labelTable.set(parentChildLabel, {
+                            value: subAddr,
+                            isStatic,
+                            isMacroLabel: true,
+                            macroInstance: this.host.macroLabelInstance,
+                            modifiesHierarchy: macroModifiesHierarchy,
+                        });
+                    }
+                }
+                else {
+                    fullLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+                }
+            }
+            else {
+                fullLabel =
+                    this.host.currentNamespace && !isGlobal
+                        ? `${this.host.currentNamespace}_${labelName}`
+                        : labelName;
+            }
+        }
+        else if (!label.includes(":")) {
+            const namespacePrefix = this.host.namespaceNestingEnabled
+                ? this.host.namespaceNestingPath.join("_")
+                : this.host.currentNamespace;
+            if (this.host.currentNamespace && !isGlobal) {
+                if (!label.startsWith(`${namespacePrefix}_`)) {
+                    fullLabel = `${namespacePrefix}_${label}`;
+                    if (this.host.namespaceNestingEnabled &&
+                        this.host.namespaceNestingPath.length > 0 &&
+                        modifiesHierarchy) {
+                        const leafNamespace = this.host.namespaceNestingPath[this.host.namespaceNestingPath.length - 1];
+                        const leafLabel = `${leafNamespace}_${label}`;
+                        const addr = value !== undefined ? value : this.host.currentTargetAddress;
+                        this.host.labelTable.set(leafLabel, {
+                            value: addr,
+                            isStatic,
+                            isMacroLabel,
+                            macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
+                            modifiesHierarchy,
+                        });
+                        for (let i = this.host.namespaceNestingPath.length - 2; i >= 0; i--) {
+                            const partialPath = this.host.namespaceNestingPath.slice(i);
+                            const partialLabel = `${partialPath.join("_")}_${label}`;
+                            this.host.labelTable.set(partialLabel, {
+                                value: addr,
+                                isStatic,
+                                isMacroLabel,
+                                macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
+                                modifiesHierarchy,
+                            });
+                        }
+                    }
+                }
+                if (label.includes("_") && !label.startsWith(`${namespacePrefix}_`)) {
+                    directScopeLabel = label;
+                }
+            }
+            else {
+                fullLabel = label;
+            }
+        }
+        const addr = value !== undefined ? value : this.host.currentTargetAddress;
+        if (this.host.isDefinitionCollectionStage) {
+            if (modifiesHierarchy && !label.startsWith(".")) {
+                this.host.currentParentLabel = fullLabel;
+                this.host.currentParentIsGlobal = isGlobal;
+            }
+            this.host.labelTable.set(fullLabel, {
+                value: addr,
+                isStatic,
+                isMacroLabel,
+                macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
+                modifiesHierarchy,
+            });
+            this.host.recordSymbolDefinition("label", fullLabel, {
+                value: addr,
+                containerName: this.symbolContainerName(fullLabel, isGlobal),
+            });
+            if (directScopeLabel) {
+                this.host.labelTable.set(directScopeLabel, {
+                    value: addr,
+                    isStatic,
+                    isMacroLabel,
+                    macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
+                    modifiesHierarchy: false,
+                });
+            }
+            return;
+        }
+        if (this.host.enforceResolvedLabels) {
+            const existingEntry = this.host.labelTable.get(fullLabel);
+            if (existingEntry) {
+                if (existingEntry.isStatic !== isStatic) {
+                    throw new Error(`Label '${fullLabel}' is not static and cannot be used in conditionals.`);
+                }
+                if (!isStatic && existingEntry.value !== addr && !isMacroLabel) {
+                    throw new Error(`Label "${fullLabel}" changed from $${existingEntry.value.toString(16)} to $${addr.toString(16)}`);
+                }
+            }
+        }
+        if (modifiesHierarchy && !label.startsWith(".")) {
+            this.host.currentParentLabel = fullLabel;
+            this.host.currentParentIsGlobal = isGlobal;
+        }
+        this.host.labelTable.set(fullLabel, {
+            value: addr,
+            isStatic,
+            isMacroLabel,
+            macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
+            modifiesHierarchy,
+        });
+        this.host.recordSymbolDefinition("label", fullLabel, {
+            value: addr,
+            containerName: this.symbolContainerName(fullLabel, isGlobal),
+        });
+        if (directScopeLabel) {
+            this.host.labelTable.set(directScopeLabel, {
+                value: addr,
+                isStatic,
+                isMacroLabel,
+                macroInstance: isMacroLabel ? this.host.macroLabelInstance : undefined,
+                modifiesHierarchy: false,
+            });
+        }
+    }
+    /**
+     * Resolves a struct member.
+     * @param {string} compoundId The compound ID of the struct member.
+     * @returns {number} The address of the struct member.
+     */
+    resolveStructMember(compoundId) {
+        const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
+        if (!firstId || !this.host.structs.has(firstId))
+            throw new Error(`Struct not found: ${compoundId}`);
+        let rest = compoundId.substring(firstId.length).trim();
+        let base = 0;
+        let currentStruct = this.host.structs.get(firstId);
+        if (!currentStruct) {
+            throw new Error(`Struct not found: ${compoundId}`);
+        }
+        while (rest.length > 0) {
+            if (rest.startsWith(".")) {
+                rest = rest.substring(1).trim();
+                const memberMatch = rest.match(/^([A-Z_a-z]\w*)/);
+                if (!memberMatch)
+                    throw new Error(`Invalid struct member: ${compoundId}`);
+                const memberName = memberMatch[1];
+                rest = rest.substring(memberName.length).trim();
+                const memberOffset = currentStruct.labels.get(memberName);
+                if (memberOffset !== undefined) {
+                    return base + memberOffset;
+                }
+                const childStruct = this.host.structs.get(memberName);
+                if (childStruct && childStruct.parent === currentStruct.name) {
+                    currentStruct = childStruct;
+                }
+                else {
+                    throw new Error(`Struct member not found: ${currentStruct.name}.${memberName}`);
+                }
+            }
+            else if (rest.startsWith("[")) {
+                const bracketEnd = rest.indexOf("]");
+                if (bracketEnd === -1)
+                    throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+                const indexStr = rest.substring(1, bracketEnd).trim();
+                const index = Number.parseInt(indexStr, 10);
+                if (Number.isNaN(index))
+                    throw new Error(`Invalid struct index: ${indexStr}`);
+                rest = rest.substring(bracketEnd + 1).trim();
+                base += index * currentStruct.size;
+            }
+            else {
+                break;
+            }
+        }
+        return base;
+    }
+    /**
+     * Gets the value of a label.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number} The value of the label.
+     */
+    getLabelValue(label, requireStatic) {
+        const value = this.tryGetLabelValue(label, requireStatic);
+        if (value !== undefined) {
+            return value;
+        }
+        if (this.host.isDefinitionCollectionStage) {
+            return 0;
+        }
+        throw new Error(`Error: Label '${label}' not found.`);
+    }
+    /**
+     * Tries to get a scoped label value without allocating an Error for a miss.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number | undefined} The value, or undefined when not found.
+     */
+    tryGetLabelValue(label, requireStatic) {
+        if (parseUnnamedLabelReference(label)) {
+            if (!this.host.enforceResolvedLabels) {
+                return undefined;
+            }
+            return this.findUnnamedLabel(label);
+        }
+        const cheap = this.toCheapDotLabel(label);
+        if (cheap !== label) {
+            return this.tryGetLabelValue(cheap, requireStatic);
+        }
+        if (label.startsWith(".") && this.host.currentParentLabel) {
+            let dotCount = 0;
+            while (label[dotCount] === ".") {
+                dotCount++;
+            }
+            const localName = label.substring(dotCount);
+            const candidates = new Set();
+            const nestedLocalParts = localName.split("_").filter(Boolean);
+            const hierarchyChain = this.getHierarchyChain(this.host.currentParentLabel);
+            let currentLocalName;
+            if (hierarchyChain.length >= 2) {
+                const parentPrefix = `${hierarchyChain[hierarchyChain.length - 2]}_`;
+                if (this.host.currentParentLabel.startsWith(parentPrefix)) {
+                    currentLocalName = this.host.currentParentLabel.slice(parentPrefix.length);
+                }
+            }
+            const addCandidate = (candidate) => {
+                if (candidate === this.host.currentParentLabel && currentLocalName !== localName) {
+                    return;
+                }
+                candidates.add(candidate);
+            };
+            const addExactLocalCandidate = (parentPrefix) => {
+                addCandidate(`${parentPrefix}_${localName}`);
+            };
+            const addShortenedLocalCandidates = (parentPrefix) => {
+                // Local labels such as `.idx_beginner` are used to reference nested
+                // multi-dot labels defined under `.idx` as `..beginner`. Since `_` is
+                // both a legal label character and our hierarchy separator, also try
+                // progressively shorter local tails against ancestor prefixes.
+                for (let i = 1; i < nestedLocalParts.length; i++) {
+                    addCandidate(`${parentPrefix}_${nestedLocalParts.slice(i).join("_")}`);
+                }
+            };
+            // Prefer labels nested directly under the current local block. Source
+            // trees such as `.underwear` -> `..idle` rely on this producing
+            // `parent_underwear_idle` rather than collapsing back to an ancestor.
+            addExactLocalCandidate(this.host.currentParentLabel);
+            for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
+                addExactLocalCandidate(ancestorPrefix);
+            }
+            for (let i = hierarchyChain.length - 2; i >= 0; i--) {
+                addExactLocalCandidate(hierarchyChain[i]);
+            }
+            addShortenedLocalCandidates(this.host.currentParentLabel);
+            for (const ancestorPrefix of this.getAncestorPrefixes(this.host.currentParentLabel)) {
+                addShortenedLocalCandidates(ancestorPrefix);
+            }
+            for (let i = hierarchyChain.length - 2; i >= 0; i--) {
+                addShortenedLocalCandidates(hierarchyChain[i]);
+            }
+            for (const candidate of candidates) {
+                const value = this.tryGetLabelValueDirect(candidate, requireStatic);
+                if (value !== undefined) {
+                    return value;
+                }
+            }
+        }
+        const qualified = this.qualifySymbolName(label);
+        if (qualified !== label) {
+            const scoped = this.tryGetLabelValueDirect(qualified, requireStatic);
+            if (scoped !== undefined) {
+                return scoped;
+            }
+        }
+        const isMacroLabelRef = label.startsWith("?");
+        if (isMacroLabelRef && this.host.inMacroExpansion) {
+            const labelName = label.substring(1);
+            if (labelName.includes("_")) {
+                const [parentPart, subPart] = labelName.split("_", 2);
+                const childLabel = `:macro_${this.host.macroLabelInstance}_.${subPart}`;
+                const childEntry = this.host.labelTable.get(childLabel);
+                if (childEntry) {
+                    if (requireStatic && !childEntry.isStatic) {
+                        throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+                    }
+                    return childEntry.value;
+                }
+                const parentChildLabel = `:macro_${this.host.macroLabelInstance}_${parentPart}_${subPart}`;
+                const parentChildEntry = this.host.labelTable.get(parentChildLabel);
+                if (parentChildEntry) {
+                    if (requireStatic && !parentChildEntry.isStatic) {
+                        throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+                    }
+                    return parentChildEntry.value;
+                }
+            }
+            const macroLabel = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+            const macroEntry = this.host.labelTable.get(macroLabel);
+            if (macroEntry) {
+                if (requireStatic && !macroEntry.isStatic) {
+                    throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+                }
+                return macroEntry.value;
+            }
+            if (labelName.startsWith(".")) {
+                const macroLabelNoDot = `:macro_${this.host.macroLabelInstance}_${labelName}`;
+                const macroNoDotEntry = this.host.labelTable.get(macroLabelNoDot);
+                if (macroNoDotEntry) {
+                    if (requireStatic && !macroNoDotEntry.isStatic) {
+                        throw new Error(`Error: Non-static macro label '${label}' used in conditional.`);
+                    }
+                    return macroNoDotEntry.value;
+                }
+            }
+        }
+        if (label.includes(":") || label.includes("_")) {
+            return this.tryGetLabelValueDirect(label, requireStatic);
+        }
+        if (this.host.namespaceNestingEnabled && this.host.namespaceNestingPath.length > 0) {
+            for (let i = this.host.namespaceNestingPath.length; i >= 0; i--) {
+                const namespacePath = this.host.namespaceNestingPath.slice(0, i);
+                const namespacePrefix = namespacePath.join("_");
+                const fullLabel = namespacePrefix ? `${namespacePrefix}_${label}` : label;
+                const value = this.tryGetLabelValueDirect(fullLabel, requireStatic);
+                if (value !== undefined) {
+                    return value;
+                }
+            }
+        }
+        if (this.host.currentNamespace) {
+            const value = this.tryGetLabelValueDirect(`${this.host.currentNamespace}_${label}`, requireStatic);
+            if (value !== undefined) {
+                return value;
+            }
+            // Object namespaces frequently reference shared globals such as
+            // `difficulty`. If the namespaced symbol is absent, fall back to the
+            // unqualified global label before reporting an error.
+        }
+        return this.tryGetLabelValueDirect(label, requireStatic);
+    }
+    /**
+     * Gets the value of a label directly.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number} The value of the label.
+     */
+    getLabelValueDirect(label, requireStatic) {
+        const value = this.tryGetLabelValueDirect(label, requireStatic);
+        if (value !== undefined) {
+            return value;
+        }
+        if (this.host.isDefinitionCollectionStage) {
+            return 0;
+        }
+        throw new Error(`Error: Label '${label}' not found.`);
+    }
+    /**
+     * Tries a direct label lookup without allocating an Error for ordinary misses.
+     * @param {string} label The label to get the value of.
+     * @param {boolean} requireStatic Whether the label must be static.
+     * @returns {number | undefined} The value, or undefined when not found.
+     */
+    tryGetLabelValueDirect(label, requireStatic) {
+        if (label.includes("_") && !label.includes(":")) {
+            const parts = label.split("_");
+            if (parts.length === 2) {
+                const parentLabel = parts[0];
+                const localLabel = `.${parts[1]}`;
+                const combinedLabel = `${parentLabel}_${localLabel.replace(/^\./, "")}`;
+                const combinedEntry = this.host.labelTable.get(combinedLabel);
+                if (combinedEntry) {
+                    if (requireStatic && !combinedEntry.isStatic) {
+                        throw new Error(`Error: Non-static label '${combinedLabel}' used in conditional.`);
+                    }
+                    return combinedEntry.value;
+                }
+                const localEntry = this.host.labelTable.get(localLabel);
+                if (localEntry) {
+                    if (requireStatic && !localEntry.isStatic) {
+                        throw new Error(`Error: Non-static label '${localLabel}' used in conditional.`);
+                    }
+                    return localEntry.value;
+                }
+            }
+        }
+        const entry = this.host.labelTable.get(label);
+        if (!entry) {
+            return undefined;
+        }
+        if (requireStatic && !entry.isStatic) {
+            throw new Error(`Error: Non-static label '${label}' used in conditional.`);
+        }
+        return entry.value;
+    }
+    /**
+     * Gets the size of a struct or extension.
+     * @param {string} identifier The identifier of the struct or extension.
+     * @param {boolean} [baseOnly] If true, returns only the base size without extensions.
+     * @returns {number} The size of the struct or extension.
+     * @throws {Error} If the struct or extension doesn't exist.
+     */
+    getObjectSize(identifier, baseOnly = false) {
+        let workingIdentifier = identifier;
+        if (workingIdentifier.startsWith('"') && workingIdentifier.endsWith('"')) {
+            workingIdentifier = workingIdentifier.substring(1, workingIdentifier.length - 1);
+        }
+        const directDef = this.host.structs.get(workingIdentifier);
+        if (directDef) {
+            if (baseOnly) {
+                return directDef.size;
+            }
+            return !directDef.parent ? directDef.size + directDef.extensionSize : directDef.size;
+        }
+        if (workingIdentifier.includes(".")) {
+            const parts = workingIdentifier.split(".").filter(Boolean);
+            let current = parts[0];
+            if (!this.host.structs.has(current)) {
+                throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+            }
+            for (let i = 1; i < parts.length; i++) {
+                const child = parts[i];
+                const childDef = this.host.structs.get(child);
+                if (!childDef || childDef.parent !== current) {
+                    throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+                }
+                current = child;
+            }
+            workingIdentifier = current;
+        }
+        if (!this.host.structs.has(workingIdentifier)) {
+            throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+        }
+        const def = this.host.structs.get(workingIdentifier);
+        if (!def) {
+            throw new Error(`Struct '${workingIdentifier}' doesn't exist.`);
+        }
+        if (baseOnly) {
+            return def.size;
+        }
+        return !def.parent ? def.size + def.extensionSize : def.size;
+    }
+    /**
+     * Returns the outline container for a stored label name.
+     * Sublabels nest under their parent; namespaced labels nest under the namespace.
+     * @param {string} fullLabel The stored label name.
+     * @param {boolean} isGlobal Whether the label is global.
+     * @returns {string | undefined} The container name, if any.
+     */
+    symbolContainerName(fullLabel, isGlobal) {
+        const parent = this.host.labelParents.get(fullLabel);
+        if (parent) {
+            return parent;
+        }
+        if (!isGlobal &&
+            this.host.currentNamespace &&
+            fullLabel.startsWith(`${this.host.currentNamespace}_`)) {
+            return this.host.currentNamespace;
+        }
+        return undefined;
+    }
+    /**
+     * Handles a label definition.
+     * @param {string} labelName The name of the label.
+     */
+    handleLabelDefinition(labelName) {
+        labelName = this.toCheapDotLabel(labelName);
+        if (!(labelName.startsWith(".") || labelName.startsWith("#."))) {
+            labelName = this.qualifySymbolName(labelName);
+        }
+        if (labelName.startsWith(".") || labelName.startsWith("#.")) {
+            if (!this.host.currentParentLabel) {
+                throw new Error("Sublabel without parent label");
+            }
+            const isHashLabel = labelName.startsWith("#");
+            const modifiesHierarchy = !isHashLabel;
+            let dotCount = 0;
+            while (labelName[dotCount] === ".") {
+                dotCount++;
+            }
+            const subLabelName = labelName.substring(dotCount);
+            const parentLabel = this.getScopedParentLabel(dotCount);
+            const directScopeLabel = `${parentLabel}_${subLabelName}`;
+            this.host.labelParents.set(directScopeLabel, parentLabel);
+            if (this.host.currentNamespace) {
+                const namespacePrefix = this.host.namespaceNestingEnabled
+                    ? this.host.namespaceNestingPath.join("_")
+                    : this.host.currentNamespace;
+                if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+                    // Pre-populate labelParents for the namespace-qualified compound label so
+                    // symbolContainerName resolves "bars_create" rather than falling back to
+                    // the namespace root "bars". Must happen before setLabel is called so the
+                    // containerName written into symbolDefinitions is correct from the first write.
+                    const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
+                    const qualifiedParent = this.qualifyNamespaceAlias(namespacePrefix, parentLabel);
+                    this.host.labelParents.set(namespacedLabel, qualifiedParent);
+                    this.setLabel(directScopeLabel, undefined, false, false, false, modifiesHierarchy);
+                    if (modifiesHierarchy) {
+                        this.host.currentParentLabel = directScopeLabel;
+                        this.host.currentParentIsGlobal = dotCount === 1;
+                    }
+                    this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+                    return;
+                }
+            }
+            this.setLabel(directScopeLabel, undefined, false, false, false, modifiesHierarchy);
+            if (modifiesHierarchy) {
+                this.host.currentParentLabel = directScopeLabel;
+                // Single-dot labels become the local root for following `..` labels even
+                // when their names contain underscores, e.g. `.stage1_boss` -> `..ch8`.
+                this.host.currentParentIsGlobal = dotCount === 1;
+            }
+            if (this.host.currentNamespace) {
+                const namespacePrefix = this.host.namespaceNestingEnabled
+                    ? this.host.namespaceNestingPath.join("_")
+                    : this.host.currentNamespace;
+                if (!directScopeLabel.startsWith(`${namespacePrefix}_`)) {
+                    const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, directScopeLabel);
+                    this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+                }
+            }
+            return;
+        }
+        const isHashLabel = labelName.startsWith("#");
+        const modifiesHierarchy = !isHashLabel;
+        if (modifiesHierarchy) {
+            this.host.currentParentLabel = labelName;
+            this.host.currentParentIsGlobal = true;
+            this.host.currentGlobalParentLabel = labelName;
+        }
+        this.host.labelParents.set(labelName, null);
+        this.setLabel(labelName, undefined, false, false, false, modifiesHierarchy);
+        if (modifiesHierarchy) {
+            this.host.currentParentLabel = labelName;
+            this.host.currentParentIsGlobal = true;
+            this.host.currentGlobalParentLabel = labelName;
+        }
+        if (this.host.currentNamespace) {
+            const namespacePrefix = this.host.namespaceNestingEnabled
+                ? this.host.namespaceNestingPath.join("_")
+                : this.host.currentNamespace;
+            if (!labelName.startsWith(`${namespacePrefix}_`)) {
+                const namespacedLabel = this.qualifyNamespaceAlias(namespacePrefix, labelName);
+                this.setLabel(namespacedLabel, undefined, false, false, false, modifiesHierarchy);
+            }
+        }
+    }
+}
+/**
+ * Returns the last path segment of a source file.
+ * @param {string} file The file path.
+ * @returns {string} The basename.
+ */
+function fileBasename(file) {
+    const normalized = file.replaceAll("\\", "/");
+    const slash = normalized.lastIndexOf("/");
+    return slash === -1 ? normalized : normalized.slice(slash + 1);
+}
+/**
+ * Parses a ca65 unnamed-label reference (`:+`, `:++`, `:-`).
+ * @param {string} token The operand token.
+ * @returns {{ direction: 1 | -1; count: number } | undefined} The skip count, or undefined.
+ */
+export function parseUnnamedLabelReference(token) {
+    const match = token.trim().match(/^:(\++|-+)$/);
+    if (!match) {
+        return undefined;
+    }
+    const signs = match[1];
+    return {
+        direction: signs[0] === "+" ? 1 : -1,
+        count: signs.length,
+    };
+}
+//# sourceMappingURL=symbol-scope-service.js.map

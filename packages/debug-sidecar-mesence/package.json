@@ -8,25 +8,30 @@
   },
   "files": [
     "dist",
+    "out",
     "src",
     "README.md"
   ],
   "type": "module",
   "sideEffects": false,
-  "module": "src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
-      "import": "./src/index.ts"
+      "import": "./dist/index.js"
     },
     "./profile": {
+      "uttori-source": "./src/profile.ts",
       "types": "./dist/profile.d.ts",
-      "import": "./src/profile.ts"
+      "import": "./dist/profile.js"
     },
     "./runtime-manifest": {
+      "uttori-source": "./src/mesen-process-host.ts",
       "types": "./dist/mesen-process-host.d.ts",
-      "import": "./src/mesen-process-host.ts"
+      "import": "./dist/mesen-process-host.js"
     }
   },
   "scripts": {
@@ -34,7 +39,8 @@
     "make-types": "tsc --project tsconfig.json",
     "typecheck": "tsc --project tsconfig.json --noEmit",
     "pack:check": "npm pack --dry-run",
-    "smoke": "node out/sidecar.mjs --help"
+    "smoke": "node out/sidecar.mjs --help",
+    "prepack": "node ../../scripts/clean-workspace-build.ts --workspace debug-sidecar-mesence && npm run make-types && npm run build"
   },
   "dependencies": {
     "@uttori/asm-core": "1.0.0",

@@ -38162,7 +38162,6 @@ init_src();
 init_src2();
 import * as fs18 from "node:fs";
 import path17 from "node:path";
-import { pathToFileURL as pathToFileURL2 } from "node:url";
 
 // packages/plugin-loader-node/src/configuration.ts
 init_plugin();
@@ -39581,8 +39580,7 @@ ${usage}`);
   }
   return assemble(parsed, cwd);
 };
-var entryPoint = process.argv[1] ? pathToFileURL2(path17.resolve(process.argv[1])).href : void 0;
-if (entryPoint === import.meta.url) {
+if (import.meta.main) {
   process.exitCode = await runCli();
 }
 export {

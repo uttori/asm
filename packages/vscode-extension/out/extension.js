@@ -42,9 +42,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/vscode-languageclient/lib/common/utils/is.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/is.js
 var require_is = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/is.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
@@ -98,9 +98,9 @@ var require_is = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/is.js
+// ../../node_modules/vscode-jsonrpc/lib/common/is.js
 var require_is2 = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
@@ -134,9 +134,9 @@ var require_is2 = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messages.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messages.js
 var require_messages = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messages.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -519,9 +519,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/linkedMap.js
+// ../../node_modules/vscode-jsonrpc/lib/common/linkedMap.js
 var require_linkedMap = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/linkedMap.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LRUCache = exports2.LinkedMap = exports2.Touch = void 0;
@@ -903,9 +903,9 @@ var require_linkedMap = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/disposable.js
+// ../../node_modules/vscode-jsonrpc/lib/common/disposable.js
 var require_disposable = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/disposable.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Disposable = void 0;
@@ -921,9 +921,9 @@ var require_disposable = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/ral.js
+// ../../node_modules/vscode-jsonrpc/lib/common/ral.js
 var require_ral = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/ral.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var _ral;
@@ -946,9 +946,9 @@ var require_ral = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/events.js
+// ../../node_modules/vscode-jsonrpc/lib/common/events.js
 var require_events = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/events.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1083,9 +1083,9 @@ var require_events = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/cancellation.js
+// ../../node_modules/vscode-jsonrpc/lib/common/cancellation.js
 var require_cancellation = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/cancellation.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1130,7 +1130,7 @@ var require_cancellation = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CancellationTokenSource = exports2.CancellationToken = void 0;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var events_1 = require_events();
     var CancellationToken;
     (function(CancellationToken2) {
@@ -1144,7 +1144,7 @@ var require_cancellation = __commonJS({
       });
       function is(value) {
         const candidate = value;
-        return candidate && (candidate === CancellationToken2.None || candidate === CancellationToken2.Cancelled || Is2.boolean(candidate.isCancellationRequested) && !!candidate.onCancellationRequested);
+        return candidate && (candidate === CancellationToken2.None || candidate === CancellationToken2.Cancelled || Is.boolean(candidate.isCancellationRequested) && !!candidate.onCancellationRequested);
       }
       CancellationToken2.is = is;
     })(CancellationToken || (exports2.CancellationToken = CancellationToken = {}));
@@ -1212,9 +1212,9 @@ var require_cancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
+// ../../node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js
 var require_sharedArrayCancellation = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/sharedArrayCancellation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SharedArrayReceiverStrategy = exports2.SharedArraySenderStrategy = void 0;
@@ -1291,9 +1291,9 @@ var require_sharedArrayCancellation = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/semaphore.js
+// ../../node_modules/vscode-jsonrpc/lib/common/semaphore.js
 var require_semaphore = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/semaphore.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -1365,9 +1365,9 @@ var require_semaphore = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageReader.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messageReader.js
 var require_messageReader = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messageReader.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1412,14 +1412,14 @@ var require_messageReader = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ReadableStreamMessageReader = exports2.AbstractMessageReader = exports2.MessageReader = void 0;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var events_1 = require_events();
     var semaphore_1 = require_semaphore();
     var MessageReader;
     (function(MessageReader2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.listen) && Is2.func(candidate.dispose) && Is2.func(candidate.onError) && Is2.func(candidate.onClose) && Is2.func(candidate.onPartialMessage);
+        return candidate && Is.func(candidate.listen) && Is.func(candidate.dispose) && Is.func(candidate.onError) && Is.func(candidate.onClose) && Is.func(candidate.onPartialMessage);
       }
       MessageReader2.is = is;
     })(MessageReader || (exports2.MessageReader = MessageReader = {}));
@@ -1459,7 +1459,7 @@ var require_messageReader = __commonJS({
         if (error instanceof Error) {
           return error;
         } else {
-          return new Error(`Reader received error. Reason: ${Is2.string(error.message) ? error.message : "unknown"}`);
+          return new Error(`Reader received error. Reason: ${Is.string(error.message) ? error.message : "unknown"}`);
         }
       }
     };
@@ -1607,9 +1607,9 @@ ${JSON.stringify(Object.fromEntries(headers))}`));
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageWriter.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messageWriter.js
 var require_messageWriter = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messageWriter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1654,7 +1654,7 @@ var require_messageWriter = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WriteableStreamMessageWriter = exports2.AbstractMessageWriter = exports2.MessageWriter = void 0;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var semaphore_1 = require_semaphore();
     var events_1 = require_events();
     var ContentLength = "Content-Length: ";
@@ -1663,7 +1663,7 @@ var require_messageWriter = __commonJS({
     (function(MessageWriter2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.dispose) && Is2.func(candidate.onClose) && Is2.func(candidate.onError) && Is2.func(candidate.write);
+        return candidate && Is.func(candidate.dispose) && Is.func(candidate.onClose) && Is.func(candidate.onError) && Is.func(candidate.write);
       }
       MessageWriter2.is = is;
     })(MessageWriter || (exports2.MessageWriter = MessageWriter = {}));
@@ -1694,7 +1694,7 @@ var require_messageWriter = __commonJS({
         if (error instanceof Error) {
           return error;
         } else {
-          return new Error(`Writer received error. Reason: ${Is2.string(error.message) ? error.message : "unknown"}`);
+          return new Error(`Writer received error. Reason: ${Is.string(error.message) ? error.message : "unknown"}`);
         }
       }
     };
@@ -1765,9 +1765,9 @@ var require_messageWriter = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
+// ../../node_modules/vscode-jsonrpc/lib/common/messageBuffer.js
 var require_messageBuffer = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/messageBuffer.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.AbstractMessageBuffer = void 0;
@@ -1916,9 +1916,9 @@ ${header}`);
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/connection.js
+// ../../node_modules/vscode-jsonrpc/lib/common/connection.js
 var require_connection = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/connection.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -1964,7 +1964,7 @@ var require_connection = __commonJS({
     exports2.ConnectionOptions = exports2.MessageStrategy = exports2.CancellationStrategy = exports2.CancellationSenderStrategy = exports2.CancellationReceiverStrategy = exports2.RequestCancellationReceiverStrategy = exports2.IdCancellationReceiverStrategy = exports2.ConnectionStrategy = exports2.ConnectionError = exports2.ConnectionErrors = exports2.LogTraceNotification = exports2.SetTraceNotification = exports2.TraceFormat = exports2.TraceValues = exports2.TraceValue = exports2.Trace = exports2.NullLogger = exports2.ProgressType = exports2.ProgressToken = void 0;
     exports2.createMessageConnection = createMessageConnection;
     var ral_1 = __importDefault(require_ral());
-    var Is2 = __importStar(require_is2());
+    var Is = __importStar(require_is2());
     var messages_1 = require_messages();
     var linkedMap_1 = require_linkedMap();
     var events_1 = require_events();
@@ -1998,7 +1998,7 @@ var require_connection = __commonJS({
     var StarRequestHandler;
     (function(StarRequestHandler2) {
       function is(value) {
-        return Is2.func(value);
+        return Is.func(value);
       }
       StarRequestHandler2.is = is;
     })(StarRequestHandler || (StarRequestHandler = {}));
@@ -2029,7 +2029,7 @@ var require_connection = __commonJS({
     exports2.TraceValues = TraceValue;
     (function(Trace3) {
       function fromString(value) {
-        if (!Is2.string(value)) {
+        if (!Is.string(value)) {
           return Trace3.Off;
         }
         value = value.toLowerCase();
@@ -2070,7 +2070,7 @@ var require_connection = __commonJS({
     })(TraceFormat || (exports2.TraceFormat = TraceFormat = {}));
     (function(TraceFormat2) {
       function fromString(value) {
-        if (!Is2.string(value)) {
+        if (!Is.string(value)) {
           return TraceFormat2.Text;
         }
         value = value.toLowerCase();
@@ -2109,7 +2109,7 @@ var require_connection = __commonJS({
     (function(ConnectionStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.cancelUndispatched);
+        return candidate && Is.func(candidate.cancelUndispatched);
       }
       ConnectionStrategy2.is = is;
     })(ConnectionStrategy || (exports2.ConnectionStrategy = ConnectionStrategy = {}));
@@ -2117,7 +2117,7 @@ var require_connection = __commonJS({
     (function(IdCancellationReceiverStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && (candidate.kind === void 0 || candidate.kind === "id") && Is2.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is2.func(candidate.dispose));
+        return candidate && (candidate.kind === void 0 || candidate.kind === "id") && Is.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is.func(candidate.dispose));
       }
       IdCancellationReceiverStrategy2.is = is;
     })(IdCancellationReceiverStrategy || (exports2.IdCancellationReceiverStrategy = IdCancellationReceiverStrategy = {}));
@@ -2125,7 +2125,7 @@ var require_connection = __commonJS({
     (function(RequestCancellationReceiverStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && candidate.kind === "request" && Is2.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is2.func(candidate.dispose));
+        return candidate && candidate.kind === "request" && Is.func(candidate.createCancellationTokenSource) && (candidate.dispose === void 0 || Is.func(candidate.dispose));
       }
       RequestCancellationReceiverStrategy2.is = is;
     })(RequestCancellationReceiverStrategy || (exports2.RequestCancellationReceiverStrategy = RequestCancellationReceiverStrategy = {}));
@@ -2152,7 +2152,7 @@ var require_connection = __commonJS({
       });
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.sendCancellation) && Is2.func(candidate.cleanup);
+        return candidate && Is.func(candidate.sendCancellation) && Is.func(candidate.cleanup);
       }
       CancellationSenderStrategy2.is = is;
     })(CancellationSenderStrategy || (exports2.CancellationSenderStrategy = CancellationSenderStrategy = {}));
@@ -2172,7 +2172,7 @@ var require_connection = __commonJS({
     (function(MessageStrategy2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.func(candidate.handleMessage);
+        return candidate && Is.func(candidate.handleMessage);
       }
       MessageStrategy2.is = is;
     })(MessageStrategy || (exports2.MessageStrategy = MessageStrategy = {}));
@@ -2180,7 +2180,7 @@ var require_connection = __commonJS({
     (function(ConnectionOptions2) {
       function is(value) {
         const candidate = value;
-        return candidate && (CancellationStrategy.is(candidate.cancellationStrategy) || ConnectionStrategy.is(candidate.connectionStrategy) || MessageStrategy.is(candidate.messageStrategy) || Is2.number(candidate.maxParallelism));
+        return candidate && (CancellationStrategy.is(candidate.cancellationStrategy) || ConnectionStrategy.is(candidate.connectionStrategy) || MessageStrategy.is(candidate.messageStrategy) || Is.number(candidate.maxParallelism));
       }
       ConnectionOptions2.is = is;
     })(ConnectionOptions || (exports2.ConnectionOptions = ConnectionOptions = {}));
@@ -2432,7 +2432,7 @@ var require_connection = __commonJS({
           } catch (error) {
             if (error instanceof messages_1.ResponseError) {
               await reply(error, requestMessage.method, startTime);
-            } else if (error && Is2.string(error.message)) {
+            } else if (error && Is.string(error.message)) {
               await replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InternalError, `Request ${requestMessage.method} failed with message: ${error.message}`), requestMessage.method, startTime);
             } else {
               await replyError(new messages_1.ResponseError(messages_1.ErrorCodes.InternalError, `Request ${requestMessage.method} failed unexpectedly without providing any details.`), requestMessage.method, startTime);
@@ -2552,7 +2552,7 @@ ${JSON.stringify(responseMessage.error, void 0, 4)}`);
         logger.error(`Received message which is neither a response nor a notification message:
 ${JSON.stringify(message, null, 4)}`);
         const responseMessage = message;
-        if (Is2.string(responseMessage.id) || Is2.number(responseMessage.id)) {
+        if (Is.string(responseMessage.id) || Is.number(responseMessage.id)) {
           const key2 = responseMessage.id;
           const responseHandler = responsePromises.get(key2);
           if (responseHandler) {
@@ -2781,7 +2781,7 @@ ${JSON.stringify(message, null, 4)}`);
           throwIfClosedOrDisposed();
           let method;
           let messageParams;
-          if (Is2.string(type)) {
+          if (Is.string(type)) {
             method = type;
             const first = args[0];
             let paramStart = 0;
@@ -2825,10 +2825,10 @@ ${JSON.stringify(message, null, 4)}`);
         onNotification: (type, handler) => {
           throwIfClosedOrDisposed();
           let method;
-          if (Is2.func(type)) {
+          if (Is.func(type)) {
             starNotificationHandler = type;
           } else if (handler) {
-            if (Is2.string(type)) {
+            if (Is.string(type)) {
               method = type;
               notificationHandlers.set(type, { type: void 0, handler });
             } else {
@@ -2881,7 +2881,7 @@ ${JSON.stringify(message, null, 4)}`);
           let method;
           let messageParams;
           let token = void 0;
-          if (Is2.string(type)) {
+          if (Is.string(type)) {
             method = type;
             const first = args[0];
             const last = args[args.length - 1];
@@ -2972,7 +2972,7 @@ ${JSON.stringify(message, null, 4)}`);
           if (StarRequestHandler.is(type)) {
             method = void 0;
             starRequestHandler = type;
-          } else if (Is2.string(type)) {
+          } else if (Is.string(type)) {
             method = null;
             if (handler !== void 0) {
               method = type;
@@ -3006,7 +3006,7 @@ ${JSON.stringify(message, null, 4)}`);
           let _sendNotification = false;
           let _traceFormat = TraceFormat.Text;
           if (sendNotificationOrTraceOptions !== void 0) {
-            if (Is2.boolean(sendNotificationOrTraceOptions)) {
+            if (Is.boolean(sendNotificationOrTraceOptions)) {
               _sendNotification = sendNotificationOrTraceOptions;
             } else {
               _sendNotification = sendNotificationOrTraceOptions.sendNotification || false;
@@ -3045,10 +3045,10 @@ ${JSON.stringify(message, null, 4)}`);
           requestTokens = /* @__PURE__ */ new Map();
           knownCanceledRequests = /* @__PURE__ */ new Set();
           messageQueue = new linkedMap_1.LinkedMap();
-          if (Is2.func(messageWriter.dispose)) {
+          if (Is.func(messageWriter.dispose)) {
             messageWriter.dispose();
           }
-          if (Is2.func(messageReader.dispose)) {
+          if (Is.func(messageReader.dispose)) {
             messageReader.dispose();
           }
         },
@@ -3082,9 +3082,9 @@ ${JSON.stringify(message, null, 4)}`);
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/common/api.js
+// ../../node_modules/vscode-jsonrpc/lib/common/api.js
 var require_api = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/common/api.js"(exports2) {
     "use strict";
     var __importDefault = exports2 && exports2.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -3296,1578 +3296,1634 @@ var require_api = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-types/lib/esm/main.js
-var main_exports = {};
-__export(main_exports, {
-  AnnotatedTextEdit: () => AnnotatedTextEdit,
-  ApplyKind: () => ApplyKind,
-  ChangeAnnotation: () => ChangeAnnotation,
-  ChangeAnnotationIdentifier: () => ChangeAnnotationIdentifier,
-  CodeAction: () => CodeAction,
-  CodeActionContext: () => CodeActionContext,
-  CodeActionKind: () => CodeActionKind,
-  CodeActionTag: () => CodeActionTag,
-  CodeActionTriggerKind: () => CodeActionTriggerKind,
-  CodeDescription: () => CodeDescription,
-  CodeLens: () => CodeLens,
-  Color: () => Color,
-  ColorInformation: () => ColorInformation,
-  ColorPresentation: () => ColorPresentation,
-  Command: () => Command,
-  CompletionItem: () => CompletionItem,
-  CompletionItemKind: () => CompletionItemKind,
-  CompletionItemLabelDetails: () => CompletionItemLabelDetails,
-  CompletionItemTag: () => CompletionItemTag,
-  CompletionList: () => CompletionList,
-  CreateFile: () => CreateFile,
-  DeleteFile: () => DeleteFile,
-  Diagnostic: () => Diagnostic,
-  DiagnosticRelatedInformation: () => DiagnosticRelatedInformation,
-  DiagnosticSeverity: () => DiagnosticSeverity,
-  DiagnosticTag: () => DiagnosticTag,
-  DocumentHighlight: () => DocumentHighlight,
-  DocumentHighlightKind: () => DocumentHighlightKind,
-  DocumentLink: () => DocumentLink,
-  DocumentSymbol: () => DocumentSymbol,
-  DocumentUri: () => DocumentUri,
-  EOL: () => EOL,
-  FoldingRange: () => FoldingRange,
-  FoldingRangeKind: () => FoldingRangeKind,
-  FormattingOptions: () => FormattingOptions,
-  Hover: () => Hover,
-  InlayHint: () => InlayHint,
-  InlayHintKind: () => InlayHintKind,
-  InlayHintLabelPart: () => InlayHintLabelPart,
-  InlineCompletionContext: () => InlineCompletionContext,
-  InlineCompletionItem: () => InlineCompletionItem,
-  InlineCompletionList: () => InlineCompletionList,
-  InlineCompletionTriggerKind: () => InlineCompletionTriggerKind,
-  InlineValueContext: () => InlineValueContext,
-  InlineValueEvaluatableExpression: () => InlineValueEvaluatableExpression,
-  InlineValueText: () => InlineValueText,
-  InlineValueVariableLookup: () => InlineValueVariableLookup,
-  InsertReplaceEdit: () => InsertReplaceEdit,
-  InsertTextFormat: () => InsertTextFormat,
-  InsertTextMode: () => InsertTextMode,
-  LanguageKind: () => LanguageKind,
-  Location: () => Location,
-  LocationLink: () => LocationLink,
-  MarkedString: () => MarkedString,
-  MarkupContent: () => MarkupContent,
-  MarkupKind: () => MarkupKind,
-  OptionalVersionedTextDocumentIdentifier: () => OptionalVersionedTextDocumentIdentifier,
-  ParameterInformation: () => ParameterInformation,
-  Position: () => Position,
-  Range: () => Range,
-  RenameFile: () => RenameFile,
-  SelectedCompletionInfo: () => SelectedCompletionInfo,
-  SelectionRange: () => SelectionRange,
-  SemanticTokenModifiers: () => SemanticTokenModifiers,
-  SemanticTokenTypes: () => SemanticTokenTypes,
-  SemanticTokens: () => SemanticTokens,
-  SignatureInformation: () => SignatureInformation,
-  SnippetTextEdit: () => SnippetTextEdit,
-  StringValue: () => StringValue,
-  SymbolInformation: () => SymbolInformation,
-  SymbolKind: () => SymbolKind,
-  SymbolTag: () => SymbolTag,
-  TextDocument: () => TextDocument,
-  TextDocumentEdit: () => TextDocumentEdit,
-  TextDocumentIdentifier: () => TextDocumentIdentifier,
-  TextDocumentItem: () => TextDocumentItem,
-  TextEdit: () => TextEdit,
-  URI: () => URI,
-  VersionedTextDocumentIdentifier: () => VersionedTextDocumentIdentifier,
-  WorkspaceChange: () => WorkspaceChange,
-  WorkspaceEdit: () => WorkspaceEdit,
-  WorkspaceFolder: () => WorkspaceFolder,
-  WorkspaceSymbol: () => WorkspaceSymbol,
-  integer: () => integer,
-  uinteger: () => uinteger
-});
-var DocumentUri, URI, integer, uinteger, Position, Range, Location, LocationLink, Color, ColorInformation, ColorPresentation, FoldingRangeKind, FoldingRange, DiagnosticRelatedInformation, DiagnosticSeverity, DiagnosticTag, CodeDescription, Diagnostic, Command, TextEdit, ChangeAnnotation, ChangeAnnotationIdentifier, AnnotatedTextEdit, TextDocumentEdit, CreateFile, RenameFile, DeleteFile, WorkspaceEdit, TextEditChangeImpl, SnippetTextEdit, ChangeAnnotations, WorkspaceChange, TextDocumentIdentifier, VersionedTextDocumentIdentifier, OptionalVersionedTextDocumentIdentifier, LanguageKind, TextDocumentItem, MarkupKind, MarkupContent, CompletionItemKind, InsertTextFormat, CompletionItemTag, InsertReplaceEdit, InsertTextMode, ApplyKind, CompletionItemLabelDetails, CompletionItem, CompletionList, MarkedString, Hover, ParameterInformation, SignatureInformation, DocumentHighlightKind, DocumentHighlight, SymbolKind, SymbolTag, SymbolInformation, WorkspaceSymbol, DocumentSymbol, CodeActionKind, CodeActionTriggerKind, CodeActionContext, CodeActionTag, CodeAction, CodeLens, FormattingOptions, DocumentLink, SelectionRange, SemanticTokenTypes, SemanticTokenModifiers, SemanticTokens, InlineValueText, InlineValueVariableLookup, InlineValueEvaluatableExpression, InlineValueContext, InlayHintKind, InlayHintLabelPart, InlayHint, StringValue, InlineCompletionItem, InlineCompletionList, InlineCompletionTriggerKind, SelectedCompletionInfo, InlineCompletionContext, WorkspaceFolder, EOL, TextDocument, FullTextDocument, Is;
-var init_main = __esm({
-  "node_modules/vscode-languageserver-types/lib/esm/main.js"() {
-    "use strict";
-    (function(DocumentUri2) {
-      function is(value) {
-        return typeof value === "string";
+// ../../node_modules/vscode-languageserver-types/lib/umd/main.js
+var require_main = __commonJS({
+  "../../node_modules/vscode-languageserver-types/lib/umd/main.js"(exports2, module2) {
+    (function(factory) {
+      if (typeof module2 === "object" && typeof module2.exports === "object") {
+        var v = factory(require, exports2);
+        if (v !== void 0) module2.exports = v;
+      } else if (typeof define === "function" && define.amd) {
+        define(["require", "exports"], factory);
       }
-      DocumentUri2.is = is;
-    })(DocumentUri || (DocumentUri = {}));
-    (function(URI2) {
-      function is(value) {
-        return typeof value === "string";
-      }
-      URI2.is = is;
-    })(URI || (URI = {}));
-    (function(integer7) {
-      integer7.MIN_VALUE = -2147483648;
-      integer7.MAX_VALUE = 2147483647;
-      function is(value) {
-        return typeof value === "number" && integer7.MIN_VALUE <= value && value <= integer7.MAX_VALUE;
-      }
-      integer7.is = is;
-    })(integer || (integer = {}));
-    (function(uinteger2) {
-      uinteger2.MIN_VALUE = 0;
-      uinteger2.MAX_VALUE = 2147483647;
-      function is(value) {
-        return typeof value === "number" && uinteger2.MIN_VALUE <= value && value <= uinteger2.MAX_VALUE;
-      }
-      uinteger2.is = is;
-    })(uinteger || (uinteger = {}));
-    (function(Position3) {
-      function create(line, character) {
-        if (line === Number.MAX_VALUE) {
-          line = uinteger.MAX_VALUE;
+    })(function(require2, exports3) {
+      "use strict";
+      Object.defineProperty(exports3, "__esModule", { value: true });
+      exports3.TextDocument = exports3.EOL = exports3.WorkspaceFolder = exports3.InlineCompletionContext = exports3.SelectedCompletionInfo = exports3.InlineCompletionTriggerKind = exports3.InlineCompletionList = exports3.InlineCompletionItem = exports3.StringValue = exports3.InlayHint = exports3.InlayHintLabelPart = exports3.InlayHintKind = exports3.InlineValueContext = exports3.InlineValueEvaluatableExpression = exports3.InlineValueVariableLookup = exports3.InlineValueText = exports3.SemanticTokens = exports3.SemanticTokenModifiers = exports3.SemanticTokenTypes = exports3.SelectionRange = exports3.DocumentLink = exports3.FormattingOptions = exports3.CodeLens = exports3.CodeAction = exports3.CodeActionTag = exports3.CodeActionContext = exports3.CodeActionTriggerKind = exports3.CodeActionKind = exports3.DocumentSymbol = exports3.WorkspaceSymbol = exports3.SymbolInformation = exports3.SymbolTag = exports3.SymbolKind = exports3.DocumentHighlight = exports3.DocumentHighlightKind = exports3.SignatureInformation = exports3.ParameterInformation = exports3.Hover = exports3.MarkedString = exports3.CompletionList = exports3.CompletionItem = exports3.CompletionItemLabelDetails = exports3.ApplyKind = exports3.InsertTextMode = exports3.InsertReplaceEdit = exports3.CompletionItemTag = exports3.InsertTextFormat = exports3.CompletionItemKind = exports3.MarkupContent = exports3.MarkupKind = exports3.TextDocumentItem = exports3.LanguageKind = exports3.OptionalVersionedTextDocumentIdentifier = exports3.VersionedTextDocumentIdentifier = exports3.TextDocumentIdentifier = exports3.WorkspaceChange = exports3.SnippetTextEdit = exports3.WorkspaceEdit = exports3.DeleteFile = exports3.RenameFile = exports3.CreateFile = exports3.TextDocumentEdit = exports3.AnnotatedTextEdit = exports3.ChangeAnnotationIdentifier = exports3.ChangeAnnotation = exports3.TextEdit = exports3.Command = exports3.Diagnostic = exports3.CodeDescription = exports3.DiagnosticTag = exports3.DiagnosticSeverity = exports3.DiagnosticRelatedInformation = exports3.FoldingRange = exports3.FoldingRangeKind = exports3.ColorPresentation = exports3.ColorInformation = exports3.Color = exports3.LocationLink = exports3.Location = exports3.Range = exports3.Position = exports3.uinteger = exports3.integer = exports3.URI = exports3.DocumentUri = void 0;
+      var DocumentUri;
+      (function(DocumentUri2) {
+        function is(value) {
+          return typeof value === "string";
         }
-        if (character === Number.MAX_VALUE) {
-          character = uinteger.MAX_VALUE;
+        DocumentUri2.is = is;
+      })(DocumentUri || (exports3.DocumentUri = DocumentUri = {}));
+      var URI;
+      (function(URI2) {
+        function is(value) {
+          return typeof value === "string";
         }
-        return { line, character };
-      }
-      Position3.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.uinteger(candidate.line) && Is.uinteger(candidate.character);
-      }
-      Position3.is = is;
-    })(Position || (Position = {}));
-    (function(Range4) {
-      function create(one, two, three, four) {
-        if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
-          return { start: Position.create(one, two), end: Position.create(three, four) };
-        } else if (Position.is(one) && Position.is(two)) {
-          return { start: one, end: two };
-        } else {
-          throw new Error(`Range#create called with invalid arguments[${one}, ${two}, ${three}, ${four}]`);
+        URI2.is = is;
+      })(URI || (exports3.URI = URI = {}));
+      var integer6;
+      (function(integer7) {
+        integer7.MIN_VALUE = -2147483648;
+        integer7.MAX_VALUE = 2147483647;
+        function is(value) {
+          return typeof value === "number" && integer7.MIN_VALUE <= value && value <= integer7.MAX_VALUE;
         }
-      }
-      Range4.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Position.is(candidate.start) && Position.is(candidate.end);
-      }
-      Range4.is = is;
-    })(Range || (Range = {}));
-    (function(Location2) {
-      function create(uri, range) {
-        return { uri, range };
-      }
-      Location2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
-      }
-      Location2.is = is;
-    })(Location || (Location = {}));
-    (function(LocationLink2) {
-      function create(targetUri, targetRange, targetSelectionRange, originSelectionRange) {
-        return { targetUri, targetRange, targetSelectionRange, originSelectionRange };
-      }
-      LocationLink2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range.is(candidate.targetSelectionRange) && (Range.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
-      }
-      LocationLink2.is = is;
-    })(LocationLink || (LocationLink = {}));
-    (function(Color2) {
-      function create(red, green, blue, alpha) {
-        return {
-          red,
-          green,
-          blue,
-          alpha
-        };
-      }
-      Color2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.numberRange(candidate.red, 0, 1) && Is.numberRange(candidate.green, 0, 1) && Is.numberRange(candidate.blue, 0, 1) && Is.numberRange(candidate.alpha, 0, 1);
-      }
-      Color2.is = is;
-    })(Color || (Color = {}));
-    (function(ColorInformation2) {
-      function create(range, color) {
-        return {
-          range,
-          color
-        };
-      }
-      ColorInformation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && Color.is(candidate.color);
-      }
-      ColorInformation2.is = is;
-    })(ColorInformation || (ColorInformation = {}));
-    (function(ColorPresentation2) {
-      function create(label, textEdit, additionalTextEdits) {
-        return {
-          label,
-          textEdit,
-          additionalTextEdits
-        };
-      }
-      ColorPresentation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.undefined(candidate.textEdit) || TextEdit.is(candidate)) && (Is.undefined(candidate.additionalTextEdits) || Is.typedArray(candidate.additionalTextEdits, TextEdit.is));
-      }
-      ColorPresentation2.is = is;
-    })(ColorPresentation || (ColorPresentation = {}));
-    (function(FoldingRangeKind2) {
-      FoldingRangeKind2.Comment = "comment";
-      FoldingRangeKind2.Imports = "imports";
-      FoldingRangeKind2.Region = "region";
-    })(FoldingRangeKind || (FoldingRangeKind = {}));
-    (function(FoldingRange2) {
-      function create(startLine, endLine, startCharacter, endCharacter, kind, collapsedText) {
-        const result = {
-          startLine,
-          endLine
-        };
-        if (Is.defined(startCharacter)) {
-          result.startCharacter = startCharacter;
+        integer7.is = is;
+      })(integer6 || (exports3.integer = integer6 = {}));
+      var uinteger;
+      (function(uinteger2) {
+        uinteger2.MIN_VALUE = 0;
+        uinteger2.MAX_VALUE = 2147483647;
+        function is(value) {
+          return typeof value === "number" && uinteger2.MIN_VALUE <= value && value <= uinteger2.MAX_VALUE;
         }
-        if (Is.defined(endCharacter)) {
-          result.endCharacter = endCharacter;
-        }
-        if (Is.defined(kind)) {
-          result.kind = kind;
-        }
-        if (Is.defined(collapsedText)) {
-          result.collapsedText = collapsedText;
-        }
-        return result;
-      }
-      FoldingRange2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.uinteger(candidate.startLine) && Is.uinteger(candidate.startLine) && (Is.undefined(candidate.startCharacter) || Is.uinteger(candidate.startCharacter)) && (Is.undefined(candidate.endCharacter) || Is.uinteger(candidate.endCharacter)) && (Is.undefined(candidate.kind) || Is.string(candidate.kind));
-      }
-      FoldingRange2.is = is;
-    })(FoldingRange || (FoldingRange = {}));
-    (function(DiagnosticRelatedInformation2) {
-      function create(location, message) {
-        return {
-          location,
-          message
-        };
-      }
-      DiagnosticRelatedInformation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Location.is(candidate.location) && Is.string(candidate.message);
-      }
-      DiagnosticRelatedInformation2.is = is;
-    })(DiagnosticRelatedInformation || (DiagnosticRelatedInformation = {}));
-    (function(DiagnosticSeverity2) {
-      DiagnosticSeverity2.Error = 1;
-      DiagnosticSeverity2.Warning = 2;
-      DiagnosticSeverity2.Information = 3;
-      DiagnosticSeverity2.Hint = 4;
-    })(DiagnosticSeverity || (DiagnosticSeverity = {}));
-    (function(DiagnosticTag2) {
-      DiagnosticTag2.Unnecessary = 1;
-      DiagnosticTag2.Deprecated = 2;
-    })(DiagnosticTag || (DiagnosticTag = {}));
-    (function(CodeDescription2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.href);
-      }
-      CodeDescription2.is = is;
-    })(CodeDescription || (CodeDescription = {}));
-    (function(Diagnostic2) {
-      function create(range, message, severity, code, source, relatedInformation) {
-        const result = { range, message };
-        if (Is.defined(severity)) {
-          result.severity = severity;
-        }
-        if (Is.defined(code)) {
-          result.code = code;
-        }
-        if (Is.defined(source)) {
-          result.source = source;
-        }
-        if (Is.defined(relatedInformation)) {
-          result.relatedInformation = relatedInformation;
-        }
-        return result;
-      }
-      Diagnostic2.create = create;
-      function is(value) {
-        var _a;
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(candidate.range) && (Is.string(candidate.message) || MarkupContent.is(candidate.message)) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
-      }
-      Diagnostic2.is = is;
-      function is3_17(value) {
-        return Is.string(value.message);
-      }
-      Diagnostic2.is3_17 = is3_17;
-      function getMessageString(diagnostic) {
-        if (Is.string(diagnostic.message)) {
-          return diagnostic.message;
-        } else if (MarkupContent.is(diagnostic.message)) {
-          return diagnostic.message.value;
-        } else {
-          throw new Error(`Unknown message type ${typeof diagnostic.message}`);
-        }
-      }
-      Diagnostic2.getMessageString = getMessageString;
-    })(Diagnostic || (Diagnostic = {}));
-    (function(Command2) {
-      function create(title, command, ...args) {
-        const result = { title, command };
-        if (Is.defined(args) && args.length > 0) {
-          result.arguments = args;
-        }
-        return result;
-      }
-      Command2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.title) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip)) && Is.string(candidate.command);
-      }
-      Command2.is = is;
-    })(Command || (Command = {}));
-    (function(TextEdit2) {
-      function replace(range, newText) {
-        return { range, newText };
-      }
-      TextEdit2.replace = replace;
-      function insert(position, newText) {
-        return { range: { start: position, end: position }, newText };
-      }
-      TextEdit2.insert = insert;
-      function del(range) {
-        return { range, newText: "" };
-      }
-      TextEdit2.del = del;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range.is(candidate.range);
-      }
-      TextEdit2.is = is;
-    })(TextEdit || (TextEdit = {}));
-    (function(ChangeAnnotation2) {
-      function create(label, needsConfirmation, description) {
-        const result = { label };
-        if (needsConfirmation !== void 0) {
-          result.needsConfirmation = needsConfirmation;
-        }
-        if (description !== void 0) {
-          result.description = description;
-        }
-        return result;
-      }
-      ChangeAnnotation2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.boolean(candidate.needsConfirmation) || candidate.needsConfirmation === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
-      }
-      ChangeAnnotation2.is = is;
-    })(ChangeAnnotation || (ChangeAnnotation = {}));
-    (function(ChangeAnnotationIdentifier2) {
-      function is(value) {
-        const candidate = value;
-        return Is.string(candidate);
-      }
-      ChangeAnnotationIdentifier2.is = is;
-    })(ChangeAnnotationIdentifier || (ChangeAnnotationIdentifier = {}));
-    (function(AnnotatedTextEdit2) {
-      function replace(range, newText, annotation) {
-        return { range, newText, annotationId: annotation };
-      }
-      AnnotatedTextEdit2.replace = replace;
-      function insert(position, newText, annotation) {
-        return { range: { start: position, end: position }, newText, annotationId: annotation };
-      }
-      AnnotatedTextEdit2.insert = insert;
-      function del(range, annotation) {
-        return { range, newText: "", annotationId: annotation };
-      }
-      AnnotatedTextEdit2.del = del;
-      function is(value) {
-        const candidate = value;
-        return TextEdit.is(candidate) && (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      AnnotatedTextEdit2.is = is;
-    })(AnnotatedTextEdit || (AnnotatedTextEdit = {}));
-    (function(TextDocumentEdit2) {
-      function create(textDocument, edits) {
-        return { textDocument, edits };
-      }
-      TextDocumentEdit2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && OptionalVersionedTextDocumentIdentifier.is(candidate.textDocument) && Array.isArray(candidate.edits);
-      }
-      TextDocumentEdit2.is = is;
-    })(TextDocumentEdit || (TextDocumentEdit = {}));
-    (function(CreateFile2) {
-      function create(uri, options, annotation) {
-        const result = {
-          kind: "create",
-          uri
-        };
-        if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
-          result.options = options;
-        }
-        if (annotation !== void 0) {
-          result.annotationId = annotation;
-        }
-        return result;
-      }
-      CreateFile2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && candidate.kind === "create" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      CreateFile2.is = is;
-    })(CreateFile || (CreateFile = {}));
-    (function(RenameFile2) {
-      function create(oldUri, newUri, options, annotation) {
-        const result = {
-          kind: "rename",
-          oldUri,
-          newUri
-        };
-        if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
-          result.options = options;
-        }
-        if (annotation !== void 0) {
-          result.annotationId = annotation;
-        }
-        return result;
-      }
-      RenameFile2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && candidate.kind === "rename" && Is.string(candidate.oldUri) && Is.string(candidate.newUri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      RenameFile2.is = is;
-    })(RenameFile || (RenameFile = {}));
-    (function(DeleteFile2) {
-      function create(uri, options, annotation) {
-        const result = {
-          kind: "delete",
-          uri
-        };
-        if (options !== void 0 && (options.recursive !== void 0 || options.ignoreIfNotExists !== void 0)) {
-          result.options = options;
-        }
-        if (annotation !== void 0) {
-          result.annotationId = annotation;
-        }
-        return result;
-      }
-      DeleteFile2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && candidate.kind === "delete" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.recursive === void 0 || Is.boolean(candidate.options.recursive)) && (candidate.options.ignoreIfNotExists === void 0 || Is.boolean(candidate.options.ignoreIfNotExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
-      }
-      DeleteFile2.is = is;
-    })(DeleteFile || (DeleteFile = {}));
-    (function(WorkspaceEdit2) {
-      function is(value) {
-        const candidate = value;
-        return candidate && (candidate.changes !== void 0 || candidate.documentChanges !== void 0) && (candidate.documentChanges === void 0 || candidate.documentChanges.every((change) => {
-          if (Is.string(change.kind)) {
-            return CreateFile.is(change) || RenameFile.is(change) || DeleteFile.is(change);
-          } else {
-            return TextDocumentEdit.is(change);
+        uinteger2.is = is;
+      })(uinteger || (exports3.uinteger = uinteger = {}));
+      var Position2;
+      (function(Position3) {
+        function create(line, character) {
+          if (line === Number.MAX_VALUE) {
+            line = uinteger.MAX_VALUE;
           }
-        }));
-      }
-      WorkspaceEdit2.is = is;
-    })(WorkspaceEdit || (WorkspaceEdit = {}));
-    TextEditChangeImpl = class {
-      constructor(edits, changeAnnotations) {
-        this.edits = edits;
-        this.changeAnnotations = changeAnnotations;
-      }
-      insert(position, newText, annotation) {
-        let edit;
-        let id;
-        if (annotation === void 0) {
-          edit = TextEdit.insert(position, newText);
-        } else if (ChangeAnnotationIdentifier.is(annotation)) {
-          id = annotation;
-          edit = AnnotatedTextEdit.insert(position, newText, annotation);
-        } else {
-          this.assertChangeAnnotations(this.changeAnnotations);
-          id = this.changeAnnotations.manage(annotation);
-          edit = AnnotatedTextEdit.insert(position, newText, id);
+          if (character === Number.MAX_VALUE) {
+            character = uinteger.MAX_VALUE;
+          }
+          return { line, character };
         }
-        this.edits.push(edit);
-        if (id !== void 0) {
-          return id;
+        Position3.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.uinteger(candidate.line) && Is.uinteger(candidate.character);
         }
-      }
-      replace(range, newText, annotation) {
-        let edit;
-        let id;
-        if (annotation === void 0) {
-          edit = TextEdit.replace(range, newText);
-        } else if (ChangeAnnotationIdentifier.is(annotation)) {
-          id = annotation;
-          edit = AnnotatedTextEdit.replace(range, newText, annotation);
-        } else {
-          this.assertChangeAnnotations(this.changeAnnotations);
-          id = this.changeAnnotations.manage(annotation);
-          edit = AnnotatedTextEdit.replace(range, newText, id);
+        Position3.is = is;
+      })(Position2 || (exports3.Position = Position2 = {}));
+      var Range3;
+      (function(Range4) {
+        function create(one, two, three, four) {
+          if (Is.uinteger(one) && Is.uinteger(two) && Is.uinteger(three) && Is.uinteger(four)) {
+            return { start: Position2.create(one, two), end: Position2.create(three, four) };
+          } else if (Position2.is(one) && Position2.is(two)) {
+            return { start: one, end: two };
+          } else {
+            throw new Error("Range#create called with invalid arguments[".concat(one, ", ").concat(two, ", ").concat(three, ", ").concat(four, "]"));
+          }
         }
-        this.edits.push(edit);
-        if (id !== void 0) {
-          return id;
+        Range4.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Position2.is(candidate.start) && Position2.is(candidate.end);
         }
-      }
-      delete(range, annotation) {
-        let edit;
-        let id;
-        if (annotation === void 0) {
-          edit = TextEdit.del(range);
-        } else if (ChangeAnnotationIdentifier.is(annotation)) {
-          id = annotation;
-          edit = AnnotatedTextEdit.del(range, annotation);
-        } else {
-          this.assertChangeAnnotations(this.changeAnnotations);
-          id = this.changeAnnotations.manage(annotation);
-          edit = AnnotatedTextEdit.del(range, id);
+        Range4.is = is;
+      })(Range3 || (exports3.Range = Range3 = {}));
+      var Location;
+      (function(Location2) {
+        function create(uri, range) {
+          return { uri, range };
         }
-        this.edits.push(edit);
-        if (id !== void 0) {
-          return id;
+        Location2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && (Is.string(candidate.uri) || Is.undefined(candidate.uri));
         }
-      }
-      add(edit) {
-        this.edits.push(edit);
-      }
-      all() {
-        return this.edits;
-      }
-      clear() {
-        this.edits.splice(0, this.edits.length);
-      }
-      assertChangeAnnotations(value) {
-        if (value === void 0) {
-          throw new Error(`Text edit change is not configured to manage change annotations.`);
+        Location2.is = is;
+      })(Location || (exports3.Location = Location = {}));
+      var LocationLink;
+      (function(LocationLink2) {
+        function create(targetUri, targetRange, targetSelectionRange, originSelectionRange) {
+          return { targetUri, targetRange, targetSelectionRange, originSelectionRange };
         }
-      }
-    };
-    (function(SnippetTextEdit2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && StringValue.isSnippet(candidate.snippet) && (candidate.annotationId === void 0 || (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId)));
-      }
-      SnippetTextEdit2.is = is;
-    })(SnippetTextEdit || (SnippetTextEdit = {}));
-    ChangeAnnotations = class {
-      constructor(annotations) {
-        this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
-        this._counter = 0;
-        this._size = 0;
-      }
-      all() {
-        return this._annotations;
-      }
-      get size() {
-        return this._size;
-      }
-      manage(idOrAnnotation, annotation) {
-        let id;
-        if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
-          id = idOrAnnotation;
-        } else {
-          id = this.nextId();
-          annotation = idOrAnnotation;
+        LocationLink2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.targetRange) && Is.string(candidate.targetUri) && Range3.is(candidate.targetSelectionRange) && (Range3.is(candidate.originSelectionRange) || Is.undefined(candidate.originSelectionRange));
         }
-        if (this._annotations[id] !== void 0) {
-          throw new Error(`Id ${id} is already in use.`);
+        LocationLink2.is = is;
+      })(LocationLink || (exports3.LocationLink = LocationLink = {}));
+      var Color;
+      (function(Color2) {
+        function create(red, green, blue, alpha) {
+          return {
+            red,
+            green,
+            blue,
+            alpha
+          };
         }
-        if (annotation === void 0) {
-          throw new Error(`No annotation provided for id ${id}`);
+        Color2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.numberRange(candidate.red, 0, 1) && Is.numberRange(candidate.green, 0, 1) && Is.numberRange(candidate.blue, 0, 1) && Is.numberRange(candidate.alpha, 0, 1);
         }
-        this._annotations[id] = annotation;
-        this._size++;
-        return id;
-      }
-      nextId() {
-        this._counter++;
-        return this._counter.toString();
-      }
-    };
-    WorkspaceChange = class {
-      constructor(workspaceEdit) {
-        this._textEditChanges = /* @__PURE__ */ Object.create(null);
-        if (workspaceEdit !== void 0) {
-          this._workspaceEdit = workspaceEdit;
-          if (workspaceEdit.documentChanges) {
-            this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
-            workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-            workspaceEdit.documentChanges.forEach((change) => {
-              if (TextDocumentEdit.is(change)) {
-                const textEditChange = new TextEditChangeImpl(change.edits, this._changeAnnotations);
-                this._textEditChanges[change.textDocument.uri] = textEditChange;
+        Color2.is = is;
+      })(Color || (exports3.Color = Color = {}));
+      var ColorInformation;
+      (function(ColorInformation2) {
+        function create(range, color) {
+          return {
+            range,
+            color
+          };
+        }
+        ColorInformation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && Color.is(candidate.color);
+        }
+        ColorInformation2.is = is;
+      })(ColorInformation || (exports3.ColorInformation = ColorInformation = {}));
+      var ColorPresentation;
+      (function(ColorPresentation2) {
+        function create(label, textEdit, additionalTextEdits) {
+          return {
+            label,
+            textEdit,
+            additionalTextEdits
+          };
+        }
+        ColorPresentation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.undefined(candidate.textEdit) || TextEdit.is(candidate)) && (Is.undefined(candidate.additionalTextEdits) || Is.typedArray(candidate.additionalTextEdits, TextEdit.is));
+        }
+        ColorPresentation2.is = is;
+      })(ColorPresentation || (exports3.ColorPresentation = ColorPresentation = {}));
+      var FoldingRangeKind;
+      (function(FoldingRangeKind2) {
+        FoldingRangeKind2.Comment = "comment";
+        FoldingRangeKind2.Imports = "imports";
+        FoldingRangeKind2.Region = "region";
+      })(FoldingRangeKind || (exports3.FoldingRangeKind = FoldingRangeKind = {}));
+      var FoldingRange;
+      (function(FoldingRange2) {
+        function create(startLine, endLine, startCharacter, endCharacter, kind, collapsedText) {
+          var result = {
+            startLine,
+            endLine
+          };
+          if (Is.defined(startCharacter)) {
+            result.startCharacter = startCharacter;
+          }
+          if (Is.defined(endCharacter)) {
+            result.endCharacter = endCharacter;
+          }
+          if (Is.defined(kind)) {
+            result.kind = kind;
+          }
+          if (Is.defined(collapsedText)) {
+            result.collapsedText = collapsedText;
+          }
+          return result;
+        }
+        FoldingRange2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.uinteger(candidate.startLine) && Is.uinteger(candidate.startLine) && (Is.undefined(candidate.startCharacter) || Is.uinteger(candidate.startCharacter)) && (Is.undefined(candidate.endCharacter) || Is.uinteger(candidate.endCharacter)) && (Is.undefined(candidate.kind) || Is.string(candidate.kind));
+        }
+        FoldingRange2.is = is;
+      })(FoldingRange || (exports3.FoldingRange = FoldingRange = {}));
+      var DiagnosticRelatedInformation;
+      (function(DiagnosticRelatedInformation2) {
+        function create(location, message) {
+          return {
+            location,
+            message
+          };
+        }
+        DiagnosticRelatedInformation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Location.is(candidate.location) && Is.string(candidate.message);
+        }
+        DiagnosticRelatedInformation2.is = is;
+      })(DiagnosticRelatedInformation || (exports3.DiagnosticRelatedInformation = DiagnosticRelatedInformation = {}));
+      var DiagnosticSeverity;
+      (function(DiagnosticSeverity2) {
+        DiagnosticSeverity2.Error = 1;
+        DiagnosticSeverity2.Warning = 2;
+        DiagnosticSeverity2.Information = 3;
+        DiagnosticSeverity2.Hint = 4;
+      })(DiagnosticSeverity || (exports3.DiagnosticSeverity = DiagnosticSeverity = {}));
+      var DiagnosticTag;
+      (function(DiagnosticTag2) {
+        DiagnosticTag2.Unnecessary = 1;
+        DiagnosticTag2.Deprecated = 2;
+      })(DiagnosticTag || (exports3.DiagnosticTag = DiagnosticTag = {}));
+      var CodeDescription;
+      (function(CodeDescription2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.href);
+        }
+        CodeDescription2.is = is;
+      })(CodeDescription || (exports3.CodeDescription = CodeDescription = {}));
+      var Diagnostic;
+      (function(Diagnostic2) {
+        function create(range, message, severity, code, source, relatedInformation) {
+          var result = { range, message };
+          if (Is.defined(severity)) {
+            result.severity = severity;
+          }
+          if (Is.defined(code)) {
+            result.code = code;
+          }
+          if (Is.defined(source)) {
+            result.source = source;
+          }
+          if (Is.defined(relatedInformation)) {
+            result.relatedInformation = relatedInformation;
+          }
+          return result;
+        }
+        Diagnostic2.create = create;
+        function is(value) {
+          var _a;
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(candidate.range) && (Is.string(candidate.message) || MarkupContent.is(candidate.message)) && (Is.number(candidate.severity) || Is.undefined(candidate.severity)) && (Is.integer(candidate.code) || Is.string(candidate.code) || Is.undefined(candidate.code)) && (Is.undefined(candidate.codeDescription) || Is.string((_a = candidate.codeDescription) === null || _a === void 0 ? void 0 : _a.href)) && (Is.string(candidate.source) || Is.undefined(candidate.source)) && (Is.undefined(candidate.relatedInformation) || Is.typedArray(candidate.relatedInformation, DiagnosticRelatedInformation.is));
+        }
+        Diagnostic2.is = is;
+        function is3_17(value) {
+          return Is.string(value.message);
+        }
+        Diagnostic2.is3_17 = is3_17;
+        function getMessageString(diagnostic) {
+          if (Is.string(diagnostic.message)) {
+            return diagnostic.message;
+          } else if (MarkupContent.is(diagnostic.message)) {
+            return diagnostic.message.value;
+          } else {
+            throw new Error("Unknown message type ".concat(typeof diagnostic.message));
+          }
+        }
+        Diagnostic2.getMessageString = getMessageString;
+      })(Diagnostic || (exports3.Diagnostic = Diagnostic = {}));
+      var Command;
+      (function(Command2) {
+        function create(title, command) {
+          var args = [];
+          for (var _i = 2; _i < arguments.length; _i++) {
+            args[_i - 2] = arguments[_i];
+          }
+          var result = { title, command };
+          if (Is.defined(args) && args.length > 0) {
+            result.arguments = args;
+          }
+          return result;
+        }
+        Command2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.title) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip)) && Is.string(candidate.command);
+        }
+        Command2.is = is;
+      })(Command || (exports3.Command = Command = {}));
+      var TextEdit;
+      (function(TextEdit2) {
+        function replace(range, newText) {
+          return { range, newText };
+        }
+        TextEdit2.replace = replace;
+        function insert(position, newText) {
+          return { range: { start: position, end: position }, newText };
+        }
+        TextEdit2.insert = insert;
+        function del(range) {
+          return { range, newText: "" };
+        }
+        TextEdit2.del = del;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.newText) && Range3.is(candidate.range);
+        }
+        TextEdit2.is = is;
+      })(TextEdit || (exports3.TextEdit = TextEdit = {}));
+      var ChangeAnnotation;
+      (function(ChangeAnnotation2) {
+        function create(label, needsConfirmation, description) {
+          var result = { label };
+          if (needsConfirmation !== void 0) {
+            result.needsConfirmation = needsConfirmation;
+          }
+          if (description !== void 0) {
+            result.description = description;
+          }
+          return result;
+        }
+        ChangeAnnotation2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Is.string(candidate.label) && (Is.boolean(candidate.needsConfirmation) || candidate.needsConfirmation === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
+        }
+        ChangeAnnotation2.is = is;
+      })(ChangeAnnotation || (exports3.ChangeAnnotation = ChangeAnnotation = {}));
+      var ChangeAnnotationIdentifier;
+      (function(ChangeAnnotationIdentifier2) {
+        function is(value) {
+          var candidate = value;
+          return Is.string(candidate);
+        }
+        ChangeAnnotationIdentifier2.is = is;
+      })(ChangeAnnotationIdentifier || (exports3.ChangeAnnotationIdentifier = ChangeAnnotationIdentifier = {}));
+      var AnnotatedTextEdit;
+      (function(AnnotatedTextEdit2) {
+        function replace(range, newText, annotation) {
+          return { range, newText, annotationId: annotation };
+        }
+        AnnotatedTextEdit2.replace = replace;
+        function insert(position, newText, annotation) {
+          return { range: { start: position, end: position }, newText, annotationId: annotation };
+        }
+        AnnotatedTextEdit2.insert = insert;
+        function del(range, annotation) {
+          return { range, newText: "", annotationId: annotation };
+        }
+        AnnotatedTextEdit2.del = del;
+        function is(value) {
+          var candidate = value;
+          return TextEdit.is(candidate) && (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        AnnotatedTextEdit2.is = is;
+      })(AnnotatedTextEdit || (exports3.AnnotatedTextEdit = AnnotatedTextEdit = {}));
+      var TextDocumentEdit;
+      (function(TextDocumentEdit2) {
+        function create(textDocument, edits) {
+          return { textDocument, edits };
+        }
+        TextDocumentEdit2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && OptionalVersionedTextDocumentIdentifier.is(candidate.textDocument) && Array.isArray(candidate.edits);
+        }
+        TextDocumentEdit2.is = is;
+      })(TextDocumentEdit || (exports3.TextDocumentEdit = TextDocumentEdit = {}));
+      var CreateFile;
+      (function(CreateFile2) {
+        function create(uri, options, annotation) {
+          var result = {
+            kind: "create",
+            uri
+          };
+          if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
+            result.options = options;
+          }
+          if (annotation !== void 0) {
+            result.annotationId = annotation;
+          }
+          return result;
+        }
+        CreateFile2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && candidate.kind === "create" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        CreateFile2.is = is;
+      })(CreateFile || (exports3.CreateFile = CreateFile = {}));
+      var RenameFile;
+      (function(RenameFile2) {
+        function create(oldUri, newUri, options, annotation) {
+          var result = {
+            kind: "rename",
+            oldUri,
+            newUri
+          };
+          if (options !== void 0 && (options.overwrite !== void 0 || options.ignoreIfExists !== void 0)) {
+            result.options = options;
+          }
+          if (annotation !== void 0) {
+            result.annotationId = annotation;
+          }
+          return result;
+        }
+        RenameFile2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && candidate.kind === "rename" && Is.string(candidate.oldUri) && Is.string(candidate.newUri) && (candidate.options === void 0 || (candidate.options.overwrite === void 0 || Is.boolean(candidate.options.overwrite)) && (candidate.options.ignoreIfExists === void 0 || Is.boolean(candidate.options.ignoreIfExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        RenameFile2.is = is;
+      })(RenameFile || (exports3.RenameFile = RenameFile = {}));
+      var DeleteFile;
+      (function(DeleteFile2) {
+        function create(uri, options, annotation) {
+          var result = {
+            kind: "delete",
+            uri
+          };
+          if (options !== void 0 && (options.recursive !== void 0 || options.ignoreIfNotExists !== void 0)) {
+            result.options = options;
+          }
+          if (annotation !== void 0) {
+            result.annotationId = annotation;
+          }
+          return result;
+        }
+        DeleteFile2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && candidate.kind === "delete" && Is.string(candidate.uri) && (candidate.options === void 0 || (candidate.options.recursive === void 0 || Is.boolean(candidate.options.recursive)) && (candidate.options.ignoreIfNotExists === void 0 || Is.boolean(candidate.options.ignoreIfNotExists))) && (candidate.annotationId === void 0 || ChangeAnnotationIdentifier.is(candidate.annotationId));
+        }
+        DeleteFile2.is = is;
+      })(DeleteFile || (exports3.DeleteFile = DeleteFile = {}));
+      var WorkspaceEdit;
+      (function(WorkspaceEdit2) {
+        function is(value) {
+          var candidate = value;
+          return candidate && (candidate.changes !== void 0 || candidate.documentChanges !== void 0) && (candidate.documentChanges === void 0 || candidate.documentChanges.every(function(change) {
+            if (Is.string(change.kind)) {
+              return CreateFile.is(change) || RenameFile.is(change) || DeleteFile.is(change);
+            } else {
+              return TextDocumentEdit.is(change);
+            }
+          }));
+        }
+        WorkspaceEdit2.is = is;
+      })(WorkspaceEdit || (exports3.WorkspaceEdit = WorkspaceEdit = {}));
+      var TextEditChangeImpl = (
+        /** @class */
+        (function() {
+          function TextEditChangeImpl2(edits, changeAnnotations) {
+            this.edits = edits;
+            this.changeAnnotations = changeAnnotations;
+          }
+          TextEditChangeImpl2.prototype.insert = function(position, newText, annotation) {
+            var edit;
+            var id;
+            if (annotation === void 0) {
+              edit = TextEdit.insert(position, newText);
+            } else if (ChangeAnnotationIdentifier.is(annotation)) {
+              id = annotation;
+              edit = AnnotatedTextEdit.insert(position, newText, annotation);
+            } else {
+              this.assertChangeAnnotations(this.changeAnnotations);
+              id = this.changeAnnotations.manage(annotation);
+              edit = AnnotatedTextEdit.insert(position, newText, id);
+            }
+            this.edits.push(edit);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          TextEditChangeImpl2.prototype.replace = function(range, newText, annotation) {
+            var edit;
+            var id;
+            if (annotation === void 0) {
+              edit = TextEdit.replace(range, newText);
+            } else if (ChangeAnnotationIdentifier.is(annotation)) {
+              id = annotation;
+              edit = AnnotatedTextEdit.replace(range, newText, annotation);
+            } else {
+              this.assertChangeAnnotations(this.changeAnnotations);
+              id = this.changeAnnotations.manage(annotation);
+              edit = AnnotatedTextEdit.replace(range, newText, id);
+            }
+            this.edits.push(edit);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          TextEditChangeImpl2.prototype.delete = function(range, annotation) {
+            var edit;
+            var id;
+            if (annotation === void 0) {
+              edit = TextEdit.del(range);
+            } else if (ChangeAnnotationIdentifier.is(annotation)) {
+              id = annotation;
+              edit = AnnotatedTextEdit.del(range, annotation);
+            } else {
+              this.assertChangeAnnotations(this.changeAnnotations);
+              id = this.changeAnnotations.manage(annotation);
+              edit = AnnotatedTextEdit.del(range, id);
+            }
+            this.edits.push(edit);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          TextEditChangeImpl2.prototype.add = function(edit) {
+            this.edits.push(edit);
+          };
+          TextEditChangeImpl2.prototype.all = function() {
+            return this.edits;
+          };
+          TextEditChangeImpl2.prototype.clear = function() {
+            this.edits.splice(0, this.edits.length);
+          };
+          TextEditChangeImpl2.prototype.assertChangeAnnotations = function(value) {
+            if (value === void 0) {
+              throw new Error("Text edit change is not configured to manage change annotations.");
+            }
+          };
+          return TextEditChangeImpl2;
+        })()
+      );
+      var SnippetTextEdit;
+      (function(SnippetTextEdit2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && StringValue.isSnippet(candidate.snippet) && (candidate.annotationId === void 0 || (ChangeAnnotation.is(candidate.annotationId) || ChangeAnnotationIdentifier.is(candidate.annotationId)));
+        }
+        SnippetTextEdit2.is = is;
+      })(SnippetTextEdit || (exports3.SnippetTextEdit = SnippetTextEdit = {}));
+      var ChangeAnnotations = (
+        /** @class */
+        (function() {
+          function ChangeAnnotations2(annotations) {
+            this._annotations = annotations === void 0 ? /* @__PURE__ */ Object.create(null) : annotations;
+            this._counter = 0;
+            this._size = 0;
+          }
+          ChangeAnnotations2.prototype.all = function() {
+            return this._annotations;
+          };
+          Object.defineProperty(ChangeAnnotations2.prototype, "size", {
+            get: function() {
+              return this._size;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          ChangeAnnotations2.prototype.manage = function(idOrAnnotation, annotation) {
+            var id;
+            if (ChangeAnnotationIdentifier.is(idOrAnnotation)) {
+              id = idOrAnnotation;
+            } else {
+              id = this.nextId();
+              annotation = idOrAnnotation;
+            }
+            if (this._annotations[id] !== void 0) {
+              throw new Error("Id ".concat(id, " is already in use."));
+            }
+            if (annotation === void 0) {
+              throw new Error("No annotation provided for id ".concat(id));
+            }
+            this._annotations[id] = annotation;
+            this._size++;
+            return id;
+          };
+          ChangeAnnotations2.prototype.nextId = function() {
+            this._counter++;
+            return this._counter.toString();
+          };
+          return ChangeAnnotations2;
+        })()
+      );
+      var WorkspaceChange = (
+        /** @class */
+        (function() {
+          function WorkspaceChange2(workspaceEdit) {
+            var _this = this;
+            this._textEditChanges = /* @__PURE__ */ Object.create(null);
+            if (workspaceEdit !== void 0) {
+              this._workspaceEdit = workspaceEdit;
+              if (workspaceEdit.documentChanges) {
+                this._changeAnnotations = new ChangeAnnotations(workspaceEdit.changeAnnotations);
+                workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+                workspaceEdit.documentChanges.forEach(function(change) {
+                  if (TextDocumentEdit.is(change)) {
+                    var textEditChange = new TextEditChangeImpl(change.edits, _this._changeAnnotations);
+                    _this._textEditChanges[change.textDocument.uri] = textEditChange;
+                  }
+                });
+              } else if (workspaceEdit.changes) {
+                Object.keys(workspaceEdit.changes).forEach(function(key2) {
+                  var textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key2]);
+                  _this._textEditChanges[key2] = textEditChange;
+                });
               }
-            });
-          } else if (workspaceEdit.changes) {
-            Object.keys(workspaceEdit.changes).forEach((key2) => {
-              const textEditChange = new TextEditChangeImpl(workspaceEdit.changes[key2]);
-              this._textEditChanges[key2] = textEditChange;
-            });
+            } else {
+              this._workspaceEdit = {};
+            }
           }
-        } else {
-          this._workspaceEdit = {};
+          Object.defineProperty(WorkspaceChange2.prototype, "edit", {
+            /**
+             * Returns the underlying {@link WorkspaceEdit} literal
+             * use to be returned from a workspace edit operation like rename.
+             */
+            get: function() {
+              this.initDocumentChanges();
+              if (this._changeAnnotations !== void 0) {
+                if (this._changeAnnotations.size === 0) {
+                  this._workspaceEdit.changeAnnotations = void 0;
+                } else {
+                  this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+                }
+              }
+              return this._workspaceEdit;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          WorkspaceChange2.prototype.getTextEditChange = function(key2) {
+            if (OptionalVersionedTextDocumentIdentifier.is(key2)) {
+              this.initDocumentChanges();
+              if (this._workspaceEdit.documentChanges === void 0) {
+                throw new Error("Workspace edit is not configured for document changes.");
+              }
+              var textDocument = { uri: key2.uri, version: key2.version };
+              var result = this._textEditChanges[textDocument.uri];
+              if (!result) {
+                var edits = [];
+                var textDocumentEdit = {
+                  textDocument,
+                  edits
+                };
+                this._workspaceEdit.documentChanges.push(textDocumentEdit);
+                result = new TextEditChangeImpl(edits, this._changeAnnotations);
+                this._textEditChanges[textDocument.uri] = result;
+              }
+              return result;
+            } else {
+              this.initChanges();
+              if (this._workspaceEdit.changes === void 0) {
+                throw new Error("Workspace edit is not configured for normal text edit changes.");
+              }
+              var result = this._textEditChanges[key2];
+              if (!result) {
+                var edits = [];
+                this._workspaceEdit.changes[key2] = edits;
+                result = new TextEditChangeImpl(edits);
+                this._textEditChanges[key2] = result;
+              }
+              return result;
+            }
+          };
+          WorkspaceChange2.prototype.initDocumentChanges = function() {
+            if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+              this._changeAnnotations = new ChangeAnnotations();
+              this._workspaceEdit.documentChanges = [];
+              this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
+            }
+          };
+          WorkspaceChange2.prototype.initChanges = function() {
+            if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
+              this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
+            }
+          };
+          WorkspaceChange2.prototype.createFile = function(uri, optionsOrAnnotation, options) {
+            this.initDocumentChanges();
+            if (this._workspaceEdit.documentChanges === void 0) {
+              throw new Error("Workspace edit is not configured for document changes.");
+            }
+            var annotation;
+            if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+              annotation = optionsOrAnnotation;
+            } else {
+              options = optionsOrAnnotation;
+            }
+            var operation;
+            var id;
+            if (annotation === void 0) {
+              operation = CreateFile.create(uri, options);
+            } else {
+              id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+              operation = CreateFile.create(uri, options, id);
+            }
+            this._workspaceEdit.documentChanges.push(operation);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          WorkspaceChange2.prototype.renameFile = function(oldUri, newUri, optionsOrAnnotation, options) {
+            this.initDocumentChanges();
+            if (this._workspaceEdit.documentChanges === void 0) {
+              throw new Error("Workspace edit is not configured for document changes.");
+            }
+            var annotation;
+            if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+              annotation = optionsOrAnnotation;
+            } else {
+              options = optionsOrAnnotation;
+            }
+            var operation;
+            var id;
+            if (annotation === void 0) {
+              operation = RenameFile.create(oldUri, newUri, options);
+            } else {
+              id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+              operation = RenameFile.create(oldUri, newUri, options, id);
+            }
+            this._workspaceEdit.documentChanges.push(operation);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          WorkspaceChange2.prototype.deleteFile = function(uri, optionsOrAnnotation, options) {
+            this.initDocumentChanges();
+            if (this._workspaceEdit.documentChanges === void 0) {
+              throw new Error("Workspace edit is not configured for document changes.");
+            }
+            var annotation;
+            if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
+              annotation = optionsOrAnnotation;
+            } else {
+              options = optionsOrAnnotation;
+            }
+            var operation;
+            var id;
+            if (annotation === void 0) {
+              operation = DeleteFile.create(uri, options);
+            } else {
+              id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
+              operation = DeleteFile.create(uri, options, id);
+            }
+            this._workspaceEdit.documentChanges.push(operation);
+            if (id !== void 0) {
+              return id;
+            }
+          };
+          return WorkspaceChange2;
+        })()
+      );
+      exports3.WorkspaceChange = WorkspaceChange;
+      var TextDocumentIdentifier;
+      (function(TextDocumentIdentifier2) {
+        function create(uri) {
+          return { uri };
         }
-      }
-      /**
-       * Returns the underlying {@link WorkspaceEdit} literal
-       * use to be returned from a workspace edit operation like rename.
-       */
-      get edit() {
-        this.initDocumentChanges();
-        if (this._changeAnnotations !== void 0) {
-          if (this._changeAnnotations.size === 0) {
-            this._workspaceEdit.changeAnnotations = void 0;
+        TextDocumentIdentifier2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri);
+        }
+        TextDocumentIdentifier2.is = is;
+      })(TextDocumentIdentifier || (exports3.TextDocumentIdentifier = TextDocumentIdentifier = {}));
+      var VersionedTextDocumentIdentifier;
+      (function(VersionedTextDocumentIdentifier2) {
+        function create(uri, version) {
+          return { uri, version };
+        }
+        VersionedTextDocumentIdentifier2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && Is.integer(candidate.version);
+        }
+        VersionedTextDocumentIdentifier2.is = is;
+      })(VersionedTextDocumentIdentifier || (exports3.VersionedTextDocumentIdentifier = VersionedTextDocumentIdentifier = {}));
+      var OptionalVersionedTextDocumentIdentifier;
+      (function(OptionalVersionedTextDocumentIdentifier2) {
+        function create(uri, version) {
+          return { uri, version };
+        }
+        OptionalVersionedTextDocumentIdentifier2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && (candidate.version === null || Is.integer(candidate.version));
+        }
+        OptionalVersionedTextDocumentIdentifier2.is = is;
+      })(OptionalVersionedTextDocumentIdentifier || (exports3.OptionalVersionedTextDocumentIdentifier = OptionalVersionedTextDocumentIdentifier = {}));
+      var LanguageKind;
+      (function(LanguageKind2) {
+        LanguageKind2.ABAP = "abap";
+        LanguageKind2.WindowsBat = "bat";
+        LanguageKind2.BibTeX = "bibtex";
+        LanguageKind2.Clojure = "clojure";
+        LanguageKind2.Coffeescript = "coffeescript";
+        LanguageKind2.C = "c";
+        LanguageKind2.CPP = "cpp";
+        LanguageKind2.CSharp = "csharp";
+        LanguageKind2.CSS = "css";
+        LanguageKind2.D = "d";
+        LanguageKind2.Delphi = "pascal";
+        LanguageKind2.Diff = "diff";
+        LanguageKind2.Dart = "dart";
+        LanguageKind2.Dockerfile = "dockerfile";
+        LanguageKind2.Elixir = "elixir";
+        LanguageKind2.Erlang = "erlang";
+        LanguageKind2.FSharp = "fsharp";
+        LanguageKind2.GitCommit = "git-commit";
+        LanguageKind2.GitRebase = "git-rebase";
+        LanguageKind2.Go = "go";
+        LanguageKind2.Groovy = "groovy";
+        LanguageKind2.Handlebars = "handlebars";
+        LanguageKind2.Haskell = "haskell";
+        LanguageKind2.HTML = "html";
+        LanguageKind2.Ini = "ini";
+        LanguageKind2.Java = "java";
+        LanguageKind2.JavaScript = "javascript";
+        LanguageKind2.JavaScriptReact = "javascriptreact";
+        LanguageKind2.JSON = "json";
+        LanguageKind2.LaTeX = "latex";
+        LanguageKind2.Less = "less";
+        LanguageKind2.Lua = "lua";
+        LanguageKind2.Makefile = "makefile";
+        LanguageKind2.Markdown = "markdown";
+        LanguageKind2.ObjectiveC = "objective-c";
+        LanguageKind2.ObjectiveCPP = "objective-cpp";
+        LanguageKind2.Pascal = "pascal";
+        LanguageKind2.Perl = "perl";
+        LanguageKind2.Perl6 = "perl6";
+        LanguageKind2.PHP = "php";
+        LanguageKind2.Plaintext = "plaintext";
+        LanguageKind2.Powershell = "powershell";
+        LanguageKind2.Pug = "jade";
+        LanguageKind2.Python = "python";
+        LanguageKind2.R = "r";
+        LanguageKind2.Razor = "razor";
+        LanguageKind2.Ruby = "ruby";
+        LanguageKind2.Rust = "rust";
+        LanguageKind2.SCSS = "scss";
+        LanguageKind2.SASS = "sass";
+        LanguageKind2.Scala = "scala";
+        LanguageKind2.ShaderLab = "shaderlab";
+        LanguageKind2.ShellScript = "shellscript";
+        LanguageKind2.SQL = "sql";
+        LanguageKind2.Swift = "swift";
+        LanguageKind2.TypeScript = "typescript";
+        LanguageKind2.TypeScriptReact = "typescriptreact";
+        LanguageKind2.TeX = "tex";
+        LanguageKind2.VisualBasic = "vb";
+        LanguageKind2.XML = "xml";
+        LanguageKind2.XSL = "xsl";
+        LanguageKind2.YAML = "yaml";
+      })(LanguageKind || (exports3.LanguageKind = LanguageKind = {}));
+      var TextDocumentItem;
+      (function(TextDocumentItem2) {
+        function create(uri, languageId, version, text2) {
+          return { uri, languageId, version, text: text2 };
+        }
+        TextDocumentItem2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && Is.string(candidate.languageId) && Is.integer(candidate.version) && Is.string(candidate.text);
+        }
+        TextDocumentItem2.is = is;
+      })(TextDocumentItem || (exports3.TextDocumentItem = TextDocumentItem = {}));
+      var MarkupKind;
+      (function(MarkupKind2) {
+        MarkupKind2.PlainText = "plaintext";
+        MarkupKind2.Markdown = "markdown";
+        function is(value) {
+          var candidate = value;
+          return candidate === MarkupKind2.PlainText || candidate === MarkupKind2.Markdown;
+        }
+        MarkupKind2.is = is;
+      })(MarkupKind || (exports3.MarkupKind = MarkupKind = {}));
+      var MarkupContent;
+      (function(MarkupContent2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(value) && MarkupKind.is(candidate.kind) && Is.string(candidate.value);
+        }
+        MarkupContent2.is = is;
+      })(MarkupContent || (exports3.MarkupContent = MarkupContent = {}));
+      var CompletionItemKind;
+      (function(CompletionItemKind2) {
+        CompletionItemKind2.Text = 1;
+        CompletionItemKind2.Method = 2;
+        CompletionItemKind2.Function = 3;
+        CompletionItemKind2.Constructor = 4;
+        CompletionItemKind2.Field = 5;
+        CompletionItemKind2.Variable = 6;
+        CompletionItemKind2.Class = 7;
+        CompletionItemKind2.Interface = 8;
+        CompletionItemKind2.Module = 9;
+        CompletionItemKind2.Property = 10;
+        CompletionItemKind2.Unit = 11;
+        CompletionItemKind2.Value = 12;
+        CompletionItemKind2.Enum = 13;
+        CompletionItemKind2.Keyword = 14;
+        CompletionItemKind2.Snippet = 15;
+        CompletionItemKind2.Color = 16;
+        CompletionItemKind2.File = 17;
+        CompletionItemKind2.Reference = 18;
+        CompletionItemKind2.Folder = 19;
+        CompletionItemKind2.EnumMember = 20;
+        CompletionItemKind2.Constant = 21;
+        CompletionItemKind2.Struct = 22;
+        CompletionItemKind2.Event = 23;
+        CompletionItemKind2.Operator = 24;
+        CompletionItemKind2.TypeParameter = 25;
+      })(CompletionItemKind || (exports3.CompletionItemKind = CompletionItemKind = {}));
+      var InsertTextFormat;
+      (function(InsertTextFormat2) {
+        InsertTextFormat2.PlainText = 1;
+        InsertTextFormat2.Snippet = 2;
+      })(InsertTextFormat || (exports3.InsertTextFormat = InsertTextFormat = {}));
+      var CompletionItemTag;
+      (function(CompletionItemTag2) {
+        CompletionItemTag2.Deprecated = 1;
+      })(CompletionItemTag || (exports3.CompletionItemTag = CompletionItemTag = {}));
+      var InsertReplaceEdit;
+      (function(InsertReplaceEdit2) {
+        function create(newText, insert, replace) {
+          return { newText, insert, replace };
+        }
+        InsertReplaceEdit2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && Is.string(candidate.newText) && Range3.is(candidate.insert) && Range3.is(candidate.replace);
+        }
+        InsertReplaceEdit2.is = is;
+      })(InsertReplaceEdit || (exports3.InsertReplaceEdit = InsertReplaceEdit = {}));
+      var InsertTextMode;
+      (function(InsertTextMode2) {
+        InsertTextMode2.asIs = 1;
+        InsertTextMode2.adjustIndentation = 2;
+      })(InsertTextMode || (exports3.InsertTextMode = InsertTextMode = {}));
+      var ApplyKind;
+      (function(ApplyKind2) {
+        ApplyKind2.Replace = 1;
+        ApplyKind2.Merge = 2;
+      })(ApplyKind || (exports3.ApplyKind = ApplyKind = {}));
+      var CompletionItemLabelDetails;
+      (function(CompletionItemLabelDetails2) {
+        function is(value) {
+          var candidate = value;
+          return candidate && (Is.string(candidate.detail) || candidate.detail === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
+        }
+        CompletionItemLabelDetails2.is = is;
+      })(CompletionItemLabelDetails || (exports3.CompletionItemLabelDetails = CompletionItemLabelDetails = {}));
+      var CompletionItem;
+      (function(CompletionItem2) {
+        function create(label) {
+          return { label };
+        }
+        CompletionItem2.create = create;
+      })(CompletionItem || (exports3.CompletionItem = CompletionItem = {}));
+      var CompletionList;
+      (function(CompletionList2) {
+        function create(items, isIncomplete) {
+          return { items: items ? items : [], isIncomplete: !!isIncomplete };
+        }
+        CompletionList2.create = create;
+      })(CompletionList || (exports3.CompletionList = CompletionList = {}));
+      var MarkedString;
+      (function(MarkedString2) {
+        function fromPlainText(plainText) {
+          return plainText.replace(/[\\`*_{}[\]()#+\-.!]/g, "\\$&");
+        }
+        MarkedString2.fromPlainText = fromPlainText;
+        function is(value) {
+          var candidate = value;
+          return Is.string(candidate) || Is.objectLiteral(candidate) && Is.string(candidate.language) && Is.string(candidate.value);
+        }
+        MarkedString2.is = is;
+      })(MarkedString || (exports3.MarkedString = MarkedString = {}));
+      var Hover;
+      (function(Hover2) {
+        function is(value) {
+          var candidate = value;
+          return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range3.is(value.range));
+        }
+        Hover2.is = is;
+      })(Hover || (exports3.Hover = Hover = {}));
+      var ParameterInformation;
+      (function(ParameterInformation2) {
+        function create(label, documentation) {
+          return documentation ? { label, documentation } : { label };
+        }
+        ParameterInformation2.create = create;
+      })(ParameterInformation || (exports3.ParameterInformation = ParameterInformation = {}));
+      var SignatureInformation;
+      (function(SignatureInformation2) {
+        function create(label, documentation) {
+          var parameters = [];
+          for (var _i = 2; _i < arguments.length; _i++) {
+            parameters[_i - 2] = arguments[_i];
+          }
+          var result = { label };
+          if (Is.defined(documentation)) {
+            result.documentation = documentation;
+          }
+          if (Is.defined(parameters)) {
+            result.parameters = parameters;
           } else {
-            this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-          }
-        }
-        return this._workspaceEdit;
-      }
-      getTextEditChange(key2) {
-        if (OptionalVersionedTextDocumentIdentifier.is(key2)) {
-          this.initDocumentChanges();
-          if (this._workspaceEdit.documentChanges === void 0) {
-            throw new Error("Workspace edit is not configured for document changes.");
-          }
-          const textDocument = { uri: key2.uri, version: key2.version };
-          let result = this._textEditChanges[textDocument.uri];
-          if (!result) {
-            const edits = [];
-            const textDocumentEdit = {
-              textDocument,
-              edits
-            };
-            this._workspaceEdit.documentChanges.push(textDocumentEdit);
-            result = new TextEditChangeImpl(edits, this._changeAnnotations);
-            this._textEditChanges[textDocument.uri] = result;
+            result.parameters = [];
           }
           return result;
-        } else {
-          this.initChanges();
-          if (this._workspaceEdit.changes === void 0) {
-            throw new Error("Workspace edit is not configured for normal text edit changes.");
-          }
-          let result = this._textEditChanges[key2];
-          if (!result) {
-            const edits = [];
-            this._workspaceEdit.changes[key2] = edits;
-            result = new TextEditChangeImpl(edits);
-            this._textEditChanges[key2] = result;
+        }
+        SignatureInformation2.create = create;
+      })(SignatureInformation || (exports3.SignatureInformation = SignatureInformation = {}));
+      var DocumentHighlightKind;
+      (function(DocumentHighlightKind2) {
+        DocumentHighlightKind2.Text = 1;
+        DocumentHighlightKind2.Read = 2;
+        DocumentHighlightKind2.Write = 3;
+      })(DocumentHighlightKind || (exports3.DocumentHighlightKind = DocumentHighlightKind = {}));
+      var DocumentHighlight;
+      (function(DocumentHighlight2) {
+        function create(range, kind) {
+          var result = { range };
+          if (Is.number(kind)) {
+            result.kind = kind;
           }
           return result;
         }
-      }
-      initDocumentChanges() {
-        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-          this._changeAnnotations = new ChangeAnnotations();
-          this._workspaceEdit.documentChanges = [];
-          this._workspaceEdit.changeAnnotations = this._changeAnnotations.all();
-        }
-      }
-      initChanges() {
-        if (this._workspaceEdit.documentChanges === void 0 && this._workspaceEdit.changes === void 0) {
-          this._workspaceEdit.changes = /* @__PURE__ */ Object.create(null);
-        }
-      }
-      createFile(uri, optionsOrAnnotation, options) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        let annotation;
-        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-          annotation = optionsOrAnnotation;
-        } else {
-          options = optionsOrAnnotation;
-        }
-        let operation;
-        let id;
-        if (annotation === void 0) {
-          operation = CreateFile.create(uri, options);
-        } else {
-          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-          operation = CreateFile.create(uri, options, id);
-        }
-        this._workspaceEdit.documentChanges.push(operation);
-        if (id !== void 0) {
-          return id;
-        }
-      }
-      renameFile(oldUri, newUri, optionsOrAnnotation, options) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        let annotation;
-        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-          annotation = optionsOrAnnotation;
-        } else {
-          options = optionsOrAnnotation;
-        }
-        let operation;
-        let id;
-        if (annotation === void 0) {
-          operation = RenameFile.create(oldUri, newUri, options);
-        } else {
-          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-          operation = RenameFile.create(oldUri, newUri, options, id);
-        }
-        this._workspaceEdit.documentChanges.push(operation);
-        if (id !== void 0) {
-          return id;
-        }
-      }
-      deleteFile(uri, optionsOrAnnotation, options) {
-        this.initDocumentChanges();
-        if (this._workspaceEdit.documentChanges === void 0) {
-          throw new Error("Workspace edit is not configured for document changes.");
-        }
-        let annotation;
-        if (ChangeAnnotation.is(optionsOrAnnotation) || ChangeAnnotationIdentifier.is(optionsOrAnnotation)) {
-          annotation = optionsOrAnnotation;
-        } else {
-          options = optionsOrAnnotation;
-        }
-        let operation;
-        let id;
-        if (annotation === void 0) {
-          operation = DeleteFile.create(uri, options);
-        } else {
-          id = ChangeAnnotationIdentifier.is(annotation) ? annotation : this._changeAnnotations.manage(annotation);
-          operation = DeleteFile.create(uri, options, id);
-        }
-        this._workspaceEdit.documentChanges.push(operation);
-        if (id !== void 0) {
-          return id;
-        }
-      }
-    };
-    (function(TextDocumentIdentifier2) {
-      function create(uri) {
-        return { uri };
-      }
-      TextDocumentIdentifier2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri);
-      }
-      TextDocumentIdentifier2.is = is;
-    })(TextDocumentIdentifier || (TextDocumentIdentifier = {}));
-    (function(VersionedTextDocumentIdentifier2) {
-      function create(uri, version) {
-        return { uri, version };
-      }
-      VersionedTextDocumentIdentifier2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && Is.integer(candidate.version);
-      }
-      VersionedTextDocumentIdentifier2.is = is;
-    })(VersionedTextDocumentIdentifier || (VersionedTextDocumentIdentifier = {}));
-    (function(OptionalVersionedTextDocumentIdentifier2) {
-      function create(uri, version) {
-        return { uri, version };
-      }
-      OptionalVersionedTextDocumentIdentifier2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && (candidate.version === null || Is.integer(candidate.version));
-      }
-      OptionalVersionedTextDocumentIdentifier2.is = is;
-    })(OptionalVersionedTextDocumentIdentifier || (OptionalVersionedTextDocumentIdentifier = {}));
-    (function(LanguageKind2) {
-      LanguageKind2.ABAP = "abap";
-      LanguageKind2.WindowsBat = "bat";
-      LanguageKind2.BibTeX = "bibtex";
-      LanguageKind2.Clojure = "clojure";
-      LanguageKind2.Coffeescript = "coffeescript";
-      LanguageKind2.C = "c";
-      LanguageKind2.CPP = "cpp";
-      LanguageKind2.CSharp = "csharp";
-      LanguageKind2.CSS = "css";
-      LanguageKind2.D = "d";
-      LanguageKind2.Delphi = "pascal";
-      LanguageKind2.Diff = "diff";
-      LanguageKind2.Dart = "dart";
-      LanguageKind2.Dockerfile = "dockerfile";
-      LanguageKind2.Elixir = "elixir";
-      LanguageKind2.Erlang = "erlang";
-      LanguageKind2.FSharp = "fsharp";
-      LanguageKind2.GitCommit = "git-commit";
-      LanguageKind2.GitRebase = "git-rebase";
-      LanguageKind2.Go = "go";
-      LanguageKind2.Groovy = "groovy";
-      LanguageKind2.Handlebars = "handlebars";
-      LanguageKind2.Haskell = "haskell";
-      LanguageKind2.HTML = "html";
-      LanguageKind2.Ini = "ini";
-      LanguageKind2.Java = "java";
-      LanguageKind2.JavaScript = "javascript";
-      LanguageKind2.JavaScriptReact = "javascriptreact";
-      LanguageKind2.JSON = "json";
-      LanguageKind2.LaTeX = "latex";
-      LanguageKind2.Less = "less";
-      LanguageKind2.Lua = "lua";
-      LanguageKind2.Makefile = "makefile";
-      LanguageKind2.Markdown = "markdown";
-      LanguageKind2.ObjectiveC = "objective-c";
-      LanguageKind2.ObjectiveCPP = "objective-cpp";
-      LanguageKind2.Pascal = "pascal";
-      LanguageKind2.Perl = "perl";
-      LanguageKind2.Perl6 = "perl6";
-      LanguageKind2.PHP = "php";
-      LanguageKind2.Plaintext = "plaintext";
-      LanguageKind2.Powershell = "powershell";
-      LanguageKind2.Pug = "jade";
-      LanguageKind2.Python = "python";
-      LanguageKind2.R = "r";
-      LanguageKind2.Razor = "razor";
-      LanguageKind2.Ruby = "ruby";
-      LanguageKind2.Rust = "rust";
-      LanguageKind2.SCSS = "scss";
-      LanguageKind2.SASS = "sass";
-      LanguageKind2.Scala = "scala";
-      LanguageKind2.ShaderLab = "shaderlab";
-      LanguageKind2.ShellScript = "shellscript";
-      LanguageKind2.SQL = "sql";
-      LanguageKind2.Swift = "swift";
-      LanguageKind2.TypeScript = "typescript";
-      LanguageKind2.TypeScriptReact = "typescriptreact";
-      LanguageKind2.TeX = "tex";
-      LanguageKind2.VisualBasic = "vb";
-      LanguageKind2.XML = "xml";
-      LanguageKind2.XSL = "xsl";
-      LanguageKind2.YAML = "yaml";
-    })(LanguageKind || (LanguageKind = {}));
-    (function(TextDocumentItem2) {
-      function create(uri, languageId, version, text2) {
-        return { uri, languageId, version, text: text2 };
-      }
-      TextDocumentItem2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && Is.string(candidate.languageId) && Is.integer(candidate.version) && Is.string(candidate.text);
-      }
-      TextDocumentItem2.is = is;
-    })(TextDocumentItem || (TextDocumentItem = {}));
-    (function(MarkupKind2) {
-      MarkupKind2.PlainText = "plaintext";
-      MarkupKind2.Markdown = "markdown";
-      function is(value) {
-        const candidate = value;
-        return candidate === MarkupKind2.PlainText || candidate === MarkupKind2.Markdown;
-      }
-      MarkupKind2.is = is;
-    })(MarkupKind || (MarkupKind = {}));
-    (function(MarkupContent2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(value) && MarkupKind.is(candidate.kind) && Is.string(candidate.value);
-      }
-      MarkupContent2.is = is;
-    })(MarkupContent || (MarkupContent = {}));
-    (function(CompletionItemKind2) {
-      CompletionItemKind2.Text = 1;
-      CompletionItemKind2.Method = 2;
-      CompletionItemKind2.Function = 3;
-      CompletionItemKind2.Constructor = 4;
-      CompletionItemKind2.Field = 5;
-      CompletionItemKind2.Variable = 6;
-      CompletionItemKind2.Class = 7;
-      CompletionItemKind2.Interface = 8;
-      CompletionItemKind2.Module = 9;
-      CompletionItemKind2.Property = 10;
-      CompletionItemKind2.Unit = 11;
-      CompletionItemKind2.Value = 12;
-      CompletionItemKind2.Enum = 13;
-      CompletionItemKind2.Keyword = 14;
-      CompletionItemKind2.Snippet = 15;
-      CompletionItemKind2.Color = 16;
-      CompletionItemKind2.File = 17;
-      CompletionItemKind2.Reference = 18;
-      CompletionItemKind2.Folder = 19;
-      CompletionItemKind2.EnumMember = 20;
-      CompletionItemKind2.Constant = 21;
-      CompletionItemKind2.Struct = 22;
-      CompletionItemKind2.Event = 23;
-      CompletionItemKind2.Operator = 24;
-      CompletionItemKind2.TypeParameter = 25;
-    })(CompletionItemKind || (CompletionItemKind = {}));
-    (function(InsertTextFormat2) {
-      InsertTextFormat2.PlainText = 1;
-      InsertTextFormat2.Snippet = 2;
-    })(InsertTextFormat || (InsertTextFormat = {}));
-    (function(CompletionItemTag2) {
-      CompletionItemTag2.Deprecated = 1;
-    })(CompletionItemTag || (CompletionItemTag = {}));
-    (function(InsertReplaceEdit2) {
-      function create(newText, insert, replace) {
-        return { newText, insert, replace };
-      }
-      InsertReplaceEdit2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && Is.string(candidate.newText) && Range.is(candidate.insert) && Range.is(candidate.replace);
-      }
-      InsertReplaceEdit2.is = is;
-    })(InsertReplaceEdit || (InsertReplaceEdit = {}));
-    (function(InsertTextMode2) {
-      InsertTextMode2.asIs = 1;
-      InsertTextMode2.adjustIndentation = 2;
-    })(InsertTextMode || (InsertTextMode = {}));
-    (function(ApplyKind2) {
-      ApplyKind2.Replace = 1;
-      ApplyKind2.Merge = 2;
-    })(ApplyKind || (ApplyKind = {}));
-    (function(CompletionItemLabelDetails2) {
-      function is(value) {
-        const candidate = value;
-        return candidate && (Is.string(candidate.detail) || candidate.detail === void 0) && (Is.string(candidate.description) || candidate.description === void 0);
-      }
-      CompletionItemLabelDetails2.is = is;
-    })(CompletionItemLabelDetails || (CompletionItemLabelDetails = {}));
-    (function(CompletionItem2) {
-      function create(label) {
-        return { label };
-      }
-      CompletionItem2.create = create;
-    })(CompletionItem || (CompletionItem = {}));
-    (function(CompletionList2) {
-      function create(items, isIncomplete) {
-        return { items: items ? items : [], isIncomplete: !!isIncomplete };
-      }
-      CompletionList2.create = create;
-    })(CompletionList || (CompletionList = {}));
-    (function(MarkedString2) {
-      function fromPlainText(plainText) {
-        return plainText.replace(/[\\`*_{}[\]()#+\-.!]/g, "\\$&");
-      }
-      MarkedString2.fromPlainText = fromPlainText;
-      function is(value) {
-        const candidate = value;
-        return Is.string(candidate) || Is.objectLiteral(candidate) && Is.string(candidate.language) && Is.string(candidate.value);
-      }
-      MarkedString2.is = is;
-    })(MarkedString || (MarkedString = {}));
-    (function(Hover2) {
-      function is(value) {
-        const candidate = value;
-        return !!candidate && Is.objectLiteral(candidate) && (MarkupContent.is(candidate.contents) || MarkedString.is(candidate.contents) || Is.typedArray(candidate.contents, MarkedString.is)) && (value.range === void 0 || Range.is(value.range));
-      }
-      Hover2.is = is;
-    })(Hover || (Hover = {}));
-    (function(ParameterInformation2) {
-      function create(label, documentation) {
-        return documentation ? { label, documentation } : { label };
-      }
-      ParameterInformation2.create = create;
-    })(ParameterInformation || (ParameterInformation = {}));
-    (function(SignatureInformation2) {
-      function create(label, documentation, ...parameters) {
-        const result = { label };
-        if (Is.defined(documentation)) {
-          result.documentation = documentation;
-        }
-        if (Is.defined(parameters)) {
-          result.parameters = parameters;
-        } else {
-          result.parameters = [];
-        }
-        return result;
-      }
-      SignatureInformation2.create = create;
-    })(SignatureInformation || (SignatureInformation = {}));
-    (function(DocumentHighlightKind2) {
-      DocumentHighlightKind2.Text = 1;
-      DocumentHighlightKind2.Read = 2;
-      DocumentHighlightKind2.Write = 3;
-    })(DocumentHighlightKind || (DocumentHighlightKind = {}));
-    (function(DocumentHighlight2) {
-      function create(range, kind) {
-        const result = { range };
-        if (Is.number(kind)) {
-          result.kind = kind;
-        }
-        return result;
-      }
-      DocumentHighlight2.create = create;
-    })(DocumentHighlight || (DocumentHighlight = {}));
-    (function(SymbolKind3) {
-      SymbolKind3.File = 1;
-      SymbolKind3.Module = 2;
-      SymbolKind3.Namespace = 3;
-      SymbolKind3.Package = 4;
-      SymbolKind3.Class = 5;
-      SymbolKind3.Method = 6;
-      SymbolKind3.Property = 7;
-      SymbolKind3.Field = 8;
-      SymbolKind3.Constructor = 9;
-      SymbolKind3.Enum = 10;
-      SymbolKind3.Interface = 11;
-      SymbolKind3.Function = 12;
-      SymbolKind3.Variable = 13;
-      SymbolKind3.Constant = 14;
-      SymbolKind3.String = 15;
-      SymbolKind3.Number = 16;
-      SymbolKind3.Boolean = 17;
-      SymbolKind3.Array = 18;
-      SymbolKind3.Object = 19;
-      SymbolKind3.Key = 20;
-      SymbolKind3.Null = 21;
-      SymbolKind3.EnumMember = 22;
-      SymbolKind3.Struct = 23;
-      SymbolKind3.Event = 24;
-      SymbolKind3.Operator = 25;
-      SymbolKind3.TypeParameter = 26;
-    })(SymbolKind || (SymbolKind = {}));
-    (function(SymbolTag2) {
-      SymbolTag2.Deprecated = 1;
-    })(SymbolTag || (SymbolTag = {}));
-    (function(SymbolInformation2) {
-      function create(name, kind, range, uri, containerName) {
-        const result = {
-          name,
-          kind,
-          location: { uri, range }
-        };
-        if (containerName) {
-          result.containerName = containerName;
-        }
-        return result;
-      }
-      SymbolInformation2.create = create;
-    })(SymbolInformation || (SymbolInformation = {}));
-    (function(WorkspaceSymbol2) {
-      function create(name, kind, uri, range) {
-        return range !== void 0 ? { name, kind, location: { uri, range } } : { name, kind, location: { uri } };
-      }
-      WorkspaceSymbol2.create = create;
-    })(WorkspaceSymbol || (WorkspaceSymbol = {}));
-    (function(DocumentSymbol2) {
-      function create(name, detail, kind, range, selectionRange, children) {
-        const result = {
-          name,
-          detail,
-          kind,
-          range,
-          selectionRange
-        };
-        if (children !== void 0) {
-          result.children = children;
-        }
-        return result;
-      }
-      DocumentSymbol2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range.is(candidate.range) && Range.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
-      }
-      DocumentSymbol2.is = is;
-    })(DocumentSymbol || (DocumentSymbol = {}));
-    (function(CodeActionKind2) {
-      CodeActionKind2.Empty = "";
-      CodeActionKind2.QuickFix = "quickfix";
-      CodeActionKind2.Refactor = "refactor";
-      CodeActionKind2.RefactorExtract = "refactor.extract";
-      CodeActionKind2.RefactorInline = "refactor.inline";
-      CodeActionKind2.RefactorMove = "refactor.move";
-      CodeActionKind2.RefactorRewrite = "refactor.rewrite";
-      CodeActionKind2.Source = "source";
-      CodeActionKind2.SourceOrganizeImports = "source.organizeImports";
-      CodeActionKind2.SourceFixAll = "source.fixAll";
-      CodeActionKind2.Notebook = "notebook";
-    })(CodeActionKind || (CodeActionKind = {}));
-    (function(CodeActionTriggerKind2) {
-      CodeActionTriggerKind2.Invoked = 1;
-      CodeActionTriggerKind2.Automatic = 2;
-    })(CodeActionTriggerKind || (CodeActionTriggerKind = {}));
-    (function(CodeActionContext2) {
-      function create(diagnostics, only, triggerKind) {
-        const result = { diagnostics };
-        if (only !== void 0 && only !== null) {
-          result.only = only;
-        }
-        if (triggerKind !== void 0 && triggerKind !== null) {
-          result.triggerKind = triggerKind;
-        }
-        return result;
-      }
-      CodeActionContext2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.typedArray(candidate.diagnostics, Diagnostic.is) && (candidate.only === void 0 || Is.typedArray(candidate.only, Is.string)) && (candidate.triggerKind === void 0 || candidate.triggerKind === CodeActionTriggerKind.Invoked || candidate.triggerKind === CodeActionTriggerKind.Automatic);
-      }
-      CodeActionContext2.is = is;
-    })(CodeActionContext || (CodeActionContext = {}));
-    (function(CodeActionTag2) {
-      CodeActionTag2.LLMGenerated = 1;
-      function is(value) {
-        return Is.defined(value) && value === CodeActionTag2.LLMGenerated;
-      }
-      CodeActionTag2.is = is;
-    })(CodeActionTag || (CodeActionTag = {}));
-    (function(CodeAction2) {
-      function create(title, kindOrCommandOrEdit, kind) {
-        const result = { title };
-        let checkKind = true;
-        if (typeof kindOrCommandOrEdit === "string") {
-          checkKind = false;
-          result.kind = kindOrCommandOrEdit;
-        } else if (Command.is(kindOrCommandOrEdit)) {
-          result.command = kindOrCommandOrEdit;
-        } else {
-          result.edit = kindOrCommandOrEdit;
-        }
-        if (checkKind && kind !== void 0) {
-          result.kind = kind;
-        }
-        return result;
-      }
-      CodeAction2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate && Is.string(candidate.title) && (candidate.diagnostics === void 0 || Is.typedArray(candidate.diagnostics, Diagnostic.is)) && (candidate.kind === void 0 || Is.string(candidate.kind)) && (candidate.edit !== void 0 || candidate.command !== void 0) && (candidate.command === void 0 || Command.is(candidate.command)) && (candidate.isPreferred === void 0 || Is.boolean(candidate.isPreferred)) && (candidate.edit === void 0 || WorkspaceEdit.is(candidate.edit)) && (candidate.tags === void 0 || Is.typedArray(candidate.tags, CodeActionTag.is));
-      }
-      CodeAction2.is = is;
-    })(CodeAction || (CodeAction = {}));
-    (function(CodeLens2) {
-      function create(range, data) {
-        const result = { range };
-        if (Is.defined(data)) {
-          result.data = data;
-        }
-        return result;
-      }
-      CodeLens2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
-      }
-      CodeLens2.is = is;
-    })(CodeLens || (CodeLens = {}));
-    (function(FormattingOptions2) {
-      function create(tabSize, insertSpaces) {
-        return { tabSize, insertSpaces };
-      }
-      FormattingOptions2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.uinteger(candidate.tabSize) && Is.boolean(candidate.insertSpaces);
-      }
-      FormattingOptions2.is = is;
-    })(FormattingOptions || (FormattingOptions = {}));
-    (function(DocumentLink2) {
-      function create(range, target, data) {
-        return { range, target, data };
-      }
-      DocumentLink2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
-      }
-      DocumentLink2.is = is;
-    })(DocumentLink || (DocumentLink = {}));
-    (function(SelectionRange2) {
-      function create(range, parent) {
-        return { range, parent };
-      }
-      SelectionRange2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Range.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
-      }
-      SelectionRange2.is = is;
-    })(SelectionRange || (SelectionRange = {}));
-    (function(SemanticTokenTypes2) {
-      SemanticTokenTypes2["namespace"] = "namespace";
-      SemanticTokenTypes2["type"] = "type";
-      SemanticTokenTypes2["class"] = "class";
-      SemanticTokenTypes2["enum"] = "enum";
-      SemanticTokenTypes2["interface"] = "interface";
-      SemanticTokenTypes2["struct"] = "struct";
-      SemanticTokenTypes2["typeParameter"] = "typeParameter";
-      SemanticTokenTypes2["parameter"] = "parameter";
-      SemanticTokenTypes2["variable"] = "variable";
-      SemanticTokenTypes2["property"] = "property";
-      SemanticTokenTypes2["enumMember"] = "enumMember";
-      SemanticTokenTypes2["event"] = "event";
-      SemanticTokenTypes2["function"] = "function";
-      SemanticTokenTypes2["method"] = "method";
-      SemanticTokenTypes2["macro"] = "macro";
-      SemanticTokenTypes2["keyword"] = "keyword";
-      SemanticTokenTypes2["modifier"] = "modifier";
-      SemanticTokenTypes2["comment"] = "comment";
-      SemanticTokenTypes2["string"] = "string";
-      SemanticTokenTypes2["number"] = "number";
-      SemanticTokenTypes2["regexp"] = "regexp";
-      SemanticTokenTypes2["operator"] = "operator";
-      SemanticTokenTypes2["decorator"] = "decorator";
-      SemanticTokenTypes2["label"] = "label";
-    })(SemanticTokenTypes || (SemanticTokenTypes = {}));
-    (function(SemanticTokenModifiers2) {
-      SemanticTokenModifiers2["declaration"] = "declaration";
-      SemanticTokenModifiers2["definition"] = "definition";
-      SemanticTokenModifiers2["readonly"] = "readonly";
-      SemanticTokenModifiers2["static"] = "static";
-      SemanticTokenModifiers2["deprecated"] = "deprecated";
-      SemanticTokenModifiers2["abstract"] = "abstract";
-      SemanticTokenModifiers2["async"] = "async";
-      SemanticTokenModifiers2["modification"] = "modification";
-      SemanticTokenModifiers2["documentation"] = "documentation";
-      SemanticTokenModifiers2["defaultLibrary"] = "defaultLibrary";
-    })(SemanticTokenModifiers || (SemanticTokenModifiers = {}));
-    (function(SemanticTokens2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && (candidate.resultId === void 0 || typeof candidate.resultId === "string") && Array.isArray(candidate.data) && (candidate.data.length === 0 || typeof candidate.data[0] === "number");
-      }
-      SemanticTokens2.is = is;
-    })(SemanticTokens || (SemanticTokens = {}));
-    (function(InlineValueText2) {
-      function create(range, text2) {
-        return { range, text: text2 };
-      }
-      InlineValueText2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.string(candidate.text);
-      }
-      InlineValueText2.is = is;
-    })(InlineValueText || (InlineValueText = {}));
-    (function(InlineValueVariableLookup2) {
-      function create(range, variableName, caseSensitiveLookup) {
-        return { range, variableName, caseSensitiveLookup };
-      }
-      InlineValueVariableLookup2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
-      }
-      InlineValueVariableLookup2.is = is;
-    })(InlineValueVariableLookup || (InlineValueVariableLookup = {}));
-    (function(InlineValueEvaluatableExpression2) {
-      function create(range, expression) {
-        return { range, expression };
-      }
-      InlineValueEvaluatableExpression2.create = create;
-      function is(value) {
-        const candidate = value;
-        return candidate !== void 0 && candidate !== null && Range.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
-      }
-      InlineValueEvaluatableExpression2.is = is;
-    })(InlineValueEvaluatableExpression || (InlineValueEvaluatableExpression = {}));
-    (function(InlineValueContext2) {
-      function create(frameId, stoppedLocation) {
-        return { frameId, stoppedLocation };
-      }
-      InlineValueContext2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Range.is(value.stoppedLocation);
-      }
-      InlineValueContext2.is = is;
-    })(InlineValueContext || (InlineValueContext = {}));
-    (function(InlayHintKind2) {
-      InlayHintKind2.Type = 1;
-      InlayHintKind2.Parameter = 2;
-      function is(value) {
-        return value === 1 || value === 2;
-      }
-      InlayHintKind2.is = is;
-    })(InlayHintKind || (InlayHintKind = {}));
-    (function(InlayHintLabelPart2) {
-      function create(value) {
-        return { value };
-      }
-      InlayHintLabelPart2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.location === void 0 || Location.is(candidate.location)) && (candidate.command === void 0 || Command.is(candidate.command));
-      }
-      InlayHintLabelPart2.is = is;
-    })(InlayHintLabelPart || (InlayHintLabelPart = {}));
-    (function(InlayHint2) {
-      function create(position, label, kind) {
-        const result = { position, label };
-        if (kind !== void 0) {
-          result.kind = kind;
-        }
-        return result;
-      }
-      InlayHint2.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && Position.is(candidate.position) && (Is.string(candidate.label) || Is.typedArray(candidate.label, InlayHintLabelPart.is)) && (candidate.kind === void 0 || InlayHintKind.is(candidate.kind)) && candidate.textEdits === void 0 || Is.typedArray(candidate.textEdits, TextEdit.is) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.paddingLeft === void 0 || Is.boolean(candidate.paddingLeft)) && (candidate.paddingRight === void 0 || Is.boolean(candidate.paddingRight));
-      }
-      InlayHint2.is = is;
-    })(InlayHint || (InlayHint = {}));
-    (function(StringValue2) {
-      function createSnippet(value) {
-        return { kind: "snippet", value };
-      }
-      StringValue2.createSnippet = createSnippet;
-      function isSnippet(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && candidate.kind === "snippet" && Is.string(candidate.value);
-      }
-      StringValue2.isSnippet = isSnippet;
-    })(StringValue || (StringValue = {}));
-    (function(InlineCompletionItem2) {
-      function create(insertText, filterText, range, command) {
-        return { insertText, filterText, range, command };
-      }
-      InlineCompletionItem2.create = create;
-    })(InlineCompletionItem || (InlineCompletionItem = {}));
-    (function(InlineCompletionList2) {
-      function create(items) {
-        return { items };
-      }
-      InlineCompletionList2.create = create;
-    })(InlineCompletionList || (InlineCompletionList = {}));
-    (function(InlineCompletionTriggerKind2) {
-      InlineCompletionTriggerKind2.Invoked = 1;
-      InlineCompletionTriggerKind2.Automatic = 2;
-    })(InlineCompletionTriggerKind || (InlineCompletionTriggerKind = {}));
-    (function(SelectedCompletionInfo2) {
-      function create(range, text2) {
-        return { range, text: text2 };
-      }
-      SelectedCompletionInfo2.create = create;
-    })(SelectedCompletionInfo || (SelectedCompletionInfo = {}));
-    (function(InlineCompletionContext2) {
-      function create(triggerKind, selectedCompletionInfo) {
-        return { triggerKind, selectedCompletionInfo };
-      }
-      InlineCompletionContext2.create = create;
-    })(InlineCompletionContext || (InlineCompletionContext = {}));
-    (function(WorkspaceFolder2) {
-      function is(value) {
-        const candidate = value;
-        return Is.objectLiteral(candidate) && URI.is(candidate.uri) && Is.string(candidate.name);
-      }
-      WorkspaceFolder2.is = is;
-    })(WorkspaceFolder || (WorkspaceFolder = {}));
-    EOL = ["\n", "\r\n", "\r"];
-    (function(TextDocument3) {
-      function create(uri, languageId, version, content) {
-        return new FullTextDocument(uri, languageId, version, content);
-      }
-      TextDocument3.create = create;
-      function is(value) {
-        const candidate = value;
-        return Is.defined(candidate) && Is.string(candidate.uri) && (Is.undefined(candidate.languageId) || Is.string(candidate.languageId)) && Is.uinteger(candidate.lineCount) && Is.func(candidate.getText) && Is.func(candidate.positionAt) && Is.func(candidate.offsetAt) ? true : false;
-      }
-      TextDocument3.is = is;
-      function applyEdits(document, edits) {
-        let text2 = document.getText();
-        const sortedEdits = mergeSort2(edits, (a, b) => {
-          const diff = a.range.start.line - b.range.start.line;
-          if (diff === 0) {
-            return a.range.start.character - b.range.start.character;
+        DocumentHighlight2.create = create;
+      })(DocumentHighlight || (exports3.DocumentHighlight = DocumentHighlight = {}));
+      var SymbolKind2;
+      (function(SymbolKind3) {
+        SymbolKind3.File = 1;
+        SymbolKind3.Module = 2;
+        SymbolKind3.Namespace = 3;
+        SymbolKind3.Package = 4;
+        SymbolKind3.Class = 5;
+        SymbolKind3.Method = 6;
+        SymbolKind3.Property = 7;
+        SymbolKind3.Field = 8;
+        SymbolKind3.Constructor = 9;
+        SymbolKind3.Enum = 10;
+        SymbolKind3.Interface = 11;
+        SymbolKind3.Function = 12;
+        SymbolKind3.Variable = 13;
+        SymbolKind3.Constant = 14;
+        SymbolKind3.String = 15;
+        SymbolKind3.Number = 16;
+        SymbolKind3.Boolean = 17;
+        SymbolKind3.Array = 18;
+        SymbolKind3.Object = 19;
+        SymbolKind3.Key = 20;
+        SymbolKind3.Null = 21;
+        SymbolKind3.EnumMember = 22;
+        SymbolKind3.Struct = 23;
+        SymbolKind3.Event = 24;
+        SymbolKind3.Operator = 25;
+        SymbolKind3.TypeParameter = 26;
+      })(SymbolKind2 || (exports3.SymbolKind = SymbolKind2 = {}));
+      var SymbolTag;
+      (function(SymbolTag2) {
+        SymbolTag2.Deprecated = 1;
+      })(SymbolTag || (exports3.SymbolTag = SymbolTag = {}));
+      var SymbolInformation;
+      (function(SymbolInformation2) {
+        function create(name, kind, range, uri, containerName) {
+          var result = {
+            name,
+            kind,
+            location: { uri, range }
+          };
+          if (containerName) {
+            result.containerName = containerName;
           }
-          return diff;
-        });
-        let lastModifiedOffset = text2.length;
-        for (let i = sortedEdits.length - 1; i >= 0; i--) {
-          const e = sortedEdits[i];
-          const startOffset = document.offsetAt(e.range.start);
-          const endOffset = document.offsetAt(e.range.end);
-          if (endOffset <= lastModifiedOffset) {
-            text2 = text2.substring(0, startOffset) + e.newText + text2.substring(endOffset, text2.length);
+          return result;
+        }
+        SymbolInformation2.create = create;
+      })(SymbolInformation || (exports3.SymbolInformation = SymbolInformation = {}));
+      var WorkspaceSymbol;
+      (function(WorkspaceSymbol2) {
+        function create(name, kind, uri, range) {
+          return range !== void 0 ? { name, kind, location: { uri, range } } : { name, kind, location: { uri } };
+        }
+        WorkspaceSymbol2.create = create;
+      })(WorkspaceSymbol || (exports3.WorkspaceSymbol = WorkspaceSymbol = {}));
+      var DocumentSymbol;
+      (function(DocumentSymbol2) {
+        function create(name, detail, kind, range, selectionRange, children) {
+          var result = {
+            name,
+            detail,
+            kind,
+            range,
+            selectionRange
+          };
+          if (children !== void 0) {
+            result.children = children;
+          }
+          return result;
+        }
+        DocumentSymbol2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && Is.string(candidate.name) && Is.number(candidate.kind) && Range3.is(candidate.range) && Range3.is(candidate.selectionRange) && (candidate.detail === void 0 || Is.string(candidate.detail)) && (candidate.deprecated === void 0 || Is.boolean(candidate.deprecated)) && (candidate.children === void 0 || Array.isArray(candidate.children)) && (candidate.tags === void 0 || Array.isArray(candidate.tags));
+        }
+        DocumentSymbol2.is = is;
+      })(DocumentSymbol || (exports3.DocumentSymbol = DocumentSymbol = {}));
+      var CodeActionKind;
+      (function(CodeActionKind2) {
+        CodeActionKind2.Empty = "";
+        CodeActionKind2.QuickFix = "quickfix";
+        CodeActionKind2.Refactor = "refactor";
+        CodeActionKind2.RefactorExtract = "refactor.extract";
+        CodeActionKind2.RefactorInline = "refactor.inline";
+        CodeActionKind2.RefactorMove = "refactor.move";
+        CodeActionKind2.RefactorRewrite = "refactor.rewrite";
+        CodeActionKind2.Source = "source";
+        CodeActionKind2.SourceOrganizeImports = "source.organizeImports";
+        CodeActionKind2.SourceFixAll = "source.fixAll";
+        CodeActionKind2.Notebook = "notebook";
+      })(CodeActionKind || (exports3.CodeActionKind = CodeActionKind = {}));
+      var CodeActionTriggerKind;
+      (function(CodeActionTriggerKind2) {
+        CodeActionTriggerKind2.Invoked = 1;
+        CodeActionTriggerKind2.Automatic = 2;
+      })(CodeActionTriggerKind || (exports3.CodeActionTriggerKind = CodeActionTriggerKind = {}));
+      var CodeActionContext;
+      (function(CodeActionContext2) {
+        function create(diagnostics, only, triggerKind) {
+          var result = { diagnostics };
+          if (only !== void 0 && only !== null) {
+            result.only = only;
+          }
+          if (triggerKind !== void 0 && triggerKind !== null) {
+            result.triggerKind = triggerKind;
+          }
+          return result;
+        }
+        CodeActionContext2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.typedArray(candidate.diagnostics, Diagnostic.is) && (candidate.only === void 0 || Is.typedArray(candidate.only, Is.string)) && (candidate.triggerKind === void 0 || candidate.triggerKind === CodeActionTriggerKind.Invoked || candidate.triggerKind === CodeActionTriggerKind.Automatic);
+        }
+        CodeActionContext2.is = is;
+      })(CodeActionContext || (exports3.CodeActionContext = CodeActionContext = {}));
+      var CodeActionTag;
+      (function(CodeActionTag2) {
+        CodeActionTag2.LLMGenerated = 1;
+        function is(value) {
+          return Is.defined(value) && value === CodeActionTag2.LLMGenerated;
+        }
+        CodeActionTag2.is = is;
+      })(CodeActionTag || (exports3.CodeActionTag = CodeActionTag = {}));
+      var CodeAction;
+      (function(CodeAction2) {
+        function create(title, kindOrCommandOrEdit, kind) {
+          var result = { title };
+          var checkKind = true;
+          if (typeof kindOrCommandOrEdit === "string") {
+            checkKind = false;
+            result.kind = kindOrCommandOrEdit;
+          } else if (Command.is(kindOrCommandOrEdit)) {
+            result.command = kindOrCommandOrEdit;
           } else {
-            throw new Error("Overlapping edit");
+            result.edit = kindOrCommandOrEdit;
           }
-          lastModifiedOffset = startOffset;
+          if (checkKind && kind !== void 0) {
+            result.kind = kind;
+          }
+          return result;
         }
-        return text2;
-      }
-      TextDocument3.applyEdits = applyEdits;
-      function mergeSort2(data, compare) {
-        if (data.length <= 1) {
-          return data;
+        CodeAction2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate && Is.string(candidate.title) && (candidate.diagnostics === void 0 || Is.typedArray(candidate.diagnostics, Diagnostic.is)) && (candidate.kind === void 0 || Is.string(candidate.kind)) && (candidate.edit !== void 0 || candidate.command !== void 0) && (candidate.command === void 0 || Command.is(candidate.command)) && (candidate.isPreferred === void 0 || Is.boolean(candidate.isPreferred)) && (candidate.edit === void 0 || WorkspaceEdit.is(candidate.edit)) && (candidate.tags === void 0 || Is.typedArray(candidate.tags, CodeActionTag.is));
         }
-        const p = data.length / 2 | 0;
-        const left = data.slice(0, p);
-        const right = data.slice(p);
-        mergeSort2(left, compare);
-        mergeSort2(right, compare);
-        let leftIdx = 0;
-        let rightIdx = 0;
-        let i = 0;
-        while (leftIdx < left.length && rightIdx < right.length) {
-          const ret = compare(left[leftIdx], right[rightIdx]);
-          if (ret <= 0) {
+        CodeAction2.is = is;
+      })(CodeAction || (exports3.CodeAction = CodeAction = {}));
+      var CodeLens;
+      (function(CodeLens2) {
+        function create(range, data) {
+          var result = { range };
+          if (Is.defined(data)) {
+            result.data = data;
+          }
+          return result;
+        }
+        CodeLens2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(candidate.range) && (Is.undefined(candidate.command) || Command.is(candidate.command));
+        }
+        CodeLens2.is = is;
+      })(CodeLens || (exports3.CodeLens = CodeLens = {}));
+      var FormattingOptions;
+      (function(FormattingOptions2) {
+        function create(tabSize, insertSpaces) {
+          return { tabSize, insertSpaces };
+        }
+        FormattingOptions2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.uinteger(candidate.tabSize) && Is.boolean(candidate.insertSpaces);
+        }
+        FormattingOptions2.is = is;
+      })(FormattingOptions || (exports3.FormattingOptions = FormattingOptions = {}));
+      var DocumentLink;
+      (function(DocumentLink2) {
+        function create(range, target, data) {
+          return { range, target, data };
+        }
+        DocumentLink2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(candidate.range) && (Is.undefined(candidate.target) || Is.string(candidate.target));
+        }
+        DocumentLink2.is = is;
+      })(DocumentLink || (exports3.DocumentLink = DocumentLink = {}));
+      var SelectionRange;
+      (function(SelectionRange2) {
+        function create(range, parent) {
+          return { range, parent };
+        }
+        SelectionRange2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Range3.is(candidate.range) && (candidate.parent === void 0 || SelectionRange2.is(candidate.parent));
+        }
+        SelectionRange2.is = is;
+      })(SelectionRange || (exports3.SelectionRange = SelectionRange = {}));
+      var SemanticTokenTypes;
+      (function(SemanticTokenTypes2) {
+        SemanticTokenTypes2["namespace"] = "namespace";
+        SemanticTokenTypes2["type"] = "type";
+        SemanticTokenTypes2["class"] = "class";
+        SemanticTokenTypes2["enum"] = "enum";
+        SemanticTokenTypes2["interface"] = "interface";
+        SemanticTokenTypes2["struct"] = "struct";
+        SemanticTokenTypes2["typeParameter"] = "typeParameter";
+        SemanticTokenTypes2["parameter"] = "parameter";
+        SemanticTokenTypes2["variable"] = "variable";
+        SemanticTokenTypes2["property"] = "property";
+        SemanticTokenTypes2["enumMember"] = "enumMember";
+        SemanticTokenTypes2["event"] = "event";
+        SemanticTokenTypes2["function"] = "function";
+        SemanticTokenTypes2["method"] = "method";
+        SemanticTokenTypes2["macro"] = "macro";
+        SemanticTokenTypes2["keyword"] = "keyword";
+        SemanticTokenTypes2["modifier"] = "modifier";
+        SemanticTokenTypes2["comment"] = "comment";
+        SemanticTokenTypes2["string"] = "string";
+        SemanticTokenTypes2["number"] = "number";
+        SemanticTokenTypes2["regexp"] = "regexp";
+        SemanticTokenTypes2["operator"] = "operator";
+        SemanticTokenTypes2["decorator"] = "decorator";
+        SemanticTokenTypes2["label"] = "label";
+      })(SemanticTokenTypes || (exports3.SemanticTokenTypes = SemanticTokenTypes = {}));
+      var SemanticTokenModifiers;
+      (function(SemanticTokenModifiers2) {
+        SemanticTokenModifiers2["declaration"] = "declaration";
+        SemanticTokenModifiers2["definition"] = "definition";
+        SemanticTokenModifiers2["readonly"] = "readonly";
+        SemanticTokenModifiers2["static"] = "static";
+        SemanticTokenModifiers2["deprecated"] = "deprecated";
+        SemanticTokenModifiers2["abstract"] = "abstract";
+        SemanticTokenModifiers2["async"] = "async";
+        SemanticTokenModifiers2["modification"] = "modification";
+        SemanticTokenModifiers2["documentation"] = "documentation";
+        SemanticTokenModifiers2["defaultLibrary"] = "defaultLibrary";
+      })(SemanticTokenModifiers || (exports3.SemanticTokenModifiers = SemanticTokenModifiers = {}));
+      var SemanticTokens;
+      (function(SemanticTokens2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && (candidate.resultId === void 0 || typeof candidate.resultId === "string") && Array.isArray(candidate.data) && (candidate.data.length === 0 || typeof candidate.data[0] === "number");
+        }
+        SemanticTokens2.is = is;
+      })(SemanticTokens || (exports3.SemanticTokens = SemanticTokens = {}));
+      var InlineValueText;
+      (function(InlineValueText2) {
+        function create(range, text2) {
+          return { range, text: text2 };
+        }
+        InlineValueText2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate !== void 0 && candidate !== null && Range3.is(candidate.range) && Is.string(candidate.text);
+        }
+        InlineValueText2.is = is;
+      })(InlineValueText || (exports3.InlineValueText = InlineValueText = {}));
+      var InlineValueVariableLookup;
+      (function(InlineValueVariableLookup2) {
+        function create(range, variableName, caseSensitiveLookup) {
+          return { range, variableName, caseSensitiveLookup };
+        }
+        InlineValueVariableLookup2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate !== void 0 && candidate !== null && Range3.is(candidate.range) && Is.boolean(candidate.caseSensitiveLookup) && (Is.string(candidate.variableName) || candidate.variableName === void 0);
+        }
+        InlineValueVariableLookup2.is = is;
+      })(InlineValueVariableLookup || (exports3.InlineValueVariableLookup = InlineValueVariableLookup = {}));
+      var InlineValueEvaluatableExpression;
+      (function(InlineValueEvaluatableExpression2) {
+        function create(range, expression) {
+          return { range, expression };
+        }
+        InlineValueEvaluatableExpression2.create = create;
+        function is(value) {
+          var candidate = value;
+          return candidate !== void 0 && candidate !== null && Range3.is(candidate.range) && (Is.string(candidate.expression) || candidate.expression === void 0);
+        }
+        InlineValueEvaluatableExpression2.is = is;
+      })(InlineValueEvaluatableExpression || (exports3.InlineValueEvaluatableExpression = InlineValueEvaluatableExpression = {}));
+      var InlineValueContext;
+      (function(InlineValueContext2) {
+        function create(frameId, stoppedLocation) {
+          return { frameId, stoppedLocation };
+        }
+        InlineValueContext2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Range3.is(value.stoppedLocation);
+        }
+        InlineValueContext2.is = is;
+      })(InlineValueContext || (exports3.InlineValueContext = InlineValueContext = {}));
+      var InlayHintKind;
+      (function(InlayHintKind2) {
+        InlayHintKind2.Type = 1;
+        InlayHintKind2.Parameter = 2;
+        function is(value) {
+          return value === 1 || value === 2;
+        }
+        InlayHintKind2.is = is;
+      })(InlayHintKind || (exports3.InlayHintKind = InlayHintKind = {}));
+      var InlayHintLabelPart;
+      (function(InlayHintLabelPart2) {
+        function create(value) {
+          return { value };
+        }
+        InlayHintLabelPart2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.location === void 0 || Location.is(candidate.location)) && (candidate.command === void 0 || Command.is(candidate.command));
+        }
+        InlayHintLabelPart2.is = is;
+      })(InlayHintLabelPart || (exports3.InlayHintLabelPart = InlayHintLabelPart = {}));
+      var InlayHint;
+      (function(InlayHint2) {
+        function create(position, label, kind) {
+          var result = { position, label };
+          if (kind !== void 0) {
+            result.kind = kind;
+          }
+          return result;
+        }
+        InlayHint2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && Position2.is(candidate.position) && (Is.string(candidate.label) || Is.typedArray(candidate.label, InlayHintLabelPart.is)) && (candidate.kind === void 0 || InlayHintKind.is(candidate.kind)) && candidate.textEdits === void 0 || Is.typedArray(candidate.textEdits, TextEdit.is) && (candidate.tooltip === void 0 || Is.string(candidate.tooltip) || MarkupContent.is(candidate.tooltip)) && (candidate.paddingLeft === void 0 || Is.boolean(candidate.paddingLeft)) && (candidate.paddingRight === void 0 || Is.boolean(candidate.paddingRight));
+        }
+        InlayHint2.is = is;
+      })(InlayHint || (exports3.InlayHint = InlayHint = {}));
+      var StringValue;
+      (function(StringValue2) {
+        function createSnippet(value) {
+          return { kind: "snippet", value };
+        }
+        StringValue2.createSnippet = createSnippet;
+        function isSnippet(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && candidate.kind === "snippet" && Is.string(candidate.value);
+        }
+        StringValue2.isSnippet = isSnippet;
+      })(StringValue || (exports3.StringValue = StringValue = {}));
+      var InlineCompletionItem;
+      (function(InlineCompletionItem2) {
+        function create(insertText, filterText, range, command) {
+          return { insertText, filterText, range, command };
+        }
+        InlineCompletionItem2.create = create;
+      })(InlineCompletionItem || (exports3.InlineCompletionItem = InlineCompletionItem = {}));
+      var InlineCompletionList;
+      (function(InlineCompletionList2) {
+        function create(items) {
+          return { items };
+        }
+        InlineCompletionList2.create = create;
+      })(InlineCompletionList || (exports3.InlineCompletionList = InlineCompletionList = {}));
+      var InlineCompletionTriggerKind;
+      (function(InlineCompletionTriggerKind2) {
+        InlineCompletionTriggerKind2.Invoked = 1;
+        InlineCompletionTriggerKind2.Automatic = 2;
+      })(InlineCompletionTriggerKind || (exports3.InlineCompletionTriggerKind = InlineCompletionTriggerKind = {}));
+      var SelectedCompletionInfo;
+      (function(SelectedCompletionInfo2) {
+        function create(range, text2) {
+          return { range, text: text2 };
+        }
+        SelectedCompletionInfo2.create = create;
+      })(SelectedCompletionInfo || (exports3.SelectedCompletionInfo = SelectedCompletionInfo = {}));
+      var InlineCompletionContext;
+      (function(InlineCompletionContext2) {
+        function create(triggerKind, selectedCompletionInfo) {
+          return { triggerKind, selectedCompletionInfo };
+        }
+        InlineCompletionContext2.create = create;
+      })(InlineCompletionContext || (exports3.InlineCompletionContext = InlineCompletionContext = {}));
+      var WorkspaceFolder;
+      (function(WorkspaceFolder2) {
+        function is(value) {
+          var candidate = value;
+          return Is.objectLiteral(candidate) && URI.is(candidate.uri) && Is.string(candidate.name);
+        }
+        WorkspaceFolder2.is = is;
+      })(WorkspaceFolder || (exports3.WorkspaceFolder = WorkspaceFolder = {}));
+      exports3.EOL = ["\n", "\r\n", "\r"];
+      var TextDocument;
+      (function(TextDocument2) {
+        function create(uri, languageId, version, content) {
+          return new FullTextDocument(uri, languageId, version, content);
+        }
+        TextDocument2.create = create;
+        function is(value) {
+          var candidate = value;
+          return Is.defined(candidate) && Is.string(candidate.uri) && (Is.undefined(candidate.languageId) || Is.string(candidate.languageId)) && Is.uinteger(candidate.lineCount) && Is.func(candidate.getText) && Is.func(candidate.positionAt) && Is.func(candidate.offsetAt) ? true : false;
+        }
+        TextDocument2.is = is;
+        function applyEdits(document, edits) {
+          var text2 = document.getText();
+          var sortedEdits = mergeSort(edits, function(a, b) {
+            var diff = a.range.start.line - b.range.start.line;
+            if (diff === 0) {
+              return a.range.start.character - b.range.start.character;
+            }
+            return diff;
+          });
+          var lastModifiedOffset = text2.length;
+          for (var i = sortedEdits.length - 1; i >= 0; i--) {
+            var e = sortedEdits[i];
+            var startOffset = document.offsetAt(e.range.start);
+            var endOffset = document.offsetAt(e.range.end);
+            if (endOffset <= lastModifiedOffset) {
+              text2 = text2.substring(0, startOffset) + e.newText + text2.substring(endOffset, text2.length);
+            } else {
+              throw new Error("Overlapping edit");
+            }
+            lastModifiedOffset = startOffset;
+          }
+          return text2;
+        }
+        TextDocument2.applyEdits = applyEdits;
+        function mergeSort(data, compare) {
+          if (data.length <= 1) {
+            return data;
+          }
+          var p = data.length / 2 | 0;
+          var left = data.slice(0, p);
+          var right = data.slice(p);
+          mergeSort(left, compare);
+          mergeSort(right, compare);
+          var leftIdx = 0;
+          var rightIdx = 0;
+          var i = 0;
+          while (leftIdx < left.length && rightIdx < right.length) {
+            var ret = compare(left[leftIdx], right[rightIdx]);
+            if (ret <= 0) {
+              data[i++] = left[leftIdx++];
+            } else {
+              data[i++] = right[rightIdx++];
+            }
+          }
+          while (leftIdx < left.length) {
             data[i++] = left[leftIdx++];
-          } else {
+          }
+          while (rightIdx < right.length) {
             data[i++] = right[rightIdx++];
           }
+          return data;
         }
-        while (leftIdx < left.length) {
-          data[i++] = left[leftIdx++];
-        }
-        while (rightIdx < right.length) {
-          data[i++] = right[rightIdx++];
-        }
-        return data;
-      }
-    })(TextDocument || (TextDocument = {}));
-    FullTextDocument = class {
-      constructor(uri, languageId, version, content) {
-        this._uri = uri;
-        this._languageId = languageId;
-        this._version = version;
-        this._content = content;
-        this._lineOffsets = void 0;
-      }
-      get uri() {
-        return this._uri;
-      }
-      get languageId() {
-        return this._languageId;
-      }
-      get version() {
-        return this._version;
-      }
-      getText(range) {
-        if (range) {
-          const start = this.offsetAt(range.start);
-          const end = this.offsetAt(range.end);
-          return this._content.substring(start, end);
-        }
-        return this._content;
-      }
-      update(event, version) {
-        this._content = event.text;
-        this._version = version;
-        this._lineOffsets = void 0;
-      }
-      getLineOffsets() {
-        if (this._lineOffsets === void 0) {
-          const lineOffsets = [];
-          const text2 = this._content;
-          let isLineStart = true;
-          for (let i = 0; i < text2.length; i++) {
-            if (isLineStart) {
-              lineOffsets.push(i);
-              isLineStart = false;
+      })(TextDocument || (exports3.TextDocument = TextDocument = {}));
+      var FullTextDocument = (
+        /** @class */
+        (function() {
+          function FullTextDocument2(uri, languageId, version, content) {
+            this._uri = uri;
+            this._languageId = languageId;
+            this._version = version;
+            this._content = content;
+            this._lineOffsets = void 0;
+          }
+          Object.defineProperty(FullTextDocument2.prototype, "uri", {
+            get: function() {
+              return this._uri;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          Object.defineProperty(FullTextDocument2.prototype, "languageId", {
+            get: function() {
+              return this._languageId;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          Object.defineProperty(FullTextDocument2.prototype, "version", {
+            get: function() {
+              return this._version;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          FullTextDocument2.prototype.getText = function(range) {
+            if (range) {
+              var start = this.offsetAt(range.start);
+              var end = this.offsetAt(range.end);
+              return this._content.substring(start, end);
             }
-            const ch = text2.charAt(i);
-            isLineStart = ch === "\r" || ch === "\n";
-            if (ch === "\r" && i + 1 < text2.length && text2.charAt(i + 1) === "\n") {
-              i++;
+            return this._content;
+          };
+          FullTextDocument2.prototype.update = function(event, version) {
+            this._content = event.text;
+            this._version = version;
+            this._lineOffsets = void 0;
+          };
+          FullTextDocument2.prototype.getLineOffsets = function() {
+            if (this._lineOffsets === void 0) {
+              var lineOffsets = [];
+              var text2 = this._content;
+              var isLineStart = true;
+              for (var i = 0; i < text2.length; i++) {
+                if (isLineStart) {
+                  lineOffsets.push(i);
+                  isLineStart = false;
+                }
+                var ch = text2.charAt(i);
+                isLineStart = ch === "\r" || ch === "\n";
+                if (ch === "\r" && i + 1 < text2.length && text2.charAt(i + 1) === "\n") {
+                  i++;
+                }
+              }
+              if (isLineStart && text2.length > 0) {
+                lineOffsets.push(text2.length);
+              }
+              this._lineOffsets = lineOffsets;
             }
-          }
-          if (isLineStart && text2.length > 0) {
-            lineOffsets.push(text2.length);
-          }
-          this._lineOffsets = lineOffsets;
+            return this._lineOffsets;
+          };
+          FullTextDocument2.prototype.positionAt = function(offset) {
+            offset = Math.max(Math.min(offset, this._content.length), 0);
+            var lineOffsets = this.getLineOffsets();
+            var low = 0, high = lineOffsets.length;
+            if (high === 0) {
+              return Position2.create(0, offset);
+            }
+            while (low < high) {
+              var mid = Math.floor((low + high) / 2);
+              if (lineOffsets[mid] > offset) {
+                high = mid;
+              } else {
+                low = mid + 1;
+              }
+            }
+            var line = low - 1;
+            return Position2.create(line, offset - lineOffsets[line]);
+          };
+          FullTextDocument2.prototype.offsetAt = function(position) {
+            var lineOffsets = this.getLineOffsets();
+            if (position.line >= lineOffsets.length) {
+              return this._content.length;
+            } else if (position.line < 0) {
+              return 0;
+            }
+            var lineOffset = lineOffsets[position.line];
+            var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+            return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
+          };
+          Object.defineProperty(FullTextDocument2.prototype, "lineCount", {
+            get: function() {
+              return this.getLineOffsets().length;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          return FullTextDocument2;
+        })()
+      );
+      var Is;
+      (function(Is2) {
+        var toString = Object.prototype.toString;
+        function defined(value) {
+          return typeof value !== "undefined";
         }
-        return this._lineOffsets;
-      }
-      positionAt(offset) {
-        offset = Math.max(Math.min(offset, this._content.length), 0);
-        const lineOffsets = this.getLineOffsets();
-        let low = 0, high = lineOffsets.length;
-        if (high === 0) {
-          return Position.create(0, offset);
+        Is2.defined = defined;
+        function undefined2(value) {
+          return typeof value === "undefined";
         }
-        while (low < high) {
-          const mid = Math.floor((low + high) / 2);
-          if (lineOffsets[mid] > offset) {
-            high = mid;
-          } else {
-            low = mid + 1;
-          }
+        Is2.undefined = undefined2;
+        function boolean3(value) {
+          return value === true || value === false;
         }
-        const line = low - 1;
-        return Position.create(line, offset - lineOffsets[line]);
-      }
-      offsetAt(position) {
-        const lineOffsets = this.getLineOffsets();
-        if (position.line >= lineOffsets.length) {
-          return this._content.length;
-        } else if (position.line < 0) {
-          return 0;
+        Is2.boolean = boolean3;
+        function string4(value) {
+          return toString.call(value) === "[object String]";
         }
-        const lineOffset = lineOffsets[position.line];
-        const nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-        return Math.max(Math.min(lineOffset + position.character, nextLineOffset), lineOffset);
-      }
-      get lineCount() {
-        return this.getLineOffsets().length;
-      }
-    };
-    (function(Is2) {
-      const toString = Object.prototype.toString;
-      function defined(value) {
-        return typeof value !== "undefined";
-      }
-      Is2.defined = defined;
-      function undefined2(value) {
-        return typeof value === "undefined";
-      }
-      Is2.undefined = undefined2;
-      function boolean3(value) {
-        return value === true || value === false;
-      }
-      Is2.boolean = boolean3;
-      function string4(value) {
-        return toString.call(value) === "[object String]";
-      }
-      Is2.string = string4;
-      function number(value) {
-        return toString.call(value) === "[object Number]";
-      }
-      Is2.number = number;
-      function numberRange(value, min, max) {
-        return toString.call(value) === "[object Number]" && min <= value && value <= max;
-      }
-      Is2.numberRange = numberRange;
-      function integer7(value) {
-        return toString.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
-      }
-      Is2.integer = integer7;
-      function uinteger2(value) {
-        return toString.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
-      }
-      Is2.uinteger = uinteger2;
-      function func(value) {
-        return toString.call(value) === "[object Function]";
-      }
-      Is2.func = func;
-      function objectLiteral(value) {
-        return value !== null && typeof value === "object";
-      }
-      Is2.objectLiteral = objectLiteral;
-      function typedArray(value, check) {
-        return Array.isArray(value) && value.every(check);
-      }
-      Is2.typedArray = typedArray;
-    })(Is || (Is = {}));
+        Is2.string = string4;
+        function number(value) {
+          return toString.call(value) === "[object Number]";
+        }
+        Is2.number = number;
+        function numberRange(value, min, max) {
+          return toString.call(value) === "[object Number]" && min <= value && value <= max;
+        }
+        Is2.numberRange = numberRange;
+        function integer7(value) {
+          return toString.call(value) === "[object Number]" && -2147483648 <= value && value <= 2147483647;
+        }
+        Is2.integer = integer7;
+        function uinteger2(value) {
+          return toString.call(value) === "[object Number]" && 0 <= value && value <= 2147483647;
+        }
+        Is2.uinteger = uinteger2;
+        function func(value) {
+          return toString.call(value) === "[object Function]";
+        }
+        Is2.func = func;
+        function objectLiteral(value) {
+          return value !== null && typeof value === "object";
+        }
+        Is2.objectLiteral = objectLiteral;
+        function typedArray(value, check) {
+          return Array.isArray(value) && value.every(check);
+        }
+        Is2.typedArray = typedArray;
+      })(Is || (Is = {}));
+    });
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/messages.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/messages.js
 var require_messages2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/messages.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CM = exports2.ProtocolNotificationType = exports2.ProtocolNotificationType0 = exports2.ProtocolRequestType = exports2.ProtocolRequestType0 = exports2.RegistrationType = exports2.MessageDirection = void 0;
@@ -4948,9 +5004,9 @@ var require_messages2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/utils/is.js
 var require_is3 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/utils/is.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.boolean = boolean3;
@@ -4992,9 +5048,9 @@ var require_is3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js
 var require_protocol_implementation = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationRequest = void 0;
@@ -5009,9 +5065,9 @@ var require_protocol_implementation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js
 var require_protocol_typeDefinition = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionRequest = void 0;
@@ -5026,9 +5082,9 @@ var require_protocol_typeDefinition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js
 var require_protocol_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.workspaceFolder.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidChangeWorkspaceFoldersNotification = exports2.WorkspaceFoldersRequest = void 0;
@@ -5050,9 +5106,9 @@ var require_protocol_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js
 var require_protocol_configuration = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.configuration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ConfigurationRequest = void 0;
@@ -5067,9 +5123,9 @@ var require_protocol_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js
 var require_protocol_colorProvider = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorPresentationRequest = exports2.DocumentColorRequest = void 0;
@@ -5091,9 +5147,9 @@ var require_protocol_colorProvider = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js
 var require_protocol_foldingRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeRefreshRequest = exports2.FoldingRangeRequest = void 0;
@@ -5115,9 +5171,9 @@ var require_protocol_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js
 var require_protocol_declaration = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationRequest = void 0;
@@ -5132,9 +5188,9 @@ var require_protocol_declaration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js
 var require_protocol_selectionRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeRequest = void 0;
@@ -5149,9 +5205,9 @@ var require_protocol_selectionRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js
 var require_protocol_progress = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WorkDoneProgressCancelNotification = exports2.WorkDoneProgressCreateRequest = exports2.WorkDoneProgress = void 0;
@@ -5181,9 +5237,9 @@ var require_protocol_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js
 var require_protocol_callHierarchy = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyOutgoingCallsRequest = exports2.CallHierarchyIncomingCallsRequest = exports2.CallHierarchyPrepareRequest = void 0;
@@ -5212,9 +5268,9 @@ var require_protocol_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js
 var require_protocol_semanticTokens = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.semanticTokens.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SemanticTokensRefreshRequest = exports2.SemanticTokensRangeRequest = exports2.SemanticTokensDeltaRequest = exports2.SemanticTokensRequest = exports2.SemanticTokensRegistrationType = exports2.TokenFormat = void 0;
@@ -5262,9 +5318,9 @@ var require_protocol_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js
 var require_protocol_showDocument = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.showDocument.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ShowDocumentRequest = void 0;
@@ -5279,9 +5335,9 @@ var require_protocol_showDocument = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js
 var require_protocol_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.linkedEditingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LinkedEditingRangeRequest = void 0;
@@ -5296,9 +5352,9 @@ var require_protocol_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js
 var require_protocol_fileOperations = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.fileOperations.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.WillDeleteFilesRequest = exports2.DidDeleteFilesNotification = exports2.DidRenameFilesNotification = exports2.WillRenameFilesRequest = exports2.DidCreateFilesNotification = exports2.WillCreateFilesRequest = exports2.FileOperationPatternKind = void 0;
@@ -5353,9 +5409,9 @@ var require_protocol_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js
 var require_protocol_moniker = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.moniker.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.MonikerRequest = exports2.MonikerKind = exports2.UniquenessLevel = void 0;
@@ -5384,9 +5440,9 @@ var require_protocol_moniker = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js
 var require_protocol_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchySubtypesRequest = exports2.TypeHierarchySupertypesRequest = exports2.TypeHierarchyPrepareRequest = void 0;
@@ -5413,9 +5469,9 @@ var require_protocol_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js
 var require_protocol_inlineValue = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueRefreshRequest = exports2.InlineValueRequest = void 0;
@@ -5437,9 +5493,9 @@ var require_protocol_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js
 var require_protocol_inlayHint = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintRefreshRequest = exports2.InlayHintResolveRequest = exports2.InlayHintRequest = void 0;
@@ -5468,9 +5524,9 @@ var require_protocol_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js
 var require_protocol_diagnostic = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.diagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5512,13 +5568,13 @@ var require_protocol_diagnostic = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DiagnosticRefreshRequest = exports2.WorkspaceDiagnosticRequest = exports2.DocumentDiagnosticRequest = exports2.DocumentDiagnosticReportKind = exports2.DiagnosticServerCancellationData = void 0;
     var vscode_jsonrpc_1 = require_api();
-    var Is2 = __importStar(require_is3());
+    var Is = __importStar(require_is3());
     var messages_1 = require_messages2();
     var DiagnosticServerCancellationData;
     (function(DiagnosticServerCancellationData2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.boolean(candidate.retriggerRequest);
+        return candidate && Is.boolean(candidate.retriggerRequest);
       }
       DiagnosticServerCancellationData2.is = is;
     })(DiagnosticServerCancellationData || (exports2.DiagnosticServerCancellationData = DiagnosticServerCancellationData = {}));
@@ -5553,9 +5609,9 @@ var require_protocol_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js
 var require_protocol_notebook = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5596,8 +5652,8 @@ var require_protocol_notebook = __commonJS({
     })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DidCloseNotebookDocumentNotification = exports2.DidSaveNotebookDocumentNotification = exports2.DidChangeNotebookDocumentNotification = exports2.NotebookCellArrayChange = exports2.DidOpenNotebookDocumentNotification = exports2.NotebookDocumentSyncRegistrationType = exports2.NotebookDocument = exports2.NotebookCell = exports2.ExecutionSummary = exports2.NotebookCellKind = void 0;
-    var vscode_languageserver_types_1 = (init_main(), __toCommonJS(main_exports));
-    var Is2 = __importStar(require_is3());
+    var vscode_languageserver_types_1 = require_main();
+    var Is = __importStar(require_is3());
     var messages_1 = require_messages2();
     var NotebookCellKind;
     (function(NotebookCellKind2) {
@@ -5620,7 +5676,7 @@ var require_protocol_notebook = __commonJS({
       ExecutionSummary2.create = create;
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.executionOrder) && (candidate.success === void 0 || Is2.boolean(candidate.success));
+        return Is.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.executionOrder) && (candidate.success === void 0 || Is.boolean(candidate.success));
       }
       ExecutionSummary2.is = is;
       function equals(one, other) {
@@ -5642,7 +5698,7 @@ var require_protocol_notebook = __commonJS({
       NotebookCell2.create = create;
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && NotebookCellKind.is(candidate.kind) && vscode_languageserver_types_1.DocumentUri.is(candidate.document) && (candidate.metadata === void 0 || Is2.objectLiteral(candidate.metadata));
+        return Is.objectLiteral(candidate) && NotebookCellKind.is(candidate.kind) && vscode_languageserver_types_1.DocumentUri.is(candidate.document) && (candidate.metadata === void 0 || Is.objectLiteral(candidate.metadata));
       }
       NotebookCell2.is = is;
       function diff(one, two) {
@@ -5693,7 +5749,7 @@ var require_protocol_notebook = __commonJS({
             }
           }
         }
-        if (Is2.objectLiteral(one) && Is2.objectLiteral(other)) {
+        if (Is.objectLiteral(one) && Is.objectLiteral(other)) {
           const oneKeys = Object.keys(one);
           const otherKeys = Object.keys(other);
           if (oneKeys.length !== otherKeys.length) {
@@ -5722,7 +5778,7 @@ var require_protocol_notebook = __commonJS({
       NotebookDocument2.create = create;
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && Is2.string(candidate.uri) && vscode_languageserver_types_1.integer.is(candidate.version) && Is2.typedArray(candidate.cells, NotebookCell.is);
+        return Is.objectLiteral(candidate) && Is.string(candidate.uri) && vscode_languageserver_types_1.integer.is(candidate.version) && Is.typedArray(candidate.cells, NotebookCell.is);
       }
       NotebookDocument2.is = is;
     })(NotebookDocument || (exports2.NotebookDocument = NotebookDocument = {}));
@@ -5743,7 +5799,7 @@ var require_protocol_notebook = __commonJS({
     (function(NotebookCellArrayChange2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.start) && vscode_languageserver_types_1.uinteger.is(candidate.deleteCount) && (candidate.cells === void 0 || Is2.typedArray(candidate.cells, NotebookCell.is));
+        return Is.objectLiteral(candidate) && vscode_languageserver_types_1.uinteger.is(candidate.start) && vscode_languageserver_types_1.uinteger.is(candidate.deleteCount) && (candidate.cells === void 0 || Is.typedArray(candidate.cells, NotebookCell.is));
       }
       NotebookCellArrayChange2.is = is;
       function create(start, deleteCount, cells) {
@@ -5779,9 +5835,9 @@ var require_protocol_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js
 var require_protocol_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.inlineCompletion.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineCompletionRequest = void 0;
@@ -5796,9 +5852,9 @@ var require_protocol_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js
 var require_protocol_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.textDocumentContent.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TextDocumentContentRefreshRequest = exports2.TextDocumentContentRequest = void 0;
@@ -5819,9 +5875,9 @@ var require_protocol_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/protocol.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/protocol.js
 var require_protocol = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/protocol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -5865,8 +5921,8 @@ var require_protocol = __commonJS({
     exports2.UniquenessLevel = exports2.WillDeleteFilesRequest = exports2.DidDeleteFilesNotification = exports2.WillRenameFilesRequest = exports2.DidRenameFilesNotification = exports2.WillCreateFilesRequest = exports2.DidCreateFilesNotification = exports2.FileOperationPatternKind = exports2.LinkedEditingRangeRequest = exports2.ShowDocumentRequest = exports2.SemanticTokensRegistrationType = exports2.SemanticTokensRefreshRequest = exports2.SemanticTokensRangeRequest = exports2.SemanticTokensDeltaRequest = exports2.SemanticTokensRequest = exports2.TokenFormat = exports2.CallHierarchyPrepareRequest = exports2.CallHierarchyOutgoingCallsRequest = exports2.CallHierarchyIncomingCallsRequest = exports2.WorkDoneProgressCancelNotification = exports2.WorkDoneProgressCreateRequest = exports2.WorkDoneProgress = exports2.SelectionRangeRequest = exports2.DeclarationRequest = exports2.FoldingRangeRefreshRequest = exports2.FoldingRangeRequest = exports2.ColorPresentationRequest = exports2.DocumentColorRequest = exports2.ConfigurationRequest = exports2.DidChangeWorkspaceFoldersNotification = exports2.WorkspaceFoldersRequest = exports2.TypeDefinitionRequest = exports2.ImplementationRequest = exports2.ApplyWorkspaceEditRequest = exports2.ExecuteCommandRequest = exports2.PrepareRenameRequest = exports2.RenameRequest = exports2.PrepareSupportDefaultBehavior = exports2.DocumentOnTypeFormattingRequest = exports2.DocumentRangesFormattingRequest = exports2.DocumentRangeFormattingRequest = exports2.DocumentFormattingRequest = exports2.DocumentLinkResolveRequest = exports2.DocumentLinkRequest = exports2.CodeLensRefreshRequest = exports2.CodeLensResolveRequest = exports2.CodeLensRequest = exports2.WorkspaceSymbolResolveRequest = exports2.WorkspaceSymbolRequest = exports2.CodeActionResolveRequest = void 0;
     exports2.TextDocumentContentRefreshRequest = exports2.TextDocumentContentRequest = exports2.InlineCompletionRequest = exports2.DidCloseNotebookDocumentNotification = exports2.DidSaveNotebookDocumentNotification = exports2.DidChangeNotebookDocumentNotification = exports2.NotebookCellArrayChange = exports2.DidOpenNotebookDocumentNotification = exports2.NotebookDocumentSyncRegistrationType = exports2.NotebookDocument = exports2.NotebookCell = exports2.ExecutionSummary = exports2.NotebookCellKind = exports2.DiagnosticRefreshRequest = exports2.WorkspaceDiagnosticRequest = exports2.DocumentDiagnosticRequest = exports2.DocumentDiagnosticReportKind = exports2.DiagnosticServerCancellationData = exports2.InlayHintRefreshRequest = exports2.InlayHintResolveRequest = exports2.InlayHintRequest = exports2.InlineValueRefreshRequest = exports2.InlineValueRequest = exports2.TypeHierarchySupertypesRequest = exports2.TypeHierarchySubtypesRequest = exports2.TypeHierarchyPrepareRequest = exports2.MonikerRequest = exports2.MonikerKind = void 0;
     var messages_1 = require_messages2();
-    var vscode_languageserver_types_1 = (init_main(), __toCommonJS(main_exports));
-    var Is2 = __importStar(require_is3());
+    var vscode_languageserver_types_1 = require_main();
+    var Is = __importStar(require_is3());
     var protocol_implementation_1 = require_protocol_implementation();
     Object.defineProperty(exports2, "ImplementationRequest", { enumerable: true, get: function() {
       return protocol_implementation_1.ImplementationRequest;
@@ -6076,7 +6132,7 @@ var require_protocol = __commonJS({
     (function(TextDocumentFilter2) {
       function is(value) {
         const candidate = value;
-        return Is2.string(candidate) || (Is2.string(candidate.language) || Is2.string(candidate.scheme) || GlobPattern.is(candidate.pattern));
+        return Is.string(candidate) || (Is.string(candidate.language) || Is.string(candidate.scheme) || GlobPattern.is(candidate.pattern));
       }
       TextDocumentFilter2.is = is;
     })(TextDocumentFilter || (exports2.TextDocumentFilter = TextDocumentFilter = {}));
@@ -6084,7 +6140,7 @@ var require_protocol = __commonJS({
     (function(NotebookDocumentFilter2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (Is2.string(candidate.notebookType) || Is2.string(candidate.scheme) || Is2.string(candidate.pattern));
+        return Is.objectLiteral(candidate) && (Is.string(candidate.notebookType) || Is.string(candidate.scheme) || Is.string(candidate.pattern));
       }
       NotebookDocumentFilter2.is = is;
     })(NotebookDocumentFilter || (exports2.NotebookDocumentFilter = NotebookDocumentFilter = {}));
@@ -6092,7 +6148,7 @@ var require_protocol = __commonJS({
     (function(NotebookCellTextDocumentFilter2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (Is2.string(candidate.notebook) || NotebookDocumentFilter.is(candidate.notebook)) && (candidate.language === void 0 || Is2.string(candidate.language));
+        return Is.objectLiteral(candidate) && (Is.string(candidate.notebook) || NotebookDocumentFilter.is(candidate.notebook)) && (candidate.language === void 0 || Is.string(candidate.language));
       }
       NotebookCellTextDocumentFilter2.is = is;
     })(NotebookCellTextDocumentFilter || (exports2.NotebookCellTextDocumentFilter = NotebookCellTextDocumentFilter = {}));
@@ -6103,7 +6159,7 @@ var require_protocol = __commonJS({
           return false;
         }
         for (const elem of value) {
-          if (!Is2.string(elem) && !TextDocumentFilter.is(elem) && !NotebookCellTextDocumentFilter.is(elem)) {
+          if (!Is.string(elem) && !TextDocumentFilter.is(elem) && !NotebookCellTextDocumentFilter.is(elem)) {
             return false;
           }
         }
@@ -6150,7 +6206,7 @@ var require_protocol = __commonJS({
     (function(StaticRegistrationOptions2) {
       function hasId(value) {
         const candidate = value;
-        return candidate && Is2.string(candidate.id) && candidate.id.length > 0;
+        return candidate && Is.string(candidate.id) && candidate.id.length > 0;
       }
       StaticRegistrationOptions2.hasId = hasId;
     })(StaticRegistrationOptions || (exports2.StaticRegistrationOptions = StaticRegistrationOptions = {}));
@@ -6166,12 +6222,12 @@ var require_protocol = __commonJS({
     (function(WorkDoneProgressOptions2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (candidate.workDoneProgress === void 0 || Is2.boolean(candidate.workDoneProgress));
+        return Is.objectLiteral(candidate) && (candidate.workDoneProgress === void 0 || Is.boolean(candidate.workDoneProgress));
       }
       WorkDoneProgressOptions2.is = is;
       function hasWorkDoneProgress(value) {
         const candidate = value;
-        return candidate && Is2.boolean(candidate.workDoneProgress);
+        return candidate && Is.boolean(candidate.workDoneProgress);
       }
       WorkDoneProgressOptions2.hasWorkDoneProgress = hasWorkDoneProgress;
     })(WorkDoneProgressOptions || (exports2.WorkDoneProgressOptions = WorkDoneProgressOptions = {}));
@@ -6328,7 +6384,7 @@ var require_protocol = __commonJS({
     (function(RelativePattern2) {
       function is(value) {
         const candidate = value;
-        return Is2.objectLiteral(candidate) && (vscode_languageserver_types_1.URI.is(candidate.baseUri) || vscode_languageserver_types_1.WorkspaceFolder.is(candidate.baseUri)) && Is2.string(candidate.pattern);
+        return Is.objectLiteral(candidate) && (vscode_languageserver_types_1.URI.is(candidate.baseUri) || vscode_languageserver_types_1.WorkspaceFolder.is(candidate.baseUri)) && Is.string(candidate.pattern);
       }
       RelativePattern2.is = is;
     })(RelativePattern || (exports2.RelativePattern = RelativePattern = {}));
@@ -6336,7 +6392,7 @@ var require_protocol = __commonJS({
     (function(GlobPattern2) {
       function is(value) {
         const candidate = value;
-        return Is2.string(candidate) || RelativePattern.is(candidate);
+        return Is.string(candidate) || RelativePattern.is(candidate);
       }
       GlobPattern2.is = is;
     })(GlobPattern || (exports2.GlobPattern = GlobPattern = {}));
@@ -6547,9 +6603,9 @@ var require_protocol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/connection.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/connection.js
 var require_connection2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/connection.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.createProtocolConnection = createProtocolConnection;
@@ -6563,9 +6619,9 @@ var require_connection2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/common/api.js
+// ../../node_modules/vscode-languageserver-protocol/lib/common/api.js
 var require_api2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
+  "../../node_modules/vscode-languageserver-protocol/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6586,7 +6642,7 @@ var require_api2 = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.LSPErrorCodes = exports2.createProtocolConnection = void 0;
     __exportStar(require_api(), exports2);
-    __exportStar((init_main(), __toCommonJS(main_exports)), exports2);
+    __exportStar(require_main(), exports2);
     __exportStar(require_messages2(), exports2);
     __exportStar(require_protocol(), exports2);
     var connection_1 = require_connection2();
@@ -6605,9 +6661,9 @@ var require_api2 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/utils/async.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/async.js
 var require_async = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/async.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/async.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.Semaphore = exports2.Delayer = void 0;
@@ -6893,9 +6949,9 @@ var require_async = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js
 var require_protocolCompletionItem = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCompletionItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -6951,9 +7007,9 @@ var require_protocolCompletionItem = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCodeLens.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCodeLens.js
 var require_protocolCodeLens = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCodeLens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCodeLens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7004,9 +7060,9 @@ var require_protocolCodeLens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js
 var require_protocolDocumentLink = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolDocumentLink.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7057,9 +7113,9 @@ var require_protocolDocumentLink = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCodeAction.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCodeAction.js
 var require_protocolCodeAction = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCodeAction.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7111,9 +7167,9 @@ var require_protocolCodeAction = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js
 var require_protocolDiagnostic = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolDiagnostic.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7155,12 +7211,12 @@ var require_protocolDiagnostic = __commonJS({
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ProtocolDiagnostic = exports2.DiagnosticCode = void 0;
     var vscode = __importStar(require("vscode"));
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var DiagnosticCode;
     (function(DiagnosticCode2) {
       function is(value) {
         const candidate = value;
-        return candidate !== void 0 && candidate !== null && (Is2.number(candidate.value) || Is2.string(candidate.value)) && Is2.string(candidate.target);
+        return candidate !== void 0 && candidate !== null && (Is.number(candidate.value) || Is.string(candidate.value)) && Is.string(candidate.target);
       }
       DiagnosticCode2.is = is;
     })(DiagnosticCode || (exports2.DiagnosticCode = DiagnosticCode = {}));
@@ -7177,9 +7233,9 @@ var require_protocolDiagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js
 var require_protocolCallHierarchyItem = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolCallHierarchyItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7233,9 +7289,9 @@ var require_protocolCallHierarchyItem = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js
 var require_protocolTypeHierarchyItem = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolTypeHierarchyItem.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7289,9 +7345,9 @@ var require_protocolTypeHierarchyItem = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js
 var require_protocolWorkspaceSymbol = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolWorkspaceSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7332,7 +7388,7 @@ var require_protocolWorkspaceSymbol = __commonJS({
     })();
     Object.defineProperty(exports2, "__esModule", { value: true });
     var code = __importStar(require("vscode"));
-    var WorkspaceSymbol2 = class extends code.SymbolInformation {
+    var WorkspaceSymbol = class extends code.SymbolInformation {
       data;
       hasRange;
       constructor(name, kind, containerName, locationOrUri, data) {
@@ -7344,13 +7400,13 @@ var require_protocolWorkspaceSymbol = __commonJS({
         }
       }
     };
-    exports2.default = WorkspaceSymbol2;
+    exports2.default = WorkspaceSymbol;
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolInlayHint.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolInlayHint.js
 var require_protocolInlayHint = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolInlayHint.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolInlayHint.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7401,9 +7457,9 @@ var require_protocolInlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/codeConverter.js
+// ../../node_modules/vscode-languageclient/lib/common/codeConverter.js
 var require_codeConverter = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/codeConverter.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/codeConverter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -7449,7 +7505,7 @@ var require_codeConverter = __commonJS({
     exports2.createConverter = createConverter;
     var code = __importStar(require("vscode"));
     var proto = __importStar(require_api2());
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var async = __importStar(require_async());
     var protocolCompletionItem_1 = __importDefault(require_protocolCompletionItem());
     var protocolCodeLens_1 = __importDefault(require_protocolCodeLens());
@@ -7769,7 +7825,7 @@ var require_codeConverter = __commonJS({
         if (value === void 0 || value === null) {
           return void 0;
         }
-        if (Is2.number(value) || Is2.string(value)) {
+        if (Is.number(value) || Is.string(value)) {
           return value;
         }
         return { value: value.value, target: asUri(value.target) };
@@ -7791,7 +7847,7 @@ var require_codeConverter = __commonJS({
         } else {
           result.code = code2;
         }
-        if (Is2.number(item.severity)) {
+        if (Is.number(item.severity)) {
           result.severity = asDiagnosticSeverity(item.severity);
         }
         if (Array.isArray(item.tags)) {
@@ -7858,7 +7914,7 @@ var require_codeConverter = __commonJS({
       function asCompletionItem(item, labelDetailsSupport = false) {
         let label;
         let labelDetails;
-        if (Is2.string(item.label)) {
+        if (Is.string(item.label)) {
           label = item.label;
         } else {
           label = item.label.label;
@@ -7885,7 +7941,7 @@ var require_codeConverter = __commonJS({
           result.filterText = item.filterText;
         }
         fillPrimaryInsertText(result, item);
-        if (Is2.number(item.kind)) {
+        if (Is.number(item.kind)) {
           result.kind = asCompletionItemKind(item.kind, protocolItem && protocolItem.originalItemKind);
         }
         if (item.sortText) {
@@ -8050,7 +8106,7 @@ var require_codeConverter = __commonJS({
           return context;
         }
         let only;
-        if (context.only && Is2.string(context.only.value)) {
+        if (context.only && Is.string(context.only.value)) {
           only = [context.only.value];
         }
         return proto.CodeActionContext.create(await asDiagnostics(context.diagnostics, token), only, asCodeActionTriggerKind(context.triggerKind));
@@ -8060,7 +8116,7 @@ var require_codeConverter = __commonJS({
           return context;
         }
         let only;
-        if (context.only && Is2.string(context.only.value)) {
+        if (context.only && Is.string(context.only.value)) {
           only = [context.only.value];
         }
         return proto.CodeActionContext.create(asDiagnosticsSync(context.diagnostics), only, asCodeActionTriggerKind(context.triggerKind));
@@ -8329,9 +8385,9 @@ var require_codeConverter = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/protocolConverter.js
+// ../../node_modules/vscode-languageclient/lib/common/protocolConverter.js
 var require_protocolConverter = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/protocolConverter.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/protocolConverter.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -8377,7 +8433,7 @@ var require_protocolConverter = __commonJS({
     exports2.createConverter = createConverter;
     var code = __importStar(require("vscode"));
     var ls = __importStar(require_api2());
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var async = __importStar(require_async());
     var protocolCompletionItem_1 = __importDefault(require_protocolCompletionItem());
     var protocolCodeLens_1 = __importDefault(require_protocolCodeLens());
@@ -8393,7 +8449,7 @@ var require_protocolConverter = __commonJS({
     (function(CodeBlock2) {
       function is(value) {
         const candidate = value;
-        return candidate && Is2.string(candidate.language) && Is2.string(candidate.value);
+        return candidate && Is.string(candidate.language) && Is.string(candidate.value);
       }
       CodeBlock2.is = is;
     })(CodeBlock || (CodeBlock = {}));
@@ -8523,7 +8579,7 @@ var require_protocolConverter = __commonJS({
         return code.DiagnosticSeverity.Error;
       }
       function asHoverContent(value) {
-        if (Is2.string(value)) {
+        if (Is.string(value)) {
           return asMarkdownString(value);
         } else if (CodeBlock.is(value)) {
           const result = asMarkdownString();
@@ -8545,7 +8601,7 @@ var require_protocolConverter = __commonJS({
         }
       }
       function asDocumentation(value) {
-        if (Is2.string(value)) {
+        if (Is.string(value)) {
           return value;
         } else {
           switch (value.kind) {
@@ -8642,7 +8698,7 @@ var require_protocolConverter = __commonJS({
         }
         if (item.documentation) {
           result.documentation = asDocumentation(item.documentation);
-          result.documentationFormat = Is2.string(item.documentation) ? "$string" : item.documentation.kind;
+          result.documentationFormat = Is.string(item.documentation) ? "$string" : item.documentation.kind;
         }
         if (item.filterText) {
           result.filterText = item.filterText;
@@ -8653,7 +8709,7 @@ var require_protocolConverter = __commonJS({
           result.range = insertText.range;
           result.fromEdit = insertText.fromEdit;
         }
-        if (Is2.number(item.kind)) {
+        if (Is.number(item.kind)) {
           const [itemKind, original] = asCompletionItemKind(item.kind);
           result.kind = itemKind;
           if (original) {
@@ -8709,14 +8765,14 @@ var require_protocolConverter = __commonJS({
               set.add(char);
             }
           }
-          if (Is2.stringArray(item.commitCharacters)) {
+          if (Is.stringArray(item.commitCharacters)) {
             for (const char of item.commitCharacters) {
               set.add(char);
             }
           }
           return Array.from(set);
         }
-        return item.commitCharacters !== void 0 ? Is2.stringArray(item.commitCharacters) ? item.commitCharacters : void 0 : defaultCommitCharacters;
+        return item.commitCharacters !== void 0 ? Is.stringArray(item.commitCharacters) ? item.commitCharacters : void 0 : defaultCommitCharacters;
       }
       function applyData(item, defaultData, applyKind) {
         if (applyKind === ls.ApplyKind.Merge) {
@@ -8798,12 +8854,12 @@ var require_protocolConverter = __commonJS({
           return void 0;
         }
         const result = new code.SignatureHelp();
-        if (Is2.number(item.activeSignature)) {
+        if (Is.number(item.activeSignature)) {
           result.activeSignature = item.activeSignature;
         } else {
           result.activeSignature = 0;
         }
-        if (Is2.number(item.activeParameter)) {
+        if (Is.number(item.activeParameter)) {
           result.activeParameter = item.activeParameter;
         } else if (item.activeParameter === null) {
           result.activeParameter = -1;
@@ -8878,7 +8934,7 @@ var require_protocolConverter = __commonJS({
         if (!item) {
           return void 0;
         }
-        if (Is2.array(item)) {
+        if (Is.array(item)) {
           if (item.length === 0) {
             return [];
           } else if (ls.LocationLink.is(item[0])) {
@@ -8908,7 +8964,7 @@ var require_protocolConverter = __commonJS({
       }
       function asDocumentHighlight(item) {
         const result = new code.DocumentHighlight(asRange(item.range));
-        if (Is2.number(item.kind)) {
+        if (Is.number(item.kind)) {
           result.kind = asDocumentHighlightKind(item.kind);
         }
         return result;
@@ -9382,7 +9438,7 @@ ${JSON.stringify(change, void 0, 4)}`);
         return async.map(items, asTypeHierarchyItem, token);
       }
       function asGlobPattern(pattern) {
-        if (Is2.string(pattern)) {
+        if (Is.string(pattern)) {
           return pattern;
         }
         if (ls.RelativePattern.is(pattern)) {
@@ -9506,9 +9562,9 @@ ${JSON.stringify(change, void 0, 4)}`);
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/utils/uuid.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/uuid.js
 var require_uuid = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/uuid.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/uuid.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.empty = void 0;
@@ -9598,9 +9654,9 @@ var require_uuid = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/progressPart.js
+// ../../node_modules/vscode-languageclient/lib/common/progressPart.js
 var require_progressPart = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/progressPart.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/progressPart.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -9643,7 +9699,7 @@ var require_progressPart = __commonJS({
     exports2.ProgressPart = void 0;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var ProgressPart = class {
       _client;
       _token;
@@ -9699,9 +9755,9 @@ var require_progressPart = __commonJS({
         });
       }
       report(params) {
-        if (this._infinite && Is2.string(params.message)) {
+        if (this._infinite && Is.string(params.message)) {
           this._progress !== void 0 && this._progress.report({ message: params.message });
-        } else if (Is2.number(params.percentage)) {
+        } else if (Is.number(params.percentage)) {
           const percentage2 = Math.max(0, Math.min(params.percentage, 100));
           const delta = Math.max(0, percentage2 - this._reported);
           this._reported += delta;
@@ -9741,9 +9797,9 @@ var require_progressPart = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/features.js
+// ../../node_modules/vscode-languageclient/lib/common/features.js
 var require_features = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/features.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/features.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -9787,7 +9843,7 @@ var require_features = __commonJS({
     exports2.ensure = ensure;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var UUID = __importStar(require_uuid());
     var LSPCancellationError = class extends vscode_1.CancellationError {
       data;
@@ -9807,7 +9863,7 @@ var require_features = __commonJS({
     (function(StaticFeature2) {
       function is(value) {
         const candidate = value;
-        return candidate !== void 0 && candidate !== null && Is2.func(candidate.fillClientCapabilities) && Is2.func(candidate.initialize) && Is2.func(candidate.getState) && Is2.func(candidate.clear) && (candidate.fillInitializeParams === void 0 || Is2.func(candidate.fillInitializeParams));
+        return candidate !== void 0 && candidate !== null && Is.func(candidate.fillClientCapabilities) && Is.func(candidate.initialize) && Is.func(candidate.getState) && Is.func(candidate.clear) && (candidate.fillInitializeParams === void 0 || Is.func(candidate.fillInitializeParams));
       }
       StaticFeature2.is = is;
     })(StaticFeature || (exports2.StaticFeature = StaticFeature = {}));
@@ -9815,7 +9871,7 @@ var require_features = __commonJS({
     (function(DynamicFeature2) {
       function is(value) {
         const candidate = value;
-        return candidate !== void 0 && candidate !== null && Is2.func(candidate.fillClientCapabilities) && Is2.func(candidate.initialize) && Is2.func(candidate.getState) && Is2.func(candidate.clear) && (candidate.fillInitializeParams === void 0 || Is2.func(candidate.fillInitializeParams)) && Is2.func(candidate.register) && Is2.func(candidate.unregister) && candidate.registrationType !== void 0;
+        return candidate !== void 0 && candidate !== null && Is.func(candidate.fillClientCapabilities) && Is.func(candidate.initialize) && Is.func(candidate.getState) && Is.func(candidate.clear) && (candidate.fillInitializeParams === void 0 || Is.func(candidate.fillInitializeParams)) && Is.func(candidate.register) && Is.func(candidate.unregister) && candidate.registrationType !== void 0;
       }
       DynamicFeature2.is = is;
     })(DynamicFeature || (exports2.DynamicFeature = DynamicFeature = {}));
@@ -10003,11 +10059,11 @@ var require_features = __commonJS({
           if (selector) {
             return [id, Object.assign({}, capability, { documentSelector: selector })];
           }
-        } else if (Is2.boolean(capability) && capability === true || vscode_languageserver_protocol_1.WorkDoneProgressOptions.is(capability)) {
+        } else if (Is.boolean(capability) && capability === true || vscode_languageserver_protocol_1.WorkDoneProgressOptions.is(capability)) {
           if (!documentSelector) {
             return [void 0, void 0];
           }
-          const options = Is2.boolean(capability) && capability === true ? { documentSelector } : Object.assign({}, capability, { documentSelector });
+          const options = Is.boolean(capability) && capability === true ? { documentSelector } : Object.assign({}, capability, { documentSelector });
           return [UUID.generateUuid(), options];
         }
         return [void 0, void 0];
@@ -10016,7 +10072,7 @@ var require_features = __commonJS({
         if (!documentSelector || !capability) {
           return void 0;
         }
-        return Is2.boolean(capability) && capability === true ? { documentSelector } : Object.assign({}, capability, { documentSelector });
+        return Is.boolean(capability) && capability === true ? { documentSelector } : Object.assign({}, capability, { documentSelector });
       }
       getProvider(textDocument) {
         for (const registration of this._registrations.values()) {
@@ -10095,9 +10151,9 @@ var require_features = __commonJS({
   }
 });
 
-// node_modules/balanced-match/dist/commonjs/index.js
+// ../../node_modules/balanced-match/dist/commonjs/index.js
 var require_commonjs = __commonJS({
-  "node_modules/balanced-match/dist/commonjs/index.js"(exports2) {
+  "../../node_modules/balanced-match/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.range = exports2.balanced = void 0;
@@ -10157,9 +10213,9 @@ var require_commonjs = __commonJS({
   }
 });
 
-// node_modules/brace-expansion/dist/commonjs/index.js
+// ../../node_modules/brace-expansion/dist/commonjs/index.js
 var require_commonjs2 = __commonJS({
-  "node_modules/brace-expansion/dist/commonjs/index.js"(exports2) {
+  "../../node_modules/brace-expansion/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.EXPANSION_MAX_LENGTH = exports2.EXPANSION_MAX = void 0;
@@ -10379,9 +10435,9 @@ var require_commonjs2 = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
+// ../../node_modules/minimatch/dist/commonjs/assert-valid-pattern.js
 var require_assert_valid_pattern = __commonJS({
-  "node_modules/minimatch/dist/commonjs/assert-valid-pattern.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/assert-valid-pattern.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.assertValidPattern = void 0;
@@ -10398,9 +10454,9 @@ var require_assert_valid_pattern = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/brace-expressions.js
+// ../../node_modules/minimatch/dist/commonjs/brace-expressions.js
 var require_brace_expressions = __commonJS({
-  "node_modules/minimatch/dist/commonjs/brace-expressions.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/brace-expressions.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.parseClass = void 0;
@@ -10515,9 +10571,9 @@ var require_brace_expressions = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/unescape.js
+// ../../node_modules/minimatch/dist/commonjs/unescape.js
 var require_unescape = __commonJS({
-  "node_modules/minimatch/dist/commonjs/unescape.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/unescape.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.unescape = void 0;
@@ -10531,9 +10587,9 @@ var require_unescape = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/ast.js
+// ../../node_modules/minimatch/dist/commonjs/ast.js
 var require_ast = __commonJS({
-  "node_modules/minimatch/dist/commonjs/ast.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/ast.js"(exports2) {
     "use strict";
     var _a;
     Object.defineProperty(exports2, "__esModule", { value: true });
@@ -11185,9 +11241,9 @@ var require_ast = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/escape.js
+// ../../node_modules/minimatch/dist/commonjs/escape.js
 var require_escape = __commonJS({
-  "node_modules/minimatch/dist/commonjs/escape.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/escape.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.escape = void 0;
@@ -11201,9 +11257,9 @@ var require_escape = __commonJS({
   }
 });
 
-// node_modules/minimatch/dist/commonjs/index.js
+// ../../node_modules/minimatch/dist/commonjs/index.js
 var require_commonjs3 = __commonJS({
-  "node_modules/minimatch/dist/commonjs/index.js"(exports2) {
+  "../../node_modules/minimatch/dist/commonjs/index.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.unescape = exports2.escape = exports2.AST = exports2.Minimatch = exports2.match = exports2.makeRe = exports2.braceExpand = exports2.defaults = exports2.filter = exports2.GLOBSTAR = exports2.sep = exports2.minimatch = void 0;
@@ -12041,9 +12097,9 @@ var require_commonjs3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/utils/globPattern.js
+// ../../node_modules/vscode-languageclient/lib/common/utils/globPattern.js
 var require_globPattern = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/utils/globPattern.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/utils/globPattern.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12107,9 +12163,9 @@ var require_globPattern = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/diagnostic.js
+// ../../node_modules/vscode-languageclient/lib/common/diagnostic.js
 var require_diagnostic = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/diagnostic.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/diagnostic.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DiagnosticFeature = exports2.DiagnosticPullMode = exports2.vsdiag = void 0;
@@ -12936,9 +12992,9 @@ var require_diagnostic = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/notebook.js
+// ../../node_modules/vscode-languageclient/lib/common/notebook.js
 var require_notebook = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/notebook.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/notebook.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12982,7 +13038,7 @@ var require_notebook = __commonJS({
     var vscode = __importStar(require("vscode"));
     var proto = __importStar(require_api2());
     var UUID = __importStar(require_uuid());
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var globPattern_1 = require_globPattern();
     function ensure(target, key2) {
       if (target[key2] === void 0) {
@@ -13023,7 +13079,7 @@ var require_notebook = __commonJS({
           if (Object.keys(cell2.metadata).length > 0) {
             result.metadata = asMetadata(cell2.metadata);
           }
-          if (cell2.executionSummary !== void 0 && (Is2.number(cell2.executionSummary.executionOrder) && Is2.boolean(cell2.executionSummary.success))) {
+          if (cell2.executionSummary !== void 0 && (Is.number(cell2.executionSummary.executionOrder) && Is.boolean(cell2.executionSummary.success))) {
             result.executionSummary = {
               executionOrder: cell2.executionSummary.executionOrder,
               success: cell2.executionSummary.success
@@ -13918,9 +13974,9 @@ var require_notebook = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/configuration.js
+// ../../node_modules/vscode-languageclient/lib/common/configuration.js
 var require_configuration = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/configuration.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/configuration.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -13964,7 +14020,7 @@ var require_configuration = __commonJS({
     exports2.toJSONObject = toJSONObject;
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var UUID = __importStar(require_uuid());
     var features_1 = require_features();
     var ConfigurationFeature = class {
@@ -14098,7 +14154,7 @@ var require_configuration = __commonJS({
           return;
         }
         let sections;
-        if (Is2.string(configurationSection)) {
+        if (Is.string(configurationSection)) {
           sections = [configurationSection];
         } else {
           sections = configurationSection;
@@ -14157,266 +14213,307 @@ var require_configuration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-textdocument/lib/esm/main.js
-var main_exports2 = {};
-__export(main_exports2, {
-  TextDocument: () => TextDocument2
-});
-function mergeSort(data, compare) {
-  if (data.length <= 1) {
-    return data;
-  }
-  const p = data.length / 2 | 0;
-  const left = data.slice(0, p);
-  const right = data.slice(p);
-  mergeSort(left, compare);
-  mergeSort(right, compare);
-  let leftIdx = 0;
-  let rightIdx = 0;
-  let i = 0;
-  while (leftIdx < left.length && rightIdx < right.length) {
-    const ret = compare(left[leftIdx], right[rightIdx]);
-    if (ret <= 0) {
-      data[i++] = left[leftIdx++];
-    } else {
-      data[i++] = right[rightIdx++];
-    }
-  }
-  while (leftIdx < left.length) {
-    data[i++] = left[leftIdx++];
-  }
-  while (rightIdx < right.length) {
-    data[i++] = right[rightIdx++];
-  }
-  return data;
-}
-function computeLineOffsets(text2, isAtLineStart, textOffset = 0) {
-  const result = isAtLineStart ? [textOffset] : [];
-  for (let i = 0; i < text2.length; i++) {
-    const ch = text2.charCodeAt(i);
-    if (isEOL(ch)) {
-      if (ch === 13 && i + 1 < text2.length && text2.charCodeAt(i + 1) === 10) {
-        i++;
-      }
-      result.push(textOffset + i + 1);
-    }
-  }
-  return result;
-}
-function isEOL(char) {
-  return char === 13 || char === 10;
-}
-function getWellformedRange(range) {
-  const start = range.start;
-  const end = range.end;
-  if (start.line > end.line || start.line === end.line && start.character > end.character) {
-    return { start: end, end: start };
-  }
-  return range;
-}
-function getWellformedEdit(textEdit) {
-  const range = getWellformedRange(textEdit.range);
-  if (range !== textEdit.range) {
-    return { newText: textEdit.newText, range };
-  }
-  return textEdit;
-}
-var FullTextDocument2, TextDocument2;
-var init_main2 = __esm({
-  "node_modules/vscode-languageserver-textdocument/lib/esm/main.js"() {
-    "use strict";
-    FullTextDocument2 = class _FullTextDocument {
-      constructor(uri, languageId, version, content) {
-        this._uri = uri;
-        this._languageId = languageId;
-        this._version = version;
-        this._content = content;
-        this._lineOffsets = void 0;
-      }
-      get uri() {
-        return this._uri;
-      }
-      get languageId() {
-        return this._languageId;
-      }
-      get version() {
-        return this._version;
-      }
-      getText(range) {
-        if (range) {
-          const start = this.offsetAt(range.start);
-          const end = this.offsetAt(range.end);
-          return this._content.substring(start, end);
+// ../../node_modules/vscode-languageserver-textdocument/lib/umd/main.js
+var require_main2 = __commonJS({
+  "../../node_modules/vscode-languageserver-textdocument/lib/umd/main.js"(exports2, module2) {
+    var __spreadArray = exports2 && exports2.__spreadArray || function(to, from, pack) {
+      if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+          if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+          ar[i] = from[i];
         }
-        return this._content;
       }
-      update(changes, version) {
-        for (const change of changes) {
-          if (_FullTextDocument.isIncremental(change)) {
-            const range = getWellformedRange(change.range);
-            const startOffset = this.offsetAt(range.start);
-            const endOffset = this.offsetAt(range.end);
-            this._content = this._content.substring(0, startOffset) + change.text + this._content.substring(endOffset, this._content.length);
-            const startLine = Math.max(range.start.line, 0);
-            const endLine = Math.max(range.end.line, 0);
-            let lineOffsets = this._lineOffsets;
-            const addedLineOffsets = computeLineOffsets(change.text, false, startOffset);
-            if (endLine - startLine === addedLineOffsets.length) {
-              for (let i = 0, len = addedLineOffsets.length; i < len; i++) {
-                lineOffsets[i + startLine + 1] = addedLineOffsets[i];
-              }
-            } else {
-              if (addedLineOffsets.length < 1e4) {
-                lineOffsets.splice(startLine + 1, endLine - startLine, ...addedLineOffsets);
-              } else {
-                this._lineOffsets = lineOffsets = lineOffsets.slice(0, startLine + 1).concat(addedLineOffsets, lineOffsets.slice(endLine + 1));
-              }
-            }
-            const diff = change.text.length - (endOffset - startOffset);
-            if (diff !== 0) {
-              for (let i = startLine + 1 + addedLineOffsets.length, len = lineOffsets.length; i < len; i++) {
-                lineOffsets[i] = lineOffsets[i] + diff;
-              }
-            }
-          } else if (_FullTextDocument.isFull(change)) {
-            this._content = change.text;
-            this._lineOffsets = void 0;
-          } else {
-            throw new Error("Unknown change event received");
-          }
-        }
-        this._version = version;
-      }
-      getLineOffsets() {
-        if (this._lineOffsets === void 0) {
-          this._lineOffsets = computeLineOffsets(this._content, true);
-        }
-        return this._lineOffsets;
-      }
-      positionAt(offset) {
-        offset = Math.max(Math.min(offset, this._content.length), 0);
-        const lineOffsets = this.getLineOffsets();
-        let low = 0, high = lineOffsets.length;
-        if (high === 0) {
-          return { line: 0, character: offset };
-        }
-        while (low < high) {
-          const mid = Math.floor((low + high) / 2);
-          if (lineOffsets[mid] > offset) {
-            high = mid;
-          } else {
-            low = mid + 1;
-          }
-        }
-        const line = low - 1;
-        offset = this.ensureBeforeEOL(offset, lineOffsets[line]);
-        return { line, character: offset - lineOffsets[line] };
-      }
-      offsetAt(position) {
-        const lineOffsets = this.getLineOffsets();
-        if (position.line >= lineOffsets.length) {
-          return this._content.length;
-        } else if (position.line < 0) {
-          return 0;
-        }
-        const lineOffset = lineOffsets[position.line];
-        if (position.character <= 0) {
-          return lineOffset;
-        }
-        const nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
-        const offset = Math.min(lineOffset + position.character, nextLineOffset);
-        return this.ensureBeforeEOL(offset, lineOffset);
-      }
-      getLineRange(line) {
-        const lineOffsets = this.getLineOffsets();
-        if (line >= lineOffsets.length) {
-          const lastLine = lineOffsets.length - 1;
-          return { start: { line: lastLine, character: 0 }, end: { line: lastLine, character: this._content.length - lineOffsets[lastLine] } };
-        } else if (line < 0) {
-          return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
-        }
-        const startOffset = lineOffsets[line];
-        const nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
-        const endOffset = this.ensureBeforeEOL(nextLineOffset, startOffset);
-        return { start: { line, character: 0 }, end: { line, character: endOffset - startOffset } };
-      }
-      getEOLCharacters(line) {
-        const lineOffsets = this.getLineOffsets();
-        if (line >= lineOffsets.length) {
-          return "";
-        } else if (line < 0) {
-          return "";
-        }
-        const nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
-        const eolOffset = this.ensureBeforeEOL(nextLineOffset, lineOffsets[line]);
-        return this._content.substring(eolOffset, nextLineOffset);
-      }
-      ensureBeforeEOL(offset, lineOffset) {
-        while (offset > lineOffset && isEOL(this._content.charCodeAt(offset - 1))) {
-          offset--;
-        }
-        return offset;
-      }
-      get lineCount() {
-        return this.getLineOffsets().length;
-      }
-      static isIncremental(event) {
-        const candidate = event;
-        return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range !== void 0 && (candidate.rangeLength === void 0 || typeof candidate.rangeLength === "number");
-      }
-      static isFull(event) {
-        const candidate = event;
-        return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range === void 0 && candidate.rangeLength === void 0;
-      }
+      return to.concat(ar || Array.prototype.slice.call(from));
     };
-    (function(TextDocument3) {
-      function create(uri, languageId, version, content) {
-        return new FullTextDocument2(uri, languageId, version, content);
+    (function(factory) {
+      if (typeof module2 === "object" && typeof module2.exports === "object") {
+        var v = factory(require, exports2);
+        if (v !== void 0) module2.exports = v;
+      } else if (typeof define === "function" && define.amd) {
+        define(["require", "exports"], factory);
       }
-      TextDocument3.create = create;
-      function update(document, changes, version) {
-        if (document instanceof FullTextDocument2) {
-          document.update(changes, version);
-          return document;
-        } else {
-          throw new Error("TextDocument.update: document must be created by TextDocument.create");
+    })(function(require2, exports3) {
+      "use strict";
+      Object.defineProperty(exports3, "__esModule", { value: true });
+      exports3.TextDocument = void 0;
+      var FullTextDocument = (
+        /** @class */
+        (function() {
+          function FullTextDocument2(uri, languageId, version, content) {
+            this._uri = uri;
+            this._languageId = languageId;
+            this._version = version;
+            this._content = content;
+            this._lineOffsets = void 0;
+          }
+          Object.defineProperty(FullTextDocument2.prototype, "uri", {
+            get: function() {
+              return this._uri;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          Object.defineProperty(FullTextDocument2.prototype, "languageId", {
+            get: function() {
+              return this._languageId;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          Object.defineProperty(FullTextDocument2.prototype, "version", {
+            get: function() {
+              return this._version;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          FullTextDocument2.prototype.getText = function(range) {
+            if (range) {
+              var start = this.offsetAt(range.start);
+              var end = this.offsetAt(range.end);
+              return this._content.substring(start, end);
+            }
+            return this._content;
+          };
+          FullTextDocument2.prototype.update = function(changes, version) {
+            for (var _i = 0, changes_1 = changes; _i < changes_1.length; _i++) {
+              var change = changes_1[_i];
+              if (FullTextDocument2.isIncremental(change)) {
+                var range = getWellformedRange(change.range);
+                var startOffset = this.offsetAt(range.start);
+                var endOffset = this.offsetAt(range.end);
+                this._content = this._content.substring(0, startOffset) + change.text + this._content.substring(endOffset, this._content.length);
+                var startLine = Math.max(range.start.line, 0);
+                var endLine = Math.max(range.end.line, 0);
+                var lineOffsets = this._lineOffsets;
+                var addedLineOffsets = computeLineOffsets(change.text, false, startOffset);
+                if (endLine - startLine === addedLineOffsets.length) {
+                  for (var i = 0, len = addedLineOffsets.length; i < len; i++) {
+                    lineOffsets[i + startLine + 1] = addedLineOffsets[i];
+                  }
+                } else {
+                  if (addedLineOffsets.length < 1e4) {
+                    lineOffsets.splice.apply(lineOffsets, __spreadArray([startLine + 1, endLine - startLine], addedLineOffsets, false));
+                  } else {
+                    this._lineOffsets = lineOffsets = lineOffsets.slice(0, startLine + 1).concat(addedLineOffsets, lineOffsets.slice(endLine + 1));
+                  }
+                }
+                var diff = change.text.length - (endOffset - startOffset);
+                if (diff !== 0) {
+                  for (var i = startLine + 1 + addedLineOffsets.length, len = lineOffsets.length; i < len; i++) {
+                    lineOffsets[i] = lineOffsets[i] + diff;
+                  }
+                }
+              } else if (FullTextDocument2.isFull(change)) {
+                this._content = change.text;
+                this._lineOffsets = void 0;
+              } else {
+                throw new Error("Unknown change event received");
+              }
+            }
+            this._version = version;
+          };
+          FullTextDocument2.prototype.getLineOffsets = function() {
+            if (this._lineOffsets === void 0) {
+              this._lineOffsets = computeLineOffsets(this._content, true);
+            }
+            return this._lineOffsets;
+          };
+          FullTextDocument2.prototype.positionAt = function(offset) {
+            offset = Math.max(Math.min(offset, this._content.length), 0);
+            var lineOffsets = this.getLineOffsets();
+            var low = 0, high = lineOffsets.length;
+            if (high === 0) {
+              return { line: 0, character: offset };
+            }
+            while (low < high) {
+              var mid = Math.floor((low + high) / 2);
+              if (lineOffsets[mid] > offset) {
+                high = mid;
+              } else {
+                low = mid + 1;
+              }
+            }
+            var line = low - 1;
+            offset = this.ensureBeforeEOL(offset, lineOffsets[line]);
+            return { line, character: offset - lineOffsets[line] };
+          };
+          FullTextDocument2.prototype.offsetAt = function(position) {
+            var lineOffsets = this.getLineOffsets();
+            if (position.line >= lineOffsets.length) {
+              return this._content.length;
+            } else if (position.line < 0) {
+              return 0;
+            }
+            var lineOffset = lineOffsets[position.line];
+            if (position.character <= 0) {
+              return lineOffset;
+            }
+            var nextLineOffset = position.line + 1 < lineOffsets.length ? lineOffsets[position.line + 1] : this._content.length;
+            var offset = Math.min(lineOffset + position.character, nextLineOffset);
+            return this.ensureBeforeEOL(offset, lineOffset);
+          };
+          FullTextDocument2.prototype.getLineRange = function(line) {
+            var lineOffsets = this.getLineOffsets();
+            if (line >= lineOffsets.length) {
+              var lastLine = lineOffsets.length - 1;
+              return { start: { line: lastLine, character: 0 }, end: { line: lastLine, character: this._content.length - lineOffsets[lastLine] } };
+            } else if (line < 0) {
+              return { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } };
+            }
+            var startOffset = lineOffsets[line];
+            var nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
+            var endOffset = this.ensureBeforeEOL(nextLineOffset, startOffset);
+            return { start: { line, character: 0 }, end: { line, character: endOffset - startOffset } };
+          };
+          FullTextDocument2.prototype.getEOLCharacters = function(line) {
+            var lineOffsets = this.getLineOffsets();
+            if (line >= lineOffsets.length) {
+              return "";
+            } else if (line < 0) {
+              return "";
+            }
+            var nextLineOffset = line + 1 < lineOffsets.length ? lineOffsets[line + 1] : this._content.length;
+            var eolOffset = this.ensureBeforeEOL(nextLineOffset, lineOffsets[line]);
+            return this._content.substring(eolOffset, nextLineOffset);
+          };
+          FullTextDocument2.prototype.ensureBeforeEOL = function(offset, lineOffset) {
+            while (offset > lineOffset && isEOL(this._content.charCodeAt(offset - 1))) {
+              offset--;
+            }
+            return offset;
+          };
+          Object.defineProperty(FullTextDocument2.prototype, "lineCount", {
+            get: function() {
+              return this.getLineOffsets().length;
+            },
+            enumerable: false,
+            configurable: true
+          });
+          FullTextDocument2.isIncremental = function(event) {
+            var candidate = event;
+            return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range !== void 0 && (candidate.rangeLength === void 0 || typeof candidate.rangeLength === "number");
+          };
+          FullTextDocument2.isFull = function(event) {
+            var candidate = event;
+            return candidate !== void 0 && candidate !== null && typeof candidate.text === "string" && candidate.range === void 0 && candidate.rangeLength === void 0;
+          };
+          return FullTextDocument2;
+        })()
+      );
+      var TextDocument;
+      (function(TextDocument2) {
+        function create(uri, languageId, version, content) {
+          return new FullTextDocument(uri, languageId, version, content);
         }
-      }
-      TextDocument3.update = update;
-      function applyEdits(document, edits) {
-        const text2 = document.getText();
-        const sortedEdits = mergeSort(edits.map(getWellformedEdit), (a, b) => {
-          const diff = a.range.start.line - b.range.start.line;
-          if (diff === 0) {
-            return a.range.start.character - b.range.start.character;
+        TextDocument2.create = create;
+        function update(document, changes, version) {
+          if (document instanceof FullTextDocument) {
+            document.update(changes, version);
+            return document;
+          } else {
+            throw new Error("TextDocument.update: document must be created by TextDocument.create");
           }
-          return diff;
-        });
-        let lastModifiedOffset = 0;
-        const spans = [];
-        for (const e of sortedEdits) {
-          const startOffset = document.offsetAt(e.range.start);
-          if (startOffset < lastModifiedOffset) {
-            throw new Error("Overlapping edit");
-          } else if (startOffset > lastModifiedOffset) {
-            spans.push(text2.substring(lastModifiedOffset, startOffset));
-          }
-          if (e.newText.length) {
-            spans.push(e.newText);
-          }
-          lastModifiedOffset = document.offsetAt(e.range.end);
         }
-        spans.push(text2.substr(lastModifiedOffset));
-        return spans.join("");
+        TextDocument2.update = update;
+        function applyEdits(document, edits) {
+          var text2 = document.getText();
+          var sortedEdits = mergeSort(edits.map(getWellformedEdit), function(a, b) {
+            var diff = a.range.start.line - b.range.start.line;
+            if (diff === 0) {
+              return a.range.start.character - b.range.start.character;
+            }
+            return diff;
+          });
+          var lastModifiedOffset = 0;
+          var spans = [];
+          for (var _i = 0, sortedEdits_1 = sortedEdits; _i < sortedEdits_1.length; _i++) {
+            var e = sortedEdits_1[_i];
+            var startOffset = document.offsetAt(e.range.start);
+            if (startOffset < lastModifiedOffset) {
+              throw new Error("Overlapping edit");
+            } else if (startOffset > lastModifiedOffset) {
+              spans.push(text2.substring(lastModifiedOffset, startOffset));
+            }
+            if (e.newText.length) {
+              spans.push(e.newText);
+            }
+            lastModifiedOffset = document.offsetAt(e.range.end);
+          }
+          spans.push(text2.substr(lastModifiedOffset));
+          return spans.join("");
+        }
+        TextDocument2.applyEdits = applyEdits;
+      })(TextDocument || (exports3.TextDocument = TextDocument = {}));
+      function mergeSort(data, compare) {
+        if (data.length <= 1) {
+          return data;
+        }
+        var p = data.length / 2 | 0;
+        var left = data.slice(0, p);
+        var right = data.slice(p);
+        mergeSort(left, compare);
+        mergeSort(right, compare);
+        var leftIdx = 0;
+        var rightIdx = 0;
+        var i = 0;
+        while (leftIdx < left.length && rightIdx < right.length) {
+          var ret = compare(left[leftIdx], right[rightIdx]);
+          if (ret <= 0) {
+            data[i++] = left[leftIdx++];
+          } else {
+            data[i++] = right[rightIdx++];
+          }
+        }
+        while (leftIdx < left.length) {
+          data[i++] = left[leftIdx++];
+        }
+        while (rightIdx < right.length) {
+          data[i++] = right[rightIdx++];
+        }
+        return data;
       }
-      TextDocument3.applyEdits = applyEdits;
-    })(TextDocument2 || (TextDocument2 = {}));
+      function computeLineOffsets(text2, isAtLineStart, textOffset) {
+        if (textOffset === void 0) {
+          textOffset = 0;
+        }
+        var result = isAtLineStart ? [textOffset] : [];
+        for (var i = 0; i < text2.length; i++) {
+          var ch = text2.charCodeAt(i);
+          if (isEOL(ch)) {
+            if (ch === 13 && i + 1 < text2.length && text2.charCodeAt(i + 1) === 10) {
+              i++;
+            }
+            result.push(textOffset + i + 1);
+          }
+        }
+        return result;
+      }
+      function isEOL(char) {
+        return char === 13 || char === 10;
+      }
+      function getWellformedRange(range) {
+        var start = range.start;
+        var end = range.end;
+        if (start.line > end.line || start.line === end.line && start.character > end.character) {
+          return { start: end, end: start };
+        }
+        return range;
+      }
+      function getWellformedEdit(textEdit) {
+        var range = getWellformedRange(textEdit.range);
+        if (range !== textEdit.range) {
+          return { newText: textEdit.newText, range };
+        }
+        return textEdit;
+      }
+    });
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/textSynchronization.js
+// ../../node_modules/vscode-languageclient/lib/common/textSynchronization.js
 var require_textSynchronization = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/textSynchronization.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -14461,7 +14558,7 @@ var require_textSynchronization = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
     var UUID = __importStar(require_uuid());
-    var vscode_languageserver_textdocument_1 = (init_main2(), __toCommonJS(main_exports2));
+    var vscode_languageserver_textdocument_1 = require_main2();
     var DidOpenTextDocumentFeature = class extends features_1.TextDocumentEventFeature {
       _syncedDocuments;
       _pendingOpenNotifications;
@@ -15087,9 +15184,9 @@ var require_textSynchronization = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/completion.js
+// ../../node_modules/vscode-languageclient/lib/common/completion.js
 var require_completion = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/completion.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15252,9 +15349,9 @@ var require_completion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/hover.js
+// ../../node_modules/vscode-languageclient/lib/common/hover.js
 var require_hover = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/hover.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15347,9 +15444,9 @@ var require_hover = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/definition.js
+// ../../node_modules/vscode-languageclient/lib/common/definition.js
 var require_definition = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/definition.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15439,9 +15536,9 @@ var require_definition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/signatureHelp.js
+// ../../node_modules/vscode-languageclient/lib/common/signatureHelp.js
 var require_signatureHelp = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/signatureHelp.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15547,9 +15644,9 @@ var require_signatureHelp = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/documentHighlight.js
+// ../../node_modules/vscode-languageclient/lib/common/documentHighlight.js
 var require_documentHighlight = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/documentHighlight.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15634,9 +15731,9 @@ var require_documentHighlight = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/documentSymbol.js
+// ../../node_modules/vscode-languageclient/lib/common/documentSymbol.js
 var require_documentSymbol = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/documentSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15772,9 +15869,9 @@ var require_documentSymbol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/workspaceSymbol.js
+// ../../node_modules/vscode-languageclient/lib/common/workspaceSymbol.js
 var require_workspaceSymbol = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/workspaceSymbol.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15884,9 +15981,9 @@ var require_workspaceSymbol = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/reference.js
+// ../../node_modules/vscode-languageclient/lib/common/reference.js
 var require_reference = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/reference.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15974,9 +16071,9 @@ var require_reference = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/typeDefinition.js
+// ../../node_modules/vscode-languageclient/lib/common/typeDefinition.js
 var require_typeDefinition = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/typeDefinition.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/typeDefinition.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeDefinitionFeature = void 0;
@@ -16029,9 +16126,9 @@ var require_typeDefinition = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/implementation.js
+// ../../node_modules/vscode-languageclient/lib/common/implementation.js
 var require_implementation = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/implementation.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/implementation.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ImplementationFeature = void 0;
@@ -16083,9 +16180,9 @@ var require_implementation = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/colorProvider.js
+// ../../node_modules/vscode-languageclient/lib/common/colorProvider.js
 var require_colorProvider = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/colorProvider.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/colorProvider.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ColorProviderFeature = void 0;
@@ -16155,9 +16252,9 @@ var require_colorProvider = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/codeAction.js
+// ../../node_modules/vscode-languageclient/lib/common/codeAction.js
 var require_codeAction = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/codeAction.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16299,9 +16396,9 @@ var require_codeAction = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/codeLens.js
+// ../../node_modules/vscode-languageclient/lib/common/codeLens.js
 var require_codeLens = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/codeLens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16412,9 +16509,9 @@ var require_codeLens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/formatting.js
+// ../../node_modules/vscode-languageclient/lib/common/formatting.js
 var require_formatting = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/formatting.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16625,9 +16722,9 @@ var require_formatting = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/rename.js
+// ../../node_modules/vscode-languageclient/lib/common/rename.js
 var require_rename = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/rename.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/rename.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16671,7 +16768,7 @@ var require_rename = __commonJS({
     var vscode_1 = require("vscode");
     var vscode_languageserver_protocol_1 = require_api2();
     var UUID = __importStar(require_uuid());
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var features_1 = require_features();
     var RenameFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client3) {
@@ -16689,7 +16786,7 @@ var require_rename = __commonJS({
         if (!options) {
           return;
         }
-        if (Is2.boolean(capabilities.renameProvider)) {
+        if (Is.boolean(capabilities.renameProvider)) {
           options.prepareProvider = false;
         }
         this.register({ id: UUID.generateUuid(), registerOptions: options });
@@ -16767,16 +16864,16 @@ var require_rename = __commonJS({
       }
       isDefaultBehavior(value) {
         const candidate = value;
-        return candidate && Is2.boolean(candidate.defaultBehavior);
+        return candidate && Is.boolean(candidate.defaultBehavior);
       }
     };
     exports2.RenameFeature = RenameFeature;
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/documentLink.js
+// ../../node_modules/vscode-languageclient/lib/common/documentLink.js
 var require_documentLink = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/documentLink.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16878,9 +16975,9 @@ var require_documentLink = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/executeCommand.js
+// ../../node_modules/vscode-languageclient/lib/common/executeCommand.js
 var require_executeCommand = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/executeCommand.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -16990,9 +17087,9 @@ var require_executeCommand = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/foldingRange.js
+// ../../node_modules/vscode-languageclient/lib/common/foldingRange.js
 var require_foldingRange = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/foldingRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/foldingRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FoldingRangeFeature = void 0;
@@ -17055,9 +17152,9 @@ var require_foldingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/declaration.js
+// ../../node_modules/vscode-languageclient/lib/common/declaration.js
 var require_declaration = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/declaration.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/declaration.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.DeclarationFeature = void 0;
@@ -17109,9 +17206,9 @@ var require_declaration = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/selectionRange.js
+// ../../node_modules/vscode-languageclient/lib/common/selectionRange.js
 var require_selectionRange = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/selectionRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/selectionRange.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.SelectionRangeFeature = void 0;
@@ -17166,9 +17263,9 @@ var require_selectionRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/callHierarchy.js
+// ../../node_modules/vscode-languageclient/lib/common/callHierarchy.js
 var require_callHierarchy = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/callHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/callHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.CallHierarchyFeature = void 0;
@@ -17261,9 +17358,9 @@ var require_callHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/semanticTokens.js
+// ../../node_modules/vscode-languageclient/lib/common/semanticTokens.js
 var require_semanticTokens = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/semanticTokens.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/semanticTokens.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17307,7 +17404,7 @@ var require_semanticTokens = __commonJS({
     var vscode = __importStar(require("vscode"));
     var vscode_languageserver_protocol_1 = require_api2();
     var features_1 = require_features();
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var SemanticTokensFeature = class extends features_1.TextDocumentLanguageFeature {
       constructor(client3) {
         super(client3, vscode_languageserver_protocol_1.SemanticTokensRegistrationType.type);
@@ -17380,7 +17477,7 @@ var require_semanticTokens = __commonJS({
       }
       registerLanguageProvider(options) {
         const selector = options.documentSelector;
-        const fullProvider = Is2.boolean(options.full) ? options.full : options.full !== void 0;
+        const fullProvider = Is.boolean(options.full) ? options.full : options.full !== void 0;
         const hasEditProvider = options.full !== void 0 && typeof options.full !== "boolean" && options.full.delta === true;
         const eventEmitter = new vscode.EventEmitter();
         const documentProvider = fullProvider ? {
@@ -17467,9 +17564,9 @@ var require_semanticTokens = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/linkedEditingRange.js
+// ../../node_modules/vscode-languageclient/lib/common/linkedEditingRange.js
 var require_linkedEditingRange = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/linkedEditingRange.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/linkedEditingRange.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17557,9 +17654,9 @@ var require_linkedEditingRange = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/typeHierarchy.js
+// ../../node_modules/vscode-languageclient/lib/common/typeHierarchy.js
 var require_typeHierarchy = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/typeHierarchy.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/typeHierarchy.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.TypeHierarchyFeature = void 0;
@@ -17651,9 +17748,9 @@ var require_typeHierarchy = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/inlineValue.js
+// ../../node_modules/vscode-languageclient/lib/common/inlineValue.js
 var require_inlineValue = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/inlineValue.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/inlineValue.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlineValueFeature = void 0;
@@ -17716,9 +17813,9 @@ var require_inlineValue = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/inlayHint.js
+// ../../node_modules/vscode-languageclient/lib/common/inlayHint.js
 var require_inlayHint = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/inlayHint.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/inlayHint.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.InlayHintsFeature = void 0;
@@ -17802,9 +17899,9 @@ var require_inlayHint = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/workspaceFolder.js
+// ../../node_modules/vscode-languageclient/lib/common/workspaceFolder.js
 var require_workspaceFolder = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/workspaceFolder.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -17984,9 +18081,9 @@ var require_workspaceFolder = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/fileOperations.js
+// ../../node_modules/vscode-languageclient/lib/common/fileOperations.js
 var require_fileOperations = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/fileOperations.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/fileOperations.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18332,9 +18429,9 @@ var require_fileOperations = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/inlineCompletion.js
+// ../../node_modules/vscode-languageclient/lib/common/inlineCompletion.js
 var require_inlineCompletion = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/inlineCompletion.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18423,9 +18520,9 @@ var require_inlineCompletion = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/textDocumentContent.js
+// ../../node_modules/vscode-languageclient/lib/common/textDocumentContent.js
 var require_textDocumentContent = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/textDocumentContent.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/textDocumentContent.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18569,9 +18666,9 @@ var require_textDocumentContent = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js
+// ../../node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js
 var require_fileSystemWatcher = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/fileSystemWatcher.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.FileSystemWatcherFeature = void 0;
@@ -18670,9 +18767,9 @@ var require_fileSystemWatcher = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/progress.js
+// ../../node_modules/vscode-languageclient/lib/common/progress.js
 var require_progress = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/progress.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/progress.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.ProgressFeature = void 0;
@@ -18718,9 +18815,9 @@ var require_progress = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/client.js
+// ../../node_modules/vscode-languageclient/lib/common/client.js
 var require_client = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/client.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/client.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18765,7 +18862,7 @@ var require_client = __commonJS({
     var vscode_languageserver_protocol_1 = require_api2();
     var c2p = __importStar(require_codeConverter());
     var p2c = __importStar(require_protocolConverter());
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var async_1 = require_async();
     var UUID = __importStar(require_uuid());
     var progressPart_1 = require_progressPart();
@@ -18842,7 +18939,7 @@ var require_client = __commonJS({
         if (isTrusted === void 0 || isTrusted === null) {
           return false;
         }
-        if (typeof isTrusted === "boolean" || typeof isTrusted === "object" && isTrusted !== null && Is2.stringArray(isTrusted.enabledCommands)) {
+        if (typeof isTrusted === "boolean" || typeof isTrusted === "object" && isTrusted !== null && Is.stringArray(isTrusted.enabledCommands)) {
           return isTrusted;
         }
         return false;
@@ -19139,7 +19236,7 @@ var require_client = __commonJS({
         this._trace = vscode_languageserver_protocol_1.Trace.Off;
         this._tracer = {
           log: (messageOrDataObject, data) => {
-            if (Is2.string(messageOrDataObject)) {
+            if (Is.string(messageOrDataObject)) {
               this.trace(messageOrDataObject, data);
             } else {
               this.traceObject(messageOrDataObject);
@@ -19451,12 +19548,12 @@ var require_client = __commonJS({
   Code: ${responseError.code} ${responseError.data ? "\n" + responseError.data.toString() : ""}`;
         }
         if (data instanceof Error) {
-          if (Is2.string(data.stack)) {
+          if (Is.string(data.stack)) {
             return data.stack;
           }
           return data.message;
         }
-        if (Is2.string(data)) {
+        if (Is.string(data)) {
           return data;
         }
         return data.toString();
@@ -19682,7 +19779,7 @@ ${this.data2String(data)}` : message;
           rootPath: rootPath ? rootPath : null,
           rootUri: rootPath ? this._c2p.asUri(vscode_1.Uri.file(rootPath)) : null,
           capabilities: this.computeClientCapabilities(),
-          initializationOptions: Is2.func(initOption) ? initOption() : initOption,
+          initializationOptions: Is.func(initOption) ? initOption() : initOption,
           trace: vscode_languageserver_protocol_1.Trace.toString(this._trace),
           workspaceFolders
         };
@@ -19712,7 +19809,7 @@ ${this.data2String(data)}` : message;
           this._initializeResult = result;
           this.$state = ClientState.Running;
           let textDocumentSyncOptions = void 0;
-          if (Is2.number(result.capabilities.textDocumentSync)) {
+          if (Is.number(result.capabilities.textDocumentSync)) {
             if (result.capabilities.textDocumentSync === vscode_languageserver_protocol_1.TextDocumentSyncKind.None) {
               textDocumentSyncOptions = {
                 openClose: false,
@@ -20108,7 +20205,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
           return;
         }
         let watchers;
-        if (Is2.array(fileEvents)) {
+        if (Is.array(fileEvents)) {
           watchers = fileEvents;
         } else {
           watchers = [fileEvents];
@@ -20206,7 +20303,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
       }
       fillInitializeParams(params) {
         for (const feature of this._features) {
-          if (Is2.func(feature.fillInitializeParams)) {
+          if (Is.func(feature.fillInitializeParams)) {
             feature.fillInitializeParams(params);
           }
         }
@@ -20259,7 +20356,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
       initializeFeatures(_connection) {
         const documentSelector = this._clientOptions.documentSelector;
         for (const feature of this._features) {
-          if (Is2.func(feature.preInitialize)) {
+          if (Is.func(feature.preInitialize)) {
             feature.preInitialize(this._capabilities, documentSelector);
           }
         }
@@ -20342,7 +20439,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
         if (!valid) {
           return Promise.resolve({ applied: false });
         }
-        return Is2.asPromise(vscode_1.workspace.applyEdit(converted, { isRefactoring: params.metadata?.isRefactoring }).then((value) => {
+        return Is.asPromise(vscode_1.workspace.applyEdit(converted, { isRefactoring: params.metadata?.isRefactoring }).then((value) => {
           return { applied: value };
         }));
       }
@@ -20451,7 +20548,7 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
           };
           if (sendNotificationOrTraceOptions === void 0) {
             return connection.trace(value, tracer, defaultTraceOptions);
-          } else if (Is2.boolean(sendNotificationOrTraceOptions)) {
+          } else if (Is.boolean(sendNotificationOrTraceOptions)) {
             return connection.trace(value, tracer, sendNotificationOrTraceOptions);
           } else {
             return connection.trace(value, tracer, sendNotificationOrTraceOptions);
@@ -20482,9 +20579,9 @@ ${error.message}`, void 0, handlerResult.handled === true ? false : "force");
   }
 });
 
-// node_modules/vscode-languageclient/lib/node/processes.js
+// ../../node_modules/vscode-languageclient/lib/node/processes.js
 var require_processes = __commonJS({
-  "node_modules/vscode-languageclient/lib/node/processes.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/node/processes.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20575,9 +20672,9 @@ terminateTree "${pid}"
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/node/ril.js
+// ../../node_modules/vscode-jsonrpc/lib/node/ril.js
 var require_ril = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
+  "../../node_modules/vscode-jsonrpc/lib/node/ril.js"(exports2) {
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     var util_1 = require("util");
@@ -20733,9 +20830,9 @@ var require_ril = __commonJS({
   }
 });
 
-// node_modules/vscode-jsonrpc/lib/node/main.js
-var require_main = __commonJS({
-  "node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
+// ../../node_modules/vscode-jsonrpc/lib/node/main.js
+var require_main3 = __commonJS({
+  "../../node_modules/vscode-jsonrpc/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21028,9 +21125,9 @@ var require_main = __commonJS({
   }
 });
 
-// node_modules/vscode-languageserver-protocol/lib/node/main.js
-var require_main2 = __commonJS({
-  "node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
+// ../../node_modules/vscode-languageserver-protocol/lib/node/main.js
+var require_main4 = __commonJS({
+  "../../node_modules/vscode-languageserver-protocol/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21050,8 +21147,8 @@ var require_main2 = __commonJS({
     };
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.createProtocolConnection = createProtocolConnection;
-    var node_1 = require_main();
-    __exportStar(require_main(), exports2);
+    var node_1 = require_main3();
+    __exportStar(require_main3(), exports2);
     __exportStar(require_api2(), exports2);
     function createProtocolConnection(input, output, logger, options) {
       return (0, node_1.createMessageConnection)(input, output, logger, options);
@@ -21059,9 +21156,9 @@ var require_main2 = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports2, module2) {
+  "../../node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug4 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -21069,9 +21166,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports2, module2) {
+  "../../node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -21101,9 +21198,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports2, module2) {
+  "../../node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -21189,9 +21286,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports2, module2) {
+  "../../node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -21208,9 +21305,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports2, module2) {
+  "../../node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -21233,9 +21330,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports2, module2) {
+  "../../node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug4 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -21525,9 +21622,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports2, module2) {
+  "../../node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -21547,9 +21644,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports2, module2) {
+  "../../node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -21585,9 +21682,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -21595,9 +21692,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -21605,9 +21702,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -21615,9 +21712,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -21625,9 +21722,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -21635,9 +21732,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -21645,9 +21742,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -21655,9 +21752,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports2, module2) {
+  "../../node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -21705,9 +21802,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports2, module2) {
+  "../../node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -21776,12 +21873,12 @@ var require_comparator = __commonJS({
           if (this.value === "") {
             return true;
           }
-          return new Range4(comp.value, options).test(this.value);
+          return new Range3(comp.value, options).test(this.value);
         } else if (comp.operator === "") {
           if (comp.value === "") {
             return true;
           }
-          return new Range4(this.value, options).test(comp.semver);
+          return new Range3(this.value, options).test(comp.semver);
         }
         options = parseOptions(options);
         if (options.includePrerelease && (this.value === "<0.0.0-0" || comp.value === "<0.0.0-0")) {
@@ -21814,16 +21911,16 @@ var require_comparator = __commonJS({
     var cmp = require_cmp();
     var debug4 = require_debug();
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports2, module2) {
+  "../../node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
-    var Range4 = class _Range {
+    var Range3 = class _Range {
       constructor(range, options) {
         options = parseOptions(options);
         if (range instanceof _Range) {
@@ -21962,7 +22059,7 @@ var require_range = __commonJS({
         return false;
       }
     };
-    module2.exports = Range4;
+    module2.exports = Range3;
     var LRU = require_lrucache();
     var cache = new LRU();
     var parseOptions = require_parse_options();
@@ -22203,14 +22300,14 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports2, module2) {
+  "../../node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var satisfies = (version, range, options) => {
       try {
-        range = new Range4(range, options);
+        range = new Range3(range, options);
       } catch (er) {
         return false;
       }
@@ -22220,9 +22317,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/common/api.js
+// ../../node_modules/vscode-languageclient/lib/common/api.js
 var require_api3 = __commonJS({
-  "node_modules/vscode-languageclient/lib/common/api.js"(exports2) {
+  "../../node_modules/vscode-languageclient/lib/common/api.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -22255,9 +22352,9 @@ var require_api3 = __commonJS({
   }
 });
 
-// node_modules/vscode-languageclient/lib/node/main.js
-var require_main3 = __commonJS({
-  "node_modules/vscode-languageclient/lib/node/main.js"(exports2) {
+// ../../node_modules/vscode-languageclient/lib/node/main.js
+var require_main5 = __commonJS({
+  "../../node_modules/vscode-languageclient/lib/node/main.js"(exports2) {
     "use strict";
     var __createBinding = exports2 && exports2.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -22306,13 +22403,13 @@ var require_main3 = __commonJS({
     var path35 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
-    var Is2 = __importStar(require_is());
+    var Is = __importStar(require_is());
     var client_1 = require_client();
     var processes_1 = require_processes();
-    var node_1 = require_main2();
+    var node_1 = require_main4();
     var semverParse = require_parse();
     var semverSatisfies = require_satisfies();
-    __exportStar(require_main2(), exports2);
+    __exportStar(require_main4(), exports2);
     __exportStar(require_api3(), exports2);
     var REQUIRED_VSCODE_VERSION = "^1.91.0";
     var TransportKind2;
@@ -22326,21 +22423,21 @@ var require_main3 = __commonJS({
     (function(Transport2) {
       function isSocket(value) {
         const candidate = value;
-        return candidate && candidate.kind === TransportKind2.socket && Is2.number(candidate.port);
+        return candidate && candidate.kind === TransportKind2.socket && Is.number(candidate.port);
       }
       Transport2.isSocket = isSocket;
     })(Transport || (Transport = {}));
     var Executable;
     (function(Executable2) {
       function is(value) {
-        return Is2.string(value.command);
+        return Is.string(value.command);
       }
       Executable2.is = is;
     })(Executable || (Executable = {}));
     var NodeModule;
     (function(NodeModule2) {
       function is(value) {
-        return Is2.string(value.module);
+        return Is.string(value.module);
       }
       NodeModule2.is = is;
     })(NodeModule || (NodeModule = {}));
@@ -22373,7 +22470,7 @@ var require_main3 = __commonJS({
         let serverOptions;
         let clientOptions;
         let forceDebug;
-        if (Is2.string(arg2)) {
+        if (Is.string(arg2)) {
           id = arg1;
           name = arg2;
           serverOptions = arg3;
@@ -22414,7 +22511,7 @@ var require_main3 = __commonJS({
         try {
           this.checkVersion();
         } catch (error) {
-          if (Is2.string(error.message)) {
+          if (Is.string(error.message)) {
             this.outputChannel.appendLine(error.message);
           }
           throw error;
@@ -22518,7 +22615,7 @@ var require_main3 = __commonJS({
         const pipeStdout = this._stdioOptions.stdout;
         const pipeStderr = this._stdioOptions.stderr;
         const server = this._serverOptions;
-        if (Is2.func(server)) {
+        if (Is.func(server)) {
           return server().then((result) => {
             if (client_1.MessageTransports.is(result)) {
               this._isDetached = !!result.detached;
@@ -22843,10 +22940,10 @@ var require_main3 = __commonJS({
   }
 });
 
-// packages/disassembler/src/canonical-json.ts
+// ../disassembler/src/canonical-json.ts
 var canonicalValue, canonicalJson;
 var init_canonical_json = __esm({
-  "packages/disassembler/src/canonical-json.ts"() {
+  "../disassembler/src/canonical-json.ts"() {
     "use strict";
     canonicalValue = (value) => {
       if (Array.isArray(value)) return value.map(canonicalValue);
@@ -22875,10 +22972,10 @@ var init_canonical_json = __esm({
   }
 });
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var import_node_crypto, import_node_path, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha256, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+  "../core/src/debug-map.ts"() {
     "use strict";
     import_node_crypto = require("node:crypto");
     import_node_path = __toESM(require("node:path"), 1);
@@ -22962,10 +23059,10 @@ var init_debug_map = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codec.ts
+// ../disassembler/src/asset-codec.ts
 var import_node_crypto3, isAsciiAlphaNumeric, isStableId, assertStableId, assertNonNegativeInteger, canonicalizeAssetValue, stableText, sha2562, sameBytes, assertSafeExtractedPath, normalizeReferences, normalizeChildren, normalizeInspection, inspectionValue, normalizeFiles, normalizeDecoded, decodedFingerprint, AssetCodecRegistry, validateRequest, validateInspectedRange, isAncestor, planAssets, codecForAsset, decodePlannedAsset, encodePlannedAsset, verifyAssetPlan;
 var init_asset_codec = __esm({
-  "packages/disassembler/src/asset-codec.ts"() {
+  "../disassembler/src/asset-codec.ts"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
     isAsciiAlphaNumeric = (character) => {
@@ -23410,10 +23507,10 @@ var init_asset_codec = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/common.ts
+// ../disassembler/src/asset-codecs/common.ts
 var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
 var init_common = __esm({
-  "packages/disassembler/src/asset-codecs/common.ts"() {
+  "../disassembler/src/asset-codecs/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
@@ -23535,10 +23632,10 @@ var init_common = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/index-table.ts
+// ../disassembler/src/asset-codecs/index-table.ts
 var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor, indexTableAssetCodec;
 var init_index_table = __esm({
-  "packages/disassembler/src/asset-codecs/index-table.ts"() {
+  "../disassembler/src/asset-codecs/index-table.ts"() {
     "use strict";
     init_common();
     INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
@@ -23656,10 +23753,10 @@ var init_index_table = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/pointer-table.ts
+// ../disassembler/src/asset-codecs/pointer-table.ts
 var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor2, pointerTableAssetCodec;
 var init_pointer_table = __esm({
-  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
+  "../disassembler/src/asset-codecs/pointer-table.ts"() {
     "use strict";
     init_common();
     POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
@@ -23800,10 +23897,10 @@ var init_pointer_table = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/raw.ts
+// ../disassembler/src/asset-codecs/raw.ts
 var import_node_crypto4, RAW_ASSET_CODEC_ID, rawAssetCodec;
 var init_raw = __esm({
-  "packages/disassembler/src/asset-codecs/raw.ts"() {
+  "../disassembler/src/asset-codecs/raw.ts"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     init_common();
@@ -23840,10 +23937,10 @@ var init_raw = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/scalar-array.ts
+// ../disassembler/src/asset-codecs/scalar-array.ts
 var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
 var init_scalar_array = __esm({
-  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
+  "../disassembler/src/asset-codecs/scalar-array.ts"() {
     "use strict";
     init_common();
     SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
@@ -23891,10 +23988,10 @@ var init_scalar_array = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/struct-array.ts
+// ../disassembler/src/asset-codecs/struct-array.ts
 var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
 var init_struct_array = __esm({
-  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
+  "../disassembler/src/asset-codecs/struct-array.ts"() {
     "use strict";
     init_common();
     STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
@@ -24066,10 +24163,10 @@ var init_struct_array = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/text.ts
+// ../disassembler/src/asset-codecs/text.ts
 var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
 var init_text = __esm({
-  "packages/disassembler/src/asset-codecs/text.ts"() {
+  "../disassembler/src/asset-codecs/text.ts"() {
     "use strict";
     init_common();
     TEXT_ASSET_CODEC_ID = "uttori.asset.text";
@@ -24226,10 +24323,10 @@ var init_text = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/index.ts
+// ../disassembler/src/asset-codecs/index.ts
 var builtinAssetCodecs, createBuiltinAssetCodecRegistry;
 var init_asset_codecs = __esm({
-  "packages/disassembler/src/asset-codecs/index.ts"() {
+  "../disassembler/src/asset-codecs/index.ts"() {
     "use strict";
     init_asset_codec();
     init_index_table();
@@ -24262,10 +24359,10 @@ var init_asset_codecs = __esm({
   }
 });
 
-// packages/disassembler/src/asset-preview.ts
+// ../disassembler/src/asset-preview.ts
 var import_node_crypto5, isAsciiAlphaNumeric2, isStableId2, sha2563, sameBytes2, normalizeFiles2, AssetPreviewRegistry, renderVerifiedAssetPreview;
 var init_asset_preview = __esm({
-  "packages/disassembler/src/asset-preview.ts"() {
+  "../disassembler/src/asset-preview.ts"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     init_asset_codec();
@@ -24370,17 +24467,17 @@ var init_asset_preview = __esm({
   }
 });
 
-// packages/disassembler/src/analysis-graph.ts
+// ../disassembler/src/analysis-graph.ts
 var init_analysis_graph = __esm({
-  "packages/disassembler/src/analysis-graph.ts"() {
+  "../disassembler/src/analysis-graph.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/compression-codec.ts
+// ../disassembler/src/compression-codec.ts
 var import_node_crypto6, isAsciiAlphaNumeric3, isStableId3, sameBytes3, sha2564, assertBytes, normalizeOptions, validateConstraints, CompressionCodecRegistry, decodeDeterministically, encodeDeterministically, verifyCompressionCodec, reencodeCompressedRange;
 var init_compression_codec = __esm({
-  "packages/disassembler/src/compression-codec.ts"() {
+  "../disassembler/src/compression-codec.ts"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     isAsciiAlphaNumeric3 = (character) => {
@@ -24563,10 +24660,10 @@ var init_compression_codec = __esm({
   }
 });
 
-// packages/disassembler/src/coverage-map.ts
+// ../disassembler/src/coverage-map.ts
 var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
 var init_coverage_map = __esm({
-  "packages/disassembler/src/coverage-map.ts"() {
+  "../disassembler/src/coverage-map.ts"() {
     "use strict";
     CLASSIFICATION_ORDER = [
       "opcode",
@@ -24898,10 +24995,10 @@ var init_coverage_map = __esm({
   }
 });
 
-// packages/disassembler/src/instruction-annotations.ts
+// ../disassembler/src/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
-  "packages/disassembler/src/instruction-annotations.ts"() {
+  "../disassembler/src/instruction-annotations.ts"() {
     "use strict";
     init_canonical_json();
     sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
@@ -25249,10 +25346,10 @@ var init_instruction_annotations = __esm({
   }
 });
 
-// packages/disassembler/src/interval-index.ts
+// ../disassembler/src/interval-index.ts
 var HalfOpenIntervalIndex;
 var init_interval_index = __esm({
-  "packages/disassembler/src/interval-index.ts"() {
+  "../disassembler/src/interval-index.ts"() {
     "use strict";
     HalfOpenIntervalIndex = class {
       #entries;
@@ -25321,10 +25418,10 @@ var init_interval_index = __esm({
   }
 });
 
-// packages/disassembler/src/analysis-sources.ts
+// ../disassembler/src/analysis-sources.ts
 var sorted, key, buildAnalysisSourceCatalog;
 var init_analysis_sources = __esm({
-  "packages/disassembler/src/analysis-sources.ts"() {
+  "../disassembler/src/analysis-sources.ts"() {
     "use strict";
     sorted = (values) => [...new Set(values)].sort();
     key = (...values) => JSON.stringify(values);
@@ -25380,10 +25477,10 @@ var init_analysis_sources = __esm({
   }
 });
 
-// packages/disassembler/src/project-labels.ts
+// ../disassembler/src/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
-  "packages/disassembler/src/project-labels.ts"() {
+  "../disassembler/src/project-labels.ts"() {
     "use strict";
     validateSourceLabelName = (name) => {
       if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name))
@@ -25417,10 +25514,10 @@ var init_project_labels = __esm({
   }
 });
 
-// packages/disassembler/src/project-types.ts
+// ../disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
 var init_project_types = __esm({
-  "packages/disassembler/src/project-types.ts"() {
+  "../disassembler/src/project-types.ts"() {
     "use strict";
     ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
     ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
@@ -25428,10 +25525,10 @@ var init_project_types = __esm({
   }
 });
 
-// packages/disassembler/src/record-id-set.ts
+// ../disassembler/src/record-id-set.ts
 var import_node_fs, import_node_os, import_node_path2, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
-  "packages/disassembler/src/record-id-set.ts"() {
+  "../disassembler/src/record-id-set.ts"() {
     "use strict";
     import_node_fs = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
@@ -25487,10 +25584,10 @@ var init_record_id_set = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-ppu.ts
+// ../disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect, createRuntimePPUAccumulator;
 var init_runtime_ppu = __esm({
-  "packages/disassembler/src/runtime-ppu.ts"() {
+  "../disassembler/src/runtime-ppu.ts"() {
     "use strict";
     normalizeRuntimePPUEffect = (effect, access) => {
       const port = access.address & 65535;
@@ -25563,10 +25660,10 @@ var init_runtime_ppu = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-bus-types.ts
+// ../disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact;
 var init_runtime_bus_types = __esm({
-  "packages/disassembler/src/runtime-bus-types.ts"() {
+  "../disassembler/src/runtime-bus-types.ts"() {
     "use strict";
     init_runtime_ppu();
     validateRuntimeBusFact = (fact) => {
@@ -25593,10 +25690,10 @@ var init_runtime_bus_types = __esm({
   }
 });
 
-// packages/disassembler/src/trace-detail.ts
+// ../disassembler/src/trace-detail.ts
 var isArray, validateRuntimeInstructionDetails;
 var init_trace_detail = __esm({
-  "packages/disassembler/src/trace-detail.ts"() {
+  "../disassembler/src/trace-detail.ts"() {
     "use strict";
     isArray = (value) => Array.isArray(value);
     validateRuntimeInstructionDetails = (value, count2) => {
@@ -25629,10 +25726,10 @@ var init_trace_detail = __esm({
   }
 });
 
-// packages/disassembler/src/project-validation.ts
+// ../disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId4, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, validateLoadedShards;
 var init_project_validation = __esm({
-  "packages/disassembler/src/project-validation.ts"() {
+  "../disassembler/src/project-validation.ts"() {
     "use strict";
     init_project_types();
     init_record_id_set();
@@ -26017,10 +26114,10 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var import_node_crypto7, fs3, import_node_path3, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, commitAnalysisProjectAnnotationUpdate, commitAnalysisProjectSelectedEdit, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
-  "packages/disassembler/src/project-transaction.ts"() {
+  "../disassembler/src/project-transaction.ts"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     fs3 = __toESM(require("node:fs"), 1);
@@ -26183,10 +26280,10 @@ var init_project_transaction = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-payload.ts
+// ../disassembler/src/sqlite-payload.ts
 var import_node_util, import_node_zlib, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES, utf8, encodeSqlitePayload, decodeSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
-  "packages/disassembler/src/sqlite-payload.ts"() {
+  "../disassembler/src/sqlite-payload.ts"() {
     "use strict";
     import_node_util = require("node:util");
     import_node_zlib = require("node:zlib");
@@ -26250,10 +26347,10 @@ var init_sqlite_payload = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-records.ts
+// ../disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
-  "packages/disassembler/src/sqlite-records.ts"() {
+  "../disassembler/src/sqlite-records.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -26529,10 +26626,10 @@ var init_sqlite_records = __esm({
   }
 });
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var fs4, import_node_path4, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
-  "packages/disassembler/src/project-store.ts"() {
+  "../disassembler/src/project-store.ts"() {
     "use strict";
     fs4 = __toESM(require("node:fs"), 1);
     import_node_path4 = __toESM(require("node:path"), 1);
@@ -26612,10 +26709,10 @@ var init_project_store = __esm({
   }
 });
 
-// packages/disassembler/src/project-edit.ts
+// ../disassembler/src/project-edit.ts
 var RANGE_CLASSIFICATIONS, isStableId5, manifestWithoutShards, assertStableId2, recordMatches, sortedUnique2, sortedUniqueNumbers, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, conflictIdFor, evidenceReferences, applyRangeClassificationEdit, revertRangeClassificationEdit, STATE_FIELD_MAXIMUMS, validateManualState, stateConflictFields, applyStateEntryPointEdit, revertStateEntryPointEdit, applyTargetResolutionEdit, revertTargetResolutionEdit, applyLabelRenameEdit, revertLabelRenameEdit, applyDisassemblyAnnotationEdit, revertDisassemblyAnnotationEdit, explainProjectEvidence;
 var init_project_edit = __esm({
-  "packages/disassembler/src/project-edit.ts"() {
+  "../disassembler/src/project-edit.ts"() {
     "use strict";
     init_project_labels();
     init_project_store();
@@ -27245,10 +27342,10 @@ var init_project_edit = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-evidence.ts
+// ../disassembler/src/runtime-evidence.ts
 var emptyCounts, sortedUnique3, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
-  "packages/disassembler/src/runtime-evidence.ts"() {
+  "../disassembler/src/runtime-evidence.ts"() {
     "use strict";
     init_project_store();
     emptyCounts = () => ({
@@ -27476,10 +27573,10 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-annotation-query.ts
+// ../disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView;
 var init_sqlite_annotation_query = __esm({
-  "packages/disassembler/src/sqlite-annotation-query.ts"() {
+  "../disassembler/src/sqlite-annotation-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -27802,10 +27899,10 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-query-cache.ts
+// ../disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA, upgradeQueryCacheStorage, installQueryCache, readQueryCache, writeQueryCache;
 var init_sqlite_query_cache = __esm({
-  "packages/disassembler/src/sqlite-query-cache.ts"() {
+  "../disassembler/src/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
     upgradeQueryCacheStorage = (db) => {
@@ -27857,10 +27954,10 @@ var init_sqlite_query_cache = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-coverage-query.ts
+// ../disassembler/src/sqlite-coverage-query.ts
 var decode2, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage;
 var init_sqlite_coverage_query = __esm({
-  "packages/disassembler/src/sqlite-coverage-query.ts"() {
+  "../disassembler/src/sqlite-coverage-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_query_cache();
@@ -28166,10 +28263,10 @@ var init_sqlite_coverage_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-graph-query.ts
+// ../disassembler/src/sqlite-graph-query.ts
 var decode3, unique, numbers, prepareGraph, publishGraph;
 var init_sqlite_graph_query = __esm({
-  "packages/disassembler/src/sqlite-graph-query.ts"() {
+  "../disassembler/src/sqlite-graph-query.ts"() {
     "use strict";
     init_sqlite_payload();
     decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
@@ -28344,10 +28441,10 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-maintenance.ts
+// ../disassembler/src/sqlite-maintenance.ts
 var import_node_fs2, import_node_path5, SQLITE_MIGRATION_DIRECTORY, SQLITE_MIGRATION_BACKUP, assertNoSqliteMigration, sqliteFileIdentity, syncSqlitePath;
 var init_sqlite_maintenance = __esm({
-  "packages/disassembler/src/sqlite-maintenance.ts"() {
+  "../disassembler/src/sqlite-maintenance.ts"() {
     "use strict";
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_path5 = __toESM(require("node:path"), 1);
@@ -28374,10 +28471,10 @@ var init_sqlite_maintenance = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-runtime-storage.ts
+// ../disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto8, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
-  "packages/disassembler/src/sqlite-runtime-storage.ts"() {
+  "../disassembler/src/sqlite-runtime-storage.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
     init_canonical_json();
@@ -28582,10 +28679,10 @@ END;
   }
 });
 
-// packages/disassembler/src/sqlite-source-query.ts
+// ../disassembler/src/sqlite-source-query.ts
 var collections, sourceEvidence, sourceRuntime, instructionKinds, hex, sourceQueriesReady, prepareSourceQueries, readSourceSummary, readSourcePage;
 var init_sqlite_source_query = __esm({
-  "packages/disassembler/src/sqlite-source-query.ts"() {
+  "../disassembler/src/sqlite-source-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -28723,10 +28820,10 @@ var init_sqlite_source_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-storage-policy.ts
+// ../disassembler/src/sqlite-storage-policy.ts
 var import_node_fs3, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
-  "packages/disassembler/src/sqlite-storage-policy.ts"() {
+  "../disassembler/src/sqlite-storage-policy.ts"() {
     "use strict";
     import_node_fs3 = __toESM(require("node:fs"), 1);
     DEFAULT_ANALYSIS_STORAGE_POLICY = {
@@ -28836,10 +28933,10 @@ var init_sqlite_storage_policy = __esm({
   }
 });
 
-// packages/disassembler/src/trace-cache.ts
+// ../disassembler/src/trace-cache.ts
 var TraceCache;
 var init_trace_cache = __esm({
-  "packages/disassembler/src/trace-cache.ts"() {
+  "../disassembler/src/trace-cache.ts"() {
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
@@ -28906,10 +29003,10 @@ var init_trace_cache = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var import_node_crypto9, import_node_fs4, import_node_path6, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
-  "packages/disassembler/src/sqlite-store.ts"() {
+  "../disassembler/src/sqlite-store.ts"() {
     "use strict";
     import_node_crypto9 = require("node:crypto");
     import_node_fs4 = __toESM(require("node:fs"), 1);
@@ -30435,10 +30532,10 @@ PRAGMA user_version=2;
   }
 });
 
-// packages/disassembler/src/runtime-trace-profile.ts
+// ../disassembler/src/runtime-trace-profile.ts
 var RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState;
 var init_runtime_trace_profile = __esm({
-  "packages/disassembler/src/runtime-trace-profile.ts"() {
+  "../disassembler/src/runtime-trace-profile.ts"() {
     "use strict";
     RUNTIME_ANALYSIS_PROFILE = "65816-analysis-v2";
     project65816AnalysisState = (state) => {
@@ -30461,14 +30558,14 @@ var init_runtime_trace_profile = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-runtime-conversion.ts
+// ../disassembler/src/sqlite-runtime-conversion.ts
 function* convertedRuntimeRecords(db) {
   for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate())
     yield { ...JSON.parse(String(row.payload)), count: Number(row.count) };
 }
 var import_node_crypto10, import_promises, migrationRuntimeQuery, RuntimeDigest, prepareRuntimeConversion;
 var init_sqlite_runtime_conversion = __esm({
-  "packages/disassembler/src/sqlite-runtime-conversion.ts"() {
+  "../disassembler/src/sqlite-runtime-conversion.ts"() {
     "use strict";
     import_node_crypto10 = require("node:crypto");
     import_promises = require("node:timers/promises");
@@ -30544,7 +30641,7 @@ var init_sqlite_runtime_conversion = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-migration.ts
+// ../disassembler/src/sqlite-migration.ts
 function* legacyRecords(database, kind, version, convert = false) {
   if (kind === "runtime") {
     if (convert) yield* convertedRuntimeRecords(database);
@@ -30563,7 +30660,7 @@ function* legacyRecords(database, kind, version, convert = false) {
 }
 var import_node_crypto11, import_node_fs5, import_node_path7, import_node_perf_hooks, import_node_sqlite3, import_promises2, TABLES, RESERVE_BYTES, writeJournal, processAlive, sourceManifest, recoverMigration, migrateAnalysisProjectStorage;
 var init_sqlite_migration = __esm({
-  "packages/disassembler/src/sqlite-migration.ts"() {
+  "../disassembler/src/sqlite-migration.ts"() {
     "use strict";
     import_node_crypto11 = require("node:crypto");
     import_node_fs5 = __toESM(require("node:fs"), 1);
@@ -30926,10 +31023,10 @@ var init_sqlite_migration = __esm({
   }
 });
 
-// packages/disassembler/src/rom-image.ts
+// ../disassembler/src/rom-image.ts
 var import_node_crypto12, fs9, sha2565, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
-  "packages/disassembler/src/rom-image.ts"() {
+  "../disassembler/src/rom-image.ts"() {
     "use strict";
     import_node_crypto12 = require("node:crypto");
     fs9 = __toESM(require("node:fs"), 1);
@@ -31029,10 +31126,10 @@ var init_rom_image = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace.ts
-var import_node_crypto13, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer2, sha2566, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
+// ../disassembler/src/runtime-trace.ts
+var import_node_crypto13, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2566, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
-  "packages/disassembler/src/runtime-trace.ts"() {
+  "../disassembler/src/runtime-trace.ts"() {
     "use strict";
     import_node_crypto13 = require("node:crypto");
     init_project_store();
@@ -31053,7 +31150,7 @@ var init_runtime_trace = __esm({
         throw new Error(`${context} must be a non-empty string.`);
       return value;
     };
-    integer2 = (value, context, minimum = 0) => {
+    integer = (value, context, minimum = 0) => {
       if (!Number.isSafeInteger(value) || value < minimum)
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       return value;
@@ -31103,22 +31200,22 @@ var init_runtime_trace = __esm({
         if (typeof input.active !== "boolean")
           throw new Error(`Instruction trace chunk ${index} active must be boolean.`);
         const chunk = {
-          sequenceStart: integer2(
+          sequenceStart: integer(
             input.sequenceStart,
             `Instruction trace chunk ${index} sequenceStart`,
             1
           ),
           addresses: input.addresses.map(
-            (address5, addressIndex) => integer2(address5, `Instruction trace chunk ${index} address ${addressIndex}`)
+            (address5, addressIndex) => integer(address5, `Instruction trace chunk ${index} address ${addressIndex}`)
           ),
           ...input.details === void 0 ? {} : { details: validateRuntimeInstructionDetails(input.details, input.addresses.length) },
           ...input.unattributedMemoryAccesses === void 0 ? {} : {
-            unattributedMemoryAccesses: integer2(
+            unattributedMemoryAccesses: integer(
               input.unattributedMemoryAccesses,
               "Unattributed trace memory accesses"
             )
           },
-          droppedEvents: integer2(input.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
+          droppedEvents: integer(input.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
           active: input.active
         };
         if ((chunk.unattributedMemoryAccesses ?? previousUnattributed) < previousUnattributed)
@@ -31193,7 +31290,7 @@ var init_runtime_trace = __esm({
         throw new Error("Unsupported runtime trace index mode.");
       if (indexMode !== "full" && (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu"))
         throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
-      const maxIndexRecords = integer2(
+      const maxIndexRecords = integer(
         context.maxIndexRecords ?? (indexMode === "full" ? MAX_RUNTIME_TRACE_INDEX_RECORDS : DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS),
         "Trace index record limit",
         1
@@ -31431,7 +31528,7 @@ var init_runtime_trace = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace-file.ts
+// ../disassembler/src/runtime-trace-file.ts
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
@@ -31611,7 +31708,7 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
 }
 var import_node_fs6, import_promises3, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
-  "packages/disassembler/src/runtime-trace-file.ts"() {
+  "../disassembler/src/runtime-trace-file.ts"() {
     "use strict";
     import_node_fs6 = require("node:fs");
     import_promises3 = require("node:fs/promises");
@@ -31659,10 +31756,10 @@ var init_runtime_trace_file = __esm({
   }
 });
 
-// packages/disassembler/src/source-export.ts
+// ../disassembler/src/source-export.ts
 var import_node_crypto14, fs10, import_node_path8, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
-  "packages/disassembler/src/source-export.ts"() {
+  "../disassembler/src/source-export.ts"() {
     "use strict";
     import_node_crypto14 = require("node:crypto");
     fs10 = __toESM(require("node:fs"), 1);
@@ -31768,10 +31865,10 @@ var init_source_export = __esm({
   }
 });
 
-// packages/disassembler/src/static-analysis.ts
+// ../disassembler/src/static-analysis.ts
 var hexAddress, contextKey, nodeIdFor, sortedUnique4, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
-  "packages/disassembler/src/static-analysis.ts"() {
+  "../disassembler/src/static-analysis.ts"() {
     "use strict";
     hexAddress = (address5) => address5.toString(16).padStart(6, "0");
     contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`).join("/");
@@ -32180,10 +32277,10 @@ var init_static_analysis = __esm({
   }
 });
 
-// packages/disassembler/src/capture-archives.ts
+// ../disassembler/src/capture-archives.ts
 var import_node_crypto15, import_node_fs7, import_node_path9, import_node_stream, import_promises4, captureFileIdentity, archiveDirectory, archiveImportedCapture, expireCaptureArchives;
 var init_capture_archives = __esm({
-  "packages/disassembler/src/capture-archives.ts"() {
+  "../disassembler/src/capture-archives.ts"() {
     "use strict";
     import_node_crypto15 = require("node:crypto");
     import_node_fs7 = __toESM(require("node:fs"), 1);
@@ -32319,10 +32416,10 @@ var init_capture_archives = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace-project.ts
+// ../disassembler/src/runtime-trace-project.ts
 var importRuntimeTraceIntoProject, importRuntimeTraceSourceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
-  "packages/disassembler/src/runtime-trace-project.ts"() {
+  "../disassembler/src/runtime-trace-project.ts"() {
     "use strict";
     init_capture_archives();
     init_project_store();
@@ -32499,10 +32596,10 @@ var init_runtime_trace_project = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-graphics.ts
+// ../disassembler/src/runtime-graphics.ts
 var mapVram, createRuntimeGraphicsAccumulator;
 var init_runtime_graphics = __esm({
-  "packages/disassembler/src/runtime-graphics.ts"() {
+  "../disassembler/src/runtime-graphics.ts"() {
     "use strict";
     mapVram = (address5, mapping) => {
       if (mapping === 0) return address5;
@@ -32704,10 +32801,10 @@ var init_runtime_graphics = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-transfer.ts
+// ../disassembler/src/runtime-transfer.ts
 var validateRuntimeTransferBoundary, createRuntimeTransferAccumulator;
 var init_runtime_transfer = __esm({
-  "packages/disassembler/src/runtime-transfer.ts"() {
+  "../disassembler/src/runtime-transfer.ts"() {
     "use strict";
     validateRuntimeTransferBoundary = (marker) => {
       const { configuration: c } = marker;
@@ -32864,10 +32961,10 @@ var init_runtime_transfer = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var import_node_crypto16, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
-  "packages/disassembler/src/runtime-bus-trace.ts"() {
+  "../disassembler/src/runtime-bus-trace.ts"() {
     "use strict";
     import_node_crypto16 = require("node:crypto");
     init_runtime_bus_types();
@@ -33216,10 +33313,10 @@ ${JSON.stringify(meta)}
   }
 });
 
-// packages/disassembler/src/runtime-bus-project.ts
+// ../disassembler/src/runtime-bus-project.ts
 var import_node_path10, importRuntimeBusTraceSourceIntoProject;
 var init_runtime_bus_project = __esm({
-  "packages/disassembler/src/runtime-bus-project.ts"() {
+  "../disassembler/src/runtime-bus-project.ts"() {
     "use strict";
     import_node_path10 = __toESM(require("node:path"), 1);
     init_capture_archives();
@@ -33368,7 +33465,7 @@ var init_runtime_bus_project = __esm({
   }
 });
 
-// packages/disassembler/src/index.ts
+// ../disassembler/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   ANALYSIS_PROJECT_FORMAT: () => ANALYSIS_PROJECT_FORMAT,
@@ -33495,7 +33592,7 @@ __export(src_exports, {
   writeAnalysisProject: () => writeAnalysisProject
 });
 var init_src = __esm({
-  "packages/disassembler/src/index.ts"() {
+  "../disassembler/src/index.ts"() {
     "use strict";
     init_asset_codec();
     init_asset_codecs();
@@ -33533,19 +33630,19 @@ var init_src = __esm({
   }
 });
 
-// packages/debug-adapter/src/contracts.ts
+// ../debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION;
 var init_contracts = __esm({
-  "packages/debug-adapter/src/contracts.ts"() {
+  "../debug-adapter/src/contracts.ts"() {
     "use strict";
     DEBUG_BACKEND_PROTOCOL_VERSION = 1;
   }
 });
 
-// packages/debug-adapter/src/conformance.ts
+// ../debug-adapter/src/conformance.ts
 var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
 var init_conformance = __esm({
-  "packages/debug-adapter/src/conformance.ts"() {
+  "../debug-adapter/src/conformance.ts"() {
     "use strict";
     init_contracts();
     DEBUG_BACKEND_CONFORMANCE_VERSION = 1;
@@ -33826,10 +33923,10 @@ var init_conformance = __esm({
   }
 });
 
-// packages/debug-adapter/src/debug-expression.ts
+// ../debug-adapter/src/debug-expression.ts
 var MAX_EXPRESSION_CHARACTERS, MAX_EXPRESSION_DEPTH, MAX_SHIFT, MAX_EXPONENT, MAX_MAGNITUDE, binaryPrecedence, checked, parseDigits, digitPattern, tokenize, DebugExpressionParser, evaluateDebugExpression, formatDebugExpressionValue;
 var init_debug_expression = __esm({
-  "packages/debug-adapter/src/debug-expression.ts"() {
+  "../debug-adapter/src/debug-expression.ts"() {
     "use strict";
     MAX_EXPRESSION_CHARACTERS = 256;
     MAX_EXPRESSION_DEPTH = 32;
@@ -34084,7 +34181,7 @@ var init_debug_expression = __esm({
   }
 });
 
-// packages/debug-adapter/src/capture-v2.ts
+// ../debug-adapter/src/capture-v2.ts
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
@@ -34171,7 +34268,7 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
 }
 var maxU64, captureScope, captureU64, captureSession, validateCaptureRequest, validateCaptureCapabilities, validateCapturePosition, crcTable, crcSlices, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "packages/debug-adapter/src/capture-v2.ts"() {
+  "../debug-adapter/src/capture-v2.ts"() {
     "use strict";
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
@@ -34488,10 +34585,10 @@ var init_capture_v2 = __esm({
   }
 });
 
-// packages/debug-adapter/src/dap.ts
+// ../debug-adapter/src/dap.ts
 var import_node_async_hooks, import_node_path11, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
-  "packages/debug-adapter/src/dap.ts"() {
+  "../debug-adapter/src/dap.ts"() {
     "use strict";
     import_node_async_hooks = require("node:async_hooks");
     import_node_path11 = __toESM(require("node:path"), 1);
@@ -35466,10 +35563,10 @@ var init_dap = __esm({
   }
 });
 
-// packages/debug-adapter/src/mock-script.ts
+// ../debug-adapter/src/mock-script.ts
 var addressFor, instructionFor, createDebugMapReplayScript;
 var init_mock_script = __esm({
-  "packages/debug-adapter/src/mock-script.ts"() {
+  "../debug-adapter/src/mock-script.ts"() {
     "use strict";
     init_debug_map();
     addressFor = (range) => ({
@@ -35547,7 +35644,7 @@ var init_mock_script = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-protocol.ts
+// ../debug-adapter/src/sidecar-protocol.ts
 function assertDebugSidecarSessionToken(value) {
   if (typeof value !== "string" || !sessionPattern.test(value))
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
@@ -35586,7 +35683,7 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
 }
 var import_node_crypto17, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
-  "packages/debug-adapter/src/sidecar-protocol.ts"() {
+  "../debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
     import_node_crypto17 = require("node:crypto");
     DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
@@ -35769,10 +35866,10 @@ var init_sidecar_protocol = __esm({
   }
 });
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var import_node_child_process2, DEBUG_SIDECAR_SESSION_ENV, positiveInteger2, NodeStdioSidecarTransport;
 var init_node_stdio_transport = __esm({
-  "packages/debug-adapter/src/node-stdio-transport.ts"() {
+  "../debug-adapter/src/node-stdio-transport.ts"() {
     "use strict";
     import_node_child_process2 = require("node:child_process");
     init_sidecar_protocol();
@@ -35933,10 +36030,10 @@ var init_node_stdio_transport = __esm({
   }
 });
 
-// packages/debug-adapter/src/trace-buffer.ts
+// ../debug-adapter/src/trace-buffer.ts
 var positiveInteger3, identity, DebugTraceBuffer;
 var init_trace_buffer = __esm({
-  "packages/debug-adapter/src/trace-buffer.ts"() {
+  "../debug-adapter/src/trace-buffer.ts"() {
     "use strict";
     positiveInteger3 = (value, context) => {
       if (!Number.isSafeInteger(value) || value <= 0)
@@ -36030,10 +36127,10 @@ var init_trace_buffer = __esm({
   }
 });
 
-// packages/debug-adapter/src/replay-backend.ts
+// ../debug-adapter/src/replay-backend.ts
 var REPLAY_TRACE_BUFFER_EVENTS, REPLAY_TRACE_BATCH_EVENTS, REPLAY_STEP_KINDS, replayArchitectureCapabilities, addressKey, addressesEqual, assertCount, ReplayDebugBackend;
 var init_replay_backend = __esm({
-  "packages/debug-adapter/src/replay-backend.ts"() {
+  "../debug-adapter/src/replay-backend.ts"() {
     "use strict";
     init_contracts();
     init_trace_buffer();
@@ -36396,10 +36493,10 @@ var init_replay_backend = __esm({
   }
 });
 
-// packages/debug-adapter/src/trace-detail-validation.ts
+// ../debug-adapter/src/trace-detail-validation.ts
 var isArray2, validateDebugTraceDetails;
 var init_trace_detail_validation = __esm({
-  "packages/debug-adapter/src/trace-detail-validation.ts"() {
+  "../debug-adapter/src/trace-detail-validation.ts"() {
     "use strict";
     isArray2 = (value) => Array.isArray(value);
     validateDebugTraceDetails = (value, count2) => {
@@ -36426,10 +36523,10 @@ var init_trace_detail_validation = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-backend.ts
-var stopReasons, stepKinds, record2, array, string2, boolean, integer3, positiveInteger4, address, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
+// ../debug-adapter/src/sidecar-backend.ts
+var stopReasons, stepKinds, record2, array, string2, boolean, integer2, positiveInteger4, address, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
 var init_sidecar_backend = __esm({
-  "packages/debug-adapter/src/sidecar-backend.ts"() {
+  "../debug-adapter/src/sidecar-backend.ts"() {
     "use strict";
     init_contracts();
     init_trace_detail_validation();
@@ -36454,19 +36551,19 @@ var init_sidecar_backend = __esm({
       if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
       return value;
     };
-    integer3 = (value, context, minimum = 0) => {
+    integer2 = (value, context, minimum = 0) => {
       if (!Number.isSafeInteger(value) || value < minimum)
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       return value;
     };
-    positiveInteger4 = (value, context) => integer3(value, context, 1);
+    positiveInteger4 = (value, context) => integer2(value, context, 1);
     address = (value, context) => {
       const candidate = record2(value, context);
-      const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer3(candidate.outputOffset, `${context}.outputOffset`);
+      const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer2(candidate.outputOffset, `${context}.outputOffset`);
       return {
         architecture: string2(candidate.architecture, `${context}.architecture`),
         addressSpace: string2(candidate.addressSpace, `${context}.addressSpace`),
-        address: integer3(candidate.address, `${context}.address`),
+        address: integer2(candidate.address, `${context}.address`),
         ...outputOffset === void 0 ? {} : { outputOffset }
       };
     };
@@ -36636,7 +36733,7 @@ var init_sidecar_backend = __esm({
       };
     };
     byte = (value, context) => {
-      const result = integer3(value, context);
+      const result = integer2(value, context);
       if (result > 255) throw new Error(`${context} must be an unsigned byte.`);
       return result;
     };
@@ -36655,7 +36752,7 @@ var init_sidecar_backend = __esm({
     traceBatch = (value, context) => {
       const candidate = record2(value, context);
       const addresses3 = array(candidate.addresses, `${context}.addresses`).map(
-        (entry, index) => integer3(entry, `${context}.addresses[${index}]`)
+        (entry, index) => integer2(entry, `${context}.addresses[${index}]`)
       );
       return {
         architecture: string2(candidate.architecture, `${context}.architecture`),
@@ -36664,12 +36761,12 @@ var init_sidecar_backend = __esm({
         addresses: addresses3,
         ...candidate.details === void 0 ? {} : { details: validateDebugTraceDetails(candidate.details, addresses3.length) },
         ...candidate.unattributedMemoryAccesses === void 0 ? {} : {
-          unattributedMemoryAccesses: integer3(
+          unattributedMemoryAccesses: integer2(
             candidate.unattributedMemoryAccesses,
             "Trace unattributed memory accesses"
           )
         },
-        droppedEvents: integer3(candidate.droppedEvents, `${context}.droppedEvents`),
+        droppedEvents: integer2(candidate.droppedEvents, `${context}.droppedEvents`),
         active: boolean(candidate.active, `${context}.active`)
       };
     };
@@ -36831,7 +36928,7 @@ var init_sidecar_backend = __esm({
       /** @inheritdoc */
       async readMemory(requestedAddress, count2) {
         const checkedAddress = address(requestedAddress, "Memory address");
-        const checkedCount = integer3(count2, "Memory count");
+        const checkedCount = integer2(count2, "Memory count");
         const readable = this.capabilities.architectures.find(({ architecture }) => architecture === checkedAddress.architecture)?.memorySpaces.some(
           (memorySpace) => memorySpace.addressSpace === checkedAddress.addressSpace
         );
@@ -36854,7 +36951,7 @@ var init_sidecar_backend = __esm({
           throw new Error(
             `Memory response returned ${bytes.length} byte(s), expected ${checkedCount}.`
           );
-        const unreadableBytes = integer3(result.unreadableBytes, "Memory response.unreadableBytes");
+        const unreadableBytes = integer2(result.unreadableBytes, "Memory response.unreadableBytes");
         if (unreadableBytes > checkedCount)
           throw new Error("Memory response unreadableBytes exceeds the requested count.");
         return { address: returnedAddress, bytes, unreadableBytes };
@@ -36877,7 +36974,7 @@ var init_sidecar_backend = __esm({
       /** @inheritdoc */
       async disassemble(requestedAddress, count2) {
         const checkedAddress = address(requestedAddress, "Disassembly address");
-        const checkedCount = integer3(count2, "Disassembly count");
+        const checkedCount = integer2(count2, "Disassembly count");
         const result = array(
           await this.#requireConnected().request("disassemble", {
             address: checkedAddress,
@@ -36967,7 +37064,7 @@ var init_sidecar_backend = __esm({
         );
         if (string2(result.backend, "Sidecar initialize backend") !== this.#backend)
           throw new Error("Sidecar initialize response named a different backend.");
-        if (integer3(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !== this.protocolVersion)
+        if (integer2(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !== this.protocolVersion)
           throw new Error(
             `Unsupported debug backend protocol '${String(result.backendProtocolVersion)}'.`
           );
@@ -37007,10 +37104,10 @@ var init_sidecar_backend = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-client.ts
+// ../debug-adapter/src/sidecar-client.ts
 var asError, DebugSidecarClient;
 var init_sidecar_client = __esm({
-  "packages/debug-adapter/src/sidecar-client.ts"() {
+  "../debug-adapter/src/sidecar-client.ts"() {
     "use strict";
     init_sidecar_protocol();
     asError = (error) => error instanceof Error ? error : new Error(String(error));
@@ -37178,10 +37275,10 @@ var init_sidecar_client = __esm({
   }
 });
 
-// packages/debug-adapter/src/sidecar-server.ts
-var stepKinds2, record3, integer4, positiveInteger5, string3, optionalPositiveInteger, boolean2, address2, addresses, asError2, DebugSidecarServer;
+// ../debug-adapter/src/sidecar-server.ts
+var stepKinds2, record3, integer3, positiveInteger5, string3, optionalPositiveInteger, boolean2, address2, addresses, asError2, DebugSidecarServer;
 var init_sidecar_server = __esm({
-  "packages/debug-adapter/src/sidecar-server.ts"() {
+  "../debug-adapter/src/sidecar-server.ts"() {
     "use strict";
     init_contracts();
     init_sidecar_protocol();
@@ -37192,12 +37289,12 @@ var init_sidecar_server = __esm({
         throw new Error(`${context} must be an object.`);
       return value;
     };
-    integer4 = (value, context, minimum = 0) => {
+    integer3 = (value, context, minimum = 0) => {
       if (!Number.isSafeInteger(value) || value < minimum)
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
       return value;
     };
-    positiveInteger5 = (value, context) => integer4(value, context, 1);
+    positiveInteger5 = (value, context) => integer3(value, context, 1);
     string3 = (value, context) => {
       if (typeof value !== "string" || value.length === 0)
         throw new Error(`${context} must be a non-empty string.`);
@@ -37215,11 +37312,11 @@ var init_sidecar_server = __esm({
         throw new Error(`${context}.architecture must be a non-empty string.`);
       if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0)
         throw new Error(`${context}.addressSpace must be a non-empty string.`);
-      const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer4(candidate.outputOffset, `${context}.outputOffset`);
+      const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer3(candidate.outputOffset, `${context}.outputOffset`);
       return {
         architecture: candidate.architecture,
         addressSpace: candidate.addressSpace,
-        address: integer4(candidate.address, `${context}.address`),
+        address: integer3(candidate.address, `${context}.address`),
         ...outputOffset === void 0 ? {} : { outputOffset }
       };
     };
@@ -37375,7 +37472,7 @@ var init_sidecar_server = __esm({
         if (request.command === "readMemory") {
           const memory = await this.#implementation.readMemory(
             address2(args.address, "Memory address"),
-            integer4(args.count, "Memory count")
+            integer3(args.count, "Memory count")
           );
           return {
             address: memory.address,
@@ -37390,7 +37487,7 @@ var init_sidecar_server = __esm({
         if (request.command === "disassemble")
           return this.#implementation.disassemble(
             address2(args.address, "Disassembly address"),
-            integer4(args.count, "Disassembly count")
+            integer3(args.count, "Disassembly count")
           );
         if (request.command === "capture") {
           const capture = args;
@@ -37488,10 +37585,10 @@ var init_sidecar_server = __esm({
   }
 });
 
-// packages/debug-adapter/src/capture-file-reader.ts
+// ../debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "packages/debug-adapter/src/capture-file-reader.ts"() {
+  "../debug-adapter/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -37542,10 +37639,10 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var import_promises5, import_promises6, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
 var init_capture_file = __esm({
-  "packages/debug-adapter/src/capture-file.ts"() {
+  "../debug-adapter/src/capture-file.ts"() {
     "use strict";
     import_promises5 = require("node:fs/promises");
     import_promises6 = require("node:timers/promises");
@@ -38378,7 +38475,7 @@ var init_capture_file = __esm({
   }
 });
 
-// packages/debug-adapter/src/index.ts
+// ../debug-adapter/src/index.ts
 var src_exports2 = {};
 __export(src_exports2, {
   DEBUG_BACKEND_CONFORMANCE_SCENARIOS: () => DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
@@ -38428,7 +38525,7 @@ __export(src_exports2, {
   validateCaptureRequest: () => validateCaptureRequest
 });
 var init_src2 = __esm({
-  "packages/debug-adapter/src/index.ts"() {
+  "../debug-adapter/src/index.ts"() {
     "use strict";
     init_conformance();
     init_contracts();
@@ -38447,7 +38544,7 @@ var init_src2 = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
     throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
@@ -38462,15 +38559,15 @@ function normalizeAddressForWidth(address5, addressWidth) {
   return (address5 % modulus + modulus) % modulus;
 }
 var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+  "../core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
+  "../core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
@@ -38506,10 +38603,10 @@ var init_crc32 = __esm({
   }
 });
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 var import_node_crypto21, fs13, sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
+  "../core/src/addressToLine.ts"() {
     "use strict";
     import_node_crypto21 = require("node:crypto");
     fs13 = __toESM(require("node:fs"), 1);
@@ -38627,10 +38724,10 @@ var init_addressToLine = __esm({
   }
 });
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var ArchitectureRegistry;
 var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
+  "../core/src/architecture-registry.ts"() {
     "use strict";
     ArchitectureRegistry = class {
       definitions = /* @__PURE__ */ new Map();
@@ -38681,7 +38778,7 @@ var init_architecture_registry = __esm({
   }
 });
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -38733,12 +38830,12 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
+  "../core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 function createAssemblySourceLocation(file, line, span) {
   return {
     file,
@@ -38776,7 +38873,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
 }
 var AssemblyError;
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "../core/src/diagnostics.ts"() {
     "use strict";
     init_source_location();
     AssemblyError = class extends Error {
@@ -38805,10 +38902,10 @@ var init_diagnostics = __esm({
   }
 });
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
+  "../core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -38825,10 +38922,10 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/directives/data.ts
+// ../core/src/directives/data.ts
 var handleDataDirective, registerDataDirectives;
 var init_data = __esm({
-  "packages/core/src/directives/data.ts"() {
+  "../core/src/directives/data.ts"() {
     "use strict";
     handleDataDirective = ({ runtime }, words) => {
       runtime.handleDataDirective(words[0], words.slice(1));
@@ -38839,10 +38936,10 @@ var init_data = __esm({
   }
 });
 
-// packages/core/src/directives/fill-pad.ts
+// ../core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
 var init_fill_pad = __esm({
-  "packages/core/src/directives/fill-pad.ts"() {
+  "../core/src/directives/fill-pad.ts"() {
     "use strict";
     FILL_PATTERN_SIZE = 12;
     PATTERN_WIDTH = {
@@ -38941,10 +39038,10 @@ var init_fill_pad = __esm({
   }
 });
 
-// packages/core/src/directives/flow-control.ts
+// ../core/src/directives/flow-control.ts
 var handleRelativeLabel, registerFlowControlDirectives;
 var init_flow_control = __esm({
-  "packages/core/src/directives/flow-control.ts"() {
+  "../core/src/directives/flow-control.ts"() {
     "use strict";
     handleRelativeLabel = ({ session }, _words, raw) => {
       session.symbolScope.handleRelativeLabel(raw);
@@ -38955,7 +39052,7 @@ var init_flow_control = __esm({
   }
 });
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text2) {
   if (!node.span) {
     node.span = createSourceSpan(0, text2.length);
@@ -39341,7 +39438,7 @@ function isBinaryOperator(value) {
 }
 var binaryPrecedence2, unaryOperators, binaryOperators, ExpressionParser;
 var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
+  "../core/src/ir/expression-node.ts"() {
     "use strict";
     init_source_location();
     binaryPrecedence2 = {
@@ -39598,10 +39695,10 @@ var init_expression_node = __esm({
   }
 });
 
-// packages/core/src/directives/include-source.ts
+// ../core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES, NUMERIC_INCBIN_TARGET, expandIncludeFilename, resolveIncludeTarget, splitIncbinArrow, parseIncbinFilenameAndRange, applyEofEnd, findTopLevelHyphen, assertIncbinMathParensBalanced, parseIncbinUnprefixedHex, parseDeprecatedHyphenIncbinRange, evaluateIncbinRange, assertIncbinBounds, handleIncbin, handleIncsrc, handleInclude, registerIncludeSourceDirectives;
 var init_include_source = __esm({
-  "packages/core/src/directives/include-source.ts"() {
+  "../core/src/directives/include-source.ts"() {
     "use strict";
     init_expression_node();
     IDENTITY_INCLUDE_DEFINES = {
@@ -39875,10 +39972,10 @@ var init_include_source = __esm({
   }
 });
 
-// packages/core/src/directives/layout.ts
+// ../core/src/directives/layout.ts
 var handlePushBase, handlePullBase, handleArch, registerGenericLayoutDirectives, registerLayoutDirectives;
 var init_layout = __esm({
-  "packages/core/src/directives/layout.ts"() {
+  "../core/src/directives/layout.ts"() {
     "use strict";
     handlePushBase = ({ session }) => {
       session.pushBaseStack.push(session.currentTargetAddress);
@@ -39955,7 +40052,7 @@ var init_layout = __esm({
   }
 });
 
-// packages/core/src/services/struct-initializer.ts
+// ../core/src/services/struct-initializer.ts
 function splitInitializerList(text2) {
   const entries3 = [];
   const stack = [];
@@ -40020,15 +40117,15 @@ function isOpenStructInitializer(text2) {
   return depth > 0;
 }
 var init_struct_initializer = __esm({
-  "packages/core/src/services/struct-initializer.ts"() {
+  "../core/src/services/struct-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
+  "../core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -40063,7 +40160,7 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/services/command-text-service.ts
+// ../core/src/services/command-text-service.ts
 function isLabelIdentifierStart(char) {
   const code = char.charCodeAt(0);
   return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
@@ -40136,7 +40233,7 @@ function isBareLabelReference(input) {
 }
 var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
 var init_command_text_service = __esm({
-  "packages/core/src/services/command-text-service.ts"() {
+  "../core/src/services/command-text-service.ts"() {
     "use strict";
     init_struct_initializer();
     init_syntax_profile();
@@ -40331,10 +40428,10 @@ var init_command_text_service = __esm({
   }
 });
 
-// packages/core/src/directives/misc.ts
+// ../core/src/directives/misc.ts
 var handlePullTable, handlePushTable, stripLeadingKeyword, unwrapQuoted, formatPrintArgs, handleAssert, handleError, hex6, invalidTableLine, parseAsarTableLine, handleClearTable, handleTable, handleWarnpc, registerMiscDirectives;
 var init_misc = __esm({
-  "packages/core/src/directives/misc.ts"() {
+  "../core/src/directives/misc.ts"() {
     "use strict";
     init_command_text_service();
     handlePullTable = ({ session }) => {
@@ -40497,7 +40594,7 @@ var init_misc = __esm({
   }
 });
 
-// packages/core/src/directives/namespace.ts
+// ../core/src/directives/namespace.ts
 function enterNamespace(session, name) {
   if (session.namespaceNestingEnabled) {
     session.namespaceNestingPath.push(name);
@@ -40512,7 +40609,7 @@ function enterNamespace(session, name) {
 }
 var handlePushNamespace, handlePullNamespace, handleNamespace, registerNamespaceDirectives;
 var init_namespace = __esm({
-  "packages/core/src/directives/namespace.ts"() {
+  "../core/src/directives/namespace.ts"() {
     "use strict";
     handlePushNamespace = ({ session }) => {
       session.namespaceStack.push(session.currentNamespace);
@@ -40584,10 +40681,10 @@ var init_namespace = __esm({
   }
 });
 
-// packages/core/src/directives/struct-binary.ts
+// ../core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives;
 var init_struct_binary = __esm({
-  "packages/core/src/directives/struct-binary.ts"() {
+  "../core/src/directives/struct-binary.ts"() {
     "use strict";
     registerStructBinaryDirectives = (registry, context) => {
       registry.register("struct", context, ({ session }, words) => {
@@ -40609,10 +40706,10 @@ var init_struct_binary = __esm({
   }
 });
 
-// packages/core/src/directives/registry.ts
+// ../core/src/directives/registry.ts
 var DirectiveRegistry, createDirectiveRegistry;
 var init_registry = __esm({
-  "packages/core/src/directives/registry.ts"() {
+  "../core/src/directives/registry.ts"() {
     "use strict";
     init_directive_groups();
     init_data();
@@ -40737,7 +40834,7 @@ var init_registry = __esm({
   }
 });
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 function stripWrappingQuotes(filename) {
   if (filename.startsWith('"') && filename.endsWith('"') || filename.startsWith("'") && filename.endsWith("'") || filename.startsWith("`") && filename.endsWith("`")) {
     return filename.slice(1, -1);
@@ -40746,7 +40843,7 @@ function stripWrappingQuotes(filename) {
 }
 var import_node_fs10, import_node_path13, NodeAssemblyFileProvider;
 var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
+  "../core/src/file-provider.ts"() {
     "use strict";
     import_node_fs10 = __toESM(require("node:fs"), 1);
     import_node_path13 = __toESM(require("node:path"), 1);
@@ -40822,7 +40919,7 @@ var init_file_provider = __esm({
   }
 });
 
-// packages/core/src/internal-instrumentation.ts
+// ../core/src/internal-instrumentation.ts
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
   metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
@@ -40858,13 +40955,13 @@ function measureInternalPhase(name, callback) {
 }
 var import_node_perf_hooks2, activeInstrumentation;
 var init_internal_instrumentation = __esm({
-  "packages/core/src/internal-instrumentation.ts"() {
+  "../core/src/internal-instrumentation.ts"() {
     "use strict";
     import_node_perf_hooks2 = require("node:perf_hooks");
   }
 });
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
   if (!collectSourceMetadata) {
     return {
@@ -41154,7 +41251,7 @@ function splitCommaArguments(input) {
 }
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
+  "../core/src/ir/normalized-command.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_source_location();
@@ -41164,7 +41261,7 @@ var init_normalized_command = __esm({
   }
 });
 
-// packages/core/src/mathcore.ts
+// ../core/src/mathcore.ts
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -41197,7 +41294,7 @@ function isWordChar(code) {
 }
 var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
 var init_mathcore = __esm({
-  "packages/core/src/mathcore.ts"() {
+  "../core/src/mathcore.ts"() {
     "use strict";
     init_diagnostics();
     init_internal_instrumentation();
@@ -42379,7 +42476,7 @@ var init_mathcore = __esm({
   }
 });
 
-// packages/core/src/operand-syntax.ts
+// ../core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -42401,15 +42498,15 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
+  "../core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/operand-resolver.ts
+// ../core/src/operand-resolver.ts
 var OperandResolver;
 var init_operand_resolver = __esm({
-  "packages/core/src/operand-resolver.ts"() {
+  "../core/src/operand-resolver.ts"() {
     "use strict";
     init_expression_node();
     init_operand_syntax();
@@ -42803,22 +42900,22 @@ var init_operand_resolver = __esm({
   }
 });
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts2 = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
+  "../core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var PluginError;
 var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
+  "../core/src/plugin/diagnostics.ts"() {
     "use strict";
     PluginError = class extends Error {
       code;
@@ -42841,10 +42938,10 @@ var init_diagnostics2 = __esm({
   }
 });
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "packages/core/src/lsp/directive-catalog.ts"() {
+  "../core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group2, operands) => ({
       keyword,
@@ -43024,10 +43121,10 @@ var init_directive_catalog = __esm({
   }
 });
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var canonical, toMap, targetInvalid, ResolvedToolingCatalog, AssemblerEnvironment;
 var init_environment = __esm({
-  "packages/core/src/plugin/environment.ts"() {
+  "../core/src/plugin/environment.ts"() {
     "use strict";
     init_directive_groups();
     init_directive_catalog();
@@ -43440,9 +43537,9 @@ var init_environment = __esm({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports2, module2) {
+  "../../node_modules/semver/functions/valid.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -43453,9 +43550,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports2, module2) {
+  "../../node_modules/semver/functions/clean.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -43466,9 +43563,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports2, module2) {
+  "../../node_modules/semver/functions/inc.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier2, identifierBase) => {
@@ -43490,9 +43587,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports2, module2) {
+  "../../node_modules/semver/functions/diff.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -43534,9 +43631,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports2, module2) {
+  "../../node_modules/semver/functions/major.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -43544,9 +43641,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports2, module2) {
+  "../../node_modules/semver/functions/minor.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -43554,9 +43651,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports2, module2) {
+  "../../node_modules/semver/functions/patch.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -43564,9 +43661,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports2, module2) {
+  "../../node_modules/semver/functions/prerelease.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -43577,9 +43674,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/rcompare.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -43587,9 +43684,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -43597,9 +43694,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare-build.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -43611,9 +43708,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports2, module2) {
+  "../../node_modules/semver/functions/sort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -43621,9 +43718,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports2, module2) {
+  "../../node_modules/semver/functions/rsort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -43631,9 +43728,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports2, module2) {
+  "../../node_modules/semver/functions/coerce.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -43677,9 +43774,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports2, module2) {
+  "../../node_modules/semver/functions/truncate.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -43718,28 +43815,28 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
     "use strict";
-    var Range4 = require_range();
-    var toComparators = (range, options) => new Range4(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
+    var Range3 = require_range();
+    var toComparators = (range, options) => new Range3(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
     module2.exports = toComparators;
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var maxSatisfying = (versions, range, options) => {
       let max = null;
       let maxSV = null;
       let rangeObj = null;
       try {
-        rangeObj = new Range4(range, options);
+        rangeObj = new Range3(range, options);
       } catch (er) {
         return null;
       }
@@ -43757,18 +43854,18 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var minSatisfying = (versions, range, options) => {
       let min = null;
       let minSV = null;
       let rangeObj = null;
       try {
-        rangeObj = new Range4(range, options);
+        rangeObj = new Range3(range, options);
       } catch (er) {
         return null;
       }
@@ -43786,15 +43883,15 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/min-version.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var gt = require_gt();
     var minVersion = (range, loose) => {
-      range = new Range4(range, loose);
+      range = new Range3(range, loose);
       let minver = new SemVer("0.0.0");
       if (range.test(minver)) {
         return minver;
@@ -43845,14 +43942,14 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/valid.js"(exports2, module2) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var validRange = (range, options) => {
       try {
-        return new Range4(range, options).range || "*";
+        return new Range3(range, options).range || "*";
       } catch (er) {
         return null;
       }
@@ -43861,14 +43958,14 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/outside.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
     var { ANY } = Comparator;
-    var Range4 = require_range();
+    var Range3 = require_range();
     var satisfies = require_satisfies();
     var gt = require_gt();
     var lt = require_lt();
@@ -43876,7 +43973,7 @@ var require_outside = __commonJS({
     var gte = require_gte();
     var outside = (version, range, hilo, options) => {
       version = new SemVer(version, options);
-      range = new Range4(range, options);
+      range = new Range3(range, options);
       let gtfn, ltefn, ltfn, comp, ecomp;
       switch (hilo) {
         case ">":
@@ -43930,9 +44027,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/gtr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -43940,9 +44037,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/ltr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -43950,23 +44047,23 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/intersects.js"(exports2, module2) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var intersects = (r1, r2, options) => {
-      r1 = new Range4(r1, options);
-      r2 = new Range4(r2, options);
+      r1 = new Range3(r1, options);
+      r2 = new Range3(r2, options);
       return r1.intersects(r2, options);
     };
     module2.exports = intersects;
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/simplify.js"(exports2, module2) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -44014,11 +44111,11 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/subset.js"(exports2, module2) {
     "use strict";
-    var Range4 = require_range();
+    var Range3 = require_range();
     var Comparator = require_comparator();
     var { ANY } = Comparator;
     var satisfies = require_satisfies();
@@ -44027,8 +44124,8 @@ var require_subset = __commonJS({
       if (sub === dom) {
         return true;
       }
-      sub = new Range4(sub, options);
-      dom = new Range4(dom, options);
+      sub = new Range3(sub, options);
+      dom = new Range3(dom, options);
       let sawNonNull = false;
       OUTER: for (const simpleSub of sub.set) {
         for (const simpleDom of dom.set) {
@@ -44176,9 +44273,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports2, module2) {
+  "../../node_modules/semver/index.js"(exports2, module2) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -44209,7 +44306,7 @@ var require_semver2 = __commonJS({
     var coerce = require_coerce();
     var truncate = require_truncate();
     var Comparator = require_comparator();
-    var Range4 = require_range();
+    var Range3 = require_range();
     var satisfies = require_satisfies();
     var toComparators = require_to_comparators();
     var maxSatisfying = require_max_satisfying();
@@ -44248,7 +44345,7 @@ var require_semver2 = __commonJS({
       coerce,
       truncate,
       Comparator,
-      Range: Range4,
+      Range: Range3,
       satisfies,
       toComparators,
       maxSatisfying,
@@ -44273,10 +44370,10 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver, noopLogger, isLowerAlphaNumeric, isValidId, isValidContributionId, isRecord2, isArray3, isEmptyOptions, deepFreeze, validateText, validateManifest, validatePlugin, validateContributionId, validateAliases, PluginManager;
 var init_manager = __esm({
-  "packages/core/src/plugin/manager.ts"() {
+  "../core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
     init_directive_groups();
@@ -44840,10 +44937,10 @@ var init_manager = __esm({
   }
 });
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var PluginSessionStateStore;
 var init_session_state = __esm({
-  "packages/core/src/plugin/session-state.ts"() {
+  "../core/src/plugin/session-state.ts"() {
     "use strict";
     init_diagnostics2();
     PluginSessionStateStore = class {
@@ -44976,9 +45073,9 @@ var init_session_state = __esm({
   }
 });
 
-// packages/core/src/plugin/index.ts
+// ../core/src/plugin/index.ts
 var init_plugin = __esm({
-  "packages/core/src/plugin/index.ts"() {
+  "../core/src/plugin/index.ts"() {
     "use strict";
     init_contracts2();
     init_diagnostics2();
@@ -44988,10 +45085,10 @@ var init_plugin = __esm({
   }
 });
 
-// packages/core/src/services/program-model-builder.ts
+// ../core/src/services/program-model-builder.ts
 var ProgramModelBuilder;
 var init_program_model_builder = __esm({
-  "packages/core/src/services/program-model-builder.ts"() {
+  "../core/src/services/program-model-builder.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -45302,10 +45399,10 @@ var init_program_model_builder = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService;
 var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
+  "../core/src/services/assembly-front-end-service.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -45433,10 +45530,10 @@ var init_assembly_front_end_service = __esm({
   }
 });
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var CommandLoweringService;
 var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
+  "../core/src/services/command-lowering-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     CommandLoweringService = class {
@@ -45610,10 +45707,10 @@ var init_command_lowering_service = __esm({
   }
 });
 
-// packages/core/src/services/define-engine.ts
+// ../core/src/services/define-engine.ts
 var DefineEngine;
 var init_define_engine = __esm({
-  "packages/core/src/services/define-engine.ts"() {
+  "../core/src/services/define-engine.ts"() {
     "use strict";
     init_normalized_command();
     DefineEngine = class {
@@ -45959,10 +46056,10 @@ var init_define_engine = __esm({
   }
 });
 
-// packages/core/src/services/directive-runtime-service.ts
+// ../core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService;
 var init_directive_runtime_service = __esm({
-  "packages/core/src/services/directive-runtime-service.ts"() {
+  "../core/src/services/directive-runtime-service.ts"() {
     "use strict";
     init_address_width();
     init_command_text_service();
@@ -46222,10 +46319,10 @@ var init_directive_runtime_service = __esm({
   }
 });
 
-// packages/core/src/services/front-end-command-service.ts
+// ../core/src/services/front-end-command-service.ts
 var FrontEndCommandService;
 var init_front_end_command_service = __esm({
-  "packages/core/src/services/front-end-command-service.ts"() {
+  "../core/src/services/front-end-command-service.ts"() {
     "use strict";
     init_expression_node();
     init_normalized_command();
@@ -46408,10 +46505,10 @@ var init_front_end_command_service = __esm({
   }
 });
 
-// packages/core/src/services/include-source-service.ts
+// ../core/src/services/include-source-service.ts
 var IncludeSourceService;
 var init_include_source_service = __esm({
-  "packages/core/src/services/include-source-service.ts"() {
+  "../core/src/services/include-source-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     IncludeSourceService = class {
@@ -46601,10 +46698,10 @@ var init_include_source_service = __esm({
   }
 });
 
-// packages/core/src/services/macro-engine.ts
+// ../core/src/services/macro-engine.ts
 var MacroEngine;
 var init_macro_engine = __esm({
-  "packages/core/src/services/macro-engine.ts"() {
+  "../core/src/services/macro-engine.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -47244,10 +47341,10 @@ var init_macro_engine = __esm({
   }
 });
 
-// packages/core/src/services/output-writer-service.ts
+// ../core/src/services/output-writer-service.ts
 var OutputWriterService;
 var init_output_writer_service = __esm({
-  "packages/core/src/services/output-writer-service.ts"() {
+  "../core/src/services/output-writer-service.ts"() {
     "use strict";
     init_address_width();
     OutputWriterService = class {
@@ -47439,10 +47536,10 @@ var init_output_writer_service = __esm({
   }
 });
 
-// packages/core/src/services/data-struct-engine.ts
+// ../core/src/services/data-struct-engine.ts
 var DataStructEngine;
 var init_data_struct_engine = __esm({
-  "packages/core/src/services/data-struct-engine.ts"() {
+  "../core/src/services/data-struct-engine.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -47604,10 +47701,10 @@ var init_data_struct_engine = __esm({
   }
 });
 
-// packages/core/src/services/struct-engine.ts
+// ../core/src/services/struct-engine.ts
 var StructEngine;
 var init_struct_engine = __esm({
-  "packages/core/src/services/struct-engine.ts"() {
+  "../core/src/services/struct-engine.ts"() {
     "use strict";
     init_address_width();
     init_normalized_command();
@@ -47924,7 +48021,7 @@ var init_struct_engine = __esm({
   }
 });
 
-// packages/core/src/services/struct-metadata.ts
+// ../core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count2 = definition.indexRange?.count ?? 1;
   const bytes = definition.size * count2;
@@ -47943,12 +48040,12 @@ function getStructMetadata(definition, property) {
   }
 }
 var init_struct_metadata = __esm({
-  "packages/core/src/services/struct-metadata.ts"() {
+  "../core/src/services/struct-metadata.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/symbol-scope-service.ts
+// ../core/src/services/symbol-scope-service.ts
 function fileBasename(file) {
   const normalized = file.replaceAll("\\", "/");
   const slash = normalized.lastIndexOf("/");
@@ -47967,7 +48064,7 @@ function parseUnnamedLabelReference(token) {
 }
 var SymbolScopeService;
 var init_symbol_scope_service = __esm({
-  "packages/core/src/services/symbol-scope-service.ts"() {
+  "../core/src/services/symbol-scope-service.ts"() {
     "use strict";
     init_syntax_profile();
     SymbolScopeService = class {
@@ -48830,10 +48927,10 @@ var init_symbol_scope_service = __esm({
   }
 });
 
-// packages/core/src/assembler.ts
+// ../core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES, Assembler;
 var init_assembler = __esm({
-  "packages/core/src/assembler.ts"() {
+  "../core/src/assembler.ts"() {
     "use strict";
     init_address_width();
     init_addressToLine();
@@ -52043,10 +52140,10 @@ var init_assembler = __esm({
   }
 });
 
-// packages/core/src/architecture-types.ts
+// ../core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "packages/core/src/architecture-types.ts"() {
+  "../core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -52071,10 +52168,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "packages/core/src/decoder-types.ts"() {
+  "../core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -52115,65 +52212,65 @@ var init_decoder_types = __esm({
   }
 });
 
-// packages/core/src/ir/assembly-tree.ts
+// ../core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "packages/core/src/ir/assembly-tree.ts"() {
+  "../core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/overlay-file-provider.ts
+// ../core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "packages/core/src/lsp/overlay-file-provider.ts"() {
+  "../core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/root-analysis-cache.ts
+// ../core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "packages/core/src/lsp/root-analysis-cache.ts"() {
+  "../core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/workspace-index.ts
+// ../core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "packages/core/src/lsp/workspace-index.ts"() {
+  "../core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/position-lookup.ts
+// ../core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "packages/core/src/lsp/position-lookup.ts"() {
+  "../core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/instruction-catalog.ts
+// ../core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "packages/core/src/lsp/instruction-catalog.ts"() {
+  "../core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/catalog.ts
+// ../core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "packages/core/src/lsp/catalog.ts"() {
+  "../core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/project-outline.ts
+// ../core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "packages/core/src/lsp/project-outline.ts"() {
+  "../core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/index.ts
+// ../core/src/lsp/index.ts
 var init_lsp = __esm({
-  "packages/core/src/lsp/index.ts"() {
+  "../core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -52186,9 +52283,9 @@ var init_lsp = __esm({
   }
 });
 
-// packages/core/src/index.ts
+// ../core/src/index.ts
 var init_src3 = __esm({
-  "packages/core/src/index.ts"() {
+  "../core/src/index.ts"() {
     "use strict";
     init_assembler();
     init_struct_metadata();
@@ -52216,7 +52313,7 @@ var init_src3 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -52240,7 +52337,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
+  "../plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -52507,7 +52604,7 @@ var init_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction2) {
   if (instruction2.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as 65816.`);
@@ -52600,7 +52697,7 @@ function formatCpu65816Instruction(instruction2) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor, buildInstruction, Cpu65816Decoder, hex3;
 var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+  "../plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -52878,7 +52975,7 @@ var init_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -52902,7 +52999,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
+  "../plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -53142,7 +53239,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -53207,7 +53304,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register2, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
+  "../plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -53581,10 +53678,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -53595,7 +53692,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/operand-classifiers.ts
+// ../plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -53795,16 +53892,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src3();
   }
 });
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "packages/plugin-snes/src/architectures/65816.ts"() {
+  "../plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src3();
     init_instruction_catalog2();
@@ -55760,7 +55857,7 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 function formatSpc700Instruction(instruction2) {
   if (instruction2.architecture !== "snes.spc700") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as SPC700.`);
@@ -55770,7 +55867,7 @@ function formatSpc700Instruction(instruction2) {
 }
 var readLittleEndian2, signedByte, register3, address3, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder, hex4, formatOperands;
 var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width2) => {
@@ -56159,10 +56256,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/split-operands.ts
+// ../plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "packages/plugin-snes/src/architectures/split-operands.ts"() {
+  "../plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text2) => text2 ? [text2] : [];
     splitCommaOperands = (text2) => text2 ? text2.split(",").map((operand) => operand.trim()) : [];
@@ -56186,7 +56283,7 @@ var init_split_operands = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700.ts
+// ../plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -56283,7 +56380,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "packages/plugin-snes/src/architectures/spc700.ts"() {
+  "../plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src3();
     init_instruction_catalog2();
@@ -58183,7 +58280,7 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 function formatSuperFxInstruction(instruction2) {
   if (instruction2.architecture !== "snes.superfx") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as SuperFX.`);
@@ -58232,7 +58329,7 @@ function formatSuperFxInstruction(instruction2) {
 }
 var word, register4, immediate2, address4, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex5;
 var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -58520,10 +58617,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "packages/plugin-snes/src/asar/compatibility.ts"() {
+  "../plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -58599,10 +58696,10 @@ var init_compatibility = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx.ts
+// ../plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "packages/plugin-snes/src/architectures/superfx.ts"() {
+  "../plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src3();
     init_compatibility();
@@ -59387,7 +59484,7 @@ var init_superfx = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -59471,13 +59568,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
+  "../plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -59533,13 +59630,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "packages/plugin-snes/src/directives/freespace.ts"() {
+  "../plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -59597,7 +59694,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout2 = __esm({
-  "packages/plugin-snes/src/directives/layout.ts"() {
+  "../plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -59613,10 +59710,10 @@ var init_layout2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "packages/plugin-snes/src/services/spc-runtime.ts"() {
+  "../plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -59741,17 +59838,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "packages/plugin-snes/src/directives/spc.ts"() {
+  "../plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -59762,7 +59859,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "packages/plugin-snes/src/session-state.ts"() {
+  "../plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -59771,10 +59868,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "packages/plugin-snes/src/target/address-space.ts"() {
+  "../plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -59941,10 +60038,10 @@ var init_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
+  "../plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -60566,10 +60663,10 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var unknown, known, joinValue, sameEntry, joinStack, normalize, unknownCpu65816State, resetCpu65816State, nativeVectorCpu65816State, emulationVectorCpu65816State, joinCpu65816States, flagOverride, applyCpu65816StateOverride, enterCpu65816Address, decoderFlag, cpu65816DecodeState, adjustStackPointer, push, pull, pushedBytes, pulledBytes, loseStackPrecision, sourceValue, CARRY_UNKNOWN_MNEMONICS, transferCpu65816State, cpu65816StateKey;
 var init_state = __esm({
-  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
+  "../plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
     unknown = () => ({ kind: "unknown" });
     known = (value) => ({ kind: "known", value });
@@ -60815,10 +60912,10 @@ var init_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE, SNES_CPU_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, createSnesAddressContext, mirrorsForOffset, identifySnesFileOffset, identifySnesCpuAddress;
 var init_address_identities = __esm({
-  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
+  "../plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     init_address_space();
     SNES_FILE_ADDRESS_SPACE = "rom.file";
@@ -60897,10 +60994,10 @@ var init_address_identities = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTER_ALIASES, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, identifySnesHardwareRegister, hex7, SNES_HARDWARE_DEFINES_SOURCE, snesHardwareDefineRecords, snesHardwareDefines, CONTROLLER_MASKS, INTERRUPT_STATUS_MASKS, renderConstants, renderSnesHardwareDefines;
 var init_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -61375,10 +61472,10 @@ var init_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS, SNES_CPU_VECTOR_DEFINITIONS, HEADER_OFFSETS, snesInternalHeaderOffset, asciiField, sizeBytes, mapModeName, regionName, chipsetDescription, parseSnesInternalRomHeader, HEADER_SPECS, defaultAddressContext, scoreCandidate, detectSnesRom;
 var init_rom_header = __esm({
-  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
+  "../plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
     init_address_space();
     SNES_MAPPERS = [
@@ -61765,10 +61862,10 @@ var init_rom_header = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var DATA_CLASSIFICATIONS, EVIDENCE_RANK, vectorState, readVector, stateOverrideFor, controlTargetKind, controlsFor2, isIndexedOrIndirect, unresolvedAddressExplanation, mappedAddressExplanation, mappedRomOffset, effectiveAddressesFor, knownBoolean, knownNumber, annotationState2, recordsFor, annotationsFor, analyzeSnes65816;
 var init_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
     init_src3();
     init_src();
@@ -62281,10 +62378,10 @@ var init_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 var import_node_crypto22, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
 var init_dizraw_import = __esm({
-  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
     import_node_crypto22 = require("node:crypto");
     SUBSTITUTIONS = [
@@ -62660,10 +62757,10 @@ var init_dizraw_import = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+// ../plugin-snes/src/disassembler/mesen-runtime.ts
 var import_node_crypto23, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2567, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
 var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     import_node_crypto23 = require("node:crypto");
     init_src3();
@@ -63291,10 +63388,10 @@ var init_mesen_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var import_node_crypto24, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
 var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     import_node_crypto24 = require("node:crypto");
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
@@ -63376,10 +63473,10 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
+// ../plugin-snes/src/disassembler/mesen-labels.ts
 var import_node_crypto25, LABEL_PATTERN, MEMORY_TYPES, sha2568, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
 var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
     import_node_crypto25 = require("node:crypto");
     init_address_identities();
@@ -63678,10 +63775,10 @@ var init_mesen_labels = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
+// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
 var assertInteger, readLittleEndian3, decodeFrameworkRelativePointerTable, deriveFrameworkAssetExtractionRanges, decodeFrameworkSamplePointers, deriveFrameworkSampleExtractionRanges;
 var init_framework_asset_helpers = __esm({
-  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
     assertInteger = (value, name) => {
       if (!Number.isSafeInteger(value) || value < 0) {
@@ -63811,10 +63908,10 @@ var init_framework_asset_helpers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/code-preservation.ts
+// ../plugin-snes/src/disassembler/code-preservation.ts
 var union, lostCodeRanges;
 var init_code_preservation = __esm({
-  "packages/plugin-snes/src/disassembler/code-preservation.ts"() {
+  "../plugin-snes/src/disassembler/code-preservation.ts"() {
     "use strict";
     union = (ranges) => {
       const merged = [];
@@ -63850,10 +63947,10 @@ var init_code_preservation = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 var fs15, import_node_path14, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress2, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
-  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
+  "../plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
     fs15 = __toESM(require("node:fs"), 1);
     import_node_path14 = __toESM(require("node:path"), 1);
@@ -64074,7 +64171,7 @@ var init_ram_map = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-expressions.ts
+// ../plugin-snes/src/disassembler/struct-expressions.ts
 function describeSnesStructAccess(binding, address5, width2) {
   const { structure } = binding;
   if (address5 < binding.address || address5 + width2 > binding.address + binding.count * structure.size)
@@ -64116,7 +64213,7 @@ function describeSnesStructAccess(binding, address5, width2) {
 }
 var SnesStructExpressionResolver;
 var init_struct_expressions = __esm({
-  "packages/plugin-snes/src/disassembler/struct-expressions.ts"() {
+  "../plugin-snes/src/disassembler/struct-expressions.ts"() {
     "use strict";
     init_src3();
     SnesStructExpressionResolver = class {
@@ -64301,10 +64398,10 @@ var init_struct_expressions = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
-var record4, integer5, text, hex10, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, renderSnesStructUseComments;
+// ../plugin-snes/src/disassembler/struct-instruction-uses.ts
+var record4, integer4, text, hex10, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, renderSnesStructUseComments;
 var init_struct_instruction_uses = __esm({
-  "packages/plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
+  "../plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
     "use strict";
     init_struct_expressions();
     record4 = (value) => {
@@ -64312,7 +64409,7 @@ var init_struct_instruction_uses = __esm({
         throw new Error("Struct instruction-use entries must be objects.");
       return value;
     };
-    integer5 = (value, min, max) => {
+    integer4 = (value, min, max) => {
       if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max)
         throw new Error(`Invalid struct instruction-use integer '${String(value)}'.`);
       return value;
@@ -64331,24 +64428,24 @@ var init_struct_instruction_uses = __esm({
       const addresses3 = /* @__PURE__ */ new Set();
       return value.map((input) => {
         const entry = record4(input);
-        const address5 = integer5(entry.address, 0, 16777215);
+        const address5 = integer4(entry.address, 0, 16777215);
         if (addresses3.has(address5))
           throw new Error(`Duplicate struct instruction use at ${hex10(address5)}.`);
         addresses3.add(address5);
         if (!Array.isArray(entry.expectedBytes) || entry.expectedBytes.length < 1 || entry.expectedBytes.length > 4)
           throw new Error("Struct instruction uses require 1\u20134 complete expectedBytes.");
-        const expectedBytes = entry.expectedBytes.map((byte2) => integer5(byte2, 0, 255));
+        const expectedBytes = entry.expectedBytes.map((byte2) => integer4(byte2, 0, 255));
         let operand;
         if (entry.operand !== void 0) {
           const resolved = resolver.resolve(entry.operand);
-          operand = { expression: resolved.expression, value: integer5(resolved.value, 0, 65535) };
+          operand = { expression: resolved.expression, value: integer4(resolved.value, 0, 65535) };
         }
         if (entry.observations !== void 0 && !Array.isArray(entry.observations))
           throw new Error("Struct observations must be an array.");
         const observations = (entry.observations ?? []).map(
           (inputObservation) => {
             const observation = record4(inputObservation);
-            const width2 = integer5(observation.width, 1, 2);
+            const width2 = integer4(observation.width, 1, 2);
             const target = resolver.resolve(observation.target);
             if (target.bindings.length !== 1)
               throw new Error("Struct observation target must reference exactly one binding.");
@@ -64439,10 +64536,10 @@ var init_struct_instruction_uses = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-map.ts
-var fs16, import_node_path15, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer6, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+// ../plugin-snes/src/disassembler/struct-map.ts
+var fs16, import_node_path15, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer5, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
-  "packages/plugin-snes/src/disassembler/struct-map.ts"() {
+  "../plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
     fs16 = __toESM(require("node:fs"), 1);
     import_node_path15 = __toESM(require("node:path"), 1);
@@ -64459,7 +64556,7 @@ var init_struct_map = __esm({
         throw new Error("Struct-map records must be objects.");
       return value;
     };
-    integer6 = (value, minimum = 0, maximum = 16777215) => {
+    integer5 = (value, minimum = 0, maximum = 16777215) => {
       if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum)
         throw new Error(`Invalid struct-map integer '${String(value)}'.`);
       return value;
@@ -64491,7 +64588,7 @@ var init_struct_map = __esm({
       const structures = file.structures.map((input) => {
         const entry = object(input);
         const id = uniqueName(entry.id);
-        const size = integer6(entry.size, 1, 65536);
+        const size = integer5(entry.size, 1, 65536);
         if (entry.byteOrder !== void 0 && entry.byteOrder !== "little")
           throw new Error(`Struct '${id}' must use little-endian fields.`);
         if (!Array.isArray(entry.fields)) throw new Error(`Struct '${id}' requires a fields array.`);
@@ -64504,7 +64601,7 @@ var init_struct_map = __esm({
           fieldNames.add(name.toLowerCase());
           if (field.description !== void 0 && typeof field.description !== "string")
             throw new Error(`Invalid description for '${id}.${name}'.`);
-          const fieldSize = integer6(field.size, 1, size);
+          const fieldSize = integer5(field.size, 1, size);
           let type;
           if (field.type !== void 0) {
             if (typeof field.type !== "string")
@@ -64516,7 +64613,7 @@ var init_struct_map = __esm({
           }
           return {
             name,
-            offset: integer6(field.offset, 0, size - 1),
+            offset: integer5(field.offset, 0, size - 1),
             size: fieldSize,
             ...type === void 0 ? {} : { type },
             ...field.description === void 0 ? {} : { description: comment(field.description) }
@@ -64536,15 +64633,15 @@ var init_struct_map = __esm({
         const name = uniqueName(entry.name);
         const structure = byName.get(String(entry.structure));
         if (!structure) throw new Error(`Unknown layout '${String(entry.structure)}' for '${name}'.`);
-        const address5 = integer6(entry.address);
-        const count2 = integer6(entry.count, 1);
-        const firstIndex = integer6(entry.firstIndex ?? 0);
+        const address5 = integer5(entry.address);
+        const count2 = integer5(entry.count, 1);
+        const firstIndex = integer5(entry.firstIndex ?? 0);
         if (address5 - firstIndex * structure.size < 0)
           throw new Error(`Struct binding '${name}' has an invalid first index.`);
         const length = count2 * structure.size;
         if (address5 + length > 16777216)
           throw new Error(`Struct binding '${name}' exceeds CPU memory.`);
-        const fileOffset = entry.fileOffset === void 0 ? void 0 : integer6(entry.fileOffset);
+        const fileOffset = entry.fileOffset === void 0 ? void 0 : integer5(entry.fileOffset);
         if (fileOffset === void 0 && (address5 < 8257536 || address5 + length > 8388608))
           throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
         return {
@@ -64737,10 +64834,10 @@ var init_struct_map = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 var fs17, import_node_path16, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
-  "packages/plugin-snes/src/disassembler/source-export.ts"() {
+  "../plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
     fs17 = __toESM(require("node:fs"), 1);
     import_node_path16 = __toESM(require("node:path"), 1);
@@ -65723,10 +65820,10 @@ var init_source_export2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress, identifySpc700HardwareRegister;
 var init_spc700_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -65759,10 +65856,10 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-state.ts
+// ../plugin-snes/src/disassembler/spc700-state.ts
 var unknown2, known3, unknownSpc700State, applySpc700StateOverride, joinDirectPage, sameStackEntry, joinStack2, joinSpc700States, spc700StateKey, spc700DecodeState, push2, pop, transferSpc700State;
 var init_spc700_state = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
+  "../plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
     unknown2 = () => ({ kind: "unknown" });
     known3 = (value) => ({ kind: "known", value });
@@ -65833,10 +65930,10 @@ var init_spc700_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-analysis.ts
+// ../plugin-snes/src/disassembler/spc700-analysis.ts
 var DATA_CLASSIFICATIONS2, EVIDENCE_RANK2, intervalContains, stateOverrideFor2, readWord, controlTargetKind2, controlsFor3, isIndexedOrIndirect2, effectiveAddressesFor2, annotationState3, recordsFor2, annotationsFor2, analyzeSpc700Aram;
 var init_spc700_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
     init_src3();
     init_src();
@@ -66256,10 +66353,10 @@ var init_spc700_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-upload.ts
+// ../plugin-snes/src/disassembler/spc700-upload.ts
 var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex13, materializeSpc700UploadBlock, spc700UploadProjectRecords;
 var init_spc700_upload = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
     init_address_identities();
     init_spc700_address_space();
@@ -66450,10 +66547,10 @@ var init_spc700_upload = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-state.ts
+// ../plugin-snes/src/disassembler/superfx-state.ts
 var known4, unknown3, initialSuperFxState, joinValue2, joinSuperFxStates, decodeValue, superFxDecodeState, enterSuperFxAddress, detailNumber, transferSuperFxState, superFxStateKey;
 var init_superfx_state = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
+  "../plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
     known4 = (value) => ({ kind: "known", value });
     unknown3 = () => ({ kind: "unknown" });
@@ -66521,10 +66618,10 @@ var init_superfx_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/processor-source-export.ts
+// ../plugin-snes/src/disassembler/processor-source-export.ts
 var hex14, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
 var init_processor_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
     init_src3();
     init_spc700_decoder();
@@ -66617,10 +66714,10 @@ var init_processor_source_export = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
+// ../plugin-snes/src/disassembler/function-heuristics.ts
 var import_node_crypto26, isArray4, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses2, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     import_node_crypto26 = require("node:crypto");
     init_src();
@@ -67092,10 +67189,10 @@ var init_function_heuristics = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 var import_node_crypto27, runtimeDecodeState, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+  "../plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
     import_node_crypto27 = require("node:crypto");
     init_src3();
@@ -67306,10 +67403,10 @@ var init_runtime_code = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var import_node_crypto28, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
 var init_superfx_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     import_node_crypto28 = require("node:crypto");
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
@@ -67366,10 +67463,10 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var fs18, import_node_path17, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace;
 var init_project_initializer = __esm({
-  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
+  "../plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
     fs18 = __toESM(require("node:fs"), 1);
     import_node_path17 = __toESM(require("node:path"), 1);
@@ -68002,10 +68099,10 @@ var init_project_initializer = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-analysis.ts
+// ../plugin-snes/src/disassembler/superfx-analysis.ts
 var DATA_CLASSIFICATIONS3, contains, applyEntryState, controlsFor4, effectiveAddressesFor3, recordsFor3, annotationsFor3, analyzeSuperFxRom;
 var init_superfx_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
     init_src3();
     init_src();
@@ -68293,10 +68390,10 @@ var init_superfx_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
+// ../plugin-snes/src/assets/common.ts
 var objectValue2, optionsFor2, integerOption2, stringOption2, readBytes, resolveCount, resolveGrid, decodedObject2, arrayValue, integerValue, defaultPath, jsonFile2;
 var init_common2 = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
+  "../plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue2 = (value, label) => {
       if (value === void 0) return {};
@@ -68393,10 +68490,10 @@ var init_common2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/brr.ts
+// ../plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
+  "../plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common2();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -68509,10 +68606,10 @@ var init_brr = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/palette.ts
+// ../plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
+  "../plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common2();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -68570,10 +68667,10 @@ var init_palette = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tilemap.ts
+// ../plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
+  "../plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common2();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -68705,10 +68802,10 @@ var init_tilemap = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tiles.ts
+// ../plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
+  "../plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common2();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -68875,10 +68972,10 @@ var init_tiles = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/previews.ts
+// ../plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue3, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer, registerSnesAssetPreviewRenderers;
 var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
+  "../plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -69011,10 +69108,10 @@ var init_previews = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/index.ts
+// ../plugin-snes/src/assets/index.ts
 var snesAssetCodecs, registerSnesAssetCodecs;
 var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
+  "../plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -69045,7 +69142,7 @@ var init_assets = __esm({
   }
 });
 
-// packages/plugin-snes/src/index.ts
+// ../plugin-snes/src/index.ts
 var src_exports3 = {};
 __export(src_exports3, {
   ASAR_COMPAT_NO_OP_DIRECTIVES: () => ASAR_COMPAT_NO_OP_DIRECTIVES,
@@ -69228,7 +69325,7 @@ async function createSnesAssemblerEnvironment() {
 }
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin, src_default;
 var init_src4 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+  "../plugin-snes/src/index.ts"() {
     "use strict";
     init_src3();
     init_decoder();
@@ -69723,7 +69820,7 @@ var init_src4 = __esm({
   }
 });
 
-// packages/vscode-extension/src/extension.ts
+// src/extension.ts
 var extension_exports = {};
 __export(extension_exports, {
   activate: () => activate,
@@ -69732,13 +69829,13 @@ __export(extension_exports, {
 module.exports = __toCommonJS(extension_exports);
 var path34 = __toESM(require("node:path"));
 var import_vscode15 = require("vscode");
-var import_node = __toESM(require_main3());
+var import_node = __toESM(require_main5());
 
-// packages/vscode-extension/src/analysis-annotation-controller.ts
+// src/analysis-annotation-controller.ts
 var path14 = __toESM(require("node:path"));
 var import_vscode3 = require("vscode");
 
-// packages/vscode-extension/src/analysis-annotation-format.ts
+// src/analysis-annotation-format.ts
 init_canonical_json();
 var hexadecimal = (value) => `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
 var valueText = (value, present = true) => {
@@ -69831,7 +69928,7 @@ Evidence: ${evidence.join(", ")}`
   return lines.join("\n");
 };
 
-// packages/vscode-extension/src/analysis-annotation-layout.ts
+// src/analysis-annotation-layout.ts
 var annotationSourceColumns = (text2, tabSize) => {
   const width2 = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
   let columns = 0;
@@ -69852,7 +69949,7 @@ var annotationOverlayColor = (annotations) => {
   return "editorInfo.foreground";
 };
 
-// packages/vscode-extension/src/analysis-debug-maps.ts
+// src/analysis-debug-maps.ts
 var import_node_crypto2 = require("node:crypto");
 var fs = __toESM(require("node:fs"));
 var path2 = __toESM(require("node:path"));
@@ -69949,7 +70046,7 @@ var analysisDebugMapRanges = (map, location) => {
   return [...unique2.values()].filter((range) => hints.size === 0 || hints.has(range.architecture));
 };
 
-// packages/vscode-extension/src/analysis-worker-client.ts
+// src/analysis-worker-client.ts
 var import_node_child_process = require("node:child_process");
 var path3 = __toESM(require("node:path"));
 var interactiveOperations = /* @__PURE__ */ new Set([
@@ -70119,7 +70216,7 @@ var analysisWorker = () => {
   return client;
 };
 
-// packages/vscode-extension/src/coverage-tree.ts
+// src/coverage-tree.ts
 var path13 = __toESM(require("node:path"));
 init_src();
 var import_vscode2 = require("vscode");
@@ -70412,7 +70509,7 @@ ${message}`,
   }
 };
 
-// packages/vscode-extension/src/analysis-annotation-controller.ts
+// src/analysis-annotation-controller.ts
 var TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
 var append = (map, key2, value) => {
   const entries3 = map.get(key2);
@@ -70571,7 +70668,7 @@ var AnalysisAnnotationController = class {
   }
 };
 
-// packages/vscode-extension/src/analysis-graph-tree.ts
+// src/analysis-graph-tree.ts
 var path15 = __toESM(require("node:path"));
 init_src();
 var import_vscode4 = require("vscode");
@@ -70914,7 +71011,7 @@ ${message}`,
   }
 };
 
-// packages/vscode-extension/src/analysis-navigation.ts
+// src/analysis-navigation.ts
 var path17 = __toESM(require("node:path"));
 init_src2();
 var import_vscode5 = require("vscode");
@@ -71079,17 +71176,17 @@ var navigateToAnalysisLocation = async (target) => {
   }
 };
 
-// packages/vscode-extension/src/analysis-project-editor.ts
+// src/analysis-project-editor.ts
 var import_node_crypto19 = require("node:crypto");
 var fs12 = __toESM(require("node:fs"));
 var path18 = __toESM(require("node:path"));
 init_src();
 var import_vscode8 = require("vscode");
 
-// packages/vscode-extension/src/disassembly-annotation-form.ts
+// src/disassembly-annotation-form.ts
 var import_vscode7 = require("vscode");
 
-// packages/vscode-extension/src/webview-template.ts
+// src/webview-template.ts
 var import_node_crypto18 = require("node:crypto");
 var import_node_fs8 = require("node:fs");
 var import_vscode6 = require("vscode");
@@ -71110,7 +71207,7 @@ var renderWebviewTemplate = (webview, extensionUri, name) => {
   );
 };
 
-// packages/vscode-extension/src/disassembly-annotation-form.ts
+// src/disassembly-annotation-form.ts
 var parseDisassemblyAnnotationFields = (value) => {
   if (!value || typeof value !== "object") throw new Error("Invalid annotation form.");
   const input = value;
@@ -71202,7 +71299,7 @@ var openDisassemblyAnnotationForm = (extensionUri) => {
   };
 };
 
-// packages/vscode-extension/src/analysis-project-editor.ts
+// src/analysis-project-editor.ts
 var loadEditableSnapshot = (directory, location) => {
   const store = openAnalysisProjectStore(directory);
   try {
@@ -72125,7 +72222,7 @@ var AnalysisProjectEditor = class {
   }
 };
 
-// packages/vscode-extension/src/analysis-sources-tree.ts
+// src/analysis-sources-tree.ts
 var path19 = __toESM(require("node:path"));
 var import_vscode9 = require("vscode");
 var count = (value) => value.toLocaleString("en-US");
@@ -72398,13 +72495,13 @@ ${String(error)}`
   }
 };
 
-// packages/vscode-extension/src/debug.ts
+// src/debug.ts
 var fs21 = __toESM(require("node:fs"));
 var path31 = __toESM(require("node:path"));
 init_debug_map();
 init_src2();
 
-// packages/debug-sidecar-ares/src/profile.ts
+// ../debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -72487,14 +72584,14 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
   ])
 });
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 var import_node_child_process3 = require("node:child_process");
 var import_node_crypto20 = require("node:crypto");
 var import_node_fs9 = require("node:fs");
 var import_node_net2 = __toESM(require("node:net"), 1);
 var import_node_path12 = __toESM(require("node:path"), 1);
 
-// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 var import_node_net = __toESM(require("node:net"), 1);
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -72618,7 +72715,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
@@ -72789,7 +72886,7 @@ var parseAresRuntimeManifest = (value) => {
   });
 };
 
-// packages/debug-sidecar-mesence/src/profile.ts
+// ../debug-sidecar-mesence/src/profile.ts
 var MESEN_BACKEND_ID = "mesence-debug-server";
 var MESEN_65816_ARCHITECTURE = "snes.65816";
 var MESEN_SPC700_ARCHITECTURE = "snes.spc700";
@@ -72872,14 +72969,14 @@ var MESEN_CAPABILITIES = Object.freeze({
   ])
 });
 
-// packages/debug-sidecar-mesence/src/mesen-process-host.ts
+// ../debug-sidecar-mesence/src/mesen-process-host.ts
 var import_node_child_process4 = require("node:child_process");
 var import_node_crypto29 = require("node:crypto");
 var import_node_fs11 = require("node:fs");
 var import_node_net4 = __toESM(require("node:net"), 1);
 var import_node_path18 = __toESM(require("node:path"), 1);
 
-// packages/debug-sidecar-mesence/src/node-tcp-mesen-transport.ts
+// ../debug-sidecar-mesence/src/node-tcp-mesen-transport.ts
 var import_node_net3 = __toESM(require("node:net"), 1);
 var NodeTcpMesenTransport = class _NodeTcpMesenTransport {
   #socket;
@@ -73003,7 +73100,7 @@ var NodeTcpMesenTransport = class _NodeTcpMesenTransport {
   }
 };
 
-// packages/debug-sidecar-mesence/src/mesen-process-host.ts
+// ../debug-sidecar-mesence/src/mesen-process-host.ts
 var MESEN_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern2 = /^[\dA-Fa-f]{64}$/;
 var revisionPattern2 = /^[\dA-Fa-f]{40}$/;
@@ -73158,10 +73255,10 @@ var parseMesenRuntimeManifest = (value) => {
   });
 };
 
-// packages/vscode-extension/src/debug.ts
+// src/debug.ts
 var import_vscode11 = require("vscode");
 
-// packages/vscode-extension/src/debug-analysis-annotations.ts
+// src/debug-analysis-annotations.ts
 var locationKey2 = (addressSpace, address5) => `${addressSpace}:${address5}`;
 var append2 = (map, key2, value) => {
   const entries3 = map.get(key2);
@@ -73250,7 +73347,7 @@ var createDebugInstructionAnnotation = async (map) => {
   };
 };
 
-// packages/vscode-extension/src/debug-source-root.ts
+// src/debug-source-root.ts
 var import_node_fs12 = __toESM(require("node:fs"));
 var import_node_path19 = __toESM(require("node:path"));
 var sourceMatches = (root, source) => {
@@ -73293,17 +73390,17 @@ var resolveDebugSourceRoot = (options) => {
   return bestRoot;
 };
 
-// packages/vscode-extension/src/disassembly-maintenance.ts
+// src/disassembly-maintenance.ts
 var fs20 = __toESM(require("node:fs"));
 var path29 = __toESM(require("node:path"));
 init_src();
 init_src4();
 var import_vscode10 = require("vscode");
 
-// packages/vscode-extension/src/disassembly-maintenance-client.ts
+// src/disassembly-maintenance-client.ts
 var import_node_child_process5 = require("node:child_process");
 
-// packages/vscode-extension/src/disassembly-maintenance-log.ts
+// src/disassembly-maintenance-log.ts
 var seconds = (milliseconds) => `${(milliseconds / 1e3).toFixed(1)}s`;
 var mib = (bytes) => `${(bytes / 1048576).toFixed(1)} MiB`;
 var MaintenanceLog = class {
@@ -73404,7 +73501,7 @@ var MaintenanceLog = class {
   }
 };
 
-// packages/vscode-extension/src/disassembly-maintenance-client.ts
+// src/disassembly-maintenance-client.ts
 var cancelled = (message) => Object.assign(new Error(message), { name: "AbortError" });
 var DisassemblyMaintenanceClient = class {
   constructor(processFile, output) {
@@ -73512,7 +73609,7 @@ ${stderr}` : ""}`
   }
 };
 
-// packages/vscode-extension/src/disassembly-maintenance-data.ts
+// src/disassembly-maintenance-data.ts
 var fileChanges = (before, after) => {
   const prior = new Map(before.files.map((file) => [file.path, file.sha256]));
   const next = new Map(after.files.map((file) => [file.path, file.sha256]));
@@ -73523,7 +73620,7 @@ var fileChanges = (before, after) => {
   };
 };
 
-// packages/vscode-extension/src/bus-trace-report.ts
+// src/bus-trace-report.ts
 var graphicsReport = (summary) => {
   const hex15 = (value, width2 = 2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
   return [
@@ -73658,7 +73755,7 @@ var ppuReport = (summary) => {
   ];
 };
 
-// packages/vscode-extension/src/disassembly-storage-report.ts
+// src/disassembly-storage-report.ts
 var mib2 = (bytes) => `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
 var renderDisassemblyStorage = (before, after) => [
   "## Storage",
@@ -73679,7 +73776,7 @@ var renderDisassemblyStorage = (before, after) => [
   "WAL bytes are allocated transaction space. Free pages are reusable; explicit compaction releases them to the filesystem. Archive expiry preserves code, counts, annotations and capture receipts."
 ].join("\n");
 
-// packages/vscode-extension/src/disassembly-timings.ts
+// src/disassembly-timings.ts
 var import_node_perf_hooks3 = require("node:perf_hooks");
 var DisassemblyTimings = class {
   /** The injectable clock must return monotonic milliseconds, like performance.now(). */
@@ -73759,7 +73856,7 @@ var renderMaintenanceTimings = (summary) => {
   ].join("\n");
 };
 
-// packages/vscode-extension/src/runtime-bus-source.ts
+// src/runtime-bus-source.ts
 var createEditorRuntimeBusSource = async (file, options = {}) => {
   const { canonicalJson: canonicalJson2, DEFAULT_RUNTIME_TRACE_MAX_BYTES: DEFAULT_RUNTIME_TRACE_MAX_BYTES2, validateRuntimeBusTraceMetadata: validateRuntimeBusTraceMetadata2 } = await Promise.resolve().then(() => (init_src(), src_exports));
   const { readCaptureFileHeader: readCaptureFileHeader2, recoverCaptureFile: recoverCaptureFile2 } = await Promise.resolve().then(() => (init_src2(), src_exports2));
@@ -73793,7 +73890,7 @@ var createEditorRuntimeBusSource = async (file, options = {}) => {
   };
 };
 
-// packages/vscode-extension/src/runtime-trace-source.ts
+// src/runtime-trace-source.ts
 var import_promises7 = require("node:fs/promises");
 var createEditorRuntimeTraceSource = async (file, options = {}) => {
   const {
@@ -73857,7 +73954,7 @@ var createEditorRuntimeTraceSource = async (file, options = {}) => {
   };
 };
 
-// packages/vscode-extension/src/snes-rom-bindings.ts
+// src/snes-rom-bindings.ts
 var path28 = __toESM(require("node:path"));
 var ROM_BINDINGS_KEY = "snesProjectRomBindings.v1";
 var MAX_ROM_BINDINGS = 32;
@@ -73880,7 +73977,7 @@ var rememberSnesRom = async (context, identity2, romFile) => {
   await context.globalState.update(ROM_BINDINGS_KEY, bounded);
 };
 
-// packages/vscode-extension/src/disassembly-maintenance.ts
+// src/disassembly-maintenance.ts
 var REGENERATE_DISASSEMBLY_COMMAND = "asm.disassembly.regenerate";
 var DISASSEMBLY_STATUS_COMMAND = "asm.disassembly.status";
 var IMPORT_TRACE_AND_REGENERATE_COMMAND = "asm.trace.importRegenerate";
@@ -74663,7 +74760,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
   ];
 };
 
-// packages/vscode-extension/src/live-bus-analysis.ts
+// src/live-bus-analysis.ts
 var import_node_child_process6 = require("node:child_process");
 var LiveBusAnalysis = class {
   /** Resolves only after guarded project publication; rejection leaves the recording available. */
@@ -74757,7 +74854,7 @@ var LiveBusAnalysis = class {
   }
 };
 
-// packages/vscode-extension/src/runtime-binding.ts
+// src/runtime-binding.ts
 var path30 = __toESM(require("node:path"));
 var runtimeBindingFromLaunch = (configurations, root) => {
   const bindings = /* @__PURE__ */ new Map();
@@ -74788,7 +74885,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
   return bindings.size === 1 ? [...bindings.values()][0] : void 0;
 };
 
-// packages/vscode-extension/src/runtime-trace-recorder.ts
+// src/runtime-trace-recorder.ts
 var import_promises8 = require("node:fs/promises");
 var resolveEditorTraceDetail = (requested, instructionDetails) => {
   if (requested === "full" && !instructionDetails)
@@ -74963,7 +75060,7 @@ var RuntimeTraceFileRecorder = class _RuntimeTraceFileRecorder {
   }
 };
 
-// packages/vscode-extension/src/trace-lease.ts
+// src/trace-lease.ts
 var owner;
 var acquireTraceLease = () => {
   if (owner)
@@ -74977,7 +75074,7 @@ var acquireTraceLease = () => {
   };
 };
 
-// packages/vscode-extension/src/debug.ts
+// src/debug.ts
 var UTTORI_ASM_DEBUG_TYPE = "uttori-asm";
 var UTTORI_TRACE_START_COMMAND = "asm.trace.start";
 var UTTORI_TRACE_STOP_COMMAND = "asm.trace.stop";
@@ -75634,7 +75731,7 @@ var registerDebugging = (extensionRoot) => {
   ];
 };
 
-// packages/vscode-extension/src/outline-tree.ts
+// src/outline-tree.ts
 var import_vscode12 = require("vscode");
 var import_vscode_languageclient = __toESM(require_api3());
 var ProjectOutlineProvider = class {
@@ -75780,7 +75877,7 @@ function iconForSymbolKind(kind) {
   }
 }
 
-// packages/vscode-extension/src/panel.ts
+// src/panel.ts
 var path32 = __toESM(require("node:path"));
 var import_vscode13 = require("vscode");
 var ProjectPanelProvider = class {
@@ -76055,7 +76152,7 @@ function asString(value) {
   return typeof value === "string" ? value : "";
 }
 
-// packages/vscode-extension/src/project-wizard.ts
+// src/project-wizard.ts
 var fs22 = __toESM(require("node:fs"));
 var import_node_path20 = __toESM(require("node:path"));
 init_src4();
@@ -76300,7 +76397,7 @@ var registerProjectWizards = (context, outputChannel2) => [
   )
 ];
 
-// packages/vscode-extension/src/extension.ts
+// src/extension.ts
 var ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"];
 var client2;
 var outputChannel;

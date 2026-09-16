@@ -11,9 +11,10 @@ await build({
   entryPoints: [path.join(here, "src/server.ts")],
   outfile,
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "esm",
-  target: "node20",
+  target: "node26",
   // Never emit a runnable bundle with plugin imports replaced by `undefined`.
   logOverride: { "import-is-undefined": "error" },
   external: [],

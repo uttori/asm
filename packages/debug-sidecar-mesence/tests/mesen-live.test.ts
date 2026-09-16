@@ -165,7 +165,7 @@ const createLiveSidecarBackend = async (
       const transport = new NodeStdioSidecarTransport({
         command: process.execPath,
         args: [
-          ...(entry.endsWith(".ts") ? ["--import=tsx"] : []),
+          ...(entry.endsWith(".ts") ? ["--conditions=uttori-source", "--import=tsx"] : []),
           entry,
           "--manifest",
           selectedManifestFile,

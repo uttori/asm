@@ -10,6 +10,7 @@ const bundle = await build({
   entryPoints: [path.resolve("packages/vscode-extension/src/panel.ts")],
   write: false,
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
   external: ["vscode"],

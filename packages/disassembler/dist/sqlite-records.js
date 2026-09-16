@@ -1,0 +1,305 @@
+import { canonicalJson } from "./canonical-json.js";
+import { decodeSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
+/**
+ * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.
+ * @param {RuntimeEvidenceRecord} left First semantic record.
+ * @param {RuntimeEvidenceRecord} right Second semantic record.
+ * @returns {number} Lexical ID comparison; streaming consumers deliberately do not use this sort.
+ */
+export const compareRuntimeRecordIds = (left, right) => {
+    if (left.id < right.id)
+        return -1;
+    if (left.id > right.id)
+        return 1;
+    return 0;
+};
+/**
+ * Store searchable coordinates as columns and variant-only fields as a bounded payload.
+ * Unused coordinate columns stay null so one record kind cannot masquerade as another.
+ * Canonicalize payloads here once: the writer reuses this exact text for hashing
+ * and encoding, avoiding a JSON stringify/parse/canonicalize round trip per fact.
+ * @param {RuntimeEvidenceRecord} record Validated semantic runtime fact.
+ * @returns {object} Column bindings with canonical payload text; absent variant fields remain omitted.
+ */
+export const runtimeColumns = (record) => {
+    switch (record.kind) {
+        case "runtime-execution":
+            return {
+                addressSpace: record.addressSpace,
+                address: record.address,
+                start: null,
+                end: null,
+                fromAddressSpace: null,
+                fromAddress: null,
+                toAddressSpace: null,
+                toAddress: null,
+                instructionAddressSpace: null,
+                instructionAddress: null,
+                accessedAddressSpace: null,
+                accessedAddress: null,
+                coverage: null,
+                payload: canonicalJson({
+                    ...(record.fileOffset === undefined ? {} : { fileOffset: record.fileOffset }),
+                    ...(record.size === undefined ? {} : { size: record.size }),
+                    ...(record.opcode === undefined ? {} : { opcode: record.opcode }),
+                }),
+            };
+        case "runtime-instruction":
+            return {
+                addressSpace: record.addressSpace,
+                address: record.address,
+                start: null,
+                end: null,
+                fromAddressSpace: null,
+                fromAddress: null,
+                toAddressSpace: null,
+                toAddress: null,
+                instructionAddressSpace: null,
+                instructionAddress: null,
+                accessedAddressSpace: null,
+                accessedAddress: null,
+                coverage: null,
+                payload: canonicalJson({ bytes: record.bytes, state: record.state }),
+            };
+        case "runtime-bus-access":
+            return {
+                addressSpace: null,
+                address: null,
+                start: null,
+                end: null,
+                fromAddressSpace: null,
+                fromAddress: null,
+                toAddressSpace: null,
+                toAddress: null,
+                // Unowned accesses must never become instruction observations through a coordinate query.
+                instructionAddressSpace: record.context === "instruction" ? record.addressSpace : null,
+                instructionAddress: record.context === "instruction" ? record.pc : null,
+                accessedAddressSpace: record.addressSpace,
+                accessedAddress: record.address,
+                coverage: null,
+                payload: canonicalJson({
+                    ...(record.ppu ? { ppu: record.ppu } : {}),
+                    pc: record.pc,
+                    value: record.value,
+                    direction: record.direction,
+                    actor: record.actor,
+                    channel: record.channel,
+                    phase: record.phase,
+                    context: record.context,
+                }),
+            };
+        case "runtime-memory-access":
+            return {
+                addressSpace: null,
+                address: null,
+                start: null,
+                end: null,
+                fromAddressSpace: null,
+                fromAddress: null,
+                toAddressSpace: null,
+                toAddress: null,
+                instructionAddressSpace: record.instructionAddressSpace,
+                instructionAddress: record.instructionAddress,
+                accessedAddressSpace: record.accessedAddressSpace,
+                accessedAddress: record.accessedAddress,
+                coverage: null,
+                payload: canonicalJson({
+                    access: record.access,
+                    width: record.width,
+                    ...(record.actor === undefined ? {} : { actor: record.actor }),
+                    ...(record.channel === undefined ? {} : { channel: record.channel }),
+                    ...(record.value === undefined ? {} : { value: record.value }),
+                }),
+            };
+        case "runtime-cpu-state":
+            return {
+                addressSpace: record.addressSpace,
+                address: record.address,
+                start: null,
+                end: null,
+                fromAddressSpace: null,
+                fromAddress: null,
+                toAddressSpace: null,
+                toAddress: null,
+                instructionAddressSpace: null,
+                instructionAddress: null,
+                accessedAddressSpace: null,
+                accessedAddress: null,
+                coverage: null,
+                payload: canonicalJson({ state: record.state }),
+            };
+        case "runtime-coverage":
+            return {
+                addressSpace: record.addressSpace,
+                address: null,
+                start: record.start,
+                end: record.end,
+                fromAddressSpace: null,
+                fromAddress: null,
+                toAddressSpace: null,
+                toAddress: null,
+                instructionAddressSpace: null,
+                instructionAddress: null,
+                accessedAddressSpace: null,
+                accessedAddress: null,
+                coverage: record.coverage,
+                payload: null,
+            };
+        case "runtime-control-target":
+            return {
+                addressSpace: null,
+                address: null,
+                start: null,
+                end: null,
+                fromAddressSpace: record.fromAddressSpace,
+                fromAddress: record.fromAddress,
+                toAddressSpace: record.toAddressSpace,
+                toAddress: record.toAddress,
+                instructionAddressSpace: null,
+                instructionAddress: null,
+                accessedAddressSpace: null,
+                accessedAddress: null,
+                coverage: null,
+                payload: canonicalJson({ flowKind: record.flowKind, indirect: record.indirect }),
+            };
+    }
+    throw new Error("Unsupported runtime evidence kind.");
+};
+/**
+ * Reconstruct a semantic fact without inventing absent optional fields; stable-ID comparisons
+ * depend on preserving the same payload across inserts and subsequent reads.
+ * @param {object} row SQLite runtime row selected with all columns.
+ * @returns {RuntimeEvidenceRecord} Decoded fact in its original discriminated shape.
+ */
+export const runtimeFromRow = (row) => {
+    const fields = row;
+    const extra = fields.payload === null || fields.payload === undefined
+        ? {}
+        : JSON.parse(decodeSqlitePayload(fields.payload));
+    // LEFT JOIN keeps a corrupt dictionary reference visible; silently omitting the row would lose history.
+    if (typeof fields.evidence !== "string")
+        throw new Error("Missing SQLite runtime evidence dictionary entry.");
+    const evidence = JSON.parse(fields.evidence);
+    const kind = fields.kind;
+    const architecture = fields.architecture;
+    const count = Number(fields.count);
+    // Legacy migration rows already have a complete text ID; current rows join the prefix dictionary.
+    const id = fields.id_prefix === undefined
+        ? fields.id
+        : decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+    if (kind === "runtime-execution") {
+        return {
+            id,
+            kind,
+            architecture,
+            count,
+            evidence,
+            addressSpace: fields.address_space,
+            address: Number(fields.address),
+            ...extra,
+        };
+    }
+    if (kind === "runtime-instruction") {
+        return {
+            id,
+            kind,
+            architecture,
+            count,
+            evidence,
+            addressSpace: fields.address_space,
+            address: Number(fields.address),
+            bytes: extra.bytes,
+            state: extra.state,
+        };
+    }
+    if (kind === "runtime-bus-access") {
+        return {
+            id,
+            kind,
+            architecture,
+            count,
+            evidence,
+            addressSpace: fields.accessed_address_space,
+            address: Number(fields.accessed_address),
+            ...(extra.ppu === undefined ? {} : { ppu: extra.ppu }),
+            pc: extra.pc,
+            value: extra.value,
+            direction: extra.direction,
+            actor: extra.actor,
+            channel: extra.channel,
+            phase: extra.phase,
+            context: extra.context,
+        };
+    }
+    if (kind === "runtime-memory-access") {
+        return {
+            id,
+            kind,
+            architecture,
+            count,
+            evidence,
+            instructionAddressSpace: fields.instruction_address_space,
+            instructionAddress: Number(fields.instruction_address),
+            accessedAddressSpace: fields.accessed_address_space,
+            accessedAddress: Number(fields.accessed_address),
+            access: extra.access,
+            width: extra.width,
+            ...(extra.actor === undefined ? {} : { actor: extra.actor }),
+            ...(extra.channel === undefined ? {} : { channel: extra.channel }),
+            ...(extra.value === undefined ? {} : { value: extra.value }),
+        };
+    }
+    if (kind === "runtime-cpu-state") {
+        return {
+            id,
+            kind,
+            architecture,
+            count,
+            evidence,
+            addressSpace: fields.address_space,
+            address: Number(fields.address),
+            state: extra.state,
+        };
+    }
+    if (kind === "runtime-coverage") {
+        return {
+            id,
+            kind,
+            architecture,
+            count,
+            evidence,
+            addressSpace: fields.address_space,
+            start: Number(fields.start),
+            end: Number(fields.end),
+            coverage: fields.coverage,
+        };
+    }
+    if (kind !== "runtime-control-target")
+        throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
+    return {
+        id,
+        kind: "runtime-control-target",
+        architecture,
+        count,
+        evidence,
+        fromAddressSpace: fields.from_address_space,
+        fromAddress: Number(fields.from_address),
+        toAddressSpace: fields.to_address_space,
+        toAddress: Number(fields.to_address),
+        flowKind: extra.flowKind,
+        indirect: Boolean(extra.indirect),
+    };
+};
+/**
+ * Extract a point coordinate for persisted analysis metadata; interval-only records have none.
+ * @param {AnalysisRecord} record Semantic analysis variant.
+ * @returns {object} Point or source coordinate, with null columns when no point is represented.
+ */
+export const analysisAddress = (record) => {
+    if ("addressSpace" in record && "address" in record)
+        return { addressSpace: record.addressSpace, address: record.address };
+    if ("addressSpace" in record && "fromAddress" in record)
+        return { addressSpace: record.addressSpace, address: record.fromAddress };
+    return { addressSpace: null, address: null };
+};
+//# sourceMappingURL=sqlite-records.js.map

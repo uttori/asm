@@ -11,9 +11,10 @@ await build({
   entryPoints: [path.join(here, "src/index.ts")],
   outfile,
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "esm",
-  target: "node20",
+  target: "node26",
   banner: { js: "#!/usr/bin/env node" },
   logLevel: "info",
 });

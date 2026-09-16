@@ -3,7 +3,7 @@ export default {
   extensions: ["ts"],
   failFast: false,
   files: ["tests/**/*.external.test.ts", "packages/*/tests/**/*.external.test.ts"],
-  nodeArguments: ["--import=tsx"],
+  nodeArguments: ["--conditions=uttori-source", "--import=tsx"],
   serial: true,
   tap: false,
   timeout: "1800000",

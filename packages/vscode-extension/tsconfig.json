@@ -1,15 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2024"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node", "vscode"],
-    "outDir": "out"
+    "outDir": "out",
+    "customConditions": ["uttori-source"]
   },
   "include": ["src/**/*.ts", "tests-host/**/*.ts"]
 }

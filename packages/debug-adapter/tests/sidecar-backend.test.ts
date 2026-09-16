@@ -29,7 +29,7 @@ const createBackend = (crashFirstOn?: string): SidecarDebugBackend => {
       const session = createDebugSidecarSessionToken();
       const transport = new NodeStdioSidecarTransport({
         command: process.execPath,
-        args: ["--import=tsx", mockSidecar],
+        args: ["--conditions=uttori-source", "--import=tsx", mockSidecar],
         cwd: workspace,
         env:
           launches++ === 0 && crashFirstOn ? { UTTORI_ASM_DEBUG_MOCK_CRASH_ON: crashFirstOn } : {},

@@ -10,6 +10,7 @@ const bundled = await build({
   entryPoints: [path.resolve("packages/vscode-extension/src/debug-analysis-annotations.ts")],
   write: false,
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
   external: ["./analysis-worker-client.js", "./coverage-tree.js"],

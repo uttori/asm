@@ -224,7 +224,9 @@ npm run build --workspace @uttori/asm-cli
 npm run smoke --workspace @uttori/asm-cli
 ```
 
-The distributable executable is generated at `out/cli.mjs`; declarations are generated under `dist/`.
+The Node 26 executable is generated at `out/cli.mjs`; compiled ESM and declarations are generated
+under `dist/`. Programmatic imports work in ordinary Node without a TypeScript loader. Packing the
+workspace rebuilds both forms through its `prepack` hook.
 
 Contributor setup, ownership, tests, and release expectations are in the repository
 [contributor guide](../../CONTRIBUTING.md) and [testing guide](../../docs/testing-and-release.md).

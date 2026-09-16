@@ -1,8 +1,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-/** Explicit generated declaration directories removed before a workspace build. */
-const GENERATED_DECLARATION_DIRECTORIES = [
+/** Explicit generated JavaScript/declaration directories removed before a workspace build. */
+const GENERATED_PACKAGE_DIRECTORIES = [
   "packages/cli/dist",
   "packages/core/dist",
   "packages/debug-adapter/dist",
@@ -15,17 +15,23 @@ const GENERATED_DECLARATION_DIRECTORIES = [
 ] as const;
 
 /**
- * Removes only the checked-in list of generated declaration directories.
+ * Removes only the checked-in list of generated JavaScript/declaration directories.
  *
  * The repository previously embedded `rm -rf` in `npm run make-types`, which made the release gate
  * depend on a POSIX shell. Keeping the allow-list in code makes cleanup identical on macOS, Linux,
  * and Windows. The containment check is intentionally redundant with the literal list: if this
  * helper is later parameterized, an absolute or parent-relative target must still fail closed.
+ * @param {string} [workspace] Optional workspace directory name for a single-package prepack build.
  * @returns {void}
  */
-export const cleanWorkspaceDeclarations = (): void => {
-  const root = process.cwd();
-  for (const relative of GENERATED_DECLARATION_DIRECTORIES) {
+export const cleanWorkspaceBuild = (workspace?: string): void => {
+  const root = path.resolve(import.meta.dirname, "..");
+  const directories = GENERATED_PACKAGE_DIRECTORIES.filter(
+    (relative) => workspace === undefined || relative === `packages/${workspace}/dist`,
+  );
+  if (directories.length === 0)
+    throw new Error(`Unknown package cleanup workspace '${workspace}'.`);
+  for (const relative of directories) {
     const destination = path.resolve(root, relative);
     const contained = path.relative(root, destination);
     if (
@@ -34,10 +40,14 @@ export const cleanWorkspaceDeclarations = (): void => {
       path.isAbsolute(contained) ||
       path.basename(destination) !== "dist"
     ) {
-      throw new Error(`Refusing unsafe declaration cleanup target '${relative}'.`);
+      throw new Error(`Refusing unsafe package cleanup target '${relative}'.`);
     }
     fs.rmSync(destination, { recursive: true, force: true });
   }
 };
 
-cleanWorkspaceDeclarations();
+const args = process.argv.slice(2);
+if (args.length !== 0 && (args.length !== 2 || args[0] !== "--workspace")) {
+  throw new Error("Usage: clean-workspace-build.ts [--workspace directory-name]");
+}
+cleanWorkspaceBuild(args[1]);

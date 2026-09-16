@@ -1,0 +1,671 @@
+import * as fs from "node:fs";
+import path from "node:path";
+import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
+import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, compareByteImages, openAnalysisProjectStore, analysisProjectRevision, assertAnalysisProjectRevision, commitAnalysisProjectViewUpdate, loadSourceExportManifest, validateAnalysisProject, validateProjectRom, validateSourceExportFiles, validateSourceExportInputs, writeAnalysisProject, } from "@uttori/asm-disassembler";
+import { snesRomAddressSpace } from "../target/address-space.js";
+import { analyzeSnes65816 } from "./65816-analysis.js";
+import { createSnesAddressContext, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, } from "./address-identities.js";
+import { lostCodeRanges } from "./code-preservation.js";
+import { importDizRaw } from "./dizraw-import.js";
+import { analyzeSnesFunctionRoles, validateSnesHeuristicConfiguration, } from "./function-heuristics.js";
+import { snesHardwareDefines } from "./hardware-registers.js";
+import { detectSnesRom, SNES_MAPPERS, } from "./rom-header.js";
+import { analyzeSnesRuntimeCode } from "./runtime-code.js";
+import { exportSnes65816Source } from "./source-export.js";
+import { SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR } from "./spc700-address-space.js";
+import { SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR } from "./superfx-address-space.js";
+/** Stable target id written to native SNES analysis projects. */
+const TARGET_ID = "snes.sfc";
+const ARCHITECTURE_ID = "snes.65816";
+const MAX_PERSISTED_RUNTIME_ENTRY_POINTS = 100_000;
+/** Thrown when a project operation observes an aborted signal. */
+export class SnesProjectInitializationCancelledError extends Error {
+    constructor() {
+        super("SNES project initialization was cancelled.");
+        this.name = "SnesProjectInitializationCancelledError";
+    }
+}
+const emptyShards = () => ({
+    analysis: [],
+    annotations: [],
+    labels: [],
+    comments: [],
+    regions: [],
+    runtime: [],
+    evidence: [],
+    imports: [],
+});
+const report = (options, stage, message) => options.onProgress?.({ stage, message });
+const throwIfCancelled = (signal) => {
+    if (signal?.aborted)
+        throw new SnesProjectInitializationCancelledError();
+};
+const assertDizRawFile = (file) => {
+    if (path.extname(file).toLowerCase() !== ".dizraw") {
+        throw new Error("Only uncompressed .dizraw imports are supported; compressed .diz input is not supported.");
+    }
+};
+const importDizRawFile = (file, rom) => {
+    assertDizRawFile(file);
+    return importDizRaw(fs.readFileSync(file, "utf8"), {
+        sourceName: path.basename(file),
+        expectedRomSize: rom.length,
+    });
+};
+const ensureWritableDestination = (directory) => {
+    if (!fs.existsSync(directory))
+        return;
+    const stat = fs.statSync(directory);
+    if (!stat.isDirectory())
+        throw new Error(`Destination '${directory}' is not a directory.`);
+    if (fs.readdirSync(directory).length > 0) {
+        throw new Error(`Destination '${directory}' must be empty.`);
+    }
+};
+const safeWorkspacePath = (relative) => {
+    if (relative === "" ||
+        path.isAbsolute(relative) ||
+        relative.split(/[/\\]/).some((part) => part === "" || part === "..")) {
+        throw new Error(`Unsafe workspace file path '${relative}'.`);
+    }
+    return relative;
+};
+const temporarySibling = (destination, suffix) => {
+    const resolved = path.resolve(destination);
+    const parent = path.dirname(resolved);
+    fs.mkdirSync(parent, { recursive: true });
+    return fs.mkdtempSync(path.join(parent, `.${path.basename(resolved)}.${suffix}-`));
+};
+const removeDirectory = (directory) => {
+    fs.rmSync(directory, { recursive: true, force: true });
+};
+/**
+ * Atomically replaces a missing or empty destination with a completely prepared staging tree.
+ * Existing non-empty destinations are never merged or overwritten.
+ * @param {string} staging Fully prepared sibling directory.
+ * @param {string} destination Missing or empty destination directory.
+ * @returns {void}
+ */
+const commitStagedDirectory = (staging, destination) => {
+    const resolved = path.resolve(destination);
+    ensureWritableDestination(resolved);
+    if (!fs.existsSync(resolved)) {
+        fs.renameSync(staging, resolved);
+        return;
+    }
+    const backup = `${resolved}.empty-${path.basename(staging)}`;
+    fs.renameSync(resolved, backup);
+    try {
+        fs.renameSync(staging, resolved);
+        fs.rmdirSync(backup);
+    }
+    catch (error) {
+        if (!fs.existsSync(resolved) && fs.existsSync(backup))
+            fs.renameSync(backup, resolved);
+        throw error;
+    }
+};
+/**
+ * Loads a ROM and optional DizRaw project without writing anything.
+ * The result contains ranked mapper candidates and whether the host must ask the user to choose.
+ * @param {ProbeSnesProjectOptions} options ROM, optional DizRaw file, and operation controls.
+ * @returns {SnesProjectProbeResult} Ranked detection and import metadata.
+ */
+export const probeSnesProject = (options) => {
+    throwIfCancelled(options.signal);
+    report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
+    const rom = RomImage.load(path.resolve(options.romFile), {
+        ...(options.headerSize === undefined ? {} : { headerSize: options.headerSize }),
+    });
+    const detection = detectSnesRom(rom, {
+        ...(options.mapper === undefined ? {} : { mapper: options.mapper }),
+        ...(options.headerSize === undefined ? {} : { headerSize: options.headerSize }),
+    });
+    throwIfCancelled(options.signal);
+    const imported = options.dizRawFile
+        ? importDizRawFile(path.resolve(options.dizRawFile), rom)
+        : undefined;
+    const detectedMapper = detection.mapper;
+    const importedMapper = imported?.mapping.mapper;
+    const conflict = options.mapper === undefined &&
+        detectedMapper !== undefined &&
+        importedMapper !== undefined &&
+        detectedMapper !== importedMapper;
+    const ambiguous = options.mapper === undefined && detectedMapper === undefined;
+    let mapperSelectionReason;
+    if (conflict) {
+        mapperSelectionReason = `.dizraw mapper '${importedMapper}' conflicts with detected mapper '${detectedMapper}'.`;
+    }
+    else if (ambiguous) {
+        mapperSelectionReason = detection.message ?? "SNES mapper detection is ambiguous.";
+    }
+    return {
+        target: TARGET_ID,
+        architecture: ARCHITECTURE_ID,
+        rom: rom.identity,
+        detection,
+        ...(imported
+            ? {
+                dizRaw: {
+                    mapping: imported.mapping,
+                    report: imported.report,
+                    metadataBytes: imported.metadataBytes,
+                },
+            }
+            : {}),
+        mapperSelectionRequired: conflict || ambiguous,
+        ...(mapperSelectionReason ? { mapperSelectionReason } : {}),
+    };
+};
+/**
+ * Creates a native analysis project through a staged sibling directory.
+ * @param {CreateSnesAnalysisProjectOptions} options ROM, mapping, import, and destination options.
+ * @returns {CreateSnesAnalysisProjectResult} Committed project and import summary.
+ */
+export const createSnesAnalysisProject = (options) => {
+    const projectDirectory = path.resolve(options.projectDirectory);
+    ensureWritableDestination(projectDirectory);
+    const probe = probeSnesProject(options);
+    if (probe.mapperSelectionRequired || probe.detection.mapper === undefined) {
+        throw new Error(`${probe.mapperSelectionReason ?? "SNES mapper detection is ambiguous."} Select an explicit mapper before creating the project.`);
+    }
+    throwIfCancelled(options.signal);
+    report(options, "create", "Creating the native analysis project.");
+    const rom = RomImage.load(path.resolve(options.romFile), {
+        headerSize: probe.rom.headerSize,
+    });
+    const imported = options.dizRawFile
+        ? importDizRawFile(path.resolve(options.dizRawFile), rom)
+        : undefined;
+    const mapper = options.mapper ?? probe.detection.mapper;
+    const importWarnings = imported && options.mapper && options.mapper !== imported.mapping.mapper
+        ? [
+            ...imported.report.warnings,
+            `Explicit mapper '${options.mapper}' overrides imported mapper '${imported.mapping.mapper}'.`,
+        ]
+        : imported?.report.warnings;
+    const importReport = imported
+        ? { ...imported.report, ...(importWarnings ? { warnings: importWarnings } : {}) }
+        : undefined;
+    let mappingSource = "detected";
+    if (options.mapper)
+        mappingSource = "override";
+    else if (imported)
+        mappingSource = "import";
+    const mapping = {
+        mapper,
+        ...((imported?.mapping.speed ?? probe.detection.speed)
+            ? { speed: imported?.mapping.speed ?? probe.detection.speed }
+            : {}),
+        ...(probe.detection.headerOffset === undefined
+            ? {}
+            : { headerOffset: probe.detection.headerOffset }),
+        source: mappingSource,
+        candidates: probe.detection.candidates,
+    };
+    const project = {
+        manifest: {
+            format: ANALYSIS_PROJECT_FORMAT,
+            schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,
+            target: TARGET_ID,
+            rom: rom.identity,
+            mapping,
+            addressSpaces: [
+                { id: SNES_FILE_ADDRESS_SPACE, name: "ROM file offset", addressBits: 24, kind: "file" },
+                { id: SNES_CPU_ADDRESS_SPACE, name: "SNES CPU bus", addressBits: 24, kind: "cpu" },
+                SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR,
+                SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR,
+                SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR,
+                SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR,
+            ],
+        },
+        shards: imported
+            ? { ...imported.shards, imports: importReport ? [importReport] : [] }
+            : emptyShards(),
+    };
+    const staging = temporarySibling(projectDirectory, "analysis");
+    try {
+        const manifest = writeAnalysisProject(staging, project);
+        validateAnalysisProject(staging, rom);
+        throwIfCancelled(options.signal);
+        commitStagedDirectory(staging, projectDirectory);
+        return {
+            projectDirectory,
+            probe,
+            manifest,
+            ...(importReport ? { importReport } : {}),
+        };
+    }
+    catch (error) {
+        removeDirectory(staging);
+        throw error;
+    }
+};
+/**
+ * Runs bounded conservative 65816 analysis and atomically updates the native project.
+ * @param {AnalyzeSnesProjectOptions} options Project, ROM, entry points, and work limits.
+ * @returns {AnalyzeSnesProjectResult} Structured analysis counts and completion state.
+ */
+export const analyzeSnesProject = (options) => {
+    throwIfCancelled(options.signal);
+    report(options, "analyze", "Preparing SQL instruction indexes.");
+    const projectDirectory = path.resolve(options.projectDirectory);
+    const store = openAnalysisProjectStore(projectDirectory);
+    let previousCode = [];
+    const loaded = (() => {
+        try {
+            const revision = analysisProjectRevision(store.manifest());
+            store.prepareAnnotationQueries();
+            report(options, "analyze", "Grouping captured instruction variants in SQLite.");
+            store.runtimeInstructionVariants(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, ["p", "P", "e", "E", "db", "DB", "d", "D"], { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } });
+            report(options, "analyze", "Loading metadata, execution seeds, MMIO observations and known code.");
+            return store.transaction(() => {
+                assertAnalysisProjectRevision(store, revision);
+                const manifest = store.manifest();
+                const registers = [...new Set(snesHardwareDefines().map(([, address]) => address))];
+                const addresses = [];
+                for (let bank = 0; bank < 256; bank++)
+                    if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf))
+                        for (const low of registers)
+                            addresses.push((bank << 16) | low);
+                const view = {
+                    labels: store.loadTable("labels"),
+                    comments: store.loadTable("comments"),
+                    annotations: store.loadTable("annotations"),
+                    regions: store.loadTable("regions"),
+                    evidence: store.loadTable("evidence"),
+                    imports: [],
+                    analysis: store.analysisByKinds(["target-override", "target-set"]),
+                    runtime: [
+                        ...store.runtimeExecutionSeeds(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE),
+                        ...store.runtimeMemoryAtAddresses(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, addresses),
+                    ],
+                };
+                // Reanalysis consumes decoder variants, seed totals and MMIO roles. All original facts stay
+                // authoritative in SQLite and are excluded from the metadata-only commit below.
+                store.validateView(view);
+                previousCode = store.codeRanges();
+                return { manifest, view, revision };
+            }, false);
+        }
+        finally {
+            store.close();
+        }
+    })();
+    report(options, "analyze", "Building static analysis from the validated runtime view.");
+    const rom = RomImage.load(path.resolve(options.romFile), {
+        headerSize: loaded.manifest.rom.headerSize,
+    });
+    validateProjectRom(loaded.manifest, rom);
+    if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
+        throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+    }
+    const heuristicFile = path.join(projectDirectory, "heuristics.json");
+    const heuristicConfig = validateSnesHeuristicConfiguration(options.heuristics ??
+        (fs.existsSync(heuristicFile) ? JSON.parse(fs.readFileSync(heuristicFile, "utf8")) : {}));
+    const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
+    const editableRecords = loaded.view.analysis.filter((record) => record.kind === "target-override" || record.kind === "target-set");
+    const targetOverrides = editableRecords.filter((record) => record.kind === "target-override");
+    const targetSets = editableRecords.filter((record) => record.kind === "target-set");
+    const configured = new Map();
+    for (const entry of options.entryPoints ?? []) {
+        if (snesRomAddressSpace.toOutputOffset(entry.address, addressContext) < 0)
+            continue;
+        const previous = configured.get(entry.address);
+        configured.set(entry.address, previous
+            ? {
+                ...previous,
+                evidence: [
+                    ...new Set([...(previous.evidence ?? []), ...(entry.evidence ?? [])]),
+                ].sort(),
+            }
+            : entry);
+    }
+    const runtimeCandidates = new Map();
+    for (const record of loaded.view.runtime) {
+        if (record.kind !== "runtime-execution" ||
+            record.architecture !== ARCHITECTURE_ID ||
+            record.addressSpace !== SNES_CPU_ADDRESS_SPACE)
+            continue;
+        const candidate = runtimeCandidates.get(record.address) ?? {
+            address: record.address,
+            count: 0,
+            evidence: new Set(),
+        };
+        candidate.count += record.count;
+        for (const id of record.evidence)
+            candidate.evidence.add(id);
+        runtimeCandidates.set(record.address, candidate);
+    }
+    const rankedRuntime = [...runtimeCandidates.values()].sort((left, right) => right.count - left.count || left.address - right.address);
+    let addedRuntimeSeeds = 0;
+    for (const candidate of rankedRuntime) {
+        // RAM PCs are decoded from captured bytes below, not queued as ROM seeds.
+        if (snesRomAddressSpace.toOutputOffset(candidate.address, addressContext) < 0)
+            continue;
+        const previous = configured.get(candidate.address);
+        if (previous) {
+            configured.set(candidate.address, {
+                ...previous,
+                evidence: [...new Set([...(previous.evidence ?? []), ...candidate.evidence])].sort(),
+            });
+            continue;
+        }
+        if (addedRuntimeSeeds >= MAX_PERSISTED_RUNTIME_ENTRY_POINTS)
+            continue;
+        configured.set(candidate.address, {
+            id: `runtime-${candidate.address.toString(16).padStart(6, "0")}`,
+            address: candidate.address,
+            kind: "observation",
+            evidence: [...candidate.evidence].sort(),
+        });
+        addedRuntimeSeeds++;
+    }
+    const runtimeSeeds = rankedRuntime.filter(({ address }) => configured.has(address)).length;
+    const result = analyzeSnes65816(rom, loaded.manifest.mapping.mapper, {
+        annotations: loaded.view.annotations,
+        labels: loaded.view.labels,
+        evidence: loaded.view.evidence,
+        entryPoints: [...configured.values()],
+        targetOverrides,
+        targetSets,
+        ...(options.maxWorkItems === undefined ? {} : { maxWorkItems: options.maxWorkItems }),
+        ...(options.maxCallDepth === undefined ? {} : { maxCallDepth: options.maxCallDepth }),
+    });
+    throwIfCancelled(options.signal);
+    report(options, "analyze", "Decoding captured instruction variants.");
+    const capturedStore = openAnalysisProjectStore(projectDirectory);
+    const capturedRecords = (() => {
+        try {
+            const variants = capturedStore.runtimeInstructionVariants(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, ["p", "P", "e", "E", "db", "DB", "d", "D"], { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } });
+            return capturedStore.transaction(() => {
+                assertAnalysisProjectRevision(capturedStore, loaded.revision);
+                return analyzeSnesRuntimeCode(loaded.view, rom, loaded.manifest.mapping.mapper, variants);
+            }, false);
+        }
+        finally {
+            capturedStore.close();
+        }
+    })();
+    const romBytes = rom.bytes();
+    const analysisRecords = [
+        ...editableRecords,
+        ...result.records.map((record) => record.kind === "cfg-node" && record.fileOffset !== undefined
+            ? {
+                ...record,
+                bytes: Array.from(romBytes.subarray(record.fileOffset, record.fileOffset + record.size)),
+            }
+            : record),
+        ...capturedRecords,
+    ];
+    if (result.status === "incomplete") {
+        const codeRanges = (records) => records.flatMap((record) => record.kind === "cfg-node" && record.fileOffset !== undefined
+            ? [{ start: record.fileOffset, end: record.fileOffset + record.size }]
+            : []);
+        const lost = lostCodeRanges(previousCode, codeRanges(analysisRecords));
+        if (lost.length > 0) {
+            const bytes = lost.reduce((total, range) => total + range.end - range.start, 0);
+            throw new Error(`Incomplete analysis would discard ${bytes} known code byte(s), starting at ROM offset ` +
+                `$${lost[0].start.toString(16).toUpperCase().padStart(6, "0")}. ` +
+                `The previous analysis was preserved. ${result.incompleteReasons.map(({ message }) => message).join(" ")} ` +
+                "Increase the analysis limits or narrow the entry points before regenerating source.");
+        }
+    }
+    report(options, "analyze", "Inferring function roles from static and captured code.");
+    const heuristicResult = analyzeSnesFunctionRoles({ ...loaded.view, analysis: analysisRecords }, heuristicConfig);
+    const annotations = [
+        ...loaded.view.annotations.filter((annotation) => !annotation.id.startsWith("static:65816:")),
+        ...result.annotations,
+    ];
+    const evidence = [
+        ...loaded.view.evidence.filter((record) => record.sourceId !== "snes.65816.static-v1" &&
+            record.sourceId !== "snes.function-roles.v1" &&
+            !record.id.startsWith("detector:vector:")),
+        ...result.evidenceRecords,
+        ...heuristicResult.evidence,
+    ];
+    report(options, "commit", "Publishing analysis after checking for concurrent edits.");
+    throwIfCancelled(options.signal);
+    const written = commitAnalysisProjectViewUpdate(projectDirectory, loaded, {
+        analysis: analysisRecords,
+        comments: [
+            ...loaded.view.comments.filter((comment) => !comment.id.startsWith("heuristic:snes:")),
+            ...heuristicResult.comments,
+        ],
+        annotations,
+        evidence,
+    }).manifest;
+    return {
+        projectDirectory,
+        manifest: written,
+        status: result.status,
+        instructions: analysisRecords.filter((record) => record.kind === "cfg-node").length,
+        capturedInstructions: capturedRecords.filter((record) => record.kind === "cfg-node").length,
+        runtimePcsWithoutCode: (() => {
+            const covered = new Set(analysisRecords
+                .filter((record) => record.kind === "cfg-node")
+                .map((record) => record.address));
+            return rankedRuntime.filter((record) => !covered.has(record.address)).length;
+        })(),
+        heuristicRoles: heuristicResult.roles.length,
+        functions: analysisRecords.filter((record) => record.kind === "function").length,
+        conflicts: analysisRecords.filter((record) => record.kind === "conflict").length,
+        unresolved: analysisRecords.filter((record) => record.kind === "unresolved").length,
+        processedWorkItems: result.processedWorkItems,
+        runtimeSeeds,
+        omittedRuntimeSeeds: rankedRuntime.filter(({ address }) => snesRomAddressSpace.toOutputOffset(address, addressContext) >= 0).length - runtimeSeeds,
+        incompleteReasons: result.incompleteReasons,
+    };
+};
+/**
+ * Exports deterministic editable source from a verified native project.
+ * @param {ExportSnesProjectOptions} options Project, ROM, destination, and overwrite policy.
+ * @returns {ExportSnesProjectResult} Source manifest and native-code coverage count.
+ */
+export const exportSnesProject = (options) => {
+    throwIfCancelled(options.signal);
+    report(options, "export", "Preparing SQL export indexes and metadata.");
+    const projectDirectory = path.resolve(options.projectDirectory);
+    const sourceDirectory = path.resolve(options.sourceDirectory);
+    const store = openAnalysisProjectStore(projectDirectory);
+    try {
+        store.prepareAnnotationQueries();
+        return store.transaction(() => {
+            const loaded = store.sourceExportView();
+            const revision = analysisProjectRevision(loaded.manifest);
+            if (options.expectedRevision !== undefined &&
+                options.expectedRevision !== revision.manifestSha256)
+                throw new Error("Analysis changed before source refresh. Run regeneration again.");
+            const rom = RomImage.load(path.resolve(options.romFile), {
+                headerSize: loaded.manifest.rom.headerSize,
+            });
+            validateProjectRom(loaded.manifest, rom);
+            if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper))
+                throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+            report(options, "export", "Generating native source, binary assets and file manifests.");
+            const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
+                force: options.force,
+                allowCodeRegression: options.allowCodeRegression,
+                sourceProjectSha256: revision.manifestSha256,
+                instructionGroups: store.instructionExportGroups(),
+            });
+            throwIfCancelled(options.signal);
+            return {
+                sourceDirectory,
+                manifest,
+                codeBytes: manifest.spans
+                    .filter((span) => span.role === "code")
+                    .reduce((total, span) => total + span.end - span.start, 0),
+            };
+        }, false);
+    }
+    finally {
+        store.close();
+    }
+};
+/**
+ * Assembles an exported tree and verifies the complete ROM byte-for-byte.
+ * @param {VerifySnesProjectRoundTripOptions} options Source directory, ROM, and operation controls.
+ * @returns {Promise<VerifySnesProjectRoundTripResult>} Exact comparison and build artifact paths.
+ */
+export const verifySnesProjectRoundTrip = async (options) => {
+    throwIfCancelled(options.signal);
+    report(options, "verify", "Validating generated files, inputs and ROM identity.");
+    const sourceDirectory = path.resolve(options.sourceDirectory);
+    const manifest = loadSourceExportManifest(sourceDirectory);
+    validateSourceExportFiles(sourceDirectory, manifest);
+    validateSourceExportInputs(sourceDirectory, manifest);
+    const rom = RomImage.load(path.resolve(options.romFile), {
+        headerSize: manifest.rom.headerSize,
+    });
+    if (rom.identity.sha256 !== manifest.rom.sha256 ||
+        rom.identity.contentSha256 !== manifest.rom.contentSha256) {
+        throw new Error(`ROM identity mismatch: export expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`);
+    }
+    // This dynamic import avoids making the target-owned initializer depend on the CLI host while
+    // still reusing the exact bundled plugin registration exported by this package.
+    report(options, "verify", "Preparing the assembler environment.");
+    const { createSnesAssemblerEnvironment } = await import("../index.js");
+    throwIfCancelled(options.signal);
+    const environment = await createSnesAssemblerEnvironment();
+    const entrySource = path.join(sourceDirectory, manifest.entrySource);
+    const assembler = new Assembler({
+        environment,
+        target: TARGET_ID,
+        architecture: ARCHITECTURE_ID,
+        targetOptions: { checksumEnabled: false, checksumMode: "asar" },
+        collectSourceMetadata: options.emitDebugMap ?? true,
+    });
+    try {
+        assembler.setIncludePaths([sourceDirectory]);
+        assembler.setCurrentFile(entrySource);
+        report(options, "verify", "Parsing generated assembly and includes.");
+        const source = fs.readFileSync(entrySource, "utf8");
+        const program = assembler.buildProgramModel(source, entrySource, 0);
+        report(options, "verify", "Assembling the ROM.");
+        assembler.assembleProgram(program);
+        throwIfCancelled(options.signal);
+        report(options, "verify", "Writing build outputs and comparing ROM bytes.");
+        const content = Buffer.from(assembler.getBinaryOutput());
+        const contentOutput = path.join(sourceDirectory, manifest.contentOutput);
+        const finalOutput = path.join(sourceDirectory, manifest.finalOutput);
+        fs.mkdirSync(path.dirname(contentOutput), { recursive: true });
+        fs.writeFileSync(contentOutput, content);
+        const final = manifest.rom.headerSize === 0
+            ? content
+            : Buffer.concat([
+                fs.readFileSync(path.join(sourceDirectory, manifest.spans.find((span) => span.role === "copier-header").file)),
+                content,
+            ]);
+        fs.mkdirSync(path.dirname(finalOutput), { recursive: true });
+        fs.writeFileSync(finalOutput, final);
+        const comparison = compareByteImages(rom.fileBytes(), final);
+        if (!comparison.equal) {
+            throw new Error(`Round-trip mismatch at file offset ${comparison.firstDifference ?? 0}: expected ${comparison.expectedSha256}, received ${comparison.actualSha256}.`);
+        }
+        let debugMap;
+        if (options.emitDebugMap ?? true) {
+            report(options, "verify", "Generating the debug map.");
+            debugMap = `${contentOutput}.debug.json`;
+            fs.writeFileSync(debugMap, canonicalDebugMapJson(createDebugMap({
+                target: TARGET_ID,
+                output: content,
+                mapping: assembler.addressToLineMapping,
+                sourceRoot: sourceDirectory,
+            })));
+        }
+        return {
+            sourceDirectory,
+            contentOutput,
+            finalOutput,
+            ...(debugMap ? { debugMap } : {}),
+            comparison,
+        };
+    }
+    finally {
+        assembler.dispose();
+    }
+};
+/**
+ * Creates, analyzes, exports, verifies, configures, and atomically commits a complete workspace.
+ * Nothing is written to the selected destination until every earlier stage has succeeded.
+ * @param {InitializeSnesDisassemblyWorkspaceOptions} options Complete initialization inputs.
+ * @returns {Promise<InitializeSnesDisassemblyWorkspaceResult>} Committed project stage results.
+ */
+export const initializeSnesDisassemblyWorkspace = async (options) => {
+    const outputDirectory = path.resolve(options.outputDirectory);
+    ensureWritableDestination(outputDirectory);
+    const staging = temporarySibling(outputDirectory, "workspace");
+    const analysisTemporary = temporarySibling(outputDirectory, "workspace-analysis-destination");
+    // createSnesAnalysisProject requires a missing or empty destination, and mkdtemp created this one.
+    try {
+        const shared = { signal: options.signal, onProgress: options.onProgress };
+        const project = createSnesAnalysisProject({
+            ...shared,
+            romFile: options.romFile,
+            dizRawFile: options.dizRawFile,
+            mapper: options.mapper,
+            headerSize: options.headerSize,
+            projectDirectory: analysisTemporary,
+        });
+        const analysis = analyzeSnesProject({
+            ...shared,
+            projectDirectory: analysisTemporary,
+            romFile: options.romFile,
+            entryPoints: options.entryPoints,
+            maxWorkItems: options.maxWorkItems,
+            maxCallDepth: options.maxCallDepth,
+        });
+        const source = exportSnesProject({
+            ...shared,
+            projectDirectory: analysisTemporary,
+            romFile: options.romFile,
+            sourceDirectory: staging,
+        });
+        const roundTrip = await verifySnesProjectRoundTrip({
+            ...shared,
+            sourceDirectory: staging,
+            romFile: options.romFile,
+            emitDebugMap: true,
+        });
+        throwIfCancelled(options.signal);
+        report(options, "configure", "Writing workspace configuration.");
+        fs.renameSync(analysisTemporary, path.join(staging, "analysis"));
+        for (const file of options.workspaceFiles ?? []) {
+            const relative = safeWorkspacePath(file.path);
+            const destination = path.join(staging, relative);
+            fs.mkdirSync(path.dirname(destination), { recursive: true });
+            fs.writeFileSync(destination, file.contents);
+        }
+        throwIfCancelled(options.signal);
+        report(options, "commit", "Committing the completed workspace.");
+        commitStagedDirectory(staging, outputDirectory);
+        const remap = (value) => path.join(outputDirectory, path.relative(staging, value));
+        return {
+            outputDirectory,
+            probe: project.probe,
+            project: {
+                ...project,
+                projectDirectory: path.join(outputDirectory, "analysis"),
+            },
+            analysis: {
+                ...analysis,
+                projectDirectory: path.join(outputDirectory, "analysis"),
+            },
+            source: { ...source, sourceDirectory: outputDirectory },
+            roundTrip: {
+                ...roundTrip,
+                sourceDirectory: outputDirectory,
+                contentOutput: remap(roundTrip.contentOutput),
+                finalOutput: remap(roundTrip.finalOutput),
+                ...(roundTrip.debugMap ? { debugMap: remap(roundTrip.debugMap) } : {}),
+            },
+        };
+    }
+    catch (error) {
+        removeDirectory(staging);
+        removeDirectory(analysisTemporary);
+        throw error;
+    }
+};
+//# sourceMappingURL=project-initializer.js.map

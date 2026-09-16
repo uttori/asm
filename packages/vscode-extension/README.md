@@ -4,6 +4,11 @@ Assembly language support powered by [uttori-asm](https://github.com/uttori/asm)
 
 Requires VS Code 1.128 or newer and implements the [Language Server Protocol 3.18 specification](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/).
 
+The extension, workers, language server, and embedded sidecars run on VS Code's bundled Node 24
+runtime. Installing the extension does not require a separate Node executable. Building this
+repository and using its standalone npm tools requires Node 26. Extension packaging builds its
+embedded tools directly from source for the editor runtime, independently of the Node 26 bundles.
+
 ## Features
 
 - Diagnostics from the assembler analysis pipeline (recovers from local errors).

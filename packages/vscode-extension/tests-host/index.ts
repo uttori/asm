@@ -1,4 +1,6 @@
 import * as assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { DatabaseSync } from "node:sqlite";
 
 import * as vscode from "vscode";
 
@@ -271,10 +273,49 @@ async function verifyReplaySourceBreakpoint(
  * @returns {Promise<void>} Promise rejected when any editor, LSP, or build assertion fails.
  */
 export async function run(): Promise<void> {
+  // npm's Node engine cannot constrain Electron. Verify the actual embedded SQLite operations
+  // needed by project storage before interpreting editor activation as a compatibility result.
+  assert.ok(
+    Number(process.versions.node.split(".")[0]) >= 24,
+    "VS Code must embed Node 24 or newer.",
+  );
+  const database = new DatabaseSync(":memory:");
+  try {
+    assert.equal(
+      database.prepare("SELECT json_extract(jsonb(?), '$.value') AS value").get('{"value":26}')
+        ?.value,
+      26,
+    );
+    database.exec(
+      "CREATE TABLE probe(id INTEGER); CREATE TRIGGER fail BEFORE INSERT ON probe BEGIN SELECT RAISE(ROLLBACK, 'probe rollback'); END; BEGIN;",
+    );
+    assert.throws(() => database.exec("INSERT INTO probe VALUES (1)"), /probe rollback/);
+    assert.equal(
+      database.isTransaction,
+      false,
+      "SQLite rollback state is required for safe recovery.",
+    );
+  } finally {
+    database.close();
+  }
+  console.log(
+    `Extension Host runtime: Node ${process.versions.node}, SQLite ${process.versions.sqlite}`,
+  );
   const folder = vscode.workspace.workspaceFolders?.[0];
   assert.ok(folder, "Smoke test requires its temporary workspace.");
   const extension = vscode.extensions.getExtension(EXTENSION_ID);
   assert.ok(extension, `Extension '${EXTENSION_ID}' was not discovered.`);
+  for (const name of ["ares", "mesence"]) {
+    // These are separately built Node 24 bundles, so verify launch with Electron's executable,
+    // not the Node 26 binary that compiled the repository or the standalone npm artifacts.
+    const executable = vscode.Uri.joinPath(extension.extensionUri, "sidecars", `${name}.mjs`);
+    const help = execFileSync(process.execPath, [executable.fsPath, "--help"], {
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      encoding: "utf8",
+      timeout: 15_000,
+    });
+    assert.match(help, /usage/i);
+  }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
   if (process.env.UTTORI_VSCODE_LIVE_WORKSPACE) return runLiveLaunch(folder);
@@ -355,18 +396,19 @@ export async function run(): Promise<void> {
       const chest = sourceRoots.find(({ label }) => label === "chest.json");
       assert.ok(chest);
       const groups = await sources.getChildren(chest);
-      const unique = groups.find(({ label }) => label === "Unique instructions");
-      assert.ok(unique);
-      assert.equal(sources.getTreeItem(unique).description, "400");
-      const pages = await sources.getChildren(unique);
-      assert.equal(pages.length, 2);
+      // Sources show directly observed addresses; overlap with another capture is retained.
+      const observed = groups.find(({ label }) => label === "Observed instructions");
+      assert.ok(observed);
+      assert.equal(sources.getTreeItem(observed).description, "500");
+      const pages = await sources.getChildren(observed);
+      assert.equal(pages.length, 3);
       const entries = await sources.getChildren(pages[0]);
       assert.equal(entries.length, 200);
       assert.equal(sources.getTreeItem(entries[0]).command?.command, "asm.analysis.navigate");
       const location = sources.getTreeItem(entries[0]).command?.arguments?.[0] as
         | { address: number }
         | undefined;
-      assert.equal(location?.address, 0x808064);
+      assert.equal(location?.address, 0x808000);
       await vscode.commands.executeCommand("uttori-asm.sources.focus");
     } finally {
       sources.dispose();

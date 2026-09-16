@@ -23,7 +23,8 @@
     "lint": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts",
     "lint:fix": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "package": "vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "npm run build"
   },
   "dependencies": {
     "@uttori/asm-core": "1.0.0",
@@ -35,7 +36,7 @@
     "vscode-languageclient": "^10.1.1"
   },
   "devDependencies": {
-    "@types/vscode": "^1.136.0",
+    "@types/vscode": "1.125.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.2"
   },
@@ -977,6 +978,7 @@
   },
   "activationEvents": [],
   "engines": {
+    "node": ">=26",
     "vscode": "^1.128.0"
   },
   "capabilities": {

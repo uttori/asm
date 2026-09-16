@@ -47,15 +47,17 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
   const entryPoint = path.resolve(options.entryPoint);
   // Isolate the process object: AVA worker stdio contains private Node callbacks and cannot be replaced.
   // Omit the top-level-await CLI guard for CJS evaluation; child-process tests exercise that guard unchanged.
-  const { code } = transformSync(
-    readFileSync(entryPoint, "utf8").split("const invokedDirectly =")[0],
-    {
-      loader: "ts",
-      format: "cjs",
-      sourcefile: entryPoint,
-      sourcemap: "inline",
-    },
-  );
+  const source = readFileSync(entryPoint, "utf8");
+  const cliStart = source.indexOf("if (import.meta.main)");
+  if (cliStart < 0) {
+    throw new Error(`Missing CLI entry-point guard in ${entryPoint}`);
+  }
+  const { code } = transformSync(source.slice(0, cliStart), {
+    loader: "ts",
+    format: "cjs",
+    sourcefile: entryPoint,
+    sourcemap: "inline",
+  });
   const nativeRequire = createRequire(entryPoint);
   /** Own the temporary streams, manifest, process hooks, and stubs for a single serial case. */
   const setup = (t: { teardown(callback: () => void): void }) => {
@@ -243,9 +245,13 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
     "sidecar CLI prints help and exits nonzero on invalid launch arguments",
     async (t) => {
       for (const args of [["--help"], ["--unknown"]]) {
-        const child = spawn(process.execPath, ["--import=tsx", options.entryPoint, ...args], {
-          stdio: ["ignore", "pipe", "pipe"],
-        });
+        const child = spawn(
+          process.execPath,
+          ["--conditions=uttori-source", "--import=tsx", options.entryPoint, ...args],
+          {
+            stdio: ["ignore", "pipe", "pipe"],
+          },
+        );
         t.teardown(() => {
           if (child.exitCode === null) child.kill();
         });
@@ -271,10 +277,14 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
     "sidecar CLI serves authenticated stdio requests and shuts down without an emulator",
     async (t) => {
       const fixture = setup(t);
-      const child = spawn(process.execPath, ["--import=tsx", options.entryPoint, ...fixture.args], {
-        env: { ...process.env, [DEBUG_SIDECAR_SESSION_ENV]: session },
-        stdio: ["pipe", "pipe", "pipe"],
-      });
+      const child = spawn(
+        process.execPath,
+        ["--conditions=uttori-source", "--import=tsx", options.entryPoint, ...fixture.args],
+        {
+          env: { ...process.env, [DEBUG_SIDECAR_SESSION_ENV]: session },
+          stdio: ["pipe", "pipe", "pipe"],
+        },
+      );
       t.teardown(() => {
         if (child.exitCode === null) child.kill();
       });

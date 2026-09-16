@@ -71,6 +71,7 @@ test.before(async () => {
     entryPoints: [path.resolve("packages/vscode-extension/src/live-bus-analysis-process.ts")],
     outfile: workerFile,
     bundle: true,
+    conditions: ["uttori-source"],
     platform: "node",
     format: "cjs",
     logLevel: "silent",

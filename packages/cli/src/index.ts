@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 import { Assembler, PluginError, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
@@ -1228,7 +1227,8 @@ export const runCli = async (argv: readonly string[] = process.argv.slice(2)): P
   return assemble(parsed, cwd);
 };
 
-const entryPoint = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : undefined;
-if (entryPoint === import.meta.url) {
+// Node resolves npm bin symlinks and platform path aliases before identifying the entry module.
+// Comparing argv paths to import.meta.url would silently skip CLI execution in those installs.
+if (import.meta.main) {
   process.exitCode = await runCli();
 }

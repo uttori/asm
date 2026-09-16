@@ -9,6 +9,7 @@ import { test } from "../../../tests/ava-helper.js";
 const bundle = await build({
   entryPoints: ["packages/vscode-extension/src/analysis-annotation-controller.ts"],
   bundle: true,
+  conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
   write: false,

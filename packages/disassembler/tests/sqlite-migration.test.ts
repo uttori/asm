@@ -261,6 +261,7 @@ for (const phase of ["copy", "linked", "published"] as const) {
     const child = spawnSync(
       process.execPath,
       [
+        "--conditions=uttori-source",
         "--import=tsx",
         "--input-type=module",
         "-e",
@@ -449,6 +450,7 @@ test("migration streams history larger than a 96 MiB child heap", async (t) => {
     process.execPath,
     [
       "--max-old-space-size=96",
+      "--conditions=uttori-source",
       "--import=tsx",
       "--input-type=module",
       "-e",
