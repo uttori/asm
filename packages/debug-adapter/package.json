@@ -6,7 +6,8 @@
   "files": [
     "dist",
     "src",
-    "README.md"
+    "README.md",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,

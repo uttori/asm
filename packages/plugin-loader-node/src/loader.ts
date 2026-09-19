@@ -1,4 +1,5 @@
 import { realpath } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -45,7 +46,9 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const toOptionsRecord = (value: unknown, entry: string): Record<string, unknown> => {
-  if (value === undefined) return {};
+  if (value === undefined) {
+    return {};
+  }
   if (!isRecord(value)) {
     throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
       code: "PLUGIN_CONFIGURATION_INVALID",
@@ -68,7 +71,9 @@ const pluginIdFromNamespace = (namespace: unknown): string | undefined => {
 };
 
 const stableValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(stableValue);
+  if (Array.isArray(value)) {
+    return value.map(stableValue);
+  }
   if (isRecord(value)) {
     return Object.fromEntries(
       Object.keys(value)
@@ -123,7 +128,25 @@ const resolveExternalModule = async (request: RequestedModule): Promise<string> 
       return normalizeFileUrl(pathToFileURL(path.resolve(request.baseDirectory, request.module)));
     }
     const parent = pathToFileURL(path.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
-    return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
+    // Node ignores import.meta.resolve's parent argument without an experimental flag.
+    // Redirect this synchronous resolution only, preserving Node's active import conditions
+    // and the host's resolver chain without leaving a process-wide hook installed.
+    const marker = "uttori:resolve-project-plugin";
+    const hooks = registerHooks({
+      resolve(specifier, context, nextResolve) {
+        if (specifier === marker) {
+          return nextResolve(request.module, { ...context, parentURL: parent.href });
+        }
+        return nextResolve(specifier, context);
+      },
+    });
+    let resolved: string;
+    try {
+      resolved = import.meta.resolve(marker);
+    } finally {
+      hooks.deregister();
+    }
+    return await normalizeFileUrl(new URL(resolved));
   } catch (error) {
     throw moduleLoadError(request, "module could not be resolved", undefined, error);
   }
@@ -141,7 +164,9 @@ const wrapActivationError = (error: unknown, modules: readonly ResolvedModule[])
       item.resolvedModule === error.pluginModule ||
       (error.pluginId !== undefined && item.pluginId === error.pluginId),
   );
-  if (!entry) return error;
+  if (!entry) {
+    return error;
+  }
   return new PluginError(
     `Configuration entry '${entry.configEntry}' resolved to '${entry.resolvedModule}': ${error.message}`,
     {
@@ -155,9 +180,22 @@ const wrapActivationError = (error: unknown, modules: readonly ResolvedModule[])
   );
 };
 
+/**
+ * Owns one active plugin environment. Loads execute trusted JavaScript in the host process.
+ * Serialize load/dispose calls and finish sessions before replacing their environment.
+ */
 export class NodePluginLoader {
   #current?: CurrentEnvironment;
 
+  /**
+   * Read, resolve, import, and activate plugins, then select a target and architecture.
+   * An unchanged normalized configuration reuses the current handle. Changed configuration
+   * disposes the old environment before activation; activation failure leaves no replacement.
+   * Module contents, logger identity, and bundled plugin object identity are not cache keys.
+   * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
+   * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
+   * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
+   */
   async loadProjectEnvironment(
     options: LoadProjectEnvironmentOptions,
   ): Promise<LoadedProjectEnvironment> {
@@ -192,7 +230,9 @@ export class NodePluginLoader {
     if (options.activateBundledPlugins && options.bundledPlugins) {
       const requested = new Set(requests.map((request) => request.module));
       for (const module of options.bundledPlugins.keys()) {
-        if (requested.has(module)) continue;
+        if (requested.has(module)) {
+          continue;
+        }
         requested.add(module);
         requests.push({
           module,
@@ -341,7 +381,9 @@ export class NodePluginLoader {
         configuration,
         diagnostics: Object.freeze([]),
         dispose: async () => {
-          if (this.#current === current) this.#current = undefined;
+          if (this.#current === current) {
+            this.#current = undefined;
+          }
           await this.#disposeEntry(current);
         },
       });
@@ -359,6 +401,7 @@ export class NodePluginLoader {
     }
   }
 
+  /** Dispose the current environment, if any. This loader may be used again afterward. */
   async dispose(): Promise<void> {
     await this.#disposeCurrent();
   }
@@ -412,18 +455,30 @@ export class NodePluginLoader {
   async #disposeCurrent(): Promise<void> {
     const current = this.#current;
     this.#current = undefined;
-    if (current) await this.#disposeEntry(current);
+    if (current) {
+      await this.#disposeEntry(current);
+    }
   }
 
   async #disposeEntry(current: CurrentEnvironment): Promise<void> {
-    if (current.disposed) return;
+    if (current.disposed) {
+      return;
+    }
     current.disposed = true;
     await current.manager.dispose();
   }
 }
 
 const defaultLoaders = new Map<string, NodePluginLoader>();
+const defaultEnvironments = new Map<string, LoadedProjectEnvironment>();
 
+/**
+ * Convenience loader shared by absolute cwd. Calls for that cwd share ownership, not references:
+ * disposing any current handle disposes its environment for all callers. Reconfiguration replaces it.
+ * Use separate NodePluginLoader instances for independent lifetimes; serialize calls for each cwd.
+ * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
+ * @returns {Promise<LoadedProjectEnvironment>} A handle to the environment shared by this absolute cwd.
+ */
 export const loadProjectEnvironment = async (
   options: LoadProjectEnvironmentOptions,
 ): Promise<LoadedProjectEnvironment> => {
@@ -434,14 +489,23 @@ export const loadProjectEnvironment = async (
     defaultLoaders.set(key, loader);
   }
   const loaded = await loader.loadProjectEnvironment(options);
+  defaultEnvironments.set(key, loaded);
   const dispose = loaded.dispose.bind(loaded);
   return Object.freeze({
     ...loaded,
     dispose: async () => {
-      await dispose();
-      if (defaultLoaders.get(key) === loader) defaultLoaders.delete(key);
+      try {
+        await dispose();
+      } finally {
+        // An older handle must not evict a replacement environment owned by this loader.
+        if (defaultLoaders.get(key) === loader && defaultEnvironments.get(key) === loaded) {
+          defaultLoaders.delete(key);
+          defaultEnvironments.delete(key);
+        }
+      }
     },
   });
 };
 
+/** Syntactic test for absolute paths, ./, ../, and file: specifiers; performs no existence check. */
 export const isPluginPathSpecifier = isPathSpecifier;

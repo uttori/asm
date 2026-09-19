@@ -1700,8 +1700,9 @@ export class ArchSPC700 {
             // Extract the value from whichever operand contains the $ address
             const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
             const match = /\$([^+]+)/.exec(operandWithAddr);
-            if (!match)
+            if (!match) {
                 return false;
+            }
             const val = parseInt(match[1], 16);
             const mode = memoryMoves[key];
             const inferredLength = getAddressSize(`$${match[1]}`);

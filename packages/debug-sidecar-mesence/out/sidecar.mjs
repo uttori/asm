@@ -37,24 +37,24 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+  "../core/src/debug-map.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+  "../core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
+  "../core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
@@ -90,38 +90,38 @@ var init_crc32 = __esm({
   }
 });
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
+  "../core/src/addressToLine.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
+  "../core/src/architecture-registry.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
+  "../core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "../core/src/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
+  "../core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -138,17 +138,17 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
+  "../core/src/ir/expression-node.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
+  "../core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -183,24 +183,24 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
+  "../core/src/file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
+  "../core/src/ir/normalized-command.ts"() {
     "use strict";
     EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
     EMPTY_TOKEN_SPANS = Object.freeze([]);
   }
 });
 
-// packages/core/src/operand-syntax.ts
+// ../core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -222,34 +222,34 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
+  "../core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
+  "../core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
+  "../core/src/plugin/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "packages/core/src/lsp/directive-catalog.ts"() {
+  "../core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group, operands) => ({
       keyword,
@@ -429,16 +429,16 @@ var init_directive_catalog = __esm({
   }
 });
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var init_environment = __esm({
-  "packages/core/src/plugin/environment.ts"() {
+  "../core/src/plugin/environment.ts"() {
     "use strict";
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports, module) {
+  "../../node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -468,9 +468,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports, module) {
+  "../../node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -478,9 +478,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports, module) {
+  "../../node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -566,9 +566,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports, module) {
+  "../../node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -585,9 +585,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports, module) {
+  "../../node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -610,9 +610,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports, module) {
+  "../../node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -902,9 +902,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports, module) {
+  "../../node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -924,9 +924,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports, module) {
+  "../../node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -937,9 +937,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports, module) {
+  "../../node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -950,9 +950,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports, module) {
+  "../../node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier, identifierBase) => {
@@ -974,9 +974,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports, module) {
+  "../../node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -1018,9 +1018,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports, module) {
+  "../../node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -1028,9 +1028,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports, module) {
+  "../../node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -1038,9 +1038,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports, module) {
+  "../../node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -1048,9 +1048,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports, module) {
+  "../../node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -1061,9 +1061,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports, module) {
+  "../../node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -1071,9 +1071,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports, module) {
+  "../../node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -1081,9 +1081,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -1091,9 +1091,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -1105,9 +1105,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports, module) {
+  "../../node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -1115,9 +1115,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports, module) {
+  "../../node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -1125,9 +1125,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports, module) {
+  "../../node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -1135,9 +1135,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports, module) {
+  "../../node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -1145,9 +1145,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports, module) {
+  "../../node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -1155,9 +1155,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports, module) {
+  "../../node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -1165,9 +1165,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports, module) {
+  "../../node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -1175,9 +1175,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports, module) {
+  "../../node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -1185,9 +1185,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports, module) {
+  "../../node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -1235,9 +1235,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports, module) {
+  "../../node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -1281,9 +1281,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports, module) {
+  "../../node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -1322,9 +1322,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports, module) {
+  "../../node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1360,9 +1360,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports, module) {
+  "../../node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1745,9 +1745,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports, module) {
+  "../../node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1858,9 +1858,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports, module) {
+  "../../node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -1875,9 +1875,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -1885,9 +1885,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1914,9 +1914,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1943,9 +1943,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -2002,9 +2002,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports, module) {
+  "../../node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -2018,9 +2018,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports, module) {
+  "../../node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -2087,9 +2087,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports, module) {
+  "../../node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -2097,9 +2097,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports, module) {
+  "../../node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -2107,9 +2107,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports, module) {
+  "../../node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -2121,9 +2121,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports, module) {
+  "../../node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -2171,9 +2171,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports, module) {
+  "../../node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -2333,9 +2333,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports, module) {
+  "../../node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -2430,25 +2430,25 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver;
 var init_manager = __esm({
-  "packages/core/src/plugin/manager.ts"() {
+  "../core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
   }
 });
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var init_session_state = __esm({
-  "packages/core/src/plugin/session-state.ts"() {
+  "../core/src/plugin/session-state.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/plugin/index.ts
+// ../core/src/plugin/index.ts
 var init_plugin = __esm({
-  "packages/core/src/plugin/index.ts"() {
+  "../core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -2458,31 +2458,24 @@ var init_plugin = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
+  "../core/src/services/assembly-front-end-service.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
+  "../core/src/services/command-lowering-service.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/assembler.ts
-var init_assembler = __esm({
-  "packages/core/src/assembler.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/architecture-types.ts
+// ../core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "packages/core/src/architecture-types.ts"() {
+  "../core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -2507,10 +2500,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "packages/core/src/decoder-types.ts"() {
+  "../core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -2530,7 +2523,9 @@ var init_decoder_types = __esm({
        * @returns {number | undefined} The byte at the offset, or undefined if the offset is out of bounds.
        */
       readByte(offset) {
-        if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length) return void 0;
+        if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length) {
+          return void 0;
+        }
         return this.#bytes[offset];
       }
       /**
@@ -2544,72 +2539,74 @@ var init_decoder_types = __esm({
           return void 0;
         }
         const end = offset + length;
-        if (!Number.isSafeInteger(end) || end > this.#bytes.length) return void 0;
+        if (!Number.isSafeInteger(end) || end > this.#bytes.length) {
+          return void 0;
+        }
         return this.#bytes.slice(offset, end);
       }
     };
   }
 });
 
-// packages/core/src/ir/assembly-tree.ts
+// ../core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "packages/core/src/ir/assembly-tree.ts"() {
+  "../core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/overlay-file-provider.ts
+// ../core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "packages/core/src/lsp/overlay-file-provider.ts"() {
+  "../core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/root-analysis-cache.ts
+// ../core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "packages/core/src/lsp/root-analysis-cache.ts"() {
+  "../core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/workspace-index.ts
+// ../core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "packages/core/src/lsp/workspace-index.ts"() {
+  "../core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/position-lookup.ts
+// ../core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "packages/core/src/lsp/position-lookup.ts"() {
+  "../core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/instruction-catalog.ts
+// ../core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "packages/core/src/lsp/instruction-catalog.ts"() {
+  "../core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/catalog.ts
+// ../core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "packages/core/src/lsp/catalog.ts"() {
+  "../core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/project-outline.ts
+// ../core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "packages/core/src/lsp/project-outline.ts"() {
+  "../core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/index.ts
+// ../core/src/lsp/index.ts
 var init_lsp = __esm({
-  "packages/core/src/lsp/index.ts"() {
+  "../core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -2622,11 +2619,10 @@ var init_lsp = __esm({
   }
 });
 
-// packages/core/src/index.ts
+// ../core/src/index.ts
 var init_src = __esm({
-  "packages/core/src/index.ts"() {
+  "../core/src/index.ts"() {
     "use strict";
-    init_assembler();
     init_architecture_types();
     init_decoder_types();
     init_architecture_registry();
@@ -2651,7 +2647,7 @@ var init_src = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -2662,8 +2658,9 @@ function buildCpu65816Catalog() {
       ...specification2.minimumSize === specification2.maximumSize ? { size: specification2.minimumSize } : {}
     };
     const descriptor2 = grouped.get(specification2.mnemonic);
-    if (descriptor2) descriptor2.modes.push(addressingMode);
-    else {
+    if (descriptor2) {
+      descriptor2.modes.push(addressingMode);
+    } else {
       grouped.set(specification2.mnemonic, {
         mnemonic: specification2.mnemonic,
         summary: specification2.summary,
@@ -2675,7 +2672,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
+  "../plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -2836,8 +2833,12 @@ var init_spec = __esm({
       "BVS"
     ]);
     flowFor = (mnemonic, addressingMode) => {
-      if (conditionalBranches.has(mnemonic)) return { kind: "conditionalBranch", fallthrough: true };
-      if (mnemonic === "BRA" || mnemonic === "BRL") return { kind: "jump", fallthrough: false };
+      if (conditionalBranches.has(mnemonic)) {
+        return { kind: "conditionalBranch", fallthrough: true };
+      }
+      if (mnemonic === "BRA" || mnemonic === "BRL") {
+        return { kind: "jump", fallthrough: false };
+      }
       if (mnemonic === "JMP" || mnemonic === "JML") {
         return {
           kind: "jump",
@@ -2858,8 +2859,12 @@ var init_spec = __esm({
       if (mnemonic === "BRK" || mnemonic === "COP") {
         return { kind: "interrupt", fallthrough: false };
       }
-      if (mnemonic === "WAI") return { kind: "wait", fallthrough: false };
-      if (mnemonic === "STP") return { kind: "stop", fallthrough: false };
+      if (mnemonic === "WAI") {
+        return { kind: "wait", fallthrough: false };
+      }
+      if (mnemonic === "STP") {
+        return { kind: "stop", fallthrough: false };
+      }
       return { kind: "fallthrough", fallthrough: true };
     };
     effects = {
@@ -2912,16 +2917,23 @@ var init_spec = __esm({
       ]
     };
     entries = opcodeRows.flatMap((row) => row.split(" "));
-    if (entries.length !== 256) throw new Error(`65816 opcode table has ${entries.length} entries.`);
+    if (entries.length !== 256) {
+      throw new Error(`65816 opcode table has ${entries.length} entries.`);
+    }
     cpu65816Specifications = Object.freeze(
       entries.map((entry, opcode) => {
         const [mnemonic, modeKeyText] = entry.split(":");
         const modeKey = modeKeyText;
         const definition = cpu65816Modes[modeKey];
-        if (!mnemonic || !definition) throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+        if (!mnemonic || !definition) {
+          throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+        }
         let operandStatusEffect;
-        if (mnemonic === "REP") operandStatusEffect = "clearBits";
-        else if (mnemonic === "SEP") operandStatusEffect = "setBits";
+        if (mnemonic === "REP") {
+          operandStatusEffect = "clearBits";
+        } else if (mnemonic === "SEP") {
+          operandStatusEffect = "setBits";
+        }
         return Object.freeze({
           id: `snes.65816.${opcode.toString(16).padStart(2, "0")}`,
           architecture: "snes.65816",
@@ -2942,7 +2954,7 @@ var init_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
@@ -3035,25 +3047,37 @@ function formatCpu65816Instruction(instruction) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder, hex;
 var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+  "../plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
-      if (value === true || value === 1) return 1;
-      if (value === false || value === 0) return 0;
+      if (value === true || value === 1) {
+        return 1;
+      }
+      if (value === false || value === 0) {
+        return 0;
+      }
       return "unknown";
     };
     resolvedWidthFlag = (state, flag) => {
       const emulation = flagValue(state.e);
-      if (emulation === 1) return 1;
+      if (emulation === 1) {
+        return 1;
+      }
       const width = flagValue(state[flag]);
-      if (width === 1) return 1;
-      if (width === 0 && emulation === 0) return 0;
+      if (width === 1) {
+        return 1;
+      }
+      if (width === 0 && emulation === 0) {
+        return 0;
+      }
       return "unknown";
     };
     readLittleEndian = (bytes, offset, width) => {
       let value = 0;
-      for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
+      for (let index = 0; index < width; index++) {
+        value |= (bytes[offset + index] ?? 0) << index * 8;
+      }
       return value >>> 0;
     };
     signed = (value, width) => {
@@ -3144,10 +3168,18 @@ var init_decoder = __esm({
     };
     targetFor = (specification2, operands, state, logicalAddress) => {
       const operand = operands[0];
-      if (!operand) return void 0;
-      if (operand.targetAddress !== void 0) return operand.targetAddress;
-      if (operand.value === void 0) return void 0;
-      if (specification2.mode === "absoluteLong") return operand.value;
+      if (!operand) {
+        return void 0;
+      }
+      if (operand.targetAddress !== void 0) {
+        return operand.targetAddress;
+      }
+      if (operand.value === void 0) {
+        return void 0;
+      }
+      if (specification2.mode === "absoluteLong") {
+        return operand.value;
+      }
       if (specification2.mode === "absolute") {
         const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
         return bank << 16 | operand.value;
@@ -3162,8 +3194,11 @@ var init_decoder = __esm({
       if (isBranch || isCall || isJump) {
         const target = targetFor(specification2, operands, state, logicalAddress);
         let kind = "jump";
-        if (isBranch) kind = "branch";
-        else if (isCall) kind = "call";
+        if (isBranch) {
+          kind = "branch";
+        } else if (isCall) {
+          kind = "call";
+        }
         return [
           {
             kind,
@@ -3185,7 +3220,9 @@ var init_decoder = __esm({
         ];
       }
       const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
-      if (!memoryMode || operands[0]?.value === void 0) return [];
+      if (!memoryMode || operands[0]?.value === void 0) {
+        return [];
+      }
       if (mode3.startsWith("direct")) {
         return [
           {
@@ -3290,7 +3327,9 @@ var init_decoder = __esm({
         const availableSizes = sizes.filter((size) => size <= availableBytes);
         const alternatives = availableSizes.map((size) => {
           const bytes = context.source.readBytes(context.offset, size);
-          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+          if (!bytes) {
+            throw new Error("Decoder byte source violated its bounds contract.");
+          }
           return buildInstruction(specification2, bytes, context, state);
         });
         if (sizes.length === 2) {
@@ -3313,7 +3352,7 @@ var init_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -3324,8 +3363,9 @@ function buildSpc700Catalog() {
       size: specification2.minimumSize
     };
     const descriptor2 = grouped.get(specification2.mnemonic);
-    if (descriptor2) descriptor2.modes.push(addressingMode);
-    else {
+    if (descriptor2) {
+      descriptor2.modes.push(addressingMode);
+    } else {
       grouped.set(specification2.mnemonic, {
         mnemonic: specification2.mnemonic,
         summary: specification2.summary,
@@ -3337,7 +3377,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
+  "../plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -3511,7 +3551,9 @@ var init_spc700_spec = __esm({
       if (spc700ConditionalBranches.has(mnemonic) || mnemonic.startsWith("BBS") || mnemonic.startsWith("BBC")) {
         return { kind: "conditionalBranch", fallthrough: true };
       }
-      if (mnemonic === "BRA") return { kind: "jump", fallthrough: false };
+      if (mnemonic === "BRA") {
+        return { kind: "jump", fallthrough: false };
+      }
       if (mnemonic === "JMP") {
         return {
           kind: "jump",
@@ -3529,9 +3571,15 @@ var init_spc700_spec = __esm({
       if (mnemonic === "RET" || mnemonic === "RETI") {
         return { kind: "return", fallthrough: false };
       }
-      if (mnemonic === "BRK") return { kind: "interrupt", fallthrough: false };
-      if (mnemonic === "SLEEP") return { kind: "wait", fallthrough: false };
-      if (mnemonic === "STOP") return { kind: "stop", fallthrough: false };
+      if (mnemonic === "BRK") {
+        return { kind: "interrupt", fallthrough: false };
+      }
+      if (mnemonic === "SLEEP") {
+        return { kind: "wait", fallthrough: false };
+      }
+      if (mnemonic === "STOP") {
+        return { kind: "stop", fallthrough: false };
+      }
       return { kind: "fallthrough", fallthrough: true };
     };
     effects2 = {
@@ -3552,12 +3600,16 @@ var init_spc700_spec = __esm({
       ]
     };
     entries2 = opcodeRows2.flatMap((row) => row.split(" "));
-    if (entries2.length !== 256) throw new Error(`SPC700 opcode table has ${entries2.length} entries.`);
+    if (entries2.length !== 256) {
+      throw new Error(`SPC700 opcode table has ${entries2.length} entries.`);
+    }
     spc700Specifications = Object.freeze(
       entries2.map((entry, opcode) => {
         const [mnemonic, modeKeyText] = entry.split(":");
         const definition = spc700Modes[modeKeyText];
-        if (!mnemonic || !definition) throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
+        if (!mnemonic || !definition) {
+          throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
+        }
         const summaryKey = mnemonic.replace(/[0-7]$/, "0");
         return Object.freeze({
           id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -3577,7 +3629,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -3589,8 +3641,9 @@ function buildSuperFxCatalog() {
     };
     const existing = grouped.get(entry.mnemonic);
     if (existing) {
-      if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode3)))
+      if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode3))) {
         existing.modes.push(mode3);
+      }
     } else {
       grouped.set(entry.mnemonic, {
         mnemonic: entry.mnemonic,
@@ -3637,12 +3690,14 @@ function buildSuperFxCatalog() {
       ]
     }
   ];
-  for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
+  for (const entry of conveniences) {
+    grouped.set(entry.mnemonic, entry);
+  }
   return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
+  "../plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -3698,40 +3753,100 @@ var init_superfx_spec = __esm({
       ...writesDestination ? { writesDestination: true } : {}
     });
     baseDefinition = (opcode) => {
-      if (opcode === 0) return implied("STOP");
-      if (opcode === 1) return implied("NOP");
-      if (opcode === 2) return implied("CACHE");
-      if (opcode === 3) return implied("LSR", true);
-      if (opcode === 4) return implied("ROL", true);
+      if (opcode === 0) {
+        return implied("STOP");
+      }
+      if (opcode === 1) {
+        return implied("NOP");
+      }
+      if (opcode === 2) {
+        return implied("CACHE");
+      }
+      if (opcode === 3) {
+        return implied("LSR", true);
+      }
+      if (opcode === 4) {
+        return implied("ROL", true);
+      }
       const branches = ["BRA", "BGE", "BLT", "BNE", "BEQ", "BPL", "BMI", "BCC", "BCS", "BVC", "BVS"];
       if (opcode >= 5 && opcode <= 15) {
         return { mnemonic: branches[opcode - 5], encoding: "relative", size: 2 };
       }
-      if (opcode >= 16 && opcode <= 31) return register("TO", opcode & 15);
-      if (opcode >= 32 && opcode <= 47) return register("WITH", opcode & 15);
-      if (opcode >= 48 && opcode <= 59) return registerIndirect("STW", opcode & 15);
-      if (opcode === 60) return implied("LOOP");
-      if (opcode === 61) return implied("ALT1");
-      if (opcode === 62) return implied("ALT2");
-      if (opcode === 63) return implied("ALT3");
-      if (opcode >= 64 && opcode <= 75) return registerIndirect("LDW", opcode & 15, true);
-      if (opcode === 76) return implied("PLOT");
-      if (opcode === 77) return implied("SWAP", true);
-      if (opcode === 78) return implied("COLOR");
-      if (opcode === 79) return implied("NOT", true);
-      if (opcode >= 80 && opcode <= 95) return register("ADD", opcode & 15, true);
-      if (opcode >= 96 && opcode <= 111) return register("SUB", opcode & 15, true);
-      if (opcode === 112) return implied("MERGE", true);
-      if (opcode >= 113 && opcode <= 127) return register("AND", opcode & 15, true);
-      if (opcode >= 128 && opcode <= 143) return register("MULT", opcode & 15, true);
-      if (opcode === 144) return implied("SBK");
-      if (opcode >= 145 && opcode <= 148) return nibble("LINK", opcode & 15);
-      if (opcode === 149) return implied("SEX", true);
-      if (opcode === 150) return implied("ASR", true);
-      if (opcode === 151) return implied("ROR", true);
-      if (opcode >= 152 && opcode <= 157) return register("JMP", opcode & 15);
-      if (opcode === 158) return implied("LOB", true);
-      if (opcode === 159) return implied("FMULT", true);
+      if (opcode >= 16 && opcode <= 31) {
+        return register("TO", opcode & 15);
+      }
+      if (opcode >= 32 && opcode <= 47) {
+        return register("WITH", opcode & 15);
+      }
+      if (opcode >= 48 && opcode <= 59) {
+        return registerIndirect("STW", opcode & 15);
+      }
+      if (opcode === 60) {
+        return implied("LOOP");
+      }
+      if (opcode === 61) {
+        return implied("ALT1");
+      }
+      if (opcode === 62) {
+        return implied("ALT2");
+      }
+      if (opcode === 63) {
+        return implied("ALT3");
+      }
+      if (opcode >= 64 && opcode <= 75) {
+        return registerIndirect("LDW", opcode & 15, true);
+      }
+      if (opcode === 76) {
+        return implied("PLOT");
+      }
+      if (opcode === 77) {
+        return implied("SWAP", true);
+      }
+      if (opcode === 78) {
+        return implied("COLOR");
+      }
+      if (opcode === 79) {
+        return implied("NOT", true);
+      }
+      if (opcode >= 80 && opcode <= 95) {
+        return register("ADD", opcode & 15, true);
+      }
+      if (opcode >= 96 && opcode <= 111) {
+        return register("SUB", opcode & 15, true);
+      }
+      if (opcode === 112) {
+        return implied("MERGE", true);
+      }
+      if (opcode >= 113 && opcode <= 127) {
+        return register("AND", opcode & 15, true);
+      }
+      if (opcode >= 128 && opcode <= 143) {
+        return register("MULT", opcode & 15, true);
+      }
+      if (opcode === 144) {
+        return implied("SBK");
+      }
+      if (opcode >= 145 && opcode <= 148) {
+        return nibble("LINK", opcode & 15);
+      }
+      if (opcode === 149) {
+        return implied("SEX", true);
+      }
+      if (opcode === 150) {
+        return implied("ASR", true);
+      }
+      if (opcode === 151) {
+        return implied("ROR", true);
+      }
+      if (opcode >= 152 && opcode <= 157) {
+        return register("JMP", opcode & 15);
+      }
+      if (opcode === 158) {
+        return implied("LOB", true);
+      }
+      if (opcode === 159) {
+        return implied("FMULT", true);
+      }
       if (opcode >= 160 && opcode <= 175) {
         return {
           mnemonic: "IBT",
@@ -3740,13 +3855,27 @@ var init_superfx_spec = __esm({
           register: opcode & 15
         };
       }
-      if (opcode >= 176 && opcode <= 191) return register("FROM", opcode & 15);
-      if (opcode === 192) return implied("HIB", true);
-      if (opcode >= 193 && opcode <= 207) return register("OR", opcode & 15, true);
-      if (opcode >= 208 && opcode <= 222) return register("INC", opcode & 15);
-      if (opcode === 223) return implied("GETC");
-      if (opcode >= 224 && opcode <= 238) return register("DEC", opcode & 15);
-      if (opcode === 239) return implied("GETB", true);
+      if (opcode >= 176 && opcode <= 191) {
+        return register("FROM", opcode & 15);
+      }
+      if (opcode === 192) {
+        return implied("HIB", true);
+      }
+      if (opcode >= 193 && opcode <= 207) {
+        return register("OR", opcode & 15, true);
+      }
+      if (opcode >= 208 && opcode <= 222) {
+        return register("INC", opcode & 15);
+      }
+      if (opcode === 223) {
+        return implied("GETC");
+      }
+      if (opcode >= 224 && opcode <= 238) {
+        return register("DEC", opcode & 15);
+      }
+      if (opcode === 239) {
+        return implied("GETB", true);
+      }
       return {
         mnemonic: "IWT",
         encoding: "registerImmediate16",
@@ -3755,20 +3884,44 @@ var init_superfx_spec = __esm({
       };
     };
     altDefinition = (alt, opcode) => {
-      if (alt === 0) return baseDefinition(opcode);
+      if (alt === 0) {
+        return baseDefinition(opcode);
+      }
       const low = opcode & 15;
       if (alt === 1) {
-        if (opcode >= 48 && opcode <= 59) return registerIndirect("STB", low);
-        if (opcode >= 64 && opcode <= 75) return registerIndirect("LDB", low, true);
-        if (opcode === 76) return implied("RPIX", true);
-        if (opcode === 78) return implied("CMODE");
-        if (opcode >= 80 && opcode <= 95) return register("ADC", low, true);
-        if (opcode >= 96 && opcode <= 111) return register("SBC", low, true);
-        if (opcode >= 113 && opcode <= 127) return register("BIC", low, true);
-        if (opcode >= 128 && opcode <= 143) return register("UMULT", low, true);
-        if (opcode === 150) return implied("DIV2", true);
-        if (opcode >= 152 && opcode <= 157) return register("LJMP", low);
-        if (opcode === 159) return implied("LMULT", true);
+        if (opcode >= 48 && opcode <= 59) {
+          return registerIndirect("STB", low);
+        }
+        if (opcode >= 64 && opcode <= 75) {
+          return registerIndirect("LDB", low, true);
+        }
+        if (opcode === 76) {
+          return implied("RPIX", true);
+        }
+        if (opcode === 78) {
+          return implied("CMODE");
+        }
+        if (opcode >= 80 && opcode <= 95) {
+          return register("ADC", low, true);
+        }
+        if (opcode >= 96 && opcode <= 111) {
+          return register("SBC", low, true);
+        }
+        if (opcode >= 113 && opcode <= 127) {
+          return register("BIC", low, true);
+        }
+        if (opcode >= 128 && opcode <= 143) {
+          return register("UMULT", low, true);
+        }
+        if (opcode === 150) {
+          return implied("DIV2", true);
+        }
+        if (opcode >= 152 && opcode <= 157) {
+          return register("LJMP", low);
+        }
+        if (opcode === 159) {
+          return implied("LMULT", true);
+        }
         if (opcode >= 160 && opcode <= 175) {
           return {
             mnemonic: "LMS",
@@ -3777,8 +3930,12 @@ var init_superfx_spec = __esm({
             register: low
           };
         }
-        if (opcode >= 193 && opcode <= 207) return register("XOR", low, true);
-        if (opcode === 239) return implied("GETBH", true);
+        if (opcode >= 193 && opcode <= 207) {
+          return register("XOR", low, true);
+        }
+        if (opcode === 239) {
+          return implied("GETBH", true);
+        }
         if (opcode >= 240) {
           return {
             mnemonic: "LM",
@@ -3789,10 +3946,18 @@ var init_superfx_spec = __esm({
         }
       }
       if (alt === 2) {
-        if (opcode >= 80 && opcode <= 95) return nibble("ADD", low, true);
-        if (opcode >= 96 && opcode <= 111) return nibble("SUB", low, true);
-        if (opcode >= 113 && opcode <= 127) return nibble("AND", low, true);
-        if (opcode >= 128 && opcode <= 143) return nibble("MULT", low, true);
+        if (opcode >= 80 && opcode <= 95) {
+          return nibble("ADD", low, true);
+        }
+        if (opcode >= 96 && opcode <= 111) {
+          return nibble("SUB", low, true);
+        }
+        if (opcode >= 113 && opcode <= 127) {
+          return nibble("AND", low, true);
+        }
+        if (opcode >= 128 && opcode <= 143) {
+          return nibble("MULT", low, true);
+        }
         if (opcode >= 160 && opcode <= 175) {
           return {
             mnemonic: "SMS",
@@ -3801,9 +3966,15 @@ var init_superfx_spec = __esm({
             register: low
           };
         }
-        if (opcode >= 193 && opcode <= 207) return nibble("OR", low, true);
-        if (opcode === 223) return implied("RAMB");
-        if (opcode === 239) return implied("GETBL", true);
+        if (opcode >= 193 && opcode <= 207) {
+          return nibble("OR", low, true);
+        }
+        if (opcode === 223) {
+          return implied("RAMB");
+        }
+        if (opcode === 239) {
+          return implied("GETBL", true);
+        }
         if (opcode >= 240) {
           return {
             mnemonic: "SM",
@@ -3814,24 +3985,46 @@ var init_superfx_spec = __esm({
         }
       }
       if (alt === 3) {
-        if (opcode >= 80 && opcode <= 95) return nibble("ADC", low, true);
-        if (opcode >= 96 && opcode <= 111) return register("CMP", low);
-        if (opcode >= 113 && opcode <= 127) return nibble("BIC", low, true);
-        if (opcode >= 128 && opcode <= 143) return nibble("UMULT", low, true);
-        if (opcode >= 193 && opcode <= 207) return nibble("XOR", low, true);
-        if (opcode === 223) return implied("ROMB");
-        if (opcode === 239) return implied("GETBS", true);
+        if (opcode >= 80 && opcode <= 95) {
+          return nibble("ADC", low, true);
+        }
+        if (opcode >= 96 && opcode <= 111) {
+          return register("CMP", low);
+        }
+        if (opcode >= 113 && opcode <= 127) {
+          return nibble("BIC", low, true);
+        }
+        if (opcode >= 128 && opcode <= 143) {
+          return nibble("UMULT", low, true);
+        }
+        if (opcode >= 193 && opcode <= 207) {
+          return nibble("XOR", low, true);
+        }
+        if (opcode === 223) {
+          return implied("ROMB");
+        }
+        if (opcode === 239) {
+          return implied("GETBS", true);
+        }
       }
       return baseDefinition(opcode);
     };
     flowFor3 = (definition, opcode) => {
-      if (definition.mnemonic === "STOP") return { kind: "stop", fallthrough: false };
-      if (definition.mnemonic === "BRA") return { kind: "jump", fallthrough: false };
-      if (opcode >= 6 && opcode <= 15) return { kind: "conditionalBranch", fallthrough: true };
-      if (definition.mnemonic === "LOOP")
+      if (definition.mnemonic === "STOP") {
+        return { kind: "stop", fallthrough: false };
+      }
+      if (definition.mnemonic === "BRA") {
+        return { kind: "jump", fallthrough: false };
+      }
+      if (opcode >= 6 && opcode <= 15) {
+        return { kind: "conditionalBranch", fallthrough: true };
+      }
+      if (definition.mnemonic === "LOOP") {
         return { kind: "conditionalBranch", fallthrough: true, indirect: true };
-      if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP")
+      }
+      if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP") {
         return { kind: "jump", fallthrough: false, indirect: true };
+      }
       return { kind: "fallthrough", fallthrough: true };
     };
     effectsFor2 = (definition) => {
@@ -3931,8 +4124,12 @@ var init_superfx_spec = __esm({
     ]);
     fusedFlow = (destinationRegister) => destinationRegister === 15 ? { kind: "jump", fallthrough: false, indirect: true } : { kind: "fallthrough", fallthrough: true };
     fusedSyntax = (mode3) => {
-      if (mode3 === "registerRegister") return "Rn,Rm";
-      if (mode3 === "registerRegisterIndirect") return "Rn,(Rm)";
+      if (mode3 === "registerRegister") {
+        return "Rn,Rm";
+      }
+      if (mode3 === "registerRegisterIndirect") {
+        return "Rn,(Rm)";
+      }
       return "(Rn),Rm";
     };
     fused = (mnemonic, opcode, mode3, destinationRegister, sourceRegister, pointerRegister) => Object.freeze({
@@ -4016,10 +4213,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -4030,7 +4227,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/operand-classifiers.ts
+// ../plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -4230,16 +4427,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src();
   }
 });
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "packages/plugin-snes/src/architectures/65816.ts"() {
+  "../plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -4667,7 +4864,9 @@ var init__ = __esm({
         if (["STX", "STY", "STZ"].includes(opcode)) {
           return this.handleStoreOperations(opcode, operand, len, explicitlen);
         }
-        if (this.handleBranchInstructions(opcode, operand)) return true;
+        if (this.handleBranchInstructions(opcode, operand)) {
+          return true;
+        }
         let num = 0;
         if (operand) {
           num = this.assembler.operandResolver.getnum(operand);
@@ -5682,8 +5881,11 @@ var init__ = __esm({
               return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
             let mode4 = currentOpcode;
-            if (currentOpcode === "JMP") mode4 = "JML";
-            else if (currentOpcode === "JSR") mode4 = "JSL";
+            if (currentOpcode === "JMP") {
+              mode4 = "JML";
+            } else if (currentOpcode === "JSR") {
+              mode4 = "JSL";
+            }
             return { mode: mode4, address: resolvedAddress };
           }
           return { mode: currentOpcode, address: resolvedAddress };
@@ -6195,7 +6397,7 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 function formatSpc700Instruction(instruction) {
   if (instruction.architecture !== "snes.spc700") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as SPC700.`);
@@ -6205,12 +6407,14 @@ function formatSpc700Instruction(instruction) {
 }
 var readLittleEndian2, signedByte, register2, address2, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder, hex2, formatOperands;
 var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width) => {
       let value = 0;
-      for (let index = 0; index < width; index++) value |= (bytes[offset + index] ?? 0) << index * 8;
+      for (let index = 0; index < width; index++) {
+        value |= (bytes[offset + index] ?? 0) << index * 8;
+      }
       return value >>> 0;
     };
     signedByte = (value) => value & 128 ? value - 256 : value;
@@ -6256,7 +6460,9 @@ var init_spc700_decoder = __esm({
       const byte = bytes[1] ?? 0;
       const word2 = readLittleEndian2(bytes, 1, 2);
       const fixed = fixedRegisters[specification2.mode];
-      if (fixed) return fixed.map(register2);
+      if (fixed) {
+        return fixed.map(register2);
+      }
       switch (specification2.mode) {
         case "implied":
           return [];
@@ -6393,8 +6599,12 @@ var init_spc700_decoder = __esm({
       }
       for (let index = 0; index < operands.length; index++) {
         const operand = operands[index];
-        if (operand.kind !== "address" || operand.value === void 0) continue;
-        if (references.some((reference) => reference.operandIndex === index)) continue;
+        if (operand.kind !== "address" || operand.value === void 0) {
+          continue;
+        }
+        if (references.some((reference) => reference.operandIndex === index)) {
+          continue;
+        }
         const isDirect = operand.width === 1;
         let resolved = operand.value;
         if (isDirect) {
@@ -6462,7 +6672,9 @@ var init_spc700_decoder = __esm({
           };
         }
         const bytes = context.source.readBytes(context.offset, size);
-        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+        if (!bytes) {
+          throw new Error("Decoder byte source violated its bounds contract.");
+        }
         return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
       }
     };
@@ -6594,10 +6806,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/split-operands.ts
+// ../plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "packages/plugin-snes/src/architectures/split-operands.ts"() {
+  "../plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text) => text ? [text] : [];
     splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
@@ -6606,8 +6818,12 @@ var init_split_operands = __esm({
       let level = 0;
       let current = "";
       for (const character of text) {
-        if (character === "(") level++;
-        if (character === ")") level--;
+        if (character === "(") {
+          level++;
+        }
+        if (character === ")") {
+          level--;
+        }
         if (character === "," && level === 0) {
           operands.push(current.trim());
           current = "";
@@ -6615,13 +6831,15 @@ var init_split_operands = __esm({
           current += character;
         }
       }
-      if (current.trim()) operands.push(current.trim());
+      if (current.trim()) {
+        operands.push(current.trim());
+      }
       return operands;
     };
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700.ts
+// ../plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -6718,7 +6936,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "packages/plugin-snes/src/architectures/spc700.ts"() {
+  "../plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -8115,7 +8333,9 @@ var init_spc700 = __esm({
         if (key && hasOwn(memoryMoves, key)) {
           const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
           const match = /\$([^+]+)/.exec(operandWithAddr);
-          if (!match) return false;
+          if (!match) {
+            return false;
+          }
           const val = parseInt(match[1], 16);
           const mode3 = memoryMoves[key];
           const inferredLength = getAddressSize(`$${match[1]}`);
@@ -8618,7 +8838,7 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 function formatSuperFxInstruction(instruction) {
   if (instruction.architecture !== "snes.superfx") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as SuperFX.`);
@@ -8667,7 +8887,7 @@ function formatSuperFxInstruction(instruction) {
 }
 var word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex3;
 var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -8733,9 +8953,13 @@ var init_superfx_decoder = __esm({
           const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
           return (bank & 255) << 16 | target;
         }
-        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
+        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") {
+          return "indirect";
+        }
       }
-      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
+      if (specification2.writesDestination && state.destinationRegister === 15) {
+        return "indirect";
+      }
       return void 0;
     };
     controlsFor = (specification2, operands, state, logicalAddress) => {
@@ -8885,7 +9109,9 @@ var init_superfx_decoder = __esm({
           const fused2 = matchFused(context);
           if (fused2) {
             const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
-            if (!bytes2) return truncated(context, fused2.minimumSize);
+            if (!bytes2) {
+              return truncated(context, fused2.minimumSize);
+            }
             return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
           }
         }
@@ -8898,7 +9124,9 @@ var init_superfx_decoder = __esm({
             if (effective.alteredByAlt) {
               const required = effective.minimumSize + 1;
               const bytes3 = context.source.readBytes(context.offset, required);
-              if (!bytes3) return truncated(context, required);
+              if (!bytes3) {
+                return truncated(context, required);
+              }
               return {
                 kind: "instruction",
                 instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
@@ -8944,7 +9172,9 @@ var init_superfx_decoder = __esm({
         const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
         const specification2 = superFxOpcodeMatrix[alt][opcode];
         const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
-        if (!bytes) return truncated(context, specification2.minimumSize);
+        if (!bytes) {
+          return truncated(context, specification2.minimumSize);
+        }
         return {
           kind: "instruction",
           instruction: buildInstruction3(specification2, bytes, context, state, 0)
@@ -8955,10 +9185,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "packages/plugin-snes/src/asar/compatibility.ts"() {
+  "../plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -9034,10 +9264,10 @@ var init_compatibility = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx.ts
+// ../plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "packages/plugin-snes/src/architectures/superfx.ts"() {
+  "../plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src();
     init_compatibility();
@@ -9822,7 +10052,7 @@ var init_superfx = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -9906,13 +10136,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
+  "../plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -9968,13 +10198,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "packages/plugin-snes/src/directives/freespace.ts"() {
+  "../plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -10010,16 +10240,26 @@ function handleCheck(state, words) {
     throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
   }
   const mode3 = words[2].toLowerCase();
-  if (mode3 === "off") state.bankCrossMode = "off";
-  else if (mode3 === "half") state.bankCrossMode = "half";
-  else if (mode3 === "full" || mode3 === "on") state.bankCrossMode = "full";
-  else throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+  if (mode3 === "off") {
+    state.bankCrossMode = "off";
+  } else if (mode3 === "half") {
+    state.bankCrossMode = "half";
+  } else if (mode3 === "full" || mode3 === "on") {
+    state.bankCrossMode = "full";
+  } else {
+    throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+  }
 }
 function handleOptimize(state, words) {
-  if (words.length < 3 || words[1].toLowerCase() !== "dp") return;
+  if (words.length < 3 || words[1].toLowerCase() !== "dp") {
+    return;
+  }
   const mode3 = words[2].toLowerCase();
-  if (mode3 === "none") state.optimizeDirectPage = false;
-  else if (mode3 === "ram" || mode3 === "always") state.optimizeDirectPage = true;
+  if (mode3 === "none") {
+    state.optimizeDirectPage = false;
+  } else if (mode3 === "ram" || mode3 === "always") {
+    state.optimizeDirectPage = true;
+  }
 }
 function handleStartpos(session, state, words) {
   if (!state.inSpcBlock || !state.spcBlock) {
@@ -10032,7 +10272,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout = __esm({
-  "packages/plugin-snes/src/directives/layout.ts"() {
+  "../plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -10048,10 +10288,10 @@ var init_layout = __esm({
   }
 });
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "packages/plugin-snes/src/services/spc-runtime.ts"() {
+  "../plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -10082,9 +10322,15 @@ var init_spc_runtime = __esm({
        * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
        */
       handleSpcblock(words) {
-        if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
-        if (words.length > 4) throw new Error("spcblock has too many arguments.");
-        if (this.state.inSpcBlock) throw new Error("Nested spcblock directives are not supported.");
+        if (words.length < 2) {
+          throw new Error("spcblock requires at least a destination address.");
+        }
+        if (words.length > 4) {
+          throw new Error("spcblock has too many arguments.");
+        }
+        if (this.state.inSpcBlock) {
+          throw new Error("Nested spcblock directives are not supported.");
+        }
         const destination = this.session.operandResolver.getnum(this.session.resolvedefines(words[1]));
         if ((destination & ~65535) !== 0) {
           throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
@@ -10092,10 +10338,13 @@ var init_spc_runtime = __esm({
         let type = "nspc";
         if (words.length === 3) {
           const kind = words[2].toLowerCase();
-          if (kind === "nspc") type = "nspc";
-          else if (kind === "custom") {
+          if (kind === "nspc") {
+            type = "nspc";
+          } else if (kind === "custom") {
             throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-          } else throw new Error(`Unknown spcblock type: ${words[2]}`);
+          } else {
+            throw new Error(`Unknown spcblock type: ${words[2]}`);
+          }
         } else if (words.length === 4) {
           if (words[2].toLowerCase() !== "custom") {
             throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
@@ -10144,7 +10393,9 @@ var init_spc_runtime = __esm({
         }
         if (this.session.canFinalize) {
           const sizeOffset = this.session.outputWriter.toOutputOffset(block.sizeAddress & 16777215);
-          if (sizeOffset < 0) throw new Error("spcblock size address does not map to output.");
+          if (sizeOffset < 0) {
+            throw new Error("spcblock size address does not map to output.");
+          }
           const blockSize = this.session.currentTargetAddress - block.destination & 65535;
           this.session.writeOutputBytes(sizeOffset, blockSize & 255, 1);
           this.session.writeOutputBytes(sizeOffset + 1, blockSize >> 8 & 255, 1);
@@ -10176,17 +10427,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "packages/plugin-snes/src/directives/spc.ts"() {
+  "../plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -10197,7 +10448,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "packages/plugin-snes/src/session-state.ts"() {
+  "../plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -10206,10 +10457,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "packages/plugin-snes/src/target/address-space.ts"() {
+  "../plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -10265,7 +10516,9 @@ var init_address_space = __esm({
        * @returns {number} The output offset.
        */
       toOutputOffset(address4, context) {
-        if (address4 < 0 || address4 > 16777215) return -1;
+        if (address4 < 0 || address4 > 16777215) {
+          return -1;
+        }
         if (context.mapper === "lorom") {
           if ((address4 & 16646144) === 8257536 || (address4 & 4227072) === 0 || (address4 & 7372800) === 7340032) {
             return -1;
@@ -10311,7 +10564,9 @@ var init_address_space = __esm({
             return address4 & 4194303 | 4194304;
           }
           if ((address4 & 12582912) === 0 || (address4 & 12582912) === 8388608) {
-            if ((address4 & 32768) === 0) return -1;
+            if ((address4 & 32768) === 0) {
+              return -1;
+            }
             return (address4 & 8388608) >> 2 | (address4 & 4128768) >> 1 | address4 & 32767;
           }
           return -1;
@@ -10327,10 +10582,14 @@ var init_address_space = __esm({
        * @returns {number} The canonical CPU address.
        */
       fromOutputOffset(offset, context) {
-        if (offset < 0) return -1;
+        if (offset < 0) {
+          return -1;
+        }
         let address4 = offset;
         if (context.mapper === "lorom") {
-          if (address4 >= 4194304) return -1;
+          if (address4 >= 4194304) {
+            return -1;
+          }
           address4 = address4 << 1 & 8323072 | address4 & 32767 | 32768;
           return address4 | 8388608;
         }
@@ -10338,7 +10597,9 @@ var init_address_space = __esm({
           return address4 >= 4194304 ? -1 : address4 | 12582912;
         }
         if (context.mapper === "exlorom") {
-          if (address4 >= 8388608) return -1;
+          if (address4 >= 8388608) {
+            return -1;
+          }
           if (address4 & 4194304) {
             address4 -= 4194304;
             return address4 << 1 & 8323072 | address4 & 32767 | 32768;
@@ -10347,11 +10608,15 @@ var init_address_space = __esm({
           return address4 | 8388608;
         }
         if (context.mapper === "exhirom") {
-          if (address4 >= 8388608) return -1;
+          if (address4 >= 8388608) {
+            return -1;
+          }
           return address4 & 4194304 ? address4 : address4 | 12582912;
         }
         if (context.mapper === "sa1rom") {
-          if (address4 >= 8388608) return -1;
+          if (address4 >= 8388608) {
+            return -1;
+          }
           for (let index = 0; index < 8; index++) {
             if (context.sa1banks[index] === (address4 & 7340032)) {
               return 32768 | index << 21 | (address4 & 1015808) << 1 | address4 & 32767;
@@ -10360,8 +10625,12 @@ var init_address_space = __esm({
           return -1;
         }
         if (context.mapper === "bigsa1rom") {
-          if (address4 >= 8388608) return -1;
-          if ((address4 & 4194304) === 4194304) return address4 | 12582912;
+          if (address4 >= 8388608) {
+            return -1;
+          }
+          if ((address4 & 4194304) === 4194304) {
+            return address4 | 12582912;
+          }
           if ((address4 & 6291456) === 0) {
             return address4 << 1 & 4128768 | 32768 | address4 & 32767;
           }
@@ -10376,10 +10645,10 @@ var init_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
+  "../plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -11001,17 +11270,17 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var init_state = __esm({
-  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
+  "../plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_address_identities = __esm({
-  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
+  "../plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     SNES_WRAM_ADDRESS_SPACE = "snes.wram";
     SNES_SRAM_ADDRESS_SPACE = "snes.sram";
@@ -11030,10 +11299,10 @@ var init_address_identities = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -11378,40 +11647,40 @@ var init_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var init_rom_header = __esm({
-  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
+  "../plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var init_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 var init_dizraw_import = __esm({
-  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+// ../plugin-snes/src/disassembler/mesen-runtime.ts
 var CDL_HEADER;
 var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     CDL_HEADER = new TextEncoder().encode("CDLv2");
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -11423,38 +11692,38 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
+// ../plugin-snes/src/disassembler/mesen-labels.ts
 var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
+// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
 var init_framework_asset_helpers = __esm({
-  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 var init_ram_map = __esm({
-  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
+  "../plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 var init_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/source-export.ts"() {
+  "../plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress;
 var init_spc700_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -11486,31 +11755,31 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-state.ts
+// ../plugin-snes/src/disassembler/spc700-state.ts
 var init_spc700_state = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
+  "../plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-analysis.ts
+// ../plugin-snes/src/disassembler/spc700-analysis.ts
 var init_spc700_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-upload.ts
+// ../plugin-snes/src/disassembler/spc700-upload.ts
 var init_spc700_upload = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-state.ts
+// ../plugin-snes/src/disassembler/superfx-state.ts
 var known, decodeValue, superFxDecodeState, detailNumber, transferSuperFxState;
 var init_superfx_state = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
+  "../plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
     known = (value) => ({ kind: "known", value });
     decodeValue = (value) => value.kind === "known" ? value.value : "unknown";
@@ -11524,7 +11793,9 @@ var init_superfx_state = __esm({
       const effect = instruction.effects.find(
         (entry) => entry.kind === "custom" && entry.name === name
       );
-      if (effect?.kind !== "custom") return void 0;
+      if (effect?.kind !== "custom") {
+        return void 0;
+      }
       const value = effect.details?.register ?? effect.details?.alt;
       return typeof value === "number" ? value : void 0;
     };
@@ -11537,7 +11808,9 @@ var init_superfx_state = __esm({
         };
       }
       const destination = detailNumber(instruction, "select-superfx-destination");
-      if (destination !== void 0) return { ...state, destinationRegister: known(destination) };
+      if (destination !== void 0) {
+        return { ...state, destinationRegister: known(destination) };
+      }
       const paired = detailNumber(instruction, "select-superfx-source-destination");
       if (paired !== void 0) {
         return {
@@ -11547,7 +11820,9 @@ var init_superfx_state = __esm({
         };
       }
       const source = detailNumber(instruction, "select-superfx-source");
-      if (source !== void 0) return { ...state, sourceRegister: known(source) };
+      if (source !== void 0) {
+        return { ...state, sourceRegister: known(source) };
+      }
       return {
         ...state,
         alt: known(0),
@@ -11558,17 +11833,17 @@ var init_superfx_state = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/processor-source-export.ts
+// ../plugin-snes/src/disassembler/processor-source-export.ts
 var init_processor_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
+// ../plugin-snes/src/disassembler/function-heuristics.ts
 var builtins, SNES_HEURISTIC_RULE_IDS;
 var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     builtins = [
       {
@@ -11629,17 +11904,17 @@ var init_function_heuristics = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+  "../plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR;
 var init_superfx_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -11651,27 +11926,29 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var init_project_initializer = __esm({
-  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
+  "../plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-analysis.ts
+// ../plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
+// ../plugin-snes/src/assets/common.ts
 var objectValue, optionsFor, integerOption, stringOption, readBytes, resolveCount, resolveGrid, decodedObject, arrayValue, integerValue, defaultPath, jsonFile;
 var init_common = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
+  "../plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
-      if (value === void 0) return {};
+      if (value === void 0) {
+        return {};
+      }
       if (value === null || Array.isArray(value) || typeof value !== "object") {
         throw new Error(`${label} must be an object.`);
       }
@@ -11681,7 +11958,9 @@ var init_common = __esm({
     integerOption = (options, key, bounds = {}) => {
       const value = options[key] ?? bounds.fallback;
       if (value === void 0 || typeof value !== "number" || !Number.isSafeInteger(value) || bounds.minimum !== void 0 && value < bounds.minimum || bounds.maximum !== void 0 && value > bounds.maximum) {
-        if (value === void 0) return void 0;
+        if (value === void 0) {
+          return void 0;
+        }
         throw new Error(`Asset option '${key}' is outside its integer bounds.`);
       }
       return value;
@@ -11695,7 +11974,9 @@ var init_common = __esm({
     };
     readBytes = (source, offset, size, owner) => {
       const bytes = source.read(offset, size);
-      if (!bytes) throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+      if (!bytes) {
+        throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+      }
       return bytes;
     };
     resolveCount = (context, unitSize, options = optionsFor(context)) => {
@@ -11711,8 +11992,9 @@ var init_common = __esm({
       }
       const count = configured ?? length / unitSize;
       const size = count * unitSize;
-      if (!Number.isSafeInteger(size))
+      if (!Number.isSafeInteger(size)) {
         throw new Error(`SNES asset '${context.request.id}' overflowed.`);
+      }
       if (length !== void 0 && length !== size) {
         throw new Error(
           `SNES asset '${context.request.id}' count ${count} requires ${size} bytes, not ${length}.`
@@ -11746,7 +12028,9 @@ var init_common = __esm({
     };
     decodedObject = (value, owner) => objectValue(value, `Decoded SNES asset '${owner}'`);
     arrayValue = (value, label) => {
-      if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
+      if (!Array.isArray(value)) {
+        throw new Error(`${label} must be an array.`);
+      }
       return value;
     };
     integerValue = (value, label, minimum, maximum) => {
@@ -11765,10 +12049,10 @@ var init_common = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/brr.ts
+// ../plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
+  "../plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -11786,8 +12070,12 @@ var init_brr = __esm({
       }
       for (let blockCount = 1; blockCount <= maxBlocks; blockCount++) {
         const block = context.source.read(context.request.sourceOffset + (blockCount - 1) * 9, 9);
-        if (!block) break;
-        if ((block[0] & 1) !== 0) return { blockCount, size: blockCount * 9 };
+        if (!block) {
+          break;
+        }
+        if ((block[0] & 1) !== 0) {
+          return { blockCount, size: blockCount * 9 };
+        }
       }
       throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
     };
@@ -11881,10 +12169,10 @@ var init_brr = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/palette.ts
+// ../plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
+  "../plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -11942,10 +12230,10 @@ var init_palette = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tilemap.ts
+// ../plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
+  "../plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -12077,10 +12365,10 @@ var init_tilemap = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tiles.ts
+// ../plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
+  "../plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -12089,7 +12377,9 @@ var init_tiles = __esm({
     SNES_TILE_8BPP_ASSET_CODEC_ID = "snes.asset.tile.8bpp";
     SNES_MODE7_TILE_ASSET_CODEC_ID = "snes.asset.tile.mode7";
     planeOffset = (bitsPerPixel, plane, row) => {
-      if (bitsPerPixel === 3 && plane === 2) return 16 + row;
+      if (bitsPerPixel === 3 && plane === 2) {
+        return 16 + row;
+      }
       return Math.floor(plane / 2) * 16 + row * 2 + plane % 2;
     };
     decodePlanarTile = (bytes, start, bitsPerPixel) => Array.from(
@@ -12105,7 +12395,9 @@ var init_tiles = __esm({
     );
     encodeTilePixels = (value, owner, tileIndex, maximum) => {
       const rows = arrayValue(value, `SNES tile ${tileIndex} pixels`);
-      if (rows.length !== 8) throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+      if (rows.length !== 8) {
+        throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+      }
       return rows.map((row, rowIndex) => {
         const pixels = arrayValue(row, `SNES tile ${tileIndex} row ${rowIndex}`);
         if (pixels.length !== 8) {
@@ -12247,10 +12539,10 @@ var init_tiles = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/previews.ts
+// ../plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue2, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer;
 var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
+  "../plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -12264,12 +12556,15 @@ var init_previews = __esm({
       return value;
     };
     arrayValue2 = (value, name) => {
-      if (!Array.isArray(value)) throw new Error(`${name} must be an array.`);
+      if (!Array.isArray(value)) {
+        throw new Error(`${name} must be an array.`);
+      }
       return value;
     };
     numberValue = (value, name) => {
-      if (typeof value !== "number" || !Number.isFinite(value))
+      if (typeof value !== "number" || !Number.isFinite(value)) {
         throw new Error(`${name} must be numeric.`);
+      }
       return value;
     };
     byteHex = (value) => Math.round(value).toString(16).padStart(2, "0");
@@ -12370,22 +12665,25 @@ var init_previews = __esm({
       ],
       render: ({ asset, decoded }) => {
         const value = objectValue2(decoded.value, `SNES asset '${asset.id}' preview`);
-        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID)
+        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID) {
           return renderPalette(asset.id, value);
+        }
         if (asset.request.codecId === SNES_BG_TILEMAP_ASSET_CODEC_ID || asset.request.codecId === SNES_MODE7_TILEMAP_ASSET_CODEC_ID) {
           return renderTilemap(asset.id, value);
         }
-        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) return renderBrr(asset.id, value);
+        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) {
+          return renderBrr(asset.id, value);
+        }
         return renderTiles(asset.id, value);
       }
     });
   }
 });
 
-// packages/plugin-snes/src/assets/index.ts
+// ../plugin-snes/src/assets/index.ts
 var snesAssetCodecs;
 var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
+  "../plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -12412,10 +12710,10 @@ var init_assets = __esm({
   }
 });
 
-// packages/plugin-snes/src/index.ts
+// ../plugin-snes/src/index.ts
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin;
 var init_src2 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+  "../plugin-snes/src/index.ts"() {
     "use strict";
     init_src();
     init_decoder();
@@ -12665,8 +12963,12 @@ var init_src2 = __esm({
               validateWrite: (address4, width) => {
                 const targetState = state.get(snesSessionStateKey);
                 const normalized = snesRomAddressSpace.normalizeForWrite(address4, mappingContext());
-                if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) return;
-                if (targetState.bankCrossMode === "off" || width <= 1) return;
+                if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) {
+                  return;
+                }
+                if (targetState.bankCrossMode === "off" || width <= 1) {
+                  return;
+                }
                 const start = address4 & 16777215;
                 const end = start + width - 1 & 16777215;
                 const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
@@ -12685,9 +12987,13 @@ var init_src2 = __esm({
           create: ({ state }) => ({
             finalize: ({ outputBytes }) => {
               const targetState = state.get(snesSessionStateKey);
-              if (!targetState.checksumEnabled) return;
+              if (!targetState.checksumEnabled) {
+                return;
+              }
               const headerOffset = getChecksumHeaderOffset(targetState.mapper);
-              if (outputBytes.length < headerOffset + 32) return;
+              if (outputBytes.length < headerOffset + 32) {
+                return;
+              }
               outputBytes[headerOffset + 28] = 255;
               outputBytes[headerOffset + 29] = 255;
               outputBytes[headerOffset + 30] = 0;
@@ -12853,9 +13159,13 @@ var init_src2 = __esm({
             shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
             beforeWrite: ({ session, logicalAddress, width }) => {
               const targetState = state.get(snesSessionStateKey);
-              if (targetState.activeFreespaceStartOffset === null) return;
+              if (targetState.activeFreespaceStartOffset === null) {
+                return;
+              }
               const outputOffset = session.outputWriter.toOutputOffset(logicalAddress);
-              if (outputOffset < 0) return;
+              if (outputOffset < 0) {
+                return;
+              }
               const endOffset = outputOffset + width - 1;
               targetState.activeFreespaceEndOffset = Math.max(
                 targetState.activeFreespaceEndOffset ?? endOffset,
@@ -12870,7 +13180,9 @@ var init_src2 = __esm({
               const start = targetState.activeFreespaceStartOffset;
               const contentStart = targetState.activeFreespaceContentStartOffset;
               const end = targetState.activeFreespaceEndOffset;
-              if (start === null || contentStart === null || end === null || end < contentStart) return;
+              if (start === null || contentStart === null || end === null || end < contentStart) {
+                return;
+              }
               const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
               const complement = ~lengthMinusOne & 65535;
               outputBytes[start + 4] = lengthMinusOne & 255;
@@ -12906,14 +13218,14 @@ var init_src2 = __esm({
   }
 });
 
-// packages/debug-sidecar-mesence/src/sidecar.ts
+// src/sidecar.ts
 import { readFile } from "node:fs/promises";
 import path2 from "node:path";
 
-// packages/debug-adapter/src/contracts.ts
+// ../debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
-// packages/debug-adapter/src/capture-v2.ts
+// ../debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
   if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
@@ -13014,7 +13326,7 @@ for (let slice = 1; slice < 8; slice++)
     Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
   );
 
-// packages/debug-adapter/src/sidecar-protocol.ts
+// ../debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -13228,10 +13540,10 @@ var DebugSidecarMessageQueue = class {
   }
 };
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
 
-// packages/debug-adapter/src/sidecar-server.ts
+// ../debug-adapter/src/sidecar-server.ts
 var stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
 var record = (value, context) => {
   if (typeof value !== "object" || value === null || Array.isArray(value))
@@ -13532,12 +13844,12 @@ var DebugSidecarServer = class {
   }
 };
 
-// packages/debug-sidecar-mesence/src/mesen-backend.ts
+// src/mesen-backend.ts
 init_src();
 import { Buffer as Buffer2 } from "node:buffer";
 init_src2();
 
-// packages/debug-sidecar-mesence/src/profile.ts
+// src/profile.ts
 var MESEN_BACKEND_ID = "mesence-debug-server";
 var MESEN_NATIVE_PROTOCOL_VERSION = 1;
 var MESEN_65816_ARCHITECTURE = "snes.65816";
@@ -13622,7 +13934,7 @@ var MESEN_CAPABILITIES = Object.freeze({
   ])
 });
 
-// packages/debug-sidecar-mesence/src/mesen-backend.ts
+// src/mesen-backend.ts
 var threads = Object.freeze({
   "65816": Object.freeze({
     id: 1,
@@ -14294,7 +14606,7 @@ var MesenDebugBackend = class {
   }
 };
 
-// packages/debug-sidecar-mesence/src/mesen-process-host.ts
+// src/mesen-process-host.ts
 import { spawn } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -14302,7 +14614,7 @@ import { stat } from "node:fs/promises";
 import net2 from "node:net";
 import path from "node:path";
 
-// packages/debug-sidecar-mesence/src/mesen-debug-client.ts
+// src/mesen-debug-client.ts
 import { Buffer as Buffer3 } from "node:buffer";
 var asError3 = (error) => error instanceof Error ? error : new Error(String(error));
 var positiveInteger3 = (value, context) => {
@@ -14504,7 +14816,7 @@ var FramedMesenDebugClient = class {
   }
 };
 
-// packages/debug-sidecar-mesence/src/node-tcp-mesen-transport.ts
+// src/node-tcp-mesen-transport.ts
 import net from "node:net";
 var NodeTcpMesenTransport = class _NodeTcpMesenTransport {
   #socket;
@@ -14628,7 +14940,7 @@ var NodeTcpMesenTransport = class _NodeTcpMesenTransport {
   }
 };
 
-// packages/debug-sidecar-mesence/src/mesen-process-host.ts
+// src/mesen-process-host.ts
 var MESEN_RUNTIME_MANIFEST_VERSION = 1;
 var MESEN_NATIVE_TOKEN_ENV = "MESEN_DEBUG_SERVER_TOKEN";
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
@@ -15020,7 +15332,7 @@ var MesenProcessHost = class {
   }
 };
 
-// packages/debug-sidecar-mesence/src/sidecar.ts
+// src/sidecar.ts
 var usage = `Usage: uttori-asm-debug-sidecar-mesence [options]
 
 Required:

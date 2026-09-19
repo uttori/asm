@@ -19,10 +19,12 @@ const isValidId = (value, allowLeadingDigit = false) => {
     let previousWasSeparator = false;
     for (const character of value) {
         const separator = character === "." || character === "-";
-        if (!isLowerAlphaNumeric(character) && !separator)
+        if (!isLowerAlphaNumeric(character) && !separator) {
             return false;
-        if (separator && previousWasSeparator)
+        }
+        if (separator && previousWasSeparator) {
             return false;
+        }
         previousWasSeparator = separator;
     }
     return !previousWasSeparator;
@@ -39,12 +41,14 @@ const deepFreeze = (value, seen = new Set()) => {
     }
     seen.add(value);
     if (Array.isArray(value)) {
-        for (const item of value)
+        for (const item of value) {
             deepFreeze(item, seen);
+        }
     }
     else {
-        for (const item of Object.values(value))
+        for (const item of Object.values(value)) {
             deepFreeze(item, seen);
+        }
     }
     return Object.freeze(value);
 };
@@ -159,8 +163,9 @@ const validateContributionId = (id, pluginId) => {
     return id;
 };
 const validateAliases = (aliases, pluginId, contributionId) => {
-    if (aliases === undefined)
+    if (aliases === undefined) {
         return;
+    }
     if (!Array.isArray(aliases) ||
         aliases.some((alias) => typeof alias !== "string" || alias === "")) {
         throw new PluginError(`Contribution '${contributionId}' has invalid aliases.`, {
@@ -170,6 +175,10 @@ const validateAliases = (aliases, pluginId, contributionId) => {
         });
     }
 };
+/**
+ * Owns plugin activation resources and produces one frozen environment.
+ * Await operations sequentially. Dispose assembler sessions before disposing their manager.
+ */
 export class PluginManager {
     #logger;
     #activated = [];
@@ -189,9 +198,17 @@ export class PluginManager {
     constructor(options = {}) {
         this.#logger = options.logger ?? noopLogger;
     }
+    /**
+     * Inspect successfully activated plugins.
+     * @returns {readonly AssemblerPluginManifest[]} A new array of frozen manifests in activation order.
+     */
     get activatedPlugins() {
         return this.#activated.map((item) => item.manifest);
     }
+    /**
+     * Validate module default exports, then activate them with the same rules as activatePlugins.
+     * @param {readonly PluginModuleActivationRequest[]} requests Imported namespaces and the options supplied for each plugin.
+     */
     async activateModules(requests) {
         const normalized = requests.map((request) => {
             if (!isRecord(request.module) || !("default" in request.module)) {
@@ -208,6 +225,13 @@ export class PluginManager {
         });
         await this.activatePlugins(normalized);
     }
+    /**
+     * Activate dependencies first, preserving input order among ready plugins.
+     * Each plugin commits independently: earlier successes remain active if a later one fails.
+     * Throws PluginError for invalid input, dependency conflicts, or activation failure.
+     * Activation is unavailable after freeze or disposal; dispose the manager after a failed batch.
+     * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
+     */
     async activatePlugins(requests) {
         if (this.#disposed) {
             throw new PluginError("Cannot activate plugins after the manager has been disposed.", {
@@ -236,8 +260,9 @@ export class PluginManager {
             pending.set(id, request);
         }
         const available = new Map(this.#manifests);
-        for (const [id, request] of pending)
+        for (const [id, request] of pending) {
             available.set(id, request.plugin.manifest);
+        }
         for (const request of normalized) {
             for (const dependency of request.plugin.manifest.requires ?? []) {
                 const installed = available.get(dependency.pluginId);
@@ -291,8 +316,9 @@ export class PluginManager {
             }
         }
         catch (error) {
-            if (error instanceof PluginError)
+            if (error instanceof PluginError) {
                 throw error;
+            }
             throw new PluginError(`Configuration for plugin '${manifest.id}' is invalid.`, {
                 code: "PLUGIN_CONFIGURATION_INVALID",
                 pluginId: manifest.id,
@@ -320,10 +346,12 @@ export class PluginManager {
             this.#manifests.set(manifest.id, manifest);
         }
         catch (error) {
-            if (disposable)
+            if (disposable) {
                 await disposable.dispose();
-            if (error instanceof PluginError)
+            }
+            if (error instanceof PluginError) {
                 throw error;
+            }
             throw new PluginError(`Activation failed for plugin '${manifest.id}'.`, {
                 code: "PLUGIN_ACTIVATION_FAILED",
                 pluginId: manifest.id,
@@ -410,8 +438,13 @@ export class PluginManager {
         }
         for (const record of transaction.architectures) {
             validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+            // Analysis-only contributions omit an encoder; Assembler rejects those when
+            // constructing a build session. Optional factories must still be callable.
             if (typeof record.value.displayName !== "string" ||
-                typeof record.value.createEncoder !== "function" ||
+                (record.value.createEncoder !== undefined &&
+                    typeof record.value.createEncoder !== "function") ||
+                (record.value.createDecoder !== undefined &&
+                    typeof record.value.createDecoder !== "function") ||
                 typeof record.value.classifyOperand !== "function" ||
                 typeof record.value.splitOperands !== "function" ||
                 !isArray(record.value.instructions)) {
@@ -423,12 +456,14 @@ export class PluginManager {
             }
         }
         for (const record of transaction.addressSpaces) {
-            if (typeof record.value.create !== "function")
+            if (typeof record.value.create !== "function") {
                 this.#malformed(transaction, record);
+            }
         }
         for (const record of transaction.outputFormats) {
-            if (typeof record.value.create !== "function")
+            if (typeof record.value.create !== "function") {
                 this.#malformed(transaction, record);
+            }
         }
         for (const record of transaction.sessionStates) {
             if (typeof record.value.create !== "function" || typeof record.value.clone !== "function") {
@@ -465,8 +500,9 @@ export class PluginManager {
             }
         }
         for (const record of transaction.expressionSets) {
-            if (!isArray(record.value.functions))
+            if (!isArray(record.value.functions)) {
                 this.#malformed(transaction, record);
+            }
             for (const expression of record.value.functions) {
                 validateAliases(expression.aliases, transaction.manifest.id, record.contributionId);
                 if (typeof expression.name !== "string" ||
@@ -479,8 +515,9 @@ export class PluginManager {
             }
         }
         for (const record of transaction.lifecycles) {
-            if (typeof record.value.create !== "function")
+            if (typeof record.value.create !== "function") {
                 this.#malformed(transaction, record);
+            }
         }
         for (const record of transaction.targets) {
             validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
@@ -541,31 +578,45 @@ export class PluginManager {
         }
         // Plugin contributions are input-sized. A spread could fail after earlier lists were committed,
         // leaving a partially registered plugin; iterative appends preserve each list's order.
-        for (const record of transaction.sessionStates)
+        for (const record of transaction.sessionStates) {
             this.#sessionStates.push(record);
-        for (const record of transaction.architectures)
+        }
+        for (const record of transaction.architectures) {
             this.#architectures.push(record);
-        for (const record of transaction.addressSpaces)
+        }
+        for (const record of transaction.addressSpaces) {
             this.#addressSpaces.push(record);
-        for (const record of transaction.outputFormats)
+        }
+        for (const record of transaction.outputFormats) {
             this.#outputFormats.push(record);
-        for (const record of transaction.directiveSets)
+        }
+        for (const record of transaction.directiveSets) {
             this.#directiveSets.push(record);
-        for (const record of transaction.expressionSets)
+        }
+        for (const record of transaction.expressionSets) {
             this.#expressionSets.push(record);
-        for (const record of transaction.lifecycles)
+        }
+        for (const record of transaction.lifecycles) {
             this.#lifecycles.push(record);
-        for (const record of transaction.targets)
+        }
+        for (const record of transaction.targets) {
             this.#targets.push(record);
+        }
     }
+    /**
+     * Validate target references and aliases, then seal registration. Repeated calls return the
+     * same environment. Throws PluginError for invalid graphs or a disposed manager.
+     * @returns {AssemblerEnvironment} The validated, shared contribution graph; resources remain owned by this manager.
+     */
     freeze() {
         if (this.#disposed) {
             throw new PluginError("Cannot freeze a disposed plugin manager.", {
                 code: "PLUGIN_ACTIVATION_FAILED",
             });
         }
-        if (this.#environment)
+        if (this.#environment) {
             return this.#environment;
+        }
         const contributions = {
             manifests: deepFreeze([...this.#manifests.values()]),
             sessionStates: Object.freeze([...this.#sessionStates]),
@@ -580,9 +631,15 @@ export class PluginManager {
         this.#environment = new AssemblerEnvironment(contributions);
         return this.#environment;
     }
+    /**
+     * Release plugin resources in reverse activation order, attempting every disposable.
+     * Idempotent and terminal; rejects with AggregateError after cleanup failures.
+     * Does not dispose assembler sessions or make their continued use safe.
+     */
     async dispose() {
-        if (this.#disposed)
+        if (this.#disposed) {
             return;
+        }
         this.#disposed = true;
         const errors = [];
         for (const plugin of [...this.#activated].reverse()) {

@@ -26,7 +26,9 @@ test("read-ahead handles short reads and frame boundaries without rereading or m
 
 test("read-ahead never turns a premature EOF into zero-filled valid bytes", async (t) => {
   const reader = new CaptureFrameReader(async (buffer, offset) => {
-    if (offset) return { bytesRead: 0 };
+    if (offset) {
+      return { bytesRead: 0 };
+    }
     buffer.fill(3, 0, 4);
     return { bytesRead: 4 };
   });

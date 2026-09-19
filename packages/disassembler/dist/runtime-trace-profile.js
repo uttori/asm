@@ -17,18 +17,23 @@ export const project65816AnalysisState = (state) => {
     const result = {};
     const e = value("e", 1);
     const p = value("p", 255);
-    if (e !== undefined)
+    if (e !== undefined) {
         result.e = e;
-    if (e === 1)
+    }
+    if (e === 1) {
         result.p = 0x30;
-    else if (p !== undefined)
+    }
+    else if (p !== undefined) {
         result.p = p & 0x30;
+    }
     const db = value("db", 255);
     const d = value("d", 65535);
-    if (db !== undefined)
+    if (db !== undefined) {
         result.db = db;
-    if (d !== undefined)
+    }
+    if (d !== undefined) {
         result.d = d;
+    }
     return result;
 };
 //# sourceMappingURL=runtime-trace-profile.js.map

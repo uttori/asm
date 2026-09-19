@@ -46,11 +46,14 @@ export const prepareSourceQueries = (db) => {
         for (let rows = pending.all(table); rows.length; rows = pending.all(table)) {
             for (const row of rows) {
                 const record = JSON.parse(decodeSqlitePayload(row.payload));
-                if (!Array.isArray(record.evidence) || record.evidence.some((id) => typeof id !== "string"))
+                if (!Array.isArray(record.evidence) ||
+                    record.evidence.some((id) => typeof id !== "string")) {
                     throw new Error("Invalid source metadata evidence membership.");
+                }
                 remove.run(table, row.id);
-                for (const id of record.evidence)
+                for (const id of record.evidence) {
                     insert.run(id, table, row.id);
+                }
                 ready.run(table, row.id);
             }
         }
@@ -88,8 +91,9 @@ export const readSourceSummary = (db, source) => {
  * @returns {AnalysisSourceEntry[]} Compact navigable entries, never the complete trace history.
  */
 export const readSourcePage = (db, source, group, offset = 0) => {
-    if (!Number.isSafeInteger(offset) || offset < 0)
+    if (!Number.isSafeInteger(offset) || offset < 0) {
         throw new Error("Invalid source page offset.");
+    }
     const evidence = JSON.stringify(source.evidenceIds);
     if (group === "instructions") {
         const rows = db
@@ -123,8 +127,9 @@ export const readSourcePage = (db, source, group, offset = 0) => {
             .all(evidence, offset)
             .map((row) => {
             const record = runtimeFromRow(row);
-            if (record.kind !== "runtime-memory-access")
+            if (record.kind !== "runtime-memory-access") {
                 throw new Error("Invalid memory observation.");
+            }
             const detail = `${record.access} ${record.accessedAddressSpace}:${hex(record.accessedAddress)} · ${record.width} byte(s) · ${record.count} observations`;
             return {
                 id: record.id,
@@ -139,8 +144,9 @@ export const readSourcePage = (db, source, group, offset = 0) => {
             };
         });
     }
-    if (group !== "contributions")
+    if (group !== "contributions") {
         throw new Error("Unknown source contribution group.");
+    }
     const select = collections
         .map((table) => `SELECT '${table}' AS collection,t.id AS id,t.payload AS payload FROM ${table} t JOIN matched m ON m.collection='${table}' AND m.id=t.id`)
         .join(" UNION ALL ");

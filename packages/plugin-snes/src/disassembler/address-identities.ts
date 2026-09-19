@@ -100,9 +100,13 @@ export const identifySnesFileOffset = (
   context: AddressSpaceContext,
   romSize: number,
 ): SnesAddressIdentity | undefined => {
-  if (!Number.isInteger(fileOffset) || fileOffset < 0 || fileOffset >= romSize) return undefined;
+  if (!Number.isInteger(fileOffset) || fileOffset < 0 || fileOffset >= romSize) {
+    return undefined;
+  }
   const canonicalCpuAddress = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
-  if (canonicalCpuAddress < 0) return undefined;
+  if (canonicalCpuAddress < 0) {
+    return undefined;
+  }
   return {
     addressSpace: SNES_CPU_ADDRESS_SPACE,
     address: canonicalCpuAddress,
@@ -128,9 +132,13 @@ export const identifySnesCpuAddress = (
   romSize: number,
 ): SnesAddressIdentity | undefined => {
   const fileOffset = snesRomAddressSpace.toOutputOffset(address, context);
-  if (fileOffset < 0 || fileOffset >= romSize) return undefined;
+  if (fileOffset < 0 || fileOffset >= romSize) {
+    return undefined;
+  }
   const canonicalCpuAddress = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
-  if (canonicalCpuAddress < 0) return undefined;
+  if (canonicalCpuAddress < 0) {
+    return undefined;
+  }
   return {
     addressSpace: SNES_CPU_ADDRESS_SPACE,
     address,

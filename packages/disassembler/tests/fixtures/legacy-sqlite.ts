@@ -40,17 +40,19 @@ export const writeLegacySqliteProject = (
       );
       for (const record of records) {
         let fields: Record<string, unknown> = { ...record, payload: JSON.stringify(record) };
-        if (table === "analysis")
+        if (table === "analysis") {
           Object.assign(
             fields,
             analysisAddress(record as AnalysisProject["shards"]["analysis"][number]),
           );
-        if (table === "runtime")
+        }
+        if (table === "runtime") {
           fields = {
             ...fields,
             ...runtimeColumns(record as RuntimeEvidenceRecord),
             evidence: JSON.stringify((record as RuntimeEvidenceRecord).evidence),
           };
+        }
         insert.run(
           ...columns.map((column) => {
             const key = column.replace(/_([a-z])/g, (_match, letter: string) =>

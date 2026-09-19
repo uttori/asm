@@ -13,6 +13,57 @@ import {
 const errorCode = (error: unknown): string | undefined =>
   error instanceof PluginError ? error.code : undefined;
 
+test("activation accepts decoder-only architectures and rejects malformed optional factories", async (t) => {
+  for (const malformed of [false, true]) {
+    const manager = new PluginManager();
+    try {
+      const activation = manager.activatePlugins([
+        {
+          plugin: definePlugin({
+            manifest: {
+              id: "fixture.decoder",
+              name: "Decoder",
+              version: "1.0.0",
+              apiVersion: PLUGIN_API_VERSION,
+            },
+            activate(context) {
+              context.registerArchitecture({
+                id: "fixture.decoder-cpu",
+                displayName: "Decoder CPU",
+                unknownInstructionBehavior: "throw",
+                splitOperands: () => [],
+                classifyOperand: ({ operands }, operand) => operands.lowerOperand(operand),
+                createDecoder: malformed
+                  ? (42 as never)
+                  : () => ({
+                      decode: ({ offset }) => ({
+                        kind: "error",
+                        code: "invalidOpcode",
+                        message: "fixture",
+                        offset,
+                      }),
+                    }),
+                instructions: [],
+              });
+            },
+          }),
+        },
+      ]);
+      if (malformed) {
+        const error = await t.throwsAsync(activation, { instanceOf: PluginError });
+        t.is(error.code, "PLUGIN_CONFIGURATION_INVALID");
+      } else {
+        await activation;
+        const architecture = manager.freeze().getArchitecture("fixture.decoder-cpu");
+        t.is(architecture?.createEncoder, undefined);
+        t.truthy(architecture?.createDecoder);
+      }
+    } finally {
+      await manager.dispose();
+    }
+  }
+});
+
 test("plugin manager activates a complete fixture plugin and freezes its environment", async (t) => {
   const manager = new PluginManager();
   await manager.activatePlugins([{ plugin: createFixturePlugin(), options: { byte: 0x7f } }]);

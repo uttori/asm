@@ -104,7 +104,9 @@ export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
       DROP TRIGGER IF EXISTS query_execution_delete; DROP TRIGGER IF EXISTS query_execution_update;`);
     for (const name of ["query_instruction_nodes", "query_execution_offsets"]) {
       const row = database.prepare("SELECT type FROM sqlite_schema WHERE name=?").get(name);
-      if (row) database.exec(`DROP ${row.type === "view" ? "VIEW" : "TABLE"} ${name}`);
+      if (row) {
+        database.exec(`DROP ${row.type === "view" ? "VIEW" : "TABLE"} ${name}`);
+      }
     }
     for (const table of ["analysis", "runtime_observations"]) {
       const columns = new Set(
@@ -118,8 +120,11 @@ export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
         ["query_size", "INTEGER"],
         ["query_data", "TEXT"],
         ["query_ready", "INTEGER NOT NULL DEFAULT 0"],
-      ])
-        if (!columns.has(name)) database.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+      ]) {
+        if (!columns.has(name)) {
+          database.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
+        }
+      }
     }
     database.exec("UPDATE analysis SET query_ready=0 WHERE kind='cfg-node'");
     // Only executions have output offsets to backfill. Leaving every instruction/state marked
@@ -159,8 +164,9 @@ export const ensureAnnotationQueryIndexes = (database: DatabaseSync): void => {
         const record =
           row.payload === null ? {} : decode<Partial<InstructionExportRecord>>(row.payload);
         const offset = record.fileOffset;
-        if (offset !== undefined && (!Number.isSafeInteger(offset) || offset < 0))
+        if (offset !== undefined && (!Number.isSafeInteger(offset) || offset < 0)) {
           throw new Error("Invalid persisted instruction output offset.");
+        }
         update.run(offset ?? null, record.size ?? null, row.row_id);
         if (exportData) {
           const {
@@ -226,10 +232,12 @@ export const readSqliteAnnotationView = (
   manifest: AnalysisProjectManifest,
   ranges: readonly AnnotationQueryRange[],
 ): SqliteAnnotationView => {
-  if (!annotationQueryIndexesReady(database))
+  if (!annotationQueryIndexesReady(database)) {
     throw new Error("Analysis query indexes changed; refresh the annotation view.");
-  if (ranges.length > 2000)
+  }
+  if (ranges.length > 2000) {
     throw new Error("At most 2000 visible source ranges may be projected per request.");
+  }
   for (const range of ranges) {
     if (
       !range.addressSpace ||
@@ -242,8 +250,9 @@ export const readSqliteAnnotationView = (
           !Number.isSafeInteger(range.outputEnd) ||
           range.outputStart! < 0 ||
           range.outputEnd! <= range.outputStart!))
-    )
+    ) {
       throw new Error("Invalid instruction annotation range.");
+    }
   }
   const fileSpaces = manifest.addressSpaces
     .filter((space) => space.kind === "file")
@@ -254,8 +263,11 @@ export const readSqliteAnnotationView = (
   let limited = false;
   const locate = (space: string, address: number): void => {
     const key = `${space}:${address}`;
-    if (locations.size < 2000 || locations.has(key)) locations.set(key, { space, address });
-    else limited = true;
+    if (locations.size < 2000 || locations.has(key)) {
+      locations.set(key, { space, address });
+    } else {
+      limited = true;
+    }
   };
   const nodes = database.prepare(
     "SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address>=? AND address<? LIMIT ?",
@@ -275,7 +287,9 @@ export const readSqliteAnnotationView = (
       analysis.set(record.id, record);
       if (record.kind === "cfg-node") {
         locate(record.addressSpace, record.address);
-        if (record.fileOffset !== undefined) offsets.add(record.fileOffset);
+        if (record.fileOffset !== undefined) {
+          offsets.add(record.fileOffset);
+        }
       }
     }
   };
@@ -321,16 +335,21 @@ export const readSqliteAnnotationView = (
         locate(String(row.address_space), Number(row.address));
         offsets.add(Number(row.file_offset));
       }
-      for (const space of fileSpaces)
+      for (const space of fileSpaces) {
         queries.push({ space, start: range.outputStart, end: range.outputEnd });
+      }
     }
     for (const { space, start, end } of queries) {
       for (const kind of ["runtime-execution", "runtime-cpu-state"]) {
-        for (const row of pointLocations.iterate(kind, space, start, end))
+        for (const row of pointLocations.iterate(kind, space, start, end)) {
           locate(space, Number(row.address));
+        }
       }
-      for (const query of [pairedLocations, memoryLocations, opcodeLocations, commentLocations])
-        for (const row of query.iterate(space, start, end)) locate(space, Number(row.address));
+      for (const query of [pairedLocations, memoryLocations, opcodeLocations, commentLocations]) {
+        for (const row of query.iterate(space, start, end)) {
+          locate(space, Number(row.address));
+        }
+      }
     }
   }
   for (const row of database
@@ -366,7 +385,9 @@ export const readSqliteAnnotationView = (
       yield row;
       remaining--;
     }
-    if (remaining > 0) yield* point.iterate("runtime-cpu-state", space, address, remaining);
+    if (remaining > 0) {
+      yield* point.iterate("runtime-cpu-state", space, address, remaining);
+    }
   }
   const addRuntime = (rows: Iterable<Record<string, unknown>>, limit: number): void => {
     let count = 0;
@@ -377,8 +398,9 @@ export const readSqliteAnnotationView = (
       }
       const record = runtimeFromRow(row);
       runtime.set(record.id, record);
-      if (record.kind === "runtime-execution" && record.fileOffset !== undefined)
+      if (record.kind === "runtime-execution" && record.fileOffset !== undefined) {
         offsets.add(record.fileOffset);
+      }
     }
   };
   for (const [key, { space, address }] of locations) {
@@ -409,9 +431,11 @@ export const readSqliteAnnotationView = (
     `${runtimeSelect()} WHERE f.kind='runtime-coverage' AND f.address_space=? AND f.address IS NULL AND f.start<=? AND f."end">? LIMIT 1025`,
   );
   const coordinates = new Map(locations);
-  for (const offset of offsets)
-    for (const space of fileSpaces)
+  for (const offset of offsets) {
+    for (const space of fileSpaces) {
       coordinates.set(`${space}:${offset}`, { space, address: offset });
+    }
+  }
   for (const { space, address } of coordinates.values()) {
     let intervalCount = 0;
     for (const row of intervals.iterate(space, address, address)) {

@@ -57,12 +57,16 @@ const joinDirectPage = (
   left: Spc700DirectPageValue,
   right: Spc700DirectPageValue,
 ): Spc700DirectPageValue => {
-  if (left.kind === "unknown" || right.kind === "unknown") return unknown();
+  if (left.kind === "unknown" || right.kind === "unknown") {
+    return unknown();
+  }
   const values = new Set<0 | 0x100>([
     ...(left.kind === "known" ? [left.value] : left.values),
     ...(right.kind === "known" ? [right.value] : right.values),
   ]);
-  if (values.size === 1) return known([...values][0]);
+  if (values.size === 1) {
+    return known([...values][0]);
+  }
   return { kind: "conflicting", values: [...values].sort((a, b) => a - b) };
 };
 
@@ -73,7 +77,9 @@ const joinStack = (left: Spc700AbstractStack, right: Spc700AbstractStack): Spc70
   const entries: Spc700StackEntry[] = [];
   const length = Math.min(left.entries.length, right.entries.length);
   for (let index = 0; index < length; index++) {
-    if (!sameStackEntry(left.entries[index], right.entries[index])) break;
+    if (!sameStackEntry(left.entries[index], right.entries[index])) {
+      break;
+    }
     entries.push(left.entries[index]);
   }
   return { entries };

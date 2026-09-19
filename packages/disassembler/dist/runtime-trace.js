@@ -13,25 +13,29 @@ const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
 // Preserve PB/PC observations with them so projection does not invent state combinations.
 const DISASSEMBLY_STATE_FIELDS = new Set(["p", "e", "d", "db", "pb", "pc"]);
 const record = (value, context) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value))
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
         throw new Error(`${context} must be an object.`);
+    }
     return value;
 };
 const string = (value, context) => {
-    if (typeof value !== "string" || value.length === 0)
+    if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
+    }
     return value;
 };
 const integer = (value, context, minimum = 0) => {
-    if (!Number.isSafeInteger(value) || value < minimum)
+    if (!Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+    }
     return value;
 };
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const sha256Identity = (value, context) => {
     const identity = string(value, context);
-    if (!/^[\da-f]{64}$/.test(identity))
+    if (!/^[\da-f]{64}$/.test(identity)) {
         throw new Error(`${context} must be a lowercase SHA-256 identity.`);
+    }
     return identity;
 };
 const hex = (value) => value.toString(16).toUpperCase().padStart(6, "0");
@@ -42,10 +46,12 @@ const hex = (value) => value.toString(16).toUpperCase().padStart(6, "0");
  */
 export const validateRuntimeInstructionTraceMetadata = (value) => {
     const artifact = record(value, "Instruction trace artifact");
-    if (artifact.format !== RUNTIME_INSTRUCTION_TRACE_FORMAT)
+    if (artifact.format !== RUNTIME_INSTRUCTION_TRACE_FORMAT) {
         throw new Error(`Unsupported instruction trace format '${String(artifact.format)}'.`);
-    if (artifact.schemaVersion !== RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION)
+    }
+    if (artifact.schemaVersion !== RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION) {
         throw new Error(`Unsupported instruction trace schema version '${String(artifact.schemaVersion)}'.`);
+    }
     const producer = record(artifact.producer, "Instruction trace producer");
     return {
         format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
@@ -71,10 +77,12 @@ export const createRuntimeTraceChunkValidator = () => {
     let previousUnattributed = 0;
     return (value) => {
         const input = record(value, `Instruction trace chunk ${index}`);
-        if (!Array.isArray(input.addresses))
+        if (!Array.isArray(input.addresses)) {
             throw new Error(`Instruction trace chunk ${index} addresses must be an array.`);
-        if (typeof input.active !== "boolean")
+        }
+        if (typeof input.active !== "boolean") {
             throw new Error(`Instruction trace chunk ${index} active must be boolean.`);
+        }
         const chunk = {
             sequenceStart: integer(input.sequenceStart, `Instruction trace chunk ${index} sequenceStart`, 1),
             addresses: input.addresses.map((address, addressIndex) => integer(address, `Instruction trace chunk ${index} address ${addressIndex}`)),
@@ -89,17 +97,21 @@ export const createRuntimeTraceChunkValidator = () => {
             droppedEvents: integer(input.droppedEvents, `Instruction trace chunk ${index} droppedEvents`),
             active: input.active,
         };
-        if ((chunk.unattributedMemoryAccesses ?? previousUnattributed) < previousUnattributed)
+        if ((chunk.unattributedMemoryAccesses ?? previousUnattributed) < previousUnattributed) {
             throw new Error("Unattributed trace memory count decreased.");
+        }
         previousUnattributed = chunk.unattributedMemoryAccesses ?? previousUnattributed;
-        if (stopped && chunk.active)
+        if (stopped && chunk.active) {
             throw new Error(`Instruction trace chunk ${index} resumes after capture stopped.`);
-        if (chunk.sequenceStart < expectedSequence)
+        }
+        if (chunk.sequenceStart < expectedSequence) {
             throw new Error(`Instruction trace chunk ${index} overlaps or reorders prior events.`);
+        }
         const sequenceGap = chunk.sequenceStart - expectedSequence;
         const lossDelta = chunk.droppedEvents - previousDropped;
-        if (lossDelta < 0 || sequenceGap !== lossDelta)
+        if (lossDelta < 0 || sequenceGap !== lossDelta) {
             throw new Error(`Instruction trace chunk ${index} has inconsistent producer loss metadata.`);
+        }
         expectedSequence = chunk.sequenceStart + chunk.addresses.length;
         previousDropped = chunk.droppedEvents;
         stopped ||= !chunk.active;
@@ -115,8 +127,9 @@ export const createRuntimeTraceChunkValidator = () => {
 export const validateRuntimeInstructionTrace = (value) => {
     const metadata = validateRuntimeInstructionTraceMetadata(value);
     const input = record(value, "Instruction trace artifact");
-    if (!Array.isArray(input.chunks))
+    if (!Array.isArray(input.chunks)) {
         throw new Error("Instruction trace chunks must be an array.");
+    }
     return { ...metadata, chunks: input.chunks.map(createRuntimeTraceChunkValidator()) };
 };
 /**
@@ -128,11 +141,13 @@ export const validateRuntimeInstructionTrace = (value) => {
  */
 export const importRuntimeInstructionTrace = (value, context) => {
     const artifact = record(value, "Instruction trace artifact");
-    if (!Array.isArray(artifact.chunks))
+    if (!Array.isArray(artifact.chunks)) {
         throw new Error("Instruction trace chunks must be an array.");
+    }
     const importer = createRuntimeInstructionTraceImporter(validateRuntimeInstructionTraceMetadata(value), context);
-    for (const chunk of artifact.chunks)
+    for (const chunk of artifact.chunks) {
         importer.push(chunk);
+    }
     return importer.finish();
 };
 /**
@@ -167,29 +182,35 @@ const createMemoryFactIndex = () => {
 export const createRuntimeInstructionTraceImporter = (value, context, storage) => {
     const artifact = validateRuntimeInstructionTraceMetadata(value);
     const projectRomContentSha256 = sha256Identity(context.projectRomContentSha256, "Project ROM content identity");
-    if (artifact.romContentSha256 !== projectRomContentSha256)
+    if (artifact.romContentSha256 !== projectRomContentSha256) {
         throw new Error(`ROM/project mismatch: project expects ${projectRomContentSha256}, trace describes ${artifact.romContentSha256}.`);
+    }
     const sourceName = string(context.sourceName, "Instruction trace source name");
     const addressSpace = string(artifact.addressSpace, "Instruction trace project address space");
     const native65816 = artifact.architecture === "snes.65816" && addressSpace === "snes.cpu";
     const indexMode = context.indexMode ?? (native65816 ? "65816-analysis" : "full");
     let indexProfile;
-    if (indexMode === "65816-disassembly")
+    if (indexMode === "65816-disassembly") {
         indexProfile = "65816-disassembly-v1";
-    if (indexMode === "65816-analysis")
+    }
+    if (indexMode === "65816-analysis") {
         indexProfile = RUNTIME_ANALYSIS_PROFILE;
-    if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode))
+    }
+    if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode)) {
         throw new Error("Unsupported runtime trace index mode.");
+    }
     // This projection follows the 65816 decoder's inputs; another CPU may need the omitted registers.
     if (indexMode !== "full" &&
-        (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu"))
+        (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")) {
         throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
+    }
     const maxIndexRecords = integer(context.maxIndexRecords ??
         (indexMode === "full"
             ? MAX_RUNTIME_TRACE_INDEX_RECORDS
             : DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS), "Trace index record limit", 1);
-    if (maxIndexRecords > MAX_RUNTIME_TRACE_INDEX_RECORDS)
+    if (maxIndexRecords > MAX_RUNTIME_TRACE_INDEX_RECORDS) {
         throw new Error(`Trace index record limit must not exceed ${MAX_RUNTIME_TRACE_INDEX_RECORDS}.`);
+    }
     // Match canonicalJson({...metadata, chunks}) exactly without making one huge string.
     const envelope = canonicalJson({ ...artifact, chunks: [] });
     const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
@@ -205,9 +226,10 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         // Reject the whole import rather than letting callers mistake a truncated index for success.
         if (indexRecords + count > maxIndexRecords) {
             let hint = "The capture has too many distinct code/state/bus variants for this index budget. ";
-            if (indexMode === "full")
+            if (indexMode === "full") {
                 hint =
                     "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
+            }
             throw new Error(`Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged; no partial import was committed.`);
         }
         indexRecords += count;
@@ -222,8 +244,9 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
     let detailedEvents = 0;
     let memoryLoss = 0;
     const pushChunk = (value) => {
-        if (finished)
+        if (finished) {
             throw new Error("Instruction trace import already finished.");
+        }
         const chunk = validateChunk(value);
         // Hash the original chunk before projecting its registers so both index modes identify the same capture.
         hash.update(chunks++ === 0 ? "[\n" : ",\n");
@@ -248,10 +271,12 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             // Keep bytes and decoding state together: independent sets could pair self-modified code
             // with register values that were never observed when those bytes executed.
             let state = detail.state;
-            if (indexMode === "65816-analysis")
+            if (indexMode === "65816-analysis") {
                 state = project65816AnalysisState(detail.state);
-            else if (indexMode === "65816-disassembly")
+            }
+            else if (indexMode === "65816-disassembly") {
                 state = Object.fromEntries(Object.entries(detail.state).filter(([field]) => DISASSEMBLY_STATE_FIELDS.has(field.toLowerCase())));
+            }
             const content = canonicalJson({ address, bytes: detail.bytes, state });
             // Full snapshots may contain large or mostly unique register objects.
             // Keep their map keys fixed-size; compact states benefit from reusing the
@@ -263,11 +288,13 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                 address,
                 bytes: detail.bytes,
                 state,
-            })))
+            }))) {
                 reserve(2);
+            }
             for (const access of detail.memoryAccesses ?? []) {
-                if (access.access === "fetch")
+                if (access.access === "fetch") {
                     continue;
+                }
                 const accessKind = access.access;
                 const accessKey = canonicalJson({ instructionAddress: address, ...access });
                 if (index.add(`memory:${sha256(accessKey)}`, () => ({
@@ -294,8 +321,9 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         }
     };
     const push = (value) => {
-        if (failure)
+        if (failure) {
             throw failure;
+        }
         try {
             pushChunk(value);
         }
@@ -308,10 +336,12 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         }
     };
     const finish = () => {
-        if (failure)
+        if (failure) {
             throw failure;
-        if (finished)
+        }
+        if (finished) {
             throw new Error("Instruction trace import already finished.");
+        }
         finished = true;
         const sourceSha256 = hash
             .update(chunks ? "\n  ]" : "[]")
@@ -326,12 +356,15 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         let lastProgress = performance.now();
         storage?.onMergeProgress?.(0, indexRecords);
         const emit = (record) => {
-            if (storage?.onRecord)
+            if (storage?.onRecord) {
                 storage.onRecord(record);
-            else if (record.kind === "runtime-execution")
+            }
+            else if (record.kind === "runtime-execution") {
                 executions.push(record);
-            else
+            }
+            else {
                 facts.push(record);
+            }
             processedRecords++;
             // Synchronous SQLite publication cannot run timer callbacks. Report from the work loop,
             // checking the clock only periodically and always delivering the exact final count.
@@ -374,25 +407,28 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                     });
                     emit({ ...base, id: `${evidenceId}:state:${fact.identity}`, kind: "runtime-cpu-state" });
                 }
-                else
+                else {
                     emit({
                         ...fact.record,
                         id: `${evidenceId}:${fact.record.id}`,
                         count,
                         evidence: evidenceIds,
                     });
+                }
             }
         }
         finally {
             index.clear();
         }
         const runtime = executions.sort((a, b) => {
-            if (a.kind !== "runtime-execution" || b.kind !== "runtime-execution")
+            if (a.kind !== "runtime-execution" || b.kind !== "runtime-execution") {
                 return 0;
+            }
             return a.address - b.address;
         });
-        for (const fact of facts.sort((a, b) => a.id.localeCompare(b.id)))
+        for (const fact of facts.sort((a, b) => a.id.localeCompare(b.id))) {
             runtime.push(fact);
+        }
         const evidence = {
             id: evidenceId,
             source: "runtime",

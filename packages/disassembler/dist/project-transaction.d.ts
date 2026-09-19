@@ -5,7 +5,10 @@ import { SqliteAnalysisStore } from "./sqlite-store.js";
 export declare const ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 /** Revision token contract; the hash now covers the authoritative database manifest and counter. */
 export declare const ANALYSIS_PROJECT_REVISION_VERSION = 1;
-/** A hash of the database manifest, including its monotonic publication counter. */
+/**
+ * Opaque optimistic token for a saved project, not a ROM hash or schema version.
+ * Publications advance the counter even when the semantic records are unchanged.
+ */
 export interface AnalysisProjectRevision {
     readonly format: typeof ANALYSIS_PROJECT_REVISION_FORMAT;
     readonly version: typeof ANALYSIS_PROJECT_REVISION_VERSION;
@@ -19,22 +22,29 @@ export interface AnalysisProjectSnapshot extends LoadedAnalysisProject {
 export interface AnalysisProjectViewSnapshot extends LoadedAnalysisProjectView {
     readonly revision: AnalysisProjectRevision;
 }
-/** Validation result held by its caller until commit; preparation creates no disk generations. */
+/** Validation result retaining the caller's project reference; no copy, lock, or revision reservation. */
 export interface PreparedAnalysisProjectTransaction {
     readonly project: AnalysisProject;
 }
-/** Explicit SQLite maintenance result, in bytes. */
+/** Explicit SQLite maintenance result; ordinary commits return zero removed bytes and no warnings. */
 export interface AnalysisProjectMaintenanceResult {
+    /** Reduction in main database file size; excludes WAL and source capture files. */
     readonly removedBytes: number;
     readonly warnings: readonly string[];
 }
-/** Manifest and revision published atomically with the changed records. */
+/**
+ * Manifest and revision published atomically with the changed records.
+ * A later watcher-pointer refresh failure emits a process warning and does not undo the commit.
+ */
 export interface CommittedAnalysisProjectTransaction {
     readonly manifest: AnalysisProjectManifest;
     readonly revision: AnalysisProjectRevision;
     readonly maintenance: AnalysisProjectMaintenanceResult;
 }
-/** An editing client must reload before applying an edit based on an obsolete snapshot. */
+/**
+ * The expected revision is stale and nothing was committed. Reload and reapply the user's intent;
+ * substituting a fresh token on the old replacement can overwrite another writer's work.
+ */
 export declare class AnalysisProjectStaleError extends Error {
     readonly expected: AnalysisProjectRevision;
     readonly actual: AnalysisProjectRevision;
@@ -67,6 +77,7 @@ export declare const loadAnalysisProjectSnapshot: (directory: string) => Analysi
 export declare const loadAnalysisProjectViewSnapshot: (directory: string, createProjection?: () => RuntimeRecordProjection) => AnalysisProjectViewSnapshot;
 /**
  * Validate a complete replacement without changing persistent state. Commit validates it again.
+ * Holds the same project reference; preparation neither binds a destination nor reserves a revision.
  * @param {string} _directory Destination root, retained for the preparation API contract.
  * @param {AnalysisProject} project Caller-owned complete replacement.
  * @returns {PreparedAnalysisProjectTransaction} Validated replacement; the caller retains ownership.
@@ -82,6 +93,8 @@ export declare const prepareAnalysisProjectTransaction: (_directory: string, pro
 export declare const commitPreparedAnalysisProjectTransaction: (directory: string, expected: AnalysisProjectRevision | undefined, prepared: PreparedAnalysisProjectTransaction) => CommittedAnalysisProjectTransaction;
 /**
  * Atomically replace all records after rejecting stale readers under the SQLite writer lock.
+ * Validation, revision, or SQLite failures leave the previous publication intact. These synchronous
+ * APIs have no AbortSignal; check cancellation before calling, or throw inside a low-level transaction.
  * @param {string} directory Existing project root.
  * @param {AnalysisProjectRevision} expected Revision observed by the editing client.
  * @param {AnalysisProject} project Complete replacement; runtime is replaced too.
@@ -89,7 +102,8 @@ export declare const commitPreparedAnalysisProjectTransaction: (directory: strin
  */
 export declare const commitAnalysisProjectTransaction: (directory: string, expected: AnalysisProjectRevision, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
 /**
- * Publish only changed metadata tables and preserve all runtime history, including omitted rows.
+ * Replace explicitly supplied metadata tables and preserve omitted tables and all runtime history.
+ * Each supplied array is the entire replacement table, including an empty array to clear it.
  * @param {string} directory Existing project root.
  * @param {AnalysisProjectViewSnapshot} snapshot Original metadata view and revision.
  * @param {object} updates Metadata table replacements; any runtime property is rejected.
@@ -106,6 +120,9 @@ export declare const commitAnalysisProjectViewUpdate: (directory: string, snapsh
  */
 export declare const commitAnalysisProjectAnnotationUpdate: (directory: string, expected: AnalysisProjectRevision, updates: Pick<AnalysisProjectShards, "labels" | "comments" | "evidence">) => CommittedAnalysisProjectTransaction;
 /** Publish a reversible edit to a selected SQL view without replacing omitted records.
+ * Include the original records and all evidence required by the edited selection. Both runtime
+ * arrays must be empty. Changed/deleted records are compared by stable ID and original value;
+ * the caller's manifest is not a manifest replacement.
  * @param {string} directory Existing project root.
  * @param {AnalysisProjectSnapshot} snapshot Selected original records and their revision.
  * @param {AnalysisProject} project Edited selected view.
@@ -114,13 +131,15 @@ export declare const commitAnalysisProjectAnnotationUpdate: (directory: string, 
 export declare const commitAnalysisProjectSelectedEdit: (directory: string, snapshot: AnalysisProjectSnapshot, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
 /**
  * Create or replace a complete project; editing clients should use an explicit snapshot revision.
+ * Protects against a writer racing this call, but cannot detect a stale caller-owned replacement.
  * @param {string} directory Destination project root.
  * @param {AnalysisProject} project Complete replacement including runtime.
  * @returns {CommittedAnalysisProjectTransaction} Committed identity and publication result.
  */
 export declare const publishAnalysisProject: (directory: string, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
 /**
- * Explicitly compact the current SQLite file; no legacy conversion or generation pruning remains.
+ * Explicitly checkpoint and VACUUM the current SQLite file without changing its logical revision.
+ * Requires temporary free space for a second database copy; active readers can delay checkpoints.
  * @param {string} directory Existing SQLite project root.
  * @returns {CommittedAnalysisProjectTransaction} Unchanged logical identity and reclaimed byte count.
  */

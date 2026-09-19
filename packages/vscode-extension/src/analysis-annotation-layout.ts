@@ -9,7 +9,9 @@ import type { InstructionAnalysisAnnotation } from "@uttori/asm-disassembler";
 export const annotationSourceColumns = (text: string, tabSize: number): number => {
   const width = Number.isSafeInteger(tabSize) && tabSize > 0 ? tabSize : 4;
   let columns = 0;
-  for (const character of text) columns += character === "\t" ? width - (columns % width) : 1;
+  for (const character of text) {
+    columns += character === "\t" ? width - (columns % width) : 1;
+  }
   return columns;
 };
 
@@ -38,8 +40,9 @@ export const annotationOverlayColumn = (
 export const annotationOverlayColor = (
   annotations: readonly InstructionAnalysisAnnotation[],
 ): string => {
-  if (annotations.some((annotation) => annotation.stateTransitions.length > 0))
+  if (annotations.some((annotation) => annotation.stateTransitions.length > 0)) {
     return "editorWarning.foreground";
+  }
   if (
     annotations.some(
       (annotation) =>
@@ -48,7 +51,8 @@ export const annotationOverlayColor = (
         annotation.memoryAccesses.length > 0 ||
         annotation.stateObservations.some(({ source }) => source === "runtime"),
     )
-  )
+  ) {
     return "debugIcon.startForeground";
+  }
   return "editorInfo.foreground";
 };

@@ -110,18 +110,28 @@ export function createNesAddressSpace({ state }: TargetFactoryContext): TargetAd
     },
     toOutputOffset(address) {
       const nes = state.get(nes65xxSessionStateKey);
-      if (!nes.currentLoadMemory) return -1;
+      if (!nes.currentLoadMemory) {
+        return -1;
+      }
       const memory = nes.linker.memories.get(nes.currentLoadMemory);
-      if (!memory || memory.fileOffset < 0) return -1;
-      if (address < memory.start || address >= memory.start + memory.size) return -1;
+      if (!memory || memory.fileOffset < 0) {
+        return -1;
+      }
+      if (address < memory.start || address >= memory.start + memory.size) {
+        return -1;
+      }
       return nes.header.length + memory.fileOffset + (address - memory.start);
     },
     fromOutputOffset(offset) {
       const nes = state.get(nes65xxSessionStateKey);
       const prgOffset = offset - nes.header.length;
-      if (prgOffset < 0) return -1;
+      if (prgOffset < 0) {
+        return -1;
+      }
       for (const memory of nes.linker.memories.values()) {
-        if (memory.fileOffset < 0) continue;
+        if (memory.fileOffset < 0) {
+          continue;
+        }
         if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
           return memory.start + (prgOffset - memory.fileOffset);
         }

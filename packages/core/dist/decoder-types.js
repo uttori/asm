@@ -20,8 +20,9 @@ export class Uint8ArrayDecoderSource {
      * @returns {number | undefined} The byte at the offset, or undefined if the offset is out of bounds.
      */
     readByte(offset) {
-        if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length)
+        if (!Number.isInteger(offset) || offset < 0 || offset >= this.#bytes.length) {
             return undefined;
+        }
         return this.#bytes[offset];
     }
     /**
@@ -35,8 +36,9 @@ export class Uint8ArrayDecoderSource {
             return undefined;
         }
         const end = offset + length;
-        if (!Number.isSafeInteger(end) || end > this.#bytes.length)
+        if (!Number.isSafeInteger(end) || end > this.#bytes.length) {
             return undefined;
+        }
         return this.#bytes.slice(offset, end);
     }
 }

@@ -13,15 +13,21 @@ class FakeTransport implements MesenDebugTransport {
 
   async write(data: Uint8Array): Promise<void> {
     await Promise.resolve();
-    if (this.closed) throw new Error("fake transport closed");
+    if (this.closed) {
+      throw new Error("fake transport closed");
+    }
     this.writes.push(new Uint8Array(data));
   }
 
   async close(): Promise<void> {
     await Promise.resolve();
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
-    for (const listener of this.#closeListeners) listener();
+    for (const listener of this.#closeListeners) {
+      listener();
+    }
   }
 
   onData(listener: (data: Uint8Array) => void): DebugSubscription {
@@ -35,11 +41,15 @@ class FakeTransport implements MesenDebugTransport {
   }
 
   feed(data: Uint8Array): void {
-    for (const listener of this.#dataListeners) listener(data);
+    for (const listener of this.#dataListeners) {
+      listener(data);
+    }
   }
 
   fail(error: Error): void {
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
   }
 }
 

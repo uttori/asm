@@ -33,7 +33,9 @@ const optionalText = (
   value: unknown,
   field: "target" | "architecture" | "$schema" | "buildOutput" | "baseImage",
 ): string | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   if (typeof value !== "string" || value.trim() === "") {
     throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
   }
@@ -44,7 +46,9 @@ const optionalStringArray = (
   value: unknown,
   field: "includePaths" | "entryPoints",
 ): string[] | undefined => {
-  if (value === undefined) return undefined;
+  if (value === undefined) {
+    return undefined;
+  }
   if (
     !Array.isArray(value) ||
     value.some((item) => typeof item !== "string" || item.trim() === "")
@@ -77,6 +81,13 @@ const validatePluginEntry = (value: unknown, index: number): PluginModuleRequest
   };
 };
 
+/**
+ * Validate known JSON fields without reading files, resolving modules, or validating plugin options.
+ * Throws PluginError with PLUGIN_CONFIGURATION_INVALID. The new top-level result retains nested
+ * arrays/options from the input; callers must not assume a deep copy or runtime immutability.
+ * @param {unknown} value Parsed JSON to validate.
+ * @returns {ProjectConfiguration} Known configuration fields, with nested input references retained.
+ */
 export const validateProjectConfiguration = (value: unknown): ProjectConfiguration => {
   if (!isRecord(value)) {
     throw configurationError("Project configuration must be a JSON object.");
@@ -109,12 +120,22 @@ export const validateProjectConfiguration = (value: unknown): ProjectConfigurati
   };
 };
 
+/** Validated configuration with the directory used to resolve its relative paths. */
 export interface LoadedConfigurationFile {
+  /** Absolute file path, absent when optional discovery finds no configuration. */
   readonly path?: string;
+  /** Absolute configuration directory, or cwd when no file was found. */
   readonly directory: string;
   readonly configuration: ProjectConfiguration;
 }
 
+/**
+ * Return an explicit nonempty path resolved against cwd, without checking its existence.
+ * Otherwise check only cwd/uttori-asm.config.json, returning undefined when absent; no ancestor search.
+ * @param {string} cwd Discovery directory and explicit-path base.
+ * @param {string} [configuredPath] Optional explicit configuration filename.
+ * @returns {string | undefined} An absolute path, or undefined when optional discovery finds nothing.
+ */
 export const discoverProjectConfigurationPath = (
   cwd: string,
   configuredPath?: string,
@@ -126,6 +147,14 @@ export const discoverProjectConfigurationPath = (
   return existsSync(candidate) ? candidate : undefined;
 };
 
+/**
+ * Read UTF-8 JSON and validate its fields. Relative configuredPath is resolved against cwd.
+ * A missing discovered file yields empty configuration; a missing explicit file, malformed JSON,
+ * or read failure rejects with PLUGIN_CONFIGURATION_INVALID. Does not execute plugins.
+ * @param {string} cwd Discovery directory and explicit-path base.
+ * @param {string} [configuredPath] Optional explicit configuration filename.
+ * @returns {Promise<LoadedConfigurationFile>} Validated settings with their absolute path-resolution directory.
+ */
 export const readProjectConfiguration = async (
   cwd: string,
   configuredPath?: string,

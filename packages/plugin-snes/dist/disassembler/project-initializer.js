@@ -37,8 +37,9 @@ const emptyShards = () => ({
 });
 const report = (options, stage, message) => options.onProgress?.({ stage, message });
 const throwIfCancelled = (signal) => {
-    if (signal?.aborted)
+    if (signal?.aborted) {
         throw new SnesProjectInitializationCancelledError();
+    }
 };
 const assertDizRawFile = (file) => {
     if (path.extname(file).toLowerCase() !== ".dizraw") {
@@ -53,11 +54,13 @@ const importDizRawFile = (file, rom) => {
     });
 };
 const ensureWritableDestination = (directory) => {
-    if (!fs.existsSync(directory))
+    if (!fs.existsSync(directory)) {
         return;
+    }
     const stat = fs.statSync(directory);
-    if (!stat.isDirectory())
+    if (!stat.isDirectory()) {
         throw new Error(`Destination '${directory}' is not a directory.`);
+    }
     if (fs.readdirSync(directory).length > 0) {
         throw new Error(`Destination '${directory}' must be empty.`);
     }
@@ -100,8 +103,9 @@ const commitStagedDirectory = (staging, destination) => {
         fs.rmdirSync(backup);
     }
     catch (error) {
-        if (!fs.existsSync(resolved) && fs.existsSync(backup))
+        if (!fs.existsSync(resolved) && fs.existsSync(backup)) {
             fs.renameSync(backup, resolved);
+        }
         throw error;
     }
 };
@@ -188,10 +192,12 @@ export const createSnesAnalysisProject = (options) => {
         ? { ...imported.report, ...(importWarnings ? { warnings: importWarnings } : {}) }
         : undefined;
     let mappingSource = "detected";
-    if (options.mapper)
+    if (options.mapper) {
         mappingSource = "override";
-    else if (imported)
+    }
+    else if (imported) {
         mappingSource = "import";
+    }
     const mapping = {
         mapper,
         ...((imported?.mapping.speed ?? probe.detection.speed)
@@ -264,10 +270,13 @@ export const analyzeSnesProject = (options) => {
                 const manifest = store.manifest();
                 const registers = [...new Set(snesHardwareDefines().map(([, address]) => address))];
                 const addresses = [];
-                for (let bank = 0; bank < 256; bank++)
-                    if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf))
-                        for (const low of registers)
+                for (let bank = 0; bank < 256; bank++) {
+                    if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf)) {
+                        for (const low of registers) {
                             addresses.push((bank << 16) | low);
+                        }
+                    }
+                }
                 const view = {
                     labels: store.loadTable("labels"),
                     comments: store.loadTable("comments"),
@@ -309,8 +318,9 @@ export const analyzeSnesProject = (options) => {
     const targetSets = editableRecords.filter((record) => record.kind === "target-set");
     const configured = new Map();
     for (const entry of options.entryPoints ?? []) {
-        if (snesRomAddressSpace.toOutputOffset(entry.address, addressContext) < 0)
+        if (snesRomAddressSpace.toOutputOffset(entry.address, addressContext) < 0) {
             continue;
+        }
         const previous = configured.get(entry.address);
         configured.set(entry.address, previous
             ? {
@@ -325,24 +335,27 @@ export const analyzeSnesProject = (options) => {
     for (const record of loaded.view.runtime) {
         if (record.kind !== "runtime-execution" ||
             record.architecture !== ARCHITECTURE_ID ||
-            record.addressSpace !== SNES_CPU_ADDRESS_SPACE)
+            record.addressSpace !== SNES_CPU_ADDRESS_SPACE) {
             continue;
+        }
         const candidate = runtimeCandidates.get(record.address) ?? {
             address: record.address,
             count: 0,
             evidence: new Set(),
         };
         candidate.count += record.count;
-        for (const id of record.evidence)
+        for (const id of record.evidence) {
             candidate.evidence.add(id);
+        }
         runtimeCandidates.set(record.address, candidate);
     }
     const rankedRuntime = [...runtimeCandidates.values()].sort((left, right) => right.count - left.count || left.address - right.address);
     let addedRuntimeSeeds = 0;
     for (const candidate of rankedRuntime) {
         // RAM PCs are decoded from captured bytes below, not queued as ROM seeds.
-        if (snesRomAddressSpace.toOutputOffset(candidate.address, addressContext) < 0)
+        if (snesRomAddressSpace.toOutputOffset(candidate.address, addressContext) < 0) {
             continue;
+        }
         const previous = configured.get(candidate.address);
         if (previous) {
             configured.set(candidate.address, {
@@ -351,8 +364,9 @@ export const analyzeSnesProject = (options) => {
             });
             continue;
         }
-        if (addedRuntimeSeeds >= MAX_PERSISTED_RUNTIME_ENTRY_POINTS)
+        if (addedRuntimeSeeds >= MAX_PERSISTED_RUNTIME_ENTRY_POINTS) {
             continue;
+        }
         configured.set(candidate.address, {
             id: `runtime-${candidate.address.toString(16).padStart(6, "0")}`,
             address: candidate.address,
@@ -474,14 +488,16 @@ export const exportSnesProject = (options) => {
             const loaded = store.sourceExportView();
             const revision = analysisProjectRevision(loaded.manifest);
             if (options.expectedRevision !== undefined &&
-                options.expectedRevision !== revision.manifestSha256)
+                options.expectedRevision !== revision.manifestSha256) {
                 throw new Error("Analysis changed before source refresh. Run regeneration again.");
+            }
             const rom = RomImage.load(path.resolve(options.romFile), {
                 headerSize: loaded.manifest.rom.headerSize,
             });
             validateProjectRom(loaded.manifest, rom);
-            if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper))
+            if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
                 throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+            }
             report(options, "export", "Generating native source, binary assets and file manifests.");
             const manifest = exportSnes65816Source(loaded, rom, sourceDirectory, {
                 force: options.force,

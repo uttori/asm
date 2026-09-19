@@ -85,10 +85,16 @@ const element = (
 
 const fake64 = (character: string): number => {
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-  if (character === "0") return 0;
-  if (character === "A") return 52 << 2;
+  if (character === "0") {
+    return 0;
+  }
+  if (character === "A") {
+    return 52 << 2;
+  }
   const index = alphabet.indexOf(character);
-  if (index < 0) throw new Error(`Invalid .dizraw flag character '${character}'.`);
+  if (index < 0) {
+    throw new Error(`Invalid .dizraw flag character '${character}'.`);
+  }
   return index << 2;
 };
 
@@ -105,17 +111,29 @@ interface DecodedMetadata {
 const decodeMetadata = (line: string): DecodedMetadata => {
   const padded = line.padEnd(9, "0").slice(0, 9);
   const classification = CLASSIFICATIONS[padded[0]];
-  if (!classification) throw new Error(`Unknown .dizraw classification '${padded[0]}'.`);
+  if (!classification) {
+    throw new Error(`Unknown .dizraw classification '${padded[0]}'.`);
+  }
   const flags = fake64(padded[1]);
   const pointValue = (flags >> 4) & 0x0f;
   const architectureValue = Number.parseInt(padded[8], 16) & 0x03;
   const architecture = ARCHITECTURES[architectureValue];
-  if (!architecture) throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
+  if (!architecture) {
+    throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
+  }
   const points: Array<"in" | "out" | "end" | "read"> = [];
-  if (pointValue & 1) points.push("in");
-  if (pointValue & 2) points.push("out");
-  if (pointValue & 4) points.push("end");
-  if (pointValue & 8) points.push("read");
+  if (pointValue & 1) {
+    points.push("in");
+  }
+  if (pointValue & 2) {
+    points.push("out");
+  }
+  if (pointValue & 4) {
+    points.push("end");
+  }
+  if (pointValue & 8) {
+    points.push("read");
+  }
   return {
     classification,
     architecture,
@@ -139,7 +157,9 @@ const sameMetadata = (left: DecodedMetadata, right: DecodedMetadata): boolean =>
 const decodeRomByteLines = (body: string, maximumBytes: number): string[] => {
   const normalized = xmlDecode(body).replaceAll("\r", "").trim();
   const [header, ...encodedLines] = normalized.split("\n");
-  if (!header) throw new Error(".dizraw RomBytes section is missing its format header.");
+  if (!header) {
+    throw new Error(".dizraw RomBytes section is missing its format header.");
+  }
   const options = header.split(",");
   const version = options.find((option) => option.startsWith("version:"));
   if (version !== "version:200" && version !== "version:201") {
@@ -163,14 +183,18 @@ const decodeRomByteLines = (body: string, maximumBytes: number): string[] => {
         continue;
       }
       const match = /^r (\d+) (.+)$/.exec(line);
-      if (!match) throw new Error(`Invalid .dizraw repeater command '${line}'.`);
+      if (!match) {
+        throw new Error(`Invalid .dizraw repeater command '${line}'.`);
+      }
       const count = Number(match[1]);
       if (!Number.isSafeInteger(count) || count < 0 || expanded.length + count > maximumBytes) {
         throw new Error(
           `.dizraw RomBytes expansion exceeds the ${maximumBytes}-byte safety limit.`,
         );
       }
-      for (let index = 0; index < count; index++) expanded.push(match[2]);
+      for (let index = 0; index < count; index++) {
+        expanded.push(match[2]);
+      }
     }
     lines = expanded;
   }
@@ -184,7 +208,9 @@ const decodeRomByteLines = (body: string, maximumBytes: number): string[] => {
 };
 
 const metadataIntervals = (lines: readonly string[], evidenceId: string): IntervalAnnotation[] => {
-  if (lines.length === 0) return [];
+  if (lines.length === 0) {
+    return [];
+  }
   const output: IntervalAnnotation[] = [];
   let start = 0;
   let active = decodeMetadata(lines[0]);
@@ -289,7 +315,9 @@ export const importDizRaw = (
   const projectAttributes = attributes(projectMatch[1]);
   const dataAttributes = attributes(data.opening);
   const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
-  if (!mapper) throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
+  if (!mapper) {
+    throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
+  }
   const sourceSha256 = createHash("sha256").update(xml).digest("hex");
   const sourceName = options.sourceName ?? "import.dizraw";
   const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
@@ -300,7 +328,9 @@ export const importDizRaw = (
     for (const match of labelsElement.body.matchAll(/<sys:Item\b([^>]*)>([\S\s]*?)<\/sys:Item>/g)) {
       const itemAttributes = attributes(match[1]);
       const valueMatch = /<Value\b([^>]*)\/?\s*>/.exec(match[2]);
-      if (!valueMatch) continue;
+      if (!valueMatch) {
+        continue;
+      }
       const valueAttributes = attributes(valueMatch[1]);
       const address = Number(itemAttributes.Key);
       if (!Number.isSafeInteger(address) || address < 0) {
@@ -329,7 +359,9 @@ export const importDizRaw = (
       const valueStart = match[2].indexOf("<Value");
       const valueOpeningEnd = match[2].indexOf(">", valueStart);
       const valueEnd = match[2].indexOf("</Value>", valueOpeningEnd);
-      if (valueStart < 0 || valueOpeningEnd < 0 || valueEnd < 0) continue;
+      if (valueStart < 0 || valueOpeningEnd < 0 || valueEnd < 0) {
+        continue;
+      }
       const address = Number(itemAttributes.Key);
       if (!Number.isSafeInteger(address) || address < 0) {
         throw new Error(`Invalid .dizraw comment address '${itemAttributes.Key}'.`);
@@ -392,7 +424,9 @@ export const importDizRaw = (
   const annotations = metadataIntervals(metadataLines, evidenceId);
   const unsupported: ImportLossItem[] = [];
   const recordUnsupported = (field: string, present: boolean, reason: string): void => {
-    if (present) unsupported.push({ field, count: 1, reason });
+    if (present) {
+      unsupported.push({ field, count: 1, reason });
+    }
   };
   recordUnsupported(
     "Project.LogWriterSettings",

@@ -60,7 +60,9 @@ export class FuzzRandom {
    * @returns {T} Selected value.
    */
   pick<T>(values: readonly T[]): T {
-    if (values.length === 0) throw new Error("Fuzz selection requires at least one value.");
+    if (values.length === 0) {
+      throw new Error("Fuzz selection requires at least one value.");
+    }
     return values[this.integer(values.length)];
   }
 
@@ -71,7 +73,9 @@ export class FuzzRandom {
    */
   bytes(maximumLength: number): Uint8Array {
     const bytes = new Uint8Array(this.integer(maximumLength + 1));
-    for (let index = 0; index < bytes.length; index++) bytes[index] = this.integer(0x100);
+    for (let index = 0; index < bytes.length; index++) {
+      bytes[index] = this.integer(0x100);
+    }
     return bytes;
   }
 
@@ -109,7 +113,9 @@ export class FuzzRandom {
         }
       }
     };
-    if (depth >= 3 || this.integer(3) === 0) return leaf();
+    if (depth >= 3 || this.integer(3) === 0) {
+      return leaf();
+    }
     if (this.boolean()) {
       return Array.from({ length: this.integer(7) }, () => this.json(depth + 1));
     }
@@ -128,7 +134,9 @@ export class FuzzRandom {
  */
 export const fuzzSeed = (fallback = DEFAULT_FUZZ_SEED): number => {
   const configured = process.env.UTTORI_FUZZ_SEED;
-  if (configured === undefined || configured === "") return fallback >>> 0;
+  if (configured === undefined || configured === "") {
+    return fallback >>> 0;
+  }
   const parsed = Number(configured);
   if (!Number.isSafeInteger(parsed) || parsed < 0 || parsed > 0xffff_ffff) {
     throw new Error("UTTORI_FUZZ_SEED must be an unsigned 32-bit integer.");

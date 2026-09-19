@@ -63,10 +63,16 @@ export const prepareSourceQueries = (db: DatabaseSync): void => {
     for (let rows = pending.all(table); rows.length; rows = pending.all(table)) {
       for (const row of rows) {
         const record = JSON.parse(decodeSqlitePayload(row.payload)) as { evidence: unknown };
-        if (!Array.isArray(record.evidence) || record.evidence.some((id) => typeof id !== "string"))
+        if (
+          !Array.isArray(record.evidence) ||
+          record.evidence.some((id) => typeof id !== "string")
+        ) {
           throw new Error("Invalid source metadata evidence membership.");
+        }
         remove.run(table, row.id);
-        for (const id of record.evidence as string[]) insert.run(id, table, row.id);
+        for (const id of record.evidence as string[]) {
+          insert.run(id, table, row.id);
+        }
         ready.run(table, row.id);
       }
     }
@@ -120,7 +126,9 @@ export const readSourcePage = (
   group: AnalysisSourceGroup,
   offset = 0,
 ): AnalysisSourceEntry[] => {
-  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Invalid source page offset.");
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new Error("Invalid source page offset.");
+  }
   const evidence = JSON.stringify(source.evidenceIds);
   if (group === "instructions") {
     const rows = db
@@ -155,7 +163,9 @@ export const readSourcePage = (
       .all(evidence, offset)
       .map((row) => {
         const record = runtimeFromRow(row);
-        if (record.kind !== "runtime-memory-access") throw new Error("Invalid memory observation.");
+        if (record.kind !== "runtime-memory-access") {
+          throw new Error("Invalid memory observation.");
+        }
         const detail = `${record.access} ${record.accessedAddressSpace}:${hex(record.accessedAddress)} · ${record.width} byte(s) · ${record.count} observations`;
         return {
           id: record.id,
@@ -170,7 +180,9 @@ export const readSourcePage = (
         };
       });
   }
-  if (group !== "contributions") throw new Error("Unknown source contribution group.");
+  if (group !== "contributions") {
+    throw new Error("Unknown source contribution group.");
+  }
   const select = collections
     .map(
       (table) =>

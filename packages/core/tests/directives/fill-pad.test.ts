@@ -91,8 +91,12 @@ test("fill of zero bytes is a no-op", (t) => {
 test("fill pattern and fill resolve defines before evaluating", (t) => {
   const { ctx, written } = createContext({
     resolvedefines: (input) => {
-      if (input === "!pat") return "$AABB";
-      if (input === "!count") return "3";
+      if (input === "!pat") {
+        return "$AABB";
+      }
+      if (input === "!count") {
+        return "3";
+      }
       return input;
     },
   });

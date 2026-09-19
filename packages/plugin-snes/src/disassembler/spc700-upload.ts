@@ -96,8 +96,9 @@ export const parseSpc700UploadStream = (
     }
     const size = wordAt(rom, offset);
     const destination = wordAt(rom, offset + 2);
-    if (size === undefined || destination === undefined)
+    if (size === undefined || destination === undefined) {
       throw new Error("ROM bounds check failed.");
+    }
     if (size === 0) {
       return {
         format: "nspc",

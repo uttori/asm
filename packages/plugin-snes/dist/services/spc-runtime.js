@@ -37,12 +37,15 @@ export class SnesSpcRuntimeService {
      * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
      */
     handleSpcblock(words) {
-        if (words.length < 2)
+        if (words.length < 2) {
             throw new Error("spcblock requires at least a destination address.");
-        if (words.length > 4)
+        }
+        if (words.length > 4) {
             throw new Error("spcblock has too many arguments.");
-        if (this.state.inSpcBlock)
+        }
+        if (this.state.inSpcBlock) {
             throw new Error("Nested spcblock directives are not supported.");
+        }
         const destination = this.session.operandResolver.getnum(this.session.resolvedefines(words[1]));
         if ((destination & ~0xffff) !== 0) {
             throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
@@ -50,13 +53,15 @@ export class SnesSpcRuntimeService {
         let type = "nspc";
         if (words.length === 3) {
             const kind = words[2].toLowerCase();
-            if (kind === "nspc")
+            if (kind === "nspc") {
                 type = "nspc";
+            }
             else if (kind === "custom") {
                 throw new Error("Custom spcblock mode requires a macro and is not implemented.");
             }
-            else
+            else {
                 throw new Error(`Unknown spcblock type: ${words[2]}`);
+            }
         }
         else if (words.length === 4) {
             if (words[2].toLowerCase() !== "custom") {
@@ -103,8 +108,9 @@ export class SnesSpcRuntimeService {
         }
         if (this.session.canFinalize) {
             const sizeOffset = this.session.outputWriter.toOutputOffset(block.sizeAddress & 0xffffff);
-            if (sizeOffset < 0)
+            if (sizeOffset < 0) {
                 throw new Error("spcblock size address does not map to output.");
+            }
             const blockSize = (this.session.currentTargetAddress - block.destination) & 0xffff;
             this.session.writeOutputBytes(sizeOffset, blockSize & 0xff, 1);
             this.session.writeOutputBytes(sizeOffset + 1, (blockSize >> 8) & 0xff, 1);

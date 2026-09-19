@@ -31,7 +31,9 @@ test("SuperFX addresses and offsets outside the contiguous image remain unmapped
     t.is(image.identifyAddress(address), undefined);
     t.is(image.readByte(address), undefined);
   }
-  for (const offset of [-1, 1, 0.5, NaN]) t.is(image.identifyOffset(offset), undefined);
+  for (const offset of [-1, 1, 0.5, NaN]) {
+    t.is(image.identifyOffset(offset), undefined);
+  }
   t.is(new SuperFxRomImage([]).identifyAddress(0), undefined);
 });
 

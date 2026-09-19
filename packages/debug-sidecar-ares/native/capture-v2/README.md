@@ -1,7 +1,7 @@
 # Downstream instruction capture v2
 
 This package implements the instruction-only scope described in
-[the implementation guide](../../../../docs/ares-capture-v2-implementation.md).
+[the capture guide](../../CAPTURE.md).
 It is independent of the unpublished U3–U6 contribution series. The prototype
 uses private `qUttoriCapture` packets; no upstream namespace is claimed.
 

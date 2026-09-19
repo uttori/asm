@@ -98,23 +98,32 @@ export const validateRuntimeTransferBoundary = (
     !Number.isInteger(marker.transferred) ||
     marker.transferred < 0 ||
     marker.transferred > 65536
-  )
+  ) {
     throw new Error("Invalid transfer boundary attribution or count.");
-  for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"] as const)
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255)
+  }
+  for (const field of ["dmap", "bbad", "a1b", "dasb", "ntlr"] as const) {
+    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 255) {
       throw new Error("Invalid transfer byte register.");
-  for (const field of ["a1t", "das", "a2a"] as const)
-    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535)
+    }
+  }
+  for (const field of ["a1t", "das", "a2a"] as const) {
+    if (!Number.isInteger(c[field]) || c[field] < 0 || c[field] > 65535) {
       throw new Error("Invalid transfer word register.");
-  if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15)
+    }
+  }
+  if (!Number.isInteger(c.flags) || c.flags < 0 || c.flags > 15) {
     throw new Error("Invalid transfer channel flags.");
+  }
   if (marker.boundary === "begin") {
-    if (marker.transferId !== marker.sequence || marker.transferred !== 0)
+    if (marker.transferId !== marker.sequence || marker.transferred !== 0) {
       throw new Error("Invalid transfer begin identity.");
-  } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1)
+    }
+  } else if (BigInt(marker.transferId) >= BigInt(marker.sequence) || marker.transferred < 1) {
     throw new Error("Invalid transfer end identity.");
-  if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4))
+  }
+  if (marker.actor === "hdma" && (marker.boundary === "interrupted" || marker.transferred > 4)) {
     throw new Error("Invalid HDMA payload-burst boundary.");
+  }
   return {
     kind: "transfer",
     sequence: marker.sequence,
@@ -191,24 +200,36 @@ export const createRuntimeTransferAccumulator = () => {
     group[fields[window.status]]++;
     group.reads += window.reads;
     group.writes += window.writes;
-    if (window.begin && window.end) group.attemptedSlots += window.end.transferred;
-    if (!Number.isSafeInteger(group.attemptedSlots))
+    if (window.begin && window.end) {
+      group.attemptedSlots += window.end.transferred;
+    }
+    if (!Number.isSafeInteger(group.attemptedSlots)) {
       throw new Error("Transfer slot total exceeds the safe integer range.");
-    if (windows.length < 64) windows.push(window);
-    else omittedWindows++;
+    }
+    if (windows.length < 64) {
+      windows.push(window);
+    } else {
+      omittedWindows++;
+    }
   };
   return {
     /** Attach only DMA/HDMA payload events; table/pointer fetches remain separate bus evidence.
      * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
      */
     push: (event: RuntimeBusAccess | RuntimeTransferBoundary): void => {
-      if (event.actor === "cpu") return;
+      if (event.actor === "cpu") {
+        return;
+      }
       const marker = "kind" in event;
-      if (!marker && event.phase !== "dma" && event.phase !== "hdma-transfer") return;
+      if (!marker && event.phase !== "dma" && event.phase !== "hdma-transfer") {
+        return;
+      }
       const key = `${event.actor}:${event.channel}`;
       let current = open.get(key);
       if (marker && event.boundary === "begin") {
-        if (current) throw new Error("Transfer began before the previous channel window ended.");
+        if (current) {
+          throw new Error("Transfer began before the previous channel window ended.");
+        }
         open.set(key, {
           actor: event.actor,
           channel: event.channel,
@@ -223,34 +244,46 @@ export const createRuntimeTransferAccumulator = () => {
         open.set(key, current);
       }
       if (!marker) {
-        if (event.direction === "read") current.reads++;
-        else current.writes++;
+        if (event.direction === "read") {
+          current.reads++;
+        } else {
+          current.writes++;
+        }
         const maximum = event.actor === "dma" ? 65536 : 4;
-        if (current.reads > maximum || current.writes > maximum)
+        if (current.reads > maximum || current.writes > maximum) {
           throw new Error("Transfer window exceeds the native payload bound.");
+        }
         return;
       }
       const expectedId = current.begin?.transferId ?? "0";
-      if (event.transferId !== expectedId)
+      if (event.transferId !== expectedId) {
         throw new Error("Transfer end does not match its observed begin.");
-      if (current.reads > event.transferred || current.writes > event.transferred)
+      }
+      if (current.reads > event.transferred || current.writes > event.transferred) {
         throw new Error("Transfer contains more observed accesses than attempted byte slots.");
+      }
       if (current.begin) {
         // In this SNES scope, A-bus register suppression and B-bus WRAM conflict
         // suppression cannot both apply to one slot. At least one access survives.
-        if (current.reads + current.writes < event.transferred)
+        if (current.reads + current.writes < event.transferred) {
           throw new Error("Transfer is missing bus accesses inside its observed boundaries.");
+        }
         const configuration = current.begin.configuration;
         let expected = configuration.das || 65536;
-        if (event.actor === "hdma") expected = [1, 2, 2, 4, 4, 4, 2, 4][configuration.dmap & 7];
+        if (event.actor === "hdma") {
+          expected = [1, 2, 2, 4, 4, 4, 2, 4][configuration.dmap & 7];
+        }
         if (
           (event.boundary === "complete" && event.transferred !== expected) ||
           event.transferred > expected
-        )
+        ) {
           throw new Error("Transfer completion disagrees with its starting configuration.");
+        }
       }
       let status: RuntimeTransferStatus = "leading-partial";
-      if (current.begin) status = event.boundary === "complete" ? "complete" : "interrupted";
+      if (current.begin) {
+        status = event.boundary === "complete" ? "complete" : "interrupted";
+      }
       retain({ ...current, end: event, status });
       open.delete(key);
     },
@@ -258,8 +291,9 @@ export const createRuntimeTransferAccumulator = () => {
      * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
      */
     finish: (): RuntimeTransferSummary => {
-      for (const current of open.values())
+      for (const current of open.values()) {
         retain({ ...current, status: current.begin ? "trailing-partial" : "both-partial" });
+      }
       open.clear();
       return {
         activity: [...activity.entries()]

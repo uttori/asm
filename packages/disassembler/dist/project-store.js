@@ -8,25 +8,30 @@ import { SqliteAnalysisStore, analysisProjectSqlitePath } from "./sqlite-store.j
 export { canonicalJson } from "./canonical-json.js";
 export { validateAnalysisProjectManifest, } from "./project-validation.js";
 /**
- * Parse the current SQLite pointer. Obsolete JSON/shard containers require no compatibility reader.
+ * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
  * @param {unknown} input Parsed watcher or database manifest.
  * @returns {AnalysisProjectManifest} Validated current manifest; obsolete containers throw.
  */
 export const parseAnalysisProjectManifest = (input) => {
-    if (!input || typeof input !== "object")
+    if (!input || typeof input !== "object") {
         throw new Error("Invalid analysis project manifest.");
+    }
     const manifest = input;
-    if (manifest.schemaVersion > 3)
+    if (manifest.schemaVersion > 3) {
         throw new Error(`Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3; refusing to downgrade.`);
+    }
     validateAnalysisProjectManifest(manifest);
-    if (manifest.db !== "analysis.sqlite")
+    if (manifest.db !== "analysis.sqlite") {
         throw new Error("Legacy analysis storage is no longer supported; use a SQLite project.");
+    }
     return manifest;
 };
 /**
  * Open the existing database selected by a validated pointer, without creating missing files.
+ * Requires a readable, valid analysis.json even when the database exists. Opening checks the
+ * physical format, not every record; snapshot loaders perform semantic validation.
  * @param {string} directory Project root containing analysis.json.
- * @returns {SqliteAnalysisStore} Owned connection; the caller must close it.
+ * @returns {SqliteAnalysisStore} Owned connection; close exactly once in a finally block.
  */
 export const openAnalysisProjectStore = (directory) => {
     const manifest = parseAnalysisProjectManifest(JSON.parse(fs.readFileSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8")));
@@ -47,23 +52,27 @@ const loadProject = (directory, runtime, createProjection) => {
             const manifest = parseAnalysisProjectManifest(store.manifest());
             const shards = store.loadShards(false);
             validateLoadedShards(shards, manifest);
-            if (!runtime && !createProjection)
+            if (!runtime && !createProjection) {
                 return { manifest, shards };
+            }
             const validate = createRuntimeRecordValidator(manifest, shards.evidence, false);
             const records = [];
             const projection = createProjection?.();
             try {
                 for (const record of store.runtimeRecords()) {
                     validate(record);
-                    if (projection)
+                    if (projection) {
                         projection.push(record);
-                    else
+                    }
+                    else {
                         records.push(record);
+                    }
                 }
                 // Complete materializations retain stable-ID ordering. Streaming projections must
                 // not sort a project-sized runtime table merely because the physical layout changed.
-                if (!projection)
+                if (!projection) {
                     records.sort(compareRuntimeRecordIds);
+                }
                 return {
                     manifest,
                     shards: { ...shards, runtime: projection ? projection.finish() : records },
@@ -80,6 +89,7 @@ const loadProject = (directory, runtime, createProjection) => {
 };
 /**
  * Load and validate the complete project, including all runtime facts.
+ * Closes its connection before returning; editing the result alone changes nothing on disk.
  * @param {string} directory Existing project root.
  * @returns {LoadedAnalysisProject} Complete validated project; large runtime histories are materialized.
  */
@@ -96,13 +106,16 @@ export const loadAnalysisProjectView = (directory, createProjection) => {
 };
 /**
  * Atomically create or replace all records, including runtime. Use view updates to preserve history.
+ * Samples the current revision at call time, so it cannot detect an edit derived from an older
+ * caller snapshot. Editing clients must use the explicit revision-checked commit APIs instead.
  * @param {string} directory Project root to create or replace.
  * @param {AnalysisProject} project Complete replacement, including runtime history.
  * @returns {AnalysisProjectManifest} Committed manifest and next revision.
  */
 export const writeAnalysisProject = (directory, project) => publishAnalysisProject(directory, project).manifest;
 /**
- * Checks that a loaded ROM matches the project's stored identity.
+ * Throw if the ROM's full-file hash, headerless-content hash, or copier-header size differs.
+ * Does not open the manifest's source path or alter the supplied ROM.
  * @param {AnalysisProjectManifest} manifest Project manifest.
  * @param {RomImage} rom ROM that should be used with this project.
  * @returns {void}
@@ -122,8 +135,9 @@ export const validateProjectRom = (manifest, rom) => {
  */
 export const validateAnalysisProject = (directory, rom) => {
     const project = loadAnalysisProject(directory);
-    if (rom)
+    if (rom) {
         validateProjectRom(project.manifest, rom);
+    }
     return project;
 };
 //# sourceMappingURL=project-store.js.map

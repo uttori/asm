@@ -60,8 +60,9 @@ dw (endof(Maps) - startof(Maps)) / countof(Maps)`,
       "bytesof(Maps.offset)",
       "startof()",
       "endof(Maps, Maps)",
-    ])
+    ]) {
       t.throws(() => assemble(`${header}\ndw ${expression}`, incremental));
+    }
   });
   test(`typed fields are non-emitting and named records use layout order (${mode})`, (t) => {
     const assembler = assemble(

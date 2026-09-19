@@ -89,7 +89,9 @@ test("runtime evidence preserves contradictory state and unions observed indirec
   t.is(second.updated.analysis, 1);
   const override = second.shards.analysis[0];
   t.is(override.kind, "target-override");
-  if (override.kind !== "target-override") return;
+  if (override.kind !== "target-override") {
+    return;
+  }
   t.deepEqual(override.targets, [0x809000, 0x80a000]);
   t.deepEqual(override.evidence, ["runtime:trace:a", "runtime:trace:b"]);
 

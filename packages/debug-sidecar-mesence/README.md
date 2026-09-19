@@ -1,17 +1,46 @@
-# `@uttori/asm-debug-sidecar-mesence`
+# @uttori/asm-debug-sidecar-mesence
 
-Clean-room MIT translator between Uttori ASM's emulator-neutral `DebugBackend` and the bounded debugger protocol implemented by the separately maintained MesenCE spike.
+Node.js process host and protocol translator for MesenCE, used by the Uttori ASM debugger.
+Experimental. Requires a separately patched MesenCE runtime matching its manifest; stock MesenCE is not a compatible live-debug runtime.
 
-This package does not contain, copy, link, or distribute MesenCE code. MesenCE remains a separate GPL program and distribution artifact. The candidate-specific command names and response validation live below the neutral backend boundary so editor, DAP, and analysis code never receive MesenCE types.
+## Install
 
-`MesenDebugBackend` currently translates coherent stopped state plus 65816, SPC700, and SuperFX threads, registers, stack frames, side-effect-suppressed named memory, project-native disassembly, exact steps, 65816 execute breakpoints, reconnects, and ordered lifecycle events. The SuperFX surface includes its debugger instruction PC, pipelined R15, selector registers, program-read buffer, banks, SFR flags, and cycles so ALT state and delayed branches remain visible. Since the experimental native protocol is request/response only, the translator uses one bounded status request at a time while running to synthesize a stopped event. Instruction tracing and SPC700/SuperFX breakpoint sets remain explicitly unsupported.
+Requires Node.js 26 or newer for standalone use. Exposes ESM JavaScript and TypeScript declarations.
+The VS Code extension includes its own build for the editor's runtime.
 
-`MesenProcessHost` verifies a versioned source/patch/binary/ROM/resource manifest before launching a separate portable MesenCE runtime. The generated `uttori-asm-debug-sidecar-mesence` executable accepts explicit manifest, emulator, ROM, and portable-runtime paths. Its stdout is reserved for the authenticated neutral protocol; the editor session token is stripped before launch and replaced by a distinct private token used only on numeric loopback.
+```sh
+npm install @uttori/asm-debug-sidecar-mesence
+npx uttori-asm-debug-sidecar-mesence --help
+```
 
-The standard opt-in live suite uses `UTTORI_MESEN_LIVE=1` and the intentional local Secret of Mana fixture. The separate `UTTORI_MESEN_SUPERFX_LIVE=1` case uses the manifest-declared local Yoshi's Island fixture, waits for active GSU execution, aligns to a GSU-owned stop, and proves one exact pipelined instruction through the built sidecar. Neither ROM, native runtime, manifest, nor GPL-side patch is included in this MIT package.
+## Runtime setup
 
-The generated 157,886-byte `out/sidecar.mjs` bundle (SHA-256 `bebfdd84606d4ebad23bf8b90716846f1f5ee50a9272cc2824390f71106a4bee`) passes the complete live 65816 conformance suite plus exact SPC700 and active SuperFX cases. The package's narrow `./profile` export contains only immutable backend/capability data so the VS Code host can negotiate before launch without importing translator, process-host, native-service, or GPL implementation.
+Provide the runtime manifest, matching emulator executable, ROM, and isolated runtime directory.
+The host verifies declared hashes and resources before launch. Its private connection is restricted
+to numeric loopback addresses.
 
-Before changing this translator or the separately licensed service, read the clean-room, capability,
-and native-evidence rules in [CONTRIBUTING.md](../../CONTRIBUTING.md) and the
-[debug architecture](../../docs/disassembler-architecture.md#debug-architecture).
+The debugger host supplies `UTTORI_ASM_DEBUG_SESSION` and starts:
+
+```sh
+uttori-asm-debug-sidecar-mesence --manifest runtime.json --mesen /path/to/emulator \
+  --rom game.sfc --runtime-dir /path/to/runtime
+```
+
+This command serves framed protocol messages on stdin/stdout; it is not an interactive terminal
+session. In VS Code, use **Assembly: Configure Emulator Runtime**, then **Debug in Emulator**.
+
+Supports negotiated 65816, SPC700, and Super FX inspection and exact stepping. Instruction tracing and SPC700/Super FX breakpoints are unsupported. Capabilities and runtime
+identity must match the host profile. Native platform validation is tracked separately from the
+portable JavaScript tests.
+
+Exports: the package root for host/backend APIs, `./profile` for capability data, and
+`./runtime-manifest` for manifest parsing and process hosting. Emulator binaries, ROMs, native
+resources, and their separate licenses are not included.
+
+## Documentation and support
+
+[VS Code setup](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md#live-debugging) ·
+[Protocol reference](https://github.com/uttori/asm/blob/master/packages/debug-adapter/PROTOCOL.md).
+
+[Report an issue](https://github.com/uttori/asm/issues). Licensed under
+[MIT](https://github.com/uttori/asm/blob/master/LICENSE).

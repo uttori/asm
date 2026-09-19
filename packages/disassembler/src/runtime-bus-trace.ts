@@ -60,9 +60,9 @@ export interface RuntimeBusTraceSource {
   readonly metadata: RuntimeBusTraceMetadata;
   readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
   /** Optional native output whose final path/inode read() validates before resolving.
-   * It is cataloged as an external archive; live analysis does not duplicate recording bytes.
+   * Its identity is rechecked before publication to reject replacement of a completed capture.
    */
-  readonly completedArchiveFile?: string;
+  readonly completedFile?: string;
 }
 
 /** ROM guard and distinct-fact limit; the default is two million variants, with an eight-million hard cap. */
@@ -134,17 +134,24 @@ export interface RuntimeBusTraceImportResult {
  * @returns {number | bigint} Exact u64; common small values avoid BigInt allocation. Invalid input throws.
  */
 const unsigned = (value: unknown): number | bigint => {
-  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value))
+  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value)) {
     throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
+  }
   // Most event counters fit in 15 digits, which is always exact and avoids a
   // BigInt allocation. Sixteen-digit strings straddle the safe-integer boundary;
   // converting those to Number before checking the range could already round.
-  if (value.length <= 15) return Number(value);
+  if (value.length <= 15) {
+    return Number(value);
+  }
   const number = BigInt(value);
-  if (number > 0xffffffffffffffffn) throw new Error("Bus trace integer exceeds u64.");
+  if (number > 0xffffffffffffffffn) {
+    throw new Error("Bus trace integer exceeds u64.");
+  }
   // Normalize every safe value to Number so sequence equality against the Number
   // event count remains valid beyond the 15-digit fast path; larger values stay exact.
-  if (number <= BigInt(Number.MAX_SAFE_INTEGER)) return Number(number);
+  if (number <= BigInt(Number.MAX_SAFE_INTEGER)) {
+    return Number(number);
+  }
   return number;
 };
 
@@ -172,10 +179,12 @@ export const validateRuntimeBusTraceMetadata = (value: unknown): RuntimeBusTrace
     typeof meta.producer?.revision !== "string" ||
     !meta.producer.revision ||
     meta.clock?.id !== "snes.master"
-  )
+  ) {
     throw new Error("Invalid SNES bus trace metadata.");
-  if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0)
+  }
+  if (unsigned(meta.clock.numerator) === 0 || unsigned(meta.clock.denominator) === 0) {
     throw new Error("Bus trace clock frequency must be positive.");
+  }
   return {
     format: RUNTIME_BUS_TRACE_FORMAT,
     schemaVersion: 1,
@@ -205,13 +214,16 @@ export const createRuntimeBusTraceImporter = (
   storage?: RuntimeTraceImporterStorage,
 ): { push: (chunk: unknown) => void; finish: () => RuntimeBusTraceImportResult } => {
   const meta = validateRuntimeBusTraceMetadata(metadata);
-  if (meta.romContentSha256 !== context.projectRomContentSha256)
+  if (meta.romContentSha256 !== context.projectRomContentSha256) {
     throw new Error("ROM/project mismatch: bus capture does not match the destination ROM.");
-  if (typeof context.sourceName !== "string" || !context.sourceName)
+  }
+  if (typeof context.sourceName !== "string" || !context.sourceName) {
     throw new Error("Bus capture source name must not be empty.");
+  }
   const limit = context.maxIndexRecords ?? 2_000_000;
-  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 8_000_000)
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 8_000_000) {
     throw new Error("Bus trace fact budget must be in [1, 8000000].");
+  }
   const memory = new Map<string, { fact: RuntimeTraceIndexedFact; count: number }>();
   const index: RuntimeTraceFactIndex = storage?.index ?? {
     add: (key, create) => {
@@ -258,36 +270,46 @@ export const createRuntimeBusTraceImporter = (
    * @returns {void} Throws and discards the index on any invalid event or exhausted fact budget.
    */
   const push = (chunk: unknown): void => {
-    if (finished || failed) throw new Error("Bus trace importer is no longer writable.");
+    if (finished || failed) {
+      throw new Error("Bus trace importer is no longer writable.");
+    }
     try {
       const accesses = (chunk as { accesses?: unknown } | null)?.accesses;
-      if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095)
+      if (!Array.isArray(accesses) || accesses.length < 1 || accesses.length > 4095) {
         throw new Error("Bus trace chunks require 1–4095 accesses.");
+      }
       // At most 4,095 normalized lines amortize native hash.update() calls without
       // retaining the whole trace. Joining must add no chunk-boundary bytes.
       const hashLines: string[] = [];
       for (const item of accesses) {
-        if (!item || typeof item !== "object") throw new Error("Invalid bus trace event.");
+        if (!item || typeof item !== "object") {
+          throw new Error("Invalid bus trace event.");
+        }
         const access = item as RuntimeBusAccess | RuntimeTransferBoundary;
         const sequence = unsigned(access.sequence);
         const ordinal = unsigned(access.ordinal);
         const cycle = unsigned(access.cycle);
         // Accepted sequence counts are safe Numbers from unsigned(); comparing
         // directly avoids allocating a BigInt for each otherwise-small counter.
-        if (streamEvents === Number.MAX_SAFE_INTEGER || sequence !== streamEvents + 1)
+        if (streamEvents === Number.MAX_SAFE_INTEGER || sequence !== streamEvents + 1) {
           throw new Error(
             "Bus trace event sequence is not contiguous or exceeds the safe count range.",
           );
-        if (cycle < previousCycle) throw new Error("Bus trace master clock moved backwards.");
+        }
+        if (cycle < previousCycle) {
+          throw new Error("Bus trace master clock moved backwards.");
+        }
         const hasOwner = ordinal > 0;
-        if (hasOwner !== (access.context === "instruction"))
+        if (hasOwner !== (access.context === "instruction")) {
           throw new Error("Bus trace instruction context and ordinal disagree.");
+        }
         // Ordinals may skip instructions without bus accesses, and zero denotes an unowned interval.
         if (
           ordinal > 0 &&
           (ordinal < lastOrdinal || (ordinal === lastOrdinal && access.pc !== lastPc))
-        )
+        ) {
           throw new Error("Bus trace instruction ownership moved backwards or changed PC.");
+        }
         if (
           !Number.isInteger(access.hcounter) ||
           access.hcounter < 0 ||
@@ -295,8 +317,9 @@ export const createRuntimeBusTraceImporter = (
           !Number.isInteger(access.vcounter) ||
           access.vcounter < 0 ||
           access.vcounter >= 313
-        )
+        ) {
           throw new Error("Bus trace raster position is out of range.");
+        }
         previousCycle = cycle;
         firstCycle ??= access.cycle;
         if (ordinal > 0) {
@@ -305,8 +328,9 @@ export const createRuntimeBusTraceImporter = (
         }
         streamEvents++;
         if ("kind" in access) {
-          if (!transfers || access.kind !== "transfer")
+          if (!transfers || access.kind !== "transfer") {
             throw new Error("Transfer markers require the negotiated transfer scope.");
+          }
           const marker = validateRuntimeTransferBoundary(access);
           transfers.push(marker);
           markerEvents++;
@@ -320,8 +344,9 @@ export const createRuntimeBusTraceImporter = (
           [0x2104, 0x2118, 0x2119, 0x2122].includes(port);
         // This scope promises a native decision on every data-port write. A missing
         // annotation or a legacy stream carrying new fields is a corrupt source.
-        if ((access.ppu !== undefined) !== Boolean(ppu && dataPort))
+        if ((access.ppu !== undefined) !== Boolean(ppu && dataPort)) {
           throw new Error("Missing or out-of-scope native PPU effect.");
+        }
         const effect: RuntimePPUEffect | undefined = access.ppu;
         if (
           access.ppu &&
@@ -331,8 +356,9 @@ export const createRuntimeBusTraceImporter = (
             !Number.isInteger(access.ppu.vcounter) ||
             access.ppu.vcounter < 0 ||
             access.ppu.vcounter >= 313)
-        )
+        ) {
           throw new Error("Invalid PPU decision raster.");
+        }
         const fact = {
           // Presence is not truthiness: null/false/zero annotations must reach
           // validation and fail, rather than masquerade as an omitted effect.
@@ -350,12 +376,17 @@ export const createRuntimeBusTraceImporter = (
         // Validate once and reuse its canonical effect, dropping event-owned
         // raster fields without a second normalization/allocation pass.
         const normalizedEffect = validateRuntimeBusFact(fact);
-        if (normalizedEffect) fact.ppu = normalizedEffect;
+        if (normalizedEffect) {
+          fact.ppu = normalizedEffect;
+        }
         // Fact reuse cannot skip these ordered state machines: identical byte
         // accesses can occur in different transfer, latch and rendering contexts.
         transfers?.push(access);
-        if (ppu) ppu.push(access);
-        else graphics.push(access);
+        if (ppu) {
+          ppu.push(access);
+        } else {
+          graphics.push(access);
+        }
         const factJson = JSON.stringify(fact);
         let key = factKeys.get(factJson);
         if (key === undefined) {
@@ -376,14 +407,17 @@ export const createRuntimeBusTraceImporter = (
           }))
         ) {
           facts++;
-          if (facts > limit)
+          if (facts > limit) {
             throw new Error(`Bus trace exceeds the ${limit} distinct-fact budget.`);
+          }
         }
         // Validated u64 decimal strings and integer raster coordinates have a
         // unique JSON spelling. Reuse fact JSON and hash once per bounded chunk,
         // retaining byte-for-byte compatibility with the v1 normalized stream.
         let line = `["${access.sequence}","${access.ordinal}","${access.cycle}",${factJson},${access.hcounter},${access.vcounter}`;
-        if (access.ppu) line += `,${access.ppu.hcounter},${access.ppu.vcounter}`;
+        if (access.ppu) {
+          line += `,${access.ppu.hcounter},${access.ppu.vcounter}`;
+        }
         hashLines.push(line + "]\n");
         observed++;
         contexts[access.context]++;
@@ -404,9 +438,14 @@ export const createRuntimeBusTraceImporter = (
           };
           activity.set(groupKey, group);
         }
-        if (access.direction === "read") group.reads++;
-        else group.writes++;
-        if (ordinal === 0) group.unowned++;
+        if (access.direction === "read") {
+          group.reads++;
+        } else {
+          group.writes++;
+        }
+        if (ordinal === 0) {
+          group.unowned++;
+        }
         group.lastSequence = access.sequence;
         group.lastCycle = access.cycle;
       }
@@ -445,8 +484,9 @@ export const createRuntimeBusTraceImporter = (
    * @returns {RuntimeBusTraceImportResult} Aggregates and provenance; releases the temporary index even if the sink fails.
    */
   const finish = (): RuntimeBusTraceImportResult => {
-    if (finished || failed)
+    if (finished || failed) {
       throw new Error("Bus trace importer cannot be finalized again or after failure.");
+    }
     finished = true;
     try {
       const sourceSha256 = hash.digest("hex");
@@ -454,16 +494,20 @@ export const createRuntimeBusTraceImporter = (
       const evidenceId = `evidence:bus-trace:${sourceSha256}`;
       const runtime: RuntimeEvidenceRecord[] = [];
       for (const { fact, count } of index.values()) {
-        if (fact.kind !== "memory" || fact.record.kind !== "runtime-bus-access")
+        if (fact.kind !== "memory" || fact.record.kind !== "runtime-bus-access") {
           throw new Error("Bus trace index contains an unexpected fact kind.");
+        }
         const record: RuntimeBusAccessRecord = {
           ...fact.record,
           id: `runtime:bus-trace:${sourceSha256}:${fact.record.id}`,
           count,
           evidence: [evidenceId],
         };
-        if (storage?.onRecord) storage.onRecord(record);
-        else runtime.push(record);
+        if (storage?.onRecord) {
+          storage.onRecord(record);
+        } else {
+          runtime.push(record);
+        }
       }
       const transferSummary = transfers?.finish();
       const graphicsSummary = graphics.finish();
@@ -477,15 +521,16 @@ export const createRuntimeBusTraceImporter = (
           "latched",
           "byteWrites",
           "renderingRestricted",
-        ] as const)
+        ] as const) {
           transferCounts[`ppu.${key}`] = ppuSummary[key];
+        }
       }
       if (transferSummary) {
         transferCounts.streamEvents = streamEvents;
         transferCounts.transferMarkers = markerEvents;
-        // These bounded totals survive archive expiry with import provenance. Full boundary
+        // These bounded totals are retained with import provenance. Full boundary
         // configurations and ordered transfer history stay in the raw capture.
-        for (const group of transferSummary.activity)
+        for (const group of transferSummary.activity) {
           for (const field of [
             "complete",
             "interrupted",
@@ -495,8 +540,10 @@ export const createRuntimeBusTraceImporter = (
             "attemptedSlots",
             "reads",
             "writes",
-          ] as const)
+          ] as const) {
             transferCounts[`${group.actor}${group.channel}.${field}`] = group[field];
+          }
+        }
       }
       const report: ImportReport = {
         id: `import:bus-trace:${sourceSha256}`,

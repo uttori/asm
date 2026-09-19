@@ -61,10 +61,12 @@ const conflictReport = (runtime) => {
             observation.field,
         ].join(":");
         const group = groups.get(key);
-        if (group)
+        if (group) {
             group.push(observation);
-        else
+        }
+        else {
             groups.set(key, [observation]);
+        }
     }
     const conflicts = [];
     for (const [key, group] of groups) {
@@ -72,13 +74,16 @@ const conflictReport = (runtime) => {
         for (const observation of group) {
             const valueKey = stateValueKey(observation.value);
             const entries = byValue.get(valueKey);
-            if (entries)
+            if (entries) {
                 entries.push(observation);
-            else
+            }
+            else {
                 byValue.set(valueKey, [observation]);
+            }
         }
-        if (byValue.size < 2)
+        if (byValue.size < 2) {
             continue;
+        }
         const first = group[0];
         conflicts.push({
             id: `runtime-conflict:${key}`,
@@ -103,8 +108,9 @@ const explanationReport = (shards) => {
     const explanations = [];
     for (const annotation of shards.annotations) {
         const evidence = annotation.evidence.filter((id) => runtimeEvidence.has(id));
-        if (evidence.length === 0)
+        if (evidence.length === 0) {
             continue;
+        }
         const stateFields = Object.keys(annotation.state ?? {}).sort();
         explanations.push({
             recordId: annotation.id,
@@ -115,11 +121,13 @@ const explanationReport = (shards) => {
         });
     }
     for (const record of shards.analysis) {
-        if (record.kind !== "target-override")
+        if (record.kind !== "target-override") {
             continue;
+        }
         const evidence = record.evidence.filter((id) => runtimeEvidence.has(id));
-        if (evidence.length === 0)
+        if (evidence.length === 0) {
             continue;
+        }
         explanations.push({
             recordId: record.id,
             detail: `Runtime observation resolves control flow to ${record.targets
@@ -157,8 +165,9 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
                 targets: [...new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
                 evidence: sortedUnique([...left.evidence, ...right.evidence]),
             };
-            if (canonicalJson(current) === canonicalJson(merged))
+            if (canonicalJson(current) === canonicalJson(merged)) {
                 existing[kind]++;
+            }
             else {
                 records.set(record.id, merged);
                 updated[kind]++;
@@ -184,11 +193,13 @@ export const mergeRuntimeEvidence = (shards, batch) => {
     // or overlapping observations could be counted twice under different byte/state identities.
     const traceProfiles = new Map();
     for (const report of [...shards.imports, ...(batch.imports ?? [])]) {
-        if (report.format !== "uttori-asm-instruction-trace")
+        if (report.format !== "uttori-asm-instruction-trace") {
             continue;
+        }
         if (traceProfiles.has(report.sourceSha256) &&
-            traceProfiles.get(report.sourceSha256) !== report.indexProfile)
+            traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
             throw new Error(`Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`);
+        }
         traceProfiles.set(report.sourceSha256, report.indexProfile);
     }
     const added = emptyCounts();

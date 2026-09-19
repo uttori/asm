@@ -98,7 +98,9 @@ export const configuredEmulatorRuntime = (
   resource?: Uri,
 ): EmulatorRuntimeBinding | undefined => {
   const folder = runtimeWorkspace(resource);
-  if (!folder) return undefined;
+  if (!folder) {
+    return undefined;
+  }
   const saved = context.globalState.get<EmulatorRuntimeBindings>(EMULATOR_RUNTIME_BINDINGS_KEY, {})[
     runtimeWorkspaceKey(folder)
   ];
@@ -127,8 +129,12 @@ const chooseLocalPath = async (
     ...(options.filters ? { filters: options.filters } : {}),
   });
   const uri = selected?.[0];
-  if (!uri) return undefined;
-  if (uri.scheme !== "file") throw new Error(`${title} must be on the local filesystem.`);
+  if (!uri) {
+    return undefined;
+  }
+  if (uri.scheme !== "file") {
+    throw new Error(`${title} must be on the local filesystem.`);
+  }
   return uri.fsPath;
 };
 
@@ -142,10 +148,13 @@ export const configureEmulatorRuntime = async (
   context: ExtensionContext,
   resource?: Uri,
 ): Promise<EmulatorRuntimeBinding | undefined> => {
-  if (!workspace.isTrusted)
+  if (!workspace.isTrusted) {
     throw new Error("Configuring an emulator runtime requires a trusted workspace.");
+  }
   const folder = runtimeWorkspace(resource);
-  if (!folder) throw new Error("Open a workspace folder before configuring an emulator runtime.");
+  if (!folder) {
+    throw new Error("Open a workspace folder before configuring an emulator runtime.");
+  }
   const selectedBackend = await window.showQuickPick(
     [
       {
@@ -162,27 +171,38 @@ export const configureEmulatorRuntime = async (
     ],
     { placeHolder: "Select the live emulator backend" },
   );
-  if (!selectedBackend) return undefined;
+  if (!selectedBackend) {
+    return undefined;
+  }
   const runtimeManifest = await chooseLocalPath("Select the emulator runtime manifest", {
     files: true,
     folders: false,
     filters: { "Runtime manifest": ["json"] },
   });
-  if (!runtimeManifest) return undefined;
+  if (!runtimeManifest) {
+    return undefined;
+  }
   const emulator = await chooseLocalPath("Select the emulator executable", {
     files: true,
     folders: true,
   });
-  if (!emulator) return undefined;
+  if (!emulator) {
+    return undefined;
+  }
   const runtimeDirectory = await chooseLocalPath("Select the emulator runtime directory", {
     files: false,
     folders: true,
   });
-  if (!runtimeDirectory) return undefined;
+  if (!runtimeDirectory) {
+    return undefined;
+  }
 
   const manifest = JSON.parse(fs.readFileSync(runtimeManifest, "utf8")) as unknown;
-  if (selectedBackend.backend === "ares") parseAresRuntimeManifest(manifest);
-  else parseMesenRuntimeManifest(manifest);
+  if (selectedBackend.backend === "ares") {
+    parseAresRuntimeManifest(manifest);
+  } else {
+    parseMesenRuntimeManifest(manifest);
+  }
   const binding: EmulatorRuntimeBinding = {
     backend: selectedBackend.backend,
     runtimeManifest,
@@ -280,23 +300,29 @@ const requiredLivePath = (
   name: string,
   folder: WorkspaceFolder | undefined,
 ): string => {
-  if (!value) throw new Error(`Live Uttori ASM debugging requires '${name}'.`);
+  if (!value) {
+    throw new Error(`Live Uttori ASM debugging requires '${name}'.`);
+  }
   return resolvedPath(value, folder);
 };
 
 const stringField = (value: unknown, name: string): string => {
-  if (typeof value !== "string" || value.length === 0)
+  if (typeof value !== "string" || value.length === 0) {
     throw new Error(`Trace identity '${name}' must be a non-empty string.`);
+  }
   return value;
 };
 
 const traceMetadata = (session: DebugSession, trace: TraceCapability): EditorTraceMetadata => {
   const loaded = sessionContexts.get(session.id);
-  if (!loaded) throw new Error("No loaded debug-session identity is available.");
+  if (!loaded) {
+    throw new Error("No loaded debug-session identity is available.");
+  }
   const map = loaded.map;
   const romContentSha256 = stringField(map.output?.sha256, "debugMap.output.sha256").toLowerCase();
-  if (!/^[\da-f]{64}$/.test(romContentSha256))
+  if (!/^[\da-f]{64}$/.test(romContentSha256)) {
     throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
+  }
   return { ...trace, romContentSha256, producer: loaded.producer };
 };
 
@@ -304,11 +330,12 @@ const traceProducer = (session: DebugSession, map: DebugMap): EditorTraceMetadat
   const configuration = session.configuration as UttoriDebugConfiguration;
   const folder = session.workspaceFolder;
   const kind = configuration.backend ?? "replay";
-  if (kind === "replay")
+  if (kind === "replay") {
     return {
       id: "debug-map-replay",
       revision: stringField(map.fingerprint?.value, "debugMap.fingerprint.value"),
     };
+  }
   const manifestFile = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
   const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as Record<string, unknown>;
   const patch = stringField(manifest.patchSha256, "runtimeManifest.patchSha256");
@@ -325,8 +352,12 @@ const chooseTrace = async (session: DebugSession): Promise<TraceCapability | und
     traces?: TraceCapability[];
   };
   const traces = result.traces ?? [];
-  if (traces.length === 0) throw new Error("The active backend has no instruction trace stream.");
-  if (traces.length === 1) return traces[0];
+  if (traces.length === 0) {
+    throw new Error("The active backend has no instruction trace stream.");
+  }
+  if (traces.length === 1) {
+    return traces[0];
+  }
   const selected = await window.showQuickPick(
     traces.map((trace) => ({
       label: `${trace.architecture} / ${trace.addressSpace}`,
@@ -344,19 +375,26 @@ const defaultTraceUri = (
   bus: boolean,
 ): Uri | undefined => {
   const root = session.workspaceFolder?.uri.fsPath ?? workspace.workspaceFolders?.[0]?.uri.fsPath;
-  if (!root) return undefined;
+  if (!root) {
+    return undefined;
+  }
   const timestamp = new Date().toISOString().replaceAll(":", "-");
   const prefix = bus ? "bus-trace" : "instruction-trace";
   return Uri.file(path.join(root, `${prefix}-${timestamp}.${extension}`));
 };
 
 const startRuntimeTraceWithLease = async (): Promise<void> => {
-  if (activeTraceRecording) throw new Error("A trace recording is already active.");
+  if (activeTraceRecording) {
+    throw new Error("A trace recording is already active.");
+  }
   const session = debug.activeDebugSession;
-  if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE)
+  if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE) {
     throw new Error("Start an Uttori ASM debug session before recording a trace.");
+  }
   const trace = await chooseTrace(session);
-  if (!trace) return;
+  if (!trace) {
+    return;
+  }
   const traceMode = workspace
     .getConfiguration("asm", session.workspaceFolder?.uri)
     .get<string>("debug.traceMode", "live");
@@ -377,16 +415,25 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     filters: { "Uttori ASM trace": [lossless ? "act2" : "json"] },
     saveLabel: "Start Recording",
   });
-  if (!destination) return;
-  if (destination.scheme !== "file")
+  if (!destination) {
+    return;
+  }
+  if (destination.scheme !== "file") {
     throw new Error("Runtime traces must be written to a local file.");
+  }
   const metadata = traceMetadata(session, trace);
   if (lossless) {
     let captureScope: import("@uttori/asm-debug-adapter").CaptureScopeV2 =
       "snes.65816.instructions";
-    if (bus) captureScope = "snes.cpu-bus";
-    if (transfers) captureScope = "snes.cpu-bus-transfers";
-    if (ppu) captureScope = "snes.cpu-bus-ppu";
+    if (bus) {
+      captureScope = "snes.cpu-bus";
+    }
+    if (transfers) {
+      captureScope = "snes.cpu-bus-transfers";
+    }
+    if (ppu) {
+      captureScope = "snes.cpu-bus-ppu";
+    }
     const nativeFile =
       workspace
         .getConfiguration("asm", session.workspaceFolder?.uri)
@@ -396,15 +443,17 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     const liveEnabled = nativeFile && bus && settings.get<boolean>("debug.liveBusAnalysis", false);
     // A stopped capture may still be catching up. Bound the editor to one
     // analysis worker, even if a new recording is requested during that drain.
-    if (liveEnabled && liveAnalyses.size > 0)
+    if (liveEnabled && liveAnalyses.size > 0) {
       throw new Error(
         "Previous live bus analysis is still finishing. Wait, or run Assembly: Stop Live Bus Analysis before starting another live recording.",
       );
+    }
     const liveProject = liveEnabled
       ? await chooseLiveBusProject(metadata.romContentSha256)
       : undefined;
-    if (liveEnabled && !liveProject)
+    if (liveEnabled && !liveProject) {
       throw new Error("Live analysis requires a matching analysis project.");
+    }
     const recorder = await recorderType.create({
       ...metadata,
       file: destination.fsPath,
@@ -482,7 +531,9 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
     }
     activeTraceRecording = { session, recorder, live };
     void recorder.completion.catch((error: unknown) => {
-      if (activeTraceRecording?.recorder === recorder) activeTraceRecording = undefined;
+      if (activeTraceRecording?.recorder === recorder) {
+        activeTraceRecording = undefined;
+      }
       void window.showErrorMessage(
         `Assembly lossless capture failed: ${error instanceof Error ? error.message : String(error)}. The partial ACT2 archive retains committed evidence; emulation remains stopped on producer failure.`,
       );
@@ -521,7 +572,9 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
   }
   activeTraceRecording = { session, recorder };
   void recorder.completion.catch((error: unknown) => {
-    if (activeTraceRecording?.recorder !== recorder) return;
+    if (activeTraceRecording?.recorder !== recorder) {
+      return;
+    }
     activeTraceRecording = undefined;
     void window.showErrorMessage(
       `Assembly trace recording failed: ${error instanceof Error ? error.message : String(error)}`,
@@ -549,7 +602,9 @@ const startRuntimeTrace = async (): Promise<void> => {
 
 const stopRuntimeTrace = async (analyze = false): Promise<void> => {
   const active = activeTraceRecording;
-  if (!active) throw new Error("No Uttori ASM trace recording is active.");
+  if (!active) {
+    throw new Error("No Uttori ASM trace recording is active.");
+  }
   activeTraceRecording = undefined;
   const summary = await active.recorder.stop();
   // Bus evidence has its own importer: observed accesses cannot supply instruction bytes or code seeds.
@@ -570,8 +625,9 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
       `Assembly: ${summary.observedEvents.toLocaleString()} CPU/DMA/HDMA capture event(s) retained; zero dropped. Wrote ${summary.file}.`,
       "Import Bus Activity",
     );
-    if (action === "Import Bus Activity")
+    if (action === "Import Bus Activity") {
       await commands.executeCommand(IMPORT_BUS_TRACE_COMMAND, Uri.file(summary.file));
+    }
     return;
   }
   const total = summary.observedEvents + summary.droppedEvents;
@@ -589,8 +645,9 @@ const stopRuntimeTrace = async (analyze = false): Promise<void> => {
     `Assembly: ${counts}. Wrote ${summary.file}.`,
     "Import Trace and Update Disassembly",
   );
-  if (action === "Import Trace and Update Disassembly")
+  if (action === "Import Trace and Update Disassembly") {
     await commands.executeCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, Uri.file(summary.file));
+  }
 };
 
 const runTraceCommand = (command: () => Promise<void>): void => {
@@ -604,7 +661,9 @@ const runTraceCommand = (command: () => Promise<void>): void => {
 const debugSessionTerminated = (session: DebugSession): void => {
   sessionContexts.delete(session.id);
   const active = activeTraceRecording;
-  if (!active || active.session.id !== session.id) return;
+  if (!active || active.session.id !== session.id) {
+    return;
+  }
   activeTraceRecording = undefined;
   void active.recorder
     .finishIncomplete()
@@ -627,11 +686,13 @@ const createLiveBackend = (
   program: string,
   log: (message: string) => void,
 ): DebugBackend => {
-  if (!workspace.isTrusted)
+  if (!workspace.isTrusted) {
     throw new Error("Live Uttori ASM debugging requires a trusted workspace.");
+  }
   const kind = configuration.backend;
-  if (kind !== "ares" && kind !== "mesence")
+  if (kind !== "ares" && kind !== "mesence") {
     throw new Error(`Unsupported live Uttori ASM backend '${String(kind)}'.`);
+  }
   const manifest = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
   const emulator = requiredLivePath(configuration.emulator, "emulator", folder);
   const runtimeDirectory = requiredLivePath(
@@ -666,9 +727,12 @@ const createLiveBackend = (
         "--runtime-dir",
         runtimeDirectory,
       ];
-      if (kind === "ares" && configuration.aresSystem)
+      if (kind === "ares" && configuration.aresSystem) {
         args.push("--system", configuration.aresSystem);
-      if (kind === "ares" && configuration.fastBoot === false) args.push("--no-fast-boot");
+      }
+      if (kind === "ares" && configuration.fastBoot === false) {
+        args.push("--no-fast-boot");
+      }
       const transport = new NodeStdioSidecarTransport({
         command: process.execPath,
         args,
@@ -703,11 +767,14 @@ const loadConfiguration = (
   const output = new Uint8Array(fs.readFileSync(program));
   const map = JSON.parse(fs.readFileSync(mapFile, "utf8")) as DebugMap;
   const issues = validateDebugMap(map, output);
-  if (issues.length) throw new Error(issues.join(" "));
+  if (issues.length) {
+    throw new Error(issues.join(" "));
+  }
   const kind = configuration.backend ?? "replay";
   const backend = (() => {
-    if (kind !== "replay")
+    if (kind !== "replay") {
       return createLiveBackend(configuration, folder, extensionRoot, program, log);
+    }
     const script: ReplayScript = configuration.replay
       ? (JSON.parse(
           fs.readFileSync(resolvedPath(configuration.replay, folder), "utf8"),
@@ -725,8 +792,9 @@ const loadConfiguration = (
     programFile: program,
     ...(folder ? { workspaceRoot: folder.uri.fsPath } : {}),
   });
-  if (sourceRoot !== configuredSourceRoot)
+  if (sourceRoot !== configuredSourceRoot) {
     log(`Resolved debug-map source root ${configuredSourceRoot} → ${sourceRoot}.`);
+  }
   return {
     backend,
     map,
@@ -757,16 +825,18 @@ class InlineDebugAdapter implements DebugAdapter {
       onMessage: (message) => {
         if (message.type === "response" && !message.success) {
           log(`${message.command} failed: ${message.message}`);
-          if (message.command === "launch" || message.command === "attach")
+          if (message.command === "launch" || message.command === "attach") {
             void window.showErrorMessage(`Assembly debugger: ${message.message}`);
+          }
         } else if (message.type === "event" && message.event === "stopped") {
           log(
             "Paused. Inspect CALL STACK and VARIABLES in Run and Debug; use Step Into (F11) or Continue (F5). Capture commands observe execution only while it runs.",
           );
-        } else if (message.type === "event" && message.event === "continued")
+        } else if (message.type === "event" && message.event === "continued") {
           log("Emulator running.");
-        else if (message.type === "event" && message.event === "terminated")
+        } else if (message.type === "event" && message.event === "terminated") {
           log("Debug session ended.");
+        }
         this.#emitter.fire(message);
       },
     });
@@ -881,7 +951,9 @@ class UttoriDebugAdapterFactory implements DebugAdapterDescriptorFactory {
     // Analysis presentation is optional and must never prevent debugger startup.
     const updateAnnotations = async (): Promise<void> => {
       const annotation = await createDebugInstructionAnnotation(loaded.map);
-      if (sessionContexts.has(session.id)) instructionAnnotation = annotation;
+      if (sessionContexts.has(session.id)) {
+        instructionAnnotation = annotation;
+      }
     };
     void updateAnnotations().catch((error) =>
       log(`Optional annotations unavailable: ${String(error)}`),
@@ -904,7 +976,9 @@ export const registerDebugging = (extensionRoot: string): readonly Disposable[] 
   return [
     {
       dispose: () => {
-        for (const analysis of liveAnalyses) analysis.cancel();
+        for (const analysis of liveAnalyses) {
+          analysis.cancel();
+        }
       },
     },
     output,
@@ -918,7 +992,9 @@ export const registerDebugging = (extensionRoot: string): readonly Disposable[] 
     ),
     commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
     commands.registerCommand("asm.trace.cancelLiveAnalysis", () => {
-      for (const analysis of liveAnalyses) analysis.cancel();
+      for (const analysis of liveAnalyses) {
+        analysis.cancel();
+      }
     }),
     commands.registerCommand(UTTORI_TRACE_STOP_COMMAND, () =>
       runTraceCommand(() => stopRuntimeTrace(false)),

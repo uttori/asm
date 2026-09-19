@@ -18,8 +18,11 @@ const locationKey = (addressSpace: string, address: number): string => `${addres
 
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
   const entries = map.get(key);
-  if (entries) entries.push(value);
-  else map.set(key, [value]);
+  if (entries) {
+    entries.push(value);
+  } else {
+    map.set(key, [value]);
+  }
 };
 
 /**
@@ -51,7 +54,9 @@ export const createDebugInstructionAnnotation = async (
       // Debug startup remains available when an unrelated analysis project is invalid.
     }
   }
-  if (!directories.length) return undefined;
+  if (!directories.length) {
+    return undefined;
+  }
   const cached = new Map<string, Promise<string | undefined>>();
   const pending: { address: DebugAddress; resolve: (value: string | undefined) => void }[] = [];
   const flush = async (): Promise<void> => {
@@ -81,8 +86,9 @@ export const createDebugInstructionAnnotation = async (
           );
           for (const annotation of annotations) {
             append(byAddress, locationKey(annotation.addressSpace, annotation.address), annotation);
-            for (const output of annotation.outputOffsets)
+            for (const output of annotation.outputOffsets) {
               append(byOutputOffset, output, annotation);
+            }
           }
         } catch {
           // A failed optional metadata query must leave debugger disassembly available.
@@ -113,15 +119,20 @@ export const createDebugInstructionAnnotation = async (
   return (address): Promise<string | undefined> => {
     const key = `${address.architecture}:${locationKey(address.addressSpace, address.address)}:${address.outputOffset ?? ""}`;
     const prior = cached.get(key);
-    if (prior) return prior;
-    if (cached.size >= 4096) cached.clear();
+    if (prior) {
+      return prior;
+    }
+    if (cached.size >= 4096) {
+      cached.clear();
+    }
     const promise = new Promise<string | undefined>((resolve) => {
       const schedule = pending.length === 0;
       pending.push({ address, resolve });
-      if (schedule)
+      if (schedule) {
         queueMicrotask(() => {
           void flush();
         });
+      }
     });
     cached.set(key, promise);
     return promise;

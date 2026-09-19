@@ -100,12 +100,16 @@ export function resolveProjectPath(...parts: string[]): string {
 }
 
 export function localRomPath(spec: ExternalFixtureSpec): string | undefined {
-  if (!spec.localRom) return undefined;
+  if (!spec.localRom) {
+    return undefined;
+  }
   return resolveProjectPath(LOCAL_ROM_DIR, spec.localRom.filename);
 }
 
 export function optionalDiffRomPath(spec: ExternalFixtureSpec): string | undefined {
-  if (!spec.optionalDiffRom) return undefined;
+  if (!spec.optionalDiffRom) {
+    return undefined;
+  }
   return resolveProjectPath(LOCAL_ROM_DIR, spec.optionalDiffRom.filename);
 }
 
@@ -137,8 +141,12 @@ function meaningfulPorcelain(raw: string): string {
 }
 
 function isGitWorktree(dir: string): boolean {
-  if (!fs.existsSync(dir)) return false;
-  if (!fs.existsSync(path.join(dir, ".git"))) return false;
+  if (!fs.existsSync(dir)) {
+    return false;
+  }
+  if (!fs.existsSync(path.join(dir, ".git"))) {
+    return false;
+  }
   return tryGit(["rev-parse", "--is-inside-work-tree"], dir) === "true";
 }
 
@@ -331,17 +339,23 @@ export function prepareExternalFixture(
   }
 
   if (spec.id === "smrpg") {
-    if (!rom) throw new Error("SMRPG ROM is required before extraction.");
+    if (!rom) {
+      throw new Error("SMRPG ROM is required before extraction.");
+    }
     extractSmrpgAssets({ rom: localRomPath(spec) as string, destRoot: workspace });
   }
 
   if (spec.id === "tmnt") {
-    if (!rom) throw new Error("TMNT ROM is required before extraction.");
+    if (!rom) {
+      throw new Error("TMNT ROM is required before extraction.");
+    }
     extractTmntAssets({ rom: localRomPath(spec) as string, destRoot: workspace });
   }
 
   if (spec.id === "zelda") {
-    if (!rom) throw new Error("Zelda ROM is required before extraction.");
+    if (!rom) {
+      throw new Error("Zelda ROM is required before extraction.");
+    }
     const xmlPath = path.join(workspace, "src/bins.xml");
     extractZeldaBins(rom, fs.readFileSync(xmlPath, "utf8"), workspace);
     const driverPath = path.join(workspace, spec.entrypoint);
@@ -502,10 +516,16 @@ function assembleZelda(workspace: string, rom: Buffer): Buffer {
 
 export function assemblePreparedFixture(prepared: PreparedFixture): Buffer {
   const { spec, workspace, rom } = prepared;
-  if (spec.id === "smrpg") return assembleSmrpg(workspace);
-  if (spec.id === "tmnt") return assembleTmnt(workspace);
+  if (spec.id === "smrpg") {
+    return assembleSmrpg(workspace);
+  }
+  if (spec.id === "tmnt") {
+    return assembleTmnt(workspace);
+  }
   if (spec.id === "zelda") {
-    if (!rom) throw new Error("Zelda assembly requires the validated input ROM.");
+    if (!rom) {
+      throw new Error("Zelda assembly requires the validated input ROM.");
+    }
     return assembleZelda(workspace, rom);
   }
   const sourcePath = path.join(workspace, spec.entrypoint);
@@ -544,7 +564,9 @@ export function listDirtySubmodules(options?: { includeUntracked?: boolean }): s
       ? ["status", "--porcelain", "--untracked-files=no"]
       : ["status", "--porcelain"];
   for (const spec of [...Object.values(EXTERNAL_FIXTURES), SNES_ROM_FRAMEWORK]) {
-    if (!isSubmoduleInitialized(spec)) continue;
+    if (!isSubmoduleInitialized(spec)) {
+      continue;
+    }
     const porcelain = meaningfulPorcelain(tryGit(args, submoduleDir(spec)) ?? "");
     if (porcelain.length > 0) {
       dirty.push(`${spec.submodulePath}:\n${porcelain}`);

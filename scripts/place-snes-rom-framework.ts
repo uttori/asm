@@ -83,7 +83,9 @@ function parseArgs(argv: string[]): CliOptions {
     }
     if (arg === "--dest") {
       const value = argv[index + 1];
-      if (!value) throw new Error("--dest requires a path");
+      if (!value) {
+        throw new Error("--dest requires a path");
+      }
       options.destRoot = path.resolve(value);
       index += 1;
       continue;

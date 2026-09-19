@@ -1,7 +1,9 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
 import type { OperandSyntax } from "./operand-syntax.js";
+/** Expression values are numeric or string literals; conversion is the caller's responsibility. */
 export type MathValue = number | string;
+/** Text after define/expression expansion with target-neutral lexical information. */
 export interface ExpandedOperand {
     /** Original operand spelling before define, symbol, or expression resolution. */
     raw: string;
@@ -11,6 +13,7 @@ export interface ExpandedOperand {
     /** Lexical facts only; register and addressing-mode validity remain architecture-owned. */
     syntax: OperandSyntax;
 }
+/** Operand classification passed to encoders; architecture-specific modes live in mode/metadata. */
 export interface LoweredOperand {
     /** Architecture-owned addressing-mode identifier. */
     mode?: string;
@@ -20,6 +23,7 @@ export interface LoweredOperand {
     explicitDirectPageIndexedX?: boolean;
     raw: string;
     expanded: string;
+    /** Inferred operand width in bytes, not full instruction size. */
     length: number;
     /** The index register for indexed addressing modes. */
     indexRegister?: string;
@@ -28,6 +32,7 @@ export interface LoweredOperand {
     /** Architecture-specific lowering metadata for extension encoders. */
     metadata?: Readonly<Record<string, unknown>>;
 }
+/** Live access to the current session's symbols and operand expressions. */
 export interface OperandResolutionContext {
     expandOperand(operand: string): ExpandedOperand;
     /**
@@ -38,25 +43,32 @@ export interface OperandResolutionContext {
     getnum(expression: string | ExpressionNode): number;
     getCurrentAddress(): number;
 }
+/** Writes at the session's logical cursor, applying target mapping and stage write rules. */
 export interface EncoderEmissionContext {
+    /** Emit the low byte and advance by one byte. */
     write1(value: number): void;
     write2(value: number): void;
     write3(value: number): void;
     writeByte(value: number): void;
     writeBytes(values: readonly number[]): void;
+    /** Width is in bytes; omitted endianness means little-endian. */
     writeValue(value: number, width: number, endianness?: "little" | "big"): void;
 }
+/** Current logical byte address used for layout and branch-size estimates. */
 export interface EncoderSizingContext {
     getCurrentAddress(): number;
 }
+/** Stage-sensitive label lookup for relative branches and unnamed labels. */
 export interface EncoderBranchContext {
     enforceResolvedLabels(): boolean;
     findNextLabel(label: string, referenceAddress: number): number;
     findPreviousLabel(label: string, referenceAddress: number): number;
 }
+/** Creates source-attributed errors; the encoder decides when to throw them. */
 export interface EncoderDiagnosticContext {
     error(message: string): Error;
 }
+/** Borrowed capabilities for a single session, without ownership of its mutable runtime. */
 export interface ArchitectureEncoderContext {
     operands: OperandResolutionContext;
     emission: EncoderEmissionContext;
@@ -64,6 +76,7 @@ export interface ArchitectureEncoderContext {
     branches: EncoderBranchContext;
     diagnostics: EncoderDiagnosticContext;
 }
+/** Convenience facade over encoder capabilities; address and label policy remain live getters. */
 export interface EncoderRuntime {
     operandResolver: OperandResolutionContext;
     write1(value: number): void;
@@ -80,7 +93,13 @@ export interface EncoderRuntime {
     };
     diagnostics: EncoderDiagnosticContext;
 }
+/**
+ * Adapt capability groups to a flat encoder facade without copying session state.
+ * @param {ArchitectureEncoderContext} context Capabilities borrowed from the owning session.
+ * @returns {EncoderRuntime} A facade whose address and label-policy getters read live session values.
+ */
 export declare const createEncoderRuntime: (context: ArchitectureEncoderContext) => EncoderRuntime;
+/** Host services used by the expression evaluator; logical addresses are distinct from file offsets. */
 export interface ExpressionHost {
     resolveLabel(identifier: string): MathValue;
     convertLogicalToOutputOffset(address: number): number;
@@ -98,6 +117,7 @@ export interface ExpressionHost {
     canReadBaseImage(position: number, size: number): number;
     readBaseImage(position: number, size: number, defaultValue?: number): number;
 }
+/** Parsed instruction and source context for encoders that consume structured operands. */
 export interface LoweredInstruction {
     kind: "instruction";
     command?: NormalizedCommand;
@@ -108,6 +128,7 @@ export interface LoweredInstruction {
     loweredOperand: LoweredOperand;
     words: readonly string[];
     sourceFile: string;
+    /** Zero-based source line index. */
     sourceLine: number;
     sourceRaw: string;
 }
@@ -136,8 +157,11 @@ export interface InstructionDescriptor {
     /** The addressing-mode forms supported by the mnemonic. */
     modes: InstructionAddressingMode[];
 }
+/** Per-session encoder. Sizing returns byte counts; encoding reports whether it handled the instruction. */
 export interface ArchitectureEncoder {
+    /** Estimate total instruction bytes without emitting output; words include the mnemonic. */
     estimateSize(words: readonly string[]): number;
+    /** Emit through the supplied emission context; false indicates an unrecognized instruction. */
     encode(words: readonly string[]): boolean;
     estimateInstruction?(instruction: LoweredInstruction): number;
     encodeInstruction?(instruction: LoweredInstruction): boolean;

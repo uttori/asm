@@ -127,9 +127,9 @@ const compareFixture = (fixtureName: string): FixtureComparison => {
   }
 
   const failedChecks: string[] = [];
-  if (outputStats.size !== expectedStats.size) failedChecks.push("staged vs golden size");
+  if (outputStats.size !== expectedStats.size) {failedChecks.push("staged vs golden size");}
   if (outputStats.checksum !== expectedStats.checksum)
-    failedChecks.push("staged vs golden checksum");
+    {failedChecks.push("staged vs golden checksum");}
   const overallPassed = failedChecks.length === 0;
 
   return {

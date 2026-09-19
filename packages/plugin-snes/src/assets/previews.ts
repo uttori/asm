@@ -26,12 +26,15 @@ const objectValue = (value: AssetValue, name: string): Readonly<Record<string, A
   return value as Readonly<Record<string, AssetValue>>;
 };
 const arrayValue = (value: AssetValue | undefined, name: string): readonly AssetValue[] => {
-  if (!Array.isArray(value)) throw new Error(`${name} must be an array.`);
+  if (!Array.isArray(value)) {
+    throw new Error(`${name} must be an array.`);
+  }
   return value as readonly AssetValue[];
 };
 const numberValue = (value: AssetValue | undefined, name: string): number => {
-  if (typeof value !== "number" || !Number.isFinite(value))
+  if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new Error(`${name} must be numeric.`);
+  }
   return value;
 };
 const byteHex = (value: number): string => Math.round(value).toString(16).padStart(2, "0");
@@ -146,15 +149,18 @@ export const snesSvgAssetPreviewRenderer: AssetPreviewRenderer = Object.freeze({
   ],
   render: ({ asset, decoded }: AssetPreviewContext) => {
     const value = objectValue(decoded.value, `SNES asset '${asset.id}' preview`);
-    if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID)
+    if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID) {
       return renderPalette(asset.id, value);
+    }
     if (
       asset.request.codecId === SNES_BG_TILEMAP_ASSET_CODEC_ID ||
       asset.request.codecId === SNES_MODE7_TILEMAP_ASSET_CODEC_ID
     ) {
       return renderTilemap(asset.id, value);
     }
-    if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) return renderBrr(asset.id, value);
+    if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) {
+      return renderBrr(asset.id, value);
+    }
     return renderTiles(asset.id, value);
   },
 });

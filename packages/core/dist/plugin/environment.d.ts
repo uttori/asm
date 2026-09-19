@@ -37,6 +37,8 @@ export declare class AssemblerEnvironment {
     readonly sessionStates: readonly OwnedContribution<SessionStateContribution<unknown>>[];
     /**
      * Indexes contributions, checks target alias uniqueness, then validates every target.
+     * Prefer PluginManager.freeze: this constructor retains input records and assumes they were
+     * already validated and deeply frozen by the manager. It does not own plugin resources.
      * @param {EnvironmentContributions} contributions Manager-collected plugin graph.
      * @throws {PluginError} On alias collisions or an invalid target graph.
      */

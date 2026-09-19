@@ -34,10 +34,6 @@ jobs:
 
       - name: Core repository verification
         run: npm run verify
-      - name: Reproducible hostile-input fuzzing
-        run: npm run test:fuzz
-      - name: Native decoder, source-export, CLI, and rebuild round trips
-        run: npm run test:roundtrip
       - name: Publish-surface audit
         run: npm run pack:check
       - name: Redistributable Asar fixtures

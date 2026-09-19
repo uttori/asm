@@ -23,6 +23,62 @@ import {
 const fixtures = fileURLToPath(new URL("./fixtures/", import.meta.url));
 const fixturePluginPath = path.join(fixtures, "relative-plugin.mjs");
 
+test("package imports resolve from the configuration directory with ESM conditions", async (t) => {
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-project-package-"));
+  const loader = new NodePluginLoader();
+  try {
+    const configDirectory = path.join(project, "nested");
+    const pluginDirectory = path.join(configDirectory, "node_modules", "project-only-plugin");
+    await fs.mkdir(pluginDirectory, { recursive: true });
+    await fs.writeFile(
+      path.join(pluginDirectory, "package.json"),
+      JSON.stringify({
+        type: "module",
+        exports: { import: "./plugin.mjs", require: "./wrong.cjs" },
+      }),
+    );
+    await fs.copyFile(fixturePluginPath, path.join(pluginDirectory, "plugin.mjs"));
+    await fs.writeFile(
+      path.join(configDirectory, "uttori-asm.config.json"),
+      JSON.stringify({ plugins: [{ module: "project-only-plugin" }] }),
+    );
+    const loaded = await loader.loadProjectEnvironment({
+      cwd: project,
+      configFile: "nested/uttori-asm.config.json",
+    });
+    t.is(loaded.configuration.projectRoot, configDirectory);
+    t.true(
+      loaded.configuration.plugins[0]!.resolvedModule.endsWith("project-only-plugin/plugin.mjs"),
+    );
+    t.deepEqual([...assemble(loaded, "org 0\nfix")], [0x42]);
+  } finally {
+    await loader.dispose();
+    await fs.rm(project, { recursive: true, force: true });
+  }
+});
+
+test("disposing an old top-level handle preserves the replacement cache", async (t) => {
+  const project = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-loader-ownership-"));
+  const options = { cwd: project, pluginModules: [{ module: fixturePluginPath }] };
+  let current: Awaited<ReturnType<typeof loadProjectEnvironment>> | undefined;
+  try {
+    const first = await loadProjectEnvironment(options);
+    const changed = {
+      ...options,
+      overrides: { pluginOptions: { "loader.fixture-plugin": { byte: 0x71 } } },
+    };
+    current = await loadProjectEnvironment(changed);
+    await first.dispose();
+    const cached = await loadProjectEnvironment(changed);
+    t.is(cached.environment, current.environment);
+    t.deepEqual([...assemble(cached, "org 0\nfix")], [0x71]);
+    await cached.dispose();
+  } finally {
+    await current?.dispose();
+    await fs.rm(project, { recursive: true, force: true });
+  }
+});
+
 const assemble = (
   loaded: Awaited<ReturnType<NodePluginLoader["loadProjectEnvironment"]>>,
   source: string,

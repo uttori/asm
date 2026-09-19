@@ -139,7 +139,11 @@ export interface AppliedLabelRenameEdit {
   readonly inverse: LabelRenameInverse;
 }
 
-/** One address-based label/comment edit. Empty comment strings clear only the selected fields. */
+/**
+ * One address-based label/comment edit. Addresses are bytes in the named space, never source lines.
+ * Omitted text fields remain unchanged; empty comment strings clear only the selected fields.
+ * New records and manual evidence need stable IDs unique within their respective collections.
+ */
 export interface DisassemblyAnnotationEditRequest {
   readonly addressSpace: string;
   readonly address: number;
@@ -163,6 +167,10 @@ export interface DisassemblyAnnotationInverse {
   readonly evidence: EvidenceRecord;
 }
 
+/**
+ * Pure edit result; nothing is persisted until a revision-checked commit. Unchanged records can be
+ * shared with the input. Retain the inverse in caller-owned undo state and commit undo separately.
+ */
 export interface AppliedDisassemblyAnnotationEdit {
   readonly project: AnalysisProject;
   readonly inverse: DisassemblyAnnotationInverse;
@@ -204,9 +212,13 @@ const isStableId = (id: string): boolean => {
       (code >= 0x61 && code <= 0x7a)
     );
   };
-  if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1)!)) return false;
+  if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1)!)) {
+    return false;
+  }
   for (const character of id) {
-    if (!isAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+    if (!isAlphaNumeric(character) && !"._:/-".includes(character)) {
+      return false;
+    }
   }
   return true;
 };
@@ -214,14 +226,18 @@ const isStableId = (id: string): boolean => {
 const manifestWithoutShards = (
   manifest: AnalysisProjectManifest | Omit<AnalysisProjectManifest, "shards">,
 ): Omit<AnalysisProjectManifest, "shards"> => {
-  if (!("shards" in manifest)) return manifest;
+  if (!("shards" in manifest)) {
+    return manifest;
+  }
   const { shards: ignored, ...projectManifest } = manifest;
   void ignored;
   return projectManifest;
 };
 
 const assertStableId = (id: string, label: string): void => {
-  if (!isStableId(id)) throw new Error(`${label} '${id}' is not a stable project id.`);
+  if (!isStableId(id)) {
+    throw new Error(`${label} '${id}' is not a stable project id.`);
+  }
 };
 
 const recordMatches = (left: unknown, right: unknown): boolean =>
@@ -255,7 +271,9 @@ const manualEvidence = (evidenceId: string, sourceId: string, detail?: string): 
 
 const addressSpaceMaximum = (project: ProjectLike, addressSpaceId: string): number => {
   const addressSpace = project.manifest.addressSpaces.find(({ id }) => id === addressSpaceId);
-  if (!addressSpace) throw new Error(`Unknown analysis address space '${addressSpaceId}'.`);
+  if (!addressSpace) {
+    throw new Error(`Unknown analysis address space '${addressSpaceId}'.`);
+  }
   return addressSpace.kind === "file"
     ? project.manifest.rom.contentSize
     : 2 ** addressSpace.addressBits;
@@ -304,8 +322,9 @@ export const applyRangeClassificationEdit = (
   if (!isStableId(request.sourceId)) {
     throw new Error(`Evidence source id '${request.sourceId}' is not a stable project id.`);
   }
-  if (request.architecture.trim() === "")
+  if (request.architecture.trim() === "") {
     throw new Error("Range classification needs an architecture.");
+  }
   if (!RANGE_CLASSIFICATIONS.includes(request.classification)) {
     throw new Error(`Unsupported range classification '${String(request.classification)}'.`);
   }
@@ -318,7 +337,9 @@ export const applyRangeClassificationEdit = (
     throw new Error("Range classification needs a valid half-open range.");
   }
   const addressSpace = project.manifest.addressSpaces.find(({ id }) => id === request.addressSpace);
-  if (!addressSpace) throw new Error(`Unknown analysis address space '${request.addressSpace}'.`);
+  if (!addressSpace) {
+    throw new Error(`Unknown analysis address space '${request.addressSpace}'.`);
+  }
   const maximum =
     addressSpace.kind === "file" ? project.manifest.rom.contentSize : 2 ** addressSpace.addressBits;
   if (request.end > maximum) {
@@ -456,7 +477,9 @@ const STATE_FIELD_MAXIMUMS = {
 } as const;
 
 const validateManualState = (state: ManualAnnotationState | undefined): readonly string[] => {
-  if (!state) return [];
+  if (!state) {
+    return [];
+  }
   const fields = Object.keys(state);
   for (const field of fields) {
     if (!["e", "m", "x", "carry", ...Object.keys(STATE_FIELD_MAXIMUMS)].includes(field)) {
@@ -464,7 +487,9 @@ const validateManualState = (state: ManualAnnotationState | undefined): readonly
     }
     const value = state[field as keyof ManualAnnotationState];
     if (["e", "m", "x", "carry"].includes(field)) {
-      if (typeof value !== "boolean") throw new Error(`Manual state '${field}' must be boolean.`);
+      if (typeof value !== "boolean") {
+        throw new Error(`Manual state '${field}' must be boolean.`);
+      }
       continue;
     }
     const maximum = STATE_FIELD_MAXIMUMS[field as keyof typeof STATE_FIELD_MAXIMUMS];
@@ -504,8 +529,9 @@ export const applyStateEntryPointEdit = (
     throw new Error(`Analysis annotation '${request.annotationId}' already exists.`);
   }
   const base = project.shards.annotations.find(({ id }) => id === request.baseAnnotationId);
-  if (!base)
+  if (!base) {
     throw new Error(`Base analysis annotation '${request.baseAnnotationId}' does not exist.`);
+  }
   const stateFields = validateManualState(request.state);
   if (stateFields.length === 0 && request.entryPoint !== true) {
     throw new Error("A state/entry-point edit needs at least one state field or an entry point.");
@@ -532,7 +558,9 @@ export const applyStateEntryPointEdit = (
     )
     .flatMap((existing): AnalysisConflictRecord[] => {
       const differing = request.state ? stateConflictFields(request.state, existing.state) : [];
-      if (differing.length === 0) return [];
+      if (differing.length === 0) {
+        return [];
+      }
       const address = Math.max(existing.start, annotation.start);
       const end = Math.min(existing.end, annotation.end);
       return [
@@ -735,11 +763,16 @@ export const applyLabelRenameEdit = (
   assertStableId(request.labelId, "Label id");
   assertManualEvidenceRequest(project, request.evidenceId, request.sourceId);
   const before = project.shards.labels.find(({ id }) => id === request.labelId);
-  if (!before) throw new Error(`Analysis label '${request.labelId}' does not exist.`);
+  if (!before) {
+    throw new Error(`Analysis label '${request.labelId}' does not exist.`);
+  }
   const name = request.name.trim();
-  if (name === "") throw new Error("A label name cannot be empty.");
-  if (name === before.name)
+  if (name === "") {
+    throw new Error("A label name cannot be empty.");
+  }
+  if (name === before.name) {
     throw new Error(`Analysis label '${request.labelId}' already has that name.`);
+  }
   const evidence = manualEvidence(
     request.evidenceId,
     request.sourceId,
@@ -817,20 +850,27 @@ export const applyDisassemblyAnnotationEdit = (
 ): AppliedDisassemblyAnnotationEdit => {
   assertManualEvidenceRequest(project, request.evidenceId, request.sourceId);
   const maximum = addressSpaceMaximum(project, request.addressSpace);
-  if (!Number.isSafeInteger(request.address) || request.address < 0 || request.address >= maximum)
+  if (!Number.isSafeInteger(request.address) || request.address < 0 || request.address >= maximum) {
     throw new Error("The annotation address is outside the selected address space.");
+  }
   for (const text of [request.comment, request.inlineComment, request.instructionComment]) {
-    if (text === undefined) continue;
-    if (typeof text !== "string") throw new Error("Comments must contain plain text.");
+    if (text === undefined) {
+      continue;
+    }
+    if (typeof text !== "string") {
+      throw new Error("Comments must contain plain text.");
+    }
     for (const character of text) {
       const code = character.codePointAt(0)!;
-      if ((code < 32 && ![9, 10, 13].includes(code)) || code === 0x2028 || code === 0x2029)
+      if ((code < 32 && ![9, 10, 13].includes(code)) || code === 0x2028 || code === 0x2029) {
         throw new Error("Comments must contain plain text without control characters.");
+      }
     }
   }
   for (const text of [request.inlineComment, request.instructionComment]) {
-    if (text !== undefined && /[\n\r]/.test(text))
+    if (text !== undefined && /[\n\r]/.test(text)) {
       throw new Error("Inline comments must fit on one line.");
+    }
   }
   const atAddress = (record: { addressSpace: string; address: number }): boolean =>
     record.addressSpace === request.addressSpace && record.address === request.address;
@@ -841,11 +881,14 @@ export const applyDisassemblyAnnotationEdit = (
     request.labelId === undefined
       ? undefined
       : project.shards.labels.find(({ id }) => id === request.labelId);
-  if (labelBefore && !atAddress(labelBefore))
+  if (labelBefore && !atAddress(labelBefore)) {
     throw new Error("The label id belongs to a different address.");
+  }
   let labelAfter: ProjectLabel | undefined;
   if (request.name !== undefined) {
-    if (!request.labelId) throw new Error("A stable label id is required.");
+    if (!request.labelId) {
+      throw new Error("A stable label id is required.");
+    }
     assertStableId(request.labelId, "Label id");
     const name = request.name.trim();
     validateSourceLabelName(name);
@@ -878,12 +921,14 @@ export const applyDisassemblyAnnotationEdit = (
   if (
     commentBefore &&
     (!atAddress(commentBefore) || commentBefore.placement !== "inline-instruction")
-  )
+  ) {
     throw new Error("The comment id belongs to a different address or placement.");
+  }
   let commentAfter: ProjectComment | undefined;
   if (request.instructionComment !== undefined) {
-    if (!request.instructionCommentId)
+    if (!request.instructionCommentId) {
       throw new Error("A stable instruction-comment id is required.");
+    }
     assertStableId(request.instructionCommentId, "Comment id");
     if (request.instructionComment) {
       if (
@@ -893,8 +938,9 @@ export const applyDisassemblyAnnotationEdit = (
             record.kind === "cfg-node" &&
             (atAddress(record) || (fileAddress && record.fileOffset === request.address)),
         )
-      )
+      ) {
         throw new Error("An inline instruction comment requires an accepted instruction boundary.");
+      }
       commentAfter = {
         id: request.instructionCommentId,
         addressSpace: request.addressSpace,
@@ -906,7 +952,9 @@ export const applyDisassemblyAnnotationEdit = (
     }
   }
   const withoutEvidence = (record: ProjectLabel | ProjectComment | undefined): unknown => {
-    if (!record) return undefined;
+    if (!record) {
+      return undefined;
+    }
     const { evidence: ignored, ...value } = record;
     void ignored;
     return value;
@@ -914,8 +962,9 @@ export const applyDisassemblyAnnotationEdit = (
   if (
     recordMatches(withoutEvidence(labelBefore), withoutEvidence(labelAfter)) &&
     recordMatches(withoutEvidence(commentBefore), withoutEvidence(commentAfter))
-  )
+  ) {
     throw new Error("The annotation has no changes to save.");
+  }
   const evidence = manualEvidence(
     request.evidenceId,
     request.sourceId,
@@ -973,15 +1022,17 @@ export const revertDisassemblyAnnotationEdit = (
       project.shards.evidence.find(({ id }) => id === inverse.evidence.id),
       inverse.evidence,
     )
-  )
+  ) {
     throw new Error("Cannot undo an annotation whose records changed after saving.");
+  }
   const allowed = new Set([`labels:${labelId}`, `comments:${commentId}`]);
   if (
     evidenceReferences(project.shards, inverse.evidence.id).some(
       (reference) => !allowed.has(reference),
     )
-  )
+  ) {
     throw new Error("Cannot undo annotation evidence referenced by another record.");
+  }
   return {
     manifest: manifestWithoutShards(project.manifest),
     shards: {
@@ -1014,14 +1065,20 @@ export const explainProjectEvidence = (
 ): ProjectEvidenceExplanation => {
   const records: readonly AnalysisProjectShardRecord[] = shards[shard];
   const record = records.find(({ id }) => id === recordId);
-  if (!record) throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
+  if (!record) {
+    throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
+  }
   let evidenceIds: readonly string[] = [];
-  if (shard === "evidence") evidenceIds = [record.id];
-  else if ("evidence" in record) evidenceIds = record.evidence;
+  if (shard === "evidence") {
+    evidenceIds = [record.id];
+  } else if ("evidence" in record) {
+    evidenceIds = record.evidence;
+  }
   const evidence = evidenceIds.map((id) => {
     const found = shards.evidence.find((entry) => entry.id === id);
-    if (!found)
+    if (!found) {
       throw new Error(`Analysis record '${recordId}' refers to missing evidence '${id}'.`);
+    }
     return found;
   });
   const referencedBy = sortedUnique(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));

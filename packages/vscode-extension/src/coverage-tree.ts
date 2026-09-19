@@ -231,9 +231,13 @@ const segmentNode = (
     .filter((value): value is string => value !== undefined)
     .join("\n");
   let icon = "symbol-color";
-  if (segment.status === "conflict") icon = "warning";
-  else if (segment.status === "unknown") icon = "question";
-  else if (segment.runtime.includes("executed")) icon = "debug-alt";
+  if (segment.status === "conflict") {
+    icon = "warning";
+  } else if (segment.status === "unknown") {
+    icon = "question";
+  } else if (segment.runtime.includes("executed")) {
+    icon = "debug-alt";
+  }
   return {
     id: `${parentId}:${segment.start}:${segment.end}`,
     label: pageLabel(segment.start, segment.end, width),
@@ -318,7 +322,9 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
   }
 
   async getChildren(element?: CoverageTreeNode): Promise<CoverageTreeNode[]> {
-    if (!element) return this.loadProjects();
+    if (!element) {
+      return this.loadProjects();
+    }
     if (element.loadProject) {
       try {
         const map = await analysisWorker().request<RomCoverageMap & { detailCount: number }>(
@@ -362,9 +368,11 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
         }
       }
       let stride = PAGE_SIZE;
-      while (Math.ceil(count / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
+      while (Math.ceil(count / stride) > PAGE_SIZE) {
+        stride *= PAGE_SIZE;
+      }
       const pages: CoverageTreeNode[] = [];
-      for (let index = 0; index < count; index += stride)
+      for (let index = 0; index < count; index += stride) {
         pages.push({
           id: `${element.id}:page:${offset + index}`,
           label: `Items ${offset + index + 1}–${offset + Math.min(index + stride, count)}`,
@@ -374,13 +382,16 @@ export class AnalysisCoverageProvider implements TreeDataProvider<CoverageTreeNo
           contentSize: element.contentSize,
           remotePage: { operation, offset: offset + index, count: Math.min(stride, count - index) },
         });
+      }
       return pages;
     }
     return [...(element.children ?? [])];
   }
 
   editTarget(element: unknown): AnalysisCoverageEditTarget | undefined {
-    if (!element || typeof element !== "object" || !("editTarget" in element)) return undefined;
+    if (!element || typeof element !== "object" || !("editTarget" in element)) {
+      return undefined;
+    }
     return (element as CoverageTreeNode).editTarget;
   }
 

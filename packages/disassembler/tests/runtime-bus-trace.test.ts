@@ -89,7 +89,9 @@ test("bus facts preserve attribution, exact u64 clocks, and chunk-independent ca
   whole.push({ accesses: events });
   const result = whole.finish();
   const split = createRuntimeBusTraceImporter(metadata, context);
-  for (const access of events) split.push({ accesses: [access] });
+  for (const access of events) {
+    split.push({ accesses: [access] });
+  }
   t.deepEqual(split.finish(), result);
   t.is(result.observedEvents, 6);
   t.is(result.report.imported.busRecords, 5);
@@ -175,8 +177,9 @@ test("bus integer validation stays exact across number and bigint boundaries", (
     "18446744073709551615",
   ];
   const importer = createRuntimeBusTraceImporter(metadata, context);
-  for (const [i, clock] of clocks.entries())
+  for (const [i, clock] of clocks.entries()) {
     importer.push({ accesses: [event(i + 1, { cycle: clock, ordinal: clock })] });
+  }
   t.is(importer.finish().summary.lastCycle, clocks.at(-1));
   for (const clock of ["-0", "00", " 1", "1e3", "18446744073709551616"]) {
     const invalid = createRuntimeBusTraceImporter(metadata, context);
@@ -315,7 +318,7 @@ test("late failure, cancellation and stale revisions publish no bus facts or ret
   };
   await t.throwsAsync(
     importRuntimeBusTraceSourceIntoProject(failing, root, context, {
-      storagePolicy: { archiveMaxBytes: 1 },
+      storagePolicy: { cacheMaxBytes: 1 },
     }),
     { message: "torn tail" },
   );
@@ -326,7 +329,9 @@ test("late failure, cancellation and stale revisions publish no bus facts or ret
       importRuntimeBusTraceSourceIntoProject(source(), root, context, {
         signal: controller.signal,
         onStage: (message) => {
-          if (message.startsWith(phase)) controller.abort();
+          if (message.startsWith(phase)) {
+            controller.abort();
+          }
         },
       }),
       { name: "AbortError" },
@@ -362,12 +367,13 @@ test("large repeated bus streams use bounded chunks and retain exact aggregate c
   const large = {
     metadata,
     read: async (accept: (chunk: unknown) => void) => {
-      for (let first = 1; first <= total; first += 1000)
+      for (let first = 1; first <= total; first += 1000) {
         accept({
           accesses: Array.from({ length: Math.min(1000, total - first + 1) }, (_, i) =>
             event(first + i),
           ),
         });
+      }
     },
   };
   const result = await importRuntimeBusTraceSourceIntoProject(large, root, {
@@ -418,7 +424,7 @@ test("separate sessions share bus facts while conflicting provenance rolls back 
   const before = loadAnalysisProject(root);
   await t.throwsAsync(
     importRuntimeBusTraceSourceIntoProject(thirdSource, root, context, {
-      storagePolicy: { archiveMaxBytes: 1 },
+      storagePolicy: { cacheMaxBytes: 1 },
     }),
     { message: /conflict|changed|different/i },
   );

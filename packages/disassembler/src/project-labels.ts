@@ -5,10 +5,11 @@ import type { ProjectLabel } from "./project-types.js";
  * @param {string} name Preferred assembly symbol.
  */
 export const validateSourceLabelName = (name: string): void => {
-  if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name))
+  if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
     throw new Error(
       "Use a global label name containing letters, digits, and underscores, starting with a letter or underscore.",
     );
+  }
 };
 
 /**
@@ -37,15 +38,18 @@ export const projectSourceLabelNames = (
     const base = legacySourceLabelName(label.name);
     let name = base;
     let suffix = 2;
-    while (used.has(name.toLowerCase())) name = `${base}_${suffix++}`;
+    while (used.has(name.toLowerCase())) {
+      name = `${base}_${suffix++}`;
+    }
     used.add(name.toLowerCase());
     names.set(label.id, name);
   }
   for (const label of sorted.filter((label) => label.sourceName !== undefined)) {
     const name = label.sourceName!;
     validateSourceLabelName(name);
-    if (used.has(name.toLowerCase()))
+    if (used.has(name.toLowerCase())) {
       throw new Error(`Source label '${name}' conflicts with another symbol.`);
+    }
     used.add(name.toLowerCase());
     names.set(label.id, name);
   }

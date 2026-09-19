@@ -1,12 +1,67 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, PluginError, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, mergeRuntimeEvidence, validateSourceExportFiles, compactAnalysisProject, expireCaptureArchives, migrateAnalysisProjectStorage, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, mergeRuntimeEvidence, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, migrateAnalysisProjectStorage, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, exportMesenLabels, identifySnesFileOffset, importMesen65816Trace, importMesenLabels, importMesenSnesCdl, } from "@uttori/asm-plugin-snes";
+import { publishOutputFiles } from "./output-files.js";
+/** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
+const commandOptions = {
+    assemble: [
+        "--config",
+        "--plugin",
+        "--target",
+        "--architecture",
+        "--base-image",
+        "--debug",
+        "--debug-map",
+        "--include-path",
+        "--plugin-option",
+        "--verbose",
+    ],
+    disassemble: ["--mapper", "--header-size", "--dizraw"],
+    analyze: ["--rom", "--entry", "--max-work-items", "--max-call-depth"],
+    export: ["--rom", "--force", "--allow-code-regression"],
+    "verify-roundtrip": ["--rom"],
+    "project-validate": ["--rom"],
+    "project-compact": [],
+    "project-migrate": ["--convert-runtime"],
+    "project-storage": ["--cache-max-mib", "--storage-max-mib"],
+    "evidence-import": [
+        "--rom",
+        "--mesen-cdl",
+        "--mesen-trace",
+        "--trace-metadata",
+        "--mesen-labels",
+        "--instruction-trace",
+        "--trace-max-mib",
+        "--trace-index",
+        "--cache-max-mib",
+        "--storage-max-mib",
+    ],
+    "evidence-report": [],
+    "mesen-labels-export": ["--rom"],
+};
+const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
+const booleanOptions = new Set([
+    "--help",
+    "--verbose",
+    "--force",
+    "--allow-code-regression",
+    "--debug",
+    "--convert-runtime",
+]);
+const commandsWithOutput = new Set([
+    "assemble",
+    "disassemble",
+    "export",
+    "evidence-report",
+    "mesen-labels-export",
+]);
+/** Installed executable's help text. All flags are long options; -- ends option parsing. */
 export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm assemble <input.asm> [output] [assemble-options]
-  uttori-asm disassemble <rom> [project-directory] [project-options]
+  uttori-asm disassemble <rom> [project-directory] [creation-options]
   uttori-asm analyze <project-directory> --rom <rom> [analysis-options]
   uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
   uttori-asm evidence-report <project-directory> [report.json]
@@ -18,11 +73,16 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm project-migrate <project-directory> [--convert-runtime]
   uttori-asm project-storage <project-directory> [storage-options]
 
-Project options:
+Creation options (disassemble):
   --mapper <${SNES_MAPPERS.join("|")}>
   --header-size <0|512>
   --dizraw <path>              Import uncompressed DiztinGUIsh XML
-  --rom <path>                 ROM to hash-check during project validation
+  Defaults: <rom stem>.analysis; copier header and mapper detected unless overridden.
+
+ROM identity (analyze, export, verify-roundtrip, evidence-import, mesen-labels-export):
+  --rom <path>                Required original ROM; optional with project-validate
+
+Evidence options (evidence-import):
   --mesen-cdl <path>           Import verified MesenCE CDLv2 coverage
   --mesen-trace <path>         Import MesenCE default 65816 text trace
   --trace-metadata <path>      Required JSON identity sidecar for --mesen-trace
@@ -30,39 +90,45 @@ Project options:
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
   --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
-  --entry <address>            Repeatable 65816 CPU entry point ($/0x/decimal)
-  --max-work-items <count>     Deterministic analysis work limit
-  --max-call-depth <count>     Bounded call-context depth
-  --force                      Replace modified generated files during export
-  --allow-code-regression       Allow export to replace existing code with raw bytes
 
-Storage options:
-  --convert-runtime           Convert existing trace detail to the native analysis profile; retain backup
-  --archive-max-mib <count>    Unpinned archive budget (default 2048)
-  --archive-max-days <count>   Optional archive age limit (0 disables)
-  --archive-max-captures <n>   Optional archive count limit (0 disables)
+Analysis options (analyze):
+  --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal; quote $hex in shells)
+  --max-work-items <count>     Positive work limit (default 100000)
+  --max-call-depth <count>     Nonnegative call-context depth (default 8)
+
+Export options (export):
+  --force                     Replace modified generated files
+  --allow-code-regression      Allow previously exported code to become raw bytes
+  Default destination: <project stem>.source
+
+Storage options (project-storage; budget options also accepted by evidence-import):
+  --convert-runtime           project-migrate only: convert trace detail; retain backup
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
-  --pin-capture <sha256>       Keep this capture's managed archive regardless of expiry limits
-  --unpin-capture <sha256>     Allow this managed archive to expire
-  --expire-archives            Apply retention and recycle caches/WAL now
 
 Assemble options:
   --config <uttori-asm.config.json>
   --plugin <module>            Repeatable; appended after configured plugins
   --target <target-id>
   --architecture <architecture-id>
-  --base-image <path>
+  --base-image <path>          Patch a copy, preserving unwritten bytes
   --debug                      Collect metadata and write <output>.debug.json
   --debug-map <path>           Collect metadata and write the map at this path
   --include-path <path>        Repeatable
   --plugin-option <plugin:key=value>
   --verbose
-  --help`;
+  --help                      Print usage (available for every command)
+
+Use --flag=value or --flag value for valued options. Boolean flags take no value.
+Use -- before positional paths beginning with --. Quote paths containing spaces.
+Exit status: 0 success/help (including explicitly incomplete analysis), 1 failure.
+Terminal signals retain Node's default termination behavior; no graceful cancellation is installed.`;
 /**
- * Parses the CLI arguments and returns a CliArguments object.
- * @param {readonly string[]} argv The CLI arguments.
- * @returns {CliArguments} The parsed CLI arguments.
+ * Parse arguments without reading files or loading plugins. Unknown/inapplicable flags, boolean
+ * values, invalid numeric limits, and excess positionals throw Error. Required input/ROM presence
+ * is checked by runCli so a bare --help remains valid. -- treats all following strings as paths.
+ * @param {readonly string[]} argv Tokens excluding the Node executable and script name; not mutated.
+ * @returns {CliArguments} New parsed object; list fields and the outer option map are shallow-frozen.
  */
 export const parseCliArguments = (argv) => {
     const positional = [];
@@ -71,18 +137,7 @@ export const parseCliArguments = (argv) => {
     const pluginOptions = {};
     let command = "assemble";
     let startIndex = 0;
-    if (argv[0] === "analyze" ||
-        argv[0] === "assemble" ||
-        argv[0] === "disassemble" ||
-        argv[0] === "evidence-import" ||
-        argv[0] === "evidence-report" ||
-        argv[0] === "export" ||
-        argv[0] === "mesen-labels-export" ||
-        argv[0] === "project-compact" ||
-        argv[0] === "project-migrate" ||
-        argv[0] === "project-storage" ||
-        argv[0] === "project-validate" ||
-        argv[0] === "verify-roundtrip") {
+    if (Object.hasOwn(commandOptions, argv[0] ?? "")) {
         command = argv[0];
         startIndex = 1;
     }
@@ -104,9 +159,6 @@ export const parseCliArguments = (argv) => {
     let traceMaxMiB;
     const storagePolicy = {};
     let convertRuntime = false;
-    let expireArchives = false;
-    let pinCapture;
-    let unpinCapture;
     let traceIndex;
     const entryPoints = [];
     let maxWorkItems;
@@ -115,6 +167,7 @@ export const parseCliArguments = (argv) => {
     let force = false;
     let allowCodeRegression = false;
     let help = false;
+    const suppliedOptions = new Set();
     const requireValue = (flag, inlineValue, index) => {
         const value = inlineValue ?? argv[index + 1];
         if (value === undefined ||
@@ -126,6 +179,10 @@ export const parseCliArguments = (argv) => {
     };
     for (let index = startIndex; index < argv.length; index++) {
         const argument = argv[index];
+        if (argument === "--") {
+            positional.push(...argv.slice(index + 1));
+            break;
+        }
         if (!argument.startsWith("--")) {
             positional.push(argument);
             continue;
@@ -133,16 +190,16 @@ export const parseCliArguments = (argv) => {
         const equals = argument.indexOf("=");
         const flag = equals < 0 ? argument : argument.slice(0, equals);
         const inlineValue = equals < 0 ? undefined : argument.slice(equals + 1);
-        if (flag === "--convert-runtime") {
-            if (inlineValue !== undefined)
-                throw new Error("--convert-runtime takes no value; omit it to preserve full detail.");
-            convertRuntime = true;
-            continue;
+        if (!knownOptions.has(flag)) {
+            throw new Error(`Unknown option '${flag}'.`);
         }
-        if (flag === "--expire-archives") {
-            if (inlineValue !== undefined)
-                throw new Error("--expire-archives takes no value; omit it to leave archives untouched.");
-            expireArchives = true;
+        // In particular, --force=false must never turn a user's refusal into overwrite permission.
+        if (booleanOptions.has(flag) && inlineValue !== undefined) {
+            throw new Error(`${flag} takes no value; omit it to disable it.`);
+        }
+        suppliedOptions.add(flag);
+        if (flag === "--convert-runtime") {
+            convertRuntime = true;
             continue;
         }
         if (flag === "--help") {
@@ -231,36 +288,23 @@ export const parseCliArguments = (argv) => {
                     throw new Error("--trace-max-mib must be a positive integer representing a safe byte limit.");
                 }
                 break;
-            case "--archive-max-mib":
-            case "--archive-max-days":
-            case "--archive-max-captures":
             case "--cache-max-mib":
             case "--storage-max-mib": {
                 const keys = {
-                    "--archive-max-mib": "archiveMaxBytes",
-                    "--archive-max-days": "archiveMaxAgeDays",
-                    "--archive-max-captures": "archiveMaxCaptures",
                     "--cache-max-mib": "cacheMaxBytes",
                     "--storage-max-mib": "databaseMaxBytes",
                 };
-                const amount = Number(value) * (flag.endsWith("mib") ? 1024 ** 2 : 1);
-                if (!Number.isSafeInteger(amount) || amount < 0)
+                const amount = Number(value) * 1024 ** 2;
+                if (!Number.isSafeInteger(amount) || amount < 0) {
                     throw new Error(`${flag} requires a nonnegative safe integer limit.`);
+                }
                 storagePolicy[keys[flag]] = amount;
                 break;
             }
-            case "--pin-capture":
-            case "--unpin-capture":
-                if (!/^[\da-f]{64}$/.test(value))
-                    throw new Error(`${flag} requires a lowercase capture SHA-256.`);
-                if (flag === "--pin-capture")
-                    pinCapture = value;
-                else
-                    unpinCapture = value;
-                break;
             case "--trace-index":
-                if (value !== "full" && value !== "65816-disassembly" && value !== "65816-analysis")
+                if (value !== "full" && value !== "65816-disassembly" && value !== "65816-analysis") {
                     throw new Error("--trace-index must be full, 65816-disassembly, or 65816-analysis.");
+                }
                 traceIndex = value;
                 break;
             case "--entry": {
@@ -311,8 +355,14 @@ export const parseCliArguments = (argv) => {
                 throw new Error(`Unknown option '${flag}'.`);
         }
     }
-    if (positional.length > 2) {
-        throw new Error(`Unexpected positional argument '${positional[2]}'.`);
+    for (const flag of suppliedOptions) {
+        if (flag !== "--help" && !commandOptions[command].includes(flag)) {
+            throw new Error(`Option '${flag}' is not supported by '${command}'.`);
+        }
+    }
+    const positionalLimit = commandsWithOutput.has(command) ? 2 : 1;
+    if (positional.length > positionalLimit) {
+        throw new Error(`Unexpected positional argument '${positional[positionalLimit]}'.`);
     }
     return {
         command,
@@ -339,9 +389,6 @@ export const parseCliArguments = (argv) => {
         traceMaxMiB,
         traceIndex,
         ...(convertRuntime ? { convertRuntime } : {}),
-        ...(expireArchives ? { expireArchives } : {}),
-        ...(pinCapture ? { pinCapture } : {}),
-        ...(unpinCapture ? { unpinCapture } : {}),
         ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
         entryPoints: Object.freeze(entryPoints),
         maxWorkItems,
@@ -434,8 +481,9 @@ const validateProject = (parsed, cwd) => {
         const rom = parsed.rom
             ? RomImage.load(path.resolve(cwd, parsed.rom), { headerSize: loaded.manifest.rom.headerSize })
             : undefined;
-        if (rom)
+        if (rom) {
             validateProjectRom(loaded.manifest, rom);
+        }
         console.log(`Success: Analysis project '${directory}' is valid${rom ? " and its ROM identity matches" : ""}.`);
         return 0;
     }
@@ -482,8 +530,9 @@ const importProjectEvidence = async (parsed, cwd) => {
                 headerSize: manifest.rom.headerSize,
             });
             validateProjectRom(manifest, rom);
-            if (!SNES_MAPPERS.includes(manifest.mapping.mapper))
+            if (!SNES_MAPPERS.includes(manifest.mapping.mapper)) {
                 throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
+            }
             const filename = path.resolve(cwd, parsed.instructionTrace);
             const result = await importRuntimeTraceIntoProject(filename, directory, {
                 projectRomContentSha256: manifest.rom.contentSha256,
@@ -495,8 +544,9 @@ const importProjectEvidence = async (parsed, cwd) => {
                 storagePolicy: parsed.storagePolicy,
             });
             console.log(`Storage: ${JSON.stringify(result.storage)}`);
-            for (const warning of result.warnings)
+            for (const warning of result.warnings) {
                 console.warn(warning);
+            }
             const action = result.changed ? "updated" : "no-op reimport for";
             console.log(`Success: ${action} '${directory}'; ${result.added.runtime} new runtime record(s).`);
             console.log(`Import: ${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported.`);
@@ -578,8 +628,9 @@ const importProjectEvidence = async (parsed, cwd) => {
         changed = commitRuntimeEvidenceBatch(directory, loaded.revision, shards).changed;
         const importAction = changed ? "updated" : "no-op reimport for";
         let diagnosticSummary = "detailed diagnostics deferred for compact trace indexing.";
-        if (includeDiagnostics)
+        if (includeDiagnostics) {
             diagnosticSummary = `incoming batch: ${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
+        }
         console.log(`Success: ${importAction} '${directory}'; ${diagnosticSummary}`);
         for (const report of reports) {
             console.log(`Import: ${report}.`);
@@ -799,6 +850,11 @@ const assemble = async (parsed, cwd) => {
             baseImage,
             collectSourceMetadata: parsed.debug,
         });
+        // The core base image supplies reads; CLI patching also preserves every unwritten byte.
+        // A growable array lets source directives extend the image beyond its original length.
+        if (baseImage) {
+            assembler.outputBytes = Array.from(baseImage);
+        }
         assembler.setIncludePaths([...new Set([path.dirname(inputFile), ...loaded.includePaths])]);
         assembler.setCurrentFile(inputFile);
         if (parsed.verbose) {
@@ -813,10 +869,12 @@ const assemble = async (parsed, cwd) => {
             ? path.resolve(cwd, parsed.output)
             : defaultOutputPath(inputFile, extension);
         const output = assembler.getBinaryOutput();
-        fs.writeFileSync(outputFile, Buffer.from(output));
-        console.log(`Success: Output written to '${outputFile}'.`);
+        const outputs = [
+            { file: outputFile, contents: output },
+        ];
+        let debugMapFile;
         if (parsed.debug) {
-            const debugMapFile = parsed.debugMap
+            debugMapFile = parsed.debugMap
                 ? path.resolve(cwd, parsed.debugMap)
                 : `${outputFile}.debug.json`;
             const debugMap = createDebugMap({
@@ -825,7 +883,11 @@ const assemble = async (parsed, cwd) => {
                 mapping: assembler.addressToLineMapping,
                 sourceRoot: path.dirname(inputFile),
             });
-            fs.writeFileSync(debugMapFile, canonicalDebugMapJson(debugMap));
+            outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
+        }
+        publishOutputFiles(outputs, [inputFile, loaded.configuration.configFile ?? explicitConfig]);
+        console.log(`Success: Output written to '${outputFile}'.`);
+        if (debugMapFile) {
             console.log(`Debug map: '${debugMapFile}'.`);
         }
         return 0;
@@ -835,8 +897,13 @@ const assemble = async (parsed, cwd) => {
         return 1;
     }
     finally {
-        assembler?.dispose();
-        await loaded?.dispose();
+        // Session cleanup can throw too; the owned plugin environment still needs disposal.
+        try {
+            assembler?.dispose();
+        }
+        finally {
+            await loaded?.dispose();
+        }
     }
 };
 /**
@@ -854,6 +921,7 @@ const verifyRoundTrip = async (parsed, cwd) => {
     try {
         const manifest = loadSourceExportManifest(directory);
         validateSourceExportFiles(directory, manifest);
+        validateSourceExportInputs(directory, manifest);
         const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
             headerSize: manifest.rom.headerSize,
         });
@@ -881,7 +949,6 @@ const verifyRoundTrip = async (parsed, cwd) => {
                 fs.readFileSync(path.join(directory, manifest.spans.find((span) => span.role === "copier-header").file)),
                 content,
             ]);
-        fs.writeFileSync(finalOutput, final);
         const comparison = compareByteImages(rom.fileBytes(), final);
         if (!comparison.equal) {
             const difference = comparison.firstDifference ?? 0;
@@ -889,12 +956,18 @@ const verifyRoundTrip = async (parsed, cwd) => {
             const identity = contentOffset < 0
                 ? undefined
                 : identifySnesFileOffset(contentOffset, createSnesAddressContext(manifest.mapper), manifest.rom.contentSize);
-            const addressDetail = contentOffset < 0
-                ? "copier header"
-                : `content offset $${contentOffset.toString(16).toUpperCase().padStart(6, "0")}${identity ? ` / CPU $${identity.canonicalCpuAddress.toString(16).toUpperCase().padStart(6, "0")}` : ""}`;
+            let addressDetail = "copier header";
+            if (contentOffset >= 0) {
+                addressDetail = `content offset $${contentOffset.toString(16).toUpperCase().padStart(6, "0")}`;
+                if (identity) {
+                    addressDetail += ` / CPU $${identity.canonicalCpuAddress.toString(16).toUpperCase().padStart(6, "0")}`;
+                }
+            }
             console.error(`Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}; first difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`);
             return 1;
         }
+        // Keep a previously verified image intact when rebuilding or comparison fails.
+        publishOutputFiles([{ file: finalOutput, contents: final }], [path.resolve(cwd, parsed.rom)]);
         console.log(`Success: Round trip is byte-identical (${comparison.actualLength} byte(s), SHA-256 ${comparison.actualSha256}).`);
         return 0;
     }
@@ -904,9 +977,15 @@ const verifyRoundTrip = async (parsed, cwd) => {
     }
 };
 /**
- * Runs the CLI.
- * @param {readonly string[]} argv The CLI arguments.
- * @returns {Promise<number>} The exit code.
+ * Run one invocation using process.cwd(), the real filesystem, and the process console. Status/help
+ * goes to stdout; errors/warnings go to stderr. Output is human-readable, not a stable JSON protocol.
+ * Owns and disposes its assembler/plugin environment; failures including cleanup return 1. Plugins
+ * execute trusted code in-process. The host must serialize calls if it changes cwd or intercepts console.
+ * No AbortSignal or signal handlers are installed: terminal termination can skip cleanup. Use the
+ * underlying libraries for cooperative cancellation or structured results. This function neither
+ * calls process.exit nor sets process.exitCode; the executable wrapper sets the returned status.
+ * @param {readonly string[]} [argv] Argument tokens, defaulting to process.argv.slice(2); not mutated.
+ * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv = process.argv.slice(2)) => {
     let parsed;
@@ -925,7 +1004,22 @@ export const runCli = async (argv = process.argv.slice(2)) => {
         console.error(usage);
         return 1;
     }
-    const cwd = process.cwd();
+    try {
+        return await runCommand(parsed, process.cwd());
+    }
+    catch (error) {
+        // Include failures from async finally/disposal in the same exit-code contract as command errors.
+        console.error(`Command failed: ${formatFailure(error)}`);
+        return 1;
+    }
+};
+/**
+ * Dispatch a validated invocation; unexpected failures are reported by runCli's outer boundary.
+ * @param {CliArguments} parsed Parsed options with a required input already checked.
+ * @param {string} cwd Invocation working directory, captured before asynchronous work.
+ * @returns {Promise<number>} Command status after its owned resources are released.
+ */
+const runCommand = async (parsed, cwd) => {
     if (parsed.command === "disassemble") {
         return createAnalysisProject(parsed, cwd);
     }
@@ -952,19 +1046,24 @@ export const runCli = async (argv = process.argv.slice(2)) => {
             const result = await migrateAnalysisProjectStorage(path.resolve(cwd, parsed.input), {
                 convertRuntime: parsed.convertRuntime,
                 onProgress: ({ phase, table, records }) => {
-                    if (records === undefined || records % 100000 === 0)
+                    if (records === undefined || records % 100000 === 0) {
                         console.log(`Storage migration: ${phase}${table ? ` ${table}` : ""}${records === undefined ? "" : ` (${records} records)`}.`);
+                    }
                 },
             });
             console.log(`Success: storage format ${result.storageVersion}; ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`);
-            for (const step of result.timings ?? [])
+            for (const step of result.timings ?? []) {
                 console.log(`${step.step}: ${(step.durationMs / 1000).toFixed(3)} s`);
-            if (result.backupFile)
+            }
+            if (result.backupFile) {
                 console.log(`Verified original retained at '${result.backupFile}'.`);
-            for (const note of result.notes ?? [])
+            }
+            for (const note of result.notes ?? []) {
                 console.log(note);
-            for (const warning of result.warnings)
+            }
+            for (const warning of result.warnings) {
                 console.warn(warning);
+            }
             return result.warnings.length ? 1 : 0;
         }
         catch (error) {
@@ -978,23 +1077,18 @@ export const runCli = async (argv = process.argv.slice(2)) => {
             store = openAnalysisProjectStore(path.resolve(cwd, parsed.input));
             const active = store;
             store.transaction(() => {
-                if (parsed.storagePolicy)
+                if (parsed.storagePolicy) {
                     active.setStoragePolicy(parsed.storagePolicy);
-                if (parsed.pinCapture)
-                    active.pinCapture(parsed.pinCapture, true);
-                if (parsed.unpinCapture)
-                    active.pinCapture(parsed.unpinCapture, false);
+                }
             });
-            const archives = parsed.expireArchives ? expireCaptureArchives(store) : undefined;
-            const maintenance = parsed.expireArchives ? store.maintainStorage() : undefined;
+            const maintenance = store.maintainStorage();
             console.log(JSON.stringify({
                 policy: store.storagePolicy(),
                 storage: { ...store.storageSnapshot(), optionalCacheBytes: store.storageCacheBytes() },
                 captures: store.captureCatalog(),
-                archives,
                 maintenance,
             }, null, 2));
-            return archives?.warnings.length ? 1 : 0;
+            return 0;
         }
         catch (error) {
             console.error(`Storage maintenance failed: ${formatFailure(error)}`);

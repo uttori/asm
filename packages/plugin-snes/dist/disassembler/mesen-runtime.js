@@ -36,8 +36,9 @@ const rangeRecords = (flags, mask, coverage, evidenceId, sourceSha256) => {
     let start = -1;
     for (let offset = 0; offset <= flags.length; offset++) {
         const matches = offset < flags.length && (flags[offset] & mask) !== 0;
-        if (matches && start < 0)
+        if (matches && start < 0) {
             start = offset;
+        }
         if (!matches && start >= 0) {
             records.push({
                 id: `runtime:mesence-cdl:${sourceSha256}:${coverage}:${hex(start, 6)}-${hex(offset, 6)}`,
@@ -271,15 +272,18 @@ const taggedHex = (line, tag) => {
 };
 const parseStatus = (line) => {
     const match = /(?:^|\s)P:([\dA-Fa-f]{2}|[CDIMNVXZcdimnvxz]{8})(?:\s|$)/.exec(line);
-    if (!match)
+    if (!match) {
         return undefined;
-    if (/^[\dA-Fa-f]{2}$/.test(match[1]))
+    }
+    if (/^[\dA-Fa-f]{2}$/.test(match[1])) {
         return Number.parseInt(match[1], 16);
+    }
     return Array.from(match[1]).reduce((value, character, index) => character === character.toUpperCase() ? value | (1 << (7 - index)) : value, 0);
 };
 const accessFor = (instruction) => {
-    if (["STA", "STX", "STY", "STZ"].includes(instruction.mnemonic))
+    if (["STA", "STX", "STY", "STZ"].includes(instruction.mnemonic)) {
         return "write";
+    }
     if (["ASL", "DEC", "INC", "LSR", "ROL", "ROR", "TRB", "TSB"].includes(instruction.mnemonic)) {
         return "read-write";
     }
@@ -326,8 +330,9 @@ export const importMesen65816Trace = (text, metadata, rom, mapper, context) => {
     let undecodableLines = 0;
     let linesWithUnparsedEffectiveAddress = 0;
     for (const [lineIndex, line] of text.split(/\r?\n/).entries()) {
-        if (line.trim() === "")
+        if (line.trim() === "") {
             continue;
+        }
         const pcMatch = /^([\dA-Fa-f]{6})\s{2}/.exec(line);
         const status = parseStatus(line);
         if (!pcMatch || status === undefined) {
@@ -374,8 +379,9 @@ export const importMesen65816Trace = (text, metadata, rom, mapper, context) => {
             ["dataBank", "DB"],
         ]) {
             const value = taggedHex(line, tag);
-            if (value !== undefined)
+            if (value !== undefined) {
                 state[field] = value;
+            }
         }
         const effectiveMatches = [...line.matchAll(/\[\$([\dA-Fa-f]{4,6})]/g)];
         const effectiveMatch = effectiveMatches.at(-1);
@@ -490,14 +496,17 @@ export const importMesen65816Trace = (text, metadata, rom, mapper, context) => {
             };
             incrementRecord(runtimeById, memory);
             let coverageKinds = ["read"];
-            if (access === "read-write")
+            if (access === "read-write") {
                 coverageKinds = ["read", "written"];
-            else if (access === "write")
+            }
+            else if (access === "write") {
                 coverageKinds = ["written"];
+            }
             for (const coverageKind of coverageKinds) {
                 const mapped = identifySnesCpuAddress(event.effectiveAddress, addressContext, rom.length);
-                if (!mapped)
+                if (!mapped) {
                     continue;
+                }
                 const coverage = {
                     id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverageKind}:${hex(mapped.fileOffset, 6)}-${hex(mapped.fileOffset + width, 6)}`,
                     kind: "runtime-coverage",
@@ -513,13 +522,15 @@ export const importMesen65816Trace = (text, metadata, rom, mapper, context) => {
             }
         }
         const next = parsed[index + 1];
-        if (!next)
+        if (!next) {
             continue;
+        }
         const fallthrough = (event.pc & 0xff0000) | ((event.pc + event.instruction.size) & 0xffff);
         const flow = event.instruction.flow;
         const followsControl = flow.kind !== "fallthrough" && flow.kind !== "stop" && flow.kind !== "wait";
-        if (!followsControl || next.pc === fallthrough)
+        if (!followsControl || next.pc === fallthrough) {
             continue;
+        }
         const targetKey = {
             from: event.pc,
             to: next.pc,

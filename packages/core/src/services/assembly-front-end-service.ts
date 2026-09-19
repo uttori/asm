@@ -95,7 +95,9 @@ export class AssemblyFrontEndService {
           line: this.host.currentLine + Math.max(0, start),
         };
       }
-    } else this.structBufferStart = undefined;
+    } else {
+      this.structBufferStart = undefined;
+    }
     return processed.sourcedCommands;
   }
 

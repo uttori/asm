@@ -413,8 +413,9 @@ test("manifest validation rejects obsolete storage and never downgrades newer sc
     await fs.readFile(path.join(schemaFixtures, "schema-v2.json"), "utf8"),
   );
   const future = JSON.parse(await fs.readFile(path.join(schemaFixtures, "schema-v3.json"), "utf8"));
-  for (const obsolete of [legacy, versionOne, current, future])
+  for (const obsolete of [legacy, versionOne, current, future]) {
     t.throws(() => parseAnalysisProjectManifest(obsolete));
+  }
   t.throws(
     () =>
       parseAnalysisProjectManifest({

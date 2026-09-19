@@ -22,8 +22,9 @@ import {
 // is read-only; ROM identity is copied into a benchmark-only manifest, never a user project.
 const archive = process.argv[2];
 const output = process.argv[3];
-if (!archive || !output)
-  throw new Error("Usage: benchmark-runtime-bus.ts ARCHIVE OUTPUT [--profile] [--archive-copy]");
+if (!archive || !output) {
+  throw new Error("Usage: benchmark-runtime-bus.ts ARCHIVE OUTPUT [--profile]");
+}
 const profile = process.argv.includes("--profile");
 const header = await readCaptureFileHeader(archive);
 const metadata = validateRuntimeBusTraceMetadata({
@@ -67,7 +68,9 @@ const source: RuntimeBusTraceSource = {
     const result = await recoverCaptureFile(
       archive,
       (chunk) => {
-        if (chunk.scope === "snes.65816.instructions") throw new Error("Bus scope required");
+        if (chunk.scope === "snes.65816.instructions") {
+          throw new Error("Bus scope required");
+        }
         accept({ accesses: chunk.scope === "snes.cpu-bus" ? chunk.accesses : chunk.events });
       },
       { onTiming: profile ? timing : undefined },
@@ -87,10 +90,11 @@ for (const file of [
   "packages/debug-adapter/src/capture-file.ts",
   "packages/debug-adapter/src/capture-file-reader.ts",
   "packages/debug-adapter/src/capture-v2.ts",
-])
+]) {
   sources[file] = createHash("sha256")
     .update(await readFile(file))
     .digest("hex");
+}
 
 try {
   writeAnalysisProject(directory, project);
@@ -107,7 +111,6 @@ try {
       sourceName: path.basename(archive),
     },
     {
-      archiveSourceFile: process.argv.includes("--archive-copy") ? archive : undefined,
       onStage: (next) => {
         const now = performance.now();
         timing(stage, now - stageStarted);

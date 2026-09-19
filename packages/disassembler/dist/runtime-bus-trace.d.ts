@@ -34,9 +34,9 @@ export interface RuntimeBusTraceSource {
     readonly metadata: RuntimeBusTraceMetadata;
     readonly read: (accept: (chunk: unknown) => void) => Promise<void>;
     /** Optional native output whose final path/inode read() validates before resolving.
-     * It is cataloged as an external archive; live analysis does not duplicate recording bytes.
+     * Its identity is rechecked before publication to reject replacement of a completed capture.
      */
-    readonly completedArchiveFile?: string;
+    readonly completedFile?: string;
 }
 /** ROM guard and distinct-fact limit; the default is two million variants, with an eight-million hard cap. */
 export interface RuntimeBusTraceImportContext {

@@ -6,7 +6,8 @@
   "files": [
     "dist",
     "src",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,

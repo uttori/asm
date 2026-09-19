@@ -108,7 +108,9 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
    * @returns {number} The output offset.
    */
   toOutputOffset(address, context) {
-    if (address < 0 || address > 0xffffff) return -1;
+    if (address < 0 || address > 0xffffff) {
+      return -1;
+    }
 
     if (context.mapper === "lorom") {
       // $7E/7F WRAM, $00-3F/$80-BF low 32K (system), $70-7D SRAM - not ROM.
@@ -179,7 +181,9 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
         return (address & 0x3fffff) | 0x400000;
       }
       if ((address & 0xc00000) === 0x000000 || (address & 0xc00000) === 0x800000) {
-        if ((address & 0x008000) === 0) return -1;
+        if ((address & 0x008000) === 0) {
+          return -1;
+        }
         return ((address & 0x800000) >> 2) | ((address & 0x3f0000) >> 1) | (address & 0x7fff);
       }
       return -1;
@@ -195,10 +199,14 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
    * @returns {number} The canonical CPU address.
    */
   fromOutputOffset(offset, context) {
-    if (offset < 0) return -1;
+    if (offset < 0) {
+      return -1;
+    }
     let address = offset;
     if (context.mapper === "lorom") {
-      if (address >= 0x400000) return -1;
+      if (address >= 0x400000) {
+        return -1;
+      }
       address = ((address << 1) & 0x7f0000) | (address & 0x7fff) | 0x8000;
       return address | 0x800000;
     }
@@ -206,7 +214,9 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
       return address >= 0x400000 ? -1 : address | 0xc00000;
     }
     if (context.mapper === "exlorom") {
-      if (address >= 0x800000) return -1;
+      if (address >= 0x800000) {
+        return -1;
+      }
       if (address & 0x400000) {
         address -= 0x400000;
         return ((address << 1) & 0x7f0000) | (address & 0x7fff) | 0x8000;
@@ -215,11 +225,15 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
       return address | 0x800000;
     }
     if (context.mapper === "exhirom") {
-      if (address >= 0x800000) return -1;
+      if (address >= 0x800000) {
+        return -1;
+      }
       return address & 0x400000 ? address : address | 0xc00000;
     }
     if (context.mapper === "sa1rom") {
-      if (address >= 0x800000) return -1;
+      if (address >= 0x800000) {
+        return -1;
+      }
       for (let index = 0; index < 8; index++) {
         if (context.sa1banks[index] === (address & 0x700000)) {
           return 0x008000 | (index << 21) | ((address & 0x0f8000) << 1) | (address & 0x7fff);
@@ -228,8 +242,12 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
       return -1;
     }
     if (context.mapper === "bigsa1rom") {
-      if (address >= 0x800000) return -1;
-      if ((address & 0x400000) === 0x400000) return address | 0xc00000;
+      if (address >= 0x800000) {
+        return -1;
+      }
+      if ((address & 0x400000) === 0x400000) {
+        return address | 0xc00000;
+      }
       if ((address & 0x600000) === 0x000000) {
         return ((address << 1) & 0x3f0000) | 0x8000 | (address & 0x7fff);
       }

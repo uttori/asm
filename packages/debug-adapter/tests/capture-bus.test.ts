@@ -122,12 +122,13 @@ test("bus decoding rejects inconsistent dictionaries, record shapes, ordering an
     { actor: 1, phase: 4, channel: 0 },
     { actor: 2, phase: 2, channel: 0, direction: 1 },
     { actor: 2, phase: 3, channel: 0, direction: 1 },
-  ])
+  ]) {
     t.throws(
       () => decodeCaptureChunk(busChunk([fields]), busSession, busScope),
       undefined,
       JSON.stringify(fields, (_, v) => (typeof v === "bigint" ? String(v) : v)),
     );
+  }
   for (const [offset, value] of [
     [64, 1],
     [66, 2],
@@ -190,29 +191,43 @@ const recordBus = async (file: string, chunks: readonly Buffer[], failAck = fals
   const events = () => chunks.slice(0, accepted).reduce((n, b) => n + b.readUInt32LE(40), 0);
   const transport: CaptureTransportV2 = async (request) => {
     if (request.operation === "capabilities") {
-      if (request.scope !== busScope) throw new Error("Missing bus negotiation");
+      if (request.scope !== busScope) {
+        throw new Error("Missing bus negotiation");
+      }
       return busCapabilities;
     }
     if (request.operation === "start") {
-      if (request.scope !== busScope) throw new Error("Missing bus start scope");
+      if (request.scope !== busScope) {
+        throw new Error("Missing bus start scope");
+      }
       return busPosition();
     }
-    if (request.operation === "read") return { hex: chunks[accepted]?.toString("hex") ?? "" };
+    if (request.operation === "read") {
+      return { hex: chunks[accepted]?.toString("hex") ?? "" };
+    }
     if (request.operation === "ack") {
       const recovered = await recoverCaptureFile(`${file}.partial`);
-      if (recovered.eventThrough !== request.event)
+      if (recovered.eventThrough !== request.event) {
         throw new Error("Ack preceded durable checkpoint");
+      }
       checkpoints.push(recovered.eventThrough);
-      if (failAck) throw new Error("Lost bus ack");
+      if (failAck) {
+        throw new Error("Lost bus ack");
+      }
       accepted++;
     }
-    if (request.operation === "stop") stopped = true;
-    if (request.operation === "abort") aborted = true;
-    if (aborted)
+    if (request.operation === "stop") {
+      stopped = true;
+    }
+    if (request.operation === "abort") {
+      aborted = true;
+    }
+    if (aborted) {
       return {
         ...busPosition(String(events()), String(accepted), "incomplete"),
         error: "consumer-aborted",
       };
+    }
     return busPosition(
       String(events()),
       String(accepted),
@@ -253,7 +268,9 @@ test("bus recording checkpoints and recovers separate bus records without instru
   t.is((await readCaptureFileHeader(file)).scope, busScope);
   const accesses: CaptureBusAccessV2[] = [];
   const result = await recoverCaptureFile(file, (chunk) => {
-    if (chunk.scope !== busScope) throw new Error("Wrong recovered scope");
+    if (chunk.scope !== busScope) {
+      throw new Error("Wrong recovered scope");
+    }
     accesses.push(...chunk.accesses);
   });
   t.true(result.complete);
@@ -308,7 +325,9 @@ test("bus setup rejects JSON and wrong-scope starts without leaving an active pr
   const operations: string[] = [];
   const transport: CaptureTransportV2 = async (request) => {
     operations.push(request.operation);
-    if (request.operation === "capabilities") return busCapabilities;
+    if (request.operation === "capabilities") {
+      return busCapabilities;
+    }
     return { ...busPosition(), scope: "snes.65816.instructions" };
   };
   const options = {

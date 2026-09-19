@@ -25,6 +25,31 @@ import {
 import { installQueryCache } from "../src/sqlite-query-cache.js";
 import { runtimeColumns } from "../src/sqlite-records.js";
 
+test("synchronous transactions reject promises and roll back their writes and revision", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-async-transaction-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(32768))));
+  const before = loadAnalysisProjectSnapshot(directory);
+  const store = openAnalysisProjectStore(directory);
+  try {
+    // Simulate an untyped JavaScript caller; an async callback cannot own this synchronous lock.
+    const action = async () => {
+      store.replaceTables({ labels: [] });
+      store.publishManifest(before.manifest);
+      await Promise.resolve();
+      return true;
+    };
+    t.throws(() => store.transaction(action as unknown as () => boolean), {
+      instanceOf: TypeError,
+      message: /synchronous/,
+    });
+    await Promise.resolve();
+    t.deepEqual(loadAnalysisProjectSnapshot(directory), before);
+  } finally {
+    store.close();
+  }
+});
+
 test("writer upgrades legacy cache keys atomically and keeps unrelated large cached payloads", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-cache-layout-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));

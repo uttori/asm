@@ -25,8 +25,9 @@ export const snesAssetCodecs = Object.freeze([
  * @returns {AssetCodecRegistry} The same registry for fluent setup.
  */
 export const registerSnesAssetCodecs = (registry) => {
-    for (const codec of snesAssetCodecs)
+    for (const codec of snesAssetCodecs) {
         registry.register(codec);
+    }
     return registry;
 };
 //# sourceMappingURL=index.js.map

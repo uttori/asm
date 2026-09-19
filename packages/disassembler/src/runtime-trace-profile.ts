@@ -22,12 +22,21 @@ export const project65816AnalysisState = (
   const result: Record<string, RuntimeStateValue> = {};
   const e = value("e", 1);
   const p = value("p", 255);
-  if (e !== undefined) result.e = e;
-  if (e === 1) result.p = 0x30;
-  else if (p !== undefined) result.p = p & 0x30;
+  if (e !== undefined) {
+    result.e = e;
+  }
+  if (e === 1) {
+    result.p = 0x30;
+  } else if (p !== undefined) {
+    result.p = p & 0x30;
+  }
   const db = value("db", 255);
   const d = value("d", 65535);
-  if (db !== undefined) result.db = db;
-  if (d !== undefined) result.d = d;
+  if (db !== undefined) {
+    result.db = db;
+  }
+  if (d !== undefined) {
+    result.d = d;
+  }
   return result;
 };

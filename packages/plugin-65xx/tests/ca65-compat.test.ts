@@ -37,7 +37,7 @@ function assembleCa65Raw(
     return assembler.getBinaryOutput();
   } finally {
     assembler.dispose();
-    if (directory) fs.rmSync(directory, { recursive: true, force: true });
+    if (directory) {fs.rmSync(directory, { recursive: true, force: true });}
   }
 }
 

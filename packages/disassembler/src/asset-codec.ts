@@ -189,13 +189,17 @@ const isStableId = (id: string): boolean => {
   }
   for (let index = 0; index < id.length; index++) {
     const character = id[index];
-    if (!isAsciiAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+    if (!isAsciiAlphaNumeric(character) && !"._:/-".includes(character)) {
+      return false;
+    }
   }
   return true;
 };
 
 const assertStableId = (id: string, what: string): void => {
-  if (!isStableId(id)) throw new Error(`${what} '${id}' is not a stable id.`);
+  if (!isStableId(id)) {
+    throw new Error(`${what} '${id}' is not a stable id.`);
+  }
 };
 
 const assertNonNegativeInteger = (value: number, what: string): void => {
@@ -205,9 +209,13 @@ const assertNonNegativeInteger = (value: number, what: string): void => {
 };
 
 const canonicalizeAssetValue = (value: AssetValue, location: string): AssetValue => {
-  if (value === null || typeof value === "string" || typeof value === "boolean") return value;
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return value;
+  }
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error(`${location} contains a non-finite number.`);
+    if (!Number.isFinite(value)) {
+      throw new Error(`${location} contains a non-finite number.`);
+    }
     return Object.is(value, -0) ? 0 : value;
   }
   if (Array.isArray(value)) {
@@ -264,7 +272,9 @@ const normalizeReferences = (
           throw new Error(`Reference '${reference.id}' width must be a positive safe integer.`);
         }
       }
-      if (reference.targetAssetId) assertStableId(reference.targetAssetId, "Target asset id");
+      if (reference.targetAssetId) {
+        assertStableId(reference.targetAssetId, "Target asset id");
+      }
       return Object.freeze({ ...reference });
     })
     .sort((left, right) => left.id.localeCompare(right.id));
@@ -284,12 +294,15 @@ const normalizeChildren = (
       }
       ids.add(child.id);
       assertNonNegativeInteger(child.relativeOffset, `Child '${child.id}' relativeOffset`);
-      if (child.length !== undefined)
+      if (child.length !== undefined) {
         assertNonNegativeInteger(child.length, `Child '${child.id}' length`);
-      if (child.address !== undefined)
+      }
+      if (child.address !== undefined) {
         assertNonNegativeInteger(child.address, `Child '${child.id}' address`);
-      if (child.addressSpace === "")
+      }
+      if (child.addressSpace === "") {
         throw new Error(`Child '${child.id}' has an empty address space.`);
+      }
       const options =
         child.options === undefined
           ? undefined
@@ -336,7 +349,9 @@ const normalizeFiles = (
         throw new Error(`Asset '${owner}' extracts duplicate path '${file.path}'.`);
       }
       paths.add(file.path);
-      if (file.mediaType === "") throw new Error(`Asset file '${file.path}' has no media type.`);
+      if (file.mediaType === "") {
+        throw new Error(`Asset file '${file.path}' has no media type.`);
+      }
       if (!(file.bytes instanceof Uint8Array)) {
         throw new Error(`Asset file '${file.path}' bytes must be a Uint8Array.`);
       }
@@ -374,8 +389,12 @@ export class AssetCodecRegistry {
    */
   register(codec: AssetCodec): this {
     assertStableId(codec.id, "Codec id");
-    if (codec.version.trim() === "") throw new Error(`Codec '${codec.id}' has no version.`);
-    if (this.#codecs.has(codec.id)) throw new Error(`Duplicate asset codec id '${codec.id}'.`);
+    if (codec.version.trim() === "") {
+      throw new Error(`Codec '${codec.id}' has no version.`);
+    }
+    if (this.#codecs.has(codec.id)) {
+      throw new Error(`Duplicate asset codec id '${codec.id}'.`);
+    }
     if (!Number.isSafeInteger(codec.sizeBounds.minimum) || codec.sizeBounds.minimum <= 0) {
       throw new Error(`Codec '${codec.id}' minimum size must be a positive safe integer.`);
     }
@@ -424,11 +443,15 @@ export class AssetCodecRegistry {
   resolve(id: string): AssetCodec {
     const visit = (current: string, path: readonly string[]): AssetCodec => {
       const codec = this.#codecs.get(current);
-      if (!codec) throw new Error(`Unknown asset codec '${current}'.`);
+      if (!codec) {
+        throw new Error(`Unknown asset codec '${current}'.`);
+      }
       if (path.includes(current)) {
         throw new Error(`Asset codec dependency cycle: ${[...path, current].join(" -> ")}.`);
       }
-      for (const dependency of codec.dependencies ?? []) visit(dependency, [...path, current]);
+      for (const dependency of codec.dependencies ?? []) {
+        visit(dependency, [...path, current]);
+      }
       return codec;
     };
     return visit(id, []);
@@ -460,7 +483,9 @@ const validateRequest = (request: AssetRequest, source: AssetByteSource): AssetR
   assertStableId(request.codecId, `Codec on asset '${request.id}'`);
   assertNonNegativeInteger(request.sourceOffset, `Asset '${request.id}' sourceOffset`);
   assertNonNegativeInteger(request.address, `Asset '${request.id}' address`);
-  if (request.addressSpace === "") throw new Error(`Asset '${request.id}' has no address space.`);
+  if (request.addressSpace === "") {
+    throw new Error(`Asset '${request.id}' has no address space.`);
+  }
   if (request.length !== undefined) {
     if (!Number.isSafeInteger(request.length) || request.length <= 0) {
       throw new Error(`Asset '${request.id}' length must be a positive safe integer.`);
@@ -509,7 +534,9 @@ const isAncestor = (
 ): boolean => {
   let parent = descendant.parentId;
   while (parent !== undefined) {
-    if (parent === ancestor) return true;
+    if (parent === ancestor) {
+      return true;
+    }
     parent = byId.get(parent)?.parentId;
   }
   return false;
@@ -538,10 +565,13 @@ export const planAssets = (
   const ids = new Set<string>();
 
   const inspect = (input: AssetRequest, parentId: string | undefined, depth: number): void => {
-    if (depth > maxDepth)
+    if (depth > maxDepth) {
       throw new Error(`Asset '${input.id}' exceeds nested codec depth ${maxDepth}.`);
+    }
     const request = validateRequest(input, source);
-    if (ids.has(request.id)) throw new Error(`Duplicate planned asset id '${request.id}'.`);
+    if (ids.has(request.id)) {
+      throw new Error(`Duplicate planned asset id '${request.id}'.`);
+    }
     ids.add(request.id);
     const codec = registry.resolve(request.codecId);
     const context: AssetCodecContext = {
@@ -620,8 +650,12 @@ export const planAssets = (
     const leftEnd = left.request.sourceOffset + left.inspection.size;
     for (let rightIndex = leftIndex + 1; rightIndex < ordered.length; rightIndex++) {
       const right = ordered[rightIndex];
-      if (right.request.sourceOffset >= leftEnd) break;
-      if (isAncestor(left.id, right, byId) || isAncestor(right.id, left, byId)) continue;
+      if (right.request.sourceOffset >= leftEnd) {
+        break;
+      }
+      if (isAncestor(left.id, right, byId) || isAncestor(right.id, left, byId)) {
+        continue;
+      }
       const sourceOffset = Math.max(left.request.sourceOffset, right.request.sourceOffset);
       const endOffset = Math.min(leftEnd, right.request.sourceOffset + right.inspection.size);
       const assetIds = [left.id, right.id].sort() as [string, string];
@@ -740,7 +774,9 @@ export const verifyAssetPlan = (
       );
     }
     const original = source.read(asset.request.sourceOffset, asset.inspection.size);
-    if (!original) throw new Error(`Asset '${asset.id}' source range is no longer readable.`);
+    if (!original) {
+      throw new Error(`Asset '${asset.id}' source range is no longer readable.`);
+    }
     if (!sameBytes(original, firstEncoded)) {
       throw new Error(`Asset '${asset.id}' failed byte-identical no-op verification.`);
     }

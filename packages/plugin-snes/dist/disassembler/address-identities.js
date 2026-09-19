@@ -57,11 +57,13 @@ const mirrorsForOffset = (fileOffset, context, canonical) => {
  * @returns {SnesAddressIdentity | undefined} Identity, or `undefined` if unmapped.
  */
 export const identifySnesFileOffset = (fileOffset, context, romSize) => {
-    if (!Number.isInteger(fileOffset) || fileOffset < 0 || fileOffset >= romSize)
+    if (!Number.isInteger(fileOffset) || fileOffset < 0 || fileOffset >= romSize) {
         return undefined;
+    }
     const canonicalCpuAddress = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
-    if (canonicalCpuAddress < 0)
+    if (canonicalCpuAddress < 0) {
         return undefined;
+    }
     return {
         addressSpace: SNES_CPU_ADDRESS_SPACE,
         address: canonicalCpuAddress,
@@ -82,11 +84,13 @@ export const identifySnesFileOffset = (fileOffset, context, romSize) => {
  */
 export const identifySnesCpuAddress = (address, context, romSize) => {
     const fileOffset = snesRomAddressSpace.toOutputOffset(address, context);
-    if (fileOffset < 0 || fileOffset >= romSize)
+    if (fileOffset < 0 || fileOffset >= romSize) {
         return undefined;
+    }
     const canonicalCpuAddress = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
-    if (canonicalCpuAddress < 0)
+    if (canonicalCpuAddress < 0) {
         return undefined;
+    }
     return {
         addressSpace: SNES_CPU_ADDRESS_SPACE,
         address,

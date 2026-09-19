@@ -142,7 +142,9 @@ test("live DAP handshake connects before initialized and configures breakpoints 
     configurationHandshake: true,
     onMessage: (message) => {
       messages.push(message);
-      if (message.type === "event" && message.event === "initialized") ready();
+      if (message.type === "event" && message.event === "initialized") {
+        ready();
+      }
     },
   });
   t.teardown(() => {
@@ -420,7 +422,9 @@ test("DAP installs and removes source breakpoints while running without exposing
   let stopped = true;
   let nextBreakpointId = 1;
   const emit = (event: DebugBackendEvent): void => {
-    for (const listener of listeners) listener(event);
+    for (const listener of listeners) {
+      listener(event);
+    }
   };
   const unsupported = (): Promise<never> => Promise.reject(new Error("Not used by this test."));
   const backend: DebugBackend = {
@@ -443,7 +447,9 @@ test("DAP installs and removes source breakpoints while running without exposing
       emit({ type: "stopped", reason: "pause", threadId: 1 });
     },
     continue: () => {
-      if (!stopped) return Promise.reject(new Error("Test backend is already running."));
+      if (!stopped) {
+        return Promise.reject(new Error("Test backend is already running."));
+      }
       actions.push("continue");
       stopped = false;
       emit({ type: "continued", threadId: 1, allThreads: true });
@@ -455,8 +461,9 @@ test("DAP installs and removes source breakpoints while running without exposing
     registers: unsupported,
     readMemory: unsupported,
     setBreakpoints: (addresses) => {
-      if (!stopped)
+      if (!stopped) {
         return Promise.reject(new Error("Test backend must be stopped to change breakpoints."));
+      }
       actions.push(`set:${addresses.length}`);
       return Promise.resolve(
         addresses.map((address) => ({
@@ -694,7 +701,9 @@ test("DAP adds host annotations to disassembly without changing backend instruct
     sourceRoot: fixture.directory,
     instructionAnnotation: async ({ architecture, address }) => {
       await Promise.resolve();
-      if (architecture === "snes.spc700" && address === 0x200) return "▶ 3× · state p=$20";
+      if (architecture === "snes.spc700" && address === 0x200) {
+        return "▶ 3× · state p=$20";
+      }
       throw new Error("Optional annotation database unavailable");
     },
   });

@@ -123,9 +123,15 @@ export function matchesFeatures(
   expression: FeatureExpression,
   features: ReadonlySet<CpuFeature>,
 ): boolean {
-  if (expression.allOf?.some((feature) => !features.has(feature))) return false;
-  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) return false;
-  if (expression.noneOf?.some((feature) => features.has(feature))) return false;
+  if (expression.allOf?.some((feature) => !features.has(feature))) {
+    return false;
+  }
+  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) {
+    return false;
+  }
+  if (expression.noneOf?.some((feature) => features.has(feature))) {
+    return false;
+  }
   return true;
 }
 

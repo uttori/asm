@@ -72,7 +72,9 @@ test("explicit nested DMA/HDMA windows retain interrupted and completed identiti
     access(5),
     marker(6, { boundary: "interrupted", transferred: 1 }),
   ];
-  for (const item of events) importer.push({ accesses: [item] });
+  for (const item of events) {
+    importer.push({ accesses: [item] });
+  }
   const result = importer.finish();
   t.is(result.observedEvents, 2);
   t.is(result.report.imported.transferMarkers, 4);

@@ -62,7 +62,9 @@ const loadEditableSnapshot = (
 ): AnalysisProjectSnapshot => {
   const store = openAnalysisProjectStore(directory);
   try {
-    if (location) store.prepareAnnotationQueries();
+    if (location) {
+      store.prepareAnnotationQueries();
+    }
     return store.transaction(() => {
       const manifest = store.manifest();
       const shards = {
@@ -183,10 +185,15 @@ type MutableManualState = {
 const parseAddress = (input: string): number | undefined => {
   const value = input.trim();
   let parsed: number;
-  if (/^\$[\da-f]+$/i.test(value)) parsed = Number.parseInt(value.slice(1), 16);
-  else if (/^0x[\da-f]+$/i.test(value)) parsed = Number.parseInt(value.slice(2), 16);
-  else if (/^\d+$/.test(value)) parsed = Number.parseInt(value, 10);
-  else return undefined;
+  if (/^\$[\da-f]+$/i.test(value)) {
+    parsed = Number.parseInt(value.slice(1), 16);
+  } else if (/^0x[\da-f]+$/i.test(value)) {
+    parsed = Number.parseInt(value.slice(2), 16);
+  } else if (/^\d+$/.test(value)) {
+    parsed = Number.parseInt(value, 10);
+  } else {
+    return undefined;
+  }
   return Number.isSafeInteger(parsed) ? parsed : undefined;
 };
 
@@ -204,22 +211,32 @@ const parseStateEntrySelection = (input: string): StateEntrySelection => {
   let entryPoint = false;
   for (const rawDirective of input.split(",")) {
     const directive = rawDirective.trim();
-    if (directive === "") continue;
+    if (directive === "") {
+      continue;
+    }
     if (["entry", "entrypoint", "entry-point"].includes(directive.toLowerCase())) {
-      if (entryPoint) throw new Error("Entry point was specified more than once.");
+      if (entryPoint) {
+        throw new Error("Entry point was specified more than once.");
+      }
       entryPoint = true;
       continue;
     }
     const separator = directive.indexOf("=");
-    if (separator < 1) throw new Error(`State directive '${directive}' needs '='.`);
+    if (separator < 1) {
+      throw new Error(`State directive '${directive}' needs '='.`);
+    }
     const rawKey = directive.slice(0, separator).trim().toLowerCase();
     const rawValue = directive
       .slice(separator + 1)
       .trim()
       .toLowerCase();
     const key = STATE_FIELD_ALIASES[rawKey];
-    if (!key) throw new Error(`Unknown state field '${rawKey}'.`);
-    if (seen.has(key)) throw new Error(`State field '${key}' was specified more than once.`);
+    if (!key) {
+      throw new Error(`Unknown state field '${rawKey}'.`);
+    }
+    if (seen.has(key)) {
+      throw new Error(`State field '${key}' was specified more than once.`);
+    }
     seen.add(key);
     if (key === "e") {
       if (!["emulation", "native", "true", "false", "1", "0"].includes(rawValue)) {
@@ -238,7 +255,9 @@ const parseStateEntrySelection = (input: string): StateEntrySelection => {
       state.carry = ["set", "true", "1"].includes(rawValue);
     } else {
       const value = parseAddress(rawValue);
-      if (value === undefined) throw new Error(`State field '${key}' needs an integer value.`);
+      if (value === undefined) {
+        throw new Error(`State field '${key}' needs an integer value.`);
+      }
       state[key] = value;
     }
   }
@@ -290,7 +309,9 @@ export class AnalysisProjectEditor {
         target?.projectDirectory,
         "Classify Analysis Range",
       );
-      if (!projectDirectory) return;
+      if (!projectDirectory) {
+        return;
+      }
       const snapshot = loadEditableSnapshot(projectDirectory);
       if (snapshot.manifest.rom.contentSize === 0) {
         await window.showErrorMessage(
@@ -339,7 +360,9 @@ export class AnalysisProjectEditor {
             : undefined;
         },
       });
-      if (startInput === undefined) return;
+      if (startInput === undefined) {
+        return;
+      }
       const start = parseAddress(startInput)!;
       const suggestedEnd = target?.end ?? Math.min(start + 1, maximum);
       const endInput = await window.showInputBox({
@@ -353,7 +376,9 @@ export class AnalysisProjectEditor {
             : undefined;
         },
       });
-      if (endInput === undefined) return;
+      if (endInput === undefined) {
+        return;
+      }
       const end = parseAddress(endInput)!;
       const classificationChoice = await window.showQuickPick(
         RANGE_CLASSIFICATIONS.map((classification) => ({ label: classification, classification })),
@@ -362,7 +387,9 @@ export class AnalysisProjectEditor {
           placeHolder: "Choose a native range classification",
         },
       );
-      if (!classificationChoice) return;
+      if (!classificationChoice) {
+        return;
+      }
       const { classification } = classificationChoice;
 
       const configuredArchitecture = workspace
@@ -389,12 +416,16 @@ export class AnalysisProjectEditor {
           (overlappingArchitectures.length === 1 ? overlappingArchitectures[0] : ""),
         validateInput: (value) => (value.trim() === "" ? "Enter an architecture id." : undefined),
       });
-      if (architectureInput === undefined) return;
+      if (architectureInput === undefined) {
+        return;
+      }
       const detail = await window.showInputBox({
         title: "Classify Analysis Range",
         prompt: "Optional manual-evidence note (leave empty for none)",
       });
-      if (detail === undefined) return;
+      if (detail === undefined) {
+        return;
+      }
 
       const architecture = architectureInput.trim();
       const suffix = createHash("sha256")
@@ -452,7 +483,9 @@ export class AnalysisProjectEditor {
         target?.projectDirectory,
         "Set Analysis State / Entry Point",
       );
-      if (!projectDirectory) return;
+      if (!projectDirectory) {
+        return;
+      }
       const snapshot = loadEditableSnapshot(projectDirectory);
       const targetIds = new Set(target?.annotationIds ?? []);
       const candidates = snapshot.shards.annotations
@@ -482,7 +515,9 @@ export class AnalysisProjectEditor {
           placeHolder: "Choose the classified interval that should carry the manual overlay",
         },
       );
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const directiveInput = await window.showInputBox({
         title: "Set Analysis State / Entry Point",
         prompt:
@@ -497,13 +532,17 @@ export class AnalysisProjectEditor {
           }
         },
       });
-      if (directiveInput === undefined) return;
+      if (directiveInput === undefined) {
+        return;
+      }
       const selection = parseStateEntrySelection(directiveInput);
       const detail = await window.showInputBox({
         title: "Set Analysis State / Entry Point",
         prompt: "Optional manual-evidence note (leave empty for none)",
       });
-      if (detail === undefined) return;
+      if (detail === undefined) {
+        return;
+      }
       const suffix = this.editSuffix(snapshot, {
         kind: "state-entry",
         baseAnnotationId: selected.annotation.id,
@@ -553,7 +592,9 @@ export class AnalysisProjectEditor {
         target?.projectDirectory,
         "Resolve Indirect Target",
       );
-      if (!projectDirectory) return;
+      if (!projectDirectory) {
+        return;
+      }
       const snapshot = loadEditableSnapshot(projectDirectory);
       const sites = new Map<
         string,
@@ -564,7 +605,9 @@ export class AnalysisProjectEditor {
         }
       >();
       for (const record of snapshot.shards.analysis) {
-        if (record.kind !== "unresolved" && record.kind !== "target-override") continue;
+        if (record.kind !== "unresolved" && record.kind !== "target-override") {
+          continue;
+        }
         const key = `${record.addressSpace}:${record.address}`;
         const site = sites.get(key) ?? {
           addressSpace: record.addressSpace,
@@ -600,7 +643,9 @@ export class AnalysisProjectEditor {
           placeHolder: "Choose an unresolved site or augment its existing observed targets",
         },
       );
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const prior = snapshot.shards.analysis.find(
         (record) =>
           record.kind === "target-override" &&
@@ -610,8 +655,9 @@ export class AnalysisProjectEditor {
       const addressSpace = snapshot.manifest.addressSpaces.find(
         ({ id }) => id === selected.site.addressSpace,
       );
-      if (!addressSpace)
+      if (!addressSpace) {
         throw new Error(`Unknown analysis address space '${selected.site.addressSpace}'.`);
+      }
       // File offsets stop at the ROM size; CPU addresses use the full address width.
       const maximum =
         addressSpace.kind === "file"
@@ -632,13 +678,17 @@ export class AnalysisProjectEditor {
           }
         },
       });
-      if (targetInput === undefined) return;
+      if (targetInput === undefined) {
+        return;
+      }
       const targets = parseTargetList(targetInput);
       const detail = await window.showInputBox({
         title: "Resolve Indirect Target",
         prompt: "Optional manual-evidence note (leave empty for none)",
       });
-      if (detail === undefined) return;
+      if (detail === undefined) {
+        return;
+      }
       const suffix = this.editSuffix(snapshot, {
         kind: "target",
         addressSpace: selected.site.addressSpace,
@@ -669,15 +719,18 @@ export class AnalysisProjectEditor {
   }
 
   dispose(): void {
-    for (const panel of this.#annotationPanels) panel.dispose();
+    for (const panel of this.#annotationPanels) {
+      panel.dispose();
+    }
     this.#annotationPanels.clear();
   }
 
   async editAnnotation(): Promise<void> {
     let form: ReturnType<typeof openDisassemblyAnnotationForm> | undefined;
     try {
-      if (!workspace.isTrusted)
+      if (!workspace.isTrusted) {
         throw new Error("Analysis project edits require a trusted local workspace.");
+      }
       const editor = window.activeTextEditor;
       const sourceEditor =
         editor && ["uttori-snes", "uttori-65xx"].includes(editor.document.languageId)
@@ -686,10 +739,11 @@ export class AnalysisProjectEditor {
       if (
         sourceEditor &&
         (sourceEditor.document.uri.scheme !== "file" || sourceEditor.document.isDirty)
-      )
+      ) {
         throw new Error(
           "Use a saved, unchanged generated source file. Regenerate source if it was edited.",
         );
+      }
       // Capture the original cursor before opening the beside panel changes focus.
       const source = sourceEditor
         ? {
@@ -708,7 +762,9 @@ export class AnalysisProjectEditor {
         panel.dispose();
         return;
       }
-      if (form.disposed) return;
+      if (form.disposed) {
+        return;
+      }
       const resolved = await analysisWorker().request<AnnotationLookupResult>(
         projectDirectory,
         "annotationLookup",
@@ -716,7 +772,9 @@ export class AnalysisProjectEditor {
           annotationLookup: { maps: source ? await discoverAnalysisDebugMapFiles() : [], source },
         },
       );
-      if (form.disposed) return;
+      if (form.disposed) {
+        return;
+      }
       const selected =
         resolved.choices.length === 1
           ? resolved.choices[0]
@@ -758,7 +816,9 @@ export class AnalysisProjectEditor {
         panel.dispose();
         return;
       }
-      if (form.disposed) return;
+      if (form.disposed) {
+        return;
+      }
       const identity = `${location.addressSpace}.${location.address.toString(16)}`;
       const initialFields = {
         name: label?.sourceName ?? location.name ?? "",
@@ -781,15 +841,19 @@ export class AnalysisProjectEditor {
               .update(await fs.promises.readFile(source.file))
               .digest("hex") !== resolved.sourceHash ||
               sourceEditor?.document.isDirty)
-          )
+          ) {
             throw new Error(
               "The source changed while this form was open. Reopen the annotation from current generated source.",
             );
-          if (canonicalJson(fields) === canonicalJson(initialFields)) return;
-          if (label && !fields.name.trim())
+          }
+          if (canonicalJson(fields) === canonicalJson(initialFields)) {
+            return;
+          }
+          if (label && !fields.name.trim()) {
             throw new Error(
               "Keep a name for the existing label; clear comment fields to remove comments.",
             );
+          }
           const request: DisassemblyAnnotationEditRequest = {
             addressSpace: location.addressSpace,
             address: location.address,
@@ -837,8 +901,11 @@ export class AnalysisProjectEditor {
         },
       );
     } catch (error) {
-      if (form) form.fail(error);
-      else await this.showFailure("Could not edit the disassembly annotation", error);
+      if (form) {
+        form.fail(error);
+      } else {
+        await this.showFailure("Could not edit the disassembly annotation", error);
+      }
     }
   }
 
@@ -854,7 +921,9 @@ export class AnalysisProjectEditor {
         target?.projectDirectory,
         "Rename Analysis Label",
       );
-      if (!projectDirectory) return;
+      if (!projectDirectory) {
+        return;
+      }
       const snapshot = loadEditableSnapshot(projectDirectory);
       if (snapshot.shards.labels.length === 0) {
         await window.showErrorMessage("The selected project has no label to rename.");
@@ -875,23 +944,33 @@ export class AnalysisProjectEditor {
           })),
         { title: "Rename Analysis Label", placeHolder: "Choose a stable native label record" },
       );
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const name = await window.showInputBox({
         title: "Rename Analysis Label",
         prompt: `New native name for '${selected.projectLabel.id}'`,
         value: selected.projectLabel.name,
         validateInput: (value) => {
-          if (value.trim() === "") return "A label name cannot be empty.";
-          if (value.trim() === selected.projectLabel.name) return "Enter a different label name.";
+          if (value.trim() === "") {
+            return "A label name cannot be empty.";
+          }
+          if (value.trim() === selected.projectLabel.name) {
+            return "Enter a different label name.";
+          }
           return undefined;
         },
       });
-      if (name === undefined) return;
+      if (name === undefined) {
+        return;
+      }
       const detail = await window.showInputBox({
         title: "Rename Analysis Label",
         prompt: "Optional manual-evidence note (leave empty for the generated rename explanation)",
       });
-      if (detail === undefined) return;
+      if (detail === undefined) {
+        return;
+      }
       const suffix = this.editSuffix(snapshot, {
         kind: "label",
         labelId: selected.projectLabel.id,
@@ -914,8 +993,9 @@ export class AnalysisProjectEditor {
         `Renamed '${applied.inverse.before.name}' to '${applied.inverse.after.name}' with manual provenance.`,
         "Analyze and Regenerate",
       );
-      if (action === "Analyze and Regenerate")
+      if (action === "Analyze and Regenerate") {
         await commands.executeCommand("asm.disassembly.regenerate", { projectDirectory });
+      }
     } catch (error) {
       await this.showFailure("Could not rename the analysis label", error);
     }
@@ -928,7 +1008,9 @@ export class AnalysisProjectEditor {
         "Explain Analysis Evidence",
         false,
       );
-      if (!projectDirectory) return;
+      if (!projectDirectory) {
+        return;
+      }
       const snapshot = await analysisWorker().request<
         Pick<AnalysisProjectSnapshot, "manifest" | "shards">
       >(projectDirectory, "evidenceChoices", {
@@ -957,7 +1039,9 @@ export class AnalysisProjectEditor {
         placeHolder:
           "Choose a record (up to 200 per collection); open a coverage segment to narrow the list",
       });
-      if (!selected) return;
+      if (!selected) {
+        return;
+      }
       const explanation = await analysisWorker().request<ProjectEvidenceExplanation>(
         projectDirectory,
         "explainEvidence",
@@ -1025,7 +1109,9 @@ export class AnalysisProjectEditor {
     requiresTrust = true,
   ): Promise<string | undefined> {
     if (preferred) {
-      if (requiresTrust) this.assertTrustedProject(preferred);
+      if (requiresTrust) {
+        this.assertTrustedProject(preferred);
+      }
       return preferred;
     }
     const found = await findAnalysisProjectDirectories();
@@ -1038,7 +1124,9 @@ export class AnalysisProjectEditor {
       );
       return undefined;
     }
-    if (directories.length === 1) return directories[0];
+    if (directories.length === 1) {
+      return directories[0];
+    }
     const selected = await window.showQuickPick(
       directories.map((directory) => ({
         label: path.basename(directory),

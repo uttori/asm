@@ -329,7 +329,9 @@ liveTest("pinned ares crash is contained and a fresh verified process reconnects
   let resolveTermination: (() => void) | undefined;
   let restartable = false;
   backend.onEvent((event) => {
-    if (event.type !== "terminated") return;
+    if (event.type !== "terminated") {
+      return;
+    }
     restartable = event.restart;
     resolveTermination?.();
     resolveTermination = undefined;
@@ -337,7 +339,9 @@ liveTest("pinned ares crash is contained and a fresh verified process reconnects
   try {
     await backend.connect({ reset: true });
     const pid = host.pid;
-    if (pid === undefined) throw new Error("Live ares process did not expose a PID.");
+    if (pid === undefined) {
+      throw new Error("Live ares process did not expose a PID.");
+    }
     const terminated = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(
         () => reject(new Error("Timed out waiting for crashed ares termination.")),
@@ -537,7 +541,9 @@ liveTest(
           await session.dispatch(dapRequest(10 + index, "uttori/readTrace", { maxEvents: 240 })),
         ).body as { addresses: number[]; active: boolean };
         traced.push(...pulled.addresses);
-        if (!pulled.active && pulled.addresses.length === 0) break;
+        if (!pulled.active && pulled.addresses.length === 0) {
+          break;
+        }
       }
       t.true(traced.length > 0);
       t.true(
@@ -605,7 +611,9 @@ liveTest("built ares sidecar sustains ordered bounded 65816 trace pulls", async 
   const backend = await createLiveSidecarBackend(entry);
   let resolveStop: (() => void) | undefined;
   backend.onEvent((event) => {
-    if (event.type !== "stopped") return;
+    if (event.type !== "stopped") {
+      return;
+    }
     resolveStop?.();
     resolveStop = undefined;
   });

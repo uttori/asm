@@ -48,9 +48,13 @@ class FakeTransport implements GdbRspTransport {
   }
 
   close(): Promise<void> {
-    if (this.closed) return Promise.resolve();
+    if (this.closed) {
+      return Promise.resolve();
+    }
     this.closed = true;
-    for (const listener of this.closeListeners) listener();
+    for (const listener of this.closeListeners) {
+      listener();
+    }
     return Promise.resolve();
   }
 
@@ -91,12 +95,16 @@ class FakeProcess implements AresProcessHandle {
 
   kill(signal: "SIGTERM" | "SIGKILL"): void {
     this.signals.push(signal);
-    if (signal === "SIGTERM" && this.#ignoreTerm) return;
+    if (signal === "SIGTERM" && this.#ignoreTerm) {
+      return;
+    }
     this.exit({ code: null, signal });
   }
 
   exit(exit: AresProcessExit): void {
-    if (this.#exited) return;
+    if (this.#exited) {
+      return;
+    }
     this.#exited = true;
     this.#resolveExit(exit);
   }
@@ -131,15 +139,20 @@ class FakeRuntime implements AresProcessRuntime {
     this.launches.push(options);
     const process = new FakeProcess(1_000 + this.processes.length, this.ignoreTerm);
     this.processes.push(process);
-    if (this.outputOnLaunch) options.onOutput("stderr", this.outputOnLaunch);
-    if (this.exitOnLaunch) process.exit(this.exitOnLaunch);
+    if (this.outputOnLaunch) {
+      options.onOutput("stderr", this.outputOnLaunch);
+    }
+    if (this.exitOnLaunch) {
+      process.exit(this.exitOnLaunch);
+    }
     return process;
   }
 
   connect(): Promise<GdbRspTransport> {
     this.connectCalls++;
-    if (this.connectCalls <= this.connectFailures)
+    if (this.connectCalls <= this.connectFailures) {
       return Promise.reject(new Error("connection refused"));
+    }
     const transport = new FakeTransport();
     this.transports.push(transport);
     return Promise.resolve(transport);
@@ -227,10 +240,12 @@ test("desktop ares uses GUI settings, awaits entry, and keeps execution running 
     "Input/Defocus=Allow",
     "General/RunAhead=false",
     "General/Rewind=false",
-  ])
+  ]) {
     t.true(args.includes(setting));
-  for (const flag of ["--quiet", "--gdb-port", "--gdb-ipv4", "--wait-on-gdb", "--fast-boot"])
+  }
+  for (const flag of ["--quiet", "--gdb-port", "--gdb-ipv4", "--wait-on-gdb", "--fast-boot"]) {
     t.false(args.includes(flag));
+  }
   await client.close();
   await host.terminate();
   t.throws(() => parseAresRuntimeManifest({ ...manifest(), frontend: "typo" }), {

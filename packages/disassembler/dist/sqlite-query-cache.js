@@ -9,8 +9,9 @@ export const upgradeQueryCacheStorage = (db) => {
     const schema = db
         .prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='query_cache'")
         .get();
-    if (!schema || !/without\s+rowid/i.test(String(schema.sql)))
+    if (!schema || !/without\s+rowid/i.test(String(schema.sql))) {
         return;
+    }
     // A large unrelated graph cache made every missing-key invalidation read overflow pages.
     // Copy within SQLite, without materializing JSON in JS or renaming the table (which would
     // rewrite dependent triggers to the temporary name). No authoritative project data changes.
@@ -27,8 +28,9 @@ export const upgradeQueryCacheStorage = (db) => {
  * @param {readonly ShardKind[]} dependencies Collections consumed by the projection.
  */
 export const installQueryCache = (db, key, dependencies) => {
-    if (!/^[\d_a-z]+$/.test(key))
+    if (!/^[\d_a-z]+$/.test(key)) {
         throw new Error("Invalid internal query cache key.");
+    }
     if (dependencies.some((table) => ![
         "analysis",
         "annotations",
@@ -38,10 +40,11 @@ export const installQueryCache = (db, key, dependencies) => {
         "imports",
         "evidence",
         "runtime",
-    ].includes(table)))
+    ].includes(table))) {
         throw new Error("Invalid query dependency.");
+    }
     db.exec(QUERY_CACHE_SCHEMA);
-    for (const table of dependencies.flatMap((name) => name === "runtime" ? ["runtime_facts", "runtime_observations"] : [name]))
+    for (const table of dependencies.flatMap((name) => name === "runtime" ? ["runtime_facts", "runtime_observations"] : [name])) {
         for (const event of ["INSERT", "UPDATE", "DELETE"]) {
             const update = table === "runtime_observations" && event === "UPDATE"
                 ? "UPDATE OF fact_id,prefix_id,id,evidence_id,count,state_prefix_id,state_id"
@@ -49,6 +52,7 @@ export const installQueryCache = (db, key, dependencies) => {
             db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key}_${table}_${event} AFTER ${update} ON ${table} BEGIN
       DELETE FROM query_cache WHERE name='${key}'; END`);
         }
+    }
 };
 /** Read a dependency-validated projection; configuration and layout belong in its signature.
  * @param {DatabaseSync} db Open project database.
@@ -57,8 +61,9 @@ export const installQueryCache = (db, key, dependencies) => {
  * @returns {T | undefined} Cached value, or undefined when its inputs changed.
  */
 export const readQueryCache = (db, key, signature) => {
-    if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get())
+    if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
         return undefined;
+    }
     const row = db
         .prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?")
         .get(key, signature);

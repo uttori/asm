@@ -404,27 +404,31 @@ export interface SnesHardwareRegister {
  */
 export const identifySnesHardwareRegister = (address: number): SnesHardwareRegister | undefined => {
   const bank = (address >>> 16) & 0xff;
-  if (!(bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf))) return undefined;
+  if (!(bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf))) {
+    return undefined;
+  }
   const low = address & 0xffff;
   const fixed = FIXED_REGISTERS[low];
-  if (fixed)
+  if (fixed) {
     return {
       address,
       symbol: fixed.symbol,
       description: fixed.description,
       volatile: true,
     };
+  }
   if (low >= 0x4300 && low <= 0x437f) {
     const channel = (low - 0x4300) >>> 4;
     const register = (low - 0x4300) & 0x0f;
     const definition = DMA_REGISTERS_BY_OFFSET.get(register);
-    if (definition)
+    if (definition) {
       return {
         address,
         symbol: definition.symbol(channel),
         description: `DMA/HDMA channel ${channel}: ${definition.description}`,
         volatile: true,
       };
+    }
   }
   return undefined;
 };
@@ -432,8 +436,8 @@ export const identifySnesHardwareRegister = (address: number): SnesHardwareRegis
 const hex = (value: number, width: number): string =>
   `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 
-/** Stable source filename emitted beside every generated SNES disassembly. */
-export const SNES_HARDWARE_DEFINES_SOURCE = "snes-defines.asm";
+/** Architecture-neutral filename; the SNES exporter supplies the register definitions. */
+export const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
 
 /**
  * Returns the complete documented set of CPU-visible register constants used by generated source.

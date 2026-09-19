@@ -1,7 +1,3 @@
-/* eslint-disable import/no-named-as-default-member */
-/* eslint-disable @typescript-eslint/no-explicit-any */
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-/* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import sinon from "sinon";
 import { test } from "../../../tests/ava-helper.js";
 

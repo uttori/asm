@@ -285,5 +285,5 @@ test("configuration disables rules, sets thresholds, and supports validated regi
       ],
     },
   ])
-    t.throws(() => validateSnesHeuristicConfiguration(invalid));
+    {t.throws(() => validateSnesHeuristicConfiguration(invalid));}
 });

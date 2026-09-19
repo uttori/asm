@@ -6,10 +6,12 @@
 export const normalizeRuntimePPUEffect = (effect, access) => {
     const port = access.address & 0xffff;
     let target = "vram";
-    if (port === 0x2104)
+    if (port === 0x2104) {
         target = "oam";
-    if (port === 0x2122)
+    }
+    if (port === 0x2122) {
         target = "cgram";
+    }
     if (!effect ||
         access.direction !== "write" ||
         access.address & 0x400000 ||
@@ -24,20 +26,24 @@ export const normalizeRuntimePPUEffect = (effect, access) => {
             ? ![65536, 131072].includes(effect.vramBytes ?? 0)
             : effect.vramBytes !== null) ||
         !Array.isArray(effect.bytes) ||
-        effect.bytes.length > 2)
+        effect.bytes.length > 2) {
         throw new Error("Invalid native PPU effect identity or flags.");
+    }
     const count = effect.bytes.length;
     if ((effect.outcome === "written" &&
         (count === 0 || (target === "vram" && count !== 1) || (target === "cgram" && count !== 2))) ||
         (effect.outcome !== "written" && count !== 0) ||
         (effect.outcome === "blocked" && (target !== "vram" || !effect.renderingRestricted)) ||
-        (effect.outcome === "latched" && (target === "vram" || effect.renderingRestricted)))
+        (effect.outcome === "latched" && (target === "vram" || effect.renderingRestricted))) {
         throw new Error("Invalid native PPU outcome or write count.");
+    }
     let bound = effect.vramBytes ?? 0;
-    if (target === "cgram")
+    if (target === "cgram") {
         bound = 512;
-    if (target === "oam")
+    }
+    if (target === "oam") {
         bound = 544;
+    }
     const bytes = effect.bytes.map((byte, i) => {
         if (!byte ||
             !Number.isInteger(byte.address) ||
@@ -51,8 +57,9 @@ export const normalizeRuntimePPUEffect = (effect, access) => {
                 (i === 0
                     ? (byte.address & 1) !== 0
                     : byte.address !== effect.bytes[0].address + 1 || byte.value !== (access.value & 127))) ||
-            (target === "oam" && i === count - 1 && byte.value !== access.value))
+            (target === "oam" && i === count - 1 && byte.value !== access.value)) {
             throw new Error("Invalid native PPU byte destination or value.");
+        }
         return { address: byte.address, value: byte.value };
     });
     return {
@@ -73,22 +80,28 @@ export const createRuntimePPUAccumulator = () => {
     const writes = [];
     return {
         push: (access) => {
-            if (!access.ppu)
+            if (!access.ppu) {
                 return;
+            }
             const effect = access.ppu;
             portWrites++;
-            if (effect.outcome === "written")
+            if (effect.outcome === "written") {
                 written++;
-            if (effect.outcome === "blocked")
+            }
+            if (effect.outcome === "blocked") {
                 blocked++;
-            if (effect.outcome === "latched")
+            }
+            if (effect.outcome === "latched") {
                 latched++;
-            if (!Number.isSafeInteger(byteWrites + effect.bytes.length))
+            }
+            if (!Number.isSafeInteger(byteWrites + effect.bytes.length)) {
                 throw new Error("PPU byte count exceeds safe integer range.");
+            }
             byteWrites += effect.bytes.length;
-            if (effect.renderingRestricted)
+            if (effect.renderingRestricted) {
                 renderingRestricted++;
-            if (writes.length < 64)
+            }
+            if (writes.length < 64) {
                 writes.push({
                     sequence: access.sequence,
                     actor: access.actor,
@@ -100,6 +113,7 @@ export const createRuntimePPUAccumulator = () => {
                         vcounter: effect.vcounter,
                     },
                 });
+            }
         },
         finish: () => ({
             portWrites,

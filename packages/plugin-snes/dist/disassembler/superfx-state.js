@@ -7,10 +7,12 @@ export const initialSuperFxState = (programBank) => ({
     programBank: programBank === undefined ? unknown() : known(programBank & 0xff),
 });
 const joinValue = (left, right) => {
-    if (left.kind === "unknown" || right.kind === "unknown")
+    if (left.kind === "unknown" || right.kind === "unknown") {
         return { kind: "unknown" };
-    if (left.kind === "conflict" || right.kind === "conflict")
+    }
+    if (left.kind === "conflict" || right.kind === "conflict") {
         return { kind: "conflict" };
+    }
     return left.value === right.value ? left : { kind: "conflict" };
 };
 export const joinSuperFxStates = (left, right) => ({
@@ -29,8 +31,9 @@ export const superFxDecodeState = (state) => ({
 export const enterSuperFxAddress = (state, address) => ({ ...state, programBank: known((address >>> 16) & 0xff) });
 const detailNumber = (instruction, name) => {
     const effect = instruction.effects.find((entry) => entry.kind === "custom" && entry.name === name);
-    if (effect?.kind !== "custom")
+    if (effect?.kind !== "custom") {
         return undefined;
+    }
     const value = effect.details?.register ?? effect.details?.alt;
     return typeof value === "number" ? value : undefined;
 };
@@ -45,8 +48,9 @@ export const transferSuperFxState = (instruction, state) => {
         };
     }
     const destination = detailNumber(instruction, "select-superfx-destination");
-    if (destination !== undefined)
+    if (destination !== undefined) {
         return { ...state, destinationRegister: known(destination) };
+    }
     const paired = detailNumber(instruction, "select-superfx-source-destination");
     if (paired !== undefined) {
         return {
@@ -56,8 +60,9 @@ export const transferSuperFxState = (instruction, state) => {
         };
     }
     const source = detailNumber(instruction, "select-superfx-source");
-    if (source !== undefined)
+    if (source !== undefined) {
         return { ...state, sourceRegister: known(source) };
+    }
     return {
         ...state,
         alt: known(0),

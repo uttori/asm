@@ -53,7 +53,9 @@ export const prepareCoverage = (
     .sort((a, b) => a.localeCompare(b));
   const files = new Set(fileAddressSpaces);
   const size = manifest.rom.contentSize;
-  if (!Number.isSafeInteger(size) || size < 0) throw new Error("Invalid ROM coverage size.");
+  if (!Number.isSafeInteger(size) || size < 0) {
+    throw new Error("Invalid ROM coverage size.");
+  }
   const event = db.prepare("INSERT INTO temp.coverage_events VALUES(?,?,?,?)");
   const detail = db.prepare("INSERT INTO query_coverage_details VALUES(?,?,?,?)");
   const unprojected = (kind: string, id: string, reason: string): void => {
@@ -85,7 +87,7 @@ export const prepareCoverage = (
       return false;
     }
     const clipped = Math.min(end, size);
-    if (clipped !== end)
+    if (clipped !== end) {
       detail.run(
         "z-diagnostic",
         id,
@@ -98,6 +100,7 @@ export const prepareCoverage = (
           icon: "warning",
         }),
       );
+    }
     for (const [category, identity] of categories) {
       event.run(start, category, identity, 1);
       event.run(clipped, category, identity, -1);
@@ -114,10 +117,12 @@ export const prepareCoverage = (
         continue;
       }
       let classification = "data";
-      if (["opcode", "operand"].includes(record.classification))
+      if (["opcode", "operand"].includes(record.classification)) {
         classification = record.classification;
-      if (["graphics", "music", "compressed", "asset"].includes(record.classification))
+      }
+      if (["graphics", "music", "compressed", "asset"].includes(record.classification)) {
         classification = "asset";
+      }
       add("annotation", record.id, record.start, record.end, [
         ["classification", classification],
         ["annotationIds", record.id],
@@ -147,11 +152,12 @@ export const prepareCoverage = (
         ["classification", "opcode"],
         ["analysisIds", id],
       ]);
-      if (Number(row.size) > 1)
+      if (Number(row.size) > 1) {
         add("analysis", id, start + 1, start + Number(row.size), [
           ["classification", "operand"],
           ["analysisIds", id],
         ]);
+      }
     }
     const node = db.prepare(
       "SELECT a.id,q.file_offset,q.size FROM analysis a JOIN query_instruction_nodes q ON q.row_id=a.rowid WHERE a.id=? AND a.kind='cfg-node'",
@@ -167,7 +173,9 @@ export const prepareCoverage = (
       let projected = false;
       for (const id of record.nodes) {
         const target = node.get(id);
-        if (!target || target.file_offset === null) continue;
+        if (!target || target.file_offset === null) {
+          continue;
+        }
         projected =
           add(
             "analysis",
@@ -180,7 +188,9 @@ export const prepareCoverage = (
             ],
           ) || projected;
       }
-      if (!projected) unprojected("analysis", record.id, "missing-file-offset");
+      if (!projected) {
+        unprojected("analysis", record.id, "missing-file-offset");
+      }
     }
     const identity = "p.value || CASE typeof(r.id) WHEN 'blob' THEN lower(hex(r.id)) ELSE r.id END";
     for (const row of db
@@ -198,11 +208,12 @@ export const prepareCoverage = (
         ["runtime", "executed"],
         ["runtimeIds", id],
       ]);
-      if (Number(row.size) > 1)
+      if (Number(row.size) > 1) {
         add("runtime", id, start + 1, start + Number(row.size), [
           ["runtime", "operand"],
           ["runtimeIds", id],
         ]);
+      }
     }
     for (const row of db
       .prepare(
@@ -229,8 +240,8 @@ export const prepareCoverage = (
       for (const [access, classification] of [
         ["read", "read"],
         ["write", "written"],
-      ])
-        if (payload.access === access || payload.access === "read-write")
+      ]) {
+        if (payload.access === access || payload.access === "read-write") {
           add(
             "runtime",
             id,
@@ -241,6 +252,8 @@ export const prepareCoverage = (
               ["runtimeIds", id],
             ],
           );
+        }
+      }
     }
     // Group equal identity deltas first: adjoining overlays with identical provenance coalesce.
     event.run(0, "boundary", "", 0);
@@ -275,7 +288,9 @@ export const prepareCoverage = (
       }
     };
     const flush = (end: number): void => {
-      if (end <= previous) return;
+      if (end <= previous) {
+        return;
+      }
       const classifications = (["opcode", "operand", "data", "asset"] as const).filter((c) =>
         active.get("classification")?.has(c),
       );
@@ -284,8 +299,12 @@ export const prepareCoverage = (
       );
       const conflictIds = ids("conflictIds");
       let status: RomCoverageSegment["status"] = "classified";
-      if (classifications.length === 0) status = "unknown";
-      if (classifications.length > 1 || conflictIds.length) status = "conflict";
+      if (classifications.length === 0) {
+        status = "unknown";
+      }
+      if (classifications.length > 1 || conflictIds.length) {
+        status = "conflict";
+      }
       const segment: RomCoverageSegment = {
         start: previous,
         end,
@@ -301,18 +320,27 @@ export const prepareCoverage = (
       const { start: _start, end: _end, ...identity } = segment;
       const key = JSON.stringify(identity);
       // Overlapping copies can change an identity's multiplicity without changing its visible set.
-      if (pending && key === pendingKey) pending = { ...pending, end };
-      else {
+      if (pending && key === pendingKey) {
+        pending = { ...pending, end };
+      } else {
         savePending();
         pending = segment;
         pendingKey = key;
       }
       const bytes = end - previous;
-      for (const c of segment.classifications) classificationTotals[c] += bytes;
-      for (const c of runtime) runtimeTotals[c] += bytes;
-      if (status === "classified") classifiedBytes += bytes;
-      else if (status === "conflict") conflictBytes += bytes;
-      else unknownBytes += bytes;
+      for (const c of segment.classifications) {
+        classificationTotals[c] += bytes;
+      }
+      for (const c of runtime) {
+        runtimeTotals[c] += bytes;
+      }
+      if (status === "classified") {
+        classifiedBytes += bytes;
+      } else if (status === "conflict") {
+        conflictBytes += bytes;
+      } else {
+        unknownBytes += bytes;
+      }
       previous = end;
     };
     for (const row of db
@@ -321,7 +349,9 @@ export const prepareCoverage = (
       )
       .iterate()) {
       flush(Number(row.pos));
-      if (row.category === "boundary") continue;
+      if (row.category === "boundary") {
+        continue;
+      }
       const category = String(row.category),
         id = String(row.id);
       let values = active.get(category);
@@ -330,8 +360,11 @@ export const prepareCoverage = (
         active.set(category, values);
       }
       const count = (values.get(id) ?? 0) + Number(row.delta);
-      if (count === 0) values.delete(id);
-      else values.set(id, count);
+      if (count === 0) {
+        values.delete(id);
+      } else {
+        values.set(id, count);
+      }
     }
     savePending();
     const result: SqliteCoverageSummary = {
@@ -379,7 +412,9 @@ export const coveragePage = (
   kind: "segments" | "details",
   offset: number,
 ): unknown[] => {
-  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error("Invalid analysis page offset.");
+  if (!Number.isSafeInteger(offset) || offset < 0) {
+    throw new Error("Invalid analysis page offset.");
+  }
   const table = kind === "segments" ? "query_coverage_segments" : "query_coverage_details";
   const order = kind === "segments" ? "start" : "kind,id,reason";
   return db

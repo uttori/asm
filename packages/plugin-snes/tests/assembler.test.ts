@@ -6925,8 +6925,9 @@ test("expressionHost - sizeof, objectsize, datasize", (t) => {
   // Mock getExpressionObjectSize method
   const originalGetObjectSize = assembler.getExpressionObjectSize;
 
-  assembler.getExpressionObjectSize = (name: string, includeParent = false) => {
+  assembler.getExpressionObjectSize = (name: string, includeParent) => {
     if (name === "test_object") {
+      // Defaults to false
       return includeParent ? 0x200 : 0x100;
     }
     throw new Error(`Unknown object: ${name}`);

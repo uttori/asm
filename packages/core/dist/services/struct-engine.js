@@ -147,8 +147,9 @@ export class StructEngine {
             if (!["align", "count", "firstindex"].includes(option) ||
                 seen.has(option) ||
                 words[index + 1] === undefined) {
-                if (words[1]?.toLowerCase() === "align")
+                if (words[1]?.toLowerCase() === "align") {
                     throw new Error("endstruct align requires a single alignment parameter.");
+                }
                 throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
             }
             seen.add(option);
@@ -156,18 +157,23 @@ export class StructEngine {
             if (!Number.isSafeInteger(value) || value < (option === "firstindex" ? 0 : 1)) {
                 throw new Error(option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`);
             }
-            if (option === "align")
+            if (option === "align") {
                 align = value;
-            else if (option === "count")
+            }
+            else if (option === "count") {
                 count = value;
-            else
+            }
+            else {
                 first = value;
+            }
         }
-        if (seen.has("firstindex") && count === undefined)
+        if (seen.has("firstindex") && count === undefined) {
             throw new Error("endstruct firstindex requires count.");
+        }
         if (count !== undefined) {
-            if (!Number.isSafeInteger(first + count))
+            if (!Number.isSafeInteger(first + count)) {
                 throw new Error("Struct index range exceeds integer precision.");
+            }
             currentStruct.indexRange = { first, count };
         }
         let finalSize = currentStruct.offset;

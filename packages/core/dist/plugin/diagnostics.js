@@ -1,3 +1,4 @@
+/** Structured plugin/configuration failure. Cleanup of multiple resources may instead throw AggregateError. */
 export class PluginError extends Error {
     code;
     pluginId;

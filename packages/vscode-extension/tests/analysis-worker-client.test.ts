@@ -371,11 +371,12 @@ test("projection failures and timeouts report the operation/budget, reject queue
   ]);
   for (const result of failed) {
     t.is(result.status, "rejected");
-    if (result.status === "rejected")
+    if (result.status === "rejected") {
       t.regex(
         result.reason.message,
         /Analysis annotations process exited \(23\).*128 MiB.*test projection failure/s,
       );
+    }
   }
   const recovered = await client.request<{ pid: number }>("normal", "details");
   t.not(recovered.pid, first.pid);

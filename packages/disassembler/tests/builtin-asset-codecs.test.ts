@@ -29,7 +29,9 @@ class Bytes implements AssetByteSource {
   }
 
   read(offset: number, length: number): Uint8Array | undefined {
-    if (offset < 0 || length < 0 || offset + length > this.length) return undefined;
+    if (offset < 0 || length < 0 || offset + length > this.length) {
+      return undefined;
+    }
     return this.#bytes.slice(offset, offset + length);
   }
 }

@@ -14,9 +14,13 @@ export function classify65xxOperand(
   const sizePrefix = parseCa65AddressSizePrefix(raw);
   const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
   let length = inferredLength;
-  if (sizePrefix.force === 1) length = 1;
-  else if (sizePrefix.force === 2) length = Math.max(2, inferredLength);
-  else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
+  if (sizePrefix.force === 1) {
+    length = 1;
+  } else if (sizePrefix.force === 2) {
+    length = Math.max(2, inferredLength);
+  } else if (sizePrefix.force === 3) {
+    length = Math.max(3, inferredLength);
+  }
   const normalized = expanded.trim();
   const normalizedUpper = normalized.toUpperCase();
   const compound = splitTopLevelOperands(normalized);
@@ -80,11 +84,17 @@ export function classify65xxOperand(
       baseExpression = indirect[1].trim();
     } else if (indexed) {
       const register = indexed[2].toLowerCase();
-      if (register === "s") mode = "stackRelative";
+      if (register === "s") {
+        mode = "stackRelative";
+      }
       // `,z` without parens/brackets is not a 65xx mode we encode.
-      else if (register === "z") mode = "unknown";
-      else if (length > 2 && register === "x") mode = "absoluteLongIndexedX";
-      else mode = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
+      else if (register === "z") {
+        mode = "unknown";
+      } else if (length > 2 && register === "x") {
+        mode = "absoluteLongIndexedX";
+      } else {
+        mode = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register.toUpperCase()}`;
+      }
       baseExpression = indexed[1].trim();
     } else if (topLevelComma >= 0) {
       if (compound.length === 3) {
@@ -129,9 +139,11 @@ function splitTopLevelOperands(value: string): string[] {
   let start = 0;
   for (let index = 0; index < value.length; index++) {
     const character = value[index];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
       parts.push(value.slice(start, index).trim());
       start = index + 1;
     }
@@ -150,9 +162,13 @@ function findTopLevelComma(value: string): number {
   let depth = 0;
   for (let index = 0; index < value.length; index++) {
     const character = value[index];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) return index;
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      return index;
+    }
   }
   return -1;
 }
@@ -173,7 +189,11 @@ function parseCa65AddressSizePrefix(operand: string): {
   }
   const rest = match[2].trim();
   const key = match[1].toLowerCase();
-  if (key === "z") return { rest, force: 1 };
-  if (key === "a") return { rest, force: 2 };
+  if (key === "z") {
+    return { rest, force: 1 };
+  }
+  if (key === "a") {
+    return { rest, force: 2 };
+  }
   return { rest, force: 3 };
 }

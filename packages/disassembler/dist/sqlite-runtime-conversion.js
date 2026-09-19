@@ -53,8 +53,9 @@ export const prepareRuntimeConversion = async (db, version, options) => {
             (record.kind === "runtime-instruction" || record.kind === "runtime-cpu-state") &&
             record.addressSpace === "snes.cpu") {
             let bytes;
-            if (record.kind === "runtime-instruction")
+            if (record.kind === "runtime-instruction") {
                 bytes = record.bytes;
+            }
             else {
                 const codeId = `runtime:instruction-trace:${match[1]}:code:${match[3]}`;
                 const identity = sqliteRuntimeIdentity(codeId);
@@ -67,8 +68,9 @@ export const prepareRuntimeConversion = async (db, version, options) => {
                     other.architecture === record.architecture &&
                     other.addressSpace === record.addressSpace &&
                     other.address === record.address &&
-                    canonicalJson(other.state) === canonicalJson(record.state))
+                    canonicalJson(other.state) === canonicalJson(record.state)) {
                     bytes = other.bytes;
+                }
             }
             if (bytes) {
                 remember.run(match[1]);
@@ -84,8 +86,9 @@ export const prepareRuntimeConversion = async (db, version, options) => {
             }
         }
         // Counts are the only additive field. Any conflicting stable identity aborts conversion.
-        if (insert.run(record.id, canonicalJson({ ...record, count: 0 }), record.count).changes !== 1)
+        if (insert.run(record.id, canonicalJson({ ...record, count: 0 }), record.count).changes !== 1) {
             throw new Error(`Conflicting projected runtime identity '${record.id}'.`);
+        }
         if (++records % 5000 === 0) {
             options.onProgress?.(records);
             await setImmediate();
@@ -93,15 +96,17 @@ export const prepareRuntimeConversion = async (db, version, options) => {
     }
     if (db
         .prepare("SELECT 1 FROM temp.converted_runtime WHERE typeof(count)!='integer' OR count>9007199254740991 LIMIT 1")
-        .get())
+        .get()) {
         throw new Error("Projected execution count exceeds the exact integer range.");
+    }
 };
 /** Read the finished projection once; no collection of full runtime history reaches the JS heap.
  * @param {DatabaseSync} db Connection containing the finished temporary projection.
  * @yields {RuntimeEvidenceRecord} One canonical variant with its exact aggregate count.
  */
 export function* convertedRuntimeRecords(db) {
-    for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate())
+    for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate()) {
         yield { ...JSON.parse(String(row.payload)), count: Number(row.count) };
+    }
 }
 //# sourceMappingURL=sqlite-runtime-conversion.js.map

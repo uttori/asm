@@ -106,11 +106,12 @@ test("root analysis rejects incompatible, corrupt, and tampered cache entries", 
     { ...identity, architecture: "other" },
     { ...identity, includePaths: ["a"] },
     { ...identity, includePaths: ["a", "c"] },
-  ])
+  ]) {
     t.is(
       cache.read(root, changed, () => hash),
       undefined,
     );
+  }
   for (const changes of [
     { version: 999 },
     { root: "wrong" },

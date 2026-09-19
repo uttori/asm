@@ -14,20 +14,27 @@ export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 2;
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
  * @param {Pick<AnalysisProjectManifest, "db">} manifest Validated pointer.
- * @returns {string} Absolute sqlite path.
+ * @returns {string} Joined sqlite path; relative directories remain relative to process cwd.
  */
 export declare const analysisProjectSqlitePath: (directory: string, manifest: Pick<AnalysisProjectManifest, "db">) => string;
 /**
- * Columnar sqlite working store for one analysis project.
+ * Owned synchronous SQLite connection for one project. Close it once in finally; do not share a
+ * connection across overlapping operations. Queries decode records but do not all validate them.
+ * Use project snapshot/publication helpers for semantic validation and revision-checked edits.
+ * Low-level mutations require a transaction and do not publish a revision or refresh the pointer
+ * automatically. WAL readers can retain old snapshots and delay checkpoint/truncation.
  */
 export declare class SqliteAnalysisStore {
     #private;
+    /** Database path as supplied at construction; resolves relative to cwd when not absolute. */
     readonly file: string;
     /**
      * Opens or creates a project database.
-     * @param {string} file Absolute sqlite path.
-     * @param {boolean} [createSchema] Permit initialization of an empty database; never upgrade an existing one.
-     * @param {boolean} [deferIndexes] Migration-only bulk load; finishMigration must build indexes before publication.
+     * Opening validates physical format, not every semantic record, and may create SQLite journal files.
+     * Connections use a 5,000 ms busy timeout; lock contention can still throw a SQLite error.
+     * @param {string} file SQLite path; parent directory must already exist.
+     * @param {boolean} [createSchema] Defaults to true; permit initialization of an empty database, never upgrade an existing one.
+     * @param {boolean} [deferIndexes] Defaults to false; migration-only bulk load, completed by finishMigration.
      */
     constructor(file: string, createSchema?: boolean, deferIndexes?: boolean);
     /**
@@ -38,11 +45,14 @@ export declare class SqliteAnalysisStore {
     /**
      * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
      * the revision so a competing process cannot slip between the stale check and publication.
+     * Throwing rolls back records and manifest changes. Promise/thenable results are rejected; perform
+     * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
+     * the manifest themselves when changing semantic records; prefer the commitAnalysisProject APIs.
      * @param {Function} action Synchronous work; cursors must be consumed before returning.
-     * @param {boolean} [write] Acquire the writer lock immediately; false creates a read snapshot.
+     * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE); false uses deferred BEGIN for reads, not an enforced read-only connection.
      * @returns {T} Callback result after a successful commit.
      */
-    transaction<T>(action: () => T, write?: boolean): T;
+    transaction<T>(action: () => T & (T extends PromiseLike<unknown> ? never : unknown), write?: boolean): T;
     /**
      * Index trace chunks in a connection-local disk table. This transaction never reads or writes
      * main, allowing other project writers to proceed during asynchronous capture parsing.
@@ -95,12 +105,14 @@ export declare class SqliteAnalysisStore {
      */
     publishManifest(manifest: Omit<AnalysisProjectManifest, "shards">): AnalysisProjectManifest;
     /**
-     * Current publication counter.
+     * Current publication counter, or zero before initial publication. It is not a schema version.
+     * Read it with related records inside transaction to retain one consistent snapshot.
      * @returns {number} Stored revision.
      */
     revision(): number;
     /**
-     * Manifest stored in meta, including sqlite pointer fields.
+     * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
+     * Use a transaction when combining it with other reads; this does not validate the entire project.
      * @returns {AnalysisProjectManifest} Pointer manifest.
      */
     manifest(): AnalysisProjectManifest;
@@ -112,7 +124,8 @@ export declare class SqliteAnalysisStore {
      */
     runtimeRecordsByKinds(kinds: readonly RuntimeEvidenceRecord["kind"][]): IterableIterator<RuntimeEvidenceRecord>;
     /**
-     * Stream runtime facts without retaining the complete table.
+     * Stream runtime facts without retaining the complete table. Consume before the owning transaction
+     * returns or the connection closes; an escaped iterator does not preserve its original snapshot.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
      * @yields {RuntimeEvidenceRecord} One runtime fact.
      */
@@ -211,7 +224,7 @@ export declare class SqliteAnalysisStore {
      * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
      * @returns {T} Current projected value.
      */
-    cachedProjection<T>(key: string, signature: string, dependencies: readonly ShardKind[], compute: () => T, publish?: () => void): T;
+    cachedProjection<T>(key: string, signature: string, dependencies: readonly ShardKind[], compute: () => T & (T extends PromiseLike<unknown> ? never : unknown), publish?: () => void): T;
     /** CPU architectures at one PC from indexed scalar columns; register payloads are untouched.
      * @param {string} space Exact logical address space.
      * @param {number} address Instruction address.
@@ -350,8 +363,8 @@ export declare class SqliteAnalysisStore {
      */
     finishMigration(): void;
     /**
-     * Materialize metadata once; full runtime history is opt-in for callers that need it.
-     * @param {boolean} [runtime] Include complete runtime history; false keeps it on disk.
+     * Materialize complete record arrays without semantic validation. Run inside a read transaction.
+     * @param {boolean} [runtime] Defaults to true; false omits runtime and must not be treated as a complete replacement.
      * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
      */
     loadShards(runtime?: boolean): AnalysisProjectShards;
@@ -398,35 +411,19 @@ export declare class SqliteAnalysisStore {
      * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
      */
     storageCacheBytes(): number;
-    /** Durable receipt lookup survives archive expiry and cache eviction.
+    /** Durable receipt lookup survives source-file removal and cache eviction.
      * @param {string} sha256 Canonical capture identity.
-     * @returns {object | undefined} Retained receipt, including archive availability.
+     * @returns {object | undefined} Retained import identity and counts.
      */
     captureReceipt(sha256: string): Record<string, import("node:sqlite").SQLOutputValue> | undefined;
-    /** Catalog rows contain small provenance/availability metadata, never capture contents.
+    /** Catalog rows contain small import provenance metadata, never capture contents.
      * @returns {object[]} Small capture metadata rows in import order.
      */
     captureCatalog(): Record<string, import("node:sqlite").SQLOutputValue>[];
-    /** Record the first successful import atomically with its facts; later detail expiry retains this receipt.
+    /** Record the first successful import atomically with its facts; reimports only refresh last-seen time.
      * @param {ImportReport} report Successfully validated native trace import.
      */
     recordCaptureReceipt(report: ImportReport): void;
-    /** Save verified archive metadata, or mark expired detail while keeping the import identity.
-     * @param {string} sha256 Canonical capture identity already committed.
-     * @param {object} value Verified location/hash/size or explicit detail unavailability.
-     */
-    updateCaptureArchive(sha256: string, value: {
-        originalPath?: string;
-        name?: string;
-        hash?: string;
-        bytes: number;
-        availability: string;
-    }): void;
-    /** Pinned detail is exempt from automatic byte, age and count expiry.
-     * @param {string} sha256 Canonical identity of an existing capture receipt.
-     * @param {boolean} pinned Whether automatic archive expiry must preserve it.
-     */
-    pinCapture(sha256: string, pinned: boolean): void;
     /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
      * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.
      */
@@ -435,7 +432,7 @@ export declare class SqliteAnalysisStore {
         cacheBytes: number;
         checkpointBusy: boolean;
     };
-    /** Close prepared statements and the database. */
+    /** Close once in finally, releasing statements and any active transaction. Further use throws. */
     close(): void;
 }
 //# sourceMappingURL=sqlite-store.d.ts.map

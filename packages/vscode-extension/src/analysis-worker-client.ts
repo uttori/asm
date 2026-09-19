@@ -76,7 +76,9 @@ export class AnalysisWorkerClient {
     }
     const key = JSON.stringify({ directory, operation, ...options });
     const previous = this.#inflight.get(key);
-    if (previous) return previous as Promise<T>;
+    if (previous) {
+      return previous as Promise<T>;
+    }
     const id = ++this.#nextId;
     const promise = new Promise<T>((resolve, reject) => {
       this.#queue.push({
@@ -87,7 +89,9 @@ export class AnalysisWorkerClient {
     });
     this.#inflight.set(key, promise);
     const forget = (): void => {
-      if (this.#inflight.get(key) === promise) this.#inflight.delete(key);
+      if (this.#inflight.get(key) === promise) {
+        this.#inflight.delete(key);
+      }
     };
     void promise.then(forget, forget);
     this.#dispatch();
@@ -95,28 +99,35 @@ export class AnalysisWorkerClient {
   }
 
   #dispatch(): void {
-    if (this.#active) return;
+    if (this.#active) {
+      return;
+    }
     const pending = this.#queue.shift();
-    if (!pending) return;
+    if (!pending) {
+      return;
+    }
     this.#active = pending;
     try {
       const maxMemoryMiB =
         pending.message.operation === "clear"
           ? this.#memoryMiB
           : (this.options.maxMemoryMiB?.(pending.message.directory) ?? 4096);
-      if (!Number.isSafeInteger(maxMemoryMiB) || maxMemoryMiB < 128)
+      if (!Number.isSafeInteger(maxMemoryMiB) || maxMemoryMiB < 128) {
         throw new Error("asm.analysis.maxMemoryMiB must be a safe integer of at least 128.");
+      }
       if (this.#worker && this.#memoryMiB !== maxMemoryMiB) {
         const previous = this.#worker;
         this.#worker = undefined;
         previous.kill();
       }
-      if (!this.#worker) this.#start(maxMemoryMiB);
+      if (!this.#worker) {
+        this.#start(maxMemoryMiB);
+      }
       // Queueing behind another view does not consume this operation's execution budget.
       const timeoutMs = this.options.timeoutMs ?? 60_000;
       // Source publication must finish its synchronous write phase before cancellation;
       // killing this worker on a timer could leave a partially written generated tree.
-      if (pending.message.operation !== "annotationRefresh")
+      if (pending.message.operation !== "annotationRefresh") {
         pending.timer = setTimeout(
           () =>
             this.#fail(
@@ -126,8 +137,11 @@ export class AnalysisWorkerClient {
             ),
           timeoutMs,
         );
+      }
       this.#worker!.send(pending.message, (error) => {
-        if (error && this.#active === pending) this.#fail(error);
+        if (error && this.#active === pending) {
+          this.#fail(error);
+        }
       });
     } catch (error) {
       this.#fail(error instanceof Error ? error : new Error(String(error)));
@@ -151,27 +165,36 @@ export class AnalysisWorkerClient {
       "message",
       (message: { id: number; value?: unknown; error?: string; stack?: string }) => {
         const pending = this.#active;
-        if (this.#worker !== worker || pending?.message.id !== message.id) return;
+        if (this.#worker !== worker || pending?.message.id !== message.id) {
+          return;
+        }
         clearTimeout(pending.timer);
         this.#active = undefined;
         if (message.error) {
           const error = new Error(message.error);
-          if (message.stack) error.stack = message.stack;
+          if (message.stack) {
+            error.stack = message.stack;
+          }
           pending.reject(error);
-        } else pending.resolve(message.value);
+        } else {
+          pending.resolve(message.value);
+        }
         this.#dispatch();
       },
     );
     worker.on("error", (error) => {
-      if (this.#worker === worker) this.#fail(error);
+      if (this.#worker === worker) {
+        this.#fail(error);
+      }
     });
     worker.on("exit", (code, signal) => {
-      if (this.#worker === worker)
+      if (this.#worker === worker) {
         this.#fail(
           new Error(
             `Analysis ${this.#active?.message.operation ?? "view"} process exited (${signal ?? code}). Memory budget: ${maxMemoryMiB} MiB (asm.analysis.maxMemoryMiB). Expand the view to retry.${stderr ? `\n${stderr}` : ""}`,
           ),
         );
+      }
     });
   }
 
@@ -179,7 +202,9 @@ export class AnalysisWorkerClient {
     this.#annotations?.invalidate();
     this.#previews?.invalidate();
     this.#inflight.clear();
-    if (this.#worker) void this.request("", "clear").catch(() => undefined);
+    if (this.#worker) {
+      void this.request("", "clear").catch(() => undefined);
+    }
   }
   dispose(): void {
     this.#annotations?.dispose();
@@ -189,7 +214,9 @@ export class AnalysisWorkerClient {
   #fail(error: Error): void {
     const worker = this.#worker;
     this.#worker = undefined;
-    if (worker) worker.kill();
+    if (worker) {
+      worker.kill();
+    }
     const pendingRequests = this.#active ? [this.#active, ...this.#queue] : this.#queue;
     this.#active = undefined;
     for (const pending of pendingRequests) {
@@ -211,6 +238,8 @@ export const initializeAnalysisWorker = (
     isolateAnnotations: true,
   }));
 export const analysisWorker = (): AnalysisWorkerClient => {
-  if (!client) throw new Error("Analysis worker has not been initialized.");
+  if (!client) {
+    throw new Error("Analysis worker has not been initialized.");
+  }
   return client;
 };

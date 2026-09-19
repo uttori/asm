@@ -182,8 +182,9 @@ const flowFor = (mnemonic, addressingMode) => {
         mnemonic.startsWith("BBC")) {
         return { kind: "conditionalBranch", fallthrough: true };
     }
-    if (mnemonic === "BRA")
+    if (mnemonic === "BRA") {
         return { kind: "jump", fallthrough: false };
+    }
     if (mnemonic === "JMP") {
         return {
             kind: "jump",
@@ -201,12 +202,15 @@ const flowFor = (mnemonic, addressingMode) => {
     if (mnemonic === "RET" || mnemonic === "RETI") {
         return { kind: "return", fallthrough: false };
     }
-    if (mnemonic === "BRK")
+    if (mnemonic === "BRK") {
         return { kind: "interrupt", fallthrough: false };
-    if (mnemonic === "SLEEP")
+    }
+    if (mnemonic === "SLEEP") {
         return { kind: "wait", fallthrough: false };
-    if (mnemonic === "STOP")
+    }
+    if (mnemonic === "STOP") {
         return { kind: "stop", fallthrough: false };
+    }
     return { kind: "fallthrough", fallthrough: true };
 };
 const effects = {
@@ -227,14 +231,16 @@ const effects = {
     ],
 };
 const entries = opcodeRows.flatMap((row) => row.split(" "));
-if (entries.length !== 256)
+if (entries.length !== 256) {
     throw new Error(`SPC700 opcode table has ${entries.length} entries.`);
+}
 /** Complete fixed-width SPC700 opcode specification, indexed by opcode byte. */
 export const spc700Specifications = Object.freeze(entries.map((entry, opcode) => {
     const [mnemonic, modeKeyText] = entry.split(":");
     const definition = spc700Modes[modeKeyText];
-    if (!mnemonic || !definition)
+    if (!mnemonic || !definition) {
         throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
+    }
     const summaryKey = mnemonic.replace(/[0-7]$/, "0");
     return Object.freeze({
         id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -264,8 +270,9 @@ export function buildSpc700Catalog() {
             size: specification.minimumSize,
         };
         const descriptor = grouped.get(specification.mnemonic);
-        if (descriptor)
+        if (descriptor) {
             descriptor.modes.push(addressingMode);
+        }
         else {
             grouped.set(specification.mnemonic, {
                 mnemonic: specification.mnemonic,

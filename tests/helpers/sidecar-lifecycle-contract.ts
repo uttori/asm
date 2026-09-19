@@ -98,8 +98,12 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
         module,
         exports: module.exports,
         require: (name: string) => {
-          if (name === "@uttori/asm-debug-adapter") return debugAdapter;
-          if (name in options.imports) return options.imports[name];
+          if (name === "@uttori/asm-debug-adapter") {
+            return debugAdapter;
+          }
+          if (name in options.imports) {
+            return options.imports[name];
+          }
           return nativeRequire(name);
         },
         process: {
@@ -253,7 +257,9 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
           },
         );
         t.teardown(() => {
-          if (child.exitCode === null) child.kill();
+          if (child.exitCode === null) {
+            child.kill();
+          }
         });
         const stdout: Buffer[] = [];
         const stderr: Buffer[] = [];
@@ -286,7 +292,9 @@ export function testSidecarLifecycle(options: SidecarLifecycleOptions): void {
         },
       );
       t.teardown(() => {
-        if (child.exitCode === null) child.kill();
+        if (child.exitCode === null) {
+          child.kill();
+        }
       });
       const output: Buffer[] = [];
       const errors: Buffer[] = [];

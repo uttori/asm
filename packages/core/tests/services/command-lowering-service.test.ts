@@ -163,7 +163,9 @@ test("registered lowered dot directives take precedence over sublabel syntax", (
   const program = assembler.buildProgramModel(".width 16", "dot-directive.asm");
   const lowered = assembler.commandLoweringService.lowerProgram(program).nodes[0];
   t.is(lowered?.kind, "directive");
-  if (lowered?.kind === "directive") assembler.dispatchLoweredNode(lowered);
+  if (lowered?.kind === "directive") {
+    assembler.dispatchLoweredNode(lowered);
+  }
   t.deepEqual(calls, [".width 16"]);
 });
 

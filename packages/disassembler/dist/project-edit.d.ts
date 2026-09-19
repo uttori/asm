@@ -92,7 +92,11 @@ export interface AppliedLabelRenameEdit {
     readonly project: AnalysisProject;
     readonly inverse: LabelRenameInverse;
 }
-/** One address-based label/comment edit. Empty comment strings clear only the selected fields. */
+/**
+ * One address-based label/comment edit. Addresses are bytes in the named space, never source lines.
+ * Omitted text fields remain unchanged; empty comment strings clear only the selected fields.
+ * New records and manual evidence need stable IDs unique within their respective collections.
+ */
 export interface DisassemblyAnnotationEditRequest {
     readonly addressSpace: string;
     readonly address: number;
@@ -114,6 +118,10 @@ export interface DisassemblyAnnotationInverse {
     readonly commentAfter?: ProjectComment;
     readonly evidence: EvidenceRecord;
 }
+/**
+ * Pure edit result; nothing is persisted until a revision-checked commit. Unchanged records can be
+ * shared with the input. Retain the inverse in caller-owned undo state and commit undo separately.
+ */
 export interface AppliedDisassemblyAnnotationEdit {
     readonly project: AnalysisProject;
     readonly inverse: DisassemblyAnnotationInverse;

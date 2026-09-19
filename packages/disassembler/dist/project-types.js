@@ -2,6 +2,6 @@
 export const ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 /** Current analysis-project schema. Only the current SQLite container is supported. */
 export const ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
-/** Filename of the project manifest written at the project root. */
+/** Watcher pointer filename; the authoritative manifest lives in SQLite. */
 export const ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 //# sourceMappingURL=project-types.js.map

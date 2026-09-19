@@ -65,14 +65,18 @@ export function handleCheck(state, words) {
         throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
     }
     const mode = words[2].toLowerCase();
-    if (mode === "off")
+    if (mode === "off") {
         state.bankCrossMode = "off";
-    else if (mode === "half")
+    }
+    else if (mode === "half") {
         state.bankCrossMode = "half";
-    else if (mode === "full" || mode === "on")
+    }
+    else if (mode === "full" || mode === "on") {
         state.bankCrossMode = "full";
-    else
+    }
+    else {
         throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+    }
 }
 /**
  * `optimize dp none|ram|always`. Unknown subcommands are ignored (Asar no-op).
@@ -82,13 +86,16 @@ export function handleCheck(state, words) {
  * @param {readonly string[]} words Tokenized line.
  */
 export function handleOptimize(state, words) {
-    if (words.length < 3 || words[1].toLowerCase() !== "dp")
+    if (words.length < 3 || words[1].toLowerCase() !== "dp") {
         return;
+    }
     const mode = words[2].toLowerCase();
-    if (mode === "none")
+    if (mode === "none") {
         state.optimizeDirectPage = false;
-    else if (mode === "ram" || mode === "always")
+    }
+    else if (mode === "ram" || mode === "always") {
         state.optimizeDirectPage = true;
+    }
 }
 /**
  * `startpos <addr>` records the SPC execute address used when `endspcblock`

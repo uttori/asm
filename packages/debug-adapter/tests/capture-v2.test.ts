@@ -95,8 +95,9 @@ test("ACT2 decodes exact u64 sequences and variants, rejects malformed envelopes
   t.is(decodeCaptureChunk(chunk(n, n), session).first, String(n));
   t.is(decodeCaptureChunk(chunk(1n, 1n, 0xe8), session).instructions[0]?.detail.bytes[0], 0xe8);
   t.is(decodeCaptureChunk(chunk(2n, 2n, 0xca), session).instructions[0]?.detail.bytes[0], 0xca);
-  for (const value of [0, "01", "-1", "18446744073709551616", "1e3", ""])
+  for (const value of [0, "01", "-1", "18446744073709551616", "1e3", ""]) {
     t.throws(() => captureU64(value));
+  }
   for (const [offset, value] of [
     [0, 0],
     [6, 1],
@@ -186,9 +187,13 @@ const fixture = async (
     aborted = false;
   const checkpointCounts: string[] = [];
   const transport: CaptureTransportV2 = async (request) => {
-    if (request.operation === "capabilities") return capabilities;
-    if (request.operation === "start") return position("0", "0", "armed");
-    if (request.operation === "read")
+    if (request.operation === "capabilities") {
+      return capabilities;
+    }
+    if (request.operation === "start") {
+      return position("0", "0", "armed");
+    }
+    if (request.operation === "read") {
       return {
         hex:
           accepted < 2
@@ -197,11 +202,14 @@ const fixture = async (
               )
             : "",
       };
+    }
     if (request.operation === "ack") {
       const archive = format === "act2" ? file : `${file}.act2`;
       const recovery = await recoverCaptureFile(`${archive}.partial`);
       checkpointCounts.push(recovery.eventThrough);
-      if (failAck) throw new Error("Simulated lost acknowledgement");
+      if (failAck) {
+        throw new Error("Simulated lost acknowledgement");
+      }
       accepted++;
       return position(String(accepted), String(accepted));
     }
@@ -344,11 +352,17 @@ test("native recorder waits for publication and sends control only", async (t) =
     drained = false;
   const transport: CaptureTransportV2 = async (request) => {
     operations.push(request.operation);
-    if (request.operation === "file-capabilities") return { ...capabilities, nativeFile: true };
-    if (request.operation === "file-stop") stopped = true;
+    if (request.operation === "file-capabilities") {
+      return { ...capabilities, nativeFile: true };
+    }
+    if (request.operation === "file-stop") {
+      stopped = true;
+    }
     const complete = stopped && drained;
     const state = stopped ? "draining" : "armed";
-    if (stopped) drained = true;
+    if (stopped) {
+      drained = true;
+    }
     return {
       ...position("0", "0", complete ? "complete" : state),
       fileState: complete ? "complete" : "writing",
@@ -380,7 +394,9 @@ test("native recorder fails closed on writer error and rejects silent sink fallb
   const operations: string[] = [];
   const transport: CaptureTransportV2 = async (request) => {
     operations.push(request.operation);
-    if (request.operation === "file-capabilities") return { ...capabilities, nativeFile: true };
+    if (request.operation === "file-capabilities") {
+      return { ...capabilities, nativeFile: true };
+    }
     const failed = request.operation !== "file-start";
     return {
       ...position("0", "0", failed ? "incomplete" : "armed"),

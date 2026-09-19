@@ -104,11 +104,15 @@ export const refreshDisassemblyAnnotation = (
   instructionGroups?: Iterable<readonly InstructionExportRecord[]>,
 ): ExportSnesProjectResult | undefined => {
   const { target, receipt } = input;
-  if (snapshot.revision.manifestSha256 !== receipt.after) return undefined;
-  if (snapshot.manifest.target !== "snes.sfc")
+  if (snapshot.revision.manifestSha256 !== receipt.after) {
+    return undefined;
+  }
+  if (snapshot.manifest.target !== "snes.sfc") {
     throw new Error("Annotation source refresh requires a SNES project.");
-  if (!SNES_MAPPERS.includes(snapshot.manifest.mapping.mapper as SnesMapper))
+  }
+  if (!SNES_MAPPERS.includes(snapshot.manifest.mapping.mapper as SnesMapper)) {
     throw new Error(`Unsupported SNES mapper '${snapshot.manifest.mapping.mapper}'.`);
+  }
   const store = openAnalysisProjectStore(target.projectDirectory);
   try {
     store.transaction(() => assertAnalysisProjectRevision(store, snapshot.revision), false);
@@ -153,12 +157,19 @@ export const annotationFileSignature = (file: string): string => {
 const readMap = (file: string): DebugMap => {
   const signature = annotationFileSignature(file);
   const cached = maps.get(file);
-  if (cached?.signature === signature) return cached.map;
+  if (cached?.signature === signature) {
+    return cached.map;
+  }
   const map = JSON.parse(fs.readFileSync(file, "utf8")) as DebugMap;
-  if (validateDebugMap(map).length) throw new Error("Invalid debug map.");
-  if (annotationFileSignature(file) !== signature)
+  if (validateDebugMap(map).length) {
+    throw new Error("Invalid debug map.");
+  }
+  if (annotationFileSignature(file) !== signature) {
     throw new Error("Debug map changed while loading.");
-  if (maps.size >= 64) maps.clear();
+  }
+  if (maps.size >= 64) {
+    maps.clear();
+  }
   maps.set(file, { signature, map });
   return map;
 };
@@ -174,10 +185,14 @@ const readSource = (
         path.resolve(path.dirname(candidate.file), source.path),
       ];
   for (const file of new Set(files)) {
-    if (expectedFile && file !== expectedFile) continue;
+    if (expectedFile && file !== expectedFile) {
+      continue;
+    }
     try {
       const bytes = fs.readFileSync(file);
-      if (hash(bytes) === source.sha256) return { file, text: bytes.toString("utf8") };
+      if (hash(bytes) === source.sha256) {
+        return { file, text: bytes.toString("utf8") };
+      }
     } catch {
       /* A portable source may resolve under another root. */
     }
@@ -217,19 +232,28 @@ export const lookupDisassemblyAnnotation = (
         map.target !== snapshot.manifest.target ||
         map.output.sha256 !== snapshot.manifest.rom.contentSha256 ||
         map.output.size !== snapshot.manifest.rom.contentSize
-      )
+      ) {
         continue;
+      }
       for (const source of map.sources) {
-        if (source.sha256 !== input.source.sha256) continue;
+        if (source.sha256 !== input.source.sha256) {
+          continue;
+        }
         const current = readSource(source, candidate, input.source.file);
-        if (!current) continue;
+        if (!current) {
+          continue;
+        }
         sourceHash = source.sha256;
         const texts = new Map([[source.id, current.text]]);
         if (annotationReferenceAt(current.text, input.source.line, input.source.column)) {
           for (const other of map.sources) {
-            if (other.id === source.id) continue;
+            if (other.id === source.id) {
+              continue;
+            }
             const resolved = readSource(other, candidate);
-            if (resolved) texts.set(other.id, resolved.text);
+            if (resolved) {
+              texts.set(other.id, resolved.text);
+            }
           }
         }
         // Preserve large macro/generated-source mappings without expanding call arguments.
@@ -243,8 +267,9 @@ export const lookupDisassemblyAnnotation = (
           texts,
           fileSpaces,
           readNodes,
-        ))
+        )) {
           found.push(location);
+        }
       }
     }
     locations = [
@@ -255,26 +280,34 @@ export const lookupDisassemblyAnnotation = (
         ]),
       ).values(),
     ];
-    if (!sourceHash || !locations.length)
+    if (!sourceHash || !locations.length) {
       throw new Error(
         "No exact current ROM/source mapping exists at the cursor. Run Analyze and Regenerate Disassembly, then select a label or instruction.",
       );
+    }
     for (let directory = path.dirname(input.source.file); ; directory = path.dirname(directory)) {
       if (fs.existsSync(path.join(directory, "generated-files.json"))) {
         sourceDirectory = directory;
         break;
       }
-      if (path.dirname(directory) === directory) break;
+      if (path.dirname(directory) === directory) {
+        break;
+      }
     }
-  } else locations = namedAnnotationLocations(snapshot.shards);
-  if (!locations.length)
+  } else {
+    locations = namedAnnotationLocations(snapshot.shards);
+  }
+  if (!locations.length) {
     throw new Error(
       "No native labels or function candidates exist. Open generated source to annotate an instruction.",
     );
+  }
   const labels = new Map(snapshot.shards.labels.map((label) => [label.id, label]));
   const comments = new Map<string, ProjectComment[]>();
   for (const comment of snapshot.shards.comments) {
-    if (comment.placement !== "inline-instruction") continue;
+    if (comment.placement !== "inline-instruction") {
+      continue;
+    }
     const key = `${comment.addressSpace}:${comment.address}`;
     const list = comments.get(key) ?? [];
     list.push(comment);
@@ -282,10 +315,15 @@ export const lookupDisassemblyAnnotation = (
   }
   const instructions = new Set<string>();
   for (const record of snapshot.shards.analysis) {
-    if (record.kind !== "cfg-node") continue;
+    if (record.kind !== "cfg-node") {
+      continue;
+    }
     instructions.add(`${record.addressSpace}:${record.address}`);
-    if (record.fileOffset !== undefined)
-      for (const space of fileSpaces) instructions.add(`${space}:${record.fileOffset}`);
+    if (record.fileOffset !== undefined) {
+      for (const space of fileSpaces) {
+        instructions.add(`${space}:${record.fileOffset}`);
+      }
+    }
   }
   return {
     revision: snapshot.revision,
@@ -321,16 +359,18 @@ export const saveDisassemblyAnnotation = (
   snapshot: AnalysisProjectSnapshot,
   input: AnnotationSave,
 ): { inverse: DisassemblyAnnotationInverse; snapshot: AnalysisProjectSnapshot } => {
-  if (canonicalJson(snapshot.revision) !== canonicalJson(input.revision))
+  if (canonicalJson(snapshot.revision) !== canonicalJson(input.revision)) {
     throw new Error(
       "The analysis project changed while this form was open. Reopen the annotation and retry.",
     );
-  if (input.sourceFile && hash(fs.readFileSync(input.sourceFile)) !== input.sourceHash)
+  }
+  if (input.sourceFile && hash(fs.readFileSync(input.sourceFile)) !== input.sourceHash) {
     throw new Error(
       "The source changed while this form was open. Reopen the annotation from current generated source.",
     );
+  }
   const applied = applyDisassemblyAnnotationEdit(snapshot, input.request);
-  if (snapshot.manifest.target === "snes.sfc")
+  if (snapshot.manifest.target === "snes.sfc") {
     snesSourceLabelNames(
       applied.project.shards,
       snapshot.manifest.mapping.mapper as SnesMapper,
@@ -339,6 +379,7 @@ export const saveDisassemblyAnnotation = (
         ? loadSnesRamMap(input.sourceDirectory).variables.map(({ name }) => name)
         : [],
     );
+  }
   const { labels, comments, evidence } = applied.project.shards;
   const committed = commitAnalysisProjectAnnotationUpdate(directory, snapshot.revision, {
     labels,

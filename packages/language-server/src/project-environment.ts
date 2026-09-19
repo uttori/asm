@@ -43,7 +43,9 @@ const configuredPluginModules = (
 ): readonly PluginModuleRequest[] =>
   (plugins ?? []).map((entry, index) => {
     if (typeof entry === "string") {
-      if (!entry.trim()) throw new Error(`Plugin setting at index ${index} must not be empty.`);
+      if (!entry.trim()) {
+        throw new Error(`Plugin setting at index ${index} must not be empty.`);
+      }
       return { module: entry };
     }
     if (!entry || typeof entry !== "object" || typeof entry.module !== "string") {
@@ -66,7 +68,9 @@ export class ProjectEnvironmentController {
   constructor(private readonly options: ProjectEnvironmentControllerOptions) {}
 
   get current(): ProjectEnvironmentState {
-    if (!this.#state) throw new Error("The project environment has not been initialized.");
+    if (!this.#state) {
+      throw new Error("The project environment has not been initialized.");
+    }
     return this.#state;
   }
 
@@ -113,8 +117,12 @@ export class ProjectEnvironmentController {
         logger: this.options.logger,
         cacheDir: path.join(cwd, ".uttori-asm", "cache"),
       });
-      for (const [file, content] of overlays) index.updateDocument(file, content);
-      if (overlays.size > 0 || (settings.entryPoints?.length ?? 0) > 0) index.reindex();
+      for (const [file, content] of overlays) {
+        index.updateDocument(file, content);
+      }
+      if (overlays.size > 0 || (settings.entryPoints?.length ?? 0) > 0) {
+        index.reindex();
+      }
 
       next = Object.freeze({
         loaded,

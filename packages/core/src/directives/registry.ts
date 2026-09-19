@@ -167,13 +167,27 @@ export const createDirectiveRegistry = (
   const registry = new DirectiveRegistry(directivePrefixes);
   const enabled = new Set<CoreDirectiveGroup>(enabledGroups);
 
-  if (enabled.has("include")) registerIncludeSourceDirectives(registry, contexts.includeSource);
-  if (enabled.has("memory")) registerFillPadDirectives(registry, contexts.fillPad);
-  if (enabled.has("control")) registerFlowControlDirectives(registry, contexts.flowControl);
-  if (enabled.has("namespace")) registerNamespaceDirectives(registry, contexts.namespace);
-  if (enabled.has("layout")) registerLayoutDirectives(registry, contexts.layout);
-  if (enabled.has("data")) registerDataDirectives(registry, contexts.data);
-  if (enabled.has("struct")) registerStructBinaryDirectives(registry, contexts.struct);
+  if (enabled.has("include")) {
+    registerIncludeSourceDirectives(registry, contexts.includeSource);
+  }
+  if (enabled.has("memory")) {
+    registerFillPadDirectives(registry, contexts.fillPad);
+  }
+  if (enabled.has("control")) {
+    registerFlowControlDirectives(registry, contexts.flowControl);
+  }
+  if (enabled.has("namespace")) {
+    registerNamespaceDirectives(registry, contexts.namespace);
+  }
+  if (enabled.has("layout")) {
+    registerLayoutDirectives(registry, contexts.layout);
+  }
+  if (enabled.has("data")) {
+    registerDataDirectives(registry, contexts.data);
+  }
+  if (enabled.has("struct")) {
+    registerStructBinaryDirectives(registry, contexts.struct);
+  }
   if (enabled.has("table") || enabled.has("diagnostic")) {
     registerMiscDirectives(
       registry,

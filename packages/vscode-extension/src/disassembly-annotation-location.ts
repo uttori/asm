@@ -33,7 +33,9 @@ export const annotationReferenceAt = (
   column: number,
 ): string | undefined => {
   const code = (text.split(/\r?\n/)[line - 1] ?? "").split(";")[0];
-  if (/^\s*[A-Z_a-z]\w*\s*:/.test(code)) return undefined;
+  if (/^\s*[A-Z_a-z]\w*\s*:/.test(code)) {
+    return undefined;
+  }
   const token = [...code.matchAll(/[A-Z_a-z]\w*/g)].find(
     (match) => match.index <= column && column <= match.index + match[0].length,
   );
@@ -41,8 +43,9 @@ export const annotationReferenceAt = (
     !token ||
     /[\d$]/.test(code[token.index - 1] ?? "") ||
     token.index <= code.search(/\S/) + (code.trimStart().match(/^\S+/)?.[0].length ?? 0)
-  )
+  ) {
     return undefined;
+  }
   return token[0];
 };
 
@@ -65,8 +68,9 @@ export const namedAnnotationLocations = (
     locations.map((location) => `${location.addressSpace}:${location.address}`),
   );
   for (const record of shards.analysis) {
-    if (record.kind !== "function" || addressed.has(`${record.addressSpace}:${record.address}`))
+    if (record.kind !== "function" || addressed.has(`${record.addressSpace}:${record.address}`)) {
       continue;
+    }
     locations.push({
       addressSpace: record.addressSpace,
       address: record.address,
@@ -124,8 +128,9 @@ export const annotationLocationsForSource = (
             sources,
             fileAddressSpaces,
             readNodes,
-          ))
+          )) {
             locations.push(location);
+          }
         }
       });
     }
@@ -136,7 +141,9 @@ export const annotationLocationsForSource = (
     const body = value.split(";")[0].trim();
     return body === "" || /^[A-Z_a-z]\w*\s*:$/.test(body) || /^\.[ai](8|16)$/.test(body);
   };
-  while (mappedLine <= lines.length && metadata(lines[mappedLine - 1])) mappedLine++;
+  while (mappedLine <= lines.length && metadata(lines[mappedLine - 1])) {
+    mappedLine++;
+  }
   const ranges = map.ranges.filter(
     (range) => range.sourceId === sourceId && range.line === mappedLine,
   );
@@ -169,14 +176,19 @@ export const annotationLocationsForSource = (
       ),
     ];
     const labels = candidates.filter((entry) => entry.labelId);
-    if (labels.length) candidates = labels;
+    if (labels.length) {
+      candidates = labels;
+    }
     const selectedDefinition = candidates.filter((entry) => entry.name === definitionName);
-    if (selectedDefinition.length) candidates = selectedDefinition;
-    for (const location of candidates.length ? candidates : matches)
+    if (selectedDefinition.length) {
+      candidates = selectedDefinition;
+    }
+    for (const location of candidates.length ? candidates : matches) {
       locations.set(
         `${location.addressSpace}:${location.address}:${"labelId" in location ? (location.labelId ?? "") : ""}`,
         location,
       );
+    }
   }
   return [...locations.values()];
 };

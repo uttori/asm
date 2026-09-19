@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import sinon from "sinon";
 import { test } from "../../../tests/ava-helper.js";
 

@@ -13,14 +13,17 @@ const utf8 = new TextDecoder("utf-8", { fatal: true });
  */
 export const encodeSqlitePayload = (json) => {
     const bytes = Buffer.byteLength(json);
-    if (bytes > MAX_SQLITE_PAYLOAD_BYTES)
+    if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
         throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
+    }
     // Most runtime payloads are small. Avoid spending compression CPU on each captured register row.
-    if (bytes < 256)
+    if (bytes < 256) {
         return json;
+    }
     const compressed = deflateSync(json, { level: 1, chunkSize: Math.min(bytes, 16 * 1024) });
-    if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8)))
+    if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8))) {
         return json;
+    }
     const result = Buffer.allocUnsafe(HEADER_BYTES + compressed.length);
     HEADER.copy(result);
     result.writeUInt32LE(bytes, 4);
@@ -34,20 +37,24 @@ export const encodeSqlitePayload = (json) => {
  */
 export const decodeSqlitePayload = (value) => {
     if (typeof value === "string") {
-        if (Buffer.byteLength(value) > MAX_SQLITE_PAYLOAD_BYTES)
+        if (Buffer.byteLength(value) > MAX_SQLITE_PAYLOAD_BYTES) {
             throw new Error("SQLite text payload exceeds the decoded size limit.");
+        }
         return value;
     }
     // node:sqlite can return arrays created in another VM realm (including bundled extension hosts).
     // A realm-sensitive instanceof check would reject a valid stored BLOB during undo or import.
-    if (!types.isUint8Array(value))
+    if (!types.isUint8Array(value)) {
         throw new Error("Invalid SQLite payload representation.");
+    }
     const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-    if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER))
+    if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER)) {
         throw new Error("Unsupported or truncated SQLite payload codec.");
+    }
     const bytes = encoded.readUInt32LE(4);
-    if (bytes === 0 || bytes > MAX_SQLITE_PAYLOAD_BYTES)
+    if (bytes === 0 || bytes > MAX_SQLITE_PAYLOAD_BYTES) {
         throw new Error("SQLite compressed payload exceeds the decoded size limit.");
+    }
     try {
         // Most stored metadata is only hundreds of bytes. The default 16 KiB output chunk would
         // allocate many times the decoded data during a full metadata scan. Keep large rows chunked.
@@ -55,8 +62,9 @@ export const decodeSqlitePayload = (value) => {
             maxOutputLength: bytes,
             chunkSize: Math.max(64, Math.min(bytes, 16 * 1024)),
         });
-        if (decoded.length !== bytes)
+        if (decoded.length !== bytes) {
             throw new Error("Decoded payload length does not match its header.");
+        }
         return utf8.decode(decoded);
     }
     catch (cause) {
@@ -83,12 +91,15 @@ export const sqliteRuntimeIdentity = (id) => {
  * @returns {string} Exact external ID; invalid binary identities throw.
  */
 export const decodeSqliteRuntimeIdentity = (prefix, suffix) => {
-    if (typeof prefix !== "string")
+    if (typeof prefix !== "string") {
         throw new Error("Invalid SQLite runtime ID prefix.");
-    if (typeof suffix === "string")
+    }
+    if (typeof suffix === "string") {
         return prefix + suffix;
-    if (!types.isUint8Array(suffix) || suffix.length !== 32)
+    }
+    if (!types.isUint8Array(suffix) || suffix.length !== 32) {
         throw new Error("Invalid SQLite runtime ID suffix.");
+    }
     return prefix + Buffer.from(suffix).toString("hex");
 };
 //# sourceMappingURL=sqlite-payload.js.map

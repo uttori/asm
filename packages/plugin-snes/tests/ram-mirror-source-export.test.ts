@@ -32,7 +32,7 @@ test("named long WRAM operands retain their encoded mirror bank on reassembly", 
           state: { e: 0, m: 1, x: 1 },
         });
         t.is(result.kind, "instruction");
-        if (result.kind !== "instruction") continue;
+        if (result.kind !== "instruction") {continue;}
         const source = formatSnes65816SourceInstruction(result.instruction, variables);
         t.true(source.includes("RAM_STATE"), source);
         const assembler = new Assembler(undefined, { collectSourceMetadata: false });
@@ -90,11 +90,11 @@ test("SRAM operands name explicit CPU addresses and reassemble without changing 
       state: { e: 0, m: 1, x: 1, dataBank: 0x30 },
     });
     t.is(result.kind, "instruction");
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {continue;}
     const source = formatSnes65816SourceInstruction(result.instruction, variables);
-    if (bytes[3] === 0xb0) t.false(source.includes("SRAM_"), source);
-    else if (bytes[1] === 0xff) t.true(source.includes("SRAM_LAST_SELECTED_FILE"), source);
-    else t.true(source.includes("(SRAM_RECORD + $03)"), source);
+    if (bytes[3] === 0xb0) {t.false(source.includes("SRAM_"), source);}
+    else if (bytes[1] === 0xff) {t.true(source.includes("SRAM_LAST_SELECTED_FILE"), source);}
+    else {t.true(source.includes("(SRAM_RECORD + $03)"), source);}
     const assembler = new Assembler(undefined, { collectSourceMetadata: false });
     assembler.setCurrentFile("sram.asm");
     const lines = ["hirom", "org $C00000", ...renderSnesRamDefines(entries).split("\n"), source];

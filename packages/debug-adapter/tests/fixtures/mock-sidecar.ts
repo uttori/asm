@@ -15,11 +15,12 @@ const crashOn = process.env.UTTORI_ASM_DEBUG_MOCK_CRASH_ON;
 const implementation: DebugBackend = crashOn
   ? (new Proxy(replay, {
       get(target, property, receiver) {
-        if (property === crashOn)
+        if (property === crashOn) {
           return () => {
             process.stderr.write(`mock sidecar crash on ${String(property)}\n`);
             process.exit(23);
           };
+        }
         const value = Reflect.get(target, property, receiver) as unknown;
         return typeof value === "function" ? value.bind(target) : value;
       },
@@ -35,15 +36,22 @@ const server = new DebugSidecarServer({
   write: (data) =>
     new Promise((resolve, reject) => {
       process.stdout.write(data, (error?: Error | null) => {
-        if (error) reject(error);
-        else resolve();
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
       });
     }),
   close: (error) =>
     new Promise((resolve) => {
-      if (ending) return resolve();
+      if (ending) {
+        return resolve();
+      }
       ending = true;
-      if (error) process.stderr.write(`${error.stack ?? error.message}\n`);
+      if (error) {
+        process.stderr.write(`${error.stack ?? error.message}\n`);
+      }
       process.stdin.pause();
       process.stdout.end(resolve);
     }),

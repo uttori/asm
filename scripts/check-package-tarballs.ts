@@ -75,7 +75,9 @@ const npm = (args: string[], cwd: string): string => {
  */
 const pack = (directory: string, lifecycle: boolean): PackedArchive => {
   const args = ["pack", "--json", "--pack-destination", scratch];
-  if (!lifecycle) args.push("--ignore-scripts");
+  if (!lifecycle) {
+    args.push("--ignore-scripts");
+  }
   const output = npm(args, directory);
   // npm forwards prepack compiler stdout before its final JSON array. Keep the real lifecycle
   // enabled, but parse only npm's terminal inventory rather than treating build logs as JSON.
@@ -100,7 +102,9 @@ try {
   const workspaces = fs.readdirSync(path.join(root, "packages")).flatMap((name) => {
     const directory = path.join(root, "packages", name);
     const manifestPath = path.join(directory, "package.json");
-    if (!fs.existsSync(manifestPath)) return [];
+    if (!fs.existsSync(manifestPath)) {
+      return [];
+    }
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
     return manifest.private ? [] : [{ directory, manifest }];
   });
@@ -122,7 +126,9 @@ try {
       // point to shipped dist files, never to workspace TypeScript that needs a loader.
       for (const condition of ["types", "import", "require"] as const) {
         const destination: string | undefined = target[condition];
-        if (condition === "require" && !destination) continue;
+        if (condition === "require" && !destination) {
+          continue;
+        }
         assert.ok(destination?.startsWith("./dist/"), `${specifier}: invalid ${condition} export`);
         const extension = condition === "types" ? ".d.ts" : ".js";
         assert.ok(
@@ -132,7 +138,9 @@ try {
         assert.ok(files.has(destination.slice(2)), `${specifier}: missing ${destination}`);
       }
       imports.push(specifier);
-      if (target.require) commonJsImports.push(specifier);
+      if (target.require) {
+        commonJsImports.push(specifier);
+      }
     }
     for (const binary of Object.values(manifest.bin ?? {})) {
       assert.ok(files.has(binary), `${manifest.name}: missing executable ${binary}`);
@@ -143,10 +151,20 @@ try {
         `${manifest.name}: forbidden payload ${file}`,
       );
     }
-    if (fs.existsSync(path.join(directory, "README.md"))) assert.ok(files.has("README.md"));
-    if (manifest.name === "@uttori/asm-plugin-65xx") assert.ok(files.has("THIRD_PARTY_NOTICES.md"));
+    assert.ok(files.has("README.md"), `${manifest.name}: missing published README`);
+    // Package-root guides are part of the installed documentation, not just repository links.
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isFile() && entry.name.endsWith(".md")) {
+        assert.ok(files.has(entry.name), `${manifest.name}: missing published guide ${entry.name}`);
+      }
+    }
+    if (manifest.name === "@uttori/asm-plugin-65xx") {
+      assert.ok(files.has("THIRD_PARTY_NOTICES.md"));
+    }
     for (const dependency of Object.keys(manifest.dependencies ?? {})) {
-      if (!names.has(dependency)) externalDependencies.add(dependency);
+      if (!names.has(dependency)) {
+        externalDependencies.add(dependency);
+      }
     }
     archives.push(path.join(scratch, archive.filename));
     console.log(`${manifest.name}: ${files.size} files, compiled exports and executables present`);
@@ -156,14 +174,18 @@ try {
   // or network fetch can rescue this installation. Set iteration includes discovered transitives.
   const stagedDependencies = new Set<string>();
   for (const dependency of externalDependencies) {
-    if (stagedDependencies.has(dependency)) continue;
+    if (stagedDependencies.has(dependency)) {
+      continue;
+    }
     stagedDependencies.add(dependency);
     const manifestPath = require.resolve(`${dependency}/package.json`);
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
     const archive = pack(path.dirname(manifestPath), false);
     archives.push(path.join(scratch, archive.filename));
     for (const transitive of Object.keys(manifest.dependencies ?? {})) {
-      if (!names.has(transitive)) externalDependencies.add(transitive);
+      if (!names.has(transitive)) {
+        externalDependencies.add(transitive);
+      }
     }
   }
 
@@ -190,6 +212,11 @@ try {
     JSON.stringify({ imports, commonJsImports }),
   );
   fs.cpSync(path.join(root, "tests", "package-consumer"), consumer, { recursive: true });
+  // Run the published how-to verbatim so copyable documentation cannot drift from installed APIs.
+  const guide = fs.readFileSync(path.join(root, "packages/disassembler/PROJECTS.md"), "utf8");
+  const examples = [...guide.matchAll(/```js\n([\S\s]*?)\n```/g)];
+  assert.equal(examples.length, 1, "Expected one complete analysis workflow example.");
+  fs.writeFileSync(path.join(consumer, "analysis-workflow.mjs"), examples[0][1]);
   console.log(run(process.execPath, ["consumer.mjs"], consumer).trim());
 
   // Compiler/Node types are test tooling; package declarations resolve only from installed archives,
@@ -211,11 +238,11 @@ try {
         module: "NodeNext",
         moduleResolution: "NodeNext",
         strict: true,
-        noEmit: true,
+        outDir: "compiled",
         types: ["node"],
         typeRoots: [path.join(root, "node_modules", "@types")],
       },
-      include: ["public-api.mts"],
+      include: ["public-api.mts", "contract-plugin.mts", "contracts.mts", "storage.mts", "cli.mts"],
     }),
   );
   run(
@@ -223,6 +250,25 @@ try {
     [path.join(root, "node_modules/typescript/bin/tsc"), "-p", "tsconfig.json"],
     consumer,
   );
+  console.log(run(process.execPath, ["compiled/contracts.mjs"], consumer).trim());
+  console.log(run(process.execPath, ["compiled/storage.mjs"], consumer).trim());
+  console.log(run(process.execPath, ["compiled/cli.mjs"], consumer).trim());
+  // Declaration comments are part of the installed editor experience, not just source docs.
+  for (const [file, contract] of [
+    ["@uttori/asm-core/dist/plugin/contracts.d.ts", "Copy all mutable descendants"],
+    ["@uttori/asm-core/dist/plugin/manager.d.ts", "Each plugin commits independently"],
+    ["@uttori/asm-plugin-loader-node/dist/loader.d.ts", "Serialize load/dispose calls"],
+    ["@uttori/asm-plugin-loader-node/dist/types.d.ts", "Shallow merge:"],
+    ["@uttori/asm-disassembler/dist/sqlite-store.d.ts", "Run a synchronous unit"],
+    ["@uttori/asm-disassembler/dist/project-types.d.ts", "Never publish"],
+    ["@uttori/asm-disassembler/dist/project-transaction.d.ts", "Each supplied array"],
+    ["@uttori/asm-cli/dist/index.d.ts", "No AbortSignal or signal handlers"],
+  ]) {
+    assert.ok(
+      fs.readFileSync(path.join(consumer, "node_modules", file), "utf8").includes(contract),
+      `${file}: missing public contract JSDoc`,
+    );
+  }
   for (const { manifest } of workspaces) {
     for (const [name, binary] of Object.entries(manifest.bin ?? {})) {
       assert.match(

@@ -14,8 +14,9 @@ export const SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 const cleanText = (value, field) => {
     const cleaned = value.replaceAll(/\s+/g, " ").trim();
-    if (!cleaned)
+    if (!cleaned) {
         throw new Error(`RAM-map ${field} must not be empty.`);
+    }
     return cleaned;
 };
 /**
@@ -28,8 +29,9 @@ const sramWindowEnd = (address) => {
     const offset = address & 0xffff;
     const hiromBank = (bank >= 0x20 && bank <= 0x3f) || (bank >= 0xa0 && bank <= 0xbf);
     const loromBank = (bank >= 0x70 && bank <= 0x7d) || bank >= 0xf0;
-    if ((hiromBank && offset >= 0x6000 && offset <= 0x7fff) || (loromBank && offset <= 0x7fff))
+    if ((hiromBank && offset >= 0x6000 && offset <= 0x7fff) || (loromBank && offset <= 0x7fff)) {
         return (address & 0xff0000) + 0x8000;
+    }
     return undefined;
 };
 /**
@@ -40,22 +42,28 @@ const sramWindowEnd = (address) => {
  */
 const parseAddress = (value, memory) => {
     let address;
-    if (typeof value === "number")
+    if (typeof value === "number") {
         address = value;
+    }
     else {
         const text = value.trim();
-        if (/^\$[\dA-Fa-f]{1,6}$/.test(text))
+        if (/^\$[\dA-Fa-f]{1,6}$/.test(text)) {
             address = Number.parseInt(text.slice(1), 16);
-        else if (/^0x[\da-f]{1,6}$/i.test(text))
+        }
+        else if (/^0x[\da-f]{1,6}$/i.test(text)) {
             address = Number.parseInt(text.slice(2), 16);
-        else
+        }
+        else {
             throw new Error(`Invalid RAM-map address '${value}'.`);
+        }
     }
-    if (!Number.isSafeInteger(address) || address < 0 || address > 0xffffff)
+    if (!Number.isSafeInteger(address) || address < 0 || address > 0xffffff) {
         throw new Error(`Invalid RAM-map CPU address '${String(value)}'.`);
+    }
     if (memory === "sram") {
-        if (sramWindowEnd(address) === undefined)
+        if (sramWindowEnd(address) === undefined) {
             throw new Error(`RAM-map address '${String(value)}' is outside supported SNES SRAM windows.`);
+        }
     }
     else if (address < 0x7e0000 || address > 0x7fffff) {
         throw new Error(`RAM-map address '${String(value)}' is outside canonical SNES WRAM.`);
@@ -68,56 +76,75 @@ const parseAddress = (value, memory) => {
  * @returns {readonly SnesRamMapVariable[]} Deterministically sorted variables.
  */
 export const validateSnesRamMap = (value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value))
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
         throw new Error("RAM map must be a JSON object.");
+    }
     const file = value;
-    if (file.format !== SNES_RAM_MAP_FORMAT)
+    if (file.format !== SNES_RAM_MAP_FORMAT) {
         throw new Error("Invalid SNES RAM-map format.");
-    if (file.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION)
+    }
+    if (file.schemaVersion !== SNES_RAM_MAP_SCHEMA_VERSION) {
         throw new Error(`Unsupported SNES RAM-map schema ${String(file.schemaVersion)}.`);
-    if (!Array.isArray(file.variables))
+    }
+    if (!Array.isArray(file.variables)) {
         throw new Error("RAM map must contain a variables array.");
+    }
     const names = new Set();
     const addresses = new Set();
     const variables = file.variables.map((input, index) => {
-        if (!input || typeof input !== "object" || Array.isArray(input))
+        if (!input || typeof input !== "object" || Array.isArray(input)) {
             throw new Error(`RAM-map variable ${index + 1} must be an object.`);
+        }
         const record = input;
-        if (typeof record.name !== "string")
+        if (typeof record.name !== "string") {
             throw new Error(`RAM-map variable ${index + 1} name must be a string.`);
+        }
         const name = cleanText(record.name, `variable ${index + 1} name`);
-        if (!/^[A-Z_a-z]\w*$/.test(name))
+        if (!/^[A-Z_a-z]\w*$/.test(name)) {
             throw new Error(`RAM-map variable name '${name}' is not an assembler identifier.`);
+        }
         const nameKey = name.toLowerCase();
-        if (names.has(nameKey))
+        if (names.has(nameKey)) {
             throw new Error(`Duplicate RAM-map variable name '${name}'.`);
+        }
         names.add(nameKey);
-        if (typeof record.address !== "string" && typeof record.address !== "number")
+        if (typeof record.address !== "string" && typeof record.address !== "number") {
             throw new Error(`RAM-map variable '${name}' must have a string or integer address.`);
+        }
         const memory = record.memory ?? "wram";
-        if (memory !== "wram" && memory !== "sram")
+        if (memory !== "wram" && memory !== "sram") {
             throw new Error(`RAM-map memory for '${name}' must be 'wram' or 'sram'.`);
+        }
         const address = parseAddress(record.address, memory);
-        if (addresses.has(address))
+        if (addresses.has(address)) {
             throw new Error(`Duplicate RAM-map address '${hex(address)}'; combine aliases in one entry.`);
+        }
         addresses.add(address);
         const size = record.size ?? 1;
         // A SRAM declaration owns one CPU window, not the ROM or I/O beyond its end.
         // Physical size and aliases depend on the cartridge and remain the map author's responsibility.
         const end = memory === "sram" ? sramWindowEnd(address) : 0x800000;
-        if (typeof size !== "number" || !Number.isSafeInteger(size) || size < 1 || address + size > end)
+        if (typeof size !== "number" ||
+            !Number.isSafeInteger(size) ||
+            size < 1 ||
+            address + size > end) {
             throw new Error(`Invalid size for RAM-map variable '${name}'.`);
-        if (record.category !== undefined && typeof record.category !== "string")
+        }
+        if (record.category !== undefined && typeof record.category !== "string") {
             throw new Error(`RAM-map category for '${name}' must be a string.`);
+        }
         const category = record.category === undefined ? undefined : cleanText(record.category, `${name} category`);
-        if (typeof record.description !== "string")
+        if (typeof record.description !== "string") {
             throw new Error(`RAM-map description for '${name}' must be a string.`);
+        }
         const description = cleanText(record.description, `${name} description`);
-        if (record.notes !== undefined && !Array.isArray(record.notes))
+        if (record.notes !== undefined && !Array.isArray(record.notes)) {
             throw new Error(`RAM-map notes for '${name}' must be an array.`);
+        }
         const notes = (record.notes ?? []).map((note) => {
-            if (typeof note !== "string")
+            if (typeof note !== "string") {
                 throw new Error(`RAM-map notes for '${name}' must be strings.`);
+            }
             return cleanText(note, `${name} note`);
         });
         return {
@@ -178,14 +205,17 @@ export const loadSnesRamMap = (directory) => {
  * @returns {number | undefined} Canonical WRAM address, or undefined outside WRAM.
  */
 export const canonicalSnesWramAddress = (address) => {
-    if (!Number.isInteger(address) || address < 0 || address > 0xffffff)
+    if (!Number.isInteger(address) || address < 0 || address > 0xffffff) {
         return undefined;
-    if (address >= 0x7e0000 && address <= 0x7fffff)
+    }
+    if (address >= 0x7e0000 && address <= 0x7fffff) {
         return address;
+    }
     const bank = address >>> 16;
     const offset = address & 0xffff;
-    if ((bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf)) && offset <= 0x1fff)
+    if ((bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf)) && offset <= 0x1fff) {
         return 0x7e0000 | offset;
+    }
     return undefined;
 };
 /**

@@ -46,7 +46,9 @@ function parameterList(words: readonly string[]): string[] {
   for (const char of joined) {
     if (quote) {
       current += char;
-      if (char === quote) quote = undefined;
+      if (char === quote) {
+        quote = undefined;
+      }
       continue;
     }
     if (char === '"' || char === "'") {
@@ -54,18 +56,25 @@ function parameterList(words: readonly string[]): string[] {
       current += char;
       continue;
     }
-    if (char === "(") parenDepth++;
-    else if (char === ")") parenDepth--;
+    if (char === "(") {
+      parenDepth++;
+    } else if (char === ")") {
+      parenDepth--;
+    }
     if (char === "," && parenDepth === 0) {
       const trimmed = current.trim();
-      if (trimmed) parts.push(trimmed);
+      if (trimmed) {
+        parts.push(trimmed);
+      }
       current = "";
       continue;
     }
     current += char;
   }
   const trimmed = current.trim();
-  if (trimmed) parts.push(trimmed);
+  if (trimmed) {
+    parts.push(trimmed);
+  }
   return parts;
 }
 
@@ -77,7 +86,9 @@ function parameterList(words: readonly string[]): string[] {
  * @returns {void}
  */
 function markGlobalSymbol(session: Assembler, name: string): void {
-  if (!name) return;
+  if (!name) {
+    return;
+  }
   const localKey = session.symbolScope.qualifySymbolName(name);
   session.globalSymbols.add(name);
   if (localKey !== name) {
@@ -96,7 +107,9 @@ function markGlobalSymbol(session: Assembler, name: string): void {
  * @returns {void}
  */
 export function closeActiveSegment(session: Assembler, state: Nes65xxSessionState): void {
-  if (!state.currentSegment) return;
+  if (!state.currentSegment) {
+    return;
+  }
   const segment = state.linker.segments.get(state.currentSegment);
   if (!segment) {
     state.currentSegment = null;
@@ -326,7 +339,9 @@ export function handleSetcpu(
   words: readonly string[],
 ): void {
   const name = unquote(words.slice(1).join(" ").trim());
-  if (!name) throw new Error(".setcpu requires a CPU name argument.");
+  if (!name) {
+    throw new Error(".setcpu requires a CPU name argument.");
+  }
   const architecture = resolve65xxCpuName(name);
   if (!architecture) {
     throw new Error(
@@ -353,7 +368,9 @@ export function handlePushcpu(session: Assembler, state: Ca65SessionState): void
  */
 export function handlePopcpu(session: Assembler, state: Ca65SessionState): void {
   const architecture = state.cpuStack.pop();
-  if (!architecture) throw new Error(".popcpu: CPU stack is empty.");
+  if (!architecture) {
+    throw new Error(".popcpu: CPU stack is empty.");
+  }
   session.selectArchitecture(architecture, architecture);
   state.currentArchitecture = architecture;
 }
@@ -371,7 +388,9 @@ export function handleCpuShorthand(
 ): void {
   const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
   const cpu = ca65CpuShorthands[keyword];
-  if (!cpu) throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  if (!cpu) {
+    throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  }
   handleSetcpu(session, state, ["setcpu", cpu]);
 }
 
@@ -387,12 +406,16 @@ export function handleRes(session: Assembler, words: readonly string[]): void {
   }
   const count = session.operandResolver.getnum(params[0] ?? "");
   const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
-  if (!Number.isInteger(count) || count < 0) throw new Error(".res count must be non-negative.");
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(".res count must be non-negative.");
+  }
   if (session.isDefinitionCollectionStage) {
     session.step(count);
     return;
   }
-  for (let index = 0; index < count; index++) session.write1(fill & 0xff);
+  for (let index = 0; index < count; index++) {
+    session.write1(fill & 0xff);
+  }
 }
 
 /**
@@ -415,7 +438,9 @@ export function handleAlign(session: Assembler, words: readonly string[]): void 
     session.step(count);
     return;
   }
-  for (let index = 0; index < count; index++) session.write1(fill & 0xff);
+  for (let index = 0; index < count; index++) {
+    session.write1(fill & 0xff);
+  }
 }
 
 /**
@@ -430,7 +455,9 @@ export function handleCa65Incbin(session: Assembler, words: readonly string[]): 
   }
   const filename = unquote(params[0] ?? "");
   const data = session.includeSource.readFile(filename);
-  if (!(data instanceof Uint8Array)) throw new Error(`Failed to read binary include: ${filename}`);
+  if (!(data instanceof Uint8Array)) {
+    throw new Error(`Failed to read binary include: ${filename}`);
+  }
   const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
   const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
   if (
@@ -448,7 +475,9 @@ export function handleCa65Incbin(session: Assembler, words: readonly string[]): 
     session.step(size);
     return;
   }
-  for (const byte of data.subarray(offset, offset + size)) session.write1(byte);
+  for (const byte of data.subarray(offset, offset + size)) {
+    session.write1(byte);
+  }
 }
 
 /**
@@ -458,8 +487,12 @@ export function handleCa65Incbin(session: Assembler, words: readonly string[]): 
  */
 export function handleCa65Assert(session: Assembler, words: readonly string[]): void {
   const params = parameterList(words);
-  if (params.length === 0) throw new Error(".assert requires an expression.");
-  if (session.operandResolver.getnum(params[0] ?? "") !== 0) return;
+  if (params.length === 0) {
+    throw new Error(".assert requires an expression.");
+  }
+  if (session.operandResolver.getnum(params[0] ?? "") !== 0) {
+    return;
+  }
   const message = params.find((part) => /^["']/.test(part));
   throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
 }
@@ -494,7 +527,9 @@ export function handleScope(
  */
 export function handleEndScope(session: Assembler, state: Ca65SessionState): void {
   const previous = state.scopeStack.pop();
-  if (previous === undefined) throw new Error("ca65 scope stack is empty.");
+  if (previous === undefined) {
+    throw new Error("ca65 scope stack is empty.");
+  }
   session.currentNamespace = previous;
 }
 
@@ -505,7 +540,9 @@ export function handleEndScope(session: Assembler, state: Ca65SessionState): voi
  */
 export function handleFlatSegment(state: Ca65SessionState, words: readonly string[]): void {
   const name = unquote(words[1] ?? "").trim();
-  if (!name) throw new Error(".segment requires a segment name.");
+  if (!name) {
+    throw new Error(".segment requires a segment name.");
+  }
   state.currentFlatSegment = name;
 }
 
@@ -517,7 +554,9 @@ export function handlePushseg(state: Ca65SessionState): void {
 /** @param {Ca65SessionState} state ca65 session state. */
 export function handlePopseg(state: Ca65SessionState): void {
   const segment = state.segmentStack.pop();
-  if (segment === undefined) throw new Error(".popseg: segment stack is empty.");
+  if (segment === undefined) {
+    throw new Error(".popseg: segment stack is empty.");
+  }
   state.currentFlatSegment = segment;
 }
 

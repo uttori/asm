@@ -104,7 +104,6 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   const result = await client.run("importBus", input, { maxMemoryMiB: 256 });
   t.is(result.observedEvents, 7);
   t.is(result.summary.contexts.interrupt, 1);
-  t.true(result.archive.archived);
   t.is(result.summary.activity.length, 5);
   const report = renderBusTraceReport(result);
   t.regex(report, /DMA \| 0 \| dma \| 1 \| 1/);
@@ -115,17 +114,10 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   const duplicate = await client.run("importBus", input, { maxMemoryMiB: 256 });
   t.false(duplicate.changed);
   t.is(duplicate.added.runtime, 0);
-  const expired = await client.run(
-    "importBus",
-    { ...input, storagePolicy: { archiveMaxBytes: 0 } },
-    { maxMemoryMiB: 256 },
-  );
-  t.false(expired.archive.archived);
-  t.false(expired.changed);
   t.true(fs.existsSync(file));
   const store = openAnalysisProjectStore(directory);
   try {
-    t.is(store.captureReceipt(result.sourceSha256)?.availability, "expired");
+    t.is(store.captureReceipt(result.sourceSha256)?.observed_events, 7);
     t.is([...store.runtimeRecordsByKinds(["runtime-bus-access"])].length, 7);
     t.deepEqual(store.runtimeExecutionCounts(), { records: 0, events: 0 });
   } finally {
@@ -167,7 +159,7 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   t.regex(graphicsReport, /before the physical 64\/128 KiB mask/);
   t.regex(
     graphicsReport,
-    /Archive expiry retains bus facts and transfer totals, not this graphics view/,
+    /The project retains bus facts and transfer totals, not this graphics view/,
   );
   const renamed = path.join(root, "renamed-graphics.act2");
   fs.copyFileSync(graphicsFile, renamed);

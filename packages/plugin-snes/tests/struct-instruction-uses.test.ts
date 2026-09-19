@@ -295,16 +295,16 @@ test("symbolic immediate operands retain bytes and indirect consumers retain add
       logicalAddress: use.address,
       state: { e: 0, m: 0, x: 1 },
     });
-    if (decoded.kind !== "instruction") throw new Error("Expected fixture instruction.");
+    if (decoded.kind !== "instruction") {throw new Error("Expected fixture instruction.");}
     const original = formatSnes65816SourceInstruction(decoded.instruction);
     const symbolic = applySnesStructInstructionOperand(decoded.instruction, original, use);
     const assembler = new Assembler();
     const source = `lorom\norg $808000\n${renderSnesStructDefines(map)}\n.a16\n.i8\n${symbolic}`;
     const program = assembler.buildProgramModel(source, "struct-use.asm");
     for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const)
-      assembler.runStage(stage, program);
+      {assembler.runStage(stage, program);}
     t.deepEqual([...assembler.getBinaryOutput()], use.expectedBytes);
-    if (!use.operand) t.is(symbolic, "LDA [$D1],y");
+    if (!use.operand) {t.is(symbolic, "LDA [$D1],y");}
     t.throws(
       () =>
         applySnesStructInstructionOperand(decoded.instruction, original, {
@@ -351,7 +351,7 @@ test("capture annotations require explicit memory operands and complete matching
       logicalAddress: use.address,
       state: { e: 0, m: 0, x: 1 },
     });
-    if (result.kind !== "instruction") throw new Error("Expected fixture instruction.");
+    if (result.kind !== "instruction") {throw new Error("Expected fixture instruction.");}
     return result.instruction;
   };
   t.throws(
@@ -433,8 +433,8 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
   const groups = project.shards.analysis.filter((record) => record.kind === "cfg-node");
   const grouped = new Map<number, typeof groups>();
   for (const node of groups)
-    if (node.fileOffset !== undefined)
-      grouped.set(node.fileOffset, [...(grouped.get(node.fileOffset) ?? []), node]);
+    {if (node.fileOffset !== undefined)
+      {grouped.set(node.fileOffset, [...(grouped.get(node.fileOffset) ?? []), node]);}}
   t.deepEqual(
     exportSnes65816Source(project, rom, outputDirectory, {
       ...options,
@@ -574,7 +574,7 @@ test("rejects unsafe, unknown, ambiguous and imprecise expressions", (t) => {
     "(".repeat(1025),
     `sizeof(Tint)${" + 1".repeat(129)}`,
   ])
-    t.throws(() => resolver.resolve(expression), undefined, JSON.stringify(expression));
+    {t.throws(() => resolver.resolve(expression), undefined, JSON.stringify(expression));}
   for (const expression of [
     "-sizeof(Tint)",
     "Commands",
@@ -698,9 +698,9 @@ test("the complete struct format remains schema version one", (t) => {
   t.is(input.schemaVersion, 1);
   t.is(validateSnesStructMap(input).instructionUses?.length, 3);
   for (const schemaVersion of [undefined, 0, 2, 3])
-    t.throws(() => validateSnesStructMap({ ...input, schemaVersion }), {
+    {t.throws(() => validateSnesStructMap({ ...input, schemaVersion }), {
       message: /Unsupported SNES struct-map/,
-    });
+    });}
   const { target: _target, ...evidence } = observation();
   t.throws(
     () =>

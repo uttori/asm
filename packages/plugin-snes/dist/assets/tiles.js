@@ -10,8 +10,9 @@ export const SNES_TILE_8BPP_ASSET_CODEC_ID = "snes.asset.tile.8bpp";
 /** Stable id of the SNES Mode 7 chunky-tile codec. */
 export const SNES_MODE7_TILE_ASSET_CODEC_ID = "snes.asset.tile.mode7";
 const planeOffset = (bitsPerPixel, plane, row) => {
-    if (bitsPerPixel === 3 && plane === 2)
+    if (bitsPerPixel === 3 && plane === 2) {
         return 16 + row;
+    }
     return Math.floor(plane / 2) * 16 + row * 2 + (plane % 2);
 };
 const decodePlanarTile = (bytes, start, bitsPerPixel) => Array.from({ length: 8 }, (_, row) => Array.from({ length: 8 }, (_, column) => {
@@ -24,8 +25,9 @@ const decodePlanarTile = (bytes, start, bitsPerPixel) => Array.from({ length: 8 
 }));
 const encodeTilePixels = (value, owner, tileIndex, maximum) => {
     const rows = arrayValue(value, `SNES tile ${tileIndex} pixels`);
-    if (rows.length !== 8)
+    if (rows.length !== 8) {
         throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+    }
     return rows.map((row, rowIndex) => {
         const pixels = arrayValue(row, `SNES tile ${tileIndex} row ${rowIndex}`);
         if (pixels.length !== 8) {

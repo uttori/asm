@@ -28,15 +28,17 @@ export const CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
  * @returns {Raw65xxTargetOptions} Normalized options.
  */
 export function createRaw65xxTargetOptions(configured) {
-    if (configured === undefined)
+    if (configured === undefined) {
         return { origin: 0 };
+    }
     if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
         throw new Error("65xx raw target options must be an object with an optional numeric 'origin'.");
     }
     const keys = Object.keys(configured);
     const unknown = keys.filter((key) => key !== "origin");
-    if (unknown.length > 0)
+    if (unknown.length > 0) {
         throw new Error(`Unknown 65xx raw target option(s): ${unknown.join(", ")}.`);
+    }
     const value = "origin" in configured ? configured.origin : 0;
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 0xffff) {
         throw new Error("65xx raw target origin must be an integer from 0 through 65535.");
@@ -213,8 +215,9 @@ export function register65xxContributions(context) {
             summary,
             evaluate: (_expressionContext, args) => {
                 const value = args[0];
-                if (typeof value !== "number")
+                if (typeof value !== "number") {
                     throw new Error(`${name}() expects a numeric argument.`);
+                }
                 return transform(value);
             },
         })),

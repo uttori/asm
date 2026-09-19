@@ -47,7 +47,9 @@ test("65816 declarative table covers each opcode exactly once and generates tool
 test("65816 decoder reports fixed-width instructions, flow, references, and effects", (t) => {
   const branch = decode([0xd0, 0xfe], { e: 0, m: 1, x: 1, programBank: 0x80 });
   t.is(branch.kind, "instruction");
-  if (branch.kind !== "instruction") return;
+  if (branch.kind !== "instruction") {
+    return;
+  }
   t.is(branch.instruction.mnemonic, "BNE");
   t.is(branch.instruction.operands[0]?.targetAddress, logicalAddress);
   t.deepEqual(branch.instruction.flow, { kind: "conditionalBranch", fallthrough: true });
@@ -65,8 +67,9 @@ test("65816 decoder reports fixed-width instructions, flow, references, and effe
 
   const stop = decode([0xdb]);
   t.is(stop.kind, "instruction");
-  if (stop.kind === "instruction")
+  if (stop.kind === "instruction") {
     t.deepEqual(stop.instruction.flow, { kind: "stop", fallthrough: false });
+  }
 
   const bankLocalCall = decode([0x20, 0x34, 0x12]);
   t.is(bankLocalCall.kind, "instruction");
@@ -113,12 +116,15 @@ test("65816 decoder makes E/M/X width ambiguity explicit", (t) => {
 
   const index = decode([0xa2, 0x34, 0x12], { e: 0, m: 1, x: "unknown" });
   t.is(index.kind, "ambiguous");
-  if (index.kind === "ambiguous") t.deepEqual(index.requiredState, ["x"]);
+  if (index.kind === "ambiguous") {
+    t.deepEqual(index.requiredState, ["x"]);
+  }
 
   const emulationForcesEightBit = decode([0xa9, 0x34], { e: 1, m: 0, x: 0 });
   t.is(emulationForcesEightBit.kind, "instruction");
-  if (emulationForcesEightBit.kind === "instruction")
+  if (emulationForcesEightBit.kind === "instruction") {
     t.is(emulationForcesEightBit.instruction.size, 2);
+  }
 
   const truncatedAmbiguous = decode([0xa9, 0x34], { e: "unknown", m: "unknown" });
   t.like(truncatedAmbiguous, {
@@ -143,19 +149,25 @@ test("65816 width predicates cover native, emulation, and unknown states for eve
         for (const x of [0, 1, "unknown"] as const) {
           const result = decode(bytes, { e, m, x });
           let selected: 0 | 1 | "unknown" = 1;
-          if (specification.widthFlag === "m") selected = m;
-          else if (specification.widthFlag === "x") selected = x;
+          if (specification.widthFlag === "m") {
+            selected = m;
+          } else if (specification.widthFlag === "x") {
+            selected = x;
+          }
           const ambiguous =
             specification.widthFlag &&
             e !== 1 &&
             (selected === "unknown" || (e === "unknown" && selected === 0));
-          if (ambiguous) t.is(result.kind, "ambiguous", specification.id);
-          else {
+          if (ambiguous) {
+            t.is(result.kind, "ambiguous", specification.id);
+          } else {
             t.is(result.kind, "instruction", specification.id);
             if (result.kind === "instruction") {
               let expected = specification.minimumSize;
               // Emulation forces an 8-bit operand even when the native width flag is clear.
-              if (specification.widthFlag) expected = e === 1 || selected === 1 ? 2 : 3;
+              if (specification.widthFlag) {
+                expected = e === 1 || selected === 1 ? 2 : 3;
+              }
               t.is(result.instruction.size, expected, specification.id);
             }
           }
@@ -198,7 +210,9 @@ test("65816 public-documentation golden vectors decode canonically", (t) => {
   for (const vector of vectors) {
     const result = decode(vector.bytes, vector.state);
     t.is(result.kind, "instruction", vector.source);
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {
+      continue;
+    }
     t.is(formatCpu65816Instruction(result.instruction), vector.source);
     t.is(result.instruction.flow.kind, vector.flow);
   }
@@ -207,7 +221,9 @@ test("65816 public-documentation golden vectors decode canonically", (t) => {
 test("65816 decoder reports every known-width truncated instruction without reading past input", (t) => {
   for (const specification of cpu65816Specifications) {
     const size = specification.maximumSize;
-    if (size === 1) continue;
+    if (size === 1) {
+      continue;
+    }
     const state: Cpu65816DecodeState = { e: 0, m: 0, x: 0 };
     const result = decode([specification.opcode[0], ...Array(size - 2).fill(0)], state);
     t.like(result, { kind: "error", code: "truncated", requiredBytes: size }, specification.id);
@@ -219,7 +235,9 @@ test("65816 decode-format-encode round trips all 256 opcodes in every width", (t
     const widths = specification.widthFlag ? ([1, 0] as const) : ([1] as const);
     for (const width of widths) {
       let size = specification.minimumSize;
-      if (specification.widthFlag) size = width === 1 ? 2 : 3;
+      if (specification.widthFlag) {
+        size = width === 1 ? 2 : 3;
+      }
       const bytes = [specification.opcode[0], 0x34, 0x12, 0x56].slice(0, size);
       const state: Cpu65816DecodeState = {
         e: 0,
@@ -229,7 +247,9 @@ test("65816 decode-format-encode round trips all 256 opcodes in every width", (t
       };
       const result = decode(bytes, state);
       t.is(result.kind, "instruction", specification.id);
-      if (result.kind !== "instruction") continue;
+      if (result.kind !== "instruction") {
+        continue;
+      }
       for (const source of [
         formatCpu65816Instruction(result.instruction),
         formatSnes65816SourceInstruction(result.instruction),
@@ -251,13 +271,15 @@ test("65816 decode-format-encode round trips all 256 opcodes in every width", (t
 test("source formatter names CPU-visible SNES hardware registers without changing width", (t) => {
   const absolute = decode([0x8d, 0x00, 0x21], { e: 0, m: 1, x: 1, dataBank: 0 });
   t.is(absolute.kind, "instruction");
-  if (absolute.kind === "instruction")
+  if (absolute.kind === "instruction") {
     t.is(formatSnes65816SourceInstruction(absolute.instruction), "STA.w INIDISP");
+  }
 
   const indexed = decode([0x9d, 0x00, 0x43], { e: 0, m: 1, x: 1, dataBank: 0 });
   t.is(indexed.kind, "instruction");
-  if (indexed.kind === "instruction")
+  if (indexed.kind === "instruction") {
     t.is(formatSnes65816SourceInstruction(indexed.instruction), "STA.w DMAP0,x");
+  }
   for (const [bytes, state, expected] of [
     [[0x20, 0x03, 0x42], { dataBank: 0 }, "JSR.w $4203"],
     [[0x8d, 0x00, 0x21], { dataBank: 0x7e }, "STA.w $2100"],
@@ -265,8 +287,9 @@ test("source formatter names CPU-visible SNES hardware registers without changin
   ] as const) {
     const decoded = decode(bytes, state);
     t.is(decoded.kind, "instruction");
-    if (decoded.kind === "instruction")
+    if (decoded.kind === "instruction") {
       t.is(formatSnes65816SourceInstruction(decoded.instruction), expected);
+    }
   }
 });
 
@@ -299,32 +322,36 @@ test("source formatter maps known WRAM references without changing operand width
 
   const long = decode([0xaf, 0x47, 0x18, 0x7e]);
   t.is(long.kind, "instruction");
-  if (long.kind === "instruction")
+  if (long.kind === "instruction") {
     t.is(formatSnes65816SourceInstruction(long.instruction, variables), "LDA.l RAM_RING_MENU_MODE");
+  }
 
   const absolute = decode([0xad, 0x47, 0x18], { dataBank: 0x7e });
   t.is(absolute.kind, "instruction");
-  if (absolute.kind === "instruction")
+  if (absolute.kind === "instruction") {
     t.is(
       formatSnes65816SourceInstruction(absolute.instruction, variables),
       "LDA.w RAM_RING_MENU_MODE & $FFFF",
     );
+  }
 
   const direct = decode([0xa5, 0xf4], { directPage: 0 });
   t.is(direct.kind, "instruction");
-  if (direct.kind === "instruction")
+  if (direct.kind === "instruction") {
     t.is(
       formatSnes65816SourceInstruction(direct.instruction, variables),
       "LDA.b RAM_GAME_HOURS & $FF",
     );
+  }
 
   const rangeOffset = decode([0xaf, 0x01, 0xcc, 0x7e]);
   t.is(rangeOffset.kind, "instruction");
-  if (rangeOffset.kind === "instruction")
+  if (rangeOffset.kind === "instruction") {
     t.is(
       formatSnes65816SourceInstruction(rangeOffset.instruction, variables),
       "LDA.l (RAM_CHARACTER_NAME + $01)",
     );
+  }
 });
 
 test("source formatter rebases relative targets from a ROM mirror to the generated source bank", (t) => {
@@ -335,7 +362,9 @@ test("source formatter rebases relative targets from a ROM mirror to the generat
     state: { programBank: 0x4f },
   });
   t.is(mirrored.kind, "instruction");
-  if (mirrored.kind !== "instruction") return;
+  if (mirrored.kind !== "instruction") {
+    return;
+  }
   t.is(formatCpu65816Instruction(mirrored.instruction), "BNE $4FFE75");
   t.is(formatSnes65816SourceInstruction(mirrored.instruction, undefined, 0xcffe7a), "BNE $CFFE75");
 });

@@ -8,7 +8,9 @@ test("DebugTraceBuffer bounds producer memory and exposes ordered oldest-first l
     capacity: 3,
   });
   trace.start();
-  for (const address of [0x808000, 0x808001, 0x808002, 0x808003, 0x808004]) trace.append(address);
+  for (const address of [0x808000, 0x808001, 0x808002, 0x808003, 0x808004]) {
+    trace.append(address);
+  }
   t.is(trace.bufferedEvents, 3);
   t.deepEqual(trace.read(2), {
     architecture: "snes.65816",

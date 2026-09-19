@@ -55,29 +55,40 @@ export const validateRuntimeBusFact = (fact: RuntimeBusFact): RuntimePPUEffect |
     fact.value > 0xff ||
     !["read", "write"].includes(fact.direction) ||
     !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)
-  )
+  ) {
     throw new Error("Invalid bus access coordinates, value, direction or context.");
+  }
   if (fact.actor === "cpu") {
-    if (fact.channel !== null || fact.phase !== "cpu")
+    if (fact.channel !== null || fact.phase !== "cpu") {
       throw new Error("CPU bus accesses require a null channel and CPU phase.");
+    }
   } else {
     if (
       !Number.isInteger(fact.channel) ||
       fact.channel === null ||
       fact.channel < 0 ||
       fact.channel > 7
-    )
+    ) {
       throw new Error("DMA/HDMA bus accesses require a channel in [0, 7].");
+    }
     if (fact.actor === "dma") {
-      if (fact.phase !== "dma") throw new Error("DMA bus access has an invalid phase.");
+      if (fact.phase !== "dma") {
+        throw new Error("DMA bus access has an invalid phase.");
+      }
     } else if (fact.actor === "hdma") {
-      if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase))
+      if (!["hdma-table", "hdma-indirect", "hdma-transfer"].includes(fact.phase)) {
         throw new Error("HDMA bus access has an invalid phase.");
+      }
       // Table and indirect-pointer fetches are metadata reads, never transfer writes.
-      if (fact.phase !== "hdma-transfer" && fact.direction !== "read")
+      if (fact.phase !== "hdma-transfer" && fact.direction !== "read") {
         throw new Error("HDMA table and indirect phases must be reads.");
-    } else throw new Error("Unknown bus access actor.");
+      }
+    } else {
+      throw new Error("Unknown bus access actor.");
+    }
   }
-  if (fact.ppu !== undefined) return normalizeRuntimePPUEffect(fact.ppu, fact);
+  if (fact.ppu !== undefined) {
+    return normalizeRuntimePPUEffect(fact.ppu, fact);
+  }
   return undefined;
 };

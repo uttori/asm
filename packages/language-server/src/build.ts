@@ -28,7 +28,9 @@ const sameFileContent = (file: string, content: Uint8Array): boolean => {
   try {
     return Buffer.from(content).equals(fs.readFileSync(file));
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
     throw error;
   }
 };
@@ -65,8 +67,9 @@ export function commitBuildArtifactPair(
 
   const outputChanged = !sameFileContent(resolvedOutput, output);
   const debugMapChanged = !sameFileContent(debugMapPath, mapBytes);
-  if (!outputChanged && !debugMapChanged)
+  if (!outputChanged && !debugMapChanged) {
     return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
+  }
 
   const oldOutput = fs.existsSync(resolvedOutput) ? fs.readFileSync(resolvedOutput) : undefined;
   const stagedOutput = stageArtifact(resolvedOutput, output);
@@ -89,8 +92,12 @@ export function commitBuildArtifactPair(
     }
     throw error;
   } finally {
-    if (fs.existsSync(stagedOutput)) fs.unlinkSync(stagedOutput);
-    if (stagedMap && fs.existsSync(stagedMap)) fs.unlinkSync(stagedMap);
+    if (fs.existsSync(stagedOutput)) {
+      fs.unlinkSync(stagedOutput);
+    }
+    if (stagedMap && fs.existsSync(stagedMap)) {
+      fs.unlinkSync(stagedMap);
+    }
   }
   return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
 }

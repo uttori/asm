@@ -81,7 +81,7 @@ test("struct operands preserve mirrored banks, array indexes, and interior bytes
         logicalAddress: 0x808000,
         state: { e: 0, m: 0, x: 0 },
       });
-      if (decoded.kind !== "instruction") throw new Error("Expected decoded fixture instruction.");
+      if (decoded.kind !== "instruction") {throw new Error("Expected decoded fixture instruction.");}
       const source = formatSnes65816SourceInstruction(
         decoded.instruction,
         undefined,
@@ -158,7 +158,7 @@ test("one-based ROM arrays distinguish biased indexed operands from adjacent sca
       logicalAddress: 0x808000,
       state: { e: 0, m: 0, x: 0 },
     });
-    if (decoded.kind !== "instruction") throw new Error("Expected fixture instruction.");
+    if (decoded.kind !== "instruction") {throw new Error("Expected fixture instruction.");}
     const source = formatSnes65816SourceInstruction(
       decoded.instruction,
       undefined,

@@ -13,8 +13,9 @@ export const validateAnalysisProjectManifest = (manifest) => {
     if (manifest.schemaVersion !== ANALYSIS_PROJECT_SCHEMA_VERSION) {
         throw new Error(`Unsupported analysis project schema version ${String(manifest.schemaVersion)}.`);
     }
-    if (!/^[\da-f]{64}$/.test(manifest.rom.sha256))
+    if (!/^[\da-f]{64}$/.test(manifest.rom.sha256)) {
         throw new Error("Invalid ROM SHA-256.");
+    }
     if (!/^[\da-f]{64}$/.test(manifest.rom.contentSha256)) {
         throw new Error("Invalid ROM content SHA-256.");
     }
@@ -33,13 +34,16 @@ export const validateAnalysisProjectManifest = (manifest) => {
         }
         addressSpaceIds.add(addressSpace.id);
     }
-    if (manifest.db !== undefined && manifest.db !== "analysis.sqlite")
+    if (manifest.db !== undefined && manifest.db !== "analysis.sqlite") {
         throw new Error(`Unsupported analysis sqlite path '${manifest.db}'.`);
+    }
     if (manifest.revision !== undefined &&
-        (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0))
+        (!Number.isSafeInteger(manifest.revision) || manifest.revision < 0)) {
         throw new Error("Invalid analysis sqlite revision.");
-    if (manifest.shards.length !== 0)
+    }
+    if (manifest.shards.length !== 0) {
         throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+    }
 };
 const FORBIDDEN_ROM_PAYLOAD_KEYS = new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
 const assertNoRomPayload = (value, location) => {
@@ -49,8 +53,9 @@ const assertNoRomPayload = (value, location) => {
         }
         return;
     }
-    if (!value || typeof value !== "object")
+    if (!value || typeof value !== "object") {
         return;
+    }
     for (const [key, entry] of Object.entries(value)) {
         if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key)) {
             throw new Error(`ROM byte payload '${location}.${key}' is forbidden in analysis projects.`);
@@ -65,12 +70,14 @@ const isStableId = (id) => {
             (code >= 0x41 && code <= 0x5a) ||
             (code >= 0x61 && code <= 0x7a));
     };
-    if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1)))
+    if (id.length === 0 || !isAlphaNumeric(id[0]) || !isAlphaNumeric(id.at(-1))) {
         return false;
+    }
     for (let index = 0; index < id.length; index++) {
         const character = id[index];
-        if (!isAlphaNumeric(character) && !"._:/-".includes(character))
+        if (!isAlphaNumeric(character) && !"._:/-".includes(character)) {
             return false;
+        }
     }
     return true;
 };
@@ -108,8 +115,9 @@ const assertCodecReference = (reference, location) => {
         }
         throw new Error(`${current} is not a JSON-safe codec option.`);
     };
-    if (reference.options !== undefined)
+    if (reference.options !== undefined) {
         visitJson(reference.options, `${location} options`);
+    }
 };
 /**
  * Validate runtime facts in one pass, spilling large duplicate-ID indexes to temporary disk storage.
@@ -124,13 +132,16 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
     const evidenceIds = new Set(evidence.map((record) => record.id));
     const addressSpaceById = new Map(project.addressSpaces.map((space) => [space.id, space]));
     const validate = (record) => {
-        if (!record || typeof record.id !== "string" || record.id === "")
+        if (!record || typeof record.id !== "string" || record.id === "") {
             throw new Error("Analysis shard 'runtime' contains a record without an id.");
-        if (ids && !ids.add(record.id))
+        }
+        if (ids && !ids.add(record.id)) {
             throw new Error(`Analysis shard 'runtime' contains duplicate id '${record.id}'.`);
+        }
         for (const id of record.evidence ?? []) {
-            if (!evidenceIds.has(id))
+            if (!evidenceIds.has(id)) {
                 throw new Error(`Analysis record '${record.id}' refers to missing evidence '${id}'.`);
+            }
         }
         if (!Number.isSafeInteger(record.count) || record.count <= 0) {
             throw new Error(`Runtime record '${record.id}' has an invalid observation count.`);
@@ -144,8 +155,9 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
             }
         }
         if (record.kind === "runtime-bus-access") {
-            if (record.architecture !== "snes.65816")
+            if (record.architecture !== "snes.65816") {
                 throw new Error("Bus facts require the SNES 65816 architecture.");
+            }
             validateRuntimeBusFact(record);
         }
         if (record.kind === "runtime-memory-access") {
@@ -154,8 +166,9 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
                     (!Number.isInteger(record.channel) ||
                         record.channel < 0 ||
                         record.channel > 7 ||
-                        !["dma", "hdma"].includes(record.actor ?? "cpu"))))
+                        !["dma", "hdma"].includes(record.actor ?? "cpu")))) {
                 throw new Error(`Runtime memory access '${record.id}' has an invalid actor/channel.`);
+            }
             if (!Number.isSafeInteger(record.width) || record.width <= 0) {
                 throw new Error(`Runtime memory access '${record.id}' has an invalid width.`);
             }
@@ -192,11 +205,13 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
         }
         if ("addressSpace" in record) {
             const space = addressSpaceById.get(record.addressSpace);
-            if (!space)
+            if (!space) {
                 throw new Error(`Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`);
+            }
             const addresses = record.kind === "runtime-coverage" ? [record.start, record.end - 1] : [record.address];
-            if (addresses.some((address) => !Number.isSafeInteger(address) || address < 0 || address >= 2 ** space.addressBits))
+            if (addresses.some((address) => !Number.isSafeInteger(address) || address < 0 || address >= 2 ** space.addressBits)) {
                 throw new Error(`Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`);
+            }
         }
         let addresses = [];
         if (record.kind === "runtime-memory-access") {
@@ -239,8 +254,9 @@ export const createRuntimeRecordValidator = (project, evidence, checkDuplicateId
 export const validateRuntimeRecords = (records, project, evidence) => {
     const validate = createRuntimeRecordValidator(project, evidence);
     try {
-        for (const record of records)
+        for (const record of records) {
             validate(record);
+        }
     }
     finally {
         validate.close();
@@ -255,8 +271,9 @@ export const validateLoadedShards = (shards, project) => {
     const { addressSpaces } = project;
     const evidenceIds = new Set(shards.evidence.map((record) => record.id));
     for (const [kind, records] of Object.entries(shards)) {
-        if (kind === "runtime")
+        if (kind === "runtime") {
             continue;
+        }
         const ids = new Set();
         for (const record of records) {
             if (!record || typeof record.id !== "string" || record.id === "") {
@@ -274,8 +291,9 @@ export const validateLoadedShards = (shards, project) => {
         }
     }
     for (const evidence of shards.evidence) {
-        if (!evidence.artifact)
+        if (!evidence.artifact) {
             continue;
+        }
         if (evidence.artifact.format === "" ||
             !/^[\da-f]{64}$/.test(evidence.artifact.sha256) ||
             !/^[\da-f]{64}$/.test(evidence.artifact.romContentSha256)) {
@@ -297,15 +315,17 @@ export const validateLoadedShards = (shards, project) => {
         }
     }
     for (const annotation of shards.annotations) {
-        if (!annotation.asset)
+        if (!annotation.asset) {
             continue;
+        }
         if (!["asset", "compressed", "graphics", "music", "text"].includes(annotation.classification)) {
             throw new Error(`Analysis annotation '${annotation.id}' cannot attach an asset codec to '${annotation.classification}'.`);
         }
         assertCodecReference(annotation.asset, `Analysis annotation '${annotation.id}' asset codec`);
         const compression = annotation.asset.compression;
-        if (!compression)
+        if (!compression) {
             continue;
+        }
         assertCodecReference(compression, `Analysis annotation '${annotation.id}' compression codec`);
         const rangeSize = annotation.end - annotation.start;
         const maximumSize = compression.maximumSize ?? rangeSize;
@@ -338,16 +358,18 @@ export const validateLoadedShards = (shards, project) => {
         }
     }
     for (const conflict of shards.analysis) {
-        if (conflict.kind !== "conflict" || conflict.end === undefined)
+        if (conflict.kind !== "conflict" || conflict.end === undefined) {
             continue;
+        }
         if (!Number.isSafeInteger(conflict.end) || conflict.end <= conflict.address) {
             throw new Error(`Analysis conflict '${conflict.id}' has an invalid half-open range.`);
         }
     }
     const regionsById = new Map(shards.regions.map((region) => [region.id, region]));
     for (const region of shards.regions) {
-        if (!region.parentRegion)
+        if (!region.parentRegion) {
             continue;
+        }
         const parent = regionsById.get(region.parentRegion);
         if (!parent) {
             throw new Error(`Analysis region '${region.id}' refers to missing parent region '${region.parentRegion}'.`);
@@ -360,8 +382,9 @@ export const validateLoadedShards = (shards, project) => {
             }
             visited.add(ancestor.id);
             const next = regionsById.get(ancestor.parentRegion);
-            if (!next)
+            if (!next) {
                 break;
+            }
             ancestor = next;
         }
         if (visited.has(ancestor.id)) {
@@ -379,21 +402,26 @@ export const validateLoadedShards = (shards, project) => {
     }
     for (const label of shards.labels) {
         if (label.sourceName !== undefined &&
-            (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName)))
+            (typeof label.sourceName !== "string" || !/^[A-Z_a-z]\w*$/.test(label.sourceName))) {
             throw new Error(`Analysis label '${label.id}' has an invalid source name.`);
+        }
         if (label.inlineComment !== undefined &&
-            (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment)))
+            (typeof label.inlineComment !== "string" || /[\n\r\u2028\u2029]/.test(label.inlineComment))) {
             throw new Error(`Analysis label '${label.id}' requires a single-line inline comment.`);
-        if (label.analysisEntryPoint !== undefined && typeof label.analysisEntryPoint !== "boolean")
+        }
+        if (label.analysisEntryPoint !== undefined && typeof label.analysisEntryPoint !== "boolean") {
             throw new Error(`Analysis label '${label.id}' has an invalid analysisEntryPoint.`);
+        }
     }
     for (const comment of shards.comments) {
         if (comment.placement !== undefined &&
-            !["before", "inline-instruction"].includes(comment.placement))
+            !["before", "inline-instruction"].includes(comment.placement)) {
             throw new Error(`Analysis comment '${comment.id}' has an invalid placement.`);
+        }
         if (comment.placement === "inline-instruction" &&
-            (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text)))
+            (typeof comment.text !== "string" || /[\n\r\u2028\u2029]/.test(comment.text))) {
             throw new Error(`Analysis comment '${comment.id}' requires a single-line inline comment.`);
+        }
     }
     const addressSpaceById = new Map(addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace]));
     const addressedRecords = [
@@ -420,14 +448,18 @@ export const validateLoadedShards = (shards, project) => {
             }
         }
         else {
-            if ("fromAddress" in record)
+            if ("fromAddress" in record) {
                 addresses.push(record.fromAddress);
-            if ("toAddress" in record && record.toAddress !== undefined)
+            }
+            if ("toAddress" in record && record.toAddress !== undefined) {
                 addresses.push(record.toAddress);
+            }
             // Imported target lists can outgrow the engine's call-argument limit; validate every target.
-            if ("targets" in record)
-                for (const target of record.targets)
+            if ("targets" in record) {
+                for (const target of record.targets) {
                     addresses.push(target);
+                }
+            }
         }
         if (addresses.some((address) => !Number.isSafeInteger(address) || address < 0 || address >= maximum)) {
             throw new Error(`Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`);

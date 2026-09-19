@@ -71,10 +71,12 @@ export class DefineEngine {
             let braceLevel = 1;
             let closingBraceIndex = 1;
             while (braceLevel > 0 && closingBraceIndex < line.length) {
-                if (line[closingBraceIndex] === "{")
+                if (line[closingBraceIndex] === "{") {
                     braceLevel++;
-                if (line[closingBraceIndex] === "}")
+                }
+                if (line[closingBraceIndex] === "}") {
                     braceLevel--;
+                }
                 closingBraceIndex++;
             }
             if (braceLevel !== 0) {
@@ -262,12 +264,15 @@ export class DefineEngine {
                 index += 2;
                 let braceLevel = 1;
                 while (index < value.length && braceLevel > 0) {
-                    if (value[index] === "{")
+                    if (value[index] === "{") {
                         braceLevel++;
-                    else if (value[index] === "}")
+                    }
+                    else if (value[index] === "}") {
                         braceLevel--;
-                    if (braceLevel === 0)
+                    }
+                    if (braceLevel === 0) {
                         break;
+                    }
                     braceContent += value[index];
                     index++;
                 }

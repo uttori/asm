@@ -183,9 +183,13 @@ const addAll = (
   target: Set<string> | undefined,
   values: readonly string[],
 ): Set<string> | undefined => {
-  if (values.length === 0) return target;
+  if (values.length === 0) {
+    return target;
+  }
   target ??= new Set<string>();
-  for (const value of values) target.add(value);
+  for (const value of values) {
+    target.add(value);
+  }
   return target;
 };
 
@@ -294,7 +298,9 @@ export const buildInstructionAnalysisAnnotations = (
       };
       observations.set(key, observation);
     }
-    if (count !== undefined) observation.count = (observation.count ?? 0) + count;
+    if (count !== undefined) {
+      observation.count = (observation.count ?? 0) + count;
+    }
     observation.recordIds.add(recordId);
     addAll(observation.evidence, evidence);
     instruction.architectures = addValue(instruction.architectures, architecture);
@@ -304,8 +310,9 @@ export const buildInstructionAnalysisAnnotations = (
   const addNode = (node: AnalysisControlFlowNodeRecord): void => {
     const instruction = ensure(node.addressSpace, node.address);
     instruction.nodeIds = addValue(instruction.nodeIds, node.id);
-    if (node.fileOffset !== undefined)
+    if (node.fileOffset !== undefined) {
       instruction.outputOffsets = addValue(instruction.outputOffsets, node.fileOffset);
+    }
     instruction.evidence = addAll(instruction.evidence, node.evidence);
     for (const raw of node.effectiveAddresses) {
       const value = effectiveAddress(raw);
@@ -336,7 +343,9 @@ export const buildInstructionAnalysisAnnotations = (
       const afterValue = after[field];
       const beforeKey = valueKey(beforeValue, hasBefore);
       const afterKey = valueKey(afterValue, hasAfter);
-      if (beforeKey === afterKey) continue;
+      if (beforeKey === afterKey) {
+        continue;
+      }
       const key = `${field}:${beforeKey}:${afterKey}`;
       const transitions = (instruction.stateTransitions ??= new Map<string, TransitionMutable>());
       let transition = transitions.get(key);
@@ -358,11 +367,15 @@ export const buildInstructionAnalysisAnnotations = (
   };
 
   for (const record of shards.analysis) {
-    if (record.kind === "cfg-node") addNode(record);
+    if (record.kind === "cfg-node") {
+      addNode(record);
+    }
   }
 
   for (const annotation of shards.annotations) {
-    if (annotation.classification !== "opcode") continue;
+    if (annotation.classification !== "opcode") {
+      continue;
+    }
     const instruction = ensure(annotation.addressSpace, annotation.start);
     if (fileAddressSpaces.has(annotation.addressSpace)) {
       instruction.outputOffsets = addValue(instruction.outputOffsets, annotation.start);
@@ -419,7 +432,9 @@ export const buildInstructionAnalysisAnnotations = (
   for (const comment of shards.comments) {
     const instruction = ensure(comment.addressSpace, comment.address);
     (instruction.comments ??= []).push(comment);
-    for (const evidence of comment.evidence) (instruction.evidence ??= new Set()).add(evidence);
+    for (const evidence of comment.evidence) {
+      (instruction.evidence ??= new Set()).add(evidence);
+    }
   }
   const mutable = [...instructions.values()];
   const directIndex = new Map<string, InstructionMutable[]>();
@@ -430,9 +445,14 @@ export const buildInstructionAnalysisAnnotations = (
     // Performance invariant: these arrays are private construction state, so append in place.
     // Replacing push with `[...direct, instruction]` copies an ever-growing array per instruction and
     // makes index construction quadratic.
-    if (direct) direct.push(instruction);
-    else directIndex.set(instruction.addressSpace, [instruction]);
-    for (const offset of instruction.outputOffsets ?? []) outputIndex.push({ offset, instruction });
+    if (direct) {
+      direct.push(instruction);
+    } else {
+      directIndex.set(instruction.addressSpace, [instruction]);
+    }
+    for (const offset of instruction.outputOffsets ?? []) {
+      outputIndex.push({ offset, instruction });
+    }
   }
   for (const values of directIndex.values()) {
     values.sort((left, right) => left.address - right.address);
@@ -454,8 +474,11 @@ export const buildInstructionAnalysisAnnotations = (
     let high = values.length;
     while (low < high) {
       const middle = low + Math.floor((high - low) / 2);
-      if (at(values[middle]) < target) low = middle + 1;
-      else high = middle;
+      if (at(values[middle]) < target) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
     }
     return low;
   };
@@ -514,7 +537,9 @@ export const buildInstructionAnalysisAnnotations = (
 
   const coverageById = new Map<string, RuntimeCoverageRecord>();
   for (const record of runtime()) {
-    if (record.kind !== "runtime-coverage") continue;
+    if (record.kind !== "runtime-coverage") {
+      continue;
+    }
     coverageById.set(record.id, record);
     attachToRange(record.addressSpace, record.start, record.end, (instruction) => {
       instruction.architectures = addValue(instruction.architectures, record.architecture);

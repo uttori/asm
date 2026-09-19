@@ -114,32 +114,40 @@ type WhileTracker = {
     for_end?: number;
     for_cur?: number;
 };
+/** Required target selection plus host services for one mutable assembly session. */
 export type AssemblerOptions = {
     /** Frozen plugin environment shared by build and tooling sessions. */
     environment: AssemblerEnvironment;
     /** Target contribution ID or alias. */
     target: string;
-    /** Optional architecture contribution ID or source alias. */
+    /** Architecture ID or alias within the target; defaults to the target's defaultArchitecture. */
     architecture?: string;
-    /** Optional target-specific configuration. */
+    /** Validated by the target's createOptions hook; nonempty options require that hook. */
     targetOptions?: unknown;
-    /** Optional base image to seed output. */
+    /** Base image copied at construction; source/output directives determine the resulting patch extent. */
     baseImage?: number[] | Uint8Array;
-    /** The file provider to use for the assembler. */
+    /** Borrowed synchronous provider; defaults to NodeAssemblyFileProvider and is not disposed by the session. */
     fileProvider?: AssemblyFileProvider;
-    /** Whether to collect source metadata. */
+    /** Collect byte-to-source metadata for debug maps; defaults to true. */
     collectSourceMetadata?: boolean;
 };
+/** Controls recovery-oriented analysis performed in an isolated temporary session. */
 export type ProgramAnalysisOptions = {
     /** Assembly stages to run. Tooling defaults to definitions-only. */
     stages?: readonly AssemblyStageName[];
-    /** When false, include directives record an edge without parsing the target. */
+    /** When false, include directives record an edge without parsing the target. Defaults to true. */
     followIncludes?: boolean;
 };
 type ActiveLifecycle = {
     record: OwnedContribution<LifecycleContribution>;
     instance: SessionLifecycle;
 };
+/**
+ * Mutable, synchronous build session. Share its frozen environment with other sessions, not its state.
+ * Use assembleSource/assembleProgram for builds and analyzeSource for recovering diagnostics.
+ * Dispose the session before its plugin manager or loader; use a fresh session after a failed build.
+ * Public runtime fields and service methods support directives and tooling and require stage invariants.
+ */
 export declare class Assembler {
     #private;
     /** The current logical target address. */
@@ -487,6 +495,11 @@ export declare class Assembler {
      * @returns {AssemblerServiceBag} The result.
      */
     private createServices;
+    /**
+     * Resolve the target and instantiate per-session factories. Throws on invalid selection/options
+     * or factory failure. Factory construction is not a resource transaction: keep external resources
+     * in plugin activation disposables and session state cloneable.
+     */
     constructor(options: AssemblerOptions);
     runLifecycleHook(hookName: string, invoke: (lifecycle: SessionLifecycle) => void): void;
     runBeforeDirective(keyword: string, words: readonly string[], raw: string): "continue" | "handled";
@@ -506,6 +519,11 @@ export declare class Assembler {
      * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
      */
     recordSourceWrite(logicalAddress: number, outputOffset: number): void;
+    /**
+     * Run lifecycle disposal in reverse registration order, then dispose live state slots.
+     * Idempotent; attempts all cleanup and throws AggregateError for failures. The environment
+     * and file provider remain owned by the host. Do not use this session afterward.
+     */
     dispose(): void;
     /**
      * Reads little endian.
@@ -795,8 +813,8 @@ export declare class Assembler {
      */
     evaluateRangeExpression(expr: string | ExpressionNode): number;
     /**
-     * Sets the paths to search for included files.
-     * @param {string[]} paths The paths to search for included files.
+     * Replace include search paths before assembly. Retains the array without copying.
+     * @param {string[]} paths Provider-specific search paths; Node resolves relative paths from cwd.
      */
     setIncludePaths(paths: string[]): void;
     /**
@@ -977,16 +995,18 @@ export declare class Assembler {
      */
     runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState;
     /**
-     * Handles assemble program.
-     * @param {ProgramModel} program The program.
+     * Run definition collection, layout resolution, and byte emission synchronously in that order.
+     * Throws at the first unrecovered failure; partial state/output is not a successful binary.
+     * @param {ProgramModel} program Parsed source model produced for this target's syntax.
      */
     assembleProgram(program: ProgramModel): void;
     /**
-     * Handles assemble source.
-     * @param {string} source The source.
-     * @param {string} [sourceFile] The source file.
-     * @param {number} [startLine] The start line.
-     * @returns {ProgramModel} The result.
+     * Parse and run all three assembly stages; includes are read through the configured provider.
+     * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
+     * @param {string} source Assembly source text, not a filename.
+     * @param {string} [sourceFile] Source identity and include-resolution base; defaults to currentFile.
+     * @param {number} [startLine] Zero-based line offset; defaults to zero.
+     * @returns {ProgramModel} Parsed model used for this build.
      */
     assembleSource(source: string, sourceFile?: string, startLine?: number): ProgramModel;
     /**
@@ -1005,8 +1025,8 @@ export declare class Assembler {
     /** Runs the active output-format finalizer. */
     finalizeOutput(): void;
     /**
-     * Returns the compiled binary output.
-     * @returns {Uint8Array} The compiled binary output.
+     * Materialize the target format's current bytes without assembling or finalizing again.
+     * @returns {Uint8Array} Output whose ownership depends on the formatter; copy before retaining or mutating independently.
      */
     getBinaryOutput: () => Uint8Array;
     /**

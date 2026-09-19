@@ -44,10 +44,18 @@ export class SnesStructExpressionResolver {
    * @returns {SnesStructExpression} Native source and exact integer value with referenced owners.
    */
   resolve(input: unknown): SnesStructExpression {
-    if (typeof input !== "string" || !input.trim() || input.length > 1024 || /[\n\r#;]/.test(input))
+    if (
+      typeof input !== "string" ||
+      !input.trim() ||
+      input.length > 1024 ||
+      /[\n\r#;]/.test(input)
+    ) {
       throw new Error("Struct expressions require a single expression of at most 1024 characters.");
+    }
     const cached = this.cache.get(input);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
     const owners = new Set<SnesStructBinding>();
     let references = 0;
     let nodes = 0;
@@ -58,8 +66,9 @@ export class SnesStructExpressionResolver {
      * @returns {object} Exact value and source, or throws on lost precision.
      */
     const checked = (value: number, expression: string): { value: number; expression: string } => {
-      if (!Number.isSafeInteger(value))
+      if (!Number.isSafeInteger(value)) {
         throw new Error("Struct expression must evaluate to exact safe integers.");
+      }
       return { value, expression };
     };
     /**
@@ -79,24 +88,37 @@ export class SnesStructExpressionResolver {
         index = visit(root.index).value;
         root = root.object;
       }
-      if (root.type !== "identifier") throw new Error("Unsupported struct reference.");
+      if (root.type !== "identifier") {
+        throw new Error("Unsupported struct reference.");
+      }
       const binding = this.bindings.get(root.name);
       const layout = binding?.structure ?? this.layouts.get(root.name);
-      if (!layout) throw new Error(`Unknown struct reference '${root.name}'.`);
+      if (!layout) {
+        throw new Error(`Unknown struct reference '${root.name}'.`);
+      }
       if (
         index !== undefined &&
         (!binding || index < binding.firstIndex || index >= binding.firstIndex + binding.count)
-      )
+      ) {
         throw new Error(`Struct reference index is out of bounds for '${root.name}'.`);
+      }
       references++;
-      if (binding) owners.add(binding);
+      if (binding) {
+        owners.add(binding);
+      }
       let value = 0;
-      if (binding) value = binding.address + ((index ?? 0) - binding.firstIndex) * layout.size;
+      if (binding) {
+        value = binding.address + ((index ?? 0) - binding.firstIndex) * layout.size;
+      }
       let expression = root.name;
-      if (index !== undefined) expression += `[${index}]`;
+      if (index !== undefined) {
+        expression += `[${index}]`;
+      }
       if (fieldName !== undefined) {
         const field = this.fields.get(layout.id)?.get(fieldName);
-        if (!field) throw new Error(`Unknown struct field '${fieldName}'.`);
+        if (!field) {
+          throw new Error(`Unknown struct field '${fieldName}'.`);
+        }
         value += field.offset;
         expression += `.${fieldName}`;
       }
@@ -108,7 +130,9 @@ export class SnesStructExpressionResolver {
      * @returns {object} Checked integer value and source preserving operator grouping.
      */
     const visit = (node: ExpressionNode): { value: number; expression: string } => {
-      if (++nodes > 128) throw new Error("Struct expression exceeds 128 nodes.");
+      if (++nodes > 128) {
+        throw new Error("Struct expression exceeds 128 nodes.");
+      }
       switch (node.type) {
         case "literal": {
           const value = node.value.startsWith("$")
@@ -123,22 +147,25 @@ export class SnesStructExpressionResolver {
         case "call": {
           const name = node.callee.name;
           const arg = node.arguments[0];
-          if (node.arguments.length !== 1 || !arg)
+          if (node.arguments.length !== 1 || !arg) {
             throw new Error(`Struct expression ${name}() requires one argument.`);
+          }
           if (name === "bank") {
             const resolved = visit(arg);
             return checked((resolved.value >> 16) & 0xff, `bank(${resolved.expression})`);
           }
-          if (arg.type !== "identifier")
+          if (arg.type !== "identifier") {
             throw new Error("Struct reflection requires a layout or binding name.");
+          }
           if (
             name !== "sizeof" &&
             name !== "countof" &&
             name !== "bytesof" &&
             name !== "startof" &&
             name !== "endof"
-          )
+          ) {
             throw new Error(`Unsupported struct expression function '${name}'.`);
+          }
           reference(arg);
           const binding = this.bindings.get(arg.name);
           const layout = binding?.structure ?? this.layouts.get(arg.name)!;
@@ -223,7 +250,9 @@ export class SnesStructExpressionResolver {
       }
     };
     const resolved = visit(parseExpressionNode(input));
-    if (!references) throw new Error("Struct expressions must reference a layout or binding.");
+    if (!references) {
+      throw new Error("Struct expressions must reference a layout or binding.");
+    }
     const result = { ...resolved, bindings: [...owners] };
     this.cache.set(input, result);
     return result;
@@ -246,8 +275,9 @@ export function describeSnesStructAccess(
   if (
     address < binding.address ||
     address + width > binding.address + binding.count * structure.size
-  )
+  ) {
     throw new Error(`Struct observation leaves binding '${binding.name}'.`);
+  }
   const parts: SnesStructAccessPart[] = [];
   for (let cursor = address; cursor < address + width;) {
     const relative = cursor - binding.address;
@@ -258,8 +288,11 @@ export function describeSnesStructAccess(
     let high = structure.fields.length;
     while (low < high) {
       const middle = (low + high) >>> 1;
-      if (structure.fields[middle].offset <= offset) low = middle + 1;
-      else high = middle;
+      if (structure.fields[middle].offset <= offset) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
     }
     const candidate = structure.fields[low - 1];
     const field = candidate && offset < candidate.offset + candidate.size ? candidate : undefined;
@@ -272,7 +305,9 @@ export function describeSnesStructAccess(
       partOffset -= field.offset;
       end = field.offset + field.size;
     }
-    if (partOffset) expression = `(${expression} + $${partOffset.toString(16).toUpperCase()})`;
+    if (partOffset) {
+      expression = `(${expression} + $${partOffset.toString(16).toUpperCase()})`;
+    }
     const partWidth = Math.min(end - offset, address + width - cursor);
     parts.push({
       expression,

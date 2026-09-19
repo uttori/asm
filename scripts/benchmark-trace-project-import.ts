@@ -13,7 +13,9 @@ import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src
 const argument = (name: string): string => {
   const index = process.argv.indexOf(name);
   const value = index >= 0 ? process.argv[index + 1] : undefined;
-  if (!value || value.startsWith("--")) throw new Error(`${name} requires a path.`);
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${name} requires a path.`);
+  }
   return path.resolve(value);
 };
 
@@ -24,7 +26,9 @@ const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-project-import
 try {
   const pointer = await fs.readFile(path.join(project, "analysis.json"));
   const manifest = JSON.parse(pointer.toString()) as { db?: string };
-  if (manifest.db !== "analysis.sqlite") throw new Error("Benchmark requires a SQLite project.");
+  if (manifest.db !== "analysis.sqlite") {
+    throw new Error("Benchmark requires a SQLite project.");
+  }
   const original = new DatabaseSync(path.join(project, "analysis.sqlite"), { readOnly: true });
   try {
     // Online backup reads a consistent committed snapshot even when the editor is importing.
@@ -68,9 +72,8 @@ try {
     runtime: process.versions,
     traceBytes: (await fs.stat(trace)).size,
     durationMs: performance.now() - started,
-    // Archive files are not copied into the sandbox, nor is a new managed copy requested.
     // Analysis/export/verification are separate commands and excluded from these timings.
-    scope: "Isolated SQLite import; excludes backup, archive copying and regeneration",
+    scope: "Isolated SQLite import; excludes backup and regeneration",
     timings,
     result: {
       sourceSha256: result.sourceSha256,

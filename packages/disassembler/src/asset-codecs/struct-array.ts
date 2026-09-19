@@ -53,8 +53,12 @@ const parseFields = (
   const fields = (input as readonly AssetValue[]).map((entry, index): Field => {
     const definition = objectValue(entry, `Struct field ${index}`);
     const name = stringOption(definition, "name");
-    if (!name) throw new Error(`Struct field ${index} requires a non-empty name.`);
-    if (names.has(name)) throw new Error(`Struct field name '${name}' is duplicated.`);
+    if (!name) {
+      throw new Error(`Struct field ${index} requires a non-empty name.`);
+    }
+    if (names.has(name)) {
+      throw new Error(`Struct field name '${name}' is duplicated.`);
+    }
     names.add(name);
     const signed = booleanOption(definition, "signed");
     const bitOffset = integerOption(definition, "bitOffset", { minimum: 0 });
@@ -66,7 +70,9 @@ const parseFields = (
       return { kind: "bitfield", name, bitStart: bitOffset, bitLength: bits, signed };
     }
     const byteOffset = integerOption(definition, "offset", { minimum: 0 });
-    if (byteOffset === undefined) throw new Error(`Scalar field '${name}' requires 'offset'.`);
+    if (byteOffset === undefined) {
+      throw new Error(`Scalar field '${name}' requires 'offset'.`);
+    }
     const width = integerOption(definition, "width", { minimum: 1, maximum: 4, fallback: 1 })!;
     const endianValue = stringOption(definition, "endian", defaultEndian);
     if (endianValue !== "little" && endianValue !== "big") {

@@ -1,3 +1,8 @@
+/**
+ * Adapt capability groups to a flat encoder facade without copying session state.
+ * @param {ArchitectureEncoderContext} context Capabilities borrowed from the owning session.
+ * @returns {EncoderRuntime} A facade whose address and label-policy getters read live session values.
+ */
 export const createEncoderRuntime = (context) => ({
     operandResolver: context.operands,
     write1: (value) => context.emission.write1(value),

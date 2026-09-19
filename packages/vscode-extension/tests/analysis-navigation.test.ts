@@ -5,22 +5,9 @@ import {
   type AnalysisControlFlowNodeRecord,
   type AnalysisProjectSnapshot,
 } from "@uttori/asm-disassembler";
-import { build } from "esbuild";
 
 import { test } from "../../../tests/ava-helper.js";
-import type { projectAnalysisNavigation as ProjectNavigation } from "../src/analysis-navigation-data.js";
-
-const bundle = await build({
-  entryPoints: ["packages/vscode-extension/src/analysis-navigation-data.ts"],
-  bundle: true,
-  conditions: ["uttori-source"],
-  platform: "node",
-  format: "esm",
-  write: false,
-});
-const { projectAnalysisNavigation } = (await import(
-  `data:text/javascript;base64,${Buffer.from(bundle.outputFiles[0].text).toString("base64")}`
-)) as { projectAnalysisNavigation: typeof ProjectNavigation };
+import { projectAnalysisNavigation } from "../src/analysis-navigation-data.js";
 
 test("navigation projects a bounded window with exact architecture, saved bytes and visible memory evidence", (t) => {
   const nodes: AnalysisControlFlowNodeRecord[] = Array.from({ length: 100 }, (_, address) => ({
@@ -51,7 +38,7 @@ test("navigation projects a bounded window with exact architecture, saved bytes 
       mapping: { mapper: "fixture", source: "override", candidates: [] },
       addressSpaces: [
         { id: "cpu", name: "CPU", kind: "cpu", addressBits: 24 },
-        { id: "ram", name: "RAM", kind: "ram", addressBits: 16 },
+        { id: "ram", name: "RAM", kind: "memory", addressBits: 16 },
         { id: "rom.file", name: "ROM", kind: "file", addressBits: 24 },
       ],
       shards: [],

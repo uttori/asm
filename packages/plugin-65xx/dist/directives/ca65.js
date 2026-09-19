@@ -34,8 +34,9 @@ function parameterList(words) {
     for (const char of joined) {
         if (quote) {
             current += char;
-            if (char === quote)
+            if (char === quote) {
                 quote = undefined;
+            }
             continue;
         }
         if (char === '"' || char === "'") {
@@ -43,22 +44,26 @@ function parameterList(words) {
             current += char;
             continue;
         }
-        if (char === "(")
+        if (char === "(") {
             parenDepth++;
-        else if (char === ")")
+        }
+        else if (char === ")") {
             parenDepth--;
+        }
         if (char === "," && parenDepth === 0) {
             const trimmed = current.trim();
-            if (trimmed)
+            if (trimmed) {
                 parts.push(trimmed);
+            }
             current = "";
             continue;
         }
         current += char;
     }
     const trimmed = current.trim();
-    if (trimmed)
+    if (trimmed) {
         parts.push(trimmed);
+    }
     return parts;
 }
 /**
@@ -69,8 +74,9 @@ function parameterList(words) {
  * @returns {void}
  */
 function markGlobalSymbol(session, name) {
-    if (!name)
+    if (!name) {
         return;
+    }
     const localKey = session.symbolScope.qualifySymbolName(name);
     session.globalSymbols.add(name);
     if (localKey !== name) {
@@ -88,8 +94,9 @@ function markGlobalSymbol(session, name) {
  * @returns {void}
  */
 export function closeActiveSegment(session, state) {
-    if (!state.currentSegment)
+    if (!state.currentSegment) {
         return;
+    }
     const segment = state.linker.segments.get(state.currentSegment);
     if (!segment) {
         state.currentSegment = null;
@@ -287,8 +294,9 @@ export function handleDword(session, words, width = 4) {
  */
 export function handleSetcpu(session, state, words) {
     const name = unquote(words.slice(1).join(" ").trim());
-    if (!name)
+    if (!name) {
         throw new Error(".setcpu requires a CPU name argument.");
+    }
     const architecture = resolve65xxCpuName(name);
     if (!architecture) {
         throw new Error(`.setcpu "${name}" is not a supported 65xx CPU. Supported names: ${Object.keys(ca65CpuNames).join(", ")}.`);
@@ -311,8 +319,9 @@ export function handlePushcpu(session, state) {
  */
 export function handlePopcpu(session, state) {
     const architecture = state.cpuStack.pop();
-    if (!architecture)
+    if (!architecture) {
         throw new Error(".popcpu: CPU stack is empty.");
+    }
     session.selectArchitecture(architecture, architecture);
     state.currentArchitecture = architecture;
 }
@@ -325,8 +334,9 @@ export function handlePopcpu(session, state) {
 export function handleCpuShorthand(session, state, words) {
     const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
     const cpu = ca65CpuShorthands[keyword];
-    if (!cpu)
+    if (!cpu) {
         throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+    }
     handleSetcpu(session, state, ["setcpu", cpu]);
 }
 /**
@@ -341,14 +351,16 @@ export function handleRes(session, words) {
     }
     const count = session.operandResolver.getnum(params[0] ?? "");
     const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
-    if (!Number.isInteger(count) || count < 0)
+    if (!Number.isInteger(count) || count < 0) {
         throw new Error(".res count must be non-negative.");
+    }
     if (session.isDefinitionCollectionStage) {
         session.step(count);
         return;
     }
-    for (let index = 0; index < count; index++)
+    for (let index = 0; index < count; index++) {
         session.write1(fill & 0xff);
+    }
 }
 /**
  * Pads to the next `.align boundary[, fill]`.
@@ -370,8 +382,9 @@ export function handleAlign(session, words) {
         session.step(count);
         return;
     }
-    for (let index = 0; index < count; index++)
+    for (let index = 0; index < count; index++) {
         session.write1(fill & 0xff);
+    }
 }
 /**
  * Includes `.incbin "file"[, offset[, size]]` using ca65's offset/length convention.
@@ -385,8 +398,9 @@ export function handleCa65Incbin(session, words) {
     }
     const filename = unquote(params[0] ?? "");
     const data = session.includeSource.readFile(filename);
-    if (!(data instanceof Uint8Array))
+    if (!(data instanceof Uint8Array)) {
         throw new Error(`Failed to read binary include: ${filename}`);
+    }
     const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
     const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
     if (!Number.isInteger(offset) ||
@@ -400,8 +414,9 @@ export function handleCa65Incbin(session, words) {
         session.step(size);
         return;
     }
-    for (const byte of data.subarray(offset, offset + size))
+    for (const byte of data.subarray(offset, offset + size)) {
         session.write1(byte);
+    }
 }
 /**
  * Implements the flat-image subset of ca65 `.assert`.
@@ -410,10 +425,12 @@ export function handleCa65Incbin(session, words) {
  */
 export function handleCa65Assert(session, words) {
     const params = parameterList(words);
-    if (params.length === 0)
+    if (params.length === 0) {
         throw new Error(".assert requires an expression.");
-    if (session.operandResolver.getnum(params[0] ?? "") !== 0)
+    }
+    if (session.operandResolver.getnum(params[0] ?? "") !== 0) {
         return;
+    }
     const message = params.find((part) => /^["']/.test(part));
     throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
 }
@@ -441,8 +458,9 @@ export function handleScope(session, state, words, procedure) {
  */
 export function handleEndScope(session, state) {
     const previous = state.scopeStack.pop();
-    if (previous === undefined)
+    if (previous === undefined) {
         throw new Error("ca65 scope stack is empty.");
+    }
     session.currentNamespace = previous;
 }
 /**
@@ -452,8 +470,9 @@ export function handleEndScope(session, state) {
  */
 export function handleFlatSegment(state, words) {
     const name = unquote(words[1] ?? "").trim();
-    if (!name)
+    if (!name) {
         throw new Error(".segment requires a segment name.");
+    }
     state.currentFlatSegment = name;
 }
 /** @param {Ca65SessionState} state ca65 session state. */
@@ -463,8 +482,9 @@ export function handlePushseg(state) {
 /** @param {Ca65SessionState} state ca65 session state. */
 export function handlePopseg(state) {
     const segment = state.segmentStack.pop();
-    if (segment === undefined)
+    if (segment === undefined) {
         throw new Error(".popseg: segment stack is empty.");
+    }
     state.currentFlatSegment = segment;
 }
 /**

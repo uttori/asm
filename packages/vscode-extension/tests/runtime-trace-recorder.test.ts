@@ -14,10 +14,11 @@ import {
 const romContentSha256 = "a".repeat(64);
 
 test("full capture rejects a PC-only runtime instead of silently downgrading", (t) => {
-  for (const support of [false, undefined])
+  for (const support of [false, undefined]) {
     t.throws(() => resolveEditorTraceDetail("full", support), {
       message: /active runtime only supports PC-only capture/,
     });
+  }
   t.is(resolveEditorTraceDetail("full", true), "full");
   t.is(resolveEditorTraceDetail("pc", false), "pc");
   t.is(resolveEditorTraceDetail("pc", true), "pc");

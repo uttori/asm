@@ -39,7 +39,9 @@ const isStableId = (id: string): boolean => {
   }
   for (let index = 0; index < id.length; index++) {
     const character = id[index];
-    if (!isAsciiAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+    if (!isAsciiAlphaNumeric(character) && !"._:/-".includes(character)) {
+      return false;
+    }
   }
   return true;
 };
@@ -89,12 +91,15 @@ export class AssetPreviewRegistry {
   readonly #renderers = new Map<string, AssetPreviewRenderer>();
 
   register(renderer: AssetPreviewRenderer): this {
-    if (!isStableId(renderer.id))
+    if (!isStableId(renderer.id)) {
       throw new Error(`Preview renderer id '${renderer.id}' is not stable.`);
-    if (renderer.version.trim() === "")
+    }
+    if (renderer.version.trim() === "") {
       throw new Error(`Preview renderer '${renderer.id}' has no version.`);
-    if (this.#renderers.has(renderer.id))
+    }
+    if (this.#renderers.has(renderer.id)) {
       throw new Error(`Duplicate preview renderer id '${renderer.id}'.`);
+    }
     const codecIds = [...new Set(renderer.codecIds)].sort();
     if (codecIds.length === 0 || codecIds.some((id) => !isStableId(id))) {
       throw new Error(`Preview renderer '${renderer.id}' requires stable supported codec ids.`);
@@ -113,7 +118,9 @@ export class AssetPreviewRegistry {
 
   resolve(id: string): AssetPreviewRenderer {
     const renderer = this.#renderers.get(id);
-    if (!renderer) throw new Error(`Unknown asset preview renderer '${id}'.`);
+    if (!renderer) {
+      throw new Error(`Unknown asset preview renderer '${id}'.`);
+    }
     return renderer;
   }
 

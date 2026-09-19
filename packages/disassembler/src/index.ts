@@ -40,12 +40,6 @@ export {
   type AnalysisStoragePolicy,
   type AnalysisStorageSnapshot,
 } from "./sqlite-storage-policy.js";
-export {
-  archiveImportedCapture,
-  captureFileIdentity,
-  expireCaptureArchives,
-  type CaptureArchiveResult,
-} from "./capture-archives.js";
 export { RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState } from "./runtime-trace-profile.js";
 
 export * from "./runtime-bus-types.js";

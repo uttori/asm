@@ -52,5 +52,5 @@ start privately.
 A security fix should add a synthetic regression test at the narrowest boundary, retain resource
 bounds, preserve explicit errors, and run the relevant fuzz, package, protocol, and hosted gates.
 Update [CONTRIBUTING.md](CONTRIBUTING.md),
-and [the architecture guide](docs/disassembler-architecture.md) if the trust model or release claim
+and [the architecture guide](packages/disassembler/ARCHITECTURE.md) if the trust model or release claim
 changes.

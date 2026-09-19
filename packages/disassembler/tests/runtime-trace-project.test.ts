@@ -66,7 +66,9 @@ test("in-memory chunks publish the same facts and roll back on a late producer f
   const source = {
     metadata: validateRuntimeInstructionTraceMetadata(artifact),
     read: async (accept: (chunk: unknown) => void) => {
-      for (const chunk of artifact.chunks) accept(chunk);
+      for (const chunk of artifact.chunks) {
+        accept(chunk);
+      }
     },
   };
   await t.throwsAsync(
@@ -241,7 +243,9 @@ test("disk import rejects invalid tails, budgets and cancellation without public
       importRuntimeTraceIntoProject(file, directory, context, {
         signal: controller.signal,
         onStage: (message) => {
-          if (message.startsWith(phase)) controller.abort();
+          if (message.startsWith(phase)) {
+            controller.abort();
+          }
         },
       }),
       { name: "AbortError" },
@@ -285,7 +289,9 @@ test("disk import refuses to overwrite a project edited after runtime merging", 
       },
       {
         onStage: (message) => {
-          if (message.startsWith("Validating")) writeAnalysisProject(directory, concurrent);
+          if (message.startsWith("Validating")) {
+            writeAnalysisProject(directory, concurrent);
+          }
         },
       },
     ),
@@ -298,7 +304,9 @@ test("record ID validation preserves exact duplicate detection after spilling to
   const ids = new RecordIdSet();
   t.teardown(() => ids.close());
   t.true(ids.add("first"));
-  for (let index = 0; index < 3000; index++) t.true(ids.add(`${index}:${"x".repeat(2048)}`));
+  for (let index = 0; index < 3000; index++) {
+    t.true(ids.add(`${index}:${"x".repeat(2048)}`));
+  }
   t.false(ids.add("first"));
   t.false(ids.add(`2999:${"x".repeat(2048)}`));
   t.true(ids.add("after"));

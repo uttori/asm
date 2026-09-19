@@ -29,8 +29,9 @@ export const projectAnalysisNavigation = (
     project.manifest.target !== target.target ||
     project.manifest.rom.contentSha256 !== target.romContentSha256 ||
     project.manifest.rom.contentSize !== target.romContentSize
-  )
+  ) {
     throw new Error("Navigation target no longer matches the current native analysis project.");
+  }
   const matchesArchitecture = (specification: string): boolean =>
     !target.architectureHints.length ||
     target.architectureHints.some(
@@ -46,7 +47,9 @@ export const projectAnalysisNavigation = (
     )
     .sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
   let index = nodes.findIndex(({ address }) => address >= target.address);
-  if (index < 0) index = Math.max(0, nodes.length - 1);
+  if (index < 0) {
+    index = Math.max(0, nodes.length - 1);
+  }
   const visible = nodes.slice(Math.max(0, index - 4), Math.max(0, index - 4) + 32);
   const addresses = new Set([...visible.map(({ address }) => address), target.address]);
   const offsets = new Set(
@@ -55,23 +58,32 @@ export const projectAnalysisNavigation = (
   const fileSpaces = new Set(
     project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id),
   );
+  const addressList = [...addresses];
+  const offsetList = [...offsets];
   const locations = (space: string): readonly number[] => {
-    if (space === target.addressSpace) return [...addresses];
-    return fileSpaces.has(space) ? [...offsets] : [];
+    if (space === target.addressSpace) {
+      return addressList;
+    }
+    return fileSpaces.has(space) ? offsetList : [];
   };
   const runtime = project.shards.runtime.filter((record) => {
-    if (!matchesArchitecture(record.architecture)) return false;
-    if (record.kind === "runtime-memory-access")
+    if (!matchesArchitecture(record.architecture)) {
+      return false;
+    }
+    if (record.kind === "runtime-memory-access") {
       return (
         record.instructionAddressSpace === target.addressSpace &&
         addresses.has(record.instructionAddress)
       );
-    if (record.kind === "runtime-control-target")
+    }
+    if (record.kind === "runtime-control-target") {
       return record.fromAddressSpace === target.addressSpace && addresses.has(record.fromAddress);
-    if (record.kind === "runtime-coverage")
+    }
+    if (record.kind === "runtime-coverage") {
       return locations(record.addressSpace).some(
         (address) => record.start <= address && address < record.end,
       );
+    }
     return record.addressSpace === target.addressSpace && addresses.has(record.address);
   });
   // Only the visible instruction window needs annotation projection; never ship full shards to VS Code.
@@ -119,7 +131,7 @@ export const projectAnalysisNavigation = (
         record.kind === "runtime-instruction" && record.address === target.address,
     )
     .slice(0, 32);
-  if (captured.length)
+  if (captured.length) {
     lines.push(
       "; Saved execution-time instruction variants at the selected address:",
       ...captured.map(
@@ -127,6 +139,7 @@ export const projectAnalysisNavigation = (
           `${record.addressSpace}|0x${record.address.toString(16)}  ${record.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")} ; ${record.architecture} · recorded ${record.count} time(s)`,
       ),
     );
+  }
   return {
     lines,
     capturedRam:

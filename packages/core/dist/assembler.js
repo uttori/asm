@@ -26,6 +26,12 @@ import { getStructMetadata } from "./services/struct-metadata.js";
 import { SymbolScopeService, parseUnnamedLabelReference, } from "./services/symbol-scope-service.js";
 import { ASAR_SYNTAX_PROFILE } from "./syntax-profile.js";
 const TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
+/**
+ * Mutable, synchronous build session. Share its frozen environment with other sessions, not its state.
+ * Use assembleSource/assembleProgram for builds and analyzeSource for recovering diagnostics.
+ * Dispose the session before its plugin manager or loader; use a fresh session after a failed build.
+ * Public runtime fields and service methods support directives and tooling and require stage invariants.
+ */
 export class Assembler {
     /** The current logical target address. */
     currentTargetAddress = 0;
@@ -585,8 +591,9 @@ export class Assembler {
         const parsed = command.parsed;
         if (command.keyword.toLowerCase() === "datastruct") {
             const args = splitInitializerList(command.words.slice(1).join(" "));
-            if (args.length !== 2)
-                return; // The directive reports its syntax error.
+            if (args.length !== 2) {
+                return;
+            } // The directive reports its syntax error.
             const reference = args[0];
             const containerName = reference.replace(/\[[^\]]+]$/, "");
             // An array row's root name was supplied by its header, not its source line.
@@ -595,8 +602,9 @@ export class Assembler {
             }
             else {
                 const index = reference.match(/\[([^\]]+)]$/)?.[1];
-                if (index)
+                if (index) {
                     this.collectExpressionReferences(parseExpressionNode(index), fallbackSpan);
+                }
             }
             for (const [field, value] of parseStructInitializer(args[1])) {
                 this.recordSymbolReference("label", field, { containerName });
@@ -607,8 +615,9 @@ export class Assembler {
             return;
         }
         if (command.keyword.toLowerCase() === "datastructs") {
-            if (command.words[1])
+            if (command.words[1]) {
                 this.collectExpressionReferences(parseExpressionNode(command.words[1]), fallbackSpan);
+            }
             return;
         }
         this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
@@ -741,8 +750,9 @@ export class Assembler {
         const target = session.environment.getTarget(session.targetId);
         for (const setId of target?.directiveSets ?? []) {
             const set = session.environment.getDirectiveSet(setId);
-            if (!set)
+            if (!set) {
                 continue;
+            }
             const pluginId = session.environment.getContributionOwner(setId);
             for (const directive of set.directives) {
                 let handler;
@@ -781,8 +791,9 @@ export class Assembler {
         }
         for (const [keyword, handler] of registry.handlers) {
             registry.handlers.set(keyword, (words, raw, command) => {
-                if (session.runBeforeDirective(keyword, words, raw) === "handled")
+                if (session.runBeforeDirective(keyword, words, raw) === "handled") {
                     return;
+                }
                 handler(words, raw, command);
             });
         }
@@ -888,6 +899,11 @@ export class Assembler {
             symbolScope,
         };
     }
+    /**
+     * Resolve the target and instantiate per-session factories. Throws on invalid selection/options
+     * or factory failure. Factory construction is not a resource transaction: keep external resources
+     * in plugin activation disposables and session state cloneable.
+     */
     constructor(options) {
         if (!options?.environment) {
             throw new PluginError("Assembler construction requires a frozen plugin environment.", {
@@ -1008,14 +1024,16 @@ export class Assembler {
             resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
             tryResolveLabel: (input, requireStatic) => {
                 const loopValue = this.activeLoopVariables.get(input.trim());
-                if (loopValue !== undefined)
+                if (loopValue !== undefined) {
                     return loopValue;
+                }
                 return this.symbolScope.tryGetLabelValue(input, requireStatic);
             },
             resolveLabel: (input, requireStatic) => {
                 const loopValue = this.activeLoopVariables.get(input.trim());
-                if (loopValue !== undefined)
+                if (loopValue !== undefined) {
                     return loopValue;
+                }
                 return this.symbolScope.getLabelValue(input, requireStatic);
             },
             evaluateMath: (input) => this.mathCore.math(input),
@@ -1207,15 +1225,22 @@ export class Assembler {
      * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
      */
     recordSourceWrite(logicalAddress, outputOffset) {
-        if (!this.collectSourceMetadata)
+        if (!this.collectSourceMetadata) {
             return;
+        }
         const command = this.traceCommandStack.at(-1);
         const target = this.environment.getTarget(this.targetId);
         this.addressToLineMapping.includeByte(command?.file ?? this.currentFile, (command?.line ?? this.currentLine) + 1, this.arch, target?.addressSpace ?? "target.logical", logicalAddress, outputOffset);
     }
+    /**
+     * Run lifecycle disposal in reverse registration order, then dispose live state slots.
+     * Idempotent; attempts all cleanup and throws AggregateError for failures. The environment
+     * and file provider remain owned by the host. Do not use this session afterward.
+     */
     dispose() {
-        if (this.sessionDisposed)
+        if (this.sessionDisposed) {
             return;
+        }
         this.sessionDisposed = true;
         const errors = [];
         for (const { record, instance } of [...this.activeLifecycles].reverse()) {
@@ -1318,8 +1343,9 @@ export class Assembler {
     resolveExpressionHostLabel(identifier) {
         const trimmed = identifier.trim();
         const loopValue = this.activeLoopVariables.get(trimmed);
-        if (loopValue !== undefined)
+        if (loopValue !== undefined) {
             return loopValue;
+        }
         if (parseUnnamedLabelReference(trimmed)) {
             return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
         }
@@ -1446,8 +1472,9 @@ export class Assembler {
     installExpressionFunctions(setIds) {
         for (const setId of setIds) {
             const set = this.environment.getExpressionSet(setId);
-            if (!set)
+            if (!set) {
                 continue;
+            }
             const pluginId = this.environment.getContributionOwner(setId);
             for (const expressionFunction of set.functions) {
                 const minimumArguments = expressionFunction.signature.minimumArguments ??
@@ -1494,17 +1521,20 @@ export class Assembler {
         getCurrentAddress: () => this.currentTargetAddress,
         getCurrentBaseAddress: () => this.currentTargetBaseAddress,
         isDefined: (identifier) => {
-            if (this.defines.has(identifier))
+            if (this.defines.has(identifier)) {
                 return 1;
-            if (this.structs.has(identifier))
+            }
+            if (this.structs.has(identifier)) {
                 return 1;
+            }
             return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
         },
         getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
         getExpressionStructMetadata: (identifier, property) => {
             const definition = this.structs.get(identifier);
-            if (!definition)
+            if (!definition) {
                 throw new Error(`Unknown struct '${identifier}' for ${property}().`);
+            }
             return getStructMetadata(definition, property);
         },
         getFileSize: (filename) => {
@@ -2157,8 +2187,8 @@ export class Assembler {
         return this.symbolScope.getLabelValue(renderExpressionNode(resolvedExpr), true);
     }
     /**
-     * Sets the paths to search for included files.
-     * @param {string[]} paths The paths to search for included files.
+     * Replace include search paths before assembly. Retains the array without copying.
+     * @param {string[]} paths Provider-specific search paths; Node resolves relative paths from cwd.
      */
     setIncludePaths(paths) {
         this.includePaths = paths;
@@ -2516,16 +2546,20 @@ export class Assembler {
                     let unprocessedName = "";
                     let braces = 1;
                     while (index < input.length) {
-                        if (input[index] === "{")
+                        if (input[index] === "{") {
                             braces++;
-                        if (input[index] === "}")
+                        }
+                        if (input[index] === "}") {
                             braces--;
-                        if (braces === 0)
+                        }
+                        if (braces === 0) {
                             break;
+                        }
                         unprocessedName += input[index++];
                     }
-                    if (braces !== 0)
+                    if (braces !== 0) {
                         throw new Error("Error: Mismatched braces in define name.");
+                    }
                     index++; // skip the closing }
                     defineName = this.resolvedefines(unprocessedName);
                 }
@@ -2851,8 +2885,9 @@ export class Assembler {
         });
     }
     /**
-     * Handles assemble program.
-     * @param {ProgramModel} program The program.
+     * Run definition collection, layout resolution, and byte emission synchronously in that order.
+     * Throws at the first unrecovered failure; partial state/output is not a successful binary.
+     * @param {ProgramModel} program Parsed source model produced for this target's syntax.
      */
     assembleProgram(program) {
         this.runStage("collectDefinitions", program);
@@ -2860,11 +2895,12 @@ export class Assembler {
         this.runStage("emitProgram", program);
     }
     /**
-     * Handles assemble source.
-     * @param {string} source The source.
-     * @param {string} [sourceFile] The source file.
-     * @param {number} [startLine] The start line.
-     * @returns {ProgramModel} The result.
+     * Parse and run all three assembly stages; includes are read through the configured provider.
+     * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
+     * @param {string} source Assembly source text, not a filename.
+     * @param {string} [sourceFile] Source identity and include-resolution base; defaults to currentFile.
+     * @param {number} [startLine] Zero-based line offset; defaults to zero.
+     * @returns {ProgramModel} Parsed model used for this build.
      */
     assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
         const program = this.buildProgramModel(source, sourceFile, startLine);
@@ -2906,8 +2942,8 @@ export class Assembler {
         });
     }
     /**
-     * Returns the compiled binary output.
-     * @returns {Uint8Array} The compiled binary output.
+     * Materialize the target format's current bytes without assembling or finalizing again.
+     * @returns {Uint8Array} Output whose ownership depends on the formatter; copy before retaining or mutating independently.
      */
     getBinaryOutput = () => {
         return this.pluginOutputFormat.getOutput({

@@ -39,7 +39,7 @@ const fixture = () => {
 test("VRAM ports apply all mappings, increment ports and increments before physical masking", (t) => {
   // Hand-evaluated word-address bit permutations for $83a5, shared with the native PPU oracle.
   const mapped = [0x83a5, 0x832d, 0x832e, 0x812f];
-  for (let mapping = 0; mapping < 4; mapping++)
+  for (let mapping = 0; mapping < 4; mapping++) {
     for (let high = 0; high < 2; high++) {
       const f = fixture();
       f.port(0x2115, (high << 7) | (mapping << 2));
@@ -54,6 +54,7 @@ test("VRAM ports apply all mappings, increment ports and increments before physi
       t.is(writes[1]!.bytes[0]!.address, (mapped[mapping]! + (high ? 0 : increment)) * 2 + 1);
       t.is(writes[0]!.forcedBlank, null);
     }
+  }
   for (let size = 0; size < 4; size++) {
     const f = fixture();
     f.port(0x2115, 0x80 | size);
@@ -224,10 +225,16 @@ test("graphics reports remain bounded while all actors and channels retain exact
   f.port(0x2121, 0);
   for (let group = 0; group < 17; group++) {
     let patch: Partial<RuntimeBusAccess> = {};
-    if (group > 0 && group < 9) patch = { actor: "dma", channel: group - 1, phase: "dma" };
-    else if (group >= 9) patch = { actor: "hdma", channel: group - 9, phase: "hdma-transfer" };
-    for (let i = 0; i < 100; i++)
-      for (const port of [0x2118, 0x2122, 0x2104]) f.port(port, i, patch);
+    if (group > 0 && group < 9) {
+      patch = { actor: "dma", channel: group - 1, phase: "dma" };
+    } else if (group >= 9) {
+      patch = { actor: "hdma", channel: group - 9, phase: "hdma-transfer" };
+    }
+    for (let i = 0; i < 100; i++) {
+      for (const port of [0x2118, 0x2122, 0x2104]) {
+        f.port(port, i, patch);
+      }
+    }
   }
   const summary = f.finish();
   t.is(summary.activity.length, 51);
@@ -260,7 +267,9 @@ test("bus import reconstructs across chunk boundaries without changing source id
   whole.push({ accesses: f.accesses });
   const result = whole.finish();
   const split = createRuntimeBusTraceImporter(metadata, context);
-  for (const access of f.accesses) split.push({ accesses: [access] });
+  for (const access of f.accesses) {
+    split.push({ accesses: [access] });
+  }
   t.deepEqual(split.finish(), result);
   t.deepEqual(result.summary.graphics, f.finish());
   t.is(result.batch.runtime?.length, 3);
@@ -303,17 +312,20 @@ test("port candidates reproduce native PPU readback for CPU and DMA uploads", (t
       });
     }
     const candidates = new Map<string, { target: string; address: number; value: number }>();
-    for (const write of f.finish().writes)
+    for (const write of f.finish().writes) {
       for (const byte of write.bytes) {
         t.not(byte.value, null, scenario.name);
         let address = byte.address;
-        if (write.target === "vram") address &= oracle.vramBytes - 1;
+        if (write.target === "vram") {
+          address &= oracle.vramBytes - 1;
+        }
         candidates.set(`${write.target}:${address}`, {
           target: write.target,
           address,
           value: byte.value!,
         });
       }
+    }
     const order = (
       a: { target: string; address: number },
       b: { target: string; address: number },

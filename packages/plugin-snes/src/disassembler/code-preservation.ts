@@ -9,7 +9,9 @@ const union = (ranges: readonly HalfOpenInterval[]): HalfOpenInterval[] => {
         start: previous.start,
         end: Math.max(previous.end, range.end),
       };
-    } else merged.push(range);
+    } else {
+      merged.push(range);
+    }
   }
   return merged;
 };
@@ -31,15 +33,25 @@ export const lostCodeRanges = (
   let index = 0;
   for (const range of union(previous)) {
     let cursor = range.start;
-    while (index < retained.length && retained[index].end <= cursor) index++;
+    while (index < retained.length && retained[index].end <= cursor) {
+      index++;
+    }
     for (let candidate = index; candidate < retained.length; candidate++) {
       const covered = retained[candidate];
-      if (covered.start >= range.end) break;
-      if (covered.start > cursor) lost.push({ start: cursor, end: covered.start });
+      if (covered.start >= range.end) {
+        break;
+      }
+      if (covered.start > cursor) {
+        lost.push({ start: cursor, end: covered.start });
+      }
       cursor = Math.max(cursor, Math.min(range.end, covered.end));
-      if (cursor === range.end) break;
+      if (cursor === range.end) {
+        break;
+      }
     }
-    if (cursor < range.end) lost.push({ start: cursor, end: range.end });
+    if (cursor < range.end) {
+      lost.push({ start: cursor, end: range.end });
+    }
   }
   return lost;
 };

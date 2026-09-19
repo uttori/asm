@@ -40,11 +40,15 @@ class MemoryTransport implements DebugSidecarTransport {
   }
 
   emitData(data: Uint8Array): void {
-    for (const listener of this.dataListeners) listener(data);
+    for (const listener of this.dataListeners) {
+      listener(data);
+    }
   }
 
   emitClose(error?: Error): void {
-    for (const listener of this.closeListeners) listener(error);
+    for (const listener of this.closeListeners) {
+      listener(error);
+    }
   }
 }
 
@@ -69,7 +73,9 @@ test("sidecar client pairs ordered responses and publishes authenticated events"
   let serverSequence = 1;
   transport.onWrite = (data) => {
     const [request] = requests.push(data);
-    if (request?.type !== "request") throw new Error("Expected request.");
+    if (request?.type !== "request") {
+      throw new Error("Expected request.");
+    }
     transport.emitData(
       encodeDebugSidecarMessage(
         serverMessage(serverSequence++, {
@@ -108,7 +114,9 @@ test("sidecar client fails closed on a mismatched session", async (t) => {
   const requests = new DebugSidecarMessageParser();
   transport.onWrite = (data) => {
     const [request] = requests.push(data);
-    if (request?.type !== "request") throw new Error("Expected request.");
+    if (request?.type !== "request") {
+      throw new Error("Expected request.");
+    }
     transport.emitData(
       encodeDebugSidecarMessage(
         serverMessage(

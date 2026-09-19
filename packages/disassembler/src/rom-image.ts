@@ -33,10 +33,16 @@ const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes)
  * @throws {Error} When `fileSize` is negative or not 32 KiB aligned with either header size.
  */
 export const detectCopierHeaderSize = (fileSize: number): CopierHeaderSize => {
-  if (fileSize < 0) throw new Error("ROM size cannot be negative.");
+  if (fileSize < 0) {
+    throw new Error("ROM size cannot be negative.");
+  }
   const remainder = fileSize % 0x8000;
-  if (remainder === 0) return 0;
-  if (remainder === 512) return 512;
+  if (remainder === 0) {
+    return 0;
+  }
+  if (remainder === 512) {
+    return 512;
+  }
   throw new Error(
     `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header; pass an explicit header override.`,
   );

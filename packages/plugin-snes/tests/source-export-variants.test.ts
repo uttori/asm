@@ -242,7 +242,7 @@ test("explicit instruction widths round trip and ignore unrelated captured M/X c
   const text = fs.readFileSync(bank, "utf8");
   t.notRegex(text, /^\.[ai](?:8|16)\b/m);
   for (const source of ["LDA.b #$12", "LDX.w #$1234", "LDY.w #$5678", "LDA.w #$9ABC"])
-    t.true(text.includes(source), source);
+    {t.true(text.includes(source), source);}
   t.true(
     (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,

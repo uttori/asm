@@ -12,12 +12,13 @@ export const resolveEditorTraceDetail = (
   requested: "full" | "pc",
   instructionDetails: boolean | undefined,
 ): "full" | "pc" => {
-  if (requested === "full" && !instructionDetails)
+  if (requested === "full" && !instructionDetails) {
     throw new Error(
       "Full instruction capture requires a runtime that supplies instruction bytes and CPU state. " +
         "The active runtime only supports PC-only capture. Check runtimeManifest and emulator in the active launch configuration, " +
         "then restart debugging with a rich-trace runtime, or explicitly set asm.debug.traceDetail to pc.",
     );
+  }
   return requested;
 };
 
@@ -62,7 +63,9 @@ const delay = (milliseconds: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 const assertIdentity = (value: string, name: string): void => {
-  if (!value) throw new Error(`${name} must not be empty.`);
+  if (!value) {
+    throw new Error(`${name} must not be empty.`);
+  }
 };
 
 /** Streams native trace chunks to disk with file I/O as explicit backpressure. */
@@ -103,10 +106,12 @@ export class RuntimeTraceFileRecorder {
     assertIdentity(options.addressSpace, "Trace address space");
     assertIdentity(options.producer.id, "Trace producer id");
     assertIdentity(options.producer.revision, "Trace producer revision");
-    if (!/^[\da-f]{64}$/.test(options.romContentSha256))
+    if (!/^[\da-f]{64}$/.test(options.romContentSha256)) {
       throw new Error("Trace ROM content identity must be a lowercase SHA-256 value.");
-    if (!Number.isSafeInteger(options.maxBatchEvents) || options.maxBatchEvents < 1)
+    }
+    if (!Number.isSafeInteger(options.maxBatchEvents) || options.maxBatchEvents < 1) {
       throw new Error("Trace batch maximum must be a positive safe integer.");
+    }
     const handle = await open(options.file, "w");
     const header = {
       format: "uttori-asm-instruction-trace",
@@ -158,20 +163,24 @@ export class RuntimeTraceFileRecorder {
       const { validateRuntimeInstructionDetails } = await import("@uttori/asm-disassembler");
       while (!this.#cancelled) {
         const batch = await this.#options.readTrace(this.#options.maxBatchEvents);
-        if (batch.details !== undefined)
+        if (batch.details !== undefined) {
           validateRuntimeInstructionDetails(batch.details, batch.addresses.length);
+        }
         this.#assertBatch(batch);
         if (
           batch.addresses.length > 0 ||
           batch.droppedEvents !== this.#droppedEvents ||
           !batch.active
-        )
+        ) {
           await this.#writeChunk(batch);
+        }
         if (!batch.active && batch.addresses.length === 0) {
           this.#complete = this.#stopRequested;
           break;
         }
-        if (batch.active && batch.addresses.length === 0) await delay(10);
+        if (batch.active && batch.addresses.length === 0) {
+          await delay(10);
+        }
       }
       return await this.#finish();
     } catch (error) {
@@ -181,34 +190,47 @@ export class RuntimeTraceFileRecorder {
   }
 
   #assertBatch(batch: EditorTraceBatch): void {
-    if (!Array.isArray(batch.addresses) || typeof batch.active !== "boolean")
+    if (!Array.isArray(batch.addresses) || typeof batch.active !== "boolean") {
       throw new Error("Invalid trace batch shape.");
+    }
     if (
       batch.architecture !== this.#options.architecture ||
       batch.addressSpace !== this.#options.addressSpace
-    )
+    ) {
       throw new Error("Trace batch identity differs from the selected recording stream.");
-    if (batch.addresses.length > this.#options.maxBatchEvents)
+    }
+    if (batch.addresses.length > this.#options.maxBatchEvents) {
       throw new Error("Trace batch exceeds the negotiated event maximum.");
-    if (!Number.isSafeInteger(batch.sequenceStart) || batch.sequenceStart < 1)
+    }
+    if (!Number.isSafeInteger(batch.sequenceStart) || batch.sequenceStart < 1) {
       throw new Error("Trace batch sequence must be a positive safe integer.");
-    if (!Number.isSafeInteger(batch.droppedEvents) || batch.droppedEvents < this.#droppedEvents)
+    }
+    if (!Number.isSafeInteger(batch.droppedEvents) || batch.droppedEvents < this.#droppedEvents) {
       throw new Error("Trace batch loss counter is invalid or decreased.");
-    if (batch.sequenceStart - this.#expectedSequence !== batch.droppedEvents - this.#droppedEvents)
+    }
+    if (
+      batch.sequenceStart - this.#expectedSequence !==
+      batch.droppedEvents - this.#droppedEvents
+    ) {
       throw new Error("Trace sequence gap disagrees with producer loss.");
-    if (this.#producerStopped && batch.active) throw new Error("Trace resumed after stopping.");
+    }
+    if (this.#producerStopped && batch.active) {
+      throw new Error("Trace resumed after stopping.");
+    }
     if (
       batch.unattributedMemoryAccesses !== undefined &&
       (!Number.isSafeInteger(batch.unattributedMemoryAccesses) ||
         batch.unattributedMemoryAccesses < this.#unattributed)
-    )
+    ) {
       throw new Error("Invalid unattributed memory counter.");
+    }
     if (
       batch.addresses.some(
         (address) => !Number.isSafeInteger(address) || address < 0 || address > 0xff_ffff,
       )
-    )
+    ) {
       throw new Error("Trace batch contains an invalid 24-bit instruction address.");
+    }
   }
 
   async #writeChunk(batch: EditorTraceBatch): Promise<void> {

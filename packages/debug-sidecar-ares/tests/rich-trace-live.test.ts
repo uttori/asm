@@ -153,13 +153,17 @@ live(
       );
       await backend.continue(1);
       const chunks = [];
-      for (let index = 0; index < 160; index++) chunks.push(await backend.readTrace(240));
+      for (let index = 0; index < 160; index++) {
+        chunks.push(await backend.readTrace(240));
+      }
       await backend.stopTrace();
       // End the producer first, then drain a bounded ring so the saved file is importable.
       for (let index = 0; index < 4097; index++) {
         const batch = await backend.readTrace(240);
         chunks.push(batch);
-        if (!batch.addresses.length) break;
+        if (!batch.addresses.length) {
+          break;
+        }
       }
       let expectedSequence = 1,
         dropped = 0;

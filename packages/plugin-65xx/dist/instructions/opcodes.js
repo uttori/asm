@@ -83,21 +83,25 @@ const unstable = new Set([
     "TAS:absoluteIndexedY",
 ]);
 const decoded = rows.flatMap((row) => row.split(" "));
-if (decoded.length !== 256)
+if (decoded.length !== 256) {
     throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
+}
 const mutableForms = decoded.map((entry, opcode) => {
     const [mnemonic, shortMode] = entry.split(":");
     const mode = modeNames[shortMode];
-    if (!mnemonic || !mode)
+    if (!mnemonic || !mode) {
         throw new Error(`Invalid opcode table entry '${entry}' at $${opcode.toString(16)}.`);
+    }
     const documented = legalOpcodes.has(opcode);
     const codec = getOperandCodec(mode);
     const key = `${mnemonic}:${mode}`;
     let stability = "stable-undocumented";
-    if (documented)
+    if (documented) {
         stability = "documented";
-    else if (unstable.has(key))
+    }
+    else if (unstable.has(key)) {
         stability = "unstable-undocumented";
+    }
     let note;
     if (unstable.has(key)) {
         note =
@@ -133,8 +137,9 @@ for (const group of groups.values()) {
     const preferred = group.find((form) => form.documented) ?? group[0];
     // Duplicate encodings (e.g. unofficial NOP mirrors): prefer the documented
     // opcode when assembling; the full decode table still lists every cell.
-    if (preferred)
+    if (preferred) {
         preferred.canonical = true;
+    }
 }
 /** Frozen 256-entry NMOS decode table (one form per opcode byte). */
 export const nmos6502DecodeTable = Object.freeze(mutableForms.map((form) => Object.freeze({ ...form })));
@@ -197,8 +202,9 @@ export function getOpcodeForm(opcode) {
  */
 export function getCpuDecodeTable(cpu) {
     const variantForms = variantFormsByCpuId[cpu.id];
-    if (variantForms)
+    if (variantForms) {
         return variantForms;
+    }
     return nmos6502DecodeTable.filter((form) => matchesFeatures(form.availableWhen, cpu.features));
 }
 /**
@@ -209,8 +215,9 @@ export function getCpuDecodeTable(cpu) {
  */
 export function getCpuAssemblyForms(cpu) {
     const variantForms = variantFormsByCpuId[cpu.id];
-    if (variantForms)
+    if (variantForms) {
         return variantForms;
+    }
     return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 //# sourceMappingURL=opcodes.js.map

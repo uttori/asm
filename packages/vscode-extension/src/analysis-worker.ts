@@ -105,9 +105,11 @@ const request = (message: AnalysisWorkerRequest): unknown => {
   if (message.operation === "clear") {
     return undefined;
   }
-  if (message.operation === "sources") return readAnalysisSourceCatalog(message.directory);
+  if (message.operation === "sources") {
+    return readAnalysisSourceCatalog(message.directory);
+  }
   const store = projectDatabase(message.directory);
-  if (message.operation === "evidenceChoices")
+  if (message.operation === "evidenceChoices") {
     return store.transaction(
       () => ({
         manifest: store.manifest(),
@@ -115,8 +117,11 @@ const request = (message: AnalysisWorkerRequest): unknown => {
       }),
       false,
     );
+  }
   if (message.operation === "explainEvidence") {
-    if (!message.evidenceRecord) throw new Error("Choose a record to explain.");
+    if (!message.evidenceRecord) {
+      throw new Error("Choose a record to explain.");
+    }
     store.prepareSourceQueries();
     return store.explainEvidence(message.evidenceRecord.kind, message.evidenceRecord.id);
   }
@@ -127,7 +132,9 @@ const request = (message: AnalysisWorkerRequest): unknown => {
         .annotationNodesAt(range.addressSpace, range.start, range.outputStart)
         .filter((record) => record.kind === "cfg-node");
     if (message.operation === "annotationLookup") {
-      if (!message.annotationLookup) throw new Error("Missing annotation lookup.");
+      if (!message.annotationLookup) {
+        throw new Error("Missing annotation lookup.");
+      }
       return store.transaction(
         () =>
           lookupDisassemblyAnnotation(
@@ -138,7 +145,9 @@ const request = (message: AnalysisWorkerRequest): unknown => {
         false,
       );
     }
-    if (!message.annotationSave) throw new Error("Missing annotation edit.");
+    if (!message.annotationSave) {
+      throw new Error("Missing annotation edit.");
+    }
     const input = message.annotationSave;
     const snapshot = store.transaction(() => {
       const snapshot = annotationEditSnapshot(store);
@@ -162,9 +171,12 @@ const request = (message: AnalysisWorkerRequest): unknown => {
   if (message.operation === "annotations" || message.operation === "debugAnnotations") {
     const ranges = message.ranges ?? [];
     // Reject unbounded requests before loading metadata or initializing any query index.
-    if (!ranges.length) return [];
-    if (ranges.length > 2000)
+    if (!ranges.length) {
+      return [];
+    }
+    if (ranges.length > 2000) {
       throw new Error("At most 2000 visible source ranges may be projected per request.");
+    }
     store.prepareAnnotationQueries();
     return store.transaction(() => {
       const manifest = store.manifest();
@@ -184,11 +196,15 @@ const request = (message: AnalysisWorkerRequest): unknown => {
       for (const range of ranges) {
         for (const annotation of instructionAnnotationsForDebugRange(index, range)) {
           output.push({ line: range.line, annotation });
-          if (output.length >= 2000) break;
+          if (output.length >= 2000) {
+            break;
+          }
         }
-        if (output.length >= 2000) break;
+        if (output.length >= 2000) {
+          break;
+        }
       }
-      if (message.operation === "debugAnnotations")
+      if (message.operation === "debugAnnotations") {
         return [...new Map(output.map(({ annotation }) => [annotation.id, annotation])).values()]
           .map((entry) => ({
             addressSpace: entry.addressSpace,
@@ -198,27 +214,38 @@ const request = (message: AnalysisWorkerRequest): unknown => {
             text: formatInstructionAnnotationSummary(entry),
           }))
           .filter(({ text }) => text);
+      }
       return output;
     }, false);
   }
   if (message.operation === "sourceSummary" || message.operation === "sourceEntries") {
-    if (!message.sourceId) throw new Error("Choose a source to inspect.");
+    if (!message.sourceId) {
+      throw new Error("Choose a source to inspect.");
+    }
     store.prepareSourceQueries();
-    if (message.operation === "sourceEntries" && message.sourceGroup === "instructions")
+    if (message.operation === "sourceEntries" && message.sourceGroup === "instructions") {
       store.prepareAnnotationQueries();
+    }
     return store.transaction(() => {
-      if (message.operation === "sourceSummary") return store.sourceSummary(message.sourceId!);
-      if (!message.sourceGroup) throw new Error("Choose a source contribution group.");
+      if (message.operation === "sourceSummary") {
+        return store.sourceSummary(message.sourceId!);
+      }
+      if (!message.sourceGroup) {
+        throw new Error("Choose a source contribution group.");
+      }
       return store.sourcePage(message.sourceId!, message.sourceGroup, message.offset);
     }, false);
   }
   if (message.operation === "annotationRefresh") {
-    if (!message.annotationRefresh) throw new Error("Missing annotation refresh.");
+    if (!message.annotationRefresh) {
+      throw new Error("Missing annotation refresh.");
+    }
     if (
       path.resolve(message.annotationRefresh.target.projectDirectory) !==
       path.resolve(message.directory)
-    )
+    ) {
       throw new Error("Annotation refresh target differs from the loaded project.");
+    }
     store.prepareAnnotationQueries();
     return store.transaction(() => {
       const view = store.sourceExportView();
@@ -231,9 +258,13 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     }, false);
   }
   const manifest = store.transaction(() => store.manifest(), false);
-  if (message.operation === "manifest") return manifest;
+  if (message.operation === "manifest") {
+    return manifest;
+  }
   if (message.operation === "navigation") {
-    if (!message.navigationTarget) throw new Error("Choose an analysis location.");
+    if (!message.navigationTarget) {
+      throw new Error("Choose an analysis location.");
+    }
     store.prepareAnnotationQueries();
     return store.transaction(() => {
       const target = message.navigationTarget!;
@@ -243,7 +274,9 @@ const request = (message: AnalysisWorkerRequest): unknown => {
         target.architectureHints,
       );
       const ranges = analysis.flatMap((record) => {
-        if (record.kind !== "cfg-node") return [];
+        if (record.kind !== "cfg-node") {
+          return [];
+        }
         const outputRange =
           record.fileOffset === undefined
             ? {}
@@ -257,12 +290,13 @@ const request = (message: AnalysisWorkerRequest): unknown => {
           },
         ];
       });
-      if (!ranges.some((range) => range.start === target.address))
+      if (!ranges.some((range) => range.start === target.address)) {
         ranges.push({
           addressSpace: target.addressSpace,
           start: target.address,
           end: target.address + 1,
         });
+      }
       const view = store.instructionAnnotationView(ranges);
       return projectAnalysisNavigation(
         { manifest: store.manifest(), shards: { ...view.shards, analysis } },
@@ -272,8 +306,9 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     }, false);
   }
   if (message.operation === "heuristics") {
-    if (manifest.target !== "snes.sfc")
+    if (manifest.target !== "snes.sfc") {
       throw new Error("Function heuristics require a SNES analysis project.");
+    }
     const file = path.join(message.directory, "heuristics.json");
     const config = validateSnesHeuristicConfiguration(
       fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {},
@@ -295,9 +330,13 @@ const request = (message: AnalysisWorkerRequest): unknown => {
         };
         const registers = [...new Set(snesHardwareDefines().map(([, address]) => address))];
         const addresses = [];
-        for (let bank = 0; bank < 256; bank++)
-          if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf))
-            for (const low of registers) addresses.push((bank << 16) | low);
+        for (let bank = 0; bank < 256; bank++) {
+          if (bank <= 0x3f || (bank >= 0x80 && bank <= 0xbf)) {
+            for (const low of registers) {
+              addresses.push((bank << 16) | low);
+            }
+          }
+        }
         const result = analyzeSnesFunctionRoles(
           shards,
           config,
@@ -311,9 +350,12 @@ const request = (message: AnalysisWorkerRequest): unknown => {
       },
     );
   }
-  if (message.operation === "coverage") return store.coverageSummary();
-  if (message.operation === "segments" || message.operation === "details")
+  if (message.operation === "coverage") {
+    return store.coverageSummary();
+  }
+  if (message.operation === "segments" || message.operation === "details") {
     return store.coveragePage(message.operation, message.offset);
+  }
   if (message.operation === "graph") {
     const graphRevision = analysisProjectRevision(store.manifest());
     const graph = store.callGraph();
@@ -347,7 +389,9 @@ const request = (message: AnalysisWorkerRequest): unknown => {
         })),
       ]) {
         const key = `${location.addressSpace}:${location.address}`;
-        if (hints[key]) continue;
+        if (hints[key]) {
+          continue;
+        }
         const relevant = [
           ...(indexes.get(location.addressSpace)?.at(location.address) ?? []),
           ...fileSpaces.flatMap((space) =>
@@ -371,8 +415,11 @@ const request = (message: AnalysisWorkerRequest): unknown => {
 
 const handleMessage = (message: AnalysisWorkerRequest): void => {
   const send = (response: unknown): void => {
-    if (parentPort) parentPort.postMessage(response);
-    else process.send?.(response as Parameters<NonNullable<typeof process.send>>[0]);
+    if (parentPort) {
+      parentPort.postMessage(response);
+    } else {
+      process.send?.(response as Parameters<NonNullable<typeof process.send>>[0]);
+    }
   };
   try {
     send({ id: message.id, value: request(message) });
@@ -385,8 +432,11 @@ const handleMessage = (message: AnalysisWorkerRequest): void => {
   }
 };
 
-if (parentPort) parentPort.on("message", handleMessage);
-else {
+export const runAnalysisWorkerRequest = request;
+
+if (parentPort) {
+  parentPort.on("message", handleMessage);
+} else if (typeof process.send === "function") {
   process.on("message", handleMessage);
   process.on("disconnect", () => process.exit(0));
 }

@@ -116,9 +116,11 @@ function splitArguments(value: string): string[] {
   let start = 0;
   for (let index = 0; index < value.length; index++) {
     const character = value[index];
-    if (character === "(") depth++;
-    else if (character === ")") depth--;
-    else if (character === "," && depth === 0) {
+    if (character === "(") {
+      depth++;
+    } else if (character === ")") {
+      depth--;
+    } else if (character === "," && depth === 0) {
       parts.push(value.slice(start, index).trim());
       start = index + 1;
     }
@@ -161,31 +163,47 @@ export function rewriteCa65Command(command: string, context: SyntaxRewriteContex
   rewritten = rewritten.replace(/<>/g, "!=");
 
   const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
-  if (!match) return rewritten;
+  if (!match) {
+    return rewritten;
+  }
   const [, indent, rawKeyword, rawRest] = match;
   const keyword = rawKeyword.toLowerCase();
   const rest = rawRest.trim();
   const predicate = cpuPredicateSymbols[keyword];
-  if (predicate) return `${indent}if ${predicate}`;
+  if (predicate) {
+    return `${indent}if ${predicate}`;
+  }
 
   if (["if", "elseif", "else", "endif"].includes(keyword)) {
     return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
   }
-  if (keyword === "ifdef") return `${indent}if defined(${rest})`;
-  if (keyword === "ifndef") return `${indent}if defined(${rest}) == 0`;
+  if (keyword === "ifdef") {
+    return `${indent}if defined(${rest})`;
+  }
+  if (keyword === "ifndef") {
+    return `${indent}if defined(${rest}) == 0`;
+  }
   if (keyword === "macro") {
     const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
-    if (!header) return rewritten;
+    if (!header) {
+      return rewritten;
+    }
     const params = splitArguments(header[2] ?? "").join(",");
     return `${indent}macro ${header[1]}(${params})`;
   }
-  if (keyword === "endmacro") return `${indent}endmacro`;
+  if (keyword === "endmacro") {
+    return `${indent}endmacro`;
+  }
   if (keyword === "repeat") {
     const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
     return `${indent}for ${variable} = 0..(${count})`;
   }
-  if (keyword === "endrepeat") return `${indent}endfor`;
-  if (keyword === "undefine") return `${indent}undef ${rest}`;
+  if (keyword === "endrepeat") {
+    return `${indent}endfor`;
+  }
+  if (keyword === "undefine") {
+    return `${indent}undef ${rest}`;
+  }
   return rewritten;
 }
 

@@ -48,18 +48,19 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
       const node = decode<AnalysisControlFlowNodeRecord>(row.payload);
       const path = node.evidencePath.length ? node.evidencePath : [node.id];
       let owner: string | undefined;
-      for (let i = path.length - 1; i >= 0; i--)
+      for (let i = path.length - 1; i >= 0; i--) {
         if (entries.has(path[i])) {
           owner = path[i];
           break;
         }
+      }
       putNode.run(node.id, node.addressSpace, node.address, node.fileOffset ?? null, owner ?? null);
     } else {
       const edge = decode<AnalysisControlFlowEdgeRecord>(row.payload);
       if (
         edge.edgeKind === "unresolved" ||
         (["call", "interrupt"].includes(edge.edgeKind) && edge.toAddress !== undefined)
-      )
+      ) {
         putEdge.run(
           edge.id,
           edge.edgeKind,
@@ -68,6 +69,7 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
           edge.from,
           JSON.stringify(edge),
         );
+      }
     }
   }
   const ownersQuery =
@@ -141,11 +143,18 @@ export const prepareGraph = (db: DatabaseSync): AnalysisCallGraph => {
     ids.push(id);
   };
   for (const call of calls) {
-    for (const id of call.callerFunctionIds) append(outgoing, id, call.id);
-    for (const id of call.calleeFunctionIds) append(incoming, id, call.id);
+    for (const id of call.callerFunctionIds) {
+      append(outgoing, id, call.id);
+    }
+    for (const id of call.calleeFunctionIds) {
+      append(incoming, id, call.id);
+    }
   }
-  for (const record of unresolved)
-    for (const id of record.ownerFunctionIds) append(unresolvedByOwner, id, record.id);
+  for (const record of unresolved) {
+    for (const id of record.ownerFunctionIds) {
+      append(unresolvedByOwner, id, record.id);
+    }
+  }
   const owned = db.prepare(
     "SELECT n.id,n.address,n.file_offset FROM query_graph_nodes e JOIN query_graph_nodes n ON n.owner=e.id WHERE e.address_space=? AND e.address=?",
   );

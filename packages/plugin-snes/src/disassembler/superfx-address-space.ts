@@ -56,7 +56,9 @@ export class SuperFxRomImage {
       return undefined;
     }
     const imageOffset = address - this.loadAddress;
-    if (imageOffset >= this.length) return undefined;
+    if (imageOffset >= this.length) {
+      return undefined;
+    }
     return { addressSpace: SUPERFX_ROM_ADDRESS_SPACE, address, imageOffset };
   }
 

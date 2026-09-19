@@ -36,13 +36,15 @@ const graphicsReport = (summary: RuntimeGraphicsSummary): string[] => {
         )
         .join(", ");
       let blank = "unknown";
-      if (write.forcedBlank !== null) blank = write.forcedBlank ? "yes" : "no";
+      if (write.forcedBlank !== null) {
+        blank = write.forcedBlank ? "yes" : "no";
+      }
       return `| ${write.sequence} | ${write.actor.toUpperCase()}/${write.channel ?? "—"} | ${hex(write.port, 4)} = ${hex(write.value)} | ${write.target.toUpperCase()} | ${write.reason ?? write.status} | ${blank} | ${bytes || "—"} |`;
     }),
     "",
     `${summary.omittedWrites} additional port writes omitted; all contribute to the totals. Data events identify the writes supplying each byte, which may precede the completing write or belong to another actor. They do not identify an A-bus source or setup instruction.`,
     "",
-    `Interpretation: ${summary.model}. This view is recomputed from ordered accesses and requires the original or managed capture archive to reproduce. Archive expiry retains bus facts and transfer totals, not this graphics view.`,
+    `Interpretation: ${summary.model}. This view is recomputed from ordered accesses and requires the source capture to reproduce. The project retains bus facts and transfer totals, not this graphics view.`,
     "",
   ];
 };
@@ -116,7 +118,6 @@ export const renderBusTraceReport = (result: RuntimeBusProjectImportResult): str
     `- Distinct access variants: ${result.report.imported.busRecords ?? 0}`,
     `- Newly added records: ${result.added.runtime}`,
     `- Capture already present: ${result.changed ? "no" : "yes"}`,
-    `- Managed archive retained: ${result.archive.archived ? "yes" : "no; consult the capture catalog for availability"}`,
     `- First-to-last recorded event span: ${elapsed}`,
     `- Clock frequency: ${summary.clock.numerator}/${summary.clock.denominator} Hz`,
     "",
@@ -166,7 +167,7 @@ const ppuReport = (summary: RuntimePPUSummary): string[] => {
       return `| ${write.sequence} | ${write.actor.toUpperCase()}/${write.channel ?? "—"} | ${hex(write.port)} | ${p.target.toUpperCase()} | ${p.outcome} | ${p.implementation} | ${p.forcedBlank ? "yes" : "no"} | ${p.renderingRestricted ? "yes" : "no"} | ${p.hcounter}/${p.vcounter} | ${bytes || "—"} |`;
     }),
     "",
-    `${summary.omittedWrites} additional effects omitted from this view. Physical write variants and totals survive managed archive expiry; event order and raster history require the archive.`,
+    `${summary.omittedWrites} additional effects omitted from this view. The project retains physical write variants and totals; event order and raster history require the source capture.`,
     "",
   ];
 };

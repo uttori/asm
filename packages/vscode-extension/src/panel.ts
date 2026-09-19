@@ -102,7 +102,9 @@ export class ProjectPanelProvider implements WebviewViewProvider {
     }
     const request = ++this.#snapshotRequest;
     const snapshot = await this.snapshot();
-    if (request !== this.#snapshotRequest) return;
+    if (request !== this.#snapshotRequest) {
+      return;
+    }
     this.#metadata = snapshot.metadata;
     void this.#view.webview.postMessage({
       type: "snapshot",
@@ -119,7 +121,9 @@ export class ProjectPanelProvider implements WebviewViewProvider {
    * @param {unknown} message.value The value of the message.
    */
   async onMessage(message: { type?: string; value?: unknown }): Promise<void> {
-    if (!message || typeof message.type !== "string" || this.#pending.has(message.type)) return;
+    if (!message || typeof message.type !== "string" || this.#pending.has(message.type)) {
+      return;
+    }
     this.#pending.add(message.type);
     let error: string | undefined;
     try {
@@ -182,8 +186,9 @@ export class ProjectPanelProvider implements WebviewViewProvider {
       case "openConfig": {
         const { status } = await this.snapshot();
         const root = workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (root && status.configFile)
+        if (root && status.configFile) {
           await window.showTextDocument(Uri.file(path.resolve(root, status.configFile)));
+        }
         return;
       }
       case "addEntryPoint":

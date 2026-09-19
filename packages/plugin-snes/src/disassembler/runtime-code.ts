@@ -33,8 +33,12 @@ const runtimeDecodeState = (sample: RuntimeInstructionRecord): Cpu65816DecodeSta
   const p = value("p", 255);
   const e = value("e", 1) as 0 | 1 | undefined;
   let widths: Pick<Cpu65816DecodeState, "m" | "x"> = {};
-  if (p !== undefined) widths = { m: ((p >> 5) & 1) as 0 | 1, x: ((p >> 4) & 1) as 0 | 1 };
-  if (e === 1) widths = { m: 1, x: 1 };
+  if (p !== undefined) {
+    widths = { m: ((p >> 5) & 1) as 0 | 1, x: ((p >> 4) & 1) as 0 | 1 };
+  }
+  if (e === 1) {
+    widths = { m: 1, x: 1 };
+  }
   return {
     ...(e === undefined ? {} : { e }),
     ...widths,
@@ -69,8 +73,9 @@ export const analyzeSnesRuntimeCode = (
       sample.kind !== "runtime-instruction" ||
       sample.architecture !== "snes.65816" ||
       sample.addressSpace !== "snes.cpu"
-    )
+    ) {
       continue;
+    }
     const state = runtimeDecodeState(sample);
     const variant = createHash("sha256")
       .update(canonicalJson({ address: sample.address, bytes: sample.bytes, state }))
@@ -92,7 +97,7 @@ export const analyzeSnesRuntimeCode = (
       state,
     });
     if (decoded.kind !== "instruction" || decoded.instruction.size !== sample.bytes.length) {
-      if (!records.some((record) => record.id === `${id}:unresolved`))
+      if (!records.some((record) => record.id === `${id}:unresolved`)) {
         records.push({
           id: `${id}:unresolved`,
           kind: "unresolved",
@@ -103,6 +108,7 @@ export const analyzeSnesRuntimeCode = (
           reason: "Captured bytes/state do not establish one complete 65816 instruction.",
           evidence: sample.evidence,
         });
+      }
       continue;
     }
     const instruction = decoded.instruction;
@@ -153,8 +159,9 @@ export const analyzeSnesRuntimeCode = (
           const hardware =
             ref.address === undefined ? undefined : identifySnesHardwareRegister(ref.address);
           let resolved: { address?: number; baseAddress?: number } = {};
-          if (ref.address !== undefined)
+          if (ref.address !== undefined) {
             resolved = indexed ? { baseAddress: ref.address } : { address: ref.address };
+          }
           return {
             operandIndex: ref.operandIndex ?? 0,
             ...resolved,
@@ -181,16 +188,19 @@ export const analyzeSnesRuntimeCode = (
     const targets: { address?: number; kind: string; indirect?: boolean }[] = instruction.references
       .filter((ref) => ["call", "branch", "jump"].includes(ref.kind))
       .map((ref) => ({ address: ref.address, kind: ref.kind, indirect: ref.indirect }));
-    if (instruction.flow.fallthrough)
+    if (instruction.flow.fallthrough) {
       targets.push({
         address: (node.address & 0xff0000) | ((node.address + node.size) & 65535),
         kind: "fallthrough",
         indirect: false,
       });
+    }
     for (const [index, target] of targets.entries()) {
       const candidates = target.address === undefined ? [] : (byAddress.get(target.address) ?? []);
       const destination = candidates.length === 1 ? candidates[0] : undefined;
-      if (target.kind === "call" && destination) entries.add(destination.id);
+      if (target.kind === "call" && destination) {
+        entries.add(destination.id);
+      }
       edges.push({
         id: `${node.id}:edge:${index}`,
         kind: "cfg-edge",
@@ -221,18 +231,22 @@ export const analyzeSnesRuntimeCode = (
     for (let index = 0; index < queue.length; index++) {
       const trail = queue[index];
       const id = trail.at(-1)!;
-      if (visited.has(id)) continue;
+      if (visited.has(id)) {
+        continue;
+      }
       visited.add(id);
       const previous = ownership.get(id);
       ownership.set(id, previous && previous[0] !== entry ? [] : (previous ?? trail));
-      for (const edge of outgoing.get(id) ?? [])
+      for (const edge of outgoing.get(id) ?? []) {
         if (
           edge.to &&
           edge.edgeKind !== "call" &&
           (!entries.has(edge.to) || edge.to === entry) &&
           !visited.has(edge.to)
-        )
+        ) {
           queue.push([...trail, edge.to]);
+        }
+      }
     }
     const node = nodes.get(entry)!;
     records.push({
@@ -245,14 +259,17 @@ export const analyzeSnesRuntimeCode = (
       evidence: node.evidence,
     });
   }
-  for (const node of nodes.values())
+  for (const node of nodes.values()) {
     records.push({
       ...node,
       evidencePath: ownership.get(node.id)?.length ? ownership.get(node.id)! : [node.id],
     });
+  }
   // Large captures exceed V8's function-argument limit even when the arrays fit in memory.
   // Append individually to retain every edge without spreading the graph onto the call stack.
-  for (const edge of edges) records.push(edge);
+  for (const edge of edges) {
+    records.push(edge);
+  }
   for (const [address, variants] of byAddress) {
     // CPU state can legitimately differ between executions of the same instruction. Preserve
     // every state/evidence variant, but only incompatible instruction encodings are code conflicts.
@@ -260,7 +277,7 @@ export const analyzeSnesRuntimeCode = (
     const encodings = new Set(
       variants.map((node) => `${node.specificationId}:${node.size}:${node.bytes?.join(",")}`),
     );
-    if (encodings.size > 1)
+    if (encodings.size > 1) {
       records.push({
         id: `runtime:code:variants:${address.toString(16)}`,
         kind: "conflict",
@@ -272,6 +289,7 @@ export const analyzeSnesRuntimeCode = (
         nodes: variants.map((node) => node.id),
         evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort(),
       });
+    }
   }
   return records.sort((a, b) => a.id.localeCompare(b.id));
 };

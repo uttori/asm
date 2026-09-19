@@ -52,21 +52,25 @@ const featureByTable = {
  */
 function opcodeFor(row, modeIndex) {
     if (row[4] === "PutJSR_m740") {
-        if (modeIndex === 10)
+        if (modeIndex === 10) {
             return 0x02;
-        if (modeIndex === 29)
+        }
+        if (modeIndex === 29) {
             return 0x22;
+        }
         return 0x20;
     }
     if (row[4] === "PutBitBranch_m740") {
         return modeIndex === 28 ? row[2] + 0x04 : row[2];
     }
-    if (row[4] === "PutLDM_m740")
+    if (row[4] === "PutLDM_m740") {
         return row[2];
+    }
     const [, , base, eaTable] = row;
     const extension = ca65EaTable[eaTable]?.[modeIndex];
-    if (extension === undefined)
+    if (extension === undefined) {
         throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+    }
     let opcode = base | extension;
     if (row[4] === "Put4510" || row[4] === "Put45GS02") {
         opcode =
@@ -84,10 +88,12 @@ function opcodeFor(row, modeIndex) {
             ]).get(opcode) ?? opcode;
     }
     if (row[4] === "Put45GS02_Q") {
-        if (opcode === 0xea)
+        if (opcode === 0xea) {
             opcode = 0x1a;
-        else if (opcode === 0xca)
+        }
+        else if (opcode === 0xca) {
             opcode = 0x3a;
+        }
     }
     return opcode;
 }
@@ -104,20 +110,26 @@ function modeFor(table, row, modeIndex) {
         return { mode: "blockTransfer", codec: "three-unsigned16-le" };
     }
     if (row[4] === "PutTST") {
-        if (modeIndex === 2)
+        if (modeIndex === 2) {
             return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
-        if (modeIndex === 3)
+        }
+        if (modeIndex === 3) {
             return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
-        if (modeIndex === 5)
+        }
+        if (modeIndex === 5) {
             return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
-        if (modeIndex === 6)
+        }
+        if (modeIndex === 6) {
             return { mode: "immediateAbsoluteIndexedX", codec: "immediate-unsigned16" };
+        }
     }
     if (row[4] === "PutBitBranch_m740") {
-        if (modeIndex === 1)
+        if (modeIndex === 1) {
             return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
-        if (modeIndex === 28)
+        }
+        if (modeIndex === 28) {
             return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+        }
     }
     if (row[4] === "PutLDM_m740" && modeIndex === 28) {
         return { mode: "zeroPageImmediate", codec: "zero-page-immediate8" };
@@ -155,8 +167,9 @@ function createForm(table, row, modeIndex, modeDefinition) {
     }
     else if (row[4] === "Put45GS02_Q") {
         prefixes.push(0x42, 0x42);
-        if (modeIndex === 12 || modeIndex === 30)
+        if (modeIndex === 12 || modeIndex === 30) {
             prefixes.push(0xea);
+        }
     }
     else if (row[4] === "Put45GS02" && modeIndex === 30) {
         prefixes.push(0xea);
@@ -212,25 +225,29 @@ function decodeTable(table) {
         if (row[4] === "PutPCRel8" || row[4] === "PutPCRel4510") {
             const modeIndex = row[4] === "PutPCRel8" ? 17 : 18;
             const modeDefinition = commonModes[modeIndex];
-            if (modeDefinition)
+            if (modeDefinition) {
                 forms.push(createForm(table, row, modeIndex, modeDefinition));
+            }
             continue;
         }
         const seenModes = new Set();
         for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
-            if ((row[1] & (2 ** modeIndex)) === 0)
+            if ((row[1] & (2 ** modeIndex)) === 0) {
                 continue;
+            }
             // ca65 sets both bits for accumulator instructions; the explicit accumulator
             // form also accepts an omitted A in our native syntax.
-            if (modeIndex === 0 && (row[1] & 2) !== 0)
+            if (modeIndex === 0 && (row[1] & 2) !== 0) {
                 continue;
+            }
             const modeDefinition = modeFor(table, row, modeIndex);
             if (!modeDefinition) {
                 throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
             }
             const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
-            if (seenModes.has(key))
+            if (seenModes.has(key)) {
                 continue;
+            }
             seenModes.add(key);
             forms.push(createForm(table, row, modeIndex, modeDefinition));
         }

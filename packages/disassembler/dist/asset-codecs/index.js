@@ -26,8 +26,9 @@ export const builtinAssetCodecs = Object.freeze([
  */
 export const createBuiltinAssetCodecRegistry = () => {
     const registry = new AssetCodecRegistry();
-    for (const codec of builtinAssetCodecs)
+    for (const codec of builtinAssetCodecs) {
         registry.register(codec);
+    }
     return registry;
 };
 //# sourceMappingURL=index.js.map

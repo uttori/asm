@@ -36,8 +36,9 @@ const coverageAddressSpace = (record) => {
     if (record.kind === "runtime-coverage" || record.kind === "runtime-execution") {
         return record.addressSpace;
     }
-    if (record.kind === "runtime-memory-access")
+    if (record.kind === "runtime-memory-access") {
         return record.accessedAddressSpace;
+    }
     return undefined;
 };
 /**
@@ -107,8 +108,9 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
     };
     for (const annotation of shards.annotations) {
         const classification = annotationClassification(annotation.classification);
-        if (!classification)
+        if (!classification) {
             continue;
+        }
         addAddressSpaceOverlay({ classification, annotationId: annotation.id }, annotation.start, annotation.end, { kind: "annotation", id: annotation.id, addressSpace: annotation.addressSpace });
     }
     for (const region of shards.regions) {
@@ -120,8 +122,9 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
     }
     const controlFlowNodes = new Map();
     for (const record of shards.analysis) {
-        if (record.kind !== "cfg-node")
+        if (record.kind !== "cfg-node") {
             continue;
+        }
         controlFlowNodes.set(record.id, record);
         if (record.fileOffset === undefined) {
             unprojected.push({
@@ -149,8 +152,9 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
         let projected = false;
         for (const nodeId of record.nodes) {
             const node = controlFlowNodes.get(nodeId);
-            if (!node || node.fileOffset === undefined)
+            if (!node || node.fileOffset === undefined) {
                 continue;
+            }
             projected =
                 addOverlay({ conflictId: record.id, analysisId: node.id }, node.fileOffset, node.fileOffset + node.size, { kind: "analysis", id: record.id, addressSpace: record.addressSpace }) || projected;
         }
@@ -164,8 +168,9 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
         }
     };
     for (const record of shards.analysis) {
-        if (record.kind === "conflict")
+        if (record.kind === "conflict") {
             addConflict(record);
+        }
     }
     const addRuntimeAddressSpaceOverlay = (record, runtime, start, end) => {
         const addressSpace = coverageAddressSpace(record);
@@ -198,8 +203,9 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
             continue;
         }
         if (record.kind === "runtime-memory-access") {
-            if (!fileAddressSpaceSet.has(record.accessedAddressSpace))
+            if (!fileAddressSpaceSet.has(record.accessedAddressSpace)) {
                 continue;
+            }
             if (record.access === "read" || record.access === "read-write") {
                 addRuntimeAddressSpaceOverlay(record, "read", record.accessedAddress, record.accessedAddress + record.width);
             }
@@ -216,18 +222,22 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
     for (let index = 0; index + 1 < boundaries.length; index++) {
         const start = boundaries[index];
         const event = events.get(start);
-        for (const overlay of event.ends)
+        for (const overlay of event.ends) {
             active.delete(overlay.token);
-        for (const overlay of event.starts)
+        }
+        for (const overlay of event.starts) {
             active.set(overlay.token, overlay);
+        }
         const end = boundaries[index + 1];
-        if (end <= start)
+        if (end <= start) {
             continue;
+        }
         const values = [...active.values()];
         const classifications = new Set();
         for (const { classification } of values) {
-            if (classification)
+            if (classification) {
                 classifications.add(classification);
+            }
         }
         const sortedClassifications = classifications.size === 0 ? ["unknown"] : [...classifications];
         sortedClassifications.sort((left, right) => CLASSIFICATION_ORDER.indexOf(left) - CLASSIFICATION_ORDER.indexOf(right));
@@ -235,10 +245,12 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
             ...new Set(values.flatMap(({ conflictId }) => (conflictId ? [conflictId] : []))),
         ].sort(compareStrings);
         let status = "classified";
-        if (classifications.size === 0 && conflictIds.length === 0)
+        if (classifications.size === 0 && conflictIds.length === 0) {
             status = "unknown";
-        else if (classifications.size > 1 || conflictIds.length > 0)
+        }
+        else if (classifications.size > 1 || conflictIds.length > 0) {
             status = "conflict";
+        }
         const segment = {
             start,
             end,
@@ -286,14 +298,18 @@ export const buildRomCoverageMap = (manifest, shards, runtime = shards.runtime) 
         for (const classification of segment.classifications) {
             bytesByClassification[classification] += size;
         }
-        for (const runtime of segment.runtime)
+        for (const runtime of segment.runtime) {
             bytesByRuntimeCoverage[runtime] += size;
-        if (segment.status === "classified")
+        }
+        if (segment.status === "classified") {
             classifiedBytes += size;
-        else if (segment.status === "unknown")
+        }
+        else if (segment.status === "unknown") {
             unknownBytes += size;
-        else
+        }
+        else {
             conflictBytes += size;
+        }
     }
     return {
         contentSize,

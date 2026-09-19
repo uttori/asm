@@ -219,7 +219,9 @@ var init_addressToLine = __esm({
       getFileIndex(filename) {
         const filenameCrc = CRC32.compute(Buffer.from(filename, "utf8"));
         for (let i = 0; i < this.filenameCrcs.length; i++) {
-          if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) return i;
+          if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
+            return i;
+          }
         }
         this.fileList.push({ name: filename, ...sourceIdentity(filename) });
         this.filenameCrcs.push(filenameCrc);
@@ -1566,27 +1568,38 @@ function splitInitializerList(text) {
   for (let index2 = 0; index2 < text.length; index2++) {
     const char = text[index2];
     if (quote) {
-      if (char === quote && text[index2 - 1] !== "\\") quote = "";
+      if (char === quote && text[index2 - 1] !== "\\") {
+        quote = "";
+      }
       continue;
     }
     if (char === '"' || char === "'") {
       quote = char;
       continue;
     }
-    if ("([{".includes(char)) stack.push(char);
-    else if (")]}".includes(char)) {
+    if ("([{".includes(char)) {
+      stack.push(char);
+    } else if (")]}".includes(char)) {
       const expected = { ")": "(", "]": "[", "}": "{" }[char];
-      if (stack.pop() !== expected) throw new Error("Mismatched initializer delimiters.");
+      if (stack.pop() !== expected) {
+        throw new Error("Mismatched initializer delimiters.");
+      }
     } else if (char === "," && stack.length === 0) {
       const entry = text.slice(start, index2).trim();
-      if (!entry) throw new Error("Empty initializer item.");
+      if (!entry) {
+        throw new Error("Empty initializer item.");
+      }
       entries3.push(entry);
       start = index2 + 1;
     }
   }
-  if (quote || stack.length) throw new Error("Unclosed initializer delimiter.");
+  if (quote || stack.length) {
+    throw new Error("Unclosed initializer delimiter.");
+  }
   const last = text.slice(start).trim();
-  if (last) entries3.push(last);
+  if (last) {
+    entries3.push(last);
+  }
   return entries3;
 }
 function parseStructInitializer(text) {
@@ -1597,27 +1610,43 @@ function parseStructInitializer(text) {
   const fields = /* @__PURE__ */ new Map();
   for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
     const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
-    if (!match) throw new Error(`Expected 'field = value' in initializer: ${entry}`);
+    if (!match) {
+      throw new Error(`Expected 'field = value' in initializer: ${entry}`);
+    }
     const [, name, value] = match;
-    if (fields.has(name)) throw new Error(`Duplicate initializer field '${name}'.`);
+    if (fields.has(name)) {
+      throw new Error(`Duplicate initializer field '${name}'.`);
+    }
     if (value.startsWith("[")) {
-      if (!value.endsWith("]")) throw new Error(`Unclosed array initializer '${name}'.`);
+      if (!value.endsWith("]")) {
+        throw new Error(`Unclosed array initializer '${name}'.`);
+      }
       fields.set(name, splitInitializerList(value.slice(1, -1)));
-    } else fields.set(name, value);
+    } else {
+      fields.set(name, value);
+    }
   }
   return fields;
 }
 function isOpenStructInitializer(text) {
-  if (!/^(?:datastruct\b|\[)/i.test(text.trimStart())) return false;
+  if (!/^(?:datastruct\b|\[)/i.test(text.trimStart())) {
+    return false;
+  }
   let depth = 0;
   let quote = "";
   for (let index2 = 0; index2 < text.length; index2++) {
     const char = text[index2];
     if (quote) {
-      if (char === quote && text[index2 - 1] !== "\\") quote = "";
-    } else if (char === '"' || char === "'") quote = char;
-    else if (char === "{") depth++;
-    else if (char === "}") depth--;
+      if (char === quote && text[index2 - 1] !== "\\") {
+        quote = "";
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === "{") {
+      depth++;
+    } else if (char === "}") {
+      depth--;
+    }
   }
   return depth > 0;
 }
@@ -1763,15 +1792,21 @@ var init_command_text_service = __esm({
       for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
         let line = lines[lineIndex];
         line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
-        if (!line.trim()) continue;
+        if (!line.trim()) {
+          continue;
+        }
         if (line.trimStart().startsWith(";`+")) {
           sourcedCommands.push({ text: line, line: lineIndex });
           continue;
         }
         line = removeInlineComment(line, syntaxProfile);
-        if (!line.trim()) continue;
+        if (!line.trim()) {
+          continue;
+        }
         if (isOpenStructInitializer(nextCommandBuffer + line)) {
-          if (nextCommandBuffer === "") bufferStartLine = lineIndex;
+          if (nextCommandBuffer === "") {
+            bufferStartLine = lineIndex;
+          }
           nextCommandBuffer += `${line} `;
         } else if (line.endsWith("\\")) {
           if (nextCommandBuffer === "") {
@@ -2317,13 +2352,27 @@ var init_registry = __esm({
     createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
       const registry = new DirectiveRegistry(directivePrefixes);
       const enabled = new Set(enabledGroups);
-      if (enabled.has("include")) registerIncludeSourceDirectives(registry, contexts.includeSource);
-      if (enabled.has("memory")) registerFillPadDirectives(registry, contexts.fillPad);
-      if (enabled.has("control")) registerFlowControlDirectives(registry, contexts.flowControl);
-      if (enabled.has("namespace")) registerNamespaceDirectives(registry, contexts.namespace);
-      if (enabled.has("layout")) registerLayoutDirectives(registry, contexts.layout);
-      if (enabled.has("data")) registerDataDirectives(registry, contexts.data);
-      if (enabled.has("struct")) registerStructBinaryDirectives(registry, contexts.struct);
+      if (enabled.has("include")) {
+        registerIncludeSourceDirectives(registry, contexts.includeSource);
+      }
+      if (enabled.has("memory")) {
+        registerFillPadDirectives(registry, contexts.fillPad);
+      }
+      if (enabled.has("control")) {
+        registerFlowControlDirectives(registry, contexts.flowControl);
+      }
+      if (enabled.has("namespace")) {
+        registerNamespaceDirectives(registry, contexts.namespace);
+      }
+      if (enabled.has("layout")) {
+        registerLayoutDirectives(registry, contexts.layout);
+      }
+      if (enabled.has("data")) {
+        registerDataDirectives(registry, contexts.data);
+      }
+      if (enabled.has("struct")) {
+        registerStructBinaryDirectives(registry, contexts.struct);
+      }
       if (enabled.has("table") || enabled.has("diagnostic")) {
         registerMiscDirectives(
           registry,
@@ -2354,7 +2403,7 @@ var init_file_provider = __esm({
     "use strict";
     NodeAssemblyFileProvider = class {
       /**
-       * Resolves path.
+       * Find the first existing path: macro directory, current source directory, include paths, then cwd.
        * @param {string} filename The filename.
        * @param {AssemblyFileResolutionOptions} [options] The options.
        * @returns {string | undefined} The result.
@@ -3320,7 +3369,9 @@ var init_mathcore = __esm({
             break;
           }
           const op2 = this.peekNextOperator(this.operators, depth);
-          if (!op2) break;
+          if (!op2) {
+            break;
+          }
           this.advance(op2.length);
           this.skipWhitespace();
           const right = this.evalMath(this.operators[op2].priority + 1, stopChar);
@@ -3733,17 +3784,23 @@ var init_mathcore = __esm({
           }
           // Min, Max, Clamp
           case "min": {
-            if (args.length < 2) throw new Error("min() expects at least 2 numeric arguments.");
+            if (args.length < 2) {
+              throw new Error("min() expects at least 2 numeric arguments.");
+            }
             const numArgs = args.map((arg) => this.numArg(name, arg));
             return numArgs.reduce((minimum, value) => Math.min(minimum, value), Infinity);
           }
           case "max": {
-            if (args.length < 2) throw new Error("max() expects at least 2 numeric arguments.");
+            if (args.length < 2) {
+              throw new Error("max() expects at least 2 numeric arguments.");
+            }
             const numArgs = args.map((arg) => this.numArg(name, arg));
             return numArgs.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
           }
           case "clamp": {
-            if (args.length !== 3) throw new Error("clamp() expects exactly 3 numeric arguments.");
+            if (args.length !== 3) {
+              throw new Error("clamp() expects exactly 3 numeric arguments.");
+            }
             const value = this.numArg(name, args[0]);
             const minVal = this.numArg(name, args[1]);
             const maxVal = this.numArg(name, args[2]);
@@ -3751,14 +3808,18 @@ var init_mathcore = __esm({
           }
           // --- Safe Division and Conditional Selection ---
           case "safediv": {
-            if (args.length !== 3) throw new Error("safediv() expects exactly 3 numeric arguments.");
+            if (args.length !== 3) {
+              throw new Error("safediv() expects exactly 3 numeric arguments.");
+            }
             const dividend = this.numArg(name, args[0]);
             const divisor = this.numArg(name, args[1]);
             const defaultValue = this.numArg(name, args[2]);
             return divisor === 0 ? defaultValue : dividend / divisor;
           }
           case "select": {
-            if (args.length !== 3) throw new Error("select() expects exactly 3 numeric arguments.");
+            if (args.length !== 3) {
+              throw new Error("select() expects exactly 3 numeric arguments.");
+            }
             const statement = this.numArg(name, args[0]);
             const trueVal = this.numArg(name, args[1]);
             const falseVal = this.numArg(name, args[2]);
@@ -3766,85 +3827,116 @@ var init_mathcore = __esm({
           }
           // --- Logical Operations ---
           case "not": {
-            if (args.length !== 1) throw new Error("not() expects exactly 1 numeric argument.");
+            if (args.length !== 1) {
+              throw new Error("not() expects exactly 1 numeric argument.");
+            }
             const value = this.numArg(name, args[0]);
             return value === 0 ? 1 : 0;
           }
           case "bank": {
-            if (args.length !== 1) throw new Error("bank() expects exactly 1 numeric argument.");
+            if (args.length !== 1) {
+              throw new Error("bank() expects exactly 1 numeric argument.");
+            }
             return this.numArg(name, args[0]) >> 16 & 255;
           }
           case "offset": {
-            if (args.length !== 2) throw new Error("offset() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("offset() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[1]) - this.numArg(name, args[0]);
           }
           // --- Comparison Functions ---
           case "equal": {
-            if (args.length !== 2) throw new Error("equal() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("equal() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) === this.numArg(name, args[1]) ? 1 : 0;
           }
           case "notequal": {
-            if (args.length !== 2) throw new Error("notequal() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("notequal() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) !== this.numArg(name, args[1]) ? 1 : 0;
           }
           case "less": {
-            if (args.length !== 2) throw new Error("less() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("less() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) < this.numArg(name, args[1]) ? 1 : 0;
           }
           case "lessequal": {
-            if (args.length !== 2) throw new Error("lessequal() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("lessequal() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) <= this.numArg(name, args[1]) ? 1 : 0;
           }
           case "greater": {
-            if (args.length !== 2) throw new Error("greater() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("greater() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
           }
           case "greaterequal": {
-            if (args.length !== 2)
+            if (args.length !== 2) {
               throw new Error("greaterequal() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
           }
           // --- Logical Bitwise Operations ---
           case "and": {
-            if (args.length !== 2) throw new Error("and() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("and() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
           }
           case "or": {
-            if (args.length !== 2) throw new Error("or() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("or() expects exactly 2 numeric arguments.");
+            }
             return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
           }
           case "nand": {
-            if (args.length !== 2) throw new Error("nand() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("nand() expects exactly 2 numeric arguments.");
+            }
             return !(this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
           }
           case "nor": {
-            if (args.length !== 2) throw new Error("nor() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("nor() expects exactly 2 numeric arguments.");
+            }
             return !(this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
           }
           case "xor": {
-            if (args.length !== 2) throw new Error("xor() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("xor() expects exactly 2 numeric arguments.");
+            }
             const a = this.numArg(name, args[0]);
             const b = this.numArg(name, args[1]);
             return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
           }
           // --- Rounding ---
           case "round": {
-            if (args.length !== 2) throw new Error("round() expects exactly 2 numeric arguments.");
+            if (args.length !== 2) {
+              throw new Error("round() expects exactly 2 numeric arguments.");
+            }
             const number = this.numArg(name, args[0]);
             const precision = this.numArg(name, args[1]);
             return parseFloat(number.toFixed(precision));
           }
           // --- String Comparisons ---
           case "stringsequal": {
-            if (args.length !== 2)
+            if (args.length !== 2) {
               throw new Error("stringsequal() expects exactly 2 string arguments.");
+            }
             const str1 = this.strArg(name, args[0]);
             const str2 = this.strArg(name, args[1]);
             return str1 === str2 ? 1 : 0;
           }
           case "stringsequalnocase": {
-            if (args.length !== 2)
+            if (args.length !== 2) {
               throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
+            }
             const str1 = this.strArg(name, args[0]);
             const str2 = this.strArg(name, args[1]);
             return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
@@ -3852,7 +3944,9 @@ var init_mathcore = __esm({
           // --- Filesize & File Status ---
           case "filesize":
           case "getfilestatus": {
-            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+            if (args.length !== 1) {
+              throw new Error(`${name}() expects exactly 1 argument.`);
+            }
             const value = this.strArg(name, args[0]);
             return name === "filesize" ? this.getHost().getFileSize(value) : this.getHost().getFileStatus(value);
           }
@@ -3861,17 +3955,22 @@ var init_mathcore = __esm({
           case "bytesof":
           case "startof":
           case "endof": {
-            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+            if (args.length !== 1) {
+              throw new Error(`${name}() expects exactly 1 argument.`);
+            }
             const host = this.getHost();
-            if (!host.getExpressionStructMetadata)
+            if (!host.getExpressionStructMetadata) {
               throw new Error(`${name}() requires a struct metadata host.`);
+            }
             return host.getExpressionStructMetadata(this.strArg(name, args[0]), name);
           }
           case "defined":
           case "sizeof":
           case "objectsize":
           case "datasize": {
-            if (args.length !== 1) throw new Error(`${name}() expects exactly 1 argument.`);
+            if (args.length !== 1) {
+              throw new Error(`${name}() expects exactly 1 argument.`);
+            }
             const value = this.strArg(name, args[0]);
             if (name === "defined") {
               return this.getHost().isDefined(value);
@@ -3883,14 +3982,17 @@ var init_mathcore = __esm({
           case "canreadfile2":
           case "canreadfile3":
           case "canreadfile4": {
-            if (args.length !== 2) throw new Error(`${name}() expects exactly 2 arguments.`);
+            if (args.length !== 2) {
+              throw new Error(`${name}() expects exactly 2 arguments.`);
+            }
             const filename = this.strArg(name, args[0]);
             const pos = this.numArg(name, args[1]);
             return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
           }
           case "canreadfile": {
-            if (args.length !== 3)
+            if (args.length !== 3) {
               throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
+            }
             const filename = this.strArg(name, args[0]);
             const pos = this.numArg(name, args[1]);
             const num = this.numArg(name, args[2]);
@@ -3901,8 +4003,9 @@ var init_mathcore = __esm({
           case "readfile2":
           case "readfile3":
           case "readfile4": {
-            if (args.length < 2 || args.length > 3)
+            if (args.length < 2 || args.length > 3) {
               throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
+            }
             const filename = this.strArg(name, args[0]);
             const pos = this.numArg(name, args[1]);
             const size = parseInt(name.slice(-1), 10);
@@ -3916,7 +4019,9 @@ var init_mathcore = __esm({
           // --- PC/Realbase ---
           case "pc":
           case "realbase": {
-            if (args.length !== 0) throw new Error(`${name}() expects no arguments.`);
+            if (args.length !== 0) {
+              throw new Error(`${name}() expects no arguments.`);
+            }
             return name === "pc" ? this.getHost().getCurrentAddress() : this.getHost().getCurrentBaseAddress();
           }
           default: {
@@ -4751,6 +4856,8 @@ var init_environment = __esm({
       #targetRecords;
       /**
        * Indexes contributions, checks target alias uniqueness, then validates every target.
+       * Prefer PluginManager.freeze: this constructor retains input records and assumes they were
+       * already validated and deeply frozen by the manager. It does not own plugin resources.
        * @param {EnvironmentContributions} contributions Manager-collected plugin graph.
        * @throws {PluginError} On alias collisions or an invalid target graph.
        */
@@ -7060,8 +7167,12 @@ var init_manager = __esm({
       let previousWasSeparator = false;
       for (const character of value) {
         const separator = character === "." || character === "-";
-        if (!isLowerAlphaNumeric(character) && !separator) return false;
-        if (separator && previousWasSeparator) return false;
+        if (!isLowerAlphaNumeric(character) && !separator) {
+          return false;
+        }
+        if (separator && previousWasSeparator) {
+          return false;
+        }
         previousWasSeparator = separator;
       }
       return !previousWasSeparator;
@@ -7076,9 +7187,13 @@ var init_manager = __esm({
       }
       seen.add(value);
       if (Array.isArray(value)) {
-        for (const item of value) deepFreeze(item, seen);
+        for (const item of value) {
+          deepFreeze(item, seen);
+        }
       } else {
-        for (const item of Object.values(value)) deepFreeze(item, seen);
+        for (const item of Object.values(value)) {
+          deepFreeze(item, seen);
+        }
       }
       return Object.freeze(value);
     };
@@ -7202,7 +7317,9 @@ var init_manager = __esm({
       return id;
     };
     validateAliases = (aliases2, pluginId, contributionId) => {
-      if (aliases2 === void 0) return;
+      if (aliases2 === void 0) {
+        return;
+      }
       if (!Array.isArray(aliases2) || aliases2.some((alias) => typeof alias !== "string" || alias === "")) {
         throw new PluginError(`Contribution '${contributionId}' has invalid aliases.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
@@ -7230,9 +7347,17 @@ var init_manager = __esm({
       constructor(options = {}) {
         this.#logger = options.logger ?? noopLogger;
       }
+      /**
+       * Inspect successfully activated plugins.
+       * @returns {readonly AssemblerPluginManifest[]} A new array of frozen manifests in activation order.
+       */
       get activatedPlugins() {
         return this.#activated.map((item) => item.manifest);
       }
+      /**
+       * Validate module default exports, then activate them with the same rules as activatePlugins.
+       * @param {readonly PluginModuleActivationRequest[]} requests Imported namespaces and the options supplied for each plugin.
+       */
       async activateModules(requests) {
         const normalized = requests.map((request) => {
           if (!isRecord(request.module) || !("default" in request.module)) {
@@ -7249,6 +7374,13 @@ var init_manager = __esm({
         });
         await this.activatePlugins(normalized);
       }
+      /**
+       * Activate dependencies first, preserving input order among ready plugins.
+       * Each plugin commits independently: earlier successes remain active if a later one fails.
+       * Throws PluginError for invalid input, dependency conflicts, or activation failure.
+       * Activation is unavailable after freeze or disposal; dispose the manager after a failed batch.
+       * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
+       */
       async activatePlugins(requests) {
         if (this.#disposed) {
           throw new PluginError("Cannot activate plugins after the manager has been disposed.", {
@@ -7277,7 +7409,9 @@ var init_manager = __esm({
           pending.set(id, request);
         }
         const available = new Map(this.#manifests);
-        for (const [id, request] of pending) available.set(id, request.plugin.manifest);
+        for (const [id, request] of pending) {
+          available.set(id, request.plugin.manifest);
+        }
         for (const request of normalized) {
           for (const dependency of request.plugin.manifest.requires ?? []) {
             const installed = available.get(dependency.pluginId);
@@ -7338,7 +7472,9 @@ var init_manager = __esm({
             });
           }
         } catch (error) {
-          if (error instanceof PluginError) throw error;
+          if (error instanceof PluginError) {
+            throw error;
+          }
           throw new PluginError(`Configuration for plugin '${manifest.id}' is invalid.`, {
             code: "PLUGIN_CONFIGURATION_INVALID",
             pluginId: manifest.id,
@@ -7364,8 +7500,12 @@ var init_manager = __esm({
           });
           this.#manifests.set(manifest.id, manifest);
         } catch (error) {
-          if (disposable) await disposable.dispose();
-          if (error instanceof PluginError) throw error;
+          if (disposable) {
+            await disposable.dispose();
+          }
+          if (error instanceof PluginError) {
+            throw error;
+          }
           throw new PluginError(`Activation failed for plugin '${manifest.id}'.`, {
             code: "PLUGIN_ACTIVATION_FAILED",
             pluginId: manifest.id,
@@ -7458,7 +7598,7 @@ var init_manager = __esm({
         }
         for (const record of transaction.architectures) {
           validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-          if (typeof record.value.displayName !== "string" || typeof record.value.createEncoder !== "function" || typeof record.value.classifyOperand !== "function" || typeof record.value.splitOperands !== "function" || !isArray(record.value.instructions)) {
+          if (typeof record.value.displayName !== "string" || record.value.createEncoder !== void 0 && typeof record.value.createEncoder !== "function" || record.value.createDecoder !== void 0 && typeof record.value.createDecoder !== "function" || typeof record.value.classifyOperand !== "function" || typeof record.value.splitOperands !== "function" || !isArray(record.value.instructions)) {
             throw new PluginError(`Architecture '${record.contributionId}' is malformed.`, {
               code: "PLUGIN_CONFIGURATION_INVALID",
               pluginId: transaction.manifest.id,
@@ -7467,10 +7607,14 @@ var init_manager = __esm({
           }
         }
         for (const record of transaction.addressSpaces) {
-          if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+          if (typeof record.value.create !== "function") {
+            this.#malformed(transaction, record);
+          }
         }
         for (const record of transaction.outputFormats) {
-          if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+          if (typeof record.value.create !== "function") {
+            this.#malformed(transaction, record);
+          }
         }
         for (const record of transaction.sessionStates) {
           if (typeof record.value.create !== "function" || typeof record.value.clone !== "function") {
@@ -7503,7 +7647,9 @@ var init_manager = __esm({
           }
         }
         for (const record of transaction.expressionSets) {
-          if (!isArray(record.value.functions)) this.#malformed(transaction, record);
+          if (!isArray(record.value.functions)) {
+            this.#malformed(transaction, record);
+          }
           for (const expression of record.value.functions) {
             validateAliases(expression.aliases, transaction.manifest.id, record.contributionId);
             if (typeof expression.name !== "string" || expression.name === "" || typeof expression.evaluate !== "function" || typeof expression.summary !== "string" || !isRecord(expression.signature)) {
@@ -7512,7 +7658,9 @@ var init_manager = __esm({
           }
         }
         for (const record of transaction.lifecycles) {
-          if (typeof record.value.create !== "function") this.#malformed(transaction, record);
+          if (typeof record.value.create !== "function") {
+            this.#malformed(transaction, record);
+          }
         }
         for (const record of transaction.targets) {
           validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
@@ -7554,22 +7702,45 @@ var init_manager = __esm({
             this.#contributionOwners.set(directive3.id.toLowerCase(), set.pluginId);
           }
         }
-        for (const record of transaction.sessionStates) this.#sessionStates.push(record);
-        for (const record of transaction.architectures) this.#architectures.push(record);
-        for (const record of transaction.addressSpaces) this.#addressSpaces.push(record);
-        for (const record of transaction.outputFormats) this.#outputFormats.push(record);
-        for (const record of transaction.directiveSets) this.#directiveSets.push(record);
-        for (const record of transaction.expressionSets) this.#expressionSets.push(record);
-        for (const record of transaction.lifecycles) this.#lifecycles.push(record);
-        for (const record of transaction.targets) this.#targets.push(record);
+        for (const record of transaction.sessionStates) {
+          this.#sessionStates.push(record);
+        }
+        for (const record of transaction.architectures) {
+          this.#architectures.push(record);
+        }
+        for (const record of transaction.addressSpaces) {
+          this.#addressSpaces.push(record);
+        }
+        for (const record of transaction.outputFormats) {
+          this.#outputFormats.push(record);
+        }
+        for (const record of transaction.directiveSets) {
+          this.#directiveSets.push(record);
+        }
+        for (const record of transaction.expressionSets) {
+          this.#expressionSets.push(record);
+        }
+        for (const record of transaction.lifecycles) {
+          this.#lifecycles.push(record);
+        }
+        for (const record of transaction.targets) {
+          this.#targets.push(record);
+        }
       }
+      /**
+       * Validate target references and aliases, then seal registration. Repeated calls return the
+       * same environment. Throws PluginError for invalid graphs or a disposed manager.
+       * @returns {AssemblerEnvironment} The validated, shared contribution graph; resources remain owned by this manager.
+       */
       freeze() {
         if (this.#disposed) {
           throw new PluginError("Cannot freeze a disposed plugin manager.", {
             code: "PLUGIN_ACTIVATION_FAILED"
           });
         }
-        if (this.#environment) return this.#environment;
+        if (this.#environment) {
+          return this.#environment;
+        }
         const contributions = {
           manifests: deepFreeze([...this.#manifests.values()]),
           sessionStates: Object.freeze([...this.#sessionStates]),
@@ -7584,8 +7755,15 @@ var init_manager = __esm({
         this.#environment = new AssemblerEnvironment(contributions);
         return this.#environment;
       }
+      /**
+       * Release plugin resources in reverse activation order, attempting every disposable.
+       * Idempotent and terminal; rejects with AggregateError after cleanup failures.
+       * Does not dispose assembler sessions or make their continued use safe.
+       */
       async dispose() {
-        if (this.#disposed) return;
+        if (this.#disposed) {
+          return;
+        }
         this.#disposed = true;
         const errors = [];
         for (const plugin3 of [...this.#activated].reverse()) {
@@ -7655,8 +7833,8 @@ var init_session_state = __esm({
         return this.#values.get(slot.id);
       }
       /**
-       * Deep-clones every slot via its plugin `clone` hook.
-       * Used to seed stage snapshots so later passes cannot mutate earlier ones.
+       * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
+       * mutable descendants so later passes cannot mutate earlier stage snapshots.
        * @param {ReadonlyMap<string, unknown>} [source] Values to clone. Defaults to the live store.
        * @returns {PluginStateSnapshot} A new map of cloned slot values.
        * @throws {PluginError} If `source` is missing a registered slot, or a `clone` hook throws.
@@ -7685,7 +7863,8 @@ var init_session_state = __esm({
         return snapshot;
       }
       /**
-       * Replaces the live slot map. Callers pass a snapshot from {@link cloneSnapshot}.
+       * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
+       * Subsequent writes mutate this map; the previous snapshot is not individually disposed.
        * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
        */
       restore(snapshot) {
@@ -7700,7 +7879,9 @@ var init_session_state = __esm({
       resetForStage(stage) {
         for (const record of this.#contributions) {
           const reset = record.value.resetForStage;
-          if (!reset) continue;
+          if (!reset) {
+            continue;
+          }
           try {
             reset(this.#values.get(record.contributionId), stage);
           } catch (cause) {
@@ -7720,7 +7901,9 @@ var init_session_state = __esm({
        * @throws {AggregateError} If one or more slot `dispose` hooks throw.
        */
       dispose() {
-        if (this.#disposed) return;
+        if (this.#disposed) {
+          return;
+        }
         this.#disposed = true;
         const errors = [];
         for (const record of [...this.#contributions].reverse()) {
@@ -8126,7 +8309,9 @@ var init_assembly_front_end_service = __esm({
               line: this.host.currentLine + Math.max(0, start)
             };
           }
-        } else this.structBufferStart = void 0;
+        } else {
+          this.structBufferStart = void 0;
+        }
         return processed.sourcedCommands;
       }
       /**
@@ -8450,8 +8635,12 @@ var init_define_engine = __esm({
           let braceLevel = 1;
           let closingBraceIndex = 1;
           while (braceLevel > 0 && closingBraceIndex < line.length) {
-            if (line[closingBraceIndex] === "{") braceLevel++;
-            if (line[closingBraceIndex] === "}") braceLevel--;
+            if (line[closingBraceIndex] === "{") {
+              braceLevel++;
+            }
+            if (line[closingBraceIndex] === "}") {
+              braceLevel--;
+            }
             closingBraceIndex++;
           }
           if (braceLevel !== 0) {
@@ -8630,9 +8819,14 @@ var init_define_engine = __esm({
             index2 += 2;
             let braceLevel = 1;
             while (index2 < value.length && braceLevel > 0) {
-              if (value[index2] === "{") braceLevel++;
-              else if (value[index2] === "}") braceLevel--;
-              if (braceLevel === 0) break;
+              if (value[index2] === "{") {
+                braceLevel++;
+              } else if (value[index2] === "}") {
+                braceLevel--;
+              }
+              if (braceLevel === 0) {
+                break;
+              }
               braceContent += value[index2];
               index2++;
             }
@@ -8843,8 +9037,9 @@ var init_directive_runtime_service = __esm({
           }
           const expandedValues = splitRespectingFunctions(resolved);
           if (expandedValues.length > 1) {
-            for (let index2 = expandedValues.length - 1; index2 >= 0; index2--)
+            for (let index2 = expandedValues.length - 1; index2 >= 0; index2--) {
               pendingValues.push(expandedValues[index2]);
+            }
             continue;
           }
           let num;
@@ -8937,8 +9132,9 @@ var init_directive_runtime_service = __esm({
           }
           const expandedValues = splitRespectingFunctions(resolved);
           if (expandedValues.length > 1) {
-            for (let index2 = expandedValues.length - 1; index2 >= 0; index2--)
+            for (let index2 = expandedValues.length - 1; index2 >= 0; index2--) {
               pendingValues.push(expandedValues[index2]);
+            }
             continue;
           }
           estimatedItems += 1;
@@ -10225,7 +10421,9 @@ var init_data_struct_engine = __esm({
         this.table = void 0;
       }
       finish() {
-        if (this.table) throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
+        if (this.table) {
+          throw new Error(`Missing endDataStructs for '${this.table.name}'.`);
+        }
       }
       /**
        * Rewrite a row into a normal directive so it retains source/trace ownership.
@@ -10233,7 +10431,9 @@ var init_data_struct_engine = __esm({
        */
       prepareRow(command) {
         const text = command.command.trim();
-        if (/^enddatastructs\b/i.test(text)) return;
+        if (/^enddatastructs\b/i.test(text)) {
+          return;
+        }
         const match = text.match(/^\[([^\]]+)]\s*=\s*({.*})$/s);
         if (!this.table || !match) {
           throw new Error("dataStructs accepts only indexed records: [index] = { field = value }.");
@@ -10242,16 +10442,24 @@ var init_data_struct_engine = __esm({
         setCommandWords(command, splitCommandIntoWords(rewritten), rewritten);
       }
       begin(words) {
-        if (this.table) throw new Error("Nested dataStructs blocks are not supported.");
+        if (this.table) {
+          throw new Error("Nested dataStructs blocks are not supported.");
+        }
         if (words.length !== 2 || !this.host.structs.has(words[1])) {
           throw new Error("dataStructs requires one previously defined struct name.");
         }
         this.table = { name: words[1], rows: 0 };
       }
       end(words) {
-        if (!this.table) throw new Error("endDataStructs without dataStructs.");
-        if (words.length !== 1) throw new Error("endDataStructs takes no arguments.");
-        if (this.table.rows === 0) throw new Error("dataStructs must contain at least one record.");
+        if (!this.table) {
+          throw new Error("endDataStructs without dataStructs.");
+        }
+        if (words.length !== 1) {
+          throw new Error("endDataStructs takes no arguments.");
+        }
+        if (this.table.rows === 0) {
+          throw new Error("dataStructs must contain at least one record.");
+        }
         this.table = void 0;
       }
       /**
@@ -10262,14 +10470,18 @@ var init_data_struct_engine = __esm({
       resolveRecord(reference) {
         const match = reference.match(/^([A-Z_a-z][\w.]*)(?:\[([^\]]+)])?$/);
         const definition = match && this.host.structs.get(match[1]);
-        if (!match || !definition) throw new Error(`Unknown dataStruct record '${reference}'.`);
+        if (!match || !definition) {
+          throw new Error(`Unknown dataStruct record '${reference}'.`);
+        }
         const index2 = match[2] === void 0 ? 0 : this.host.operandResolver.getnum(match[2]);
-        if (!Number.isSafeInteger(index2) || index2 < 0)
+        if (!Number.isSafeInteger(index2) || index2 < 0) {
           throw new Error(`Invalid record index '${reference}'.`);
+        }
         if (definition.indexRange) {
           const { first, count } = definition.indexRange;
-          if (index2 < first || index2 >= first + count)
+          if (index2 < first || index2 >= first + count) {
             throw new Error(`Record index out of bounds: '${reference}'.`);
+          }
         }
         return { definition, index: index2 };
       }
@@ -10282,15 +10494,17 @@ var init_data_struct_engine = __esm({
         const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
         let end = 0;
         for (const field of fields) {
-          if (field.offset !== end)
+          if (field.offset !== end) {
             throw new Error(
               `Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`
             );
+          }
           end += field.width * field.count;
         }
         if (definition.align && end === definition.offset && end < definition.size) {
-          if (definition.labels.has("__padding"))
+          if (definition.labels.has("__padding")) {
             throw new Error("The alignment padding name '__padding' is reserved.");
+          }
           fields.push({
             name: "__padding",
             offset: end,
@@ -10309,8 +10523,9 @@ var init_data_struct_engine = __esm({
       }
       emit(words) {
         const args = splitInitializerList(words.slice(1).join(" "));
-        if (args.length !== 2)
+        if (args.length !== 2) {
           throw new Error("dataStruct syntax: dataStruct Record[index], { field = value }.");
+        }
         const [reference, literal] = args;
         const { definition, index: index2 } = this.resolveRecord(reference);
         if (this.table?.next !== void 0 && index2 !== this.table.next) {
@@ -10322,22 +10537,29 @@ var init_data_struct_engine = __esm({
         const values = parseStructInitializer(literal);
         const names = new Set(layout.map((field) => field.name));
         for (const name of values.keys()) {
-          if (!names.has(name))
+          if (!names.has(name)) {
             throw new Error(`Unknown initializer field '${definition.name}.${name}'.`);
+          }
         }
         const bytes = [];
         for (const field of layout) {
           const value = values.get(field.name);
           const name = `${reference}.${field.name}`;
-          if (value === void 0) throw new Error(`Missing initializer field '${name}'.`);
-          if (field.array !== Array.isArray(value))
+          if (value === void 0) {
+            throw new Error(`Missing initializer field '${name}'.`);
+          }
+          if (field.array !== Array.isArray(value)) {
             throw new Error(`Field '${name}' requires ${field.array ? "an array" : "a scalar"}.`);
+          }
           const items = typeof value === "string" ? [value] : value;
-          if (items.length !== field.count)
+          if (items.length !== field.count) {
             throw new Error(
               `Field '${name}' requires ${field.count} value(s), received ${items.length}.`
             );
-          if (!this.host.canEmitBytes) continue;
+          }
+          if (!this.host.canEmitBytes) {
+            continue;
+          }
           for (const expression of items) {
             const number = this.host.operandResolver.getnum(expression);
             if (!Number.isSafeInteger(number) || number < 0 || number >= 2 ** (8 * field.width)) {
@@ -10345,8 +10567,9 @@ var init_data_struct_engine = __esm({
                 `Value '${expression}' for '${name}' does not fit an unsigned ${field.width * 8}-bit field.`
               );
             }
-            for (let byte = 0; byte < field.width; byte++)
+            for (let byte = 0; byte < field.width; byte++) {
               bytes.push(Math.floor(number / 2 ** (8 * byte)) & 255);
+            }
           }
         }
         if (this.host.canEmitBytes) {
@@ -10357,7 +10580,9 @@ var init_data_struct_engine = __esm({
             );
           }
           this.host.outputWriter.writeBytes(bytes);
-        } else this.host.outputWriter.step(definition.size);
+        } else {
+          this.host.outputWriter.step(definition.size);
+        }
         if (this.table) {
           this.table.next = index2 + 1;
           this.table.rows++;
@@ -10514,8 +10739,9 @@ var init_struct_engine = __esm({
         for (let index2 = 1; index2 < words.length; index2 += 2) {
           const option = words[index2].toLowerCase();
           if (!["align", "count", "firstindex"].includes(option) || seen.has(option) || words[index2 + 1] === void 0) {
-            if (words[1]?.toLowerCase() === "align")
+            if (words[1]?.toLowerCase() === "align") {
               throw new Error("endstruct align requires a single alignment parameter.");
+            }
             throw new Error("endstruct accepts [align value] [count value] [firstindex value].");
           }
           seen.add(option);
@@ -10525,15 +10751,21 @@ var init_struct_engine = __esm({
               option === "align" ? "Alignment must be at least 1." : `Invalid endstruct ${option}.`
             );
           }
-          if (option === "align") align = value;
-          else if (option === "count") count = value;
-          else first = value;
+          if (option === "align") {
+            align = value;
+          } else if (option === "count") {
+            count = value;
+          } else {
+            first = value;
+          }
         }
-        if (seen.has("firstindex") && count === void 0)
+        if (seen.has("firstindex") && count === void 0) {
           throw new Error("endstruct firstindex requires count.");
+        }
         if (count !== void 0) {
-          if (!Number.isSafeInteger(first + count))
+          if (!Number.isSafeInteger(first + count)) {
             throw new Error("Struct index range exceeds integer precision.");
+          }
           currentStruct.indexRange = { first, count };
         }
         let finalSize = currentStruct.offset;
@@ -10916,7 +11148,9 @@ var init_symbol_scope_service = __esm({
           return targetAddress;
         }
         if (isPositive) {
-          if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
+          if (!this.host.forwardLabels[depth]) {
+            this.host.forwardLabels[depth] = [];
+          }
           if (isMacroLocal && this.host.inMacroExpansion) {
             this.host.forwardLabels[depth].push({
               addr: targetAddress,
@@ -10926,7 +11160,9 @@ var init_symbol_scope_service = __esm({
             this.host.forwardLabels[depth].push({ addr: targetAddress });
           }
         } else {
-          if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
+          if (!this.host.backwardLabels[depth]) {
+            this.host.backwardLabels[depth] = [];
+          }
           if (isMacroLocal && this.host.inMacroExpansion) {
             this.host.backwardLabels[depth].push({
               addr: targetAddress,
@@ -10951,8 +11187,12 @@ var init_symbol_scope_service = __esm({
           }
           return targetAddress;
         }
-        if (!this.host.forwardLabels[0]) this.host.forwardLabels[0] = [];
-        if (!this.host.backwardLabels[0]) this.host.backwardLabels[0] = [];
+        if (!this.host.forwardLabels[0]) {
+          this.host.forwardLabels[0] = [];
+        }
+        if (!this.host.backwardLabels[0]) {
+          this.host.backwardLabels[0] = [];
+        }
         const entry = { addr: targetAddress, unit: this.objectFileKey() };
         this.host.forwardLabels[0].push(entry);
         this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
@@ -11201,8 +11441,9 @@ var init_symbol_scope_service = __esm({
        */
       resolveStructMember(compoundId) {
         const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
-        if (!firstId || !this.host.structs.has(firstId))
+        if (!firstId || !this.host.structs.has(firstId)) {
           throw new Error(`Struct not found: ${compoundId}`);
+        }
         let rest = compoundId.substring(firstId.length).trim();
         let base = 0;
         let currentStruct = this.host.structs.get(firstId);
@@ -11213,7 +11454,9 @@ var init_symbol_scope_service = __esm({
           if (rest.startsWith(".")) {
             rest = rest.substring(1).trim();
             const memberMatch = rest.match(/^([A-Z_a-z]\w*)/);
-            if (!memberMatch) throw new Error(`Invalid struct member: ${compoundId}`);
+            if (!memberMatch) {
+              throw new Error(`Invalid struct member: ${compoundId}`);
+            }
             const memberName = memberMatch[1];
             rest = rest.substring(memberName.length).trim();
             const memberOffset = currentStruct.labels.get(memberName);
@@ -11228,10 +11471,14 @@ var init_symbol_scope_service = __esm({
             }
           } else if (rest.startsWith("[")) {
             const bracketEnd = rest.indexOf("]");
-            if (bracketEnd === -1) throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+            if (bracketEnd === -1) {
+              throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+            }
             const indexStr = rest.substring(1, bracketEnd).trim();
             const index2 = Number.parseInt(indexStr, 10);
-            if (Number.isNaN(index2)) throw new Error(`Invalid struct index: ${indexStr}`);
+            if (Number.isNaN(index2)) {
+              throw new Error(`Invalid struct index: ${indexStr}`);
+            }
             rest = rest.substring(bracketEnd + 1).trim();
             base += index2 * currentStruct.size;
           } else {
@@ -12193,14 +12440,18 @@ var init_assembler = __esm({
         const parsed = command.parsed;
         if (command.keyword.toLowerCase() === "datastruct") {
           const args = splitInitializerList(command.words.slice(1).join(" "));
-          if (args.length !== 2) return;
+          if (args.length !== 2) {
+            return;
+          }
           const reference = args[0];
           const containerName = reference.replace(/\[[^\]]+]$/, "");
           if (!command.source.raw.trimStart().startsWith("[")) {
             this.collectExpressionReferences(parseExpressionNode(reference), fallbackSpan);
           } else {
             const index2 = reference.match(/\[([^\]]+)]$/)?.[1];
-            if (index2) this.collectExpressionReferences(parseExpressionNode(index2), fallbackSpan);
+            if (index2) {
+              this.collectExpressionReferences(parseExpressionNode(index2), fallbackSpan);
+            }
           }
           for (const [field, value] of parseStructInitializer(args[1])) {
             this.recordSymbolReference("label", field, { containerName });
@@ -12211,8 +12462,9 @@ var init_assembler = __esm({
           return;
         }
         if (command.keyword.toLowerCase() === "datastructs") {
-          if (command.words[1])
+          if (command.words[1]) {
             this.collectExpressionReferences(parseExpressionNode(command.words[1]), fallbackSpan);
+          }
           return;
         }
         this.collectExpressionReferences(parsed.assignment?.expression, fallbackSpan);
@@ -12357,7 +12609,9 @@ var init_assembler = __esm({
         const target = session.environment.getTarget(session.targetId);
         for (const setId of target?.directiveSets ?? []) {
           const set = session.environment.getDirectiveSet(setId);
-          if (!set) continue;
+          if (!set) {
+            continue;
+          }
           const pluginId = session.environment.getContributionOwner(setId);
           for (const directive3 of set.directives) {
             let handler;
@@ -12399,7 +12653,9 @@ var init_assembler = __esm({
         }
         for (const [keyword, handler] of registry.handlers) {
           registry.handlers.set(keyword, (words, raw, command) => {
-            if (session.runBeforeDirective(keyword, words, raw) === "handled") return;
+            if (session.runBeforeDirective(keyword, words, raw) === "handled") {
+              return;
+            }
             handler(words, raw, command);
           });
         }
@@ -12506,6 +12762,11 @@ var init_assembler = __esm({
           symbolScope
         };
       }
+      /**
+       * Resolve the target and instantiate per-session factories. Throws on invalid selection/options
+       * or factory failure. Factory construction is not a resource transaction: keep external resources
+       * in plugin activation disposables and session state cloneable.
+       */
       constructor(options) {
         if (!options?.environment) {
           throw new PluginError("Assembler construction requires a frozen plugin environment.", {
@@ -12627,12 +12888,16 @@ var init_assembler = __esm({
           resolveStructLabel: (input) => this.structEngine.resolveStructLabel(input),
           tryResolveLabel: (input, requireStatic) => {
             const loopValue = this.activeLoopVariables.get(input.trim());
-            if (loopValue !== void 0) return loopValue;
+            if (loopValue !== void 0) {
+              return loopValue;
+            }
             return this.symbolScope.tryGetLabelValue(input, requireStatic);
           },
           resolveLabel: (input, requireStatic) => {
             const loopValue = this.activeLoopVariables.get(input.trim());
-            if (loopValue !== void 0) return loopValue;
+            if (loopValue !== void 0) {
+              return loopValue;
+            }
             return this.symbolScope.getLabelValue(input, requireStatic);
           },
           evaluateMath: (input) => this.mathCore.math(input),
@@ -12847,7 +13112,9 @@ var init_assembler = __esm({
        * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
        */
       recordSourceWrite(logicalAddress, outputOffset) {
-        if (!this.collectSourceMetadata) return;
+        if (!this.collectSourceMetadata) {
+          return;
+        }
         const command = this.traceCommandStack.at(-1);
         const target = this.environment.getTarget(this.targetId);
         this.addressToLineMapping.includeByte(
@@ -12859,8 +13126,15 @@ var init_assembler = __esm({
           outputOffset
         );
       }
+      /**
+       * Run lifecycle disposal in reverse registration order, then dispose live state slots.
+       * Idempotent; attempts all cleanup and throws AggregateError for failures. The environment
+       * and file provider remain owned by the host. Do not use this session afterward.
+       */
       dispose() {
-        if (this.sessionDisposed) return;
+        if (this.sessionDisposed) {
+          return;
+        }
         this.sessionDisposed = true;
         const errors = [];
         for (const { record, instance } of [...this.activeLifecycles].reverse()) {
@@ -12960,7 +13234,9 @@ var init_assembler = __esm({
       resolveExpressionHostLabel(identifier) {
         const trimmed = identifier.trim();
         const loopValue = this.activeLoopVariables.get(trimmed);
-        if (loopValue !== void 0) return loopValue;
+        if (loopValue !== void 0) {
+          return loopValue;
+        }
         if (parseUnnamedLabelReference(trimmed)) {
           return this.symbolScope.getLabelValue(trimmed, this.requireStaticLabelLookup);
         }
@@ -13099,7 +13375,9 @@ var init_assembler = __esm({
       installExpressionFunctions(setIds) {
         for (const setId of setIds) {
           const set = this.environment.getExpressionSet(setId);
-          if (!set) continue;
+          if (!set) {
+            continue;
+          }
           const pluginId = this.environment.getContributionOwner(setId);
           for (const expressionFunction of set.functions) {
             const minimumArguments = expressionFunction.signature.minimumArguments ?? expressionFunction.signature.parameters.length;
@@ -13147,14 +13425,20 @@ var init_assembler = __esm({
         getCurrentAddress: () => this.currentTargetAddress,
         getCurrentBaseAddress: () => this.currentTargetBaseAddress,
         isDefined: (identifier) => {
-          if (this.defines.has(identifier)) return 1;
-          if (this.structs.has(identifier)) return 1;
+          if (this.defines.has(identifier)) {
+            return 1;
+          }
+          if (this.structs.has(identifier)) {
+            return 1;
+          }
           return this.symbolScope.hasLabelInScope(identifier) ? 1 : 0;
         },
         getExpressionObjectSize: (identifier, baseOnly) => this.getExpressionObjectSize(identifier, baseOnly),
         getExpressionStructMetadata: (identifier, property) => {
           const definition = this.structs.get(identifier);
-          if (!definition) throw new Error(`Unknown struct '${identifier}' for ${property}().`);
+          if (!definition) {
+            throw new Error(`Unknown struct '${identifier}' for ${property}().`);
+          }
           return getStructMetadata(definition, property);
         },
         getFileSize: (filename) => {
@@ -13801,8 +14085,8 @@ var init_assembler = __esm({
         return this.symbolScope.getLabelValue(renderExpressionNode(resolvedExpr), true);
       }
       /**
-       * Sets the paths to search for included files.
-       * @param {string[]} paths The paths to search for included files.
+       * Replace include search paths before assembly. Retains the array without copying.
+       * @param {string[]} paths Provider-specific search paths; Node resolves relative paths from cwd.
        */
       setIncludePaths(paths) {
         this.includePaths = paths;
@@ -14140,12 +14424,20 @@ var init_assembler = __esm({
               let unprocessedName = "";
               let braces = 1;
               while (index2 < input.length) {
-                if (input[index2] === "{") braces++;
-                if (input[index2] === "}") braces--;
-                if (braces === 0) break;
+                if (input[index2] === "{") {
+                  braces++;
+                }
+                if (input[index2] === "}") {
+                  braces--;
+                }
+                if (braces === 0) {
+                  break;
+                }
                 unprocessedName += input[index2++];
               }
-              if (braces !== 0) throw new Error("Error: Mismatched braces in define name.");
+              if (braces !== 0) {
+                throw new Error("Error: Mismatched braces in define name.");
+              }
               index2++;
               defineName = this.resolvedefines(unprocessedName);
             } else {
@@ -14474,8 +14766,9 @@ var init_assembler = __esm({
         });
       }
       /**
-       * Handles assemble program.
-       * @param {ProgramModel} program The program.
+       * Run definition collection, layout resolution, and byte emission synchronously in that order.
+       * Throws at the first unrecovered failure; partial state/output is not a successful binary.
+       * @param {ProgramModel} program Parsed source model produced for this target's syntax.
        */
       assembleProgram(program) {
         this.runStage("collectDefinitions", program);
@@ -14483,11 +14776,12 @@ var init_assembler = __esm({
         this.runStage("emitProgram", program);
       }
       /**
-       * Handles assemble source.
-       * @param {string} source The source.
-       * @param {string} [sourceFile] The source file.
-       * @param {number} [startLine] The start line.
-       * @returns {ProgramModel} The result.
+       * Parse and run all three assembly stages; includes are read through the configured provider.
+       * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
+       * @param {string} source Assembly source text, not a filename.
+       * @param {string} [sourceFile] Source identity and include-resolution base; defaults to currentFile.
+       * @param {number} [startLine] Zero-based line offset; defaults to zero.
+       * @returns {ProgramModel} Parsed model used for this build.
        */
       assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
         const program = this.buildProgramModel(source, sourceFile, startLine);
@@ -14529,8 +14823,8 @@ var init_assembler = __esm({
         });
       }
       /**
-       * Returns the compiled binary output.
-       * @returns {Uint8Array} The compiled binary output.
+       * Materialize the target format's current bytes without assembling or finalizing again.
+       * @returns {Uint8Array} Output whose ownership depends on the formatter; copy before retaining or mutating independently.
        */
       getBinaryOutput = () => {
         return this.pluginOutputFormat.getOutput({
@@ -14851,7 +15145,9 @@ var init_debug_map = __esm({
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
     DEBUG_MAP_SCHEMA_VERSION = 1;
     canonicalValue = (value) => {
-      if (Array.isArray(value)) return value.map(canonicalValue);
+      if (Array.isArray(value)) {
+        return value.map(canonicalValue);
+      }
       if (value !== null && typeof value === "object") {
         return Object.fromEntries(
           Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key, entry]) => [key, canonicalValue(entry)])
@@ -16156,8 +16452,9 @@ function buildCpu65816Catalog() {
       ...specification2.minimumSize === specification2.maximumSize ? { size: specification2.minimumSize } : {}
     };
     const descriptor3 = grouped.get(specification2.mnemonic);
-    if (descriptor3) descriptor3.modes.push(addressingMode);
-    else {
+    if (descriptor3) {
+      descriptor3.modes.push(addressingMode);
+    } else {
       grouped.set(specification2.mnemonic, {
         mnemonic: specification2.mnemonic,
         summary: specification2.summary,
@@ -16330,8 +16627,12 @@ var init_spec = __esm({
       "BVS"
     ]);
     flowFor = (mnemonic, addressingMode) => {
-      if (conditionalBranches.has(mnemonic)) return { kind: "conditionalBranch", fallthrough: true };
-      if (mnemonic === "BRA" || mnemonic === "BRL") return { kind: "jump", fallthrough: false };
+      if (conditionalBranches.has(mnemonic)) {
+        return { kind: "conditionalBranch", fallthrough: true };
+      }
+      if (mnemonic === "BRA" || mnemonic === "BRL") {
+        return { kind: "jump", fallthrough: false };
+      }
       if (mnemonic === "JMP" || mnemonic === "JML") {
         return {
           kind: "jump",
@@ -16352,8 +16653,12 @@ var init_spec = __esm({
       if (mnemonic === "BRK" || mnemonic === "COP") {
         return { kind: "interrupt", fallthrough: false };
       }
-      if (mnemonic === "WAI") return { kind: "wait", fallthrough: false };
-      if (mnemonic === "STP") return { kind: "stop", fallthrough: false };
+      if (mnemonic === "WAI") {
+        return { kind: "wait", fallthrough: false };
+      }
+      if (mnemonic === "STP") {
+        return { kind: "stop", fallthrough: false };
+      }
       return { kind: "fallthrough", fallthrough: true };
     };
     effects = {
@@ -16406,16 +16711,23 @@ var init_spec = __esm({
       ]
     };
     entries = opcodeRows.flatMap((row) => row.split(" "));
-    if (entries.length !== 256) throw new Error(`65816 opcode table has ${entries.length} entries.`);
+    if (entries.length !== 256) {
+      throw new Error(`65816 opcode table has ${entries.length} entries.`);
+    }
     cpu65816Specifications = Object.freeze(
       entries.map((entry, opcode) => {
         const [mnemonic, modeKeyText] = entry.split(":");
         const modeKey = modeKeyText;
         const definition = cpu65816Modes[modeKey];
-        if (!mnemonic || !definition) throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+        if (!mnemonic || !definition) {
+          throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+        }
         let operandStatusEffect;
-        if (mnemonic === "REP") operandStatusEffect = "clearBits";
-        else if (mnemonic === "SEP") operandStatusEffect = "setBits";
+        if (mnemonic === "REP") {
+          operandStatusEffect = "clearBits";
+        } else if (mnemonic === "SEP") {
+          operandStatusEffect = "setBits";
+        }
         return Object.freeze({
           id: `snes.65816.${opcode.toString(16).padStart(2, "0")}`,
           architecture: "snes.65816",
@@ -16443,21 +16755,33 @@ var init_decoder = __esm({
     "use strict";
     init_spec();
     flagValue = (value) => {
-      if (value === true || value === 1) return 1;
-      if (value === false || value === 0) return 0;
+      if (value === true || value === 1) {
+        return 1;
+      }
+      if (value === false || value === 0) {
+        return 0;
+      }
       return "unknown";
     };
     resolvedWidthFlag = (state, flag) => {
       const emulation = flagValue(state.e);
-      if (emulation === 1) return 1;
+      if (emulation === 1) {
+        return 1;
+      }
       const width = flagValue(state[flag]);
-      if (width === 1) return 1;
-      if (width === 0 && emulation === 0) return 0;
+      if (width === 1) {
+        return 1;
+      }
+      if (width === 0 && emulation === 0) {
+        return 0;
+      }
       return "unknown";
     };
     readLittleEndian = (bytes, offset, width) => {
       let value = 0;
-      for (let index2 = 0; index2 < width; index2++) value |= (bytes[offset + index2] ?? 0) << index2 * 8;
+      for (let index2 = 0; index2 < width; index2++) {
+        value |= (bytes[offset + index2] ?? 0) << index2 * 8;
+      }
       return value >>> 0;
     };
     signed = (value, width) => {
@@ -16548,10 +16872,18 @@ var init_decoder = __esm({
     };
     targetFor = (specification2, operands, state, logicalAddress) => {
       const operand = operands[0];
-      if (!operand) return void 0;
-      if (operand.targetAddress !== void 0) return operand.targetAddress;
-      if (operand.value === void 0) return void 0;
-      if (specification2.mode === "absoluteLong") return operand.value;
+      if (!operand) {
+        return void 0;
+      }
+      if (operand.targetAddress !== void 0) {
+        return operand.targetAddress;
+      }
+      if (operand.value === void 0) {
+        return void 0;
+      }
+      if (specification2.mode === "absoluteLong") {
+        return operand.value;
+      }
       if (specification2.mode === "absolute") {
         const bank = (state.programBank ?? logicalAddress >>> 16) & 255;
         return bank << 16 | operand.value;
@@ -16566,8 +16898,11 @@ var init_decoder = __esm({
       if (isBranch || isCall || isJump) {
         const target = targetFor(specification2, operands, state, logicalAddress);
         let kind = "jump";
-        if (isBranch) kind = "branch";
-        else if (isCall) kind = "call";
+        if (isBranch) {
+          kind = "branch";
+        } else if (isCall) {
+          kind = "call";
+        }
         return [
           {
             kind,
@@ -16589,7 +16924,9 @@ var init_decoder = __esm({
         ];
       }
       const memoryMode = mode3.startsWith("direct") || mode3.startsWith("absolute") || mode3.startsWith("stackRelative");
-      if (!memoryMode || operands[0]?.value === void 0) return [];
+      if (!memoryMode || operands[0]?.value === void 0) {
+        return [];
+      }
       if (mode3.startsWith("direct")) {
         return [
           {
@@ -16694,7 +17031,9 @@ var init_decoder = __esm({
         const availableSizes = sizes.filter((size) => size <= availableBytes);
         const alternatives = availableSizes.map((size) => {
           const bytes = context.source.readBytes(context.offset, size);
-          if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+          if (!bytes) {
+            throw new Error("Decoder byte source violated its bounds contract.");
+          }
           return buildInstruction(specification2, bytes, context, state);
         });
         if (sizes.length === 2) {
@@ -16727,8 +17066,9 @@ function buildSpc700Catalog() {
       size: specification2.minimumSize
     };
     const descriptor3 = grouped.get(specification2.mnemonic);
-    if (descriptor3) descriptor3.modes.push(addressingMode);
-    else {
+    if (descriptor3) {
+      descriptor3.modes.push(addressingMode);
+    } else {
       grouped.set(specification2.mnemonic, {
         mnemonic: specification2.mnemonic,
         summary: specification2.summary,
@@ -16914,7 +17254,9 @@ var init_spc700_spec = __esm({
       if (spc700ConditionalBranches.has(mnemonic) || mnemonic.startsWith("BBS") || mnemonic.startsWith("BBC")) {
         return { kind: "conditionalBranch", fallthrough: true };
       }
-      if (mnemonic === "BRA") return { kind: "jump", fallthrough: false };
+      if (mnemonic === "BRA") {
+        return { kind: "jump", fallthrough: false };
+      }
       if (mnemonic === "JMP") {
         return {
           kind: "jump",
@@ -16932,9 +17274,15 @@ var init_spc700_spec = __esm({
       if (mnemonic === "RET" || mnemonic === "RETI") {
         return { kind: "return", fallthrough: false };
       }
-      if (mnemonic === "BRK") return { kind: "interrupt", fallthrough: false };
-      if (mnemonic === "SLEEP") return { kind: "wait", fallthrough: false };
-      if (mnemonic === "STOP") return { kind: "stop", fallthrough: false };
+      if (mnemonic === "BRK") {
+        return { kind: "interrupt", fallthrough: false };
+      }
+      if (mnemonic === "SLEEP") {
+        return { kind: "wait", fallthrough: false };
+      }
+      if (mnemonic === "STOP") {
+        return { kind: "stop", fallthrough: false };
+      }
       return { kind: "fallthrough", fallthrough: true };
     };
     effects2 = {
@@ -16955,12 +17303,16 @@ var init_spc700_spec = __esm({
       ]
     };
     entries2 = opcodeRows2.flatMap((row) => row.split(" "));
-    if (entries2.length !== 256) throw new Error(`SPC700 opcode table has ${entries2.length} entries.`);
+    if (entries2.length !== 256) {
+      throw new Error(`SPC700 opcode table has ${entries2.length} entries.`);
+    }
     spc700Specifications = Object.freeze(
       entries2.map((entry, opcode) => {
         const [mnemonic, modeKeyText] = entry.split(":");
         const definition = spc700Modes[modeKeyText];
-        if (!mnemonic || !definition) throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
+        if (!mnemonic || !definition) {
+          throw new Error(`Invalid SPC700 opcode entry '${entry}'.`);
+        }
         const summaryKey = mnemonic.replace(/[0-7]$/, "0");
         return Object.freeze({
           id: `snes.spc700.${opcode.toString(16).padStart(2, "0")}`,
@@ -16992,8 +17344,9 @@ function buildSuperFxCatalog() {
     };
     const existing = grouped.get(entry.mnemonic);
     if (existing) {
-      if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode3)))
+      if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode3))) {
         existing.modes.push(mode3);
+      }
     } else {
       grouped.set(entry.mnemonic, {
         mnemonic: entry.mnemonic,
@@ -17040,7 +17393,9 @@ function buildSuperFxCatalog() {
       ]
     }
   ];
-  for (const entry of conveniences) grouped.set(entry.mnemonic, entry);
+  for (const entry of conveniences) {
+    grouped.set(entry.mnemonic, entry);
+  }
   return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
@@ -17101,40 +17456,100 @@ var init_superfx_spec = __esm({
       ...writesDestination ? { writesDestination: true } : {}
     });
     baseDefinition = (opcode) => {
-      if (opcode === 0) return implied("STOP");
-      if (opcode === 1) return implied("NOP");
-      if (opcode === 2) return implied("CACHE");
-      if (opcode === 3) return implied("LSR", true);
-      if (opcode === 4) return implied("ROL", true);
+      if (opcode === 0) {
+        return implied("STOP");
+      }
+      if (opcode === 1) {
+        return implied("NOP");
+      }
+      if (opcode === 2) {
+        return implied("CACHE");
+      }
+      if (opcode === 3) {
+        return implied("LSR", true);
+      }
+      if (opcode === 4) {
+        return implied("ROL", true);
+      }
       const branches = ["BRA", "BGE", "BLT", "BNE", "BEQ", "BPL", "BMI", "BCC", "BCS", "BVC", "BVS"];
       if (opcode >= 5 && opcode <= 15) {
         return { mnemonic: branches[opcode - 5], encoding: "relative", size: 2 };
       }
-      if (opcode >= 16 && opcode <= 31) return register("TO", opcode & 15);
-      if (opcode >= 32 && opcode <= 47) return register("WITH", opcode & 15);
-      if (opcode >= 48 && opcode <= 59) return registerIndirect("STW", opcode & 15);
-      if (opcode === 60) return implied("LOOP");
-      if (opcode === 61) return implied("ALT1");
-      if (opcode === 62) return implied("ALT2");
-      if (opcode === 63) return implied("ALT3");
-      if (opcode >= 64 && opcode <= 75) return registerIndirect("LDW", opcode & 15, true);
-      if (opcode === 76) return implied("PLOT");
-      if (opcode === 77) return implied("SWAP", true);
-      if (opcode === 78) return implied("COLOR");
-      if (opcode === 79) return implied("NOT", true);
-      if (opcode >= 80 && opcode <= 95) return register("ADD", opcode & 15, true);
-      if (opcode >= 96 && opcode <= 111) return register("SUB", opcode & 15, true);
-      if (opcode === 112) return implied("MERGE", true);
-      if (opcode >= 113 && opcode <= 127) return register("AND", opcode & 15, true);
-      if (opcode >= 128 && opcode <= 143) return register("MULT", opcode & 15, true);
-      if (opcode === 144) return implied("SBK");
-      if (opcode >= 145 && opcode <= 148) return nibble("LINK", opcode & 15);
-      if (opcode === 149) return implied("SEX", true);
-      if (opcode === 150) return implied("ASR", true);
-      if (opcode === 151) return implied("ROR", true);
-      if (opcode >= 152 && opcode <= 157) return register("JMP", opcode & 15);
-      if (opcode === 158) return implied("LOB", true);
-      if (opcode === 159) return implied("FMULT", true);
+      if (opcode >= 16 && opcode <= 31) {
+        return register("TO", opcode & 15);
+      }
+      if (opcode >= 32 && opcode <= 47) {
+        return register("WITH", opcode & 15);
+      }
+      if (opcode >= 48 && opcode <= 59) {
+        return registerIndirect("STW", opcode & 15);
+      }
+      if (opcode === 60) {
+        return implied("LOOP");
+      }
+      if (opcode === 61) {
+        return implied("ALT1");
+      }
+      if (opcode === 62) {
+        return implied("ALT2");
+      }
+      if (opcode === 63) {
+        return implied("ALT3");
+      }
+      if (opcode >= 64 && opcode <= 75) {
+        return registerIndirect("LDW", opcode & 15, true);
+      }
+      if (opcode === 76) {
+        return implied("PLOT");
+      }
+      if (opcode === 77) {
+        return implied("SWAP", true);
+      }
+      if (opcode === 78) {
+        return implied("COLOR");
+      }
+      if (opcode === 79) {
+        return implied("NOT", true);
+      }
+      if (opcode >= 80 && opcode <= 95) {
+        return register("ADD", opcode & 15, true);
+      }
+      if (opcode >= 96 && opcode <= 111) {
+        return register("SUB", opcode & 15, true);
+      }
+      if (opcode === 112) {
+        return implied("MERGE", true);
+      }
+      if (opcode >= 113 && opcode <= 127) {
+        return register("AND", opcode & 15, true);
+      }
+      if (opcode >= 128 && opcode <= 143) {
+        return register("MULT", opcode & 15, true);
+      }
+      if (opcode === 144) {
+        return implied("SBK");
+      }
+      if (opcode >= 145 && opcode <= 148) {
+        return nibble("LINK", opcode & 15);
+      }
+      if (opcode === 149) {
+        return implied("SEX", true);
+      }
+      if (opcode === 150) {
+        return implied("ASR", true);
+      }
+      if (opcode === 151) {
+        return implied("ROR", true);
+      }
+      if (opcode >= 152 && opcode <= 157) {
+        return register("JMP", opcode & 15);
+      }
+      if (opcode === 158) {
+        return implied("LOB", true);
+      }
+      if (opcode === 159) {
+        return implied("FMULT", true);
+      }
       if (opcode >= 160 && opcode <= 175) {
         return {
           mnemonic: "IBT",
@@ -17143,13 +17558,27 @@ var init_superfx_spec = __esm({
           register: opcode & 15
         };
       }
-      if (opcode >= 176 && opcode <= 191) return register("FROM", opcode & 15);
-      if (opcode === 192) return implied("HIB", true);
-      if (opcode >= 193 && opcode <= 207) return register("OR", opcode & 15, true);
-      if (opcode >= 208 && opcode <= 222) return register("INC", opcode & 15);
-      if (opcode === 223) return implied("GETC");
-      if (opcode >= 224 && opcode <= 238) return register("DEC", opcode & 15);
-      if (opcode === 239) return implied("GETB", true);
+      if (opcode >= 176 && opcode <= 191) {
+        return register("FROM", opcode & 15);
+      }
+      if (opcode === 192) {
+        return implied("HIB", true);
+      }
+      if (opcode >= 193 && opcode <= 207) {
+        return register("OR", opcode & 15, true);
+      }
+      if (opcode >= 208 && opcode <= 222) {
+        return register("INC", opcode & 15);
+      }
+      if (opcode === 223) {
+        return implied("GETC");
+      }
+      if (opcode >= 224 && opcode <= 238) {
+        return register("DEC", opcode & 15);
+      }
+      if (opcode === 239) {
+        return implied("GETB", true);
+      }
       return {
         mnemonic: "IWT",
         encoding: "registerImmediate16",
@@ -17158,20 +17587,44 @@ var init_superfx_spec = __esm({
       };
     };
     altDefinition = (alt, opcode) => {
-      if (alt === 0) return baseDefinition(opcode);
+      if (alt === 0) {
+        return baseDefinition(opcode);
+      }
       const low = opcode & 15;
       if (alt === 1) {
-        if (opcode >= 48 && opcode <= 59) return registerIndirect("STB", low);
-        if (opcode >= 64 && opcode <= 75) return registerIndirect("LDB", low, true);
-        if (opcode === 76) return implied("RPIX", true);
-        if (opcode === 78) return implied("CMODE");
-        if (opcode >= 80 && opcode <= 95) return register("ADC", low, true);
-        if (opcode >= 96 && opcode <= 111) return register("SBC", low, true);
-        if (opcode >= 113 && opcode <= 127) return register("BIC", low, true);
-        if (opcode >= 128 && opcode <= 143) return register("UMULT", low, true);
-        if (opcode === 150) return implied("DIV2", true);
-        if (opcode >= 152 && opcode <= 157) return register("LJMP", low);
-        if (opcode === 159) return implied("LMULT", true);
+        if (opcode >= 48 && opcode <= 59) {
+          return registerIndirect("STB", low);
+        }
+        if (opcode >= 64 && opcode <= 75) {
+          return registerIndirect("LDB", low, true);
+        }
+        if (opcode === 76) {
+          return implied("RPIX", true);
+        }
+        if (opcode === 78) {
+          return implied("CMODE");
+        }
+        if (opcode >= 80 && opcode <= 95) {
+          return register("ADC", low, true);
+        }
+        if (opcode >= 96 && opcode <= 111) {
+          return register("SBC", low, true);
+        }
+        if (opcode >= 113 && opcode <= 127) {
+          return register("BIC", low, true);
+        }
+        if (opcode >= 128 && opcode <= 143) {
+          return register("UMULT", low, true);
+        }
+        if (opcode === 150) {
+          return implied("DIV2", true);
+        }
+        if (opcode >= 152 && opcode <= 157) {
+          return register("LJMP", low);
+        }
+        if (opcode === 159) {
+          return implied("LMULT", true);
+        }
         if (opcode >= 160 && opcode <= 175) {
           return {
             mnemonic: "LMS",
@@ -17180,8 +17633,12 @@ var init_superfx_spec = __esm({
             register: low
           };
         }
-        if (opcode >= 193 && opcode <= 207) return register("XOR", low, true);
-        if (opcode === 239) return implied("GETBH", true);
+        if (opcode >= 193 && opcode <= 207) {
+          return register("XOR", low, true);
+        }
+        if (opcode === 239) {
+          return implied("GETBH", true);
+        }
         if (opcode >= 240) {
           return {
             mnemonic: "LM",
@@ -17192,10 +17649,18 @@ var init_superfx_spec = __esm({
         }
       }
       if (alt === 2) {
-        if (opcode >= 80 && opcode <= 95) return nibble("ADD", low, true);
-        if (opcode >= 96 && opcode <= 111) return nibble("SUB", low, true);
-        if (opcode >= 113 && opcode <= 127) return nibble("AND", low, true);
-        if (opcode >= 128 && opcode <= 143) return nibble("MULT", low, true);
+        if (opcode >= 80 && opcode <= 95) {
+          return nibble("ADD", low, true);
+        }
+        if (opcode >= 96 && opcode <= 111) {
+          return nibble("SUB", low, true);
+        }
+        if (opcode >= 113 && opcode <= 127) {
+          return nibble("AND", low, true);
+        }
+        if (opcode >= 128 && opcode <= 143) {
+          return nibble("MULT", low, true);
+        }
         if (opcode >= 160 && opcode <= 175) {
           return {
             mnemonic: "SMS",
@@ -17204,9 +17669,15 @@ var init_superfx_spec = __esm({
             register: low
           };
         }
-        if (opcode >= 193 && opcode <= 207) return nibble("OR", low, true);
-        if (opcode === 223) return implied("RAMB");
-        if (opcode === 239) return implied("GETBL", true);
+        if (opcode >= 193 && opcode <= 207) {
+          return nibble("OR", low, true);
+        }
+        if (opcode === 223) {
+          return implied("RAMB");
+        }
+        if (opcode === 239) {
+          return implied("GETBL", true);
+        }
         if (opcode >= 240) {
           return {
             mnemonic: "SM",
@@ -17217,24 +17688,46 @@ var init_superfx_spec = __esm({
         }
       }
       if (alt === 3) {
-        if (opcode >= 80 && opcode <= 95) return nibble("ADC", low, true);
-        if (opcode >= 96 && opcode <= 111) return register("CMP", low);
-        if (opcode >= 113 && opcode <= 127) return nibble("BIC", low, true);
-        if (opcode >= 128 && opcode <= 143) return nibble("UMULT", low, true);
-        if (opcode >= 193 && opcode <= 207) return nibble("XOR", low, true);
-        if (opcode === 223) return implied("ROMB");
-        if (opcode === 239) return implied("GETBS", true);
+        if (opcode >= 80 && opcode <= 95) {
+          return nibble("ADC", low, true);
+        }
+        if (opcode >= 96 && opcode <= 111) {
+          return register("CMP", low);
+        }
+        if (opcode >= 113 && opcode <= 127) {
+          return nibble("BIC", low, true);
+        }
+        if (opcode >= 128 && opcode <= 143) {
+          return nibble("UMULT", low, true);
+        }
+        if (opcode >= 193 && opcode <= 207) {
+          return nibble("XOR", low, true);
+        }
+        if (opcode === 223) {
+          return implied("ROMB");
+        }
+        if (opcode === 239) {
+          return implied("GETBS", true);
+        }
       }
       return baseDefinition(opcode);
     };
     flowFor3 = (definition, opcode) => {
-      if (definition.mnemonic === "STOP") return { kind: "stop", fallthrough: false };
-      if (definition.mnemonic === "BRA") return { kind: "jump", fallthrough: false };
-      if (opcode >= 6 && opcode <= 15) return { kind: "conditionalBranch", fallthrough: true };
-      if (definition.mnemonic === "LOOP")
+      if (definition.mnemonic === "STOP") {
+        return { kind: "stop", fallthrough: false };
+      }
+      if (definition.mnemonic === "BRA") {
+        return { kind: "jump", fallthrough: false };
+      }
+      if (opcode >= 6 && opcode <= 15) {
+        return { kind: "conditionalBranch", fallthrough: true };
+      }
+      if (definition.mnemonic === "LOOP") {
         return { kind: "conditionalBranch", fallthrough: true, indirect: true };
-      if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP")
+      }
+      if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP") {
         return { kind: "jump", fallthrough: false, indirect: true };
+      }
       return { kind: "fallthrough", fallthrough: true };
     };
     effectsFor2 = (definition) => {
@@ -17334,8 +17827,12 @@ var init_superfx_spec = __esm({
     ]);
     fusedFlow = (destinationRegister) => destinationRegister === 15 ? { kind: "jump", fallthrough: false, indirect: true } : { kind: "fallthrough", fallthrough: true };
     fusedSyntax = (mode3) => {
-      if (mode3 === "registerRegister") return "Rn,Rm";
-      if (mode3 === "registerRegisterIndirect") return "Rn,(Rm)";
+      if (mode3 === "registerRegister") {
+        return "Rn,Rm";
+      }
+      if (mode3 === "registerRegisterIndirect") {
+        return "Rn,(Rm)";
+      }
       return "(Rn),Rm";
     };
     fused = (mnemonic, opcode, mode3, destinationRegister, sourceRegister, pointerRegister) => Object.freeze({
@@ -18070,7 +18567,9 @@ var init__ = __esm({
         if (["STX", "STY", "STZ"].includes(opcode)) {
           return this.handleStoreOperations(opcode, operand, len, explicitlen);
         }
-        if (this.handleBranchInstructions(opcode, operand)) return true;
+        if (this.handleBranchInstructions(opcode, operand)) {
+          return true;
+        }
         let num = 0;
         if (operand) {
           num = this.assembler.operandResolver.getnum(operand);
@@ -19085,8 +19584,11 @@ var init__ = __esm({
               return { mode: currentOpcode, address: resolvedAddress & 65535 };
             }
             let mode4 = currentOpcode;
-            if (currentOpcode === "JMP") mode4 = "JML";
-            else if (currentOpcode === "JSR") mode4 = "JSL";
+            if (currentOpcode === "JMP") {
+              mode4 = "JML";
+            } else if (currentOpcode === "JSR") {
+              mode4 = "JSL";
+            }
             return { mode: mode4, address: resolvedAddress };
           }
           return { mode: currentOpcode, address: resolvedAddress };
@@ -19606,7 +20108,9 @@ var init_spc700_decoder = __esm({
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width) => {
       let value = 0;
-      for (let index2 = 0; index2 < width; index2++) value |= (bytes[offset + index2] ?? 0) << index2 * 8;
+      for (let index2 = 0; index2 < width; index2++) {
+        value |= (bytes[offset + index2] ?? 0) << index2 * 8;
+      }
       return value >>> 0;
     };
     signedByte = (value) => value & 128 ? value - 256 : value;
@@ -19652,7 +20156,9 @@ var init_spc700_decoder = __esm({
       const byte = bytes[1] ?? 0;
       const word2 = readLittleEndian2(bytes, 1, 2);
       const fixed = fixedRegisters[specification2.mode];
-      if (fixed) return fixed.map(register2);
+      if (fixed) {
+        return fixed.map(register2);
+      }
       switch (specification2.mode) {
         case "implied":
           return [];
@@ -19789,8 +20295,12 @@ var init_spc700_decoder = __esm({
       }
       for (let index2 = 0; index2 < operands.length; index2++) {
         const operand = operands[index2];
-        if (operand.kind !== "address" || operand.value === void 0) continue;
-        if (references.some((reference) => reference.operandIndex === index2)) continue;
+        if (operand.kind !== "address" || operand.value === void 0) {
+          continue;
+        }
+        if (references.some((reference) => reference.operandIndex === index2)) {
+          continue;
+        }
         const isDirect = operand.width === 1;
         let resolved = operand.value;
         if (isDirect) {
@@ -19858,7 +20368,9 @@ var init_spc700_decoder = __esm({
           };
         }
         const bytes = context.source.readBytes(context.offset, size);
-        if (!bytes) throw new Error("Decoder byte source violated its bounds contract.");
+        if (!bytes) {
+          throw new Error("Decoder byte source violated its bounds contract.");
+        }
         return { kind: "instruction", instruction: buildInstruction2(specification2, bytes, context) };
       }
     };
@@ -19877,8 +20389,12 @@ var init_split_operands = __esm({
       let level = 0;
       let current = "";
       for (const character of text) {
-        if (character === "(") level++;
-        if (character === ")") level--;
+        if (character === "(") {
+          level++;
+        }
+        if (character === ")") {
+          level--;
+        }
         if (character === "," && level === 0) {
           operands.push(current.trim());
           current = "";
@@ -19886,7 +20402,9 @@ var init_split_operands = __esm({
           current += character;
         }
       }
-      if (current.trim()) operands.push(current.trim());
+      if (current.trim()) {
+        operands.push(current.trim());
+      }
       return operands;
     };
   }
@@ -21386,7 +21904,9 @@ var init_spc700 = __esm({
         if (key && hasOwn(memoryMoves, key)) {
           const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
           const match = /\$([^+]+)/.exec(operandWithAddr);
-          if (!match) return false;
+          if (!match) {
+            return false;
+          }
           const val = parseInt(match[1], 16);
           const mode3 = memoryMoves[key];
           const inferredLength = getAddressSize(`$${match[1]}`);
@@ -21958,9 +22478,13 @@ var init_superfx_decoder = __esm({
           const bank = state.programBank === "unknown" || state.programBank === void 0 ? logicalAddress >>> 16 : state.programBank;
           return (bank & 255) << 16 | target;
         }
-        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") return "indirect";
+        if (specification2.mnemonic === "LM" || specification2.mnemonic === "LMS") {
+          return "indirect";
+        }
       }
-      if (specification2.writesDestination && state.destinationRegister === 15) return "indirect";
+      if (specification2.writesDestination && state.destinationRegister === 15) {
+        return "indirect";
+      }
       return void 0;
     };
     controlsFor = (specification2, operands, state, logicalAddress) => {
@@ -22110,7 +22634,9 @@ var init_superfx_decoder = __esm({
           const fused2 = matchFused(context);
           if (fused2) {
             const bytes2 = context.source.readBytes(context.offset, fused2.minimumSize);
-            if (!bytes2) return truncated(context, fused2.minimumSize);
+            if (!bytes2) {
+              return truncated(context, fused2.minimumSize);
+            }
             return { kind: "instruction", instruction: buildFusedInstruction(fused2, bytes2, context) };
           }
         }
@@ -22123,7 +22649,9 @@ var init_superfx_decoder = __esm({
             if (effective.alteredByAlt) {
               const required = effective.minimumSize + 1;
               const bytes3 = context.source.readBytes(context.offset, required);
-              if (!bytes3) return truncated(context, required);
+              if (!bytes3) {
+                return truncated(context, required);
+              }
               return {
                 kind: "instruction",
                 instruction: buildInstruction3(effective, bytes3, context, { ...state, alt: prefix }, 1)
@@ -22169,7 +22697,9 @@ var init_superfx_decoder = __esm({
         const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
         const specification2 = superFxOpcodeMatrix[alt][opcode];
         const bytes = context.source.readBytes(context.offset, specification2.minimumSize);
-        if (!bytes) return truncated(context, specification2.minimumSize);
+        if (!bytes) {
+          return truncated(context, specification2.minimumSize);
+        }
         return {
           kind: "instruction",
           instruction: buildInstruction3(specification2, bytes, context, state, 0)
@@ -23234,16 +23764,26 @@ function handleCheck(state, words) {
     throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
   }
   const mode3 = words[2].toLowerCase();
-  if (mode3 === "off") state.bankCrossMode = "off";
-  else if (mode3 === "half") state.bankCrossMode = "half";
-  else if (mode3 === "full" || mode3 === "on") state.bankCrossMode = "full";
-  else throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+  if (mode3 === "off") {
+    state.bankCrossMode = "off";
+  } else if (mode3 === "half") {
+    state.bankCrossMode = "half";
+  } else if (mode3 === "full" || mode3 === "on") {
+    state.bankCrossMode = "full";
+  } else {
+    throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+  }
 }
 function handleOptimize(state, words) {
-  if (words.length < 3 || words[1].toLowerCase() !== "dp") return;
+  if (words.length < 3 || words[1].toLowerCase() !== "dp") {
+    return;
+  }
   const mode3 = words[2].toLowerCase();
-  if (mode3 === "none") state.optimizeDirectPage = false;
-  else if (mode3 === "ram" || mode3 === "always") state.optimizeDirectPage = true;
+  if (mode3 === "none") {
+    state.optimizeDirectPage = false;
+  } else if (mode3 === "ram" || mode3 === "always") {
+    state.optimizeDirectPage = true;
+  }
 }
 function handleStartpos(session, state, words) {
   if (!state.inSpcBlock || !state.spcBlock) {
@@ -23306,9 +23846,15 @@ var init_spc_runtime = __esm({
        * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
        */
       handleSpcblock(words) {
-        if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
-        if (words.length > 4) throw new Error("spcblock has too many arguments.");
-        if (this.state.inSpcBlock) throw new Error("Nested spcblock directives are not supported.");
+        if (words.length < 2) {
+          throw new Error("spcblock requires at least a destination address.");
+        }
+        if (words.length > 4) {
+          throw new Error("spcblock has too many arguments.");
+        }
+        if (this.state.inSpcBlock) {
+          throw new Error("Nested spcblock directives are not supported.");
+        }
         const destination = this.session.operandResolver.getnum(this.session.resolvedefines(words[1]));
         if ((destination & ~65535) !== 0) {
           throw new Error(`spcblock destination must be 16-bit, got: ${words[1]}`);
@@ -23316,10 +23862,13 @@ var init_spc_runtime = __esm({
         let type = "nspc";
         if (words.length === 3) {
           const kind = words[2].toLowerCase();
-          if (kind === "nspc") type = "nspc";
-          else if (kind === "custom") {
+          if (kind === "nspc") {
+            type = "nspc";
+          } else if (kind === "custom") {
             throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-          } else throw new Error(`Unknown spcblock type: ${words[2]}`);
+          } else {
+            throw new Error(`Unknown spcblock type: ${words[2]}`);
+          }
         } else if (words.length === 4) {
           if (words[2].toLowerCase() !== "custom") {
             throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
@@ -23368,7 +23917,9 @@ var init_spc_runtime = __esm({
         }
         if (this.session.canFinalize) {
           const sizeOffset = this.session.outputWriter.toOutputOffset(block.sizeAddress & 16777215);
-          if (sizeOffset < 0) throw new Error("spcblock size address does not map to output.");
+          if (sizeOffset < 0) {
+            throw new Error("spcblock size address does not map to output.");
+          }
           const blockSize = this.session.currentTargetAddress - block.destination & 65535;
           this.session.writeOutputBytes(sizeOffset, blockSize & 255, 1);
           this.session.writeOutputBytes(sizeOffset + 1, blockSize >> 8 & 255, 1);
@@ -23489,7 +24040,9 @@ var init_address_space = __esm({
        * @returns {number} The output offset.
        */
       toOutputOffset(address3, context) {
-        if (address3 < 0 || address3 > 16777215) return -1;
+        if (address3 < 0 || address3 > 16777215) {
+          return -1;
+        }
         if (context.mapper === "lorom") {
           if ((address3 & 16646144) === 8257536 || (address3 & 4227072) === 0 || (address3 & 7372800) === 7340032) {
             return -1;
@@ -23535,7 +24088,9 @@ var init_address_space = __esm({
             return address3 & 4194303 | 4194304;
           }
           if ((address3 & 12582912) === 0 || (address3 & 12582912) === 8388608) {
-            if ((address3 & 32768) === 0) return -1;
+            if ((address3 & 32768) === 0) {
+              return -1;
+            }
             return (address3 & 8388608) >> 2 | (address3 & 4128768) >> 1 | address3 & 32767;
           }
           return -1;
@@ -23551,10 +24106,14 @@ var init_address_space = __esm({
        * @returns {number} The canonical CPU address.
        */
       fromOutputOffset(offset, context) {
-        if (offset < 0) return -1;
+        if (offset < 0) {
+          return -1;
+        }
         let address3 = offset;
         if (context.mapper === "lorom") {
-          if (address3 >= 4194304) return -1;
+          if (address3 >= 4194304) {
+            return -1;
+          }
           address3 = address3 << 1 & 8323072 | address3 & 32767 | 32768;
           return address3 | 8388608;
         }
@@ -23562,7 +24121,9 @@ var init_address_space = __esm({
           return address3 >= 4194304 ? -1 : address3 | 12582912;
         }
         if (context.mapper === "exlorom") {
-          if (address3 >= 8388608) return -1;
+          if (address3 >= 8388608) {
+            return -1;
+          }
           if (address3 & 4194304) {
             address3 -= 4194304;
             return address3 << 1 & 8323072 | address3 & 32767 | 32768;
@@ -23571,11 +24132,15 @@ var init_address_space = __esm({
           return address3 | 8388608;
         }
         if (context.mapper === "exhirom") {
-          if (address3 >= 8388608) return -1;
+          if (address3 >= 8388608) {
+            return -1;
+          }
           return address3 & 4194304 ? address3 : address3 | 12582912;
         }
         if (context.mapper === "sa1rom") {
-          if (address3 >= 8388608) return -1;
+          if (address3 >= 8388608) {
+            return -1;
+          }
           for (let index2 = 0; index2 < 8; index2++) {
             if (context.sa1banks[index2] === (address3 & 7340032)) {
               return 32768 | index2 << 21 | (address3 & 1015808) << 1 | address3 & 32767;
@@ -23584,8 +24149,12 @@ var init_address_space = __esm({
           return -1;
         }
         if (context.mapper === "bigsa1rom") {
-          if (address3 >= 8388608) return -1;
-          if ((address3 & 4194304) === 4194304) return address3 | 12582912;
+          if (address3 >= 8388608) {
+            return -1;
+          }
+          if ((address3 & 4194304) === 4194304) {
+            return address3 | 12582912;
+          }
           if ((address3 & 6291456) === 0) {
             return address3 << 1 & 4128768 | 32768 | address3 & 32767;
           }
@@ -24851,7 +25420,9 @@ var init_common = __esm({
   "packages/plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
-      if (value === void 0) return {};
+      if (value === void 0) {
+        return {};
+      }
       if (value === null || Array.isArray(value) || typeof value !== "object") {
         throw new Error(`${label} must be an object.`);
       }
@@ -24861,7 +25432,9 @@ var init_common = __esm({
     integerOption = (options, key, bounds = {}) => {
       const value = options[key] ?? bounds.fallback;
       if (value === void 0 || typeof value !== "number" || !Number.isSafeInteger(value) || bounds.minimum !== void 0 && value < bounds.minimum || bounds.maximum !== void 0 && value > bounds.maximum) {
-        if (value === void 0) return void 0;
+        if (value === void 0) {
+          return void 0;
+        }
         throw new Error(`Asset option '${key}' is outside its integer bounds.`);
       }
       return value;
@@ -24875,7 +25448,9 @@ var init_common = __esm({
     };
     readBytes = (source, offset, size, owner) => {
       const bytes = source.read(offset, size);
-      if (!bytes) throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+      if (!bytes) {
+        throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+      }
       return bytes;
     };
     resolveCount = (context, unitSize, options = optionsFor(context)) => {
@@ -24891,8 +25466,9 @@ var init_common = __esm({
       }
       const count = configured ?? length / unitSize;
       const size = count * unitSize;
-      if (!Number.isSafeInteger(size))
+      if (!Number.isSafeInteger(size)) {
         throw new Error(`SNES asset '${context.request.id}' overflowed.`);
+      }
       if (length !== void 0 && length !== size) {
         throw new Error(
           `SNES asset '${context.request.id}' count ${count} requires ${size} bytes, not ${length}.`
@@ -24926,7 +25502,9 @@ var init_common = __esm({
     };
     decodedObject = (value, owner) => objectValue(value, `Decoded SNES asset '${owner}'`);
     arrayValue = (value, label) => {
-      if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
+      if (!Array.isArray(value)) {
+        throw new Error(`${label} must be an array.`);
+      }
       return value;
     };
     integerValue = (value, label, minimum, maximum) => {
@@ -24966,8 +25544,12 @@ var init_brr = __esm({
       }
       for (let blockCount = 1; blockCount <= maxBlocks; blockCount++) {
         const block = context.source.read(context.request.sourceOffset + (blockCount - 1) * 9, 9);
-        if (!block) break;
-        if ((block[0] & 1) !== 0) return { blockCount, size: blockCount * 9 };
+        if (!block) {
+          break;
+        }
+        if ((block[0] & 1) !== 0) {
+          return { blockCount, size: blockCount * 9 };
+        }
       }
       throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
     };
@@ -25269,7 +25851,9 @@ var init_tiles = __esm({
     SNES_TILE_8BPP_ASSET_CODEC_ID = "snes.asset.tile.8bpp";
     SNES_MODE7_TILE_ASSET_CODEC_ID = "snes.asset.tile.mode7";
     planeOffset = (bitsPerPixel, plane, row) => {
-      if (bitsPerPixel === 3 && plane === 2) return 16 + row;
+      if (bitsPerPixel === 3 && plane === 2) {
+        return 16 + row;
+      }
       return Math.floor(plane / 2) * 16 + row * 2 + plane % 2;
     };
     decodePlanarTile = (bytes, start, bitsPerPixel) => Array.from(
@@ -25285,7 +25869,9 @@ var init_tiles = __esm({
     );
     encodeTilePixels = (value, owner, tileIndex, maximum) => {
       const rows2 = arrayValue(value, `SNES tile ${tileIndex} pixels`);
-      if (rows2.length !== 8) throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+      if (rows2.length !== 8) {
+        throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+      }
       return rows2.map((row, rowIndex) => {
         const pixels = arrayValue(row, `SNES tile ${tileIndex} row ${rowIndex}`);
         if (pixels.length !== 8) {
@@ -25444,12 +26030,15 @@ var init_previews = __esm({
       return value;
     };
     arrayValue2 = (value, name) => {
-      if (!Array.isArray(value)) throw new Error(`${name} must be an array.`);
+      if (!Array.isArray(value)) {
+        throw new Error(`${name} must be an array.`);
+      }
       return value;
     };
     numberValue = (value, name) => {
-      if (typeof value !== "number" || !Number.isFinite(value))
+      if (typeof value !== "number" || !Number.isFinite(value)) {
         throw new Error(`${name} must be numeric.`);
+      }
       return value;
     };
     byteHex = (value) => Math.round(value).toString(16).padStart(2, "0");
@@ -25550,12 +26139,15 @@ var init_previews = __esm({
       ],
       render: ({ asset, decoded: decoded2 }) => {
         const value = objectValue2(decoded2.value, `SNES asset '${asset.id}' preview`);
-        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID)
+        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID) {
           return renderPalette(asset.id, value);
+        }
         if (asset.request.codecId === SNES_BG_TILEMAP_ASSET_CODEC_ID || asset.request.codecId === SNES_MODE7_TILEMAP_ASSET_CODEC_ID) {
           return renderTilemap(asset.id, value);
         }
-        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) return renderBrr(asset.id, value);
+        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) {
+          return renderBrr(asset.id, value);
+        }
         return renderTiles(asset.id, value);
       }
     });
@@ -25845,8 +26437,12 @@ var init_src2 = __esm({
               validateWrite: (address3, width) => {
                 const targetState = state.get(snesSessionStateKey);
                 const normalized = snesRomAddressSpace.normalizeForWrite(address3, mappingContext());
-                if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) return;
-                if (targetState.bankCrossMode === "off" || width <= 1) return;
+                if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) {
+                  return;
+                }
+                if (targetState.bankCrossMode === "off" || width <= 1) {
+                  return;
+                }
                 const start = address3 & 16777215;
                 const end = start + width - 1 & 16777215;
                 const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
@@ -25865,9 +26461,13 @@ var init_src2 = __esm({
           create: ({ state }) => ({
             finalize: ({ outputBytes }) => {
               const targetState = state.get(snesSessionStateKey);
-              if (!targetState.checksumEnabled) return;
+              if (!targetState.checksumEnabled) {
+                return;
+              }
               const headerOffset = getChecksumHeaderOffset(targetState.mapper);
-              if (outputBytes.length < headerOffset + 32) return;
+              if (outputBytes.length < headerOffset + 32) {
+                return;
+              }
               outputBytes[headerOffset + 28] = 255;
               outputBytes[headerOffset + 29] = 255;
               outputBytes[headerOffset + 30] = 0;
@@ -26033,9 +26633,13 @@ var init_src2 = __esm({
             shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
             beforeWrite: ({ session, logicalAddress, width }) => {
               const targetState = state.get(snesSessionStateKey);
-              if (targetState.activeFreespaceStartOffset === null) return;
+              if (targetState.activeFreespaceStartOffset === null) {
+                return;
+              }
               const outputOffset = session.outputWriter.toOutputOffset(logicalAddress);
-              if (outputOffset < 0) return;
+              if (outputOffset < 0) {
+                return;
+              }
               const endOffset = outputOffset + width - 1;
               targetState.activeFreespaceEndOffset = Math.max(
                 targetState.activeFreespaceEndOffset ?? endOffset,
@@ -26050,7 +26654,9 @@ var init_src2 = __esm({
               const start = targetState.activeFreespaceStartOffset;
               const contentStart = targetState.activeFreespaceContentStartOffset;
               const end = targetState.activeFreespaceEndOffset;
-              if (start === null || contentStart === null || end === null || end < contentStart) return;
+              if (start === null || contentStart === null || end === null || end < contentStart) {
+                return;
+              }
               const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
               const complement = ~lengthMinusOne & 65535;
               outputBytes[start + 4] = lengthMinusOne & 255;
@@ -36078,9 +36684,15 @@ function buildInstructionCatalog(forms) {
 
 // packages/plugin-65xx/src/instructions/schema.ts
 function matchesFeatures(expression, features) {
-  if (expression.allOf?.some((feature) => !features.has(feature))) return false;
-  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) return false;
-  if (expression.noneOf?.some((feature) => features.has(feature))) return false;
+  if (expression.allOf?.some((feature) => !features.has(feature))) {
+    return false;
+  }
+  if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) {
+    return false;
+  }
+  if (expression.noneOf?.some((feature) => features.has(feature))) {
+    return false;
+  }
   return true;
 }
 function getOperandCodec(mode3) {
@@ -37767,17 +38379,25 @@ var featureByTable = {
 };
 function opcodeFor(row, modeIndex) {
   if (row[4] === "PutJSR_m740") {
-    if (modeIndex === 10) return 2;
-    if (modeIndex === 29) return 34;
+    if (modeIndex === 10) {
+      return 2;
+    }
+    if (modeIndex === 29) {
+      return 34;
+    }
     return 32;
   }
   if (row[4] === "PutBitBranch_m740") {
     return modeIndex === 28 ? row[2] + 4 : row[2];
   }
-  if (row[4] === "PutLDM_m740") return row[2];
+  if (row[4] === "PutLDM_m740") {
+    return row[2];
+  }
   const [, , base, eaTable] = row;
   const extension = ca65EaTable[eaTable]?.[modeIndex];
-  if (extension === void 0) throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+  if (extension === void 0) {
+    throw new Error(`Missing ca65 EA table ${eaTable}/${modeIndex}.`);
+  }
   let opcode = base | extension;
   if (row[4] === "Put4510" || row[4] === "Put45GS02") {
     opcode = (/* @__PURE__ */ new Map([
@@ -37794,8 +38414,11 @@ function opcodeFor(row, modeIndex) {
     ])).get(opcode) ?? opcode;
   }
   if (row[4] === "Put45GS02_Q") {
-    if (opcode === 234) opcode = 26;
-    else if (opcode === 202) opcode = 58;
+    if (opcode === 234) {
+      opcode = 26;
+    } else if (opcode === 202) {
+      opcode = 58;
+    }
   }
   return opcode;
 }
@@ -37804,15 +38427,26 @@ function modeFor(table, row, modeIndex) {
     return { mode: "blockTransfer", codec: "three-unsigned16-le" };
   }
   if (row[4] === "PutTST") {
-    if (modeIndex === 2) return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
-    if (modeIndex === 3) return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
-    if (modeIndex === 5) return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
-    if (modeIndex === 6)
+    if (modeIndex === 2) {
+      return { mode: "immediateZeroPage", codec: "immediate-unsigned8" };
+    }
+    if (modeIndex === 3) {
+      return { mode: "immediateAbsolute", codec: "immediate-unsigned16" };
+    }
+    if (modeIndex === 5) {
+      return { mode: "immediateZeroPageIndexedX", codec: "immediate-unsigned8" };
+    }
+    if (modeIndex === 6) {
       return { mode: "immediateAbsoluteIndexedX", codec: "immediate-unsigned16" };
+    }
   }
   if (row[4] === "PutBitBranch_m740") {
-    if (modeIndex === 1) return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
-    if (modeIndex === 28) return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+    if (modeIndex === 1) {
+      return { mode: "accumulatorRelative", codec: "accumulator-relative8" };
+    }
+    if (modeIndex === 28) {
+      return { mode: "zeroPageRelative", codec: "zero-page-relative8" };
+    }
   }
   if (row[4] === "PutLDM_m740" && modeIndex === 28) {
     return { mode: "zeroPageImmediate", codec: "zero-page-immediate8" };
@@ -37837,7 +38471,9 @@ function createForm(table, row, modeIndex, modeDefinition) {
     opcode = row[2];
   } else if (row[4] === "Put45GS02_Q") {
     prefixes.push(66, 66);
-    if (modeIndex === 12 || modeIndex === 30) prefixes.push(234);
+    if (modeIndex === 12 || modeIndex === 30) {
+      prefixes.push(234);
+    }
   } else if (row[4] === "Put45GS02" && modeIndex === 30) {
     prefixes.push(234);
   }
@@ -37886,19 +38522,27 @@ function decodeTable(table) {
     if (row[4] === "PutPCRel8" || row[4] === "PutPCRel4510") {
       const modeIndex = row[4] === "PutPCRel8" ? 17 : 18;
       const modeDefinition = commonModes[modeIndex];
-      if (modeDefinition) forms.push(createForm(table, row, modeIndex, modeDefinition));
+      if (modeDefinition) {
+        forms.push(createForm(table, row, modeIndex, modeDefinition));
+      }
       continue;
     }
     const seenModes = /* @__PURE__ */ new Set();
     for (let modeIndex = 0; modeIndex < 32; modeIndex++) {
-      if ((row[1] & 2 ** modeIndex) === 0) continue;
-      if (modeIndex === 0 && (row[1] & 2) !== 0) continue;
+      if ((row[1] & 2 ** modeIndex) === 0) {
+        continue;
+      }
+      if (modeIndex === 0 && (row[1] & 2) !== 0) {
+        continue;
+      }
       const modeDefinition = modeFor(table, row, modeIndex);
       if (!modeDefinition) {
         throw new Error(`Unsupported ca65 mode bit ${modeIndex} for ${table} ${row[0]}.`);
       }
       const key = `${modeDefinition.mode}:${modeDefinition.codec ?? ""}`;
-      if (seenModes.has(key)) continue;
+      if (seenModes.has(key)) {
+        continue;
+      }
       seenModes.add(key);
       forms.push(createForm(table, row, modeIndex, modeDefinition));
     }
@@ -38204,19 +38848,24 @@ var unstable = /* @__PURE__ */ new Set([
   "TAS:absoluteIndexedY"
 ]);
 var decoded = rows.flatMap((row) => row.split(" "));
-if (decoded.length !== 256)
+if (decoded.length !== 256) {
   throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
+}
 var mutableForms = decoded.map((entry, opcode) => {
   const [mnemonic, shortMode] = entry.split(":");
   const mode3 = modeNames[shortMode];
-  if (!mnemonic || !mode3)
+  if (!mnemonic || !mode3) {
     throw new Error(`Invalid opcode table entry '${entry}' at $${opcode.toString(16)}.`);
+  }
   const documented = legalOpcodes.has(opcode);
   const codec = getOperandCodec(mode3);
   const key = `${mnemonic}:${mode3}`;
   let stability = "stable-undocumented";
-  if (documented) stability = "documented";
-  else if (unstable.has(key)) stability = "unstable-undocumented";
+  if (documented) {
+    stability = "documented";
+  } else if (unstable.has(key)) {
+    stability = "unstable-undocumented";
+  }
   let note;
   if (unstable.has(key)) {
     note = "Opcode semantics are unstable or chip-dependent; assembly emits the canonical ca65-compatible byte.";
@@ -38247,7 +38896,9 @@ for (const form of mutableForms) {
 }
 for (const group of groups.values()) {
   const preferred = group.find((form) => form.documented) ?? group[0];
-  if (preferred) preferred.canonical = true;
+  if (preferred) {
+    preferred.canonical = true;
+  }
 }
 var nmos6502DecodeTable = Object.freeze(
   mutableForms.map((form) => Object.freeze({ ...form }))
@@ -38289,7 +38940,9 @@ var nmos6502xCpu = Object.freeze({
 });
 function getCpuAssemblyForms(cpu) {
   const variantForms = variantFormsByCpuId[cpu.id];
-  if (variantForms) return variantForms;
+  if (variantForms) {
+    return variantForms;
+  }
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }
 
@@ -38310,14 +38963,21 @@ var absoluteToDirect = {
 };
 var aliasToMnemonic = /* @__PURE__ */ new Map();
 for (const form of nmos6502DecodeTable) {
-  for (const alias of form.aliases ?? []) aliasToMnemonic.set(alias, form.mnemonic);
+  for (const alias of form.aliases ?? []) {
+    aliasToMnemonic.set(alias, form.mnemonic);
+  }
 }
 function parseMnemonic(value) {
   const match = value.trim().toUpperCase().match(/^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/);
-  if (!match) return { mnemonic: value.trim().toUpperCase() };
+  if (!match) {
+    return { mnemonic: value.trim().toUpperCase() };
+  }
   let forcedWidth;
-  if (match[2] === "B") forcedWidth = 1;
-  else if (match[2] === "W") forcedWidth = 2;
+  if (match[2] === "B") {
+    forcedWidth = 1;
+  } else if (match[2] === "W") {
+    forcedWidth = 2;
+  }
   return {
     mnemonic: match[1],
     forcedWidth
@@ -38332,9 +38992,11 @@ function splitTopLevelOperands(value) {
   let start = 0;
   for (let index2 = 0; index2 < value.length; index2++) {
     const character = value[index2];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
       operands.push(value.slice(start, index2).trim());
       start = index2 + 1;
     }
@@ -38360,7 +39022,9 @@ var Arch65xx = class {
       entries3.push(form);
       grouped.set(form.mnemonic, entries3);
     }
-    for (const [mnemonic, entries3] of grouped) this.formsByMnemonic.set(mnemonic, entries3);
+    for (const [mnemonic, entries3] of grouped) {
+      this.formsByMnemonic.set(mnemonic, entries3);
+    }
   }
   context;
   cpu;
@@ -38376,7 +39040,9 @@ var Arch65xx = class {
    * @returns {number} Encoded size in bytes, or 0 if unknown.
    */
   estimateSize(words) {
-    if (words.length === 0) return 0;
+    if (words.length === 0) {
+      return 0;
+    }
     const operand = words.slice(1).join(" ");
     return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
@@ -38386,7 +39052,9 @@ var Arch65xx = class {
    * @returns {boolean} True if encoded.
    */
   encode(words) {
-    if (words.length === 0) return true;
+    if (words.length === 0) {
+      return true;
+    }
     const operand = words.slice(1).join(" ");
     return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
@@ -38402,7 +39070,9 @@ var Arch65xx = class {
   }
   encodeResolved(rawMnemonic, operand) {
     const resolved = this.resolveForm(rawMnemonic, operand);
-    if (!resolved) return false;
+    if (!resolved) {
+      return false;
+    }
     const form = resolved;
     const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
     let branchDelta = 0;
@@ -38413,9 +39083,13 @@ var Arch65xx = class {
     const compoundOperands = form.codec === "zero-page-relative8" || form.codec === "accumulator-relative8" || form.codec === "zero-page-immediate8" || form.codec === "three-unsigned16-le" || form.codec === "immediate-unsigned8" || form.codec === "immediate-unsigned16" ? splitTopLevelOperands(operand.expanded) : [];
     const compoundValues = this.readCompoundValues(form, compoundOperands);
     let operandWidth = 0;
-    if (form.codec === "unsigned8") operandWidth = 1;
-    else if (form.codec === "unsigned16-le") operandWidth = 2;
-    else if (form.codec === "unsigned24-le") operandWidth = 3;
+    if (form.codec === "unsigned8") {
+      operandWidth = 1;
+    } else if (form.codec === "unsigned16-le") {
+      operandWidth = 2;
+    } else if (form.codec === "unsigned24-le") {
+      operandWidth = 3;
+    }
     const operandKind = operandWidth === 1 ? "operand" : "address";
     let operandValue = 0;
     if (operandWidth !== 0) {
@@ -38475,7 +39149,9 @@ var Arch65xx = class {
         this.context.emission.writeByte(specialPageValue & 255);
         return true;
       case "three-unsigned16-le":
-        for (const value of compoundValues) this.context.emission.writeValue(value, 2, "little");
+        for (const value of compoundValues) {
+          this.context.emission.writeValue(value, 2, "little");
+        }
         return true;
       case "immediate-unsigned8":
         this.context.emission.writeByte(compoundValues[0] ?? 0);
@@ -38603,19 +39279,30 @@ var Arch65xx = class {
       return void 0;
     }
     const hasOperand = operand.raw.trim() !== "";
-    if (mnemonic === "BRK" && forcedWidth === 2)
+    if (mnemonic === "BRK" && forcedWidth === 2) {
       throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
+    }
     let mode3 = operand.mode;
-    if (operand.raw.trim().toUpperCase() === "A") mode3 = "accumulator";
-    if (operand.raw.trim().toUpperCase() === "Q") mode3 = "quadAccumulator";
+    if (operand.raw.trim().toUpperCase() === "A") {
+      mode3 = "accumulator";
+    }
+    if (operand.raw.trim().toUpperCase() === "Q") {
+      mode3 = "quadAccumulator";
+    }
     if (this.cpu.id === "65xx.m740" && mnemonic === "JSR" && mode3 === "absolute" && /^(?:\$ff[\da-f]{2}|0xff[\da-f]{2})$/i.test(operand.expanded.trim())) {
       mode3 = "specialPage";
     }
-    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode3 = "relative16";
-    else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode3 = "relative";
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
+      mode3 = "relative16";
+    } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
+      mode3 = "relative";
+    }
     if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
-      if (forms.some((entry) => entry.mode === "accumulator")) mode3 = "accumulator";
-      else if (forms.some((entry) => entry.mode === "quadAccumulator")) mode3 = "quadAccumulator";
+      if (forms.some((entry) => entry.mode === "accumulator")) {
+        mode3 = "accumulator";
+      } else if (forms.some((entry) => entry.mode === "quadAccumulator")) {
+        mode3 = "quadAccumulator";
+      }
     }
     if (forcedWidth) {
       const byteMode = mode3 ? absoluteToDirect[mode3] : void 0;
@@ -38644,8 +39331,11 @@ var Arch65xx = class {
     const value = this.context.operands.getnum(expression);
     const minimum = width === 1 && immediate3 ? -128 : 0;
     let maximum = 255;
-    if (width === 2) maximum = 65535;
-    else if (width === 3) maximum = 16777215;
+    if (width === 2) {
+      maximum = 65535;
+    } else if (width === 3) {
+      maximum = 16777215;
+    }
     if (!Number.isInteger(value) || value < minimum || value > maximum) {
       throw this.context.diagnostics.error(
         `${description} ${value} is outside the ${width * 8}-bit range.`
@@ -38661,7 +39351,9 @@ var Arch65xx = class {
     );
   }
   readBranchExpression(expression, relativeBaseOffset, width) {
-    if (!this.context.branches.enforceResolvedLabels()) return 0;
+    if (!this.context.branches.enforceResolvedLabels()) {
+      return 0;
+    }
     const reference = this.context.sizing.getCurrentAddress() + relativeBaseOffset & 65535;
     let target;
     if (/^\++$/.test(expression)) {
@@ -38780,9 +39472,11 @@ function splitArguments(value) {
   let start = 0;
   for (let index2 = 0; index2 < value.length; index2++) {
     const character = value[index2];
-    if (character === "(") depth++;
-    else if (character === ")") depth--;
-    else if (character === "," && depth === 0) {
+    if (character === "(") {
+      depth++;
+    } else if (character === ")") {
+      depth--;
+    } else if (character === "," && depth === 0) {
       parts.push(value.slice(start, index2).trim());
       start = index2 + 1;
     }
@@ -38816,30 +39510,46 @@ function rewriteCa65Command(command, context) {
   );
   rewritten = rewritten.replace(/<>/g, "!=");
   const match = rewritten.match(/^(\s*)\.([\dA-Za-z]+)\b(.*)$/);
-  if (!match) return rewritten;
+  if (!match) {
+    return rewritten;
+  }
   const [, indent, rawKeyword, rawRest] = match;
   const keyword = rawKeyword.toLowerCase();
   const rest = rawRest.trim();
   const predicate = cpuPredicateSymbols[keyword];
-  if (predicate) return `${indent}if ${predicate}`;
+  if (predicate) {
+    return `${indent}if ${predicate}`;
+  }
   if (["if", "elseif", "else", "endif"].includes(keyword)) {
     return `${indent}${keyword}${rest ? ` ${rest}` : ""}`;
   }
-  if (keyword === "ifdef") return `${indent}if defined(${rest})`;
-  if (keyword === "ifndef") return `${indent}if defined(${rest}) == 0`;
+  if (keyword === "ifdef") {
+    return `${indent}if defined(${rest})`;
+  }
+  if (keyword === "ifndef") {
+    return `${indent}if defined(${rest}) == 0`;
+  }
   if (keyword === "macro") {
     const header = rest.match(/^([A-Z_a-z]\w*)\s*(.*)$/);
-    if (!header) return rewritten;
+    if (!header) {
+      return rewritten;
+    }
     const params = splitArguments(header[2] ?? "").join(",");
     return `${indent}macro ${header[1]}(${params})`;
   }
-  if (keyword === "endmacro") return `${indent}endmacro`;
+  if (keyword === "endmacro") {
+    return `${indent}endmacro`;
+  }
   if (keyword === "repeat") {
     const [count = "0", variable = `__ca65_repeat_${context.sourceLine}`] = splitArguments(rest);
     return `${indent}for ${variable} = 0..(${count})`;
   }
-  if (keyword === "endrepeat") return `${indent}endfor`;
-  if (keyword === "undefine") return `${indent}undef ${rest}`;
+  if (keyword === "endrepeat") {
+    return `${indent}endfor`;
+  }
+  if (keyword === "undefine") {
+    return `${indent}undef ${rest}`;
+  }
   return rewritten;
 }
 var CA65_65XX_SYNTAX_PROFILE = Object.freeze({
@@ -38869,7 +39579,9 @@ function parameterList(words) {
   for (const char of joined) {
     if (quote) {
       current += char;
-      if (char === quote) quote = void 0;
+      if (char === quote) {
+        quote = void 0;
+      }
       continue;
     }
     if (char === '"' || char === "'") {
@@ -38877,22 +39589,31 @@ function parameterList(words) {
       current += char;
       continue;
     }
-    if (char === "(") parenDepth++;
-    else if (char === ")") parenDepth--;
+    if (char === "(") {
+      parenDepth++;
+    } else if (char === ")") {
+      parenDepth--;
+    }
     if (char === "," && parenDepth === 0) {
       const trimmed2 = current.trim();
-      if (trimmed2) parts.push(trimmed2);
+      if (trimmed2) {
+        parts.push(trimmed2);
+      }
       current = "";
       continue;
     }
     current += char;
   }
   const trimmed = current.trim();
-  if (trimmed) parts.push(trimmed);
+  if (trimmed) {
+    parts.push(trimmed);
+  }
   return parts;
 }
 function markGlobalSymbol(session, name) {
-  if (!name) return;
+  if (!name) {
+    return;
+  }
   const localKey = session.symbolScope.qualifySymbolName(name);
   session.globalSymbols.add(name);
   if (localKey !== name) {
@@ -38903,7 +39624,9 @@ function markGlobalSymbol(session, name) {
   }
 }
 function closeActiveSegment(session, state) {
-  if (!state.currentSegment) return;
+  if (!state.currentSegment) {
+    return;
+  }
   const segment = state.linker.segments.get(state.currentSegment);
   if (!segment) {
     state.currentSegment = null;
@@ -39021,7 +39744,9 @@ function handleDword(session, words, width = 4) {
 }
 function handleSetcpu(session, state, words) {
   const name = unquote(words.slice(1).join(" ").trim());
-  if (!name) throw new Error(".setcpu requires a CPU name argument.");
+  if (!name) {
+    throw new Error(".setcpu requires a CPU name argument.");
+  }
   const architecture = resolve65xxCpuName(name);
   if (!architecture) {
     throw new Error(
@@ -39036,14 +39761,18 @@ function handlePushcpu(session, state) {
 }
 function handlePopcpu(session, state) {
   const architecture = state.cpuStack.pop();
-  if (!architecture) throw new Error(".popcpu: CPU stack is empty.");
+  if (!architecture) {
+    throw new Error(".popcpu: CPU stack is empty.");
+  }
   session.selectArchitecture(architecture, architecture);
   state.currentArchitecture = architecture;
 }
 function handleCpuShorthand(session, state, words) {
   const keyword = (words[0] ?? "").replace(/^\./, "").toLowerCase();
   const cpu = ca65CpuShorthands[keyword];
-  if (!cpu) throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  if (!cpu) {
+    throw new Error(`Unknown ca65 CPU shorthand '.${keyword}'.`);
+  }
   handleSetcpu(session, state, ["setcpu", cpu]);
 }
 function handleRes(session, words) {
@@ -39053,12 +39782,16 @@ function handleRes(session, words) {
   }
   const count = session.operandResolver.getnum(params[0] ?? "");
   const fill = params[1] ? session.operandResolver.getnum(params[1]) : 0;
-  if (!Number.isInteger(count) || count < 0) throw new Error(".res count must be non-negative.");
+  if (!Number.isInteger(count) || count < 0) {
+    throw new Error(".res count must be non-negative.");
+  }
   if (session.isDefinitionCollectionStage) {
     session.step(count);
     return;
   }
-  for (let index2 = 0; index2 < count; index2++) session.write1(fill & 255);
+  for (let index2 = 0; index2 < count; index2++) {
+    session.write1(fill & 255);
+  }
 }
 function handleAlign(session, words) {
   const params = parameterList(words);
@@ -39075,7 +39808,9 @@ function handleAlign(session, words) {
     session.step(count);
     return;
   }
-  for (let index2 = 0; index2 < count; index2++) session.write1(fill & 255);
+  for (let index2 = 0; index2 < count; index2++) {
+    session.write1(fill & 255);
+  }
 }
 function handleCa65Incbin(session, words) {
   const params = parameterList(words);
@@ -39084,7 +39819,9 @@ function handleCa65Incbin(session, words) {
   }
   const filename = unquote(params[0] ?? "");
   const data = session.includeSource.readFile(filename);
-  if (!(data instanceof Uint8Array)) throw new Error(`Failed to read binary include: ${filename}`);
+  if (!(data instanceof Uint8Array)) {
+    throw new Error(`Failed to read binary include: ${filename}`);
+  }
   const offset = params[1] ? session.operandResolver.getnum(params[1]) : 0;
   const size = params[2] ? session.operandResolver.getnum(params[2]) : data.length - offset;
   if (!Number.isInteger(offset) || !Number.isInteger(size) || offset < 0 || size < 0 || offset + size > data.length) {
@@ -39096,12 +39833,18 @@ function handleCa65Incbin(session, words) {
     session.step(size);
     return;
   }
-  for (const byte of data.subarray(offset, offset + size)) session.write1(byte);
+  for (const byte of data.subarray(offset, offset + size)) {
+    session.write1(byte);
+  }
 }
 function handleCa65Assert(session, words) {
   const params = parameterList(words);
-  if (params.length === 0) throw new Error(".assert requires an expression.");
-  if (session.operandResolver.getnum(params[0] ?? "") !== 0) return;
+  if (params.length === 0) {
+    throw new Error(".assert requires an expression.");
+  }
+  if (session.operandResolver.getnum(params[0] ?? "") !== 0) {
+    return;
+  }
   const message = params.find((part) => /^["']/.test(part));
   throw new Error(message ? unquote(message) : ".assert expression evaluated to false.");
 }
@@ -39115,12 +39858,16 @@ function handleScope(session, state, words, procedure) {
 }
 function handleEndScope(session, state) {
   const previous = state.scopeStack.pop();
-  if (previous === void 0) throw new Error("ca65 scope stack is empty.");
+  if (previous === void 0) {
+    throw new Error("ca65 scope stack is empty.");
+  }
   session.currentNamespace = previous;
 }
 function handleFlatSegment(state, words) {
   const name = unquote(words[1] ?? "").trim();
-  if (!name) throw new Error(".segment requires a segment name.");
+  if (!name) {
+    throw new Error(".segment requires a segment name.");
+  }
   state.currentFlatSegment = name;
 }
 function handlePushseg(state) {
@@ -39128,7 +39875,9 @@ function handlePushseg(state) {
 }
 function handlePopseg(state) {
   const segment = state.segmentStack.pop();
-  if (segment === void 0) throw new Error(".popseg: segment stack is empty.");
+  if (segment === void 0) {
+    throw new Error(".popseg: segment stack is empty.");
+  }
   state.currentFlatSegment = segment;
 }
 function handleUnsupportedCa65(words) {
@@ -39144,9 +39893,13 @@ function classify65xxOperand(resolver, operand) {
   const sizePrefix = parseCa65AddressSizePrefix(raw);
   const { expanded, length: inferredLength } = resolver.expandOperand(sizePrefix.rest);
   let length = inferredLength;
-  if (sizePrefix.force === 1) length = 1;
-  else if (sizePrefix.force === 2) length = Math.max(2, inferredLength);
-  else if (sizePrefix.force === 3) length = Math.max(3, inferredLength);
+  if (sizePrefix.force === 1) {
+    length = 1;
+  } else if (sizePrefix.force === 2) {
+    length = Math.max(2, inferredLength);
+  } else if (sizePrefix.force === 3) {
+    length = Math.max(3, inferredLength);
+  }
   const normalized = expanded.trim();
   const normalizedUpper = normalized.toUpperCase();
   const compound = splitTopLevelOperands2(normalized);
@@ -39203,10 +39956,15 @@ function classify65xxOperand(resolver, operand) {
       baseExpression = indirect[1].trim();
     } else if (indexed) {
       const register4 = indexed[2].toLowerCase();
-      if (register4 === "s") mode3 = "stackRelative";
-      else if (register4 === "z") mode3 = "unknown";
-      else if (length > 2 && register4 === "x") mode3 = "absoluteLongIndexedX";
-      else mode3 = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register4.toUpperCase()}`;
+      if (register4 === "s") {
+        mode3 = "stackRelative";
+      } else if (register4 === "z") {
+        mode3 = "unknown";
+      } else if (length > 2 && register4 === "x") {
+        mode3 = "absoluteLongIndexedX";
+      } else {
+        mode3 = `${length <= 1 ? "zeroPage" : "absolute"}Indexed${register4.toUpperCase()}`;
+      }
       baseExpression = indexed[1].trim();
     } else if (topLevelComma >= 0) {
       if (compound.length === 3) {
@@ -39244,9 +40002,11 @@ function splitTopLevelOperands2(value) {
   let start = 0;
   for (let index2 = 0; index2 < value.length; index2++) {
     const character = value[index2];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
       parts.push(value.slice(start, index2).trim());
       start = index2 + 1;
     }
@@ -39258,9 +40018,13 @@ function findTopLevelComma(value) {
   let depth = 0;
   for (let index2 = 0; index2 < value.length; index2++) {
     const character = value[index2];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) return index2;
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
+      return index2;
+    }
   }
   return -1;
 }
@@ -39271,8 +40035,12 @@ function parseCa65AddressSizePrefix(operand) {
   }
   const rest = match[2].trim();
   const key = match[1].toLowerCase();
-  if (key === "z") return { rest, force: 1 };
-  if (key === "a") return { rest, force: 2 };
+  if (key === "z") {
+    return { rest, force: 1 };
+  }
+  if (key === "a") {
+    return { rest, force: 2 };
+  }
   return { rest, force: 3 };
 }
 
@@ -39378,7 +40146,9 @@ function parseLd65Config(source) {
 function linkerDefinedSymbolNames(config) {
   const names = [];
   for (const segment of config.segments.values()) {
-    if (!segment.define) continue;
+    if (!segment.define) {
+      continue;
+    }
     names.push(
       `__${segment.name}_LOAD__`,
       `__${segment.name}_RUN__`,
@@ -39412,7 +40182,9 @@ function parseNamedStatement(statement) {
   const attrs = {};
   for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
     const equals = part.indexOf("=");
-    if (equals <= 0) continue;
+    if (equals <= 0) {
+      continue;
+    }
     const key = part.slice(0, equals).trim().toLowerCase();
     const value = part.slice(equals + 1).trim();
     attrs[key] = value;
@@ -39426,7 +40198,9 @@ function splitTopLevelCommas(input) {
   for (const char of input) {
     if (quote) {
       current += char;
-      if (char === quote) quote = void 0;
+      if (char === quote) {
+        quote = void 0;
+      }
       continue;
     }
     if (char === '"' || char === "'") {
@@ -39436,18 +40210,24 @@ function splitTopLevelCommas(input) {
     }
     if (char === ",") {
       const trimmed2 = current.trim();
-      if (trimmed2) parts.push(trimmed2);
+      if (trimmed2) {
+        parts.push(trimmed2);
+      }
       current = "";
       continue;
     }
     current += char;
   }
   const trimmed = current.trim();
-  if (trimmed) parts.push(trimmed);
+  if (trimmed) {
+    parts.push(trimmed);
+  }
   return parts;
 }
 function parseNumberToken(token) {
-  if (token === void 0 || token === "") return void 0;
+  if (token === void 0 || token === "") {
+    return void 0;
+  }
   if (token.startsWith("$")) {
     const value = Number.parseInt(token.slice(1), 16);
     return Number.isFinite(value) ? value : void 0;
@@ -39465,10 +40245,16 @@ function requireNumber(attrs, key, owner) {
   return value;
 }
 function parseYesNo(raw) {
-  if (raw === void 0) return void 0;
+  if (raw === void 0) {
+    return void 0;
+  }
   const normalized = raw.toLowerCase();
-  if (normalized === "yes" || normalized === "true") return true;
-  if (normalized === "no" || normalized === "false") return false;
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
   return void 0;
 }
 
@@ -39519,18 +40305,28 @@ function createNesAddressSpace({ state }) {
     },
     toOutputOffset(address3) {
       const nes = state.get(nes65xxSessionStateKey);
-      if (!nes.currentLoadMemory) return -1;
+      if (!nes.currentLoadMemory) {
+        return -1;
+      }
       const memory = nes.linker.memories.get(nes.currentLoadMemory);
-      if (!memory || memory.fileOffset < 0) return -1;
-      if (address3 < memory.start || address3 >= memory.start + memory.size) return -1;
+      if (!memory || memory.fileOffset < 0) {
+        return -1;
+      }
+      if (address3 < memory.start || address3 >= memory.start + memory.size) {
+        return -1;
+      }
       return nes.header.length + memory.fileOffset + (address3 - memory.start);
     },
     fromOutputOffset(offset) {
       const nes = state.get(nes65xxSessionStateKey);
       const prgOffset = offset - nes.header.length;
-      if (prgOffset < 0) return -1;
+      if (prgOffset < 0) {
+        return -1;
+      }
       for (const memory of nes.linker.memories.values()) {
-        if (memory.fileOffset < 0) continue;
+        if (memory.fileOffset < 0) {
+          continue;
+        }
         if (prgOffset >= memory.fileOffset && prgOffset < memory.fileOffset + memory.size) {
           return memory.start + (prgOffset - memory.fileOffset);
         }
@@ -39609,14 +40405,17 @@ var CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
 var CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
 var CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
 function createRaw65xxTargetOptions(configured) {
-  if (configured === void 0) return { origin: 0 };
+  if (configured === void 0) {
+    return { origin: 0 };
+  }
   if (typeof configured !== "object" || configured === null || Array.isArray(configured)) {
     throw new Error("65xx raw target options must be an object with an optional numeric 'origin'.");
   }
   const keys = Object.keys(configured);
   const unknown = keys.filter((key) => key !== "origin");
-  if (unknown.length > 0)
+  if (unknown.length > 0) {
     throw new Error(`Unknown 65xx raw target option(s): ${unknown.join(", ")}.`);
+  }
   const value = "origin" in configured ? configured.origin : 0;
   if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > 65535) {
     throw new Error("65xx raw target origin must be an integer from 0 through 65535.");
@@ -39799,7 +40598,9 @@ function register65xxContributions(context) {
       summary,
       evaluate: (_expressionContext, args) => {
         const value = args[0];
-        if (typeof value !== "number") throw new Error(`${name}() expects a numeric argument.`);
+        if (typeof value !== "number") {
+          throw new Error(`${name}() expects a numeric argument.`);
+        }
         return transform(value);
       }
     }))
@@ -40064,14 +40865,18 @@ var configurationError = (message, cause) => new PluginError(message, {
   cause
 });
 var optionalText = (value, field) => {
-  if (value === void 0) return void 0;
+  if (value === void 0) {
+    return void 0;
+  }
   if (typeof value !== "string" || value.trim() === "") {
     throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
   }
   return value;
 };
 var optionalStringArray = (value, field) => {
-  if (value === void 0) return void 0;
+  if (value === void 0) {
+    return void 0;
+  }
   if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
     throw configurationError(`Configuration field '${field}' must be an array of strings.`);
   }
@@ -40172,11 +40977,14 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
 // packages/plugin-loader-node/src/loader.ts
 init_plugin();
 import { realpath } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import path7 from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
 var toOptionsRecord = (value, entry) => {
-  if (value === void 0) return {};
+  if (value === void 0) {
+    return {};
+  }
   if (!isRecord3(value)) {
     throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
       code: "PLUGIN_CONFIGURATION_INVALID"
@@ -40191,7 +40999,9 @@ var pluginIdFromNamespace = (namespace) => {
   return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
 };
 var stableValue = (value) => {
-  if (Array.isArray(value)) return value.map(stableValue);
+  if (Array.isArray(value)) {
+    return value.map(stableValue);
+  }
   if (isRecord3(value)) {
     return Object.fromEntries(
       Object.keys(value).sort().map((key) => [key, stableValue(value[key])])
@@ -40223,7 +41033,22 @@ var resolveExternalModule = async (request) => {
       return normalizeFileUrl(pathToFileURL(path7.resolve(request.baseDirectory, request.module)));
     }
     const parent = pathToFileURL(path7.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
-    return await normalizeFileUrl(new URL(import.meta.resolve(request.module, parent.href)));
+    const marker = "uttori:resolve-project-plugin";
+    const hooks = registerHooks({
+      resolve(specifier, context, nextResolve) {
+        if (specifier === marker) {
+          return nextResolve(request.module, { ...context, parentURL: parent.href });
+        }
+        return nextResolve(specifier, context);
+      }
+    });
+    let resolved;
+    try {
+      resolved = import.meta.resolve(marker);
+    } finally {
+      hooks.deregister();
+    }
+    return await normalizeFileUrl(new URL(resolved));
   } catch (error) {
     throw moduleLoadError(request, "module could not be resolved", void 0, error);
   }
@@ -40238,7 +41063,9 @@ var wrapActivationError = (error, modules) => {
   const entry = modules.find(
     (item) => item.resolvedModule === error.pluginModule || error.pluginId !== void 0 && item.pluginId === error.pluginId
   );
-  if (!entry) return error;
+  if (!entry) {
+    return error;
+  }
   return new PluginError(
     `Configuration entry '${entry.configEntry}' resolved to '${entry.resolvedModule}': ${error.message}`,
     {
@@ -40253,6 +41080,15 @@ var wrapActivationError = (error, modules) => {
 };
 var NodePluginLoader = class {
   #current;
+  /**
+   * Read, resolve, import, and activate plugins, then select a target and architecture.
+   * An unchanged normalized configuration reuses the current handle. Changed configuration
+   * disposes the old environment before activation; activation failure leaves no replacement.
+   * Module contents, logger identity, and bundled plugin object identity are not cache keys.
+   * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
+   * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
+   * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
+   */
   async loadProjectEnvironment(options) {
     const cwd = path7.resolve(options.cwd);
     const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
@@ -40281,7 +41117,9 @@ var NodePluginLoader = class {
     if (options.activateBundledPlugins && options.bundledPlugins) {
       const requested = new Set(requests.map((request) => request.module));
       for (const module of options.bundledPlugins.keys()) {
-        if (requested.has(module)) continue;
+        if (requested.has(module)) {
+          continue;
+        }
         requested.add(module);
         requests.push({
           module,
@@ -40414,7 +41252,9 @@ var NodePluginLoader = class {
         configuration,
         diagnostics: Object.freeze([]),
         dispose: async () => {
-          if (this.#current === current) this.#current = void 0;
+          if (this.#current === current) {
+            this.#current = void 0;
+          }
           await this.#disposeEntry(current);
         }
       });
@@ -40431,6 +41271,7 @@ var NodePluginLoader = class {
       throw wrapActivationError(error, modules);
     }
   }
+  /** Dispose the current environment, if any. This loader may be used again afterward. */
   async dispose() {
     await this.#disposeCurrent();
   }
@@ -40475,10 +41316,14 @@ var NodePluginLoader = class {
   async #disposeCurrent() {
     const current = this.#current;
     this.#current = void 0;
-    if (current) await this.#disposeEntry(current);
+    if (current) {
+      await this.#disposeEntry(current);
+    }
   }
   async #disposeEntry(current) {
-    if (current.disposed) return;
+    if (current.disposed) {
+      return;
+    }
     current.disposed = true;
     await current.manager.dispose();
   }
@@ -40746,7 +41591,9 @@ var sameFileContent = (file, content) => {
   try {
     return Buffer.from(content).equals(fs4.readFileSync(file));
   } catch (error) {
-    if (error.code === "ENOENT") return false;
+    if (error.code === "ENOENT") {
+      return false;
+    }
     throw error;
   }
 };
@@ -40766,8 +41613,9 @@ function commitBuildArtifactPair(outputPath, output, debugMapJson) {
   fs4.mkdirSync(path8.dirname(resolvedOutput), { recursive: true });
   const outputChanged = !sameFileContent(resolvedOutput, output);
   const debugMapChanged = !sameFileContent(debugMapPath, mapBytes);
-  if (!outputChanged && !debugMapChanged)
+  if (!outputChanged && !debugMapChanged) {
     return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
+  }
   const oldOutput = fs4.existsSync(resolvedOutput) ? fs4.readFileSync(resolvedOutput) : void 0;
   const stagedOutput = stageArtifact(resolvedOutput, output);
   let stagedMap;
@@ -40789,8 +41637,12 @@ function commitBuildArtifactPair(outputPath, output, debugMapJson) {
     }
     throw error;
   } finally {
-    if (fs4.existsSync(stagedOutput)) fs4.unlinkSync(stagedOutput);
-    if (stagedMap && fs4.existsSync(stagedMap)) fs4.unlinkSync(stagedMap);
+    if (fs4.existsSync(stagedOutput)) {
+      fs4.unlinkSync(stagedOutput);
+    }
+    if (stagedMap && fs4.existsSync(stagedMap)) {
+      fs4.unlinkSync(stagedMap);
+    }
   }
   return { outputPath: resolvedOutput, debugMapPath, outputChanged, debugMapChanged };
 }
@@ -40856,7 +41708,9 @@ import { existsSync as existsSync3 } from "node:fs";
 import path9 from "node:path";
 var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) => {
   if (typeof entry === "string") {
-    if (!entry.trim()) throw new Error(`Plugin setting at index ${index2} must not be empty.`);
+    if (!entry.trim()) {
+      throw new Error(`Plugin setting at index ${index2} must not be empty.`);
+    }
     return { module: entry };
   }
   if (!entry || typeof entry !== "object" || typeof entry.module !== "string") {
@@ -40874,7 +41728,9 @@ var ProjectEnvironmentController = class {
   options;
   #state;
   get current() {
-    if (!this.#state) throw new Error("The project environment has not been initialized.");
+    if (!this.#state) {
+      throw new Error("The project environment has not been initialized.");
+    }
     return this.#state;
   }
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
@@ -40912,8 +41768,12 @@ var ProjectEnvironmentController = class {
         logger: this.options.logger,
         cacheDir: path9.join(cwd, ".uttori-asm", "cache")
       });
-      for (const [file, content] of overlays) index2.updateDocument(file, content);
-      if (overlays.size > 0 || (settings2.entryPoints?.length ?? 0) > 0) index2.reindex();
+      for (const [file, content] of overlays) {
+        index2.updateDocument(file, content);
+      }
+      if (overlays.size > 0 || (settings2.entryPoints?.length ?? 0) > 0) {
+        index2.reindex();
+      }
       next = Object.freeze({
         loaded,
         index: index2,
@@ -42163,7 +43023,9 @@ function stringArray(value) {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string") ? value : void 0;
 }
 function mergeServerSettings(previous, value) {
-  if (!value || typeof value !== "object") return previous;
+  if (!value || typeof value !== "object") {
+    return previous;
+  }
   const next = value;
   const has = (key) => Object.prototype.hasOwnProperty.call(next, key);
   return {
@@ -42262,7 +43124,9 @@ function enqueueProjectEnvironment(next) {
   configurationQueue = applyQueuedEnvironment(configurationQueue, next);
 }
 function scheduleReindex() {
-  if (reindexTimer) clearTimeout(reindexTimer);
+  if (reindexTimer) {
+    clearTimeout(reindexTimer);
+  }
   reindexTimer = setTimeout(() => {
     reindexTimer = void 0;
     connection.console.info("Full workspace reindex starting");
@@ -42280,7 +43144,9 @@ function scheduleReindex() {
   }, 500);
 }
 function publishAllDiagnostics() {
-  if (!index) return;
+  if (!index) {
+    return;
+  }
   for (const document of documents.all()) {
     const file = uriToPath(document.uri);
     void connection.sendDiagnostics({
@@ -42296,7 +43162,9 @@ function publishAllDiagnostics() {
   }
 }
 function notifyIndexUpdated() {
-  if (!index || !clientInitialized) return;
+  if (!index || !clientInitialized) {
+    return;
+  }
   void connection.sendNotification("asm/indexUpdated", index.getStatus());
 }
 connection.onInitialize(async (params) => {
@@ -42305,7 +43173,9 @@ connection.onInitialize(async (params) => {
     params.capabilities.workspace?.didChangeConfiguration?.dynamicRegistration
   );
   workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
-  if (workspaceRoots.length === 0 && params.rootUri) workspaceRoots = [uriToPath(params.rootUri)];
+  if (workspaceRoots.length === 0 && params.rootUri) {
+    workspaceRoots = [uriToPath(params.rootUri)];
+  }
   editorSettings = mergeServerSettings(defaultSettings, params.initializationOptions);
   const requested = applyConfigFileDefaults(editorSettings);
   try {
@@ -42343,7 +43213,9 @@ connection.onInitialized(() => {
     connection.client.register(import_node.DidChangeConfigurationNotification.type, void 0).catch(() => {
     });
   }
-  if (hasConfigurationCapability) void refreshConfiguration();
+  if (hasConfigurationCapability) {
+    void refreshConfiguration();
+  }
   notifyIndexUpdated();
 });
 async function refreshConfiguration() {
@@ -42376,7 +43248,9 @@ function defaultOutputPath(file) {
   );
 }
 function resolveOptionalBuildPath(configured, file) {
-  if (!configured) return void 0;
+  if (!configured) {
+    return void 0;
+  }
   return path11.isAbsolute(configured) ? path11.normalize(configured) : path11.resolve(workspaceRoots[0] ?? path11.dirname(file), configured);
 }
 function buildBinary(requestedFile, output, baseImage) {
@@ -42496,11 +43370,15 @@ function buildBinary(requestedFile, output, baseImage) {
   }
 }
 function argumentPath(value) {
-  if (!value) return void 0;
+  if (!value) {
+    return void 0;
+  }
   return value.startsWith("file:") ? uriToPath(value) : value;
 }
 connection.onExecuteCommand(async (params) => {
-  if (params.command !== "asm.build") return void 0;
+  if (params.command !== "asm.build") {
+    return void 0;
+  }
   await configurationQueue;
   const args = params.arguments ?? [];
   return buildBinary(argumentPath(args[0]), argumentPath(args[1]), argumentPath(args[2]));
@@ -42565,8 +43443,11 @@ connection.onDidChangeWatchedFiles((params) => {
       index.invalidateFile(file);
     }
   }
-  if (reload) enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
-  else scheduleReindex();
+  if (reload) {
+    enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
+  } else {
+    scheduleReindex();
+  }
 });
 documents.onDidOpen((event) => {
   const file = uriToPath(event.document.uri);
@@ -42619,7 +43500,9 @@ connection.onWorkspaceSymbol((params) => {
 });
 connection.onSignatureHelp((params) => {
   const document = documents.get(params.textDocument.uri);
-  if (!document) return null;
+  if (!document) {
+    return null;
+  }
   const lineText = document.getText({
     start: { line: params.position.line, character: 0 },
     end: params.position

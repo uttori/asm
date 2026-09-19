@@ -111,9 +111,13 @@ const r15Target = (
           : state.programBank;
       return ((bank & 0xff) << 16) | target;
     }
-    if (specification.mnemonic === "LM" || specification.mnemonic === "LMS") return "indirect";
+    if (specification.mnemonic === "LM" || specification.mnemonic === "LMS") {
+      return "indirect";
+    }
   }
-  if (specification.writesDestination && state.destinationRegister === 15) return "indirect";
+  if (specification.writesDestination && state.destinationRegister === 15) {
+    return "indirect";
+  }
   return undefined;
 };
 
@@ -311,7 +315,9 @@ export class SuperFxDecoder implements ArchitectureDecoder<SuperFxDecodeState> {
       const fused = matchFused(context);
       if (fused) {
         const bytes = context.source.readBytes(context.offset, fused.minimumSize);
-        if (!bytes) return truncated(context, fused.minimumSize);
+        if (!bytes) {
+          return truncated(context, fused.minimumSize);
+        }
         return { kind: "instruction", instruction: buildFusedInstruction(fused, bytes, context) };
       }
     }
@@ -325,7 +331,9 @@ export class SuperFxDecoder implements ArchitectureDecoder<SuperFxDecodeState> {
         if (effective.alteredByAlt) {
           const required = effective.minimumSize + 1;
           const bytes = context.source.readBytes(context.offset, required);
-          if (!bytes) return truncated(context, required);
+          if (!bytes) {
+            return truncated(context, required);
+          }
           return {
             kind: "instruction",
             instruction: buildInstruction(effective, bytes, context, { ...state, alt: prefix }, 1),
@@ -380,7 +388,9 @@ export class SuperFxDecoder implements ArchitectureDecoder<SuperFxDecodeState> {
     const alt = requestedAlt === "unknown" ? 0 : requestedAlt;
     const specification = superFxOpcodeMatrix[alt][opcode];
     const bytes = context.source.readBytes(context.offset, specification.minimumSize);
-    if (!bytes) return truncated(context, specification.minimumSize);
+    if (!bytes) {
+      return truncated(context, specification.minimumSize);
+    }
     return {
       kind: "instruction",
       instruction: buildInstruction(specification, bytes, context, state, 0),

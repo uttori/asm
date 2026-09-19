@@ -33,7 +33,8 @@
     "@uttori/asm-debug-sidecar-mesence": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
     "@uttori/asm-plugin-snes": "1.0.0",
-    "vscode-languageclient": "^10.1.1"
+    "vscode-languageclient": "^10.1.1",
+    "vscode-languageserver-types": "^3.18.3"
   },
   "devDependencies": {
     "@types/vscode": "1.125.0",
@@ -911,27 +912,6 @@
           ],
           "default": "full",
           "description": "Full capture requires a runtime supplying execution-time instruction bytes, registers and bus accesses; unsupported runtimes are rejected. Select pc explicitly to record addresses only. Both modes use bounded buffers and report dropped events."
-        },
-        "asm.trace.archiveMaxMiB": {
-          "type": "integer",
-          "scope": "resource",
-          "minimum": 0,
-          "default": 2048,
-          "description": "Managed unpinned capture archive budget in MiB. Pinned captures are exempt; original files and durable analysis facts are never expired."
-        },
-        "asm.trace.archiveMaxAgeDays": {
-          "type": "integer",
-          "scope": "resource",
-          "minimum": 0,
-          "default": 0,
-          "description": "Maximum age of unpinned managed archives in days; 0 disables age expiry."
-        },
-        "asm.trace.archiveMaxCaptures": {
-          "type": "integer",
-          "scope": "resource",
-          "minimum": 0,
-          "default": 0,
-          "description": "Maximum unpinned managed archives; 0 disables count expiry."
         },
         "asm.analysis.cacheMaxMiB": {
           "type": "integer",

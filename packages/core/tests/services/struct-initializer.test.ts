@@ -16,12 +16,15 @@ test("initializer lists preserve nested expressions, quoted commas, and one trai
   ]);
   t.deepEqual(splitInitializerList(String.raw`"a\",b", 2`), [String.raw`"a\",b"`, "2"]);
   t.deepEqual(splitInitializerList("  "), []);
-  for (const text of ["(]", "]", "[1}"])
+  for (const text of ["(]", "]", "[1}"]) {
     t.throws(() => splitInitializerList(text), { message: /Mismatched/ });
-  for (const text of [",1", "1,,2"])
+  }
+  for (const text of [",1", "1,,2"]) {
     t.throws(() => splitInitializerList(text), { message: /Empty/ });
-  for (const text of ["[1", "'open", '"open'])
+  }
+  for (const text of ["[1", "'open", '"open']) {
     t.throws(() => splitInitializerList(text), { message: /Unclosed/ });
+  }
 });
 
 test("named initializers distinguish scalar expressions and arrays without evaluating them", (t) => {

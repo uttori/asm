@@ -6,7 +6,8 @@
   "files": [
     "dist",
     "src",
-    "asm-config.schema.json"
+    "asm-config.schema.json",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,

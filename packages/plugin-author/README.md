@@ -1,16 +1,39 @@
-# Plugin Author Example
+# Plugin author example
 
-This minimal plugin is a working copy of the test fixture pattern. It contributes a one-byte architecture, a flat address space, raw output, one directive, one session-state slot, and the `example.raw` target.
+Private, runnable example of an Uttori ASM plugin. It registers a one-byte architecture and decoder,
+a flat address space, raw output, a directive, session state, and the `example.raw` target.
 
-From the repository root:
+## Run in this repository
+
+Requires Node.js 26 or newer. From the repository root after `npm ci`:
 
 ```sh
 npm run cli -- packages/plugin-author/main.asm packages/plugin-author/main.bin \
   --config packages/plugin-author/uttori-asm.config.json
 ```
 
-The output is one byte, `0x42`. The same architecture also demonstrates the optional decoder and machine-readable instruction-specification hooks. Decoder input is immutable and bounds-safe, and decoded instructions deliberately contain no source formatting.
+The output is one byte, `0x42`. `npm run example:typecheck` checks the example's public API usage.
 
-A decoder-only architecture can be registered for analysis, but selecting it as an assembler target produces a clear target diagnostic.
+## Use it for your plugin
 
-The plugin imports only the documented `@uttori/asm-core` and `@uttori/asm-core/plugin` entry points and exports an `AssemblerPlugin` as its default export. Copy this directory when starting a plugin, then give every manifest and contribution ID a package-specific namespace.
+Copy this directory, give the package and contribution IDs unique names, and install
+`@uttori/asm-core` as a runtime dependency. Compile `src/index.ts` to ESM JavaScript and point your
+package export and project configuration at that output. Replace the repository-relative schema
+path with `./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json` when using the loader.
+
+The included configuration references TypeScript for repository development. It requires the
+repository's source loader and is not the configuration to publish. The included `tsconfig.json`
+also extends the repository configuration; replace it when copying the example out.
+
+Validate plugin options before activation, keep mutable state per assembly session, and release
+host resources through plugin disposal. A decoder-only architecture can support analysis, but an
+assembler target also requires an encoder.
+
+## Documentation and support
+
+[Plugin authoring guide](https://github.com/uttori/asm/blob/master/packages/plugin-author/GUIDE.md) ·
+[Core API](https://github.com/uttori/asm/tree/master/packages/core) ·
+[Configuration](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md).
+
+[Report an issue](https://github.com/uttori/asm/issues). Licensed under
+[MIT](https://github.com/uttori/asm/blob/master/LICENSE).

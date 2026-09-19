@@ -2,7 +2,6 @@ import * as fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { test } from "../../../tests/ava-helper.js";
 import {
   commitAnalysisProjectTransaction,
   importRuntimeInstructionTrace,
@@ -11,6 +10,8 @@ import {
   RomImage,
   validateSourceExportFiles,
 } from "@uttori/asm-disassembler";
+
+import { test } from "../../../tests/ava-helper.js";
 import {
   SnesProjectInitializationCancelledError,
   analyzeSnesProject,
@@ -62,8 +63,8 @@ test("shared initializer commits a verified workspace with analysis and editor f
     t.true(stages.includes("commit"));
     await fs.stat(path.join(outputDirectory, "main.asm"));
     const main = await fs.readFile(path.join(outputDirectory, "main.asm"), "utf8");
-    t.regex(main, /incsrc "snes-defines\.asm"/);
-    const defines = await fs.readFile(path.join(outputDirectory, "snes-defines.asm"), "utf8");
+    t.regex(main, /incsrc "defines\.asm"/);
+    const defines = await fs.readFile(path.join(outputDirectory, "defines.asm"), "utf8");
     t.regex(defines, /^INIDISP = \$2100 ; Display control:/m);
     t.regex(defines, /^DMAP7 = \$4370 ; DMA\/HDMA channel 7:/m);
     t.regex(defines, /^OBJSEL = \$2101 ; Object size/m);
@@ -180,7 +181,9 @@ test("background reanalysis does not overwrite an edit published while it was ru
         projectDirectory,
         romFile,
         onProgress: ({ stage }) => {
-          if (stage !== "commit") return;
+          if (stage !== "commit") {
+            return;
+          }
           const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
           const labels = [
             ...snapshot.shards.labels,
@@ -417,8 +420,9 @@ test("separate captures accumulate code and compatible CPU-state changes do not 
     t.true(exported.codeBytes >= previousCode);
     previousCode = exported.codeBytes;
     t.true(exported.manifest.spans.some((span) => span.role === "code" && span.start === 0x10));
-    if (index > 0)
+    if (index > 0) {
       t.true(exported.manifest.spans.some((span) => span.role === "code" && span.start === 0x20));
+    }
     const saved = loadAnalysisProjectSnapshot(projectDirectory);
     t.true(traceIds.every((id) => saved.shards.evidence.some((record) => record.id === id)));
     t.false(

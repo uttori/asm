@@ -27,8 +27,12 @@ const createLayoutHarness = () => {
     arch: "snes.65816",
     architectureRegistry: {
       getCanonicalName: (name: string) => {
-        if (name === "65816" || name === "snes.65816") return "snes.65816";
-        if (name === "spc700") return "snes.spc700";
+        if (name === "65816" || name === "snes.65816") {
+          return "snes.65816";
+        }
+        if (name === "spc700") {
+          return "snes.spc700";
+        }
         return undefined;
       },
     },
@@ -122,8 +126,12 @@ test("arch without selectArchitecture writes session.arch and enforces the targe
     arch: "old",
     architectureRegistry: {
       getCanonicalName: (name: string) => {
-        if (name === "65816") return "snes.65816";
-        if (name === "spc700") return "snes.spc700";
+        if (name === "65816") {
+          return "snes.65816";
+        }
+        if (name === "spc700") {
+          return "snes.spc700";
+        }
         return undefined;
       },
     } as ArchitectureDirectiveContext["session"]["architectureRegistry"],

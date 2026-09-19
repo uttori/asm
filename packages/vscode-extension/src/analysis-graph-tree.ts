@@ -43,7 +43,9 @@ const isStringArray = (value: unknown): value is readonly string[] =>
 const isAnalysisGraphNavigationTarget = (
   value: unknown,
 ): value is AnalysisGraphNavigationTarget => {
-  if (!value || typeof value !== "object") return false;
+  if (!value || typeof value !== "object") {
+    return false;
+  }
   const target = value as Partial<AnalysisGraphNavigationTarget>;
   return (
     typeof target.projectDirectory === "string" &&
@@ -186,8 +188,12 @@ const callNode = (
   const caller = callers.length > 0 ? callers.join(" / ") : "unowned call site";
   const callee = callees.length > 0 ? callees.join(" / ") : hexadecimal(call.toAddress);
   let label = `${caller} → ${callee}`;
-  if (direction === "incoming") label = `← ${caller}`;
-  if (direction === "outgoing") label = `→ ${callee}`;
+  if (direction === "incoming") {
+    label = `← ${caller}`;
+  }
+  if (direction === "outgoing") {
+    label = `→ ${callee}`;
+  }
   return leaf(
     `${projectId}:call:${direction}:${call.id}`,
     label,
@@ -420,14 +426,22 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
   }
 
   async getChildren(element?: AnalysisGraphTreeNode): Promise<AnalysisGraphTreeNode[]> {
-    if (!element) return this.loadProjects();
-    if (element.loadChildren) return [...(await element.loadChildren())];
-    if (element.pageEntries) return this.pagedChildren(element);
+    if (!element) {
+      return this.loadProjects();
+    }
+    if (element.loadChildren) {
+      return [...(await element.loadChildren())];
+    }
+    if (element.pageEntries) {
+      return this.pagedChildren(element);
+    }
     return [...(element.children ?? [])];
   }
 
   navigationTarget(element: unknown): AnalysisGraphNavigationTarget | undefined {
-    if (!element || typeof element !== "object") return undefined;
+    if (!element || typeof element !== "object") {
+      return undefined;
+    }
     const candidate = "navigationTarget" in element ? element.navigationTarget : element;
     return isAnalysisGraphNavigationTarget(candidate) ? candidate : undefined;
   }
@@ -487,9 +501,13 @@ export class AnalysisGraphProvider implements TreeDataProvider<AnalysisGraphTree
 
   private pagedChildren(element: AnalysisGraphTreeNode): AnalysisGraphTreeNode[] {
     const entries = element.pageEntries ?? [];
-    if (entries.length <= PAGE_SIZE) return entries.map((create) => create());
+    if (entries.length <= PAGE_SIZE) {
+      return entries.map((create) => create());
+    }
     let stride = PAGE_SIZE;
-    while (Math.ceil(entries.length / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
+    while (Math.ceil(entries.length / stride) > PAGE_SIZE) {
+      stride *= PAGE_SIZE;
+    }
     const pages: AnalysisGraphTreeNode[] = [];
     for (let index = 0; index < entries.length; index += stride) {
       const slice = entries.slice(index, index + stride);

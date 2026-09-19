@@ -56,8 +56,9 @@ const capture = <T>(operation: () => T): { ok: true; value: T } | { ok: false; e
   try {
     return { ok: true, value: operation() };
   } catch (error) {
-    if (!(error instanceof Error))
+    if (!(error instanceof Error)) {
       throw new Error(`Boundary threw a non-Error value: ${String(error)}`);
+    }
     return { ok: false, error };
   }
 };
@@ -74,8 +75,12 @@ const assertDecodeContract = (
   offset: number,
 ): void => {
   let instructions: readonly DecodedInstruction[] = [];
-  if (result.kind === "instruction") instructions = [result.instruction];
-  if (result.kind === "ambiguous") instructions = [...result.alternatives];
+  if (result.kind === "instruction") {
+    instructions = [result.instruction];
+  }
+  if (result.kind === "ambiguous") {
+    instructions = [...result.alternatives];
+  }
   for (const instruction of instructions) {
     if (!Number.isSafeInteger(instruction.size) || instruction.size <= 0) {
       throw new Error("Decoder returned a non-positive instruction size.");
@@ -219,7 +224,9 @@ test("deterministic project fuzz rejects or validates arbitrary manifests", (t) 
           } as unknown as FuzzJson)
         : random.json();
     const migrated = capture(() => parseAnalysisProjectManifest(candidate));
-    if (!migrated.ok) continue;
+    if (!migrated.ok) {
+      continue;
+    }
     accepted++;
     t.notThrows(() => validateAnalysisProjectManifest(migrated.value));
     t.is(migrated.value.schemaVersion, ANALYSIS_PROJECT_SCHEMA_VERSION);
@@ -259,10 +266,11 @@ test("deterministic project fuzz bounds SQLite payload parsing and validation", 
       const text =
         iteration % 29 === 0 ? `{invalid-${random.nextUint32()}` : canonicalJson(payload);
       database.exec("DELETE FROM annotations");
-      if (!Array.isArray(payload) || payload.length !== 0 || iteration % 29 === 0)
+      if (!Array.isArray(payload) || payload.length !== 0 || iteration % 29 === 0) {
         database
           .prepare("INSERT INTO annotations VALUES (?, ?, ?, ?, ?, ?)")
           .run("fuzz", "rom.file", 0, 1, "data8", text);
+      }
       const loaded = capture(() => loadAnalysisProject(directory));
       if (loaded.ok) {
         accepted++;
@@ -379,7 +387,9 @@ test("deterministic protocol fuzz preserves validation, framing, and ordering bo
     const malformed = random.bytes(96);
     const parsed = capture(() => new DebugSidecarMessageParser(protocolLimits).push(malformed));
     if (parsed.ok) {
-      for (const message of parsed.value) t.notThrows(() => assertDebugSidecarMessage(message));
+      for (const message of parsed.value) {
+        t.notThrows(() => assertDebugSidecarMessage(message));
+      }
     }
   }
 });

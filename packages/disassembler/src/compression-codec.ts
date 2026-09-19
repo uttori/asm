@@ -65,7 +65,9 @@ const isStableId = (id: string): boolean => {
   }
   for (let index = 0; index < id.length; index++) {
     const character = id[index];
-    if (!isAsciiAlphaNumeric(character) && !"._:/-".includes(character)) return false;
+    if (!isAsciiAlphaNumeric(character) && !"._:/-".includes(character)) {
+      return false;
+    }
   }
   return true;
 };
@@ -93,13 +95,17 @@ const normalizeOptions = (
     return value;
   }
   if (typeof value === "number") {
-    if (!Number.isFinite(value)) throw new Error(`${location} contains a non-finite number.`);
+    if (!Number.isFinite(value)) {
+      throw new Error(`${location} contains a non-finite number.`);
+    }
     return Object.is(value, -0) ? 0 : value;
   }
   if (Array.isArray(value)) {
     return (value as readonly AssetValue[]).map((entry, index): AssetValue => {
       const normalized = normalizeOptions(entry, `${location}[${index}]`);
-      if (normalized === undefined) throw new Error(`${location}[${index}] cannot be undefined.`);
+      if (normalized === undefined) {
+        throw new Error(`${location}[${index}] cannot be undefined.`);
+      }
       return normalized;
     });
   }
@@ -169,11 +175,15 @@ export class CompressionCodecRegistry {
   readonly #codecs = new Map<string, CompressionCodec>();
 
   register(codec: CompressionCodec): this {
-    if (!isStableId(codec.id)) throw new Error(`Compression codec id '${codec.id}' is not stable.`);
-    if (codec.version.trim() === "")
+    if (!isStableId(codec.id)) {
+      throw new Error(`Compression codec id '${codec.id}' is not stable.`);
+    }
+    if (codec.version.trim() === "") {
       throw new Error(`Compression codec '${codec.id}' has no version.`);
-    if (this.#codecs.has(codec.id))
+    }
+    if (this.#codecs.has(codec.id)) {
       throw new Error(`Duplicate compression codec id '${codec.id}'.`);
+    }
     this.#codecs.set(
       codec.id,
       Object.freeze({
@@ -188,7 +198,9 @@ export class CompressionCodecRegistry {
 
   resolve(id: string): CompressionCodec {
     const codec = this.#codecs.get(id);
-    if (!codec) throw new Error(`Unknown compression codec '${id}'.`);
+    if (!codec) {
+      throw new Error(`Unknown compression codec '${id}'.`);
+    }
     return codec;
   }
 
@@ -240,7 +252,9 @@ export const verifyCompressionCodec = (
   constraints: CompressionRangeConstraints,
   options?: AssetValue,
 ): CompressionVerificationRecord => {
-  if (!(encoded instanceof Uint8Array)) throw new Error("Compressed input must be a Uint8Array.");
+  if (!(encoded instanceof Uint8Array)) {
+    throw new Error("Compressed input must be a Uint8Array.");
+  }
   const checked = validateConstraints(constraints, encoded.length);
   const codec = registry.resolve(codecId);
   const context = { options: normalizeOptions(options) };
@@ -305,7 +319,9 @@ export const reencodeCompressedRange = (
     throw new Error(`Compression codec '${codec.id}' failed decoded-data round-trip verification.`);
   }
   const replacement = Uint8Array.from(existing);
-  if (checked.fillByte !== undefined) replacement.fill(checked.fillByte);
+  if (checked.fillByte !== undefined) {
+    replacement.fill(checked.fillByte);
+  }
   replacement.set(encoded);
   return Object.freeze({
     encoded: Uint8Array.from(encoded),

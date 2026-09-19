@@ -230,7 +230,9 @@ const executeMaintenanceJob = async (
         // Annotation refresh deliberately renders saved analysis, including earlier saved
         // annotations. Decoding pending traces remains the full Analyze command's job.
         // An intervening write cannot silently join the edit the user just asked to refresh.
-        if (revision !== receipt.after) return undefined;
+        if (revision !== receipt.after) {
+          return undefined;
+        }
       } finally {
         store.close();
       }
@@ -283,7 +285,6 @@ const executeMaintenanceJob = async (
           onStage: (message) => progress({ message }),
           onMergeProgress: (processedRecords, totalRecords) =>
             progress({ processedRecords, totalRecords }),
-          archiveSourceFile: traceFile,
           storagePolicy: job.input.storagePolicy,
         },
       );
@@ -321,7 +322,6 @@ const executeMaintenanceJob = async (
         {
           signal,
           storagePolicy,
-          archiveSourceFile: traceFile,
           onStage: (message) => progress({ message }),
         },
       );

@@ -71,10 +71,15 @@ export function handleCheck(state: SnesSessionState, words: readonly string[]): 
     throw new Error("Invalid CHECK command. Expected: check bankcross <on|off|half|full>");
   }
   const mode = words[2].toLowerCase();
-  if (mode === "off") state.bankCrossMode = "off";
-  else if (mode === "half") state.bankCrossMode = "half";
-  else if (mode === "full" || mode === "on") state.bankCrossMode = "full";
-  else throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+  if (mode === "off") {
+    state.bankCrossMode = "off";
+  } else if (mode === "half") {
+    state.bankCrossMode = "half";
+  } else if (mode === "full" || mode === "on") {
+    state.bankCrossMode = "full";
+  } else {
+    throw new Error(`Invalid parameter for check bankcross: ${words[2]}`);
+  }
 }
 
 /**
@@ -85,10 +90,15 @@ export function handleCheck(state: SnesSessionState, words: readonly string[]): 
  * @param {readonly string[]} words Tokenized line.
  */
 export function handleOptimize(state: SnesSessionState, words: readonly string[]): void {
-  if (words.length < 3 || words[1].toLowerCase() !== "dp") return;
+  if (words.length < 3 || words[1].toLowerCase() !== "dp") {
+    return;
+  }
   const mode = words[2].toLowerCase();
-  if (mode === "none") state.optimizeDirectPage = false;
-  else if (mode === "ram" || mode === "always") state.optimizeDirectPage = true;
+  if (mode === "none") {
+    state.optimizeDirectPage = false;
+  } else if (mode === "ram" || mode === "always") {
+    state.optimizeDirectPage = true;
+  }
 }
 
 /**

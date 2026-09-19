@@ -49,8 +49,8 @@ export class PluginSessionStateStore {
         return this.#values.get(slot.id);
     }
     /**
-     * Deep-clones every slot via its plugin `clone` hook.
-     * Used to seed stage snapshots so later passes cannot mutate earlier ones.
+     * Copies every slot via its plugin `clone` hook. Each hook is responsible for copying
+     * mutable descendants so later passes cannot mutate earlier stage snapshots.
      * @param {ReadonlyMap<string, unknown>} [source] Values to clone. Defaults to the live store.
      * @returns {PluginStateSnapshot} A new map of cloned slot values.
      * @throws {PluginError} If `source` is missing a registered slot, or a `clone` hook throws.
@@ -80,7 +80,8 @@ export class PluginSessionStateStore {
         return snapshot;
     }
     /**
-     * Replaces the live slot map. Callers pass a snapshot from {@link cloneSnapshot}.
+     * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
+     * Subsequent writes mutate this map; the previous snapshot is not individually disposed.
      * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
      */
     restore(snapshot) {
@@ -95,8 +96,9 @@ export class PluginSessionStateStore {
     resetForStage(stage) {
         for (const record of this.#contributions) {
             const reset = record.value.resetForStage;
-            if (!reset)
+            if (!reset) {
                 continue;
+            }
             try {
                 reset(this.#values.get(record.contributionId), stage);
             }
@@ -117,8 +119,9 @@ export class PluginSessionStateStore {
      * @throws {AggregateError} If one or more slot `dispose` hooks throw.
      */
     dispose() {
-        if (this.#disposed)
+        if (this.#disposed) {
             return;
+        }
         this.#disposed = true;
         const errors = [];
         for (const record of [...this.#contributions].reverse()) {

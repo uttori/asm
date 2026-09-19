@@ -35,28 +35,27 @@ Before opening a pull request, run:
 ```sh
 npm run verify
 npm run pack:check
-npm run test:roundtrip
 ```
 
 The complete gate map, including fixtures and the Extension Host smoke, is in
-[Testing and release gates](docs/testing-and-release.md).
+[Testing and release gates](TESTING.md).
 
 ## Choose the right starting document
 
-| If you are changing…                                               | Read first                                                                       | Primary implementation                                           |
-| ------------------------------------------------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| parser, expressions, symbols, macros, assembly stages, diagnostics | [root README](README.md)                                                         | `packages/core/src/`                                             |
-| plugin contracts or a new target                                   | [plugin-author example](packages/plugin-author/README.md)                        | `packages/core/src/plugin/`, then a plugin package               |
-| 65816, SPC700, SuperFX, mappers, SNES source output                | [SNES reference](packages/plugin-snes/README.md)                                 | `packages/plugin-snes/src/`                                      |
-| NMOS/CMOS/other 65xx targets                                       | [65xx reference](packages/plugin-65xx/README.md)                                 | `packages/plugin-65xx/src/`                                      |
-| ROM projects, analysis, evidence, transactions, assets             | [disassembler architecture](docs/disassembler-architecture.md)                   | `packages/disassembler/src/`                                     |
-| CLI commands or end-to-end disassembly                             | [CLI reference](packages/cli/README.md)                                          | `packages/cli/src/`                                              |
-| LSP diagnostics or editor language features                        | [architecture guide](docs/disassembler-architecture.md#language-and-editor-path) | `packages/language-server/src/`                                  |
-| DAP, neutral debug contracts, framing, replay                      | [debug-adapter reference](packages/debug-adapter/README.md)                      | `packages/debug-adapter/src/`                                    |
-| ares translation/process hosting                                   | [ares sidecar reference](packages/debug-sidecar-ares/README.md)                  | `packages/debug-sidecar-ares/src/`                               |
-| MesenCE translation/process hosting                                | [MesenCE sidecar reference](packages/debug-sidecar-mesence/README.md)            | `packages/debug-sidecar-mesence/src/`                            |
-| VS Code commands, trees, annotations, launch settings              | [extension reference](packages/vscode-extension/README.md)                       | `packages/vscode-extension/src/`                                 |
-| performance-sensitive analysis/persistence                         | [performance guide](docs/disassembler-performance.md)                            | relevant implementation plus `scripts/benchmark-disassembler.ts` |
+| If you are changing…                                               | Read first                                                                           | Primary implementation                                           |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ---------------------------------------------------------------- |
+| parser, expressions, symbols, macros, assembly stages, diagnostics | [root README](README.md)                                                             | `packages/core/src/`                                             |
+| plugin contracts or a new target                                   | [plugin-author example](packages/plugin-author/README.md)                            | `packages/core/src/plugin/`, then a plugin package               |
+| 65816, SPC700, SuperFX, mappers, SNES source output                | [SNES reference](packages/plugin-snes/README.md)                                     | `packages/plugin-snes/src/`                                      |
+| NMOS/CMOS/other 65xx targets                                       | [65xx reference](packages/plugin-65xx/README.md)                                     | `packages/plugin-65xx/src/`                                      |
+| ROM projects, analysis, evidence, transactions, assets             | [disassembler architecture](packages/disassembler/ARCHITECTURE.md)                   | `packages/disassembler/src/`                                     |
+| CLI commands or end-to-end disassembly                             | [CLI reference](packages/cli/README.md)                                              | `packages/cli/src/`                                              |
+| LSP diagnostics or editor language features                        | [architecture guide](packages/disassembler/ARCHITECTURE.md#language-and-editor-path) | `packages/language-server/src/`                                  |
+| DAP, neutral debug contracts, framing, replay                      | [debug-adapter reference](packages/debug-adapter/README.md)                          | `packages/debug-adapter/src/`                                    |
+| ares translation/process hosting                                   | [ares sidecar reference](packages/debug-sidecar-ares/README.md)                      | `packages/debug-sidecar-ares/src/`                               |
+| MesenCE translation/process hosting                                | [MesenCE sidecar reference](packages/debug-sidecar-mesence/README.md)                | `packages/debug-sidecar-mesence/src/`                            |
+| VS Code commands, trees, annotations, launch settings              | [extension reference](packages/vscode-extension/README.md)                           | `packages/vscode-extension/src/`                                 |
+| performance-sensitive analysis/persistence                         | [performance guide](packages/disassembler/PERFORMANCE.md)                            | relevant implementation plus `scripts/benchmark-disassembler.ts` |
 
 The implementation, public package documentation, and executable validation gates are the source of
 truth. Update all three together when capability status or validation evidence changes, and keep
@@ -81,24 +80,24 @@ contract instead of creating a dependency shortcut. `npm run check:boundaries` e
 important directions.
 
 The deeper dependency and data-flow description is in
-[Disassembler architecture](docs/disassembler-architecture.md).
+[Disassembler architecture](packages/disassembler/ARCHITECTURE.md).
 
 ## Glossary
 
-| Term             | Meaning in this repository                                                                                          |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------- |
-| architecture     | An instruction set and encoder/decoder identity, such as `snes.65816`.                                              |
-| target           | A complete build environment: architecture, address spaces, output format, directives, and options.                 |
-| address space    | A named coordinate system. Equal numbers in ROM, CPU bus, WRAM, ARAM, and GSU space are not interchangeable.        |
-| mapper           | Target-owned conversion between SNES cartridge offsets and CPU addresses. Reverse mapping is never guessed.         |
-| analysis project | `analysis.json` plus eight independently hashed, merge-friendly JSON shards. It contains metadata, never ROM bytes. |
-| evidence         | Provenance and confidence attached to a fact: manual, imported, detected, static, or runtime.                       |
-| conflict         | Persisted contradictory evidence. A conflict is useful data, not an error to discard.                               |
-| CFG              | Control-flow graph: decoded instruction nodes and branch/call/return edges.                                         |
-| DAP              | Visual Studio Code's Debug Adapter Protocol. Only the adapter/editor layer speaks it.                               |
-| sidecar          | A restartable child process translating the neutral debug protocol to one emulator.                                 |
-| fixture          | A stable input and expected result used by a test. Some are redistributable; ROM-backed fixtures are local only.    |
-| round trip       | Export native source, reassemble it, and compare the complete rebuilt byte image with the input.                    |
+| Term             | Meaning in this repository                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| architecture     | An instruction set and encoder/decoder identity, such as `snes.65816`.                                           |
+| target           | A complete build environment: architecture, address spaces, output format, directives, and options.              |
+| address space    | A named coordinate system. Equal numbers in ROM, CPU bus, WRAM, ARAM, and GSU space are not interchangeable.     |
+| mapper           | Target-owned conversion between SNES cartridge offsets and CPU addresses. Reverse mapping is never guessed.      |
+| analysis project | `analysis.sqlite` plus an `analysis.json` watcher pointer. The source ROM remains external.                      |
+| evidence         | Provenance and confidence attached to a fact: manual, imported, detected, static, or runtime.                    |
+| conflict         | Persisted contradictory evidence. A conflict is useful data, not an error to discard.                            |
+| CFG              | Control-flow graph: decoded instruction nodes and branch/call/return edges.                                      |
+| DAP              | Visual Studio Code's Debug Adapter Protocol. Only the adapter/editor layer speaks it.                            |
+| sidecar          | A restartable child process translating the neutral debug protocol to one emulator.                              |
+| fixture          | A stable input and expected result used by a test. Some are redistributable; ROM-backed fixtures are local only. |
+| round trip       | Export native source, reassemble it, and compare the complete rebuilt byte image with the input.                 |
 
 ## Make a focused change
 
@@ -183,11 +182,11 @@ Tests should be deterministic, hermetic by default, and safe to run concurrently
 temporary directory in `finally` or test teardown. Never write a user ROM, emulator runtime, or
 generated analysis project into a publishable package.
 
-The fuzz suite is deterministic:
+The fuzz suite is deterministic and part of `npm test`:
 
 ```sh
-npm run test:fuzz
-UTTORI_FUZZ_SEED=123456789 npm run test:fuzz
+npm test -- tests/integration/disassembler-fuzz.test.ts
+UTTORI_FUZZ_SEED=123456789 npm test -- tests/integration/disassembler-fuzz.test.ts
 ```
 
 When a fuzz case fails, report the seed and iteration, add a minimal regression assertion when
@@ -205,23 +204,24 @@ repository floors and higher per-file floors for historically fragile core modul
    that specification.
 3. Add a documented golden vector and a truncated-input case when instruction width changes.
 4. Preserve decode-format-encode tests across every opcode/state variant.
-5. Run the architecture test, `npm run test:fuzz`, and `npm run test:roundtrip`.
+5. Run the architecture test and `npm test`.
 
 65816 is the primary processor; SPC700 and SuperFX use the same reversible-contract standard.
 
 ### Add a project schema field
 
-1. Decide which existing shard owns the fact. Do not add a shard merely for convenience.
+1. Decide which existing semantic collection/table owns the fact. Keep storage and public record contracts aligned.
 2. Add a stable, JSON-safe type and validation at load and write boundaries.
 3. Update canonical ordering when the field affects deterministic output.
-4. Add an explicit one-way migration if an older persisted schema needs transformation.
+4. Support the currently declared format and document deliberate future changes; do not add compatibility for earlier development layouts.
 5. Reject future versions; never downgrade them.
 6. Test malformed input, deterministic rewrite, missing evidence/address spaces, and ROM-payload
    exclusion.
 7. Document merge and recovery behavior.
 
-The manifest is the only active commit pointer. Preserve manifest-last publication and immutable
-content-addressed generations.
+SQLite owns the authoritative manifest and revision. Check the expected revision under the writer
+lock and commit records and revision atomically. Refresh `analysis.json` after commit; it is a watcher
+pointer, not the authority for recovery or conflict detection.
 
 ### Add an analysis rule
 
@@ -277,7 +277,7 @@ isolated Extension Development Host.
 
 ### Change a performance-sensitive path
 
-Read [Disassembler performance baselines](docs/disassembler-performance.md) before editing. Preserve
+Read [Disassembler performance baselines](packages/disassembler/PERFORMANCE.md) before editing. Preserve
 the inline `Performance invariant`, `Security invariant`, and `TOCTOU invariant` comments. Add or
 update semantic tests first, then run the focused benchmark and compare the complete distribution,
 not one favorable measurement. Only the matching Apple M1 Max host may enforce the checked-in M1
@@ -311,10 +311,15 @@ redistributable dummy ROM.
 Change documentation in the same pull request when behavior, a command, a file format, a capability,
 or a validation claim changes. Use this ownership order:
 
-- package README: public API and end-user behavior;
-- `docs/disassembler-architecture.md`: system boundaries and invariants;
-- `docs/testing-and-release.md`: commands, CI, fixtures, and release evidence;
+- package README or another Markdown file at that package's top level: public API and end-user behavior;
+- `packages/disassembler/ARCHITECTURE.md`: system boundaries and invariants;
+- `TESTING.md`: commands, CI, fixtures, and release evidence;
 - ADR: a durable decision with alternatives and consequences.
+
+Keep research and bookkeeping in the internal `docs/` directory. Public documents must contain
+the relevant user guidance themselves or link to another public package/root guide; they must not
+link into internal research. Include package-level guides in the published package's `files` list.
+`npm run docs:check` enforces the link boundary, and `npm run pack:check` verifies guide inclusion.
 
 Say “implemented”, “locally passed on macOS”, and “passed hosted matrix” only when each is true.
 Never infer a Windows/Linux, native runtime, semantic completeness, or performance claim from a
@@ -343,8 +348,9 @@ If VS Code smoke testing fails before launch, confirm network access and remove 
 version directory beneath `.vscode-test/`; do not delete the whole repository or a user VS Code
 profile. Linux needs `xvfb-run` in headless environments.
 
-If a project write reports stale or locked state, reload it. Do not remove a live project lock. Read
-[Conflict-safe edits and recovery](packages/disassembler/README.md#conflict-safe-edits-and-recovery)
+If a project write reports stale or locked state, reload it after the active writer finishes. Do not
+delete SQLite WAL/SHM files or replace a database with active clients. Read
+[Conflict-safe edits and recovery](packages/disassembler/API.md#conflict-safe-edits-and-recovery)
 before recovering interrupted writes.
 
 If an external fixture is skipped, run `npm run fixtures:status`. The output identifies the missing

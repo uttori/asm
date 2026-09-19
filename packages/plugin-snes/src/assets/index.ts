@@ -38,6 +38,8 @@ export const snesAssetCodecs: readonly AssetCodec[] = Object.freeze(
  * @returns {AssetCodecRegistry} The same registry for fluent setup.
  */
 export const registerSnesAssetCodecs = (registry: AssetCodecRegistry): AssetCodecRegistry => {
-  for (const codec of snesAssetCodecs) registry.register(codec);
+  for (const codec of snesAssetCodecs) {
+    registry.register(codec);
+  }
   return registry;
 };

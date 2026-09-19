@@ -1,8 +1,9 @@
 import { spc700Specifications } from "./spc700-spec.js";
 const readLittleEndian = (bytes, offset, width) => {
     let value = 0;
-    for (let index = 0; index < width; index++)
+    for (let index = 0; index < width; index++) {
         value |= (bytes[offset + index] ?? 0) << (index * 8);
+    }
     return value >>> 0;
 };
 const signedByte = (value) => (value & 0x80 ? value - 0x100 : value);
@@ -48,8 +49,9 @@ const operandsFor = (specification, bytes, logicalAddress) => {
     const byte = bytes[1] ?? 0;
     const word = readLittleEndian(bytes, 1, 2);
     const fixed = fixedRegisters[specification.mode];
-    if (fixed)
+    if (fixed) {
         return fixed.map(register);
+    }
     switch (specification.mode) {
         case "implied":
             return [];
@@ -190,10 +192,12 @@ const referencesFor = (specification, operands, state) => {
     }
     for (let index = 0; index < operands.length; index++) {
         const operand = operands[index];
-        if (operand.kind !== "address" || operand.value === undefined)
+        if (operand.kind !== "address" || operand.value === undefined) {
             continue;
-        if (references.some((reference) => reference.operandIndex === index))
+        }
+        if (references.some((reference) => reference.operandIndex === index)) {
             continue;
+        }
         const isDirect = operand.width === 1;
         let resolved = operand.value;
         if (isDirect) {
@@ -267,8 +271,9 @@ export class Spc700Decoder {
             };
         }
         const bytes = context.source.readBytes(context.offset, size);
-        if (!bytes)
+        if (!bytes) {
             throw new Error("Decoder byte source violated its bounds contract.");
+        }
         return { kind: "instruction", instruction: buildInstruction(specification, bytes, context) };
     }
 }

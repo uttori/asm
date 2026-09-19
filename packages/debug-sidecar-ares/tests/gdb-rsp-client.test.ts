@@ -10,14 +10,20 @@ class FakeTransport implements GdbRspTransport {
   closed = false;
 
   async write(data: Uint8Array): Promise<void> {
-    if (this.closed) throw new Error("fake transport closed");
+    if (this.closed) {
+      throw new Error("fake transport closed");
+    }
     this.writes.push(new Uint8Array(data));
   }
 
   async close(): Promise<void> {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
-    for (const listener of this.#closeListeners) listener();
+    for (const listener of this.#closeListeners) {
+      listener();
+    }
   }
 
   onData(listener: (data: Uint8Array) => void): DebugSubscription {
@@ -32,18 +38,24 @@ class FakeTransport implements GdbRspTransport {
 
   feed(data: Uint8Array | string): void {
     const bytes = typeof data === "string" ? Buffer.from(data, "ascii") : data;
-    for (const listener of this.#dataListeners) listener(bytes);
+    for (const listener of this.#dataListeners) {
+      listener(bytes);
+    }
   }
 
   fail(error: Error): void {
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
   }
 }
 
 const packet = (payload: string, checksumOverride?: string): string => {
   const bytes = Buffer.from(payload, "ascii");
   let sum = 0;
-  for (const byte of bytes) sum = (sum + byte) & 0xff;
+  for (const byte of bytes) {
+    sum = (sum + byte) & 0xff;
+  }
   return `$${payload}#${checksumOverride ?? sum.toString(16).padStart(2, "0")}`;
 };
 
@@ -232,7 +244,9 @@ test("framing enforces exact packet bounds and supports empty replies and reentr
   transport.feed(packet("S05"));
   t.is(await response, "OK");
   const empty = client.request("qUnknown");
-  for (const byte of packet("")) transport.feed(byte);
+  for (const byte of packet("")) {
+    transport.feed(byte);
+  }
   t.is(await empty, "");
   const maximum = client.request("g");
   transport.feed(packet("12345678"));

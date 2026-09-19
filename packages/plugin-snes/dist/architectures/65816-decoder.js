@@ -5,10 +5,12 @@ import { conditionalBranches, cpu65816Specifications, } from "./65816-spec.js";
  * @returns {0 | 1 | "unknown"} The value of the flag.
  */
 const flagValue = (value) => {
-    if (value === true || value === 1)
+    if (value === true || value === 1) {
         return 1;
-    if (value === false || value === 0)
+    }
+    if (value === false || value === 0) {
         return 0;
+    }
     return "unknown";
 };
 /**
@@ -19,13 +21,16 @@ const flagValue = (value) => {
  */
 const resolvedWidthFlag = (state, flag) => {
     const emulation = flagValue(state.e);
-    if (emulation === 1)
+    if (emulation === 1) {
         return 1;
+    }
     const width = flagValue(state[flag]);
-    if (width === 1)
+    if (width === 1) {
         return 1;
-    if (width === 0 && emulation === 0)
+    }
+    if (width === 0 && emulation === 0) {
         return 0;
+    }
     return "unknown";
 };
 /**
@@ -37,8 +42,9 @@ const resolvedWidthFlag = (state, flag) => {
  */
 const readLittleEndian = (bytes, offset, width) => {
     let value = 0;
-    for (let index = 0; index < width; index++)
+    for (let index = 0; index < width; index++) {
         value |= (bytes[offset + index] ?? 0) << (index * 8);
+    }
     return value >>> 0;
 };
 /**
@@ -164,14 +170,18 @@ const operandsFor = (specification, bytes, logicalAddress) => {
  */
 const targetFor = (specification, operands, state, logicalAddress) => {
     const operand = operands[0];
-    if (!operand)
+    if (!operand) {
         return undefined;
-    if (operand.targetAddress !== undefined)
+    }
+    if (operand.targetAddress !== undefined) {
         return operand.targetAddress;
-    if (operand.value === undefined)
+    }
+    if (operand.value === undefined) {
         return undefined;
-    if (specification.mode === "absoluteLong")
+    }
+    if (specification.mode === "absoluteLong") {
         return operand.value;
+    }
     if (specification.mode === "absolute") {
         const bank = (state.programBank ?? logicalAddress >>> 16) & 0xff;
         return (bank << 16) | operand.value;
@@ -194,10 +204,12 @@ const referencesFor = (specification, operands, state, logicalAddress) => {
     if (isBranch || isCall || isJump) {
         const target = targetFor(specification, operands, state, logicalAddress);
         let kind = "jump";
-        if (isBranch)
+        if (isBranch) {
             kind = "branch";
-        else if (isCall)
+        }
+        else if (isCall) {
             kind = "call";
+        }
         return [
             {
                 kind,
@@ -219,8 +231,9 @@ const referencesFor = (specification, operands, state, logicalAddress) => {
         ];
     }
     const memoryMode = mode.startsWith("direct") || mode.startsWith("absolute") || mode.startsWith("stackRelative");
-    if (!memoryMode || operands[0]?.value === undefined)
+    if (!memoryMode || operands[0]?.value === undefined) {
         return [];
+    }
     if (mode.startsWith("direct")) {
         return [
             {
@@ -348,8 +361,9 @@ export class Cpu65816Decoder {
         const availableSizes = sizes.filter((size) => size <= availableBytes);
         const alternatives = availableSizes.map((size) => {
             const bytes = context.source.readBytes(context.offset, size);
-            if (!bytes)
+            if (!bytes) {
                 throw new Error("Decoder byte source violated its bounds contract.");
+            }
             return buildInstruction(specification, bytes, context, state);
         });
         if (sizes.length === 2) {

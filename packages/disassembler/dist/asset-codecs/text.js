@@ -23,8 +23,9 @@ const settings = (context) => {
         byteToToken.set(0x0a, "\n");
         byteToToken.set(0x0d, "\r");
         for (let byte = 0x20; byte <= 0x7e; byte++) {
-            if (byte !== 0x5c)
+            if (byte !== 0x5c) {
                 byteToToken.set(byte, String.fromCharCode(byte));
+            }
         }
     }
     const table = objectValue(options.table, "Text asset option 'table'");
@@ -37,8 +38,9 @@ const settings = (context) => {
     const tokenToByte = [...byteToToken.entries()].map(([byte, token]) => [token, byte]);
     const tokens = new Set();
     for (const [token] of tokenToByte) {
-        if (tokens.has(token))
+        if (tokens.has(token)) {
             throw new Error(`Text table token '${token}' is duplicated.`);
+        }
         tokens.add(token);
     }
     for (const [left] of tokenToByte) {
@@ -52,8 +54,9 @@ const settings = (context) => {
     return { options, byteToToken, tokenToByte, terminator };
 };
 const inspectedSize = (context, resolved) => {
-    if (context.request.length !== undefined)
+    if (context.request.length !== undefined) {
         return context.request.length;
+    }
     if (resolved.terminator === undefined) {
         throw new Error(`Text asset '${context.request.id}' requires a length or terminator.`);
     }
@@ -63,10 +66,12 @@ const inspectedSize = (context, resolved) => {
     }
     for (let size = 1; size <= maxLength; size++) {
         const bytes = context.source.read(context.request.sourceOffset + size - 1, 1);
-        if (!bytes)
+        if (!bytes) {
             break;
-        if (bytes[0] === resolved.terminator)
+        }
+        if (bytes[0] === resolved.terminator) {
             return size;
+        }
     }
     throw new Error(`Text asset '${context.request.id}' has no terminator within ${maxLength} bytes.`);
 };
@@ -134,8 +139,9 @@ export const textAssetCodec = Object.freeze({
             throw new Error(`Text asset '${context.request.id}' requires string text and terminated flag.`);
         }
         const payload = encodeText(text, resolved, context.request.id);
-        if (!terminated)
+        if (!terminated) {
             return payload;
+        }
         if (resolved.terminator === undefined) {
             throw new Error(`Text asset '${context.request.id}' cannot append an unconfigured terminator.`);
         }

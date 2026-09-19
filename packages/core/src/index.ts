@@ -1,4 +1,9 @@
-export * from "./assembler.js";
+/**
+ * Host assembly/tooling entry point. Plugin author contracts live at ./plugin; ./debug-map
+ * also has a dedicated entry point. Exported front-end, lowering, and IR services are advanced
+ * embedding APIs and retain their session/stage invariants.
+ */
+export { Assembler, type AssemblerOptions, type ProgramAnalysisOptions } from "./assembler.js";
 export type { AssemblyStageName } from "./plugin/contracts.js";
 export type { PushPcStackEntry } from "./services/directive-runtime-service.js";
 export type { MacroDefinition } from "./services/macro-engine.js";

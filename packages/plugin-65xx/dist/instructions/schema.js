@@ -6,12 +6,15 @@
  * @returns {boolean} True when the form is available on this CPU.
  */
 export function matchesFeatures(expression, features) {
-    if (expression.allOf?.some((feature) => !features.has(feature)))
+    if (expression.allOf?.some((feature) => !features.has(feature))) {
         return false;
-    if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature)))
+    }
+    if (expression.anyOf && !expression.anyOf.some((feature) => features.has(feature))) {
         return false;
-    if (expression.noneOf?.some((feature) => features.has(feature)))
+    }
+    if (expression.noneOf?.some((feature) => features.has(feature))) {
         return false;
+    }
     return true;
 }
 /**

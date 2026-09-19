@@ -38,7 +38,7 @@ const encode = (source: string, address = logicalAddress): readonly number[] => 
   const encoder = new ArchSuperFX(host.context);
   const space = source.indexOf(" ");
   const words = space < 0 ? [source] : [source.slice(0, space), source.slice(space + 1)];
-  if (!encoder.encode(words)) throw new Error(`SuperFX encoder rejected '${source}'.`);
+  if (!encoder.encode(words)) {throw new Error(`SuperFX encoder rejected '${source}'.`);}
   return host.emitted;
 };
 
@@ -64,7 +64,7 @@ test("SuperFX selector-fused MOVE families decode-format-encode exhaustively", (
   for (const specification of superFxFusedSpecifications) {
     const result = decode(specification.opcode);
     t.is(result.kind, "instruction", specification.id);
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {continue;}
     t.is(result.instruction.specificationId, specification.id);
     const source = formatSuperFxInstruction(result.instruction);
     t.deepEqual(encode(source), specification.opcode, `${specification.id}: ${source}`);
@@ -76,7 +76,7 @@ test("SuperFX base opcode table decode-format-encodes all 256 bytes", (t) => {
     const bytes = [specification.opcode[0], 0x34, 0x12].slice(0, specification.minimumSize);
     const result = decode(bytes);
     t.is(result.kind, "instruction", specification.id);
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {continue;}
     const source = formatSuperFxInstruction(result.instruction);
     t.deepEqual(encode(source), bytes, `${specification.id}: ${source}`);
   }
@@ -90,7 +90,7 @@ test("SuperFX altered ALT forms decode as fused native instructions and round-tr
     );
     const result = decode(bytes);
     t.is(result.kind, "instruction", specification.id);
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {continue;}
     const source = formatSuperFxInstruction(result.instruction);
     t.deepEqual(encode(source), bytes, `${specification.id}: ${source}`);
   }
@@ -124,7 +124,7 @@ test("SuperFX state models selector prefixes and R15 control flow", (t) => {
   let state = initialSuperFxState(0x08);
   const to = decode([0x1f], superFxDecodeState(state));
   t.is(to.kind, "instruction");
-  if (to.kind !== "instruction") return;
+  if (to.kind !== "instruction") {return;}
   state = transferSuperFxState(to.instruction, state);
   t.deepEqual(state.destinationRegister, { kind: "known", value: 15 });
 

@@ -141,15 +141,18 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
     const artifacts = catalog.sources.filter((source) => source.sha256);
     const producers = catalog.sources.filter((source) => !source.sha256);
     const nameCounts = new Map<string, number>();
-    for (const source of catalog.sources)
+    for (const source of catalog.sources) {
       nameCounts.set(source.name, (nameCounts.get(source.name) ?? 0) + 1);
+    }
     const node = (source: AnalysisEvidenceSource): AnalysisSourcesTreeNode => {
       const target = { directory, source };
       const warnings = source.reports.some(
         (report) => report.warnings.length || report.unsupported.length,
       );
       let icon = source.sha256 ? "file" : "symbol-event";
-      if (source.kinds.includes("runtime")) icon = "pulse";
+      if (source.kinds.includes("runtime")) {
+        icon = "pulse";
+      }
       return {
         id: this.#sourceKey(target),
         label: source.name,
@@ -177,7 +180,7 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
       };
     };
     const roots = this.#localPages(`${directory}:artifacts`, artifacts.map(node));
-    if (producers.length)
+    if (producers.length) {
       roots.push({
         id: `${directory}:producers`,
         label: "Other evidence",
@@ -186,15 +189,21 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
         icon: "symbol-event",
         load: () => this.#localPages(`${directory}:producers`, producers.map(node)),
       });
-    if (!roots.length)
+    }
+    if (!roots.length) {
       roots.push({ id: `${directory}:empty`, label: "No imported sources yet", icon: "info" });
+    }
     return roots;
   }
 
   #localPages(id: string, entries: AnalysisSourcesTreeNode[]): AnalysisSourcesTreeNode[] {
-    if (entries.length <= PAGE_SIZE) return entries;
+    if (entries.length <= PAGE_SIZE) {
+      return entries;
+    }
     let stride = PAGE_SIZE;
-    while (Math.ceil(entries.length / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
+    while (Math.ceil(entries.length / stride) > PAGE_SIZE) {
+      stride *= PAGE_SIZE;
+    }
     const pages: AnalysisSourcesTreeNode[] = [];
     for (let start = 0; start < entries.length; start += stride) {
       const slice = entries.slice(start, start + stride);
@@ -335,7 +344,9 @@ export class AnalysisSourcesProvider implements TreeDataProvider<AnalysisSources
       });
     }
     let stride = PAGE_SIZE;
-    while (Math.ceil(total / stride) > PAGE_SIZE) stride *= PAGE_SIZE;
+    while (Math.ceil(total / stride) > PAGE_SIZE) {
+      stride *= PAGE_SIZE;
+    }
     const pages: AnalysisSourcesTreeNode[] = [];
     for (let offset = 0; offset < total; offset += stride) {
       const from = start + offset;

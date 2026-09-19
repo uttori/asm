@@ -4,28 +4,53 @@ import type { ArchitectureDecoder, ArchitectureInstructionSpecification } from "
 import type { CoreDirectiveGroup } from "../directive-groups.js";
 import type { DirectiveDescriptor } from "../lsp/directive-catalog.js";
 import type { SyntaxProfile } from "../syntax-profile.js";
+/** Contract revision required by PluginManager; independent of npm package versions. */
 export declare const PLUGIN_API_VERSION: 1;
+/** Ordered build passes: collect symbols, determine addresses, then emit final bytes. */
 export type AssemblyStageName = "collectDefinitions" | "resolveLayout" | "emitProgram";
+/** Plugin identity and dependencies validated before activation. */
 export interface AssemblerPluginManifest {
+    /** Globally unique lowercase ID, beginning with a letter; dots and hyphens separate segments. */
     id: string;
     name: string;
+    /** Exact semantic version of this plugin. */
     version: string;
     apiVersion: typeof PLUGIN_API_VERSION;
     description?: string;
+    /** Dependencies must be active or present in the same activation batch. */
     requires?: ReadonlyArray<{
         pluginId: string;
+        /** Semver range accepted for the dependency. */
         version: string;
     }>;
 }
+/** Plugin-wide resources owned by the manager, separate from assembler session state. */
 export interface PluginDisposable {
+    /** Called once by the manager, including rollback when contribution validation fails after activation returns. */
     dispose(): void | Promise<void>;
 }
+/** Default module export consumed by hosts; importing a module is outside the activation transaction. */
 export interface AssemblerPlugin<Options = unknown> {
     manifest: AssemblerPluginManifest;
+    /**
+     * Validate unknown input and supply defaults, or throw to reject configuration.
+     * The returned object graph is frozen in place; return owned data, not shared mutable objects.
+     * Without this hook, only absent or empty options are accepted.
+     */
     validateOptions?(configured: unknown): Options;
+    /**
+     * Register contributions before resolving. Registrations commit together for this plugin.
+     * Release resources yourself if activation throws before returning a disposable.
+     */
     activate(context: PluginActivationContext<Options>, options: Readonly<Options>): void | PluginDisposable | Promise<void | PluginDisposable>;
 }
+/**
+ * Preserve the plugin's option type without runtime validation.
+ * @param {AssemblerPlugin<Options>} plugin Definition to expose as the module's default export.
+ * @returns {AssemblerPlugin<Options>} The same plugin object, retaining its option type.
+ */
 export declare function definePlugin<Options>(plugin: AssemblerPlugin<Options>): AssemblerPlugin<Options>;
+/** Host-owned diagnostic sink; omitted manager loggers discard messages. */
 export interface PluginLogger {
     debug(message: string, details?: Readonly<Record<string, unknown>>): void;
     info(message: string, details?: Readonly<Record<string, unknown>>): void;
@@ -33,27 +58,41 @@ export interface PluginLogger {
     error(message: string, details?: Readonly<Record<string, unknown>>): void;
 }
 declare const sessionStateBrand: unique symbol;
+/** Typed slot token returned during registration; keep it to access each session's live value. */
 export interface SessionStateKey<T> {
     readonly id: string;
     readonly [sessionStateBrand]: T;
 }
+/** Canonical target identity and target-normalized options for a newly created session. */
 export interface SessionCreationContext {
     readonly targetId: string;
     readonly targetOptions: Readonly<Record<string, unknown>>;
 }
+/**
+ * Mutable data isolated per session and assembly stage. Factories run for every registered slot,
+ * including slots from plugins whose target was not selected. Store cloneable data here;
+ * plugin-wide external resources belong in the activation disposable.
+ */
 export interface SessionStateContribution<T> {
     id: string;
     create(context: SessionCreationContext): T;
+    /** Copy all mutable descendants needed to isolate stage snapshots; do not mutate the input. */
     clone(value: T): T;
+    /** Prepare the live stage value before lifecycle onStageStart. Omission preserves its contents. */
     resetForStage?(value: T, stage: AssemblyStageName): void;
+    /** Releases the current live value at session disposal; discarded snapshots are not disposed individually. */
     dispose?(value: T): void;
 }
+/** Session-scoped access shared by encoders, directives, expressions, and lifecycle hooks. */
 export interface SessionStateStore {
+    /** Returns the live mutable value, not a copy. Throws PluginError for an inactive slot. */
     get<T>(slot: SessionStateKey<T>): T;
 }
+/** Session expression and symbol resolution available while classifying an operand. */
 export interface OperandClassificationContext {
     readonly operands: OperandResolutionContext;
 }
+/** Processor syntax and factories. IDs are namespaced; aliases resolve within each target. */
 export interface ArchitectureContribution {
     id: string;
     aliases?: readonly string[];
@@ -61,7 +100,7 @@ export interface ArchitectureContribution {
     unknownInstructionBehavior: "throw" | "returnFalse";
     splitOperands(text: string): string[];
     classifyOperand(context: OperandClassificationContext, operand: string): LoweredOperand;
-    /** Optional so analysis-only plugins do not need to provide an assembler. */
+    /** Per-session encoder. May be omitted for analysis; Assembler requires encoders for every target architecture. */
     createEncoder?(context: ArchitectureFactoryContext): ArchitectureEncoder;
     /** Optional architecture-owned decoder; formatting remains a separate concern. */
     createDecoder?(context: ArchitectureDecoderFactoryContext): ArchitectureDecoder;
@@ -69,76 +108,99 @@ export interface ArchitectureContribution {
     instructionSpecifications?: readonly ArchitectureInstructionSpecification[];
     instructions: readonly InstructionDescriptor[];
 }
+/** Encoder capabilities bound to one assembler session; do not retain beyond that session. */
 export interface ArchitectureFactoryContext extends ArchitectureEncoderContext {
     readonly targetId: string;
     readonly options: Readonly<Record<string, unknown>>;
     readonly state: SessionStateStore;
 }
+/** Decoder inputs owned by the host; options and state follow the selected target's contract. */
 export interface ArchitectureDecoderFactoryContext {
     readonly targetId: string;
     readonly options: Readonly<Record<string, unknown>>;
     readonly state: SessionStateStore;
 }
+/** Per-session target services use normalized target options and shared session state. */
 export interface TargetFactoryContext {
     readonly targetId: string;
     readonly options: Readonly<Record<string, unknown>>;
     readonly state: SessionStateStore;
 }
+/** Creates the logical-address to output-offset mapping for each session. */
 export interface AddressSpaceContribution {
     id: string;
     create(context: TargetFactoryContext): TargetAddressSpace;
 }
+/** Target mapping policy; logical addresses and physical offsets are byte addresses. */
 export interface TargetAddressSpace {
+    /** Logical address width in bits. */
     readonly addressWidth: number;
+    /** Initial logical address before a source origin directive. */
     readonly defaultOrigin: number;
     normalizeForWrite(address: number): number;
+    /** Advance by a byte count, applying target bank/wrap rules. */
     advance(address: number, amount: number): number;
     toOutputOffset(address: number): number;
     fromOutputOffset(offset: number): number;
+    /** Reject a write by throwing before output mutation; width is a byte count. */
     validateWrite?(address: number, width: number): void;
 }
+/** Live output at finalization; the formatter may patch bytes or update session state. */
 export interface OutputFinalizationContext {
     readonly state: SessionStateStore;
     readonly outputBytes: number[] | Uint8Array;
 }
+/** Live session bytes supplied when materializing the target's binary representation. */
 export interface OutputReadContext {
     readonly state: SessionStateStore;
     readonly outputBytes: number[] | Uint8Array;
 }
+/** Creates per-session finalization and binary output behavior. */
 export interface OutputFormatContribution {
     id: string;
     create(context: TargetFactoryContext): TargetOutputFormat;
 }
+/** Target-owned serialization, including headers, checksums, or padding. */
 export interface TargetOutputFormat {
+    /** Runs after emission and beforeOutputFinalize hooks. May mutate live output. */
     finalize(context: OutputFinalizationContext): void;
+    /** May return a view of session data; consumers that need independent ownership must copy it. */
     getOutput(context: OutputReadContext): Uint8Array;
 }
+/** The same live state store supplied to the directive factory. */
 export interface DirectiveExecutionContext {
     readonly state: SessionStateStore;
 }
+/** Synchronous directive execution; words include the keyword, and raw retains the command text. */
 export type DirectiveHandler = (context: DirectiveExecutionContext, words: readonly string[], raw: string) => void;
+/** Creates a handler bound to one session; the session remains owned and disposed by its host. */
 export interface DirectiveFactoryContext {
     readonly targetId: string;
     readonly state: SessionStateStore;
     readonly session: Assembler;
 }
+/** Runtime syntax and editor descriptions; keywords must not collide within a target. */
 export interface DirectiveContribution {
     id: string;
     keywords: readonly string[];
+    /** Preprocess handles source before lowering; lowered handles executable commands in each stage. */
     phase: "preprocess" | "lowered";
     createHandler(context: DirectiveFactoryContext): DirectiveHandler;
     tooling: readonly DirectiveDescriptor[];
 }
+/** Named group selected by a target; unselected groups do not install handlers. */
 export interface DirectiveSetContribution {
     id: string;
     directives: readonly DirectiveContribution[];
     tooling?: readonly DirectiveDescriptor[];
 }
+/** Editor signature metadata; implementations must validate their accepted argument values. */
 export interface ExpressionFunctionSignature {
     readonly parameters: readonly string[];
     readonly minimumArguments?: number;
     readonly maximumArguments?: number;
 }
+/** Target mapping and read access supplied to a contributed expression function. */
 export interface ExpressionFunctionContext {
     readonly state: SessionStateStore;
     readonly addresses: {
@@ -146,10 +208,13 @@ export interface ExpressionFunctionContext {
         fromOutputOffset(offset: number): number;
     };
     readonly output: {
+        /** Tests a physical byte offset in the base image (or output if absent); returns 1 or 0. */
         canRead(position: number, size: number): number;
+        /** Read at a logical address through the target mapping, little-endian; an unavailable range throws unless a fallback is supplied. */
         read(position: number, size: number, defaultValue?: number): number;
     };
 }
+/** Synchronous expression callback; names and aliases must be unique within the target. */
 export interface ExpressionFunctionContribution {
     name: string;
     aliases?: readonly string[];
@@ -157,59 +222,78 @@ export interface ExpressionFunctionContribution {
     summary: string;
     evaluate(context: ExpressionFunctionContext, args: readonly MathValue[]): MathValue;
 }
+/** Named group of expression functions selected by a target. */
 export interface ExpressionSetContribution {
     id: string;
     functions: readonly ExpressionFunctionContribution[];
 }
+/** Borrowed session and live state; hooks must not dispose or recursively assemble the session. */
 export interface SessionLifecycleContext {
     readonly state: SessionStateStore;
     readonly session: Assembler;
 }
+/** The stage entering or leaving execution; analysis may run only a subset of stages. */
 export interface StageLifecycleContext extends SessionLifecycleContext {
     readonly stage: AssemblyStageName;
 }
+/** Directive command before its registered handler executes. */
 export interface DirectiveMiddlewareContext extends SessionLifecycleContext {
     readonly keyword: string;
     readonly words: readonly string[];
     readonly raw: string;
 }
+/** Architecture IDs are canonical; sourceAlias retains the spelling used for selection. */
 export interface ArchitectureSelectionContext extends SessionLifecycleContext {
     readonly previousArchitecture?: string;
     readonly architecture: string;
     readonly sourceAlias: string;
 }
+/** Dialect-specific ambiguity at endif; start-line indices are zero-based. */
 export interface EndifResolutionContext extends SessionLifecycleContext {
     readonly loopType?: "for" | "while";
     readonly loopStartLine?: number;
     readonly ifStartLine?: number;
 }
+/** Pending write after address-space validation; width is a byte count. */
 export interface WriteValidationContext extends SessionLifecycleContext {
     readonly logicalAddress: number;
     readonly width: number;
 }
+/** Output and session immediately before the output-format finalizer. */
 export interface LifecycleOutputFinalizationContext extends OutputFinalizationContext {
     readonly session: Assembler;
 }
+/**
+ * Synchronous hooks run in contribution registration order, except disposal which reverses it.
+ * Hook exceptions become PluginError; disposal attempts all hooks and aggregates failures.
+ */
 export interface SessionLifecycle {
     onSessionCreated?(context: SessionLifecycleContext): void;
+    /** Also runs for collectDefinitions during construction, before the first explicit assembly/analysis pass. */
     onStageStart?(context: StageLifecycleContext): void;
+    /** First handled result skips later middleware and the directive handler. */
     beforeDirective?(context: DirectiveMiddlewareContext): "continue" | "handled";
     onArchitectureSelected?(context: ArchitectureSelectionContext): void;
+    /** Last defined answer wins; undefined defers, and no answer means false. */
     shouldEndifCloseInnermostWhile?(context: EndifResolutionContext): boolean | undefined;
     beforeWrite?(context: WriteValidationContext): void;
     onStageEnd?(context: StageLifecycleContext): void;
     beforeOutputFinalize?(context: LifecycleOutputFinalizationContext): void;
+    /** Runs before state-slot disposal, so live state is still available. */
     onSessionDispose?(context: SessionLifecycleContext): void;
 }
+/** Creates hooks for one session; included only when referenced by the selected target. */
 export interface LifecycleContribution {
     id: string;
     create(context: TargetFactoryContext): SessionLifecycle;
 }
+/** Links processor, mapping, output, and language contributions into a build/tooling target. */
 export interface TargetContribution {
     id: string;
     aliases?: readonly string[];
     displayName: string;
     defaultArchitecture: string;
+    /** Canonical architecture contribution IDs available for this target. */
     architectures: readonly string[];
     addressSpace: string;
     outputFormat: string;
@@ -217,16 +301,24 @@ export interface TargetContribution {
     /** Core directive families enabled for runtime and tooling. Omitted means all. */
     coreDirectiveGroups?: readonly CoreDirectiveGroup[];
     expressionSets: readonly string[];
+    /** Selected lifecycle IDs; execution follows registration order, not this array's order. */
     lifecycle: readonly string[];
     /** Source grammar policy. Omitted targets retain the legacy Asar-compatible profile. */
     syntaxProfile?: SyntaxProfile;
+    /** Suggested output suffix, including its leading dot; core does not write files. */
     defaultOutputExtension: string;
+    /** Validate/default Assembler targetOptions; output is shallow-copied and frozen per session. */
     createOptions?(configured: unknown): Readonly<Record<string, unknown>>;
 }
+/**
+ * Registration capability valid only until activate resolves. Contributions are frozen in place
+ * on commit; their IDs must be globally unique, lowercase, and contain a namespace dot.
+ */
 export interface PluginActivationContext<Options = unknown> {
     readonly pluginId: string;
     readonly logger: PluginLogger;
     readonly options: Readonly<Options>;
+    /** Register a per-session slot and return its typed access token. */
     registerSessionState<T>(contribution: SessionStateContribution<T>): SessionStateKey<T>;
     registerArchitecture(contribution: ArchitectureContribution): void;
     registerAddressSpace(contribution: AddressSpaceContribution): void;
@@ -236,17 +328,20 @@ export interface PluginActivationContext<Options = unknown> {
     registerLifecycle(contribution: LifecycleContribution): void;
     registerTarget(contribution: TargetContribution): void;
 }
+/** Read-only editor description with aliases normalized to an array. */
 export interface ExpressionFunctionDescriptor {
     readonly name: string;
     readonly aliases: readonly string[];
     readonly signature: ExpressionFunctionSignature;
     readonly summary: string;
 }
+/** Processor identity for target-scoped editor selection. */
 export interface ArchitectureSummary {
     readonly id: string;
     readonly aliases: readonly string[];
     readonly displayName: string;
 }
+/** Target identity and defaults for host pickers and output naming. */
 export interface TargetSummary {
     readonly id: string;
     readonly aliases: readonly string[];
@@ -254,11 +349,14 @@ export interface TargetSummary {
     readonly defaultArchitecture: string;
     readonly defaultOutputExtension: string;
 }
+/** Read-only target catalog; instruction lookup accepts target-scoped IDs or aliases. */
 export interface ToolingCatalog {
+    /** Returns an empty array when the architecture is unavailable in this target. */
     getInstructions(architecture: string): readonly InstructionDescriptor[];
     getDirectives(): readonly DirectiveDescriptor[];
     getExpressionFunctions(): readonly ExpressionFunctionDescriptor[];
     getArchitectures(): readonly ArchitectureSummary[];
+    /** Lists every target in the environment, not just this catalog's target. */
     getTargets(): readonly TargetSummary[];
 }
 export {};

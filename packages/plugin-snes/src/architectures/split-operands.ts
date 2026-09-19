@@ -31,8 +31,12 @@ export const splitTopLevelCommaOperands = (text: string): string[] => {
   let level = 0;
   let current = "";
   for (const character of text) {
-    if (character === "(") level++;
-    if (character === ")") level--;
+    if (character === "(") {
+      level++;
+    }
+    if (character === ")") {
+      level--;
+    }
     if (character === "," && level === 0) {
       operands.push(current.trim());
       current = "";
@@ -40,6 +44,8 @@ export const splitTopLevelCommaOperands = (text: string): string[] => {
       current += character;
     }
   }
-  if (current.trim()) operands.push(current.trim());
+  if (current.trim()) {
+    operands.push(current.trim());
+  }
   return operands;
 };

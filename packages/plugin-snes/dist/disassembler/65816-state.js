@@ -1,8 +1,9 @@
 const unknown = () => ({ kind: "unknown" });
 const known = (value) => ({ kind: "known", value });
 const joinValue = (left, right) => {
-    if (left.kind === "unknown" || right.kind === "unknown")
+    if (left.kind === "unknown" || right.kind === "unknown") {
         return unknown();
+    }
     if (left.kind === "known" && right.kind === "known") {
         return left.value === right.value
             ? left
@@ -16,13 +17,15 @@ const joinValue = (left, right) => {
 };
 const sameEntry = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const joinStack = (left, right) => {
-    if (left.kind === "unknown" || right.kind === "unknown")
+    if (left.kind === "unknown" || right.kind === "unknown") {
         return { kind: "unknown" };
+    }
     if (left.kind === "conflicting" || right.kind === "conflicting") {
         return { kind: "conflicting" };
     }
-    if (left.entries.length !== right.entries.length)
+    if (left.entries.length !== right.entries.length) {
         return { kind: "conflicting" };
+    }
     return left.entries.every((entry, index) => sameEntry(entry, right.entries[index]))
         ? left
         : { kind: "conflicting" };
@@ -139,11 +142,13 @@ export const cpu65816DecodeState = (state) => ({
     ...(state.d.kind === "known" ? { directPage: state.d.value } : {}),
 });
 const adjustStackPointer = (state, delta) => {
-    if (state.s.kind !== "known")
+    if (state.s.kind !== "known") {
         return state.s.kind === "conflicting" ? state.s : unknown();
+    }
     let value = (state.s.value + delta) & 0xffff;
-    if (state.e.kind === "known" && state.e.value === 1)
+    if (state.e.kind === "known" && state.e.value === 1) {
         value = 0x0100 | (value & 0xff);
+    }
     return known(value);
 };
 const push = (state, entry) => {
@@ -170,14 +175,16 @@ const pull = (state, bytes) => {
 const pushedBytes = (mnemonic, state) => {
     if (mnemonic === "PHA") {
         const flag = decoderFlag(state.m);
-        if (flag === "unknown")
+        if (flag === "unknown") {
             return undefined;
+        }
         return flag === 0 ? 2 : 1;
     }
     if (mnemonic === "PHX" || mnemonic === "PHY") {
         const flag = decoderFlag(state.x);
-        if (flag === "unknown")
+        if (flag === "unknown") {
             return undefined;
+        }
         return flag === 0 ? 2 : 1;
     }
     return mnemonic === "PHD" || mnemonic === "PEA" || mnemonic === "PEI" || mnemonic === "PER"
@@ -187,14 +194,16 @@ const pushedBytes = (mnemonic, state) => {
 const pulledBytes = (target, state) => {
     if (target === "a") {
         const flag = decoderFlag(state.m);
-        if (flag === "unknown")
+        if (flag === "unknown") {
             return undefined;
+        }
         return flag === 0 ? 2 : 1;
     }
     if (target === "x" || target === "y") {
         const flag = decoderFlag(state.x);
-        if (flag === "unknown")
+        if (flag === "unknown") {
             return undefined;
+        }
         return flag === 0 ? 2 : 1;
     }
     return target === "d" || target === "pc" ? 2 : 1;
@@ -205,12 +214,15 @@ const loseStackPrecision = (state) => ({
     stack: { kind: "unknown" },
 });
 const sourceValue = (source, state) => {
-    if (source === "pbr")
+    if (source === "pbr") {
         return state.pbr;
-    if (source === "dbr")
+    }
+    if (source === "dbr") {
         return state.dbr;
-    if (source === "d")
+    }
+    if (source === "d") {
         return state.d;
+    }
     return unknown();
 };
 const CARRY_UNKNOWN_MNEMONICS = new Set([
@@ -313,8 +325,9 @@ export const transferCpu65816State = (instruction, input) => {
             state = { ...state, s: unknown(), stack: { kind: "unknown" } };
         }
     }
-    if (CARRY_UNKNOWN_MNEMONICS.has(instruction.mnemonic))
+    if (CARRY_UNKNOWN_MNEMONICS.has(instruction.mnemonic)) {
         state = { ...state, carry: unknown() };
+    }
     if (["BRK", "COP", "JSL", "JSR"].includes(instruction.mnemonic)) {
         state = loseStackPrecision(state);
     }

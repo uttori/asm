@@ -37,7 +37,9 @@ export interface CreateDebugMapOptions {
 }
 
 const canonicalValue = (value: unknown): unknown => {
-  if (Array.isArray(value)) return value.map(canonicalValue);
+  if (Array.isArray(value)) {
+    return value.map(canonicalValue);
+  }
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
@@ -117,16 +119,23 @@ export const createDebugMap = (options: CreateDebugMapOptions): DebugMap => {
 export const validateDebugMap = (map: DebugMap, output?: Uint8Array): readonly string[] => {
   const { fingerprint, ...payload } = map;
   const issues: string[] = [];
-  if (map.format !== DEBUG_MAP_FORMAT)
+  if (map.format !== DEBUG_MAP_FORMAT) {
     issues.push(`Unsupported debug-map format '${String(map.format)}'.`);
-  if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION)
+  }
+  if (map.schemaVersion !== DEBUG_MAP_SCHEMA_VERSION) {
     issues.push(`Unsupported debug-map schema ${String(map.schemaVersion)}.`);
+  }
   const actualFingerprint = sha256(canonicalDebugMapJson(payload));
-  if (fingerprint.algorithm !== "sha256" || fingerprint.value !== actualFingerprint)
+  if (fingerprint.algorithm !== "sha256" || fingerprint.value !== actualFingerprint) {
     issues.push("Debug-map fingerprint mismatch.");
+  }
   if (output) {
-    if (output.length !== map.output.size) issues.push("Debug-map output size mismatch.");
-    if (sha256(output) !== map.output.sha256) issues.push("Debug-map output SHA-256 mismatch.");
+    if (output.length !== map.output.size) {
+      issues.push("Debug-map output size mismatch.");
+    }
+    if (sha256(output) !== map.output.sha256) {
+      issues.push("Debug-map output SHA-256 mismatch.");
+    }
   }
   return issues;
 };

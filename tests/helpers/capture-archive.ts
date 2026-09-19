@@ -52,8 +52,9 @@ export const writeCaptureFixture = async (
     !Number.isInteger(chunkEvents) ||
     chunkEvents < 1 ||
     chunkEvents > 3854
-  )
+  ) {
     throw new Error("Invalid capture fixture event count.");
+  }
   const handle = await open(file, "wx");
   let chunks = 0;
   try {

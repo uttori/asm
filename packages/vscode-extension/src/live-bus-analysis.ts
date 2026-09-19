@@ -40,8 +40,9 @@ export class LiveBusAnalysis {
     onProgress: (progress: LiveBusProgress) => void,
     maxMemoryMiB = 512,
   ) {
-    if (!Number.isSafeInteger(maxMemoryMiB) || maxMemoryMiB < 128)
+    if (!Number.isSafeInteger(maxMemoryMiB) || maxMemoryMiB < 128) {
       throw new Error("Live analysis requires a heap budget of at least 128 MiB.");
+    }
     this.#worker = fork(workerFile, [], {
       execArgv: [`--max-old-space-size=${maxMemoryMiB}`],
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
@@ -57,7 +58,9 @@ export class LiveBusAnalysis {
           error?: string;
           progress?: LiveBusProgress;
         }) => {
-          if (this.#settled) return;
+          if (this.#settled) {
+            return;
+          }
           if (message.type === "accepted") {
             this.#sending = false;
             this.#send();
@@ -69,30 +72,37 @@ export class LiveBusAnalysis {
               return;
             }
             this.#worker.send({ type: "preview-accepted" }, (error) => {
-              if (error) this.#fail(error);
+              if (error) {
+                this.#fail(error);
+              }
             });
           } else if (message.type === "result" && message.value) {
             this.#settled = true;
             clearTimeout(this.#cancelTimer);
             resolve(message.value);
-          } else if (message.type === "error") this.#fail(new Error(message.error));
+          } else if (message.type === "error") {
+            this.#fail(new Error(message.error));
+          }
         },
       );
       this.#worker.on("error", (error) => this.#fail(error));
       this.#worker.on("exit", (code, signal) => {
-        if (!this.#settled)
+        if (!this.#settled) {
           this.#fail(
             new Error(
               `Live analysis process exited (${signal ?? code}); the capture can be imported offline.`,
             ),
           );
+        }
       });
     });
     // Avoid an unhandled rejection before the UI has attached its completion handler.
     void this.completion.catch(() => undefined);
     this.#worker.stderr?.resume();
     this.#worker.send({ type: "start", ...options }, (error) => {
-      if (error) this.#fail(error);
+      if (error) {
+        this.#fail(error);
+      }
     });
   }
   /** Replace pending progress; debugger polling never waits for analysis.
@@ -103,24 +113,34 @@ export class LiveBusAnalysis {
     this.#send();
   }
   #send(): void {
-    if (this.#settled || this.#sending || !this.#latest) return;
+    if (this.#settled || this.#sending || !this.#latest) {
+      return;
+    }
     const position = this.#latest;
     this.#latest = undefined;
     this.#sending = true;
     this.#worker.send({ type: "position", position }, (error) => {
-      if (error) this.#fail(error);
+      if (error) {
+        this.#fail(error);
+      }
     });
   }
   /** Cooperative cancellation rolls back temp staging; force exit bounds cleanup after 2 s. */
   cancel(): void {
-    if (this.#settled) return;
+    if (this.#settled) {
+      return;
+    }
     this.#worker.send({ type: "cancel" }, (error) => {
-      if (error) this.#fail(error);
+      if (error) {
+        this.#fail(error);
+      }
     });
     this.#cancelTimer ??= setTimeout(() => this.#fail(new Error("Live analysis cancelled.")), 2000);
   }
   #fail(error: Error): void {
-    if (this.#settled) return;
+    if (this.#settled) {
+      return;
+    }
     this.#settled = true;
     clearTimeout(this.#cancelTimer);
     this.#worker.kill();

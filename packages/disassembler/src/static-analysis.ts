@@ -322,7 +322,9 @@ class StaticWorkQueue<State> {
   #nextSequence = 0;
 
   constructor(items: readonly WorkItem<State>[]) {
-    for (const item of items) this.push(item);
+    for (const item of items) {
+      this.push(item);
+    }
   }
 
   get length(): number {
@@ -341,7 +343,9 @@ class StaticWorkQueue<State> {
     let index = this.#values.length - 1;
     while (index > 0) {
       const parent = Math.floor((index - 1) / 2);
-      if (this.#compare(this.#values[parent], queued) <= 0) break;
+      if (this.#compare(this.#values[parent], queued) <= 0) {
+        break;
+      }
       this.#values[index] = this.#values[parent];
       index = parent;
     }
@@ -351,20 +355,26 @@ class StaticWorkQueue<State> {
   shift(): WorkItem<State> | undefined {
     const first = this.#values[0];
     const last = this.#values.pop();
-    if (!first || !last) return undefined;
+    if (!first || !last) {
+      return undefined;
+    }
     if (this.#values.length > 0) {
       // Restore the heap by sifting the former tail down. Assigning parents/children in place also
       // avoids allocating a replacement queue on every processed CFG edge.
       let index = 0;
       while (true) {
         const left = index * 2 + 1;
-        if (left >= this.#values.length) break;
+        if (left >= this.#values.length) {
+          break;
+        }
         const right = left + 1;
         const child =
           right < this.#values.length && this.#compare(this.#values[right], this.#values[left]) < 0
             ? right
             : left;
-        if (this.#compare(last, this.#values[child]) <= 0) break;
+        if (this.#compare(last, this.#values[child]) <= 0) {
+          break;
+        }
         this.#values[index] = this.#values[child];
         index = child;
       }
@@ -389,15 +399,25 @@ const edgeIdFor = (
 const conflictKindFor = (
   decoded: Exclude<StaticDecodeResult, { readonly kind: "instruction" }>,
 ): StaticAnalysisConflict["kind"] => {
-  if (decoded.kind === "ambiguous") return "state-ambiguity";
-  if (decoded.kind === "blocked") return "blocked";
+  if (decoded.kind === "ambiguous") {
+    return "state-ambiguity";
+  }
+  if (decoded.kind === "blocked") {
+    return "blocked";
+  }
   return decoded.reason.includes("map") ? "invalid-mapping" : "decode";
 };
 
 const overriddenTargetKind = (flow: StaticControlFlowKind): StaticControlTargetKind => {
-  if (flow === "call") return "call";
-  if (flow === "interrupt") return "interrupt";
-  if (flow === "conditionalBranch") return "branch";
+  if (flow === "call") {
+    return "call";
+  }
+  if (flow === "interrupt") {
+    return "interrupt";
+  }
+  if (flow === "conditionalBranch") {
+    return "branch";
+  }
   return "jump";
 };
 
@@ -476,7 +496,9 @@ export const analyzeStaticControlFlow = <State>(
   for (const seed of seeds) {
     // A runtime PC proves that an instruction executed, not that it begins a function. Calls,
     // interrupts, and deliberate entry-point metadata remain the sources of function ownership.
-    if (seed.kind === "observation") continue;
+    if (seed.kind === "observation") {
+      continue;
+    }
     functions.set(`function:${hexAddress(seed.address)}`, {
       id: `function:${hexAddress(seed.address)}`,
       address: seed.address,
@@ -527,7 +549,9 @@ export const analyzeStaticControlFlow = <State>(
     for (const offset of previousOwned) {
       const owners = ownership.get(offset);
       owners?.delete(nodeId);
-      if (owners?.size === 0) ownership.delete(offset);
+      if (owners?.size === 0) {
+        ownership.delete(offset);
+      }
     }
     nodes.delete(nodeId);
 
@@ -579,7 +603,9 @@ export const analyzeStaticControlFlow = <State>(
         const existing = nodes.get(owner);
         const compatibleBoundary =
           existing?.fileOffset === instruction.fileOffset && existing.size === instruction.size;
-        if (owner !== nodeId && !compatibleBoundary) overlapping.add(owner);
+        if (owner !== nodeId && !compatibleBoundary) {
+          overlapping.add(owner);
+        }
       }
     }
     if (overlapping.size > 0) {
@@ -752,8 +778,11 @@ export const analyzeStaticControlFlow = <State>(
   }
 
   const reachedOffsets = new Set<number>();
-  for (const offsets of ownedByNode.values())
-    for (const offset of offsets) reachedOffsets.add(offset);
+  for (const offsets of ownedByNode.values()) {
+    for (const offset of offsets) {
+      reachedOffsets.add(offset);
+    }
+  }
   const sortedNodes = [...nodes.values()].sort(
     (left, right) => left.address - right.address || left.id.localeCompare(right.id),
   );

@@ -38,7 +38,7 @@ interface MapperPick extends QuickPickItem {
 
 const jsonFile = (value: unknown): string => `${JSON.stringify(value, null, 2)}\n`;
 
-const workspaceFiles = (): readonly SnesWorkspaceFile[] => [
+const WORKSPACE_FILES: readonly SnesWorkspaceFile[] = [
   {
     path: ".vscode/settings.json",
     contents: jsonFile({
@@ -70,9 +70,23 @@ const workspaceFiles = (): readonly SnesWorkspaceFile[] => [
   },
 ];
 
+const PROGRESS_STAGES: readonly string[] = [
+  "probe",
+  "create",
+  "analyze",
+  "export",
+  "verify",
+  "configure",
+  "commit",
+];
+
 const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
+  }
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KiB`;
+  }
   return `${bytes} bytes`;
 };
 
@@ -82,6 +96,15 @@ const mapperItems = (probe: SnesProjectProbeResult): readonly MapperPick[] => {
   );
   const imported = probe.dizRaw?.mapping.mapper;
   const detected = probe.detection.mapper;
+  const rank = (mapper: SnesMapper): number => {
+    if (mapper === imported) {
+      return 0;
+    }
+    if (mapper === detected) {
+      return 1;
+    }
+    return candidates.has(mapper) ? 2 : 3;
+  };
   return SNES_MAPPERS.map((mapper): MapperPick => {
     const candidate = candidates.get(mapper);
     const descriptions = [
@@ -98,18 +121,16 @@ const mapperItems = (probe: SnesProjectProbeResult): readonly MapperPick[] => {
         .map((evidence) => `${evidence.kind}: ${evidence.detail}`)
         .join("; "),
     };
-  }).sort((left, right) => {
-    const rank = (item: MapperPick): number => {
-      if (item.mapper === imported) return 0;
-      if (item.mapper === detected) return 1;
-      return candidates.has(item.mapper) ? 2 : 3;
-    };
-    return rank(left) - rank(right) || left.label.localeCompare(right.label);
-  });
+  }).sort(
+    (left, right) =>
+      rank(left.mapper) - rank(right.mapper) || left.label.localeCompare(right.label),
+  );
 };
 
 const chooseMapper = async (probe: SnesProjectProbeResult): Promise<SnesMapper | undefined> => {
-  if (!probe.mapperSelectionRequired) return probe.detection.mapper;
+  if (!probe.mapperSelectionRequired) {
+    return probe.detection.mapper;
+  }
   const selected = await window.showQuickPick(mapperItems(probe), {
     title: "Select the SNES cartridge mapper",
     placeHolder: probe.mapperSelectionReason ?? "ROM detection needs an explicit mapper.",
@@ -144,7 +165,9 @@ const chooseOutputDirectory = async (romFile: string): Promise<string | undefine
     openLabel: "Create Disassembly Project Here",
   });
   const directory = selected?.[0]?.fsPath;
-  if (!directory) return undefined;
+  if (!directory) {
+    return undefined;
+  }
   try {
     if (fs.readdirSync(directory).length > 0) {
       void window.showErrorMessage("Assembly: the selected output directory must be empty.");
@@ -184,11 +207,10 @@ const runProbe = async (romFile: string, dizRawFile?: string): Promise<SnesProje
 const progressReporter = (progress: {
   report(value: { message?: string; increment?: number }): void;
 }): ((event: SnesProjectInitializationProgress) => void) => {
-  const ordered = ["probe", "create", "analyze", "export", "verify", "configure", "commit"];
   let completed = 0;
   return (event) => {
-    const next = Math.max(completed, ordered.indexOf(event.stage));
-    const increment = next > completed ? ((next - completed) / ordered.length) * 100 : 0;
+    const next = Math.max(completed, PROGRESS_STAGES.indexOf(event.stage));
+    const increment = next > completed ? ((next - completed) / PROGRESS_STAGES.length) * 100 : 0;
     completed = next;
     progress.report({ message: event.message, ...(increment > 0 ? { increment } : {}) });
   };
@@ -220,17 +242,23 @@ const runProjectWizard = async (
       "SNES ROM": ["sfc", "smc", "bin", "rom"],
       "All files": ["*"],
     });
-    if (!romFile) return;
+    if (!romFile) {
+      return;
+    }
     const dizRawFile = importDiz
       ? await chooseFile("Select a DiztinGUIsh project", {
           "DiztinGUIsh project": ["dizraw", "diz"],
         })
       : undefined;
-    if (importDiz && !dizRawFile) return;
+    if (importDiz && !dizRawFile) {
+      return;
+    }
 
     const initialProbe = await runProbe(romFile, dizRawFile);
     const mapper = await chooseMapper(initialProbe);
-    if (!mapper) return;
+    if (!mapper) {
+      return;
+    }
     const resolvedProbe =
       initialProbe.detection.mapper === mapper && !initialProbe.mapperSelectionRequired
         ? initialProbe
@@ -242,7 +270,9 @@ const runProjectWizard = async (
             () => Promise.resolve(probeSnesProject({ romFile, dizRawFile, mapper })),
           );
     const outputDirectory = await chooseOutputDirectory(romFile);
-    if (!outputDirectory) return;
+    if (!outputDirectory) {
+      return;
+    }
     const detectedMapper = resolvedProbe.detection.mapper ?? "needs selection";
     const header =
       resolvedProbe.rom.headerSize === 0 ? "none" : `${resolvedProbe.rom.headerSize} bytes`;
@@ -254,7 +284,9 @@ const runProjectWizard = async (
       },
       "Create Project",
     );
-    if (create !== "Create Project") return;
+    if (create !== "Create Project") {
+      return;
+    }
 
     const result = await window.withProgress(
       {
@@ -269,18 +301,19 @@ const runProjectWizard = async (
           dizRawFile,
           mapper,
           outputDirectory,
-          workspaceFiles: workspaceFiles(),
+          workspaceFiles: WORKSPACE_FILES,
           signal: cancellation.signal,
           onProgress: progressReporter(progress),
         });
       },
     );
     await rememberSnesRom(context, result.probe.rom, romFile);
+    const detail = completionDetail(result);
     outputChannel?.info(`Disassembly project created at ${outputDirectory}`);
-    outputChannel?.info(completionDetail(result).replaceAll("\n", " "));
+    outputChannel?.info(detail.replaceAll("\n", " "));
     await window.showInformationMessage("Assembly: disassembly project created successfully.", {
       modal: true,
-      detail: completionDetail(result),
+      detail,
     });
     await commands.executeCommand("vscode.openFolder", Uri.file(outputDirectory), false);
   } catch (error) {

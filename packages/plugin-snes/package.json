@@ -5,7 +5,8 @@
   "license": "MIT",
   "files": [
     "dist",
-    "src"
+    "src",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,
@@ -20,8 +21,8 @@
     }
   },
   "scripts": {
-    "make-types": "tsc --project tsconfig.json",
-    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "make-types": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --project tsconfig.build.json --noEmit",
     "pack:check": "npm pack --dry-run",
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace plugin-snes && npm run make-types"
   },

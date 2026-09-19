@@ -126,8 +126,9 @@ export const SNES_HEURISTIC_RULE_IDS = [
  * @returns {SnesHeuristicConfiguration} Validated configuration.
  */
 export const validateSnesHeuristicConfiguration = (value: unknown): SnesHeuristicConfiguration => {
-  if (!value || typeof value !== "object" || isArray(value))
+  if (!value || typeof value !== "object" || isArray(value)) {
     throw new Error("SNES heuristics must be an object.");
+  }
   const config = value as SnesHeuristicConfiguration;
   const allowed = new Set([
     "enabled",
@@ -136,24 +137,31 @@ export const validateSnesHeuristicConfiguration = (value: unknown): SnesHeuristi
     "disabledRules",
     "registerRules",
   ]);
-  for (const key of Object.keys(config))
-    if (!allowed.has(key)) throw new Error(`Unknown SNES heuristic option '${key}'.`);
-  if (config.enabled !== undefined && typeof config.enabled !== "boolean")
+  for (const key of Object.keys(config)) {
+    if (!allowed.has(key)) {
+      throw new Error(`Unknown SNES heuristic option '${key}'.`);
+    }
+  }
+  if (config.enabled !== undefined && typeof config.enabled !== "boolean") {
     throw new Error("Heuristic enabled must be boolean.");
-  if (config.minimumConfidence !== undefined && !Object.hasOwn(rank, config.minimumConfidence))
+  }
+  if (config.minimumConfidence !== undefined && !Object.hasOwn(rank, config.minimumConfidence)) {
     throw new Error("Invalid heuristic confidence.");
+  }
   if (
     config.maxWindowInstructions !== undefined &&
     (!Number.isInteger(config.maxWindowInstructions) ||
       config.maxWindowInstructions < 2 ||
       config.maxWindowInstructions > 256)
-  )
+  ) {
     throw new Error("Heuristic window must be between 2 and 256 instructions.");
+  }
   if (
     config.registerRules !== undefined &&
     (!isArray(config.registerRules) || config.registerRules.length > 128)
-  )
+  ) {
     throw new Error("At most 128 register rules are allowed.");
+  }
   const ids = new Set<string>(SNES_HEURISTIC_RULE_IDS);
   for (const rule of config.registerRules ?? []) {
     if (
@@ -171,15 +179,17 @@ export const validateSnesHeuristicConfiguration = (value: unknown): SnesHeuristi
       rule.addresses.some(
         (address: number) => !Number.isInteger(address) || !identifySnesHardwareRegister(address),
       )
-    )
+    ) {
       throw new Error("Invalid or duplicate SNES register role rule.");
+    }
     ids.add(rule.id);
   }
   if (
     config.disabledRules !== undefined &&
     (!isArray(config.disabledRules) || config.disabledRules.some((id) => !ids.has(id)))
-  )
+  ) {
     throw new Error("Unknown disabled heuristic rule.");
+  }
   return config;
 };
 
@@ -187,13 +197,19 @@ const width = (node: Node, register: "a" | "x" | "y" = "a"): number | undefined 
   const flag = node.incomingState[register === "a" ? "m" : "x"] as
     | { kind?: string; value?: number }
     | undefined;
-  if (flag?.kind !== "known") return undefined;
-  if (flag.value === 1) return 1;
+  if (flag?.kind !== "known") {
+    return undefined;
+  }
+  if (flag.value === 1) {
+    return 1;
+  }
   return flag.value === 0 ? 2 : undefined;
 };
 const addresses = (node: Node): number[] =>
   node.effectiveAddresses.flatMap((effect) => {
-    if (typeof effect.address !== "number") return [];
+    if (typeof effect.address !== "number") {
+      return [];
+    }
     const hardware = identifySnesHardwareRegister(effect.address);
     return hardware ? [hardware.address] : [];
   });
@@ -215,7 +231,9 @@ export const analyzeSnesFunctionRoles = (
   runtime: Iterable<AnalysisProjectShards["runtime"][number]> = shards.runtime,
 ): SnesHeuristicResult => {
   const config = validateSnesHeuristicConfiguration(options);
-  if (config.enabled === false) return { roles: [], comments: [], evidence: [] };
+  if (config.enabled === false) {
+    return { roles: [], comments: [], evidence: [] };
+  }
   const disabled = new Set(config.disabledRules);
   const limit = config.maxWindowInstructions ?? 48;
   const nodes = new Map(
@@ -232,20 +250,25 @@ export const analyzeSnesFunctionRoles = (
     (record): record is Edge => record.kind === "cfg-edge" && record.addressSpace === "snes.cpu",
   );
   const incoming = new Map<string, Edge[]>();
-  for (const edge of edges)
+  for (const edge of edges) {
     if (edge.to) {
       const list = incoming.get(edge.to) ?? [];
       list.push(edge);
       incoming.set(edge.to, list);
     }
+  }
   const window = (end: Node): Node[] => {
     const result = [end];
     const seen = new Set([end.id]);
     while (result.length < limit) {
       const links = (incoming.get(result[0].id) ?? []).filter((edge) => edge.edgeKind !== "call");
-      if (links.length !== 1 || links[0].edgeKind !== "fallthrough") break;
+      if (links.length !== 1 || links[0].edgeKind !== "fallthrough") {
+        break;
+      }
       const previous = nodes.get(links[0].from);
-      if (!previous || seen.has(previous.id)) break;
+      if (!previous || seen.has(previous.id)) {
+        break;
+      }
       seen.add(previous.id);
       result.unshift(previous);
     }
@@ -261,7 +284,9 @@ export const analyzeSnesFunctionRoles = (
     explanation: string,
     relationship: "direct" | "delegated" = "direct",
   ): void => {
-    if (disabled.has(rule) || rank[confidence] < rank[config.minimumConfidence ?? "medium"]) return;
+    if (disabled.has(rule) || rank[confidence] < rank[config.minimumConfidence ?? "medium"]) {
+      return;
+    }
     const key = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
     const prior = found.get(key);
     found.set(key, {
@@ -289,7 +314,7 @@ export const analyzeSnesFunctionRoles = (
   };
   for (const node of nodes.values()) {
     const ports = addresses(node);
-    for (const rule of [...builtins, ...(config.registerRules ?? [])])
+    for (const rule of [...builtins, ...(config.registerRules ?? [])]) {
       if (
         (rule.access === "write" ? writes : reads).has(node.mnemonic) &&
         ports.some((address) =>
@@ -297,7 +322,7 @@ export const analyzeSnesFunctionRoles = (
             (candidate) => identifySnesHardwareRegister(candidate)?.address === address,
           ),
         )
-      )
+      ) {
         emit(
           node,
           rule.id,
@@ -306,7 +331,9 @@ export const analyzeSnesFunctionRoles = (
           [node],
           `Resolved ${rule.access} of ${ports.map((address) => `$${address.toString(16)}`).join(", ")}.`,
         );
-    if (["MVN", "MVP"].includes(node.mnemonic))
+      }
+    }
+    if (["MVN", "MVP"].includes(node.mnemonic)) {
       emit(
         node,
         "block-copy",
@@ -315,6 +342,7 @@ export const analyzeSnesFunctionRoles = (
         [node],
         "Block move instruction; payload purpose requires destination provenance.",
       );
+    }
     const trail = window(node);
     if (node.mnemonic === "STA" && ports.includes(0x420b)) {
       const values = new Map<number, number>();
@@ -322,44 +350,70 @@ export const analyzeSnesFunctionRoles = (
       for (const step of trail) {
         const imm = immediate(step);
         if (["LDA", "LDX", "LDY"].includes(step.mnemonic)) {
-          if (imm === undefined) registers.delete(step.mnemonic[2]);
-          else registers.set(step.mnemonic[2], { value: imm, size: step.bytes!.length - 1 });
+          if (imm === undefined) {
+            registers.delete(step.mnemonic[2]);
+          } else {
+            registers.set(step.mnemonic[2], { value: imm, size: step.bytes!.length - 1 });
+          }
         } else if (writes.has(step.mnemonic)) {
           let register: "a" | "x" | "y" = "a";
-          if (step.mnemonic === "STX") register = "x";
-          if (step.mnemonic === "STY") register = "y";
+          if (step.mnemonic === "STX") {
+            register = "x";
+          }
+          if (step.mnemonic === "STY") {
+            register = "y";
+          }
           const size = width(step, register);
           const source = registers.get(step.mnemonic[2]);
           let value: number | undefined;
-          if (source && size !== undefined && source.size >= size) value = source.value;
-          if (step.mnemonic === "STZ") value = 0;
+          if (source && size !== undefined && source.size >= size) {
+            value = source.value;
+          }
+          if (step.mnemonic === "STZ") {
+            value = 0;
+          }
           if (
             !step.effectiveAddresses.length ||
             step.effectiveAddresses.some((effect) => effect.address === undefined)
-          )
+          ) {
             values.clear();
-          for (const port of addresses(step))
+          }
+          for (const port of addresses(step)) {
             for (let i = 0; i < (size ?? 2); i++) {
-              if (value === undefined || size === undefined) values.delete(port + i);
-              else values.set(port + i, (value >> (8 * i)) & 255);
+              if (value === undefined || size === undefined) {
+                values.delete(port + i);
+              } else {
+                values.set(port + i, (value >> (8 * i)) & 255);
+              }
             }
+          }
         } else if (!["REP", "SEP", "NOP"].includes(step.mnemonic)) {
           registers.clear();
-          if (["JSR", "JSL", "JMP", "JML", "MVN", "MVP"].includes(step.mnemonic)) values.clear();
+          if (["JSR", "JSL", "JMP", "JML", "MVN", "MVP"].includes(step.mnemonic)) {
+            values.clear();
+          }
         }
       }
       const mask = values.get(0x420b);
-      if (mask !== undefined)
-        for (let channel = 0; channel < 8; channel++)
+      if (mask !== undefined) {
+        for (let channel = 0; channel < 8; channel++) {
           if (mask & (1 << channel)) {
             const mode = values.get(0x4300 + channel * 16);
             const target = values.get(0x4301 + channel * 16);
-            if (mode === undefined || target === undefined || mode & 0x80) continue;
+            if (mode === undefined || target === undefined || mode & 0x80) {
+              continue;
+            }
             let role: string | undefined;
-            if (target === 0x18 && (mode & 7) === 1) role = "graphics.vram-dma";
-            if (target === 0x22 && (mode & 7) === 0) role = "graphics.palette-dma";
-            if (target === 4 && (mode & 7) === 0) role = "graphics.oam-dma";
-            if (role)
+            if (target === 0x18 && (mode & 7) === 1) {
+              role = "graphics.vram-dma";
+            }
+            if (target === 0x22 && (mode & 7) === 0) {
+              role = "graphics.palette-dma";
+            }
+            if (target === 4 && (mode & 7) === 0) {
+              role = "graphics.oam-dma";
+            }
+            if (role) {
               emit(
                 node,
                 "dma-destination",
@@ -368,7 +422,10 @@ export const analyzeSnesFunctionRoles = (
                 trail,
                 `Channel ${channel} starts A-to-B DMA, mode ${mode & 7}, B-bus target $21${target.toString(16).padStart(2, "0")}. Source/length may remain unresolved.`,
               );
+            }
           }
+        }
+      }
     }
     if (
       node.mnemonic === "STA" &&
@@ -379,7 +436,7 @@ export const analyzeSnesFunctionRoles = (
           writes.has(step.mnemonic) &&
           addresses(step).some((address) => address >= 0x211b && address <= 0x2120),
       ).length >= 4
-    )
+    ) {
       emit(
         node,
         "mode7-setup",
@@ -388,19 +445,25 @@ export const analyzeSnesFunctionRoles = (
         trail,
         "Matrix/center writes and a nearby mode-7 constant; confirm the value reaching BGMODE.",
       );
+    }
   }
   for (const edge of edges) {
     if (
       edge.edgeKind !== "branch" ||
       edge.toAddress === undefined ||
       edge.toAddress > edge.fromAddress
-    )
+    ) {
       continue;
+    }
     const end = nodes.get(edge.from);
-    if (!end) continue;
+    if (!end) {
+      continue;
+    }
     const trail = window(end);
     const startIndex = trail.findIndex((node) => node.address === edge.toAddress);
-    if (startIndex < 0) continue;
+    if (startIndex < 0) {
+      continue;
+    }
     const loop = trail.slice(startIndex);
     const start = loop[0];
     const has = (set: Set<string>, port: number) =>
@@ -427,7 +490,7 @@ export const analyzeSnesFunctionRoles = (
     if (
       has(reads, 0x4212) &&
       loop.some((node) => ["AND", "BIT"].includes(node.mnemonic) && immediate(node) === 0x80)
-    )
+    ) {
       emit(
         start,
         "vblank-wait",
@@ -436,7 +499,8 @@ export const analyzeSnesFunctionRoles = (
         loop,
         "Backward loop tests HVBJOY bit 7.",
       );
-    if (has(writes, 0x2100) && loop.some((node) => ["INC", "DEC"].includes(node.mnemonic)))
+    }
+    if (has(writes, 0x2100) && loop.some((node) => ["INC", "DEC"].includes(node.mnemonic))) {
       emit(
         start,
         "display-fade",
@@ -445,6 +509,7 @@ export const analyzeSnesFunctionRoles = (
         loop,
         "Repeated brightness writes with an increment/decrement; frame synchronization needs caller/trace evidence.",
       );
+    }
   }
   const contextNodes = new Map<string, Map<number, Node[]>>();
   for (const node of nodes.values()) {
@@ -464,22 +529,29 @@ export const analyzeSnesFunctionRoles = (
       edge.edgeKind !== "branch" ||
       edge.toAddress === undefined ||
       edge.toAddress >= edge.fromAddress
-    )
+    ) {
       continue;
+    }
     const end = nodes.get(edge.from);
     const start = edge.to ? nodes.get(edge.to) : undefined;
-    if (!end || !start) continue;
+    if (!end || !start) {
+      continue;
+    }
     const indexed = contextNodes.get(canonicalJson(start.context))!;
     const loop: Node[] = [];
     let cursor = start.address;
     while (cursor <= end.address && loop.length < limit) {
       const choices = indexed.get(cursor);
-      if (choices?.length !== 1) break;
+      if (choices?.length !== 1) {
+        break;
+      }
       const node = choices[0];
       loop.push(node);
       cursor += node.size;
     }
-    if (loop.length < 4 || loop.at(-1)?.id !== end.id) continue;
+    if (loop.length < 4 || loop.at(-1)?.id !== end.id) {
+      continue;
+    }
     const payload = loop.some((node) => node.mnemonic === "LDA" && node.mode.includes("Indirect"));
     const ports = new Set(loop.filter((node) => writes.has(node.mnemonic)).flatMap(addresses));
     const ack = loop.some(
@@ -493,7 +565,7 @@ export const analyzeSnesFunctionRoles = (
       ports.has(0x2140) &&
       [0x2141, 0x2142, 0x2143].some((port) => ports.has(port)) &&
       loop.some((node) => ["INY", "INX", "DEX", "DEY"].includes(node.mnemonic))
-    )
+    ) {
       emit(
         start,
         "apu-upload",
@@ -502,6 +574,7 @@ export const analyzeSnesFunctionRoles = (
         loop,
         "Advancing indirect source feeds APU payload ports with a token/acknowledgement cycle inside a counted loop.",
       );
+    }
   }
   const atAddress = new Map<number, Node[]>();
   for (const node of nodes.values()) {
@@ -515,19 +588,30 @@ export const analyzeSnesFunctionRoles = (
       access.architecture !== "snes.65816" ||
       access.instructionAddressSpace !== "snes.cpu" ||
       access.accessedAddressSpace !== "snes.cpu"
-    )
+    ) {
       continue;
+    }
     const port = identifySnesHardwareRegister(access.accessedAddress)?.address;
-    if (port === undefined) continue;
+    if (port === undefined) {
+      continue;
+    }
     for (const node of atAddress.get(access.instructionAddress) ?? []) {
       const observedNode = { ...node, evidence: [...node.evidence, ...access.evidence] };
       if (access.actor === "dma" || access.actor === "hdma") {
-        if (access.access !== "write") continue;
+        if (access.access !== "write") {
+          continue;
+        }
         let role: string | undefined;
-        if ([0x2118, 0x2119].includes(port)) role = "graphics.vram-transfer";
-        if (port === 0x2122) role = "graphics.palette-transfer";
-        if (port === 0x2104) role = "graphics.oam-transfer";
-        if (role)
+        if ([0x2118, 0x2119].includes(port)) {
+          role = "graphics.vram-transfer";
+        }
+        if (port === 0x2122) {
+          role = "graphics.palette-transfer";
+        }
+        if (port === 0x2104) {
+          role = "graphics.oam-transfer";
+        }
+        if (role) {
           emit(
             node,
             "observed-access",
@@ -536,7 +620,8 @@ export const analyzeSnesFunctionRoles = (
             [observedNode],
             `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction; the DMA engine performs the bus operation.`,
           );
-      } else
+        }
+      } else {
         for (const rule of [...builtins, ...(config.registerRules ?? [])]) {
           if (
             !disabled.has(rule.id) &&
@@ -544,7 +629,7 @@ export const analyzeSnesFunctionRoles = (
             rule.addresses.some(
               (address) => identifySnesHardwareRegister(address)?.address === port,
             )
-          )
+          ) {
             emit(
               node,
               "observed-access",
@@ -553,7 +638,9 @@ export const analyzeSnesFunctionRoles = (
               [observedNode],
               `Observed CPU ${access.access} at $${port.toString(16)} resolves the executed operand, including indexed/indirect access.`,
             );
+          }
         }
+      }
     }
   }
   // Attribute a finding to the innermost known function on its evidence path and call context.
@@ -562,7 +649,7 @@ export const analyzeSnesFunctionRoles = (
       record.kind === "function" && record.addressSpace === "snes.cpu" ? [record.address] : [],
     ),
   );
-  for (const role of [...found.values()])
+  for (const role of [...found.values()]) {
     for (const node of atAddress.get(role.address) ?? []) {
       const owner = [...node.evidencePath]
         .reverse()
@@ -573,7 +660,7 @@ export const analyzeSnesFunctionRoles = (
             functionAddresses.has(candidate.address) &&
             canonicalJson(candidate.context) === canonicalJson(node.context),
         );
-      if (owner && owner.address !== node.address)
+      if (owner && owner.address !== node.address) {
         emit(
           owner,
           role.rule,
@@ -582,18 +669,22 @@ export const analyzeSnesFunctionRoles = (
           [node, owner],
           `Function contains ${role.role} evidence at $${node.address.toString(16)}. ${role.explanation}`,
         );
+      }
     }
+  }
   const directByAddress = new Map<number, SnesFunctionRole[]>();
   for (const role of found.values()) {
     const list = directByAddress.get(role.address) ?? [];
     list.push(role);
     directByAddress.set(role.address, list);
   }
-  for (const edge of edges)
+  for (const edge of edges) {
     if (edge.edgeKind === "call" && edge.toAddress !== undefined) {
       const caller = nodes.get(edge.from);
-      if (!caller) continue;
-      for (const role of directByAddress.get(edge.toAddress) ?? [])
+      if (!caller) {
+        continue;
+      }
+      for (const role of directByAddress.get(edge.toAddress) ?? []) {
         emit(
           caller,
           "wrapper",
@@ -603,7 +694,9 @@ export const analyzeSnesFunctionRoles = (
           `Calls $${edge.toAddress.toString(16)} with ${role.role} evidence. Caller may have other roles.`,
           "delegated",
         );
+      }
     }
+  }
   const roles = [...found.values()].sort(
     (a, b) => a.address - b.address || a.id.localeCompare(b.id),
   );

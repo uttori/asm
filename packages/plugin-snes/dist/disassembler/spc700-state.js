@@ -16,14 +16,16 @@ export const unknownSpc700State = () => ({
  */
 export const applySpc700StateOverride = (state, override) => override.directPage === undefined ? state : { ...state, directPage: known(override.directPage) };
 const joinDirectPage = (left, right) => {
-    if (left.kind === "unknown" || right.kind === "unknown")
+    if (left.kind === "unknown" || right.kind === "unknown") {
         return unknown();
+    }
     const values = new Set([
         ...(left.kind === "known" ? [left.value] : left.values),
         ...(right.kind === "known" ? [right.value] : right.values),
     ]);
-    if (values.size === 1)
+    if (values.size === 1) {
         return known([...values][0]);
+    }
     return { kind: "conflicting", values: [...values].sort((a, b) => a - b) };
 };
 const sameStackEntry = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -31,8 +33,9 @@ const joinStack = (left, right) => {
     const entries = [];
     const length = Math.min(left.entries.length, right.entries.length);
     for (let index = 0; index < length; index++) {
-        if (!sameStackEntry(left.entries[index], right.entries[index]))
+        if (!sameStackEntry(left.entries[index], right.entries[index])) {
             break;
+        }
         entries.push(left.entries[index]);
     }
     return { entries };

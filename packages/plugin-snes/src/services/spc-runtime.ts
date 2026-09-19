@@ -41,9 +41,15 @@ export class SnesSpcRuntimeService {
    * @param {readonly string[]} words Tokenized line: `spcblock dest [nspc|custom [macro]]`.
    */
   handleSpcblock(words: readonly string[]): void {
-    if (words.length < 2) throw new Error("spcblock requires at least a destination address.");
-    if (words.length > 4) throw new Error("spcblock has too many arguments.");
-    if (this.state.inSpcBlock) throw new Error("Nested spcblock directives are not supported.");
+    if (words.length < 2) {
+      throw new Error("spcblock requires at least a destination address.");
+    }
+    if (words.length > 4) {
+      throw new Error("spcblock has too many arguments.");
+    }
+    if (this.state.inSpcBlock) {
+      throw new Error("Nested spcblock directives are not supported.");
+    }
 
     const destination = this.session.operandResolver.getnum(this.session.resolvedefines(words[1]));
     if ((destination & ~0xffff) !== 0) {
@@ -53,10 +59,13 @@ export class SnesSpcRuntimeService {
     let type: SnesSpcBlockType = "nspc";
     if (words.length === 3) {
       const kind = words[2].toLowerCase();
-      if (kind === "nspc") type = "nspc";
-      else if (kind === "custom") {
+      if (kind === "nspc") {
+        type = "nspc";
+      } else if (kind === "custom") {
         throw new Error("Custom spcblock mode requires a macro and is not implemented.");
-      } else throw new Error(`Unknown spcblock type: ${words[2]}`);
+      } else {
+        throw new Error(`Unknown spcblock type: ${words[2]}`);
+      }
     } else if (words.length === 4) {
       if (words[2].toLowerCase() !== "custom") {
         throw new Error(`Unexpected spcblock argument for type: ${words[2]}`);
@@ -108,7 +117,9 @@ export class SnesSpcRuntimeService {
 
     if (this.session.canFinalize) {
       const sizeOffset = this.session.outputWriter.toOutputOffset(block.sizeAddress & 0xffffff);
-      if (sizeOffset < 0) throw new Error("spcblock size address does not map to output.");
+      if (sizeOffset < 0) {
+        throw new Error("spcblock size address does not map to output.");
+      }
       const blockSize = (this.session.currentTargetAddress - block.destination) & 0xffff;
       this.session.writeOutputBytes(sizeOffset, blockSize & 0xff, 1);
       this.session.writeOutputBytes(sizeOffset + 1, (blockSize >> 8) & 0xff, 1);

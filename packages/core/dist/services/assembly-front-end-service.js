@@ -61,8 +61,9 @@ export class AssemblyFrontEndService {
                 };
             }
         }
-        else
+        else {
             this.structBufferStart = undefined;
+        }
         return processed.sourcedCommands;
     }
     /**

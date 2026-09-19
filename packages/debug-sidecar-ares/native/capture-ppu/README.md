@@ -3,7 +3,7 @@
 This downstream development patch adds the separately negotiated
 `snes.cpu-bus-ppu` stream. It includes the existing bus and transfer records and
 attaches actual PPU write decisions to graphics data-port writes. See the
-[protocol, behavior and performance notes](../../../../docs/ares-ppu-effect-capture.md).
+[capture scopes and their evidence limits](../../CAPTURE.md#select-a-scope).
 
 Apply `capture-ppu.patch` after `capture-v2`, `capture-bus`, `capture-transfer`,
 and the test-only `capture-graphics/graphics-tests.patch`, on

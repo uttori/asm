@@ -107,12 +107,13 @@ const RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_pref
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
  * @param {Pick<AnalysisProjectManifest, "db">} manifest Validated pointer.
- * @returns {string} Absolute sqlite path.
+ * @returns {string} Joined sqlite path; relative directories remain relative to process cwd.
  */
 export const analysisProjectSqlitePath = (directory, manifest) => {
     const relative = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
-    if (relative !== ANALYSIS_PROJECT_SQLITE_FILE)
+    if (relative !== ANALYSIS_PROJECT_SQLITE_FILE) {
         throw new Error(`Unsupported analysis sqlite path '${relative}'.`);
+    }
     return path.join(directory, relative);
 };
 /**
@@ -122,11 +123,16 @@ export const analysisProjectSqlitePath = (directory, manifest) => {
  */
 const parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
 /**
- * Columnar sqlite working store for one analysis project.
+ * Owned synchronous SQLite connection for one project. Close it once in finally; do not share a
+ * connection across overlapping operations. Queries decode records but do not all validate them.
+ * Use project snapshot/publication helpers for semantic validation and revision-checked edits.
+ * Low-level mutations require a transaction and do not publish a revision or refresh the pointer
+ * automatically. WAL readers can retain old snapshots and delay checkpoint/truncation.
  */
 export class SqliteAnalysisStore {
     #database;
     #fileIdentity;
+    /** Database path as supplied at construction; resolves relative to cwd when not absolute. */
     file;
     #insertEvidence;
     #insertLabel;
@@ -143,14 +149,17 @@ export class SqliteAnalysisStore {
     #dictionaryCacheBytes = 0;
     /**
      * Opens or creates a project database.
-     * @param {string} file Absolute sqlite path.
-     * @param {boolean} [createSchema] Permit initialization of an empty database; never upgrade an existing one.
-     * @param {boolean} [deferIndexes] Migration-only bulk load; finishMigration must build indexes before publication.
+     * Opening validates physical format, not every semantic record, and may create SQLite journal files.
+     * Connections use a 5,000 ms busy timeout; lock contention can still throw a SQLite error.
+     * @param {string} file SQLite path; parent directory must already exist.
+     * @param {boolean} [createSchema] Defaults to true; permit initialization of an empty database, never upgrade an existing one.
+     * @param {boolean} [deferIndexes] Defaults to false; migration-only bulk load, completed by finishMigration.
      */
     constructor(file, createSchema = true, deferIndexes = false) {
         assertNoSqliteMigration(file);
-        if (!createSchema && !fs.existsSync(file))
+        if (!createSchema && !fs.existsSync(file)) {
             throw new Error(`Analysis database does not exist: ${file}`);
+        }
         this.file = file;
         this.#database = new DatabaseSync(file, { open: true });
         // SQL can inspect legacy compressed payloads without transferring full records to JS callers.
@@ -161,13 +170,16 @@ export class SqliteAnalysisStore {
             const initialVersion = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
             if (createSchema && empty && initialVersion === 0) {
                 this.#database.exec(SCHEMA);
-                if (!deferIndexes)
-                    for (const sql of SCHEMA_INDEX_STATEMENTS)
+                if (!deferIndexes) {
+                    for (const sql of SCHEMA_INDEX_STATEMENTS) {
                         this.#database.exec(sql);
+                    }
+                }
             }
             const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
-            if (version !== ANALYSIS_SQLITE_STORAGE_VERSION)
+            if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
                 throw new Error(`Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`);
+            }
             this.#database.exec("PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE; PRAGMA journal_size_limit=67108864;");
             this.#insertEvidence = this.#database.prepare("INSERT INTO evidence (id, payload) VALUES (?, ?)");
             this.#insertLabel = this.#database.prepare("INSERT INTO labels (id, address_space, address, name, payload) VALUES (?, ?, ?, ?, ?)");
@@ -197,8 +209,9 @@ export class SqliteAnalysisStore {
      */
     rollback() {
         this.#clearDictionaryCache();
-        if (!this.#database.isTransaction)
+        if (!this.#database.isTransaction) {
             return;
+        }
         try {
             this.#database.exec("ROLLBACK");
         }
@@ -220,14 +233,16 @@ export class SqliteAnalysisStore {
     #intern(table, value) {
         const key = `${table}:${value}`;
         const cached = this.#dictionaryIds.get(key);
-        if (cached !== undefined)
+        if (cached !== undefined) {
             return cached;
+        }
         const statements = this.#dictionaryStatements.get(table);
         const found = statements.find.get(value);
         const id = found ? Number(found.id) : Number(statements.insert.run(value).lastInsertRowid);
         const bytes = Buffer.byteLength(key);
-        if (this.#dictionaryIds.size >= 256 || this.#dictionaryCacheBytes + bytes > 512 * 1024)
+        if (this.#dictionaryIds.size >= 256 || this.#dictionaryCacheBytes + bytes > 512 * 1024) {
             this.#clearDictionaryCache();
+        }
         // A single unusually large ID/evidence set must not turn the cache into a second record store.
         if (bytes <= 512 * 1024) {
             this.#dictionaryIds.set(key, id);
@@ -279,25 +294,40 @@ export class SqliteAnalysisStore {
     /**
      * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
      * the revision so a competing process cannot slip between the stale check and publication.
+     * Throwing rolls back records and manifest changes. Promise/thenable results are rejected; perform
+     * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
+     * the manifest themselves when changing semantic records; prefer the commitAnalysisProject APIs.
      * @param {Function} action Synchronous work; cursors must be consumed before returning.
-     * @param {boolean} [write] Acquire the writer lock immediately; false creates a read snapshot.
+     * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE); false uses deferred BEGIN for reads, not an enforced read-only connection.
      * @returns {T} Callback result after a successful commit.
      */
     transaction(action, write = true) {
         assertNoSqliteMigration(this.file);
-        if (sqliteFileIdentity(this.file) !== this.#fileIdentity)
+        if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
             throw new Error("Analysis database was replaced; close this connection and reload the project.");
+        }
         this.#clearDictionaryCache();
         this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
         try {
             // Repair legacy cache key storage before any per-record invalidation triggers execute.
             // Read-only transactions never acquire a writer lock merely to update a disposable cache.
-            if (write)
+            if (write) {
                 upgradeQueryCacheStorage(this.#database);
+            }
             const revision = write ? this.revision() : 0;
             const result = action();
-            if (write && this.revision() !== revision)
+            if (result !== null &&
+                (typeof result === "object" || typeof result === "function") &&
+                "then" in result &&
+                typeof result.then === "function") {
+                // An async callback would otherwise commit before its work finishes. Roll back now,
+                // and observe its eventual rejection so this misuse cannot also crash the host later.
+                void Promise.resolve(result).catch(() => undefined);
+                throw new TypeError("Analysis transactions require a synchronous callback, not a Promise.");
+            }
+            if (write && this.revision() !== revision) {
                 enforceDatabaseBudget(this.#database);
+            }
             this.#database.exec("COMMIT");
             this.#clearDictionaryCache();
             return result;
@@ -326,23 +356,27 @@ export class SqliteAnalysisStore {
         // 4096 counter deltas; payloads and the full distinct index remain on disk.
         const pending = new TraceCache(metrics);
         const flushEntry = (key, count) => {
-            if (!count)
+            if (!count) {
                 return;
+            }
             incrementMany.run(count, key);
-            if (metrics)
+            if (metrics) {
                 metrics.sqlStatements++;
+            }
         };
         const flush = () => {
-            for (const [key, entry] of pending.entries())
+            for (const [key, entry] of pending.entries()) {
                 flushEntry(key, entry.count);
+            }
             pending.clear();
         };
         const index = {
             add: (key, create) => {
                 const entry = pending.get(key);
                 if (entry !== undefined) {
-                    if (!Number.isSafeInteger(entry.count + 1))
+                    if (!Number.isSafeInteger(entry.count + 1)) {
                         throw new Error("Trace count exceeds exact integer range.");
+                    }
                     // Keep the same entry on hits: no replacement allocation or Map rewrite
                     // is needed for the repeated-key path that dominates dense captures.
                     entry.count++;
@@ -353,15 +387,18 @@ export class SqliteAnalysisStore {
                 // Zero means no deferred repeats yet: the miss's own observation is
                 // counted by UPDATE or INSERT below, so initializing to one would double it.
                 const displaced = pending.insert(key, { count: 0 });
-                if (displaced)
+                if (displaced) {
                     flushEntry(displaced.key, displaced.value.count);
-                if (metrics)
+                }
+                if (metrics) {
                     metrics.sqlStatements++;
+                }
                 // A cache miss may still be a disk-index hit. UPDATE first keeps create()
                 // lazy; an eager UPSERT payload would serialize repeats unnecessarily.
                 // A speculative membership filter was benchmarked without a useful gain.
-                if (increment.run(key).changes !== 0)
+                if (increment.run(key).changes !== 0) {
                     return false;
+                }
                 insert.run(key, JSON.stringify(create()));
                 if (metrics) {
                     metrics.sqlStatements++;
@@ -373,11 +410,12 @@ export class SqliteAnalysisStore {
                 // Reconcile deferred counts before streaming rows; the complete distinct
                 // set stays on disk instead of being materialized just to finalize it.
                 flush();
-                for (const row of values.iterate())
+                for (const row of values.iterate()) {
                     yield {
                         fact: parseRecord(row.payload),
                         count: Number(row.count),
                     };
+                }
             },
             clear: () => {
                 pending.clear();
@@ -398,8 +436,9 @@ export class SqliteAnalysisStore {
     }
     /** Require mutations to belong to an explicitly owned atomic publication. */
     #requireTransaction() {
-        if (!this.#database.isTransaction)
+        if (!this.#database.isTransaction) {
             throw new Error("Analysis mutation requires a transaction.");
+        }
     }
     /** Apply a selected metadata edit by stable ID; omitted records are never deleted.
      * Validation and optimistic revision checks belong to the publication API.
@@ -423,14 +462,17 @@ export class SqliteAnalysisStore {
             const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
             for (const id of new Set([...previous.keys(), ...next.keys()])) {
                 const prior = previous.get(id), record = next.get(id);
-                if (canonicalJson(prior) === canonicalJson(record))
+                if (canonicalJson(prior) === canonicalJson(record)) {
                     continue;
+                }
                 const stored = find.get(id);
-                if (canonicalJson(stored ? parseRecord(stored.payload) : undefined) !== canonicalJson(prior))
+                if (canonicalJson(stored ? parseRecord(stored.payload) : undefined) !== canonicalJson(prior)) {
                     throw new Error(`Selected ${kind} record '${id}' changed; reload before editing.`);
+                }
                 remove.run(id);
-                if (record)
+                if (record) {
                     this.#insertRecord(kind, record);
+                }
             }
         }
         // Undo can remove newly-created provenance. Check retained references in SQL before committing;
@@ -444,8 +486,9 @@ export class SqliteAnalysisStore {
             for (const table of ["analysis", "annotations", "labels", "comments", "regions"]) {
                 if (this.#database
                     .prepare(`SELECT 1 FROM ${table} r,json_each(analysis_json(r.payload),'$.evidence') e WHERE e.value IN (SELECT value FROM json_each(?)) LIMIT 1`)
-                    .get(ids))
+                    .get(ids)) {
                     throw new Error("Cannot remove evidence still referenced by retained project records.");
+                }
             }
             this.validateRuntimeEvidence();
         }
@@ -471,8 +514,9 @@ export class SqliteAnalysisStore {
             "imports",
         ]);
         for (const kind of Object.keys(shards)) {
-            if (!tables.has(kind))
+            if (!tables.has(kind)) {
                 throw new Error(`Unknown analysis table '${kind}'.`);
+            }
             if (kind === "runtime") {
                 this.#replaceRuntime(shards.runtime ?? []);
                 continue;
@@ -488,13 +532,15 @@ export class SqliteAnalysisStore {
                     // Reanalysis usually reproduces the same serialized record. Compare its decoded JSON
                     // before parsing/sorting both objects; retain canonical comparison for reordered keys.
                     const json = decodeSqlitePayload(prior.payload);
-                    if (json === JSON.stringify(record))
+                    if (json === JSON.stringify(record)) {
                         continue;
+                    }
                     const before = JSON.parse(json);
                     // Comparison is internal: preserve canonical key/undefined semantics without allocating
                     // the pretty-printed identity format for every large CFG context twice.
-                    if (JSON.stringify(canonicalValue(before)) === JSON.stringify(canonicalValue(record)))
+                    if (JSON.stringify(canonicalValue(before)) === JSON.stringify(canonicalValue(record))) {
                         continue;
+                    }
                     remove.run(record.id);
                 }
                 this.#insertRecord(kind, record);
@@ -513,13 +559,16 @@ export class SqliteAnalysisStore {
         for (const record of records) {
             const identity = sqliteRuntimeIdentity(record.id);
             // Pairing may replace a standalone state's rowid; external IDs remain stable throughout.
-            if (!remember.run(identity.prefix, identity.suffix).changes)
+            if (!remember.run(identity.prefix, identity.suffix).changes) {
                 throw new Error(`Duplicate runtime record ID '${record.id}'.`);
+            }
             const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
-            if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record))
+            if (prior && canonicalJson(runtimeFromRow(prior)) === canonicalJson(record)) {
                 continue;
-            if (prior)
+            }
+            if (prior) {
                 remove.run(prior.storage_rowid);
+            }
             this.#insertRecord("runtime", record);
         }
         this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
@@ -536,11 +585,13 @@ export class SqliteAnalysisStore {
         this.#requireTransaction();
         for (const record of records) {
             if (kind === "runtime") {
-                if (!this.insertRuntime(record))
+                if (!this.insertRuntime(record)) {
                     throw new Error(`Duplicate runtime record ID '${record.id}'.`);
+                }
             }
-            else
+            else {
                 this.#insertRecord(kind, record);
+            }
         }
     }
     /**
@@ -554,8 +605,9 @@ export class SqliteAnalysisStore {
         const identity = sqliteRuntimeIdentity(record.id);
         const prior = this.#findRuntime.get(identity.prefix, identity.suffix);
         if (prior) {
-            if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record))
+            if (canonicalJson(runtimeFromRow(prior)) !== canonicalJson(record)) {
                 throw new Error(`Runtime record '${record.id}' has changed content for a stable imported ID.`);
+            }
             return false;
         }
         this.#insertRecord("runtime", record);
@@ -570,8 +622,9 @@ export class SqliteAnalysisStore {
      */
     runtimeBatchInserter(prefix) {
         this.#requireTransaction();
-        if (!prefix || !prefix.endsWith(":"))
+        if (!prefix || !prefix.endsWith(":")) {
             throw new Error("Invalid runtime batch prefix.");
+        }
         // Query the logical view so paired states count as existing observations too.
         // Receipts alone cannot prove completeness: pruning can remove some or all
         // observations without removing their capture's provenance.
@@ -580,12 +633,14 @@ export class SqliteAnalysisStore {
             .get(prefix);
         return (record) => {
             this.#requireTransaction();
-            if (!record.id.startsWith(prefix) || record.id.lastIndexOf(":") !== prefix.length - 1)
+            if (!record.id.startsWith(prefix) || record.id.lastIndexOf(":") !== prefix.length - 1) {
                 throw new Error("Runtime record escaped its batch prefix.");
+            }
             // Retained rows require exact comparison; missing rows in a partial import
             // must be repaired. A matching source hash is not permission to skip either.
-            if (existing)
+            if (existing) {
                 return this.insertRuntime(record);
+            }
             // The caller emits a distinct temporary index under a freshly checked
             // namespace. The surrounding writer transaction excludes competing inserts.
             this.#insertRecord("runtime", record);
@@ -601,8 +656,9 @@ export class SqliteAnalysisStore {
       WHERE evidence.id IS NULL AND EXISTS (SELECT 1 FROM runtime WHERE evidence_id=sets.id) LIMIT 1
     `)
             .get();
-        if (missing)
+        if (missing) {
             throw new Error(`Runtime history refers to missing evidence '${String(missing.evidence)}'.`);
+        }
     }
     /**
      * Store manifest and counter in the same transaction as the changed records.
@@ -624,7 +680,8 @@ export class SqliteAnalysisStore {
         return pointer;
     }
     /**
-     * Current publication counter.
+     * Current publication counter, or zero before initial publication. It is not a schema version.
+     * Read it with related records inside transaction to retain one consistent snapshot.
      * @returns {number} Stored revision.
      */
     revision() {
@@ -632,13 +689,15 @@ export class SqliteAnalysisStore {
         return Number(row?.v ?? 0);
     }
     /**
-     * Manifest stored in meta, including sqlite pointer fields.
+     * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
+     * Use a transaction when combining it with other reads; this does not validate the entire project.
      * @returns {AnalysisProjectManifest} Pointer manifest.
      */
     manifest() {
         const row = this.#database.prepare("SELECT v FROM meta WHERE k='manifest'").get();
-        if (!row)
+        if (!row) {
             throw new Error("Sqlite analysis project is missing its stored manifest.");
+        }
         return { ...parseRecord(row.v), revision: this.revision() };
     }
     /**
@@ -648,20 +707,24 @@ export class SqliteAnalysisStore {
      * @yields {RuntimeEvidenceRecord} One matching decoded fact.
      */
     *runtimeRecordsByKinds(kinds) {
-        if (kinds.length === 0)
+        if (kinds.length === 0) {
             return;
+        }
         const statement = this.#database.prepare(`${RUNTIME_SELECT} WHERE r.kind IN (${kinds.map(() => "?").join(", ")})`);
-        for (const row of statement.iterate(...kinds))
+        for (const row of statement.iterate(...kinds)) {
             yield runtimeFromRow(row);
+        }
     }
     /**
-     * Stream runtime facts without retaining the complete table.
+     * Stream runtime facts without retaining the complete table. Consume before the owning transaction
+     * returns or the connection closes; an escaped iterator does not preserve its original snapshot.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
      * @yields {RuntimeEvidenceRecord} One runtime fact.
      */
     *runtimeRecords() {
-        for (const row of this.#database.prepare(`${RUNTIME_SELECT} ORDER BY r.rowid`).iterate())
+        for (const row of this.#database.prepare(`${RUNTIME_SELECT} ORDER BY r.rowid`).iterate()) {
             yield runtimeFromRow(row);
+        }
     }
     /**
      * Read one metadata table directly; Sources must not load unrelated CFG or runtime tables.
@@ -678,13 +741,15 @@ export class SqliteAnalysisStore {
             evidence: "id",
             imports: "id",
         };
-        if (!Object.hasOwn(order, kind))
+        if (!Object.hasOwn(order, kind)) {
             throw new Error(`Unknown analysis table '${kind}'.`);
+        }
         const records = [];
         for (const row of this.#database
             .prepare(`SELECT payload FROM ${kind} ORDER BY ${order[kind]}`)
-            .iterate())
+            .iterate()) {
             records.push(parseRecord(row.payload));
+        }
         return records;
     }
     /** Validate a query view against this read snapshot, including every included provenance reference.
@@ -720,9 +785,11 @@ export class SqliteAnalysisStore {
         this.validateView({ ...merged.shards, runtime: batch.runtime ?? [] });
         this.patchMetadata(before, merged.shards);
         let runtime = 0;
-        for (const record of batch.runtime ?? [])
-            if (this.insertRuntime(record))
+        for (const record of batch.runtime ?? []) {
+            if (this.insertRuntime(record)) {
                 runtime++;
+            }
+        }
         return {
             changed: merged.changed || runtime > 0,
             added: { ...merged.added, runtime },
@@ -749,10 +816,12 @@ export class SqliteAnalysisStore {
         const sites = this.#database.prepare("SELECT DISTINCT architecture,address_space,address FROM runtime WHERE kind IN ('runtime-execution','runtime-cpu-state')");
         for (const site of sites.iterate()) {
             const runtime = [];
-            for (const row of rows.iterate(site.address_space, site.address, site.architecture))
+            for (const row of rows.iterate(site.address_space, site.address, site.architecture)) {
                 runtime.push(runtimeFromRow(row));
-            for (const conflict of inspectRuntimeEvidence({ ...shards, runtime }).conflicts)
+            }
+            for (const conflict of inspectRuntimeEvidence({ ...shards, runtime }).conflicts) {
                 conflicts.push(conflict);
+            }
         }
         conflicts.sort((a, b) => a.id.localeCompare(b.id));
         return {
@@ -787,29 +856,34 @@ export class SqliteAnalysisStore {
         ]) {
             const records = [];
             const ids = selected?.[kind];
-            if (selected && !ids?.length)
+            if (selected && !ids?.length) {
                 continue;
+            }
             if (kind === "runtime") {
                 if (ids) {
                     const find = this.#database.prepare(`${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
                     for (const id of ids.slice(0, 200)) {
                         const identity = sqliteRuntimeIdentity(id);
                         const row = find.get(identity.prefix, identity.suffix);
-                        if (row)
+                        if (row) {
                             records.push(runtimeFromRow(row));
+                        }
                     }
                 }
-                else
-                    for (const row of this.#database.prepare(`${RUNTIME_SELECT} LIMIT 200`).iterate())
+                else {
+                    for (const row of this.#database.prepare(`${RUNTIME_SELECT} LIMIT 200`).iterate()) {
                         records.push(runtimeFromRow(row));
+                    }
+                }
             }
             else {
                 const sql = ids
                     ? `SELECT payload FROM ${kind} WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id LIMIT 200`
                     : `SELECT payload FROM ${kind} ORDER BY id LIMIT 200`;
                 const parameters = ids ? [JSON.stringify(ids)] : [];
-                for (const row of this.#database.prepare(sql).iterate(...parameters))
+                for (const row of this.#database.prepare(sql).iterate(...parameters)) {
                     records.push(parseRecord(row.payload));
+                }
             }
             Object.assign(shards, { [kind]: records });
         }
@@ -834,8 +908,9 @@ export class SqliteAnalysisStore {
                     "regions",
                 ]);
                 this.#database.exec("CREATE TABLE IF NOT EXISTS query_evidence_links(evidence TEXT,collection TEXT,id TEXT,PRIMARY KEY(evidence,collection,id)) WITHOUT ROWID;DELETE FROM query_evidence_links;");
-                for (const table of ["analysis", "annotations", "labels", "comments", "regions"])
+                for (const table of ["analysis", "annotations", "labels", "comments", "regions"]) {
                     this.#database.exec(`INSERT OR IGNORE INTO query_evidence_links SELECT e.value,'${table}',r.id FROM ${table} r,json_each(analysis_json(r.payload),'$.evidence') e`);
+                }
                 writeQueryCache(this.#database, "evidence_links", signature, true);
             });
         }
@@ -876,14 +951,16 @@ export class SqliteAnalysisStore {
      */
     coverageSummary() {
         const cached = cachedCoverage(this.#database, this.manifest());
-        if (cached)
+        if (cached) {
             return cached;
+        }
         this.prepareAnnotationQueries();
         try {
             this.cachedProjection("coverage", coverageSignature(this.manifest()), ["analysis", "annotations", "regions", "runtime"], () => prepareCoverage(this.#database, this.manifest()), () => publishCoverage(this.#database));
             const published = cachedCoverage(this.#database, this.manifest());
-            if (!published)
+            if (!published) {
                 throw new Error("Project changed while building coverage; refresh the view.");
+            }
             return published;
         }
         finally {
@@ -907,8 +984,9 @@ export class SqliteAnalysisStore {
         try {
             graph = this.cachedProjection("graph", "2", ["analysis"], () => prepareGraph(this.#database), () => publishGraph(this.#database));
             const published = readQueryCache(this.#database, "graph", "2");
-            if (!published)
+            if (!published) {
                 throw new Error("Analysis changed while building the graph; refresh the view.");
+            }
             graph = published;
         }
         finally {
@@ -938,8 +1016,9 @@ export class SqliteAnalysisStore {
      */
     cachedProjection(key, signature, dependencies, compute, publish) {
         const cached = readQueryCache(this.#database, key, signature);
-        if (cached !== undefined)
+        if (cached !== undefined) {
             return cached;
+        }
         const pending = `pending:${randomUUID()}`;
         this.transaction(() => {
             installQueryCache(this.#database, key, dependencies);
@@ -983,8 +1062,9 @@ export class SqliteAnalysisStore {
           DELETE FROM query_runtime_architectures;
           INSERT INTO query_runtime_architectures SELECT * FROM temp.runtime_architectures_pending;`);
             });
-            if (!readQueryCache(this.#database, "runtime_architectures", "2"))
+            if (!readQueryCache(this.#database, "runtime_architectures", "2")) {
                 throw new Error("Runtime changed while building processor hints; refresh the view.");
+            }
         }
         finally {
             this.#database.exec("DROP TABLE IF EXISTS temp.runtime_architectures_pending");
@@ -1001,8 +1081,9 @@ export class SqliteAnalysisStore {
             ? " AND EXISTS(SELECT 1 FROM json_each(?) h WHERE json_extract(analysis_json(payload),'$.specificationId')=h.value OR substr(json_extract(analysis_json(payload),'$.specificationId'),1,length(h.value)+1)=h.value||'.')"
             : "";
         const parameters = [space, address];
-        if (architectures.length)
+        if (architectures.length) {
             parameters.push(JSON.stringify(architectures));
+        }
         const before = this.#database
             .prepare(`SELECT payload FROM analysis WHERE kind='cfg-node' AND address_space=? AND address<? ${matches} ORDER BY address DESC,id DESC LIMIT 4`)
             .all(...parameters)
@@ -1038,8 +1119,9 @@ export class SqliteAnalysisStore {
       SELECT g.*,p.value AS id_prefix,e.value AS evidence FROM grouped g JOIN runtime_prefixes p ON p.id=g.prefix_id JOIN runtime_evidence e ON e.id=g.evidence_id`;
         for (const row of this.#database
             .prepare(sql)
-            .iterate(architecture, space, space, JSON.stringify(addresses)))
+            .iterate(architecture, space, space, JSON.stringify(addresses))) {
             yield runtimeFromRow({ ...row, count: row.total });
+        }
     }
     /** Decode-state variants aggregated in SQL; raw register histories never become a JS array.
      * The signature includes the ordered state fields and architecture. Aliases remain distinct so
@@ -1052,8 +1134,9 @@ export class SqliteAnalysisStore {
      * Prepare before starting the consuming read transaction.
      */
     runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
-        if (stateFields.some((field) => !/^\w+$/.test(field)))
+        if (stateFields.some((field) => !/^\w+$/.test(field))) {
             throw new Error("Invalid instruction state field.");
+        }
         const signature = JSON.stringify([3, architecture, space, stateFields, masks]);
         try {
             this.cachedProjection("instruction_variants", signature, ["runtime"], () => {
@@ -1068,10 +1151,12 @@ export class SqliteAnalysisStore {
                             typeof value === "number" &&
                             Number.isInteger(value) &&
                             value >= 0 &&
-                            value <= mask.max)
+                            value <= mask.max) {
                             state[key] = value & mask.mask;
-                        else if (value !== undefined)
+                        }
+                        else if (value !== undefined) {
                             state[key] = value;
+                        }
                     }
                     return JSON.stringify([record.bytes, state]);
                 });
@@ -1083,11 +1168,12 @@ export class SqliteAnalysisStore {
           SELECT r.*,g.total,p.value AS id_prefix,e.value AS evidence FROM grouped g JOIN runtime r ON r.rowid=g.sample JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id`);
                 for (const row of rows.iterate(architecture, space)) {
                     const record = runtimeFromRow({ ...row, count: row.total });
-                    if (record.kind === "runtime-instruction")
+                    if (record.kind === "runtime-instruction") {
                         insert.run(JSON.stringify({
                             ...record,
                             state: Object.fromEntries(Object.entries(record.state).filter(([key]) => stateFields.includes(key))),
                         }));
+                    }
                 }
                 return true;
             }, () => {
@@ -1096,8 +1182,9 @@ export class SqliteAnalysisStore {
           DELETE FROM query_runtime_variants;
           INSERT INTO query_runtime_variants SELECT payload FROM temp.instruction_variants_pending;`);
             });
-            if (!readQueryCache(this.#database, "instruction_variants", signature))
+            if (!readQueryCache(this.#database, "instruction_variants", signature)) {
                 throw new Error("Runtime changed while building instruction variants; retry reanalysis.");
+            }
         }
         finally {
             this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
@@ -1106,8 +1193,9 @@ export class SqliteAnalysisStore {
         // Call preparation before opening the consuming read transaction. Each decoded record is
         // owned by that iteration; the complete variant set never passes through a JSON string/array.
         return (function* () {
-            for (const row of statement.iterate())
+            for (const row of statement.iterate()) {
                 yield JSON.parse(String(row.payload));
+            }
         })();
     }
     /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
@@ -1132,14 +1220,16 @@ export class SqliteAnalysisStore {
     }
     /** Build additive query indexes once, then refresh only rows invalidated by project writes. */
     prepareAnnotationQueries() {
-        if (annotationQueryIndexesReady(this.#database))
+        if (annotationQueryIndexesReady(this.#database)) {
             return;
+        }
         this.transaction(() => ensureAnnotationQueryIndexes(this.#database));
     }
     /** Prepare direct source attribution indexes without decoding runtime payloads. */
     prepareSourceQueries() {
-        if (!sourceQueriesReady(this.#database))
+        if (!sourceQueriesReady(this.#database)) {
             this.transaction(() => prepareSourceQueries(this.#database));
+        }
     }
     /** Validated source identities from small catalog tables in the caller's read snapshot.
      * @returns {object} Manifest and sources ordered by their most recent successful import.
@@ -1170,8 +1260,9 @@ export class SqliteAnalysisStore {
     sourceSummary(sourceId) {
         const { manifest, sources } = this.sourceCatalog();
         const source = sources.find(({ id }) => id === sourceId);
-        if (!source)
+        if (!source) {
             throw new Error("Unknown analysis source.");
+        }
         return { manifest, summary: readSourceSummary(this.#database, source) };
     }
     /** At most 200 SQL-selected contribution rows, decoded within the caller's read transaction.
@@ -1182,8 +1273,9 @@ export class SqliteAnalysisStore {
      */
     sourcePage(sourceId, group, offset = 0) {
         const source = this.sourceCatalog().sources.find(({ id }) => id === sourceId);
-        if (!source)
+        if (!source) {
             throw new Error("Unknown analysis source.");
+        }
         return readSourcePage(this.#database, source, group, offset);
     }
     /**
@@ -1255,13 +1347,15 @@ export class SqliteAnalysisStore {
                 !record.incomingState ||
                 typeof record.incomingState !== "object" ||
                 !Array.isArray(record.evidence) ||
-                record.evidence.some((id) => typeof id !== "string" || !evidence.has(id)))
+                record.evidence.some((id) => typeof id !== "string" || !evidence.has(id))) {
                 throw new Error("Invalid indexed export instruction or missing provenance.");
+            }
             group.push(record);
             previous = offset;
         }
-        if (group.length)
+        if (group.length) {
             yield group;
+        }
     }
     /**
      * Read and validate only the requested instruction metadata and bounded runtime details.
@@ -1280,13 +1374,15 @@ export class SqliteAnalysisStore {
      * @returns {AnalysisRecord[]} Matching rows in stable ID order.
      */
     analysisByKinds(kinds) {
-        if (!kinds.length)
+        if (!kinds.length) {
             return [];
+        }
         const records = [];
         for (const row of this.#database
             .prepare(`SELECT payload FROM analysis WHERE kind IN (${kinds.map(() => "?").join(",")}) ORDER BY id`)
-            .iterate(...kinds))
+            .iterate(...kinds)) {
             records.push(parseRecord(row.payload));
+        }
         return records;
     }
     /**
@@ -1319,12 +1415,14 @@ export class SqliteAnalysisStore {
             yield* this.runtimeRecords();
             return;
         }
-        if (!["evidence", "labels", "comments", "regions", "annotations", "analysis", "imports"].includes(kind))
+        if (!["evidence", "labels", "comments", "regions", "annotations", "analysis", "imports"].includes(kind)) {
             throw new Error(`Unknown analysis table '${kind}'.`);
+        }
         for (const row of this.#database
             .prepare(`SELECT payload FROM ${kind} ORDER BY rowid`)
-            .iterate())
+            .iterate()) {
             yield parseRecord(row.payload);
+        }
     }
     /**
      * Initialize a migrated project's unchanged logical identity once, inside its first publication.
@@ -1332,8 +1430,9 @@ export class SqliteAnalysisStore {
      */
     initializeMigratedManifest(manifest) {
         this.#requireTransaction();
-        if (this.#database.prepare("SELECT 1 FROM meta LIMIT 1").get())
+        if (this.#database.prepare("SELECT 1 FROM meta LIMIT 1").get()) {
             throw new Error("Migration manifest can only initialize an empty metadata header.");
+        }
         const insert = this.#database.prepare("INSERT INTO meta (k,v) VALUES (?,?)");
         insert.run("revision", String(manifest.revision ?? 0));
         insert.run("manifest", canonicalJson(manifest));
@@ -1344,18 +1443,21 @@ export class SqliteAnalysisStore {
      * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
      */
     finishMigration() {
-        for (const sql of SCHEMA_INDEX_STATEMENTS)
+        for (const sql of SCHEMA_INDEX_STATEMENTS) {
             this.#database.exec(sql);
+        }
         const integrity = this.#database.prepare("PRAGMA integrity_check").all();
-        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok")
+        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok") {
             throw new Error("Migrated SQLite database failed integrity validation.");
-        if (this.#database.prepare("PRAGMA foreign_key_check").get())
+        }
+        if (this.#database.prepare("PRAGMA foreign_key_check").get()) {
             throw new Error("Migrated SQLite database contains an invalid dictionary reference.");
+        }
         this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; PRAGMA journal_mode=WAL;");
     }
     /**
-     * Materialize metadata once; full runtime history is opt-in for callers that need it.
-     * @param {boolean} [runtime] Include complete runtime history; false keeps it on disk.
+     * Materialize complete record arrays without semantic validation. Run inside a read transaction.
+     * @param {boolean} [runtime] Defaults to true; false omits runtime and must not be treated as a complete replacement.
      * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
      */
     loadShards(runtime = true) {
@@ -1400,8 +1502,9 @@ export class SqliteAnalysisStore {
         const result = {};
         for (const row of this.#database
             .prepare("SELECT kind, COUNT(*) AS n FROM analysis GROUP BY kind")
-            .iterate())
+            .iterate()) {
             result[String(row.kind)] = Number(row.n);
+        }
         return result;
     }
     /**
@@ -1445,8 +1548,9 @@ export class SqliteAnalysisStore {
         const disk = fs.statfsSync(path.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
-        if (disk.bavail * disk.bsize < 2 * pageCount * pageSize)
+        if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
             throw new Error("Insufficient free disk space for SQLite VACUUM; allow twice the database size.");
+        }
         this.transaction(() => {
             // Retired provenance/prefix sets may remain after complete runtime replacements. Prune with
             // set queries so compaction does not perform one full runtime scan per dictionary entry.
@@ -1487,14 +1591,14 @@ export class SqliteAnalysisStore {
     storageCacheBytes() {
         return optionalCacheBytes(this.#database);
     }
-    /** Durable receipt lookup survives archive expiry and cache eviction.
+    /** Durable receipt lookup survives source-file removal and cache eviction.
      * @param {string} sha256 Canonical capture identity.
-     * @returns {object | undefined} Retained receipt, including archive availability.
+     * @returns {object | undefined} Retained import identity and counts.
      */
     captureReceipt(sha256) {
         return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha256);
     }
-    /** Catalog rows contain small provenance/availability metadata, never capture contents.
+    /** Catalog rows contain small import provenance metadata, never capture contents.
      * @returns {object[]} Small capture metadata rows in import order.
      */
     captureCatalog() {
@@ -1502,41 +1606,19 @@ export class SqliteAnalysisStore {
             .prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256")
             .all();
     }
-    /** Record the first successful import atomically with its facts; later detail expiry retains this receipt.
+    /** Record the first successful import atomically with its facts; reimports only refresh last-seen time.
      * @param {ImportReport} report Successfully validated native trace import.
      */
     recordCaptureReceipt(report) {
         this.#requireTransaction();
-        if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format))
+        if (!["uttori-asm-instruction-trace", "uttori-asm-bus-trace"].includes(report.format)) {
             return;
+        }
         const now = Date.now();
         this.#database
             .prepare(`INSERT INTO capture_catalog(sha256,profile,source_name,imported_at,last_seen_at,observed_events,dropped_events)
       VALUES(?,?,?,?,?,?,?) ON CONFLICT(sha256) DO UPDATE SET last_seen_at=excluded.last_seen_at`)
             .run(report.sourceSha256, report.indexProfile ?? "full", report.sourceName, now, now, report.imported.busEvents ?? report.imported.executionEvents ?? 0, report.unsupported.find((entry) => entry.field === "instruction-addresses")?.count ?? 0);
-    }
-    /** Save verified archive metadata, or mark expired detail while keeping the import identity.
-     * @param {string} sha256 Canonical capture identity already committed.
-     * @param {object} value Verified location/hash/size or explicit detail unavailability.
-     */
-    updateCaptureArchive(sha256, value) {
-        this.#requireTransaction();
-        if (!this.captureReceipt(sha256))
-            throw new Error("Unknown capture identity.");
-        this.#database
-            .prepare("UPDATE capture_catalog SET original_path=COALESCE(?,original_path),archive_name=?,archive_sha256=?,archive_bytes=?,availability=? WHERE sha256=?")
-            .run(value.originalPath ?? null, value.name ?? null, value.hash ?? null, value.bytes, value.availability, sha256);
-    }
-    /** Pinned detail is exempt from automatic byte, age and count expiry.
-     * @param {string} sha256 Canonical identity of an existing capture receipt.
-     * @param {boolean} pinned Whether automatic archive expiry must preserve it.
-     */
-    pinCapture(sha256, pinned) {
-        this.#requireTransaction();
-        if (!this.#database
-            .prepare("UPDATE capture_catalog SET pinned=? WHERE sha256=?")
-            .run(Number(pinned), sha256).changes)
-            throw new Error("Unknown capture identity.");
     }
     /** Drop disposable projections after publication, then recycle WAL without waiting on active readers.
      * @returns {object} Cache eviction totals and whether readers delayed WAL truncation.
@@ -1553,7 +1635,7 @@ export class SqliteAnalysisStore {
             this.#database.exec(`PRAGMA busy_timeout=${previousTimeout}`);
         }
     }
-    /** Close prepared statements and the database. */
+    /** Close once in finally, releasing statements and any active transaction. Further use throws. */
     close() {
         this.#database.close();
     }

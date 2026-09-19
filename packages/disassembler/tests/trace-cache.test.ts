@@ -11,13 +11,18 @@ test("bounded cache preserves values and reports every eviction across rotating 
     const key = String(i < 32768 ? i % 4097 : i);
     expected.set(key, (expected.get(key) ?? 0) + 1);
     const entry = cache.get(key);
-    if (entry) entry.count++;
-    else {
+    if (entry) {
+      entry.count++;
+    } else {
       const evicted = cache.insert(key, { count: 1 });
-      if (evicted) persist(evicted.key, evicted.value.count);
+      if (evicted) {
+        persist(evicted.key, evicted.value.count);
+      }
     }
   }
-  for (const [key, value] of cache.entries()) persist(key, value.count);
+  for (const [key, value] of cache.entries()) {
+    persist(key, value.count);
+  }
   // Compare ordered arrays: unordered large Map matching can make the assertion
   // itself quadratic even though aggregation is linear.
   const byKey = (a: [string, number], b: [string, number]) => a[0].localeCompare(b[0]);

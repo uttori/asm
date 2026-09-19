@@ -51,35 +51,44 @@ const element = (xml, name) => {
 };
 const fake64 = (character) => {
     const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    if (character === "0")
+    if (character === "0") {
         return 0;
-    if (character === "A")
+    }
+    if (character === "A") {
         return 52 << 2;
+    }
     const index = alphabet.indexOf(character);
-    if (index < 0)
+    if (index < 0) {
         throw new Error(`Invalid .dizraw flag character '${character}'.`);
+    }
     return index << 2;
 };
 const decodeMetadata = (line) => {
     const padded = line.padEnd(9, "0").slice(0, 9);
     const classification = CLASSIFICATIONS[padded[0]];
-    if (!classification)
+    if (!classification) {
         throw new Error(`Unknown .dizraw classification '${padded[0]}'.`);
+    }
     const flags = fake64(padded[1]);
     const pointValue = (flags >> 4) & 0x0f;
     const architectureValue = Number.parseInt(padded[8], 16) & 0x03;
     const architecture = ARCHITECTURES[architectureValue];
-    if (!architecture)
+    if (!architecture) {
         throw new Error(`Unknown .dizraw architecture '${padded[8]}'.`);
+    }
     const points = [];
-    if (pointValue & 1)
+    if (pointValue & 1) {
         points.push("in");
-    if (pointValue & 2)
+    }
+    if (pointValue & 2) {
         points.push("out");
-    if (pointValue & 4)
+    }
+    if (pointValue & 4) {
         points.push("end");
-    if (pointValue & 8)
+    }
+    if (pointValue & 8) {
         points.push("read");
+    }
     return {
         classification,
         architecture,
@@ -100,8 +109,9 @@ const sameMetadata = (left, right) => left.classification === right.classificati
 const decodeRomByteLines = (body, maximumBytes) => {
     const normalized = xmlDecode(body).replaceAll("\r", "").trim();
     const [header, ...encodedLines] = normalized.split("\n");
-    if (!header)
+    if (!header) {
         throw new Error(".dizraw RomBytes section is missing its format header.");
+    }
     const options = header.split(",");
     const version = options.find((option) => option.startsWith("version:"));
     if (version !== "version:200" && version !== "version:201") {
@@ -125,14 +135,16 @@ const decodeRomByteLines = (body, maximumBytes) => {
                 continue;
             }
             const match = /^r (\d+) (.+)$/.exec(line);
-            if (!match)
+            if (!match) {
                 throw new Error(`Invalid .dizraw repeater command '${line}'.`);
+            }
             const count = Number(match[1]);
             if (!Number.isSafeInteger(count) || count < 0 || expanded.length + count > maximumBytes) {
                 throw new Error(`.dizraw RomBytes expansion exceeds the ${maximumBytes}-byte safety limit.`);
             }
-            for (let index = 0; index < count; index++)
+            for (let index = 0; index < count; index++) {
                 expanded.push(match[2]);
+            }
         }
         lines = expanded;
     }
@@ -145,8 +157,9 @@ const decodeRomByteLines = (body, maximumBytes) => {
     return decoded;
 };
 const metadataIntervals = (lines, evidenceId) => {
-    if (lines.length === 0)
+    if (lines.length === 0) {
         return [];
+    }
     const output = [];
     let start = 0;
     let active = decodeMetadata(lines[0]);
@@ -218,8 +231,9 @@ export const importDizRaw = (xml, options = {}) => {
     const projectAttributes = attributes(projectMatch[1]);
     const dataAttributes = attributes(data.opening);
     const mapper = DIZ_MAPPERS[dataAttributes.RomMapMode];
-    if (!mapper)
+    if (!mapper) {
         throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
+    }
     const sourceSha256 = createHash("sha256").update(xml).digest("hex");
     const sourceName = options.sourceName ?? "import.dizraw";
     const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
@@ -229,8 +243,9 @@ export const importDizRaw = (xml, options = {}) => {
         for (const match of labelsElement.body.matchAll(/<sys:Item\b([^>]*)>([\S\s]*?)<\/sys:Item>/g)) {
             const itemAttributes = attributes(match[1]);
             const valueMatch = /<Value\b([^>]*)\/?\s*>/.exec(match[2]);
-            if (!valueMatch)
+            if (!valueMatch) {
                 continue;
+            }
             const valueAttributes = attributes(valueMatch[1]);
             const address = Number(itemAttributes.Key);
             if (!Number.isSafeInteger(address) || address < 0) {
@@ -256,8 +271,9 @@ export const importDizRaw = (xml, options = {}) => {
             const valueStart = match[2].indexOf("<Value");
             const valueOpeningEnd = match[2].indexOf(">", valueStart);
             const valueEnd = match[2].indexOf("</Value>", valueOpeningEnd);
-            if (valueStart < 0 || valueOpeningEnd < 0 || valueEnd < 0)
+            if (valueStart < 0 || valueOpeningEnd < 0 || valueEnd < 0) {
                 continue;
+            }
             const address = Number(itemAttributes.Key);
             if (!Number.isSafeInteger(address) || address < 0) {
                 throw new Error(`Invalid .dizraw comment address '${itemAttributes.Key}'.`);
@@ -314,8 +330,9 @@ export const importDizRaw = (xml, options = {}) => {
     const annotations = metadataIntervals(metadataLines, evidenceId);
     const unsupported = [];
     const recordUnsupported = (field, present, reason) => {
-        if (present)
+        if (present) {
             unsupported.push({ field, count: 1, reason });
+        }
     };
     recordUnsupported("Project.LogWriterSettings", /<LogWriterSettings\b/.test(xml), "assembly export formatting is not analysis data");
     recordUnsupported("Project.ProjectSettings", /<ProjectSettings\b/.test(xml), "DiztinGUIsh UI and serializer preferences are not portable analysis data");

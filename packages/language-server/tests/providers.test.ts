@@ -76,7 +76,7 @@ test("language-server providers expose navigation, docs, completion, and tokens"
 });
 
 test("every generated SNES hardware register provides hover documentation", (t) => {
-  const definesFile = path.resolve("/virtual/snes-defines.asm");
+  const definesFile = path.resolve("/virtual/defines.asm");
   const sourceFile = path.resolve("/virtual/register-users.asm");
   const definitions = snesHardwareDefineRecords();
   const registerUses = definitions.map(({ symbol }) => `  dw ${symbol}`).join("\n");

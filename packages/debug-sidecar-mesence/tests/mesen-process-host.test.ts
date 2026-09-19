@@ -51,9 +51,13 @@ class FakeTransport implements MesenDebugTransport {
   }
 
   close(): Promise<void> {
-    if (this.closed) return Promise.resolve();
+    if (this.closed) {
+      return Promise.resolve();
+    }
     this.closed = true;
-    for (const listener of this.closeListeners) listener();
+    for (const listener of this.closeListeners) {
+      listener();
+    }
     return Promise.resolve();
   }
 
@@ -94,12 +98,16 @@ class FakeProcess implements MesenProcessHandle {
 
   kill(signal: "SIGTERM" | "SIGKILL"): void {
     this.signals.push(signal);
-    if (signal === "SIGTERM" && this.#ignoreTerm) return;
+    if (signal === "SIGTERM" && this.#ignoreTerm) {
+      return;
+    }
     this.exit({ code: null, signal });
   }
 
   exit(exit: MesenProcessExit): void {
-    if (this.#exited) return;
+    if (this.#exited) {
+      return;
+    }
     this.#exited = true;
     this.#resolveExit(exit);
   }
@@ -138,16 +146,20 @@ class FakeRuntime implements MesenProcessRuntime {
     this.launches.push(options);
     const process = new FakeProcess(2_000 + this.processes.length, this.ignoreTerm);
     this.processes.push(process);
-    if (this.launchOutput)
+    if (this.launchOutput) {
       options.onOutput(this.launchOutput[0], Buffer.from(this.launchOutput[1]));
-    if (this.exitOnLaunch) process.exit(this.exitOnLaunch);
+    }
+    if (this.exitOnLaunch) {
+      process.exit(this.exitOnLaunch);
+    }
     return process;
   }
 
   connect(): Promise<MesenDebugTransport> {
     this.connectCalls++;
-    if (this.connectCalls <= this.connectFailures)
+    if (this.connectCalls <= this.connectFailures) {
       return Promise.reject(new Error("connection refused"));
+    }
     const transport = new FakeTransport();
     this.transports.push(transport);
     return Promise.resolve(transport);
@@ -320,8 +332,9 @@ test("Mesen runtime manifest rejects every malformed identity field", (t) => {
     [{ ...manifest(), architecture: "" }, /non-empty string/],
     [{ ...manifest(), buildConfiguration: "" }, /non-empty string/],
   ];
-  for (const [value, message] of invalid)
+  for (const [value, message] of invalid) {
     t.throws(() => parseMesenRuntimeManifest(value), { message });
+  }
 });
 
 test("Mesen process host validates paths, numeric bounds, platform, and tokens", async (t) => {

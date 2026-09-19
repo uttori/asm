@@ -24,7 +24,9 @@ export const SNES_TILE_8BPP_ASSET_CODEC_ID = "snes.asset.tile.8bpp";
 export const SNES_MODE7_TILE_ASSET_CODEC_ID = "snes.asset.tile.mode7";
 
 const planeOffset = (bitsPerPixel: number, plane: number, row: number): number => {
-  if (bitsPerPixel === 3 && plane === 2) return 16 + row;
+  if (bitsPerPixel === 3 && plane === 2) {
+    return 16 + row;
+  }
   return Math.floor(plane / 2) * 16 + row * 2 + (plane % 2);
 };
 
@@ -51,7 +53,9 @@ const encodeTilePixels = (
   maximum: number,
 ): readonly (readonly number[])[] => {
   const rows = arrayValue(value, `SNES tile ${tileIndex} pixels`);
-  if (rows.length !== 8) throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+  if (rows.length !== 8) {
+    throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
+  }
   return rows.map((row, rowIndex) => {
     const pixels = arrayValue(row, `SNES tile ${tileIndex} row ${rowIndex}`);
     if (pixels.length !== 8) {

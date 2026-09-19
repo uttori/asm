@@ -122,7 +122,7 @@ test("SPC700 official-documentation vectors decode in native syntax", (t) => {
   for (const vector of vectors) {
     const result = decode(vector.bytes);
     t.is(result.kind, "instruction", vector.source);
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {continue;}
     t.is(formatSpc700Instruction(result.instruction), vector.source);
     t.is(result.instruction.flow.kind, vector.flow);
   }
@@ -154,7 +154,7 @@ test("SPC700 decode-format-encode round trips all 256 opcode bytes", (t) => {
     const bytes = [specification.opcode[0], 0x34, 0x12].slice(0, specification.minimumSize);
     const result = decode(bytes, { directPage: 0 });
     t.is(result.kind, "instruction", specification.id);
-    if (result.kind !== "instruction") continue;
+    if (result.kind !== "instruction") {continue;}
 
     const source = formatSpc700Instruction(result.instruction);
     const host = createEncoderTestHost();

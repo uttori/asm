@@ -11,16 +11,26 @@ import {
 } from "./external-fixtures.ts";
 
 function submoduleLabel(status: FixtureStatus): string {
-  if (status.issues.includes("uninitialized")) return "uninitialized";
-  if (status.issues.includes("wrong-commit")) return "wrong-commit";
+  if (status.issues.includes("uninitialized")) {
+    return "uninitialized";
+  }
+  if (status.issues.includes("wrong-commit")) {
+    return "wrong-commit";
+  }
   return status.commit?.slice(0, 12) ?? "unknown";
 }
 
 function romLabel(status: FixtureStatus): string {
   const spec = EXTERNAL_FIXTURES[status.id];
-  if (!spec.localRom) return "not-required";
-  if (status.issues.includes("missing-rom")) return "missing";
-  if (status.issues.includes("wrong-rom-hash")) return "wrong-hash";
+  if (!spec.localRom) {
+    return "not-required";
+  }
+  if (status.issues.includes("missing-rom")) {
+    return "missing";
+  }
+  if (status.issues.includes("wrong-rom-hash")) {
+    return "wrong-hash";
+  }
   return "ok";
 }
 
@@ -46,7 +56,9 @@ function main(): void {
   );
   console.table(rows);
   for (const status of statuses) {
-    if (status.ready && status.issues.length === 0) continue;
+    if (status.ready && status.issues.length === 0) {
+      continue;
+    }
     console.log(`\n[${status.id}] ${status.issues.join(", ") || "notes"}`);
     for (const detail of status.details) {
       console.log(`  ${detail}`);

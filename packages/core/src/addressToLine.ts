@@ -194,7 +194,9 @@ export class AddressToLineMapping {
   getFileIndex(filename: string): number {
     const filenameCrc = CRC32.compute(Buffer.from(filename, "utf8"));
     for (let i = 0; i < this.filenameCrcs.length; i++) {
-      if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) return i;
+      if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
+        return i;
+      }
     }
     this.fileList.push({ name: filename, ...sourceIdentity(filename) });
     this.filenameCrcs.push(filenameCrc);

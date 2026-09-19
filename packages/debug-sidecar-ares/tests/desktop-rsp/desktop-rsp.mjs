@@ -83,7 +83,9 @@ const record = (name) => {
 async function connect() {
   const deadline = Date.now() + 15000;
   for (;;) {
-    if (child.exitCode !== null || child.signalCode) throw new Error(`Desktop exited: ${log}`);
+    if (child.exitCode !== null || child.signalCode) {
+      throw new Error(`Desktop exited: ${log}`);
+    }
     try {
       const transport = await NodeTcpGdbRspTransport.connect({
         host: "127.0.0.1",
@@ -94,7 +96,9 @@ async function connect() {
       await connected.start();
       return connected;
     } catch (error) {
-      if (Date.now() >= deadline) throw error;
+      if (Date.now() >= deadline) {
+        throw error;
+      }
       await delay(50);
     }
   }
@@ -139,7 +143,9 @@ try {
       `qXfer:features:read:target.xml:${xml.length.toString(16)},20`,
     );
     xml += chunk.slice(1);
-    if (chunk[0] === "l") break;
+    if (chunk[0] === "l") {
+      break;
+    }
     assert.equal(chunk[0], "m");
   }
   assert.match(xml, /dev\.ares\.wdc65816\.core/);
@@ -161,7 +167,9 @@ try {
   );
   record("continue leaves breakpoint and executes one loop before stopping again");
   const started = performance.now();
-  for (let i = 0; i < 200; ++i) assert.equal(await getClient().request("p7"), "0580");
+  for (let i = 0; i < 200; ++i) {
+    assert.equal(await getClient().request("p7"), "0580");
+  }
   const burstMs = performance.now() - started;
   assert.equal(await pc(), 0x8005);
   record("200 desktop packet round trips preserve the stopped PC");
@@ -214,8 +222,11 @@ try {
       const timer = setTimeout(() => reject(new Error("GUI quit timed out")), 60000);
       child.once("exit", (code, signal) => {
         clearTimeout(timer);
-        if (code === 0 && signal === null) resolve(undefined);
-        else reject(new Error(`Unclean desktop exit: ${code}/${signal}`));
+        if (code === 0 && signal === null) {
+          resolve(undefined);
+        } else {
+          reject(new Error(`Unclean desktop exit: ${code}/${signal}`));
+        }
       });
     });
     record("GUI quit while debugger is halted exits cleanly");
@@ -236,7 +247,9 @@ try {
       ? "clean GUI quit while halted"
       : "process termination; GUI quit is a separate check",
   };
-  if (evidencePath) await writeFile(evidencePath, JSON.stringify(evidence, null, 2) + "\n");
+  if (evidencePath) {
+    await writeFile(evidencePath, JSON.stringify(evidence, null, 2) + "\n");
+  }
   process.stdout.write(JSON.stringify(evidence, null, 2) + "\n");
 } catch (error) {
   process.stderr.write(log + "\n");
@@ -246,7 +259,9 @@ try {
   if (child.exitCode === null && !child.signalCode) {
     child.kill("SIGTERM");
     await Promise.race([new Promise((resolve) => child.once("exit", resolve)), delay(3000)]);
-    if (child.exitCode === null && !child.signalCode) child.kill("SIGKILL");
+    if (child.exitCode === null && !child.signalCode) {
+      child.kill("SIGKILL");
+    }
   }
   await rm(temporary, { recursive: true, force: true });
 }

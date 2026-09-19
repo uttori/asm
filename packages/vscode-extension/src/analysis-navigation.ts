@@ -42,7 +42,9 @@ const findDebugMapSources = async (
     for (const range of analysisDebugMapRanges(candidate.map, target)) {
       architectures.push(range.architecture);
       const source = candidate.map.sources.find(({ id }) => id === range.sourceId);
-      if (!source) continue;
+      if (!source) {
+        continue;
+      }
       const file = currentAnalysisSourcePath(source, candidate);
       if (!file) {
         staleSources++;
@@ -79,7 +81,9 @@ const findDebugMapSources = async (
 const openSourceLocation = async (
   locations: readonly CurrentSourceLocation[],
 ): Promise<boolean> => {
-  if (locations.length === 0) return false;
+  if (locations.length === 0) {
+    return false;
+  }
   const selected =
     locations.length === 1
       ? locations[0]
@@ -96,7 +100,9 @@ const openSourceLocation = async (
             },
           )
         )?.location;
-  if (!selected) return true;
+  if (!selected) {
+    return true;
+  }
   const document = await workspace.openTextDocument(Uri.file(selected.file));
   const editor = await window.showTextDocument(document, { preview: true });
   const position = new Position(Math.max(0, selected.line - 1), 0);
@@ -108,8 +114,12 @@ const openSourceLocation = async (
 const chooseArchitecture = async (
   architectures: readonly string[],
 ): Promise<string | undefined> => {
-  if (architectures.length === 0) return undefined;
-  if (architectures.length === 1) return architectures[0];
+  if (architectures.length === 0) {
+    return undefined;
+  }
+  if (architectures.length === 1) {
+    return architectures[0];
+  }
   return window.showQuickPick(architectures, {
     title: "Open Virtual Disassembly",
     placeHolder: "Choose the persisted architecture identity",
@@ -121,9 +131,13 @@ const openLiveDisassembly = async (
   architectures: readonly string[],
 ): Promise<boolean> => {
   const session = debug.activeDebugSession;
-  if (!session || session.type !== "uttori-asm") return false;
+  if (!session || session.type !== "uttori-asm") {
+    return false;
+  }
   const architecture = await chooseArchitecture(architectures);
-  if (!architecture) return false;
+  if (!architecture) {
+    return false;
+  }
   try {
     const response = (await session.customRequest("disassemble", {
       memoryReference: formatDebugAddress({
@@ -136,7 +150,9 @@ const openLiveDisassembly = async (
       instructionCount: 32,
     })) as { readonly instructions?: readonly Record<string, unknown>[] };
     const instructions = response.instructions ?? [];
-    if (instructions.length === 0) return false;
+    if (instructions.length === 0) {
+      return false;
+    }
     const lines = instructions.map((instruction) => {
       const address = typeof instruction.address === "string" ? instruction.address : "?";
       const bytes =
@@ -201,7 +217,9 @@ export const navigateToAnalysisLocation = async (
       throw new Error("Navigation target no longer matches the current native analysis project.");
     }
     const search = await findDebugMapSources(target);
-    if (await openSourceLocation(search.locations)) return;
+    if (await openSourceLocation(search.locations)) {
+      return;
+    }
     const projection = await analysisWorker().request<AnalysisNavigationProjection>(
       target.projectDirectory,
       "navigation",
@@ -212,7 +230,9 @@ export const navigateToAnalysisLocation = async (
       await openPersistedDisassembly(target, projection);
       return;
     }
-    if (await openLiveDisassembly(target, search.architectures)) return;
+    if (await openLiveDisassembly(target, search.architectures)) {
+      return;
+    }
     if (search.staleSources > 0) {
       await window.showWarningMessage(
         `Found ${search.staleSources} stale source mapping(s); opening persisted analysis disassembly instead.`,

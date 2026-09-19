@@ -32,8 +32,12 @@ const blockCountAndSize = (
   }
   for (let blockCount = 1; blockCount <= maxBlocks; blockCount++) {
     const block = context.source.read(context.request.sourceOffset + (blockCount - 1) * 9, 9);
-    if (!block) break;
-    if ((block[0] & 1) !== 0) return { blockCount, size: blockCount * 9 };
+    if (!block) {
+      break;
+    }
+    if ((block[0] & 1) !== 0) {
+      return { blockCount, size: blockCount * 9 };
+    }
   }
   throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
 };

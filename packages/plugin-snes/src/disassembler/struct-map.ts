@@ -80,8 +80,9 @@ const fieldType = (field: SnesStructField): string =>
 const hex = (value: number): string => `$${value.toString(16).toUpperCase()}`;
 const comment = (value: string): string => value.replaceAll(/\s+/g, " ").trim();
 const object = (value: unknown): Record<string, unknown> => {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Struct-map records must be objects.");
+  }
   return value as Record<string, unknown>;
 };
 const integer = (value: unknown, minimum = 0, maximum = 0xffffff): number => {
@@ -90,19 +91,24 @@ const integer = (value: unknown, minimum = 0, maximum = 0xffffff): number => {
     !Number.isSafeInteger(value) ||
     value < minimum ||
     value > maximum
-  )
+  ) {
     throw new Error(`Invalid struct-map integer '${String(value)}'.`);
+  }
   return value;
 };
 const identifier = (value: unknown): string => {
-  if (typeof value !== "string" || !/^[A-Z_a-z]\w*$/.test(value) || /^__gap_|^snes_/i.test(value))
+  if (typeof value !== "string" || !/^[A-Z_a-z]\w*$/.test(value) || /^__gap_|^snes_/i.test(value)) {
     throw new Error(`Invalid or reserved struct-map identifier '${String(value)}'.`);
+  }
   return value;
 };
 const notes = (value: unknown): string[] => {
-  if (value === undefined) return [];
-  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string"))
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || value.some((entry) => typeof entry !== "string")) {
     throw new Error("Struct-map notes must be an array of strings.");
+  }
   return (value as string[]).map(comment);
 };
 
@@ -114,14 +120,18 @@ const notes = (value: unknown): string[] => {
  */
 export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap, "sourceBytes"> => {
   const file = object(value);
-  if (file.format !== "uttori-asm-snes-struct-map" || file.schemaVersion !== 1)
+  if (file.format !== "uttori-asm-snes-struct-map" || file.schemaVersion !== 1) {
     throw new Error("Unsupported SNES struct-map format or schema.");
-  if (!Array.isArray(file.structures) || !Array.isArray(file.bindings))
+  }
+  if (!Array.isArray(file.structures) || !Array.isArray(file.bindings)) {
     throw new Error("Struct map requires structures and bindings arrays.");
+  }
   const names = new Set<string>();
   const uniqueName = (value: unknown): string => {
     const name = identifier(value);
-    if (names.has(name.toLowerCase())) throw new Error(`Duplicate struct-map name '${name}'.`);
+    if (names.has(name.toLowerCase())) {
+      throw new Error(`Duplicate struct-map name '${name}'.`);
+    }
     names.add(name.toLowerCase());
     return name;
   };
@@ -129,28 +139,35 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
     const entry = object(input);
     const id = uniqueName(entry.id);
     const size = integer(entry.size, 1, 0x10000);
-    if (entry.byteOrder !== undefined && entry.byteOrder !== "little")
+    if (entry.byteOrder !== undefined && entry.byteOrder !== "little") {
       throw new Error(`Struct '${id}' must use little-endian fields.`);
-    if (!Array.isArray(entry.fields)) throw new Error(`Struct '${id}' requires a fields array.`);
+    }
+    if (!Array.isArray(entry.fields)) {
+      throw new Error(`Struct '${id}' requires a fields array.`);
+    }
     const fieldNames = new Set<string>();
     const fields = entry.fields
       .map((inputField: unknown): SnesStructField => {
         const field = object(inputField);
         const name = identifier(field.name);
-        if (fieldNames.has(name.toLowerCase()))
+        if (fieldNames.has(name.toLowerCase())) {
           throw new Error(`Duplicate struct field '${id}.${name}'.`);
+        }
         fieldNames.add(name.toLowerCase());
-        if (field.description !== undefined && typeof field.description !== "string")
+        if (field.description !== undefined && typeof field.description !== "string") {
           throw new Error(`Invalid description for '${id}.${name}'.`);
+        }
         const fieldSize = integer(field.size, 1, size);
         let type: string | undefined;
         if (field.type !== undefined) {
-          if (typeof field.type !== "string")
+          if (typeof field.type !== "string") {
             throw new Error(`Invalid field type '${id}.${name}'.`);
+          }
           // oxlint-disable-next-line security/detect-unsafe-regex -- The fixed width token and decimal count cannot overlap.
           const match = field.type.match(/^(db|dw|dl|dd)(?:\[([1-9]\d*)])?$/i);
-          if (!match || widths[match[1].toLowerCase()] * Number(match[2] ?? 1) !== fieldSize)
+          if (!match || widths[match[1].toLowerCase()] * Number(match[2] ?? 1) !== fieldSize) {
             throw new Error(`Field type '${id}.${name}' must match its size (${fieldSize} bytes).`);
+          }
           type = field.type.toLowerCase();
         }
         return {
@@ -164,8 +181,9 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
       .sort((a, b) => a.offset - b.offset);
     let end = 0;
     for (const field of fields) {
-      if (field.offset < end || field.offset + field.size > size)
+      if (field.offset < end || field.offset + field.size > size) {
         throw new Error(`Struct field '${id}.${field.name}' overlaps or exceeds the layout.`);
+      }
       end = field.offset + field.size;
     }
     return { id, size, fields, notes: notes(entry.notes) };
@@ -176,18 +194,23 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
       const entry = object(input);
       const name = uniqueName(entry.name);
       const structure = byName.get(String(entry.structure));
-      if (!structure) throw new Error(`Unknown layout '${String(entry.structure)}' for '${name}'.`);
+      if (!structure) {
+        throw new Error(`Unknown layout '${String(entry.structure)}' for '${name}'.`);
+      }
       const address = integer(entry.address);
       const count = integer(entry.count, 1);
       const firstIndex = integer(entry.firstIndex ?? 0);
-      if (address - firstIndex * structure.size < 0)
+      if (address - firstIndex * structure.size < 0) {
         throw new Error(`Struct binding '${name}' has an invalid first index.`);
+      }
       const length = count * structure.size;
-      if (address + length > 0x1000000)
+      if (address + length > 0x1000000) {
         throw new Error(`Struct binding '${name}' exceeds CPU memory.`);
+      }
       const fileOffset = entry.fileOffset === undefined ? undefined : integer(entry.fileOffset);
-      if (fileOffset === undefined && (address < 0x7e0000 || address + length > 0x800000))
+      if (fileOffset === undefined && (address < 0x7e0000 || address + length > 0x800000)) {
         throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
+      }
       return {
         name,
         structure,
@@ -201,8 +224,9 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
     .sort((a, b) => a.address - b.address);
   for (let index = 1; index < bindings.length; index++) {
     const previous = bindings[index - 1];
-    if (bindings[index].address < previous.address + previous.structure.size * previous.count)
+    if (bindings[index].address < previous.address + previous.structure.size * previous.count) {
       throw new Error(`Struct bindings '${previous.name}' and '${bindings[index].name}' overlap.`);
+    }
   }
   const romBindings = bindings
     .filter((binding) => binding.fileOffset !== undefined)
@@ -212,10 +236,11 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
     if (
       romBindings[index].fileOffset! <
       previous.fileOffset! + previous.structure.size * previous.count
-    )
+    ) {
       throw new Error(
         `ROM struct bindings '${previous.name}' and '${romBindings[index].name}' overlap.`,
       );
+    }
   }
   const instructionUses = validateSnesStructInstructionUses(
     file.instructionUses,
@@ -232,7 +257,9 @@ export const validateSnesStructMap = (value: unknown): Omit<LoadedSnesStructMap,
  */
 export const loadSnesStructMap = (directory: string): LoadedSnesStructMap | undefined => {
   const filename = path.join(directory, SNES_STRUCT_MAP_SOURCE);
-  if (!fs.existsSync(filename)) return undefined;
+  if (!fs.existsSync(filename)) {
+    return undefined;
+  }
   const sourceBytes = fs.readFileSync(filename);
   return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
 };
@@ -241,13 +268,14 @@ const completeFields = (structure: SnesStructLayout): SnesStructField[] => {
   const fields: SnesStructField[] = [];
   let offset = 0;
   const gap = (end: number): void => {
-    if (end > offset)
+    if (end > offset) {
       fields.push({
         name: `__gap_${offset.toString(16)}`,
         offset,
         size: end - offset,
         type: `db[${end - offset}]`,
       });
+    }
   };
   for (const field of structure.fields) {
     gap(field.offset);
@@ -278,19 +306,24 @@ export const renderSnesStructDefines = (map: LoadedSnesStructMap): string => {
   ): void => {
     lines.push(`; ${name}: ${hex(structure.size)} bytes per record.`);
     // Notes come from the struct map; retain their order without an input-sized argument list.
-    for (const note of detail) lines.push(`; ${note}`);
+    for (const note of detail) {
+      lines.push(`; ${note}`);
+    }
     lines.push(`struct ${name} ${hex(base)}`);
-    for (const field of completeFields(structure))
+    for (const field of completeFields(structure)) {
       lines.push(
         `  .${field.name}: ${fieldType(field)} ; +${hex(field.offset)}${field.description ? ` ${field.description}` : ""}`,
       );
+    }
     lines.push(
       binding ? `endstruct count ${binding.count} firstindex ${binding.firstIndex}` : "endstruct",
       "",
     );
   };
-  for (const structure of map.structures) render(structure.id, 0, structure, structure.notes);
-  for (const binding of map.bindings)
+  for (const structure of map.structures) {
+    render(structure.id, 0, structure, structure.notes);
+  }
+  for (const binding of map.bindings) {
     render(
       binding.name,
       binding.address - binding.firstIndex * binding.structure.size,
@@ -301,6 +334,7 @@ export const renderSnesStructDefines = (map: LoadedSnesStructMap): string => {
       ],
       binding,
     );
+  }
   return `${lines.join("\n")}\n`;
 };
 
@@ -335,7 +369,9 @@ export const indexSnesStructFields = (
   }
   if (indexed) {
     for (const binding of map?.bindings ?? []) {
-      if (binding.firstIndex === 0) continue;
+      if (binding.firstIndex === 0) {
+        continue;
+      }
       const base = binding.address - binding.firstIndex * binding.structure.size;
       for (const field of binding.structure.fields) {
         for (let offset = 0; offset < field.size; offset++) {
@@ -365,16 +401,20 @@ export const planSnesStructRomFields = (
 ): readonly SnesStructRomField[] => {
   const fields: SnesStructRomField[] = [];
   for (const binding of map?.bindings ?? []) {
-    if (binding.fileOffset === undefined) continue;
+    if (binding.fileOffset === undefined) {
+      continue;
+    }
     const length = binding.structure.size * binding.count;
     if (
       binding.fileOffset + length > romSize ||
       canonicalSnesWramAddress(binding.address) !== undefined
-    )
+    ) {
       throw new Error(`ROM struct '${binding.name}' lies outside the ROM.`);
+    }
     for (let offset = 0; offset < length; offset++) {
-      if (cpuAddress(binding.fileOffset + offset) !== binding.address + offset)
+      if (cpuAddress(binding.fileOffset + offset) !== binding.address + offset) {
         throw new Error(`ROM struct '${binding.name}' has inconsistent CPU/file mapping.`);
+      }
     }
     for (let index = 0; index < binding.count; index++) {
       const record: SnesStructRomRecord = {
@@ -407,15 +447,18 @@ export const renderSnesStructInitializer = (
   record: SnesStructRomRecord,
   bytes: Uint8Array,
 ): string => {
-  if (bytes.length !== record.end - record.start)
+  if (bytes.length !== record.end - record.start) {
     throw new Error("Struct initializer requires a complete record.");
+  }
   const assignments = completeFields(record.binding.structure).map((field) => {
     const type = fieldType(field);
     const width = widths[type.slice(0, 2)];
     const values: string[] = [];
     for (let offset = field.offset; offset < field.offset + field.size; offset += width) {
       let value = 0;
-      for (let byte = 0; byte < width; byte++) value += bytes[offset + byte] * 2 ** (8 * byte);
+      for (let byte = 0; byte < width; byte++) {
+        value += bytes[offset + byte] * 2 ** (8 * byte);
+      }
       values.push(
         `$${value
           .toString(16)
@@ -450,7 +493,9 @@ export const renderSnesStructData = (
   const values: string[] = [];
   for (let index = 0; index < bytes.length; index += width) {
     let value = 0;
-    for (let byte = 0; byte < width; byte++) value += bytes[index + byte] * 2 ** (8 * byte);
+    for (let byte = 0; byte < width; byte++) {
+      value += bytes[index + byte] * 2 ** (8 * byte);
+    }
     values.push(
       `$${value
         .toString(16)

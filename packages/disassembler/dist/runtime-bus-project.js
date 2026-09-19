@@ -1,31 +1,39 @@
-import path from "node:path";
-import { archiveImportedCapture, captureFileIdentity, expireCaptureArchives, } from "./capture-archives.js";
+import fs from "node:fs";
 import { openAnalysisProjectStore } from "./project-store.js";
 import { analysisProjectRevision, assertAnalysisProjectRevision } from "./project-transaction.js";
 import { createRuntimeRecordValidator, validateLoadedShards } from "./project-validation.js";
 import { createRuntimeBusTraceImporter, } from "./runtime-bus-trace.js";
 import { mergeRuntimeEvidence } from "./runtime-evidence.js";
+/** Detect replacement or mutation between live source validation and publication.
+ * @param {string} file Completed native capture path.
+ * @returns {string} Stable file identity, size and nanosecond timestamps.
+ */
+const captureFileIdentity = (file) => {
+    const stat = fs.statSync(file, { bigint: true });
+    if (!stat.isFile()) {
+        throw new Error("Capture input must be a regular file.");
+    }
+    return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
+};
 /** Stage counters off heap and atomically publish only after the entire lossless stream validates.
  * @param {RuntimeBusTraceSource} source Bounded reader that rejects incomplete or changed captures.
  * @param {string} directory Destination SQLite project root.
  * @param {RuntimeBusTraceImportContext} context Expected ROM identity and distinct-fact budget.
- * @param {RuntimeTraceProjectImportOptions} options Cancellation, progress and optional archive retention.
+ * @param {RuntimeTraceProjectImportOptions} options Cancellation, progress and storage limits.
  * @returns {Promise<RuntimeBusProjectImportResult>} Committed counts and bounded channel/phase activity.
  */
 export const importRuntimeBusTraceSourceIntoProject = async (source, directory, context, options = {}) => {
     options.signal?.throwIfAborted();
-    const archiveIdentity = options.archiveSourceFile
-        ? captureFileIdentity(options.archiveSourceFile)
-        : undefined;
     const store = openAnalysisProjectStore(directory);
     try {
         const before = store.storageSnapshot();
         const manifest = store.transaction(() => store.manifest(), false);
         const expected = analysisProjectRevision(manifest);
-        if (manifest.rom.contentSha256 !== context.projectRomContentSha256)
+        if (manifest.rom.contentSha256 !== context.projectRomContentSha256) {
             throw new Error("ROM/project mismatch: destination does not match the bus import context.");
+        }
         let addedRuntime = 0;
-        let completedArchiveIdentity;
+        let completedFileIdentity;
         let validate;
         let insert;
         options.onStage?.("Indexing CPU/DMA/HDMA bus facts in SQLite…");
@@ -49,16 +57,18 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
                     // The batch path removes redundant existence queries, not validation:
                     // every emitted record still crosses the project's normal trust boundary.
                     validate(record);
-                    if (insert(record))
+                    if (insert(record)) {
                         addedRuntime++;
+                    }
                 },
             });
             await source.read((chunk) => {
                 options.signal?.throwIfAborted();
                 importer.push(chunk);
             });
-            if (source.completedArchiveFile)
-                completedArchiveIdentity = captureFileIdentity(source.completedArchiveFile);
+            if (source.completedFile) {
+                completedFileIdentity = captureFileIdentity(source.completedFile);
+            }
             return importer;
         }, context.cacheMetrics?.index);
         options.onStage?.("Publishing validated bus activity…");
@@ -98,22 +108,16 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
                 store.replaceTables({ evidence: merged.shards.evidence, imports: merged.shards.imports });
                 store.publishManifest(manifest);
             }
-            // Policy changes belong to the same transaction: a failed capture cannot alter retention.
-            if (options.storagePolicy)
+            // Policy changes belong to the same transaction: a failed capture cannot alter storage limits.
+            if (options.storagePolicy) {
                 store.setStoragePolicy(options.storagePolicy);
+            }
             store.recordCaptureReceipt(report);
             // A live source publishes this path only after END2 and inode validation.
-            // Preserve managed copies on reimport; external originals are never owned
-            // or removed by project archive retention.
-            if (source.completedArchiveFile) {
-                if (captureFileIdentity(source.completedArchiveFile) !== completedArchiveIdentity)
+            if (source.completedFile) {
+                if (captureFileIdentity(source.completedFile) !== completedFileIdentity) {
                     throw new Error("Completed live capture changed before publication.");
-                if (store.captureReceipt(imported.sourceSha256)?.availability !== "managed")
-                    store.updateCaptureArchive(imported.sourceSha256, {
-                        originalPath: path.resolve(source.completedArchiveFile),
-                        bytes: 0,
-                        availability: "external",
-                    });
+                }
             }
             options.signal?.throwIfAborted();
             return {
@@ -126,19 +130,15 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
                 added: { runtime: addedRuntime, evidence: merged.added.evidence },
             };
         });
-        if (result.changed)
+        if (result.changed) {
             store.writePointer(directory);
-        let archive = { archived: false, expired: [], warnings: [] };
+        }
         let checkpointBusy = false;
         const warnings = [];
-        // Optional archive/cache failures happen after durable publication; report them without
+        // Optional cache failures happen after durable publication; report them without
         // pretending the facts rolled back or asking the caller to import them again.
         try {
-            options.onStage?.("Maintaining optional capture archives…");
-            archive =
-                options.archiveSourceFile && archiveIdentity
-                    ? await archiveImportedCapture(store, result.sourceSha256, options.archiveSourceFile, archiveIdentity)
-                    : { archived: false, ...expireCaptureArchives(store) };
+            options.onStage?.("Recycling SQLite caches and WAL…");
             checkpointBusy = store.maintainStorage().checkpointBusy;
         }
         catch (error) {
@@ -148,8 +148,7 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
         const newFacts = after.facts - before.facts;
         return {
             ...result,
-            archive,
-            warnings: [...archive.warnings, ...warnings],
+            warnings,
             storage: {
                 before,
                 after,

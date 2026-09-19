@@ -20,8 +20,9 @@ export const createEditorRuntimeBusSource = async (
     header.scope !== "snes.cpu-bus" &&
     header.scope !== "snes.cpu-bus-transfers" &&
     header.scope !== "snes.cpu-bus-ppu"
-  )
+  ) {
     throw new Error("Bus activity import requires a lossless CPU/DMA/HDMA bus capture.");
+  }
   const metadata = validateRuntimeBusTraceMetadata({
     ...header,
     format: "uttori-asm-bus-trace",
@@ -33,17 +34,23 @@ export const createEditorRuntimeBusSource = async (
       const result = await recoverCaptureFile(
         file,
         (chunk) => {
-          if (chunk.scope === "snes.cpu-bus-transfers" || chunk.scope === "snes.cpu-bus-ppu")
+          if (chunk.scope === "snes.cpu-bus-transfers" || chunk.scope === "snes.cpu-bus-ppu") {
             accept({ accesses: chunk.events });
-          else if (chunk.scope === "snes.cpu-bus") accept({ accesses: chunk.accesses });
-          else throw new Error("Capture scope changed during bus import.");
+          } else if (chunk.scope === "snes.cpu-bus") {
+            accept({ accesses: chunk.accesses });
+          } else {
+            throw new Error("Capture scope changed during bus import.");
+          }
         },
         limits,
       );
       // The consumer may have indexed a valid prefix, but must publish nothing without END2.
-      if (!result.complete) throw new Error(`Capture archive is incomplete: ${result.reason}`);
-      if (canonicalJson(result.header) !== canonicalJson(header))
+      if (!result.complete) {
+        throw new Error(`Capture archive is incomplete: ${result.reason}`);
+      }
+      if (canonicalJson(result.header) !== canonicalJson(header)) {
         throw new Error("Capture archive identity changed while importing.");
+      }
     },
   };
 };

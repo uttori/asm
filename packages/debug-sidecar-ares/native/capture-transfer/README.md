@@ -40,7 +40,7 @@ The separately staged development candidate is
 `asm.debug.traceMode: "lossless-bus-transfers"` with that runtime and import the
 saved ACT2 archive using **Import Bus Capture and Show DMA/HDMA Activity**.
 
-See [the protocol and analysis documentation](../../../../docs/ares-dma-hdma-capture.md#explicit-transfer-boundaries)
-for the 80-byte boundary layout, partial-window rules and retention limits. This
+See [the capture guide](../../CAPTURE.md#explicit-transfer-boundaries)
+for partial-window rules and retention limits. This
 increment establishes transfer evidence, not realtime throughput or internal
 VRAM/CGRAM/OAM destination reconstruction. Linux and Windows remain unverified.

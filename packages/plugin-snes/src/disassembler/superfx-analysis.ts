@@ -80,7 +80,9 @@ const applyEntryState = (
   state: SuperFxAbstractState,
   override: SuperFxEntryPoint["state"],
 ): SuperFxAbstractState => {
-  if (!override) return state;
+  if (!override) {
+    return state;
+  }
   return {
     ...state,
     ...(override.alt === undefined ? {} : { alt: { kind: "known" as const, value: override.alt } }),
@@ -241,7 +243,7 @@ const annotationsFor = (
         evidence: [...new Set([...node.evidence, evidence])].sort(),
       },
     ];
-    if (node.size > 1)
+    if (node.size > 1) {
       records.push({
         id: `static:superfx:operand:${address}`,
         addressSpace: SUPERFX_ROM_ADDRESS_SPACE,
@@ -251,6 +253,7 @@ const annotationsFor = (
         architecture: "snes.superfx",
         evidence: [...new Set([...node.evidence, evidence])].sort(),
       });
+    }
     return records;
   });
 
@@ -303,7 +306,7 @@ export const analyzeSuperFxRom = (
       })),
     ...(options.entryPoints ?? []).map((entry) => {
       const evidenceId = entry.evidence?.[0] ?? `manual:entry:${entry.id}`;
-      if (!(options.evidence ?? []).some((value) => value.id === evidenceId))
+      if (!(options.evidence ?? []).some((value) => value.id === evidenceId)) {
         evidenceRecords.push({
           id: evidenceId,
           source: "manual",
@@ -311,6 +314,7 @@ export const analyzeSuperFxRom = (
           confidence: "certain",
           detail: `Configured SuperFX entry point $${entry.address.toString(16).padStart(6, "0")}.`,
         });
+      }
       return {
         id: `entry:${entry.id}`,
         address: entry.address,
@@ -349,29 +353,35 @@ export const analyzeSuperFxRom = (
       transfer: transferSuperFxState,
       decode: (address, state) => {
         const identity = image.identifyAddress(address);
-        if (!identity) return { kind: "error", reason: "Address is outside the SuperFX image." };
+        if (!identity) {
+          return { kind: "error", reason: "Address is outside the SuperFX image." };
+        }
         const blocked = annotations.find(
           (entry) => contains(entry, address) && DATA_CLASSIFICATIONS.has(entry.classification),
         );
-        if (blocked)
+        if (blocked) {
           return {
             kind: "blocked",
             reason: `Analysis reached '${blocked.classification}' region '${blocked.id}'.`,
             evidence: blocked.evidence,
           };
+        }
         const decoded = decoder.decode({
           source,
           offset: identity.imageOffset,
           logicalAddress: address,
           state: superFxDecodeState(state),
         });
-        if (decoded.kind === "ambiguous")
+        if (decoded.kind === "ambiguous") {
           return {
             kind: "ambiguous",
             reason: decoded.reason,
             requiredState: decoded.requiredState,
           };
-        if (decoded.kind === "error") return { kind: "error", reason: decoded.message };
+        }
+        if (decoded.kind === "error") {
+          return { kind: "error", reason: decoded.message };
+        }
         const instruction = decoded.instruction;
         const crossing = annotations.find(
           (entry) =>
@@ -380,12 +390,13 @@ export const analyzeSuperFxRom = (
               contains(entry, value),
             ),
         );
-        if (crossing)
+        if (crossing) {
           return {
             kind: "blocked",
             reason: `Instruction crosses '${crossing.classification}' region '${crossing.id}'.`,
             evidence: crossing.evidence,
           };
+        }
         const normalized: StaticInstruction = {
           specificationId: instruction.specificationId,
           address,

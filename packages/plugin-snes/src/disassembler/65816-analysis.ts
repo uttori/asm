@@ -118,22 +118,30 @@ export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816Ab
 const vectorState = (
   kind: NonNullable<SnesCpuVectorDefinition["state"]>,
 ): Cpu65816AbstractState => {
-  if (kind === "reset") return resetCpu65816State();
+  if (kind === "reset") {
+    return resetCpu65816State();
+  }
   return kind === "native" ? nativeVectorCpu65816State() : emulationVectorCpu65816State();
 };
 
 const readVector = (rom: RomImage, mapper: SnesMapper, pointer: number): number | undefined => {
   const identity = identifySnesCpuAddress(pointer, createSnesAddressContext(mapper), rom.length);
-  if (!identity) return undefined;
+  if (!identity) {
+    return undefined;
+  }
   const low = rom.readByte(identity.fileOffset);
   const high = rom.readByte(identity.fileOffset + 1);
-  if (low === undefined || high === undefined) return undefined;
+  if (low === undefined || high === undefined) {
+    return undefined;
+  }
   const target = low | (high << 8);
   return target === 0 || target === 0xffff ? undefined : target;
 };
 
 const stateOverrideFor = (annotation: IntervalAnnotation): Cpu65816StateOverride | undefined => {
-  if (!annotation.state) return undefined;
+  if (!annotation.state) {
+    return undefined;
+  }
   return {
     ...(annotation.state.e === undefined ? {} : { e: annotation.state.e }),
     ...(annotation.state.m === undefined ? {} : { m: annotation.state.m }),
@@ -155,8 +163,12 @@ const stateOverrideFor = (annotation: IntervalAnnotation): Cpu65816StateOverride
 const controlTargetKind = (
   kind: DecodedInstruction["references"][number]["kind"],
 ): "branch" | "call" | "jump" => {
-  if (kind === "branch") return "branch";
-  if (kind === "call") return "call";
+  if (kind === "branch") {
+    return "branch";
+  }
+  if (kind === "call") {
+    return "call";
+  }
   return "jump";
 };
 
@@ -177,7 +189,9 @@ const controlsFor = (
         ? { explanation: "The decoded indirect target is not known statically." }
         : {}),
     }));
-  if (instruction.flow.kind !== "interrupt") return controls;
+  if (instruction.flow.kind !== "interrupt") {
+    return controls;
+  }
   return interruptTargets.map((address) => ({
     kind: "interrupt",
     address,
@@ -231,7 +245,9 @@ const mappedRomOffset = (
   // Performance invariant: do not replace this with identifySnesCpuAddress() in the decode loop;
   // that API intentionally enumerates mirrors for UI/evidence use and is much more expensive.
   const fileOffset = snesRomAddressSpace.toOutputOffset(address, context);
-  if (fileOffset < 0 || fileOffset >= romSize) return undefined;
+  if (fileOffset < 0 || fileOffset >= romSize) {
+    return undefined;
+  }
   return snesRomAddressSpace.fromOutputOffset(fileOffset, context) < 0 ? undefined : { fileOffset };
 };
 
@@ -455,10 +471,13 @@ export const analyzeSnes65816 = (
   const explicitStateOverrides = new Map<number, Cpu65816StateOverride>();
   const conflictingExplicitStateOverrides = new Set<number>();
   for (const entry of options.entryPoints ?? []) {
-    if (!entry.state || conflictingExplicitStateOverrides.has(entry.address)) continue;
+    if (!entry.state || conflictingExplicitStateOverrides.has(entry.address)) {
+      continue;
+    }
     const existing = explicitStateOverrides.get(entry.address);
-    if (!existing) explicitStateOverrides.set(entry.address, entry.state);
-    else if (JSON.stringify(existing) !== JSON.stringify(entry.state)) {
+    if (!existing) {
+      explicitStateOverrides.set(entry.address, entry.state);
+    } else if (JSON.stringify(existing) !== JSON.stringify(entry.state)) {
       explicitStateOverrides.delete(entry.address);
       conflictingExplicitStateOverrides.add(entry.address);
     }
@@ -474,9 +493,13 @@ export const analyzeSnes65816 = (
 
   const seeds: StaticAnalysisSeed<Cpu65816AbstractState>[] = [];
   for (const vector of SNES_CPU_VECTOR_DEFINITIONS) {
-    if (!vector.state) continue;
+    if (!vector.state) {
+      continue;
+    }
     const target = readVector(rom, mapper, vector.pointer);
-    if (target === undefined) continue;
+    if (target === undefined) {
+      continue;
+    }
     const evidenceId = `detector:vector:${vector.id}`;
     evidenceRecords.set(evidenceId, {
       id: evidenceId,
@@ -503,7 +526,9 @@ export const analyzeSnes65816 = (
     readonly evidence: readonly string[];
   } => {
     const identity = mappedRomOffset(address, context, rom.length);
-    if (!identity) return { state: base, evidence: [] };
+    if (!identity) {
+      return { state: base, evidence: [] };
+    }
     const matching = annotationIndex
       .at(identity.fileOffset)
       .filter((annotation) => annotation.state)
@@ -534,15 +559,23 @@ export const analyzeSnes65816 = (
         state = candidates.reduce((left, right) => joinCpu65816States(left, right));
       }
       // Retain all provenance without an intermediate flattened list or a giant push call.
-      for (const { annotation } of ranked) for (const id of annotation.evidence) consumed.push(id);
+      for (const { annotation } of ranked) {
+        for (const id of annotation.evidence) {
+          consumed.push(id);
+        }
+      }
     }
     return { state, evidence: [...new Set(consumed)].sort() };
   };
 
   const projectAddress = (addressSpace: string, address: number): number | undefined => {
-    if (addressSpace === SNES_CPU_ADDRESS_SPACE) return address;
+    if (addressSpace === SNES_CPU_ADDRESS_SPACE) {
+      return address;
+    }
     if (addressSpace === SNES_FILE_ADDRESS_SPACE) {
-      if (address < 0 || address >= rom.length) return undefined;
+      if (address < 0 || address >= rom.length) {
+        return undefined;
+      }
       // Only one canonical CPU address is needed for a seed. Enumerating every mirror would retain
       // large temporary identity arrays while adding no analysis evidence.
       const mapped = snesRomAddressSpace.fromOutputOffset(address, context);
@@ -575,9 +608,13 @@ export const analyzeSnes65816 = (
   }
 
   for (const label of options.labels ?? []) {
-    if (label.analysisEntryPoint === false) continue;
+    if (label.analysisEntryPoint === false) {
+      continue;
+    }
     const address = projectAddress(label.addressSpace, label.address);
-    if (address === undefined) continue;
+    if (address === undefined) {
+      continue;
+    }
     const seeded = stateAtAddress(unknownCpu65816State(), address);
     seeds.push({
       id: `label:${label.id}`,
@@ -590,9 +627,13 @@ export const analyzeSnes65816 = (
   }
 
   for (const annotation of annotations) {
-    if (!annotation.points?.includes("in")) continue;
+    if (!annotation.points?.includes("in")) {
+      continue;
+    }
     const address = projectAddress(annotation.addressSpace, annotation.start);
-    if (address === undefined) continue;
+    if (address === undefined) {
+      continue;
+    }
     const seeded = stateAtAddress(unknownCpu65816State(), address);
     seeds.push({
       id: `point:${annotation.id}`,
@@ -629,7 +670,9 @@ export const analyzeSnes65816 = (
     instruction: DecodedInstruction,
     state: Cpu65816AbstractState,
   ): readonly number[] => {
-    if (instruction.flow.kind !== "interrupt") return [];
+    if (instruction.flow.kind !== "interrupt") {
+      return [];
+    }
     const mnemonic = instruction.mnemonic;
     const possiblePointers: number[] = [];
     if (state.e.kind !== "known" || state.e.value === 0) {
@@ -656,7 +699,9 @@ export const analyzeSnes65816 = (
       transfer: transferCpu65816State,
       decode: (address, state) => {
         const identity = mappedRomOffset(address, context, rom.length);
-        if (!identity) return { kind: "error", reason: "Address does not map into the ROM." };
+        if (!identity) {
+          return { kind: "error", reason: "Address does not map into the ROM." };
+        }
         const blocked = annotationIndex
           .at(identity.fileOffset)
           .find((annotation) => DATA_CLASSIFICATIONS.has(annotation.classification));
@@ -680,7 +725,9 @@ export const analyzeSnes65816 = (
             requiredState: decoded.requiredState,
           };
         }
-        if (decoded.kind === "error") return { kind: "error", reason: decoded.message };
+        if (decoded.kind === "error") {
+          return { kind: "error", reason: decoded.message };
+        }
         const instruction = decoded.instruction;
         // Query the whole instruction range once. Materializing each byte and scanning all project
         // annotations was both allocation-heavy and quadratic on imported per-byte metadata.

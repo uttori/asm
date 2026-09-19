@@ -22,8 +22,11 @@ export interface InstructionAnnotationIndex {
 
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
   const entries = map.get(key);
-  if (entries) entries.push(value);
-  else map.set(key, [value]);
+  if (entries) {
+    entries.push(value);
+  } else {
+    map.set(key, [value]);
+  }
 };
 
 const lowerBound = <Value>(
@@ -35,8 +38,11 @@ const lowerBound = <Value>(
   let high = values.length;
   while (low < high) {
     const middle = low + Math.floor((high - low) / 2);
-    if (at(values[middle]) < target) low = middle + 1;
-    else high = middle;
+    if (at(values[middle]) < target) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
   }
   return low;
 };
@@ -73,7 +79,9 @@ export const createInstructionAnnotationIndex = (
   }> = [];
   for (const annotation of instructions) {
     append(byAddressSpace, annotation.addressSpace, annotation);
-    for (const offset of annotation.outputOffsets) byOutputOffset.push({ offset, annotation });
+    for (const offset of annotation.outputOffsets) {
+      byOutputOffset.push({ offset, annotation });
+    }
   }
   for (const annotations of byAddressSpace.values()) {
     annotations.sort(

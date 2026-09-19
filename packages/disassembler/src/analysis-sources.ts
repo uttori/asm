@@ -71,8 +71,11 @@ export const buildAnalysisSourceCatalog = (
         )
       : [];
     let id = key("producer", evidence.source, evidence.sourceId);
-    if (artifact) id = key("artifact", artifact.format, artifact.sha256);
-    else if (legacy.length === 1) id = reportSources.get(legacy[0].id)!;
+    if (artifact) {
+      id = key("artifact", artifact.format, artifact.sha256);
+    } else if (legacy.length === 1) {
+      id = reportSources.get(legacy[0].id)!;
+    }
     const source =
       sources.get(id) ?? ensure(id, evidence.sourceId, artifact?.format, artifact?.sha256);
     source.kinds.add(evidence.source);

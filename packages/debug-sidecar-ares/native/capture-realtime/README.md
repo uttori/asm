@@ -33,5 +33,5 @@ compiles target-native and forced-portable variants; CTest adds a portable case
 beside the existing ownership, failure, paused-state and both-PPU tests.
 
 See [validation evidence](native-evidence.json) and
-[measurements, live analysis and remaining limits](../../../../docs/ares-realtime-and-import.md).
+[live analysis and its limits](../../CAPTURE.md#live-bus-analysis).
 This is an opt-in development runtime; no default promotion or upstream PR is included.

@@ -457,8 +457,9 @@ export class Arch65816 {
             return this.handleStoreOperations(opcode, operand, len, explicitlen);
         }
         // Handle Branch Instructions
-        if (this.handleBranchInstructions(opcode, operand))
+        if (this.handleBranchInstructions(opcode, operand)) {
             return true;
+        }
         // Handle special cases where length is on the opcode
         let num = 0;
         if (operand) {
@@ -1641,10 +1642,12 @@ export class Arch65816 {
                     return { mode: currentOpcode, address: resolvedAddress & 0xffff };
                 }
                 let mode = currentOpcode;
-                if (currentOpcode === "JMP")
+                if (currentOpcode === "JMP") {
                     mode = "JML";
-                else if (currentOpcode === "JSR")
+                }
+                else if (currentOpcode === "JSR") {
                     mode = "JSL";
+                }
                 return { mode, address: resolvedAddress };
             }
             return { mode: currentOpcode, address: resolvedAddress };

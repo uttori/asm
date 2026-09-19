@@ -16,7 +16,6 @@ import {
   mergeRuntimeEvidence,
   migrateAnalysisProjectStorage,
   project65816AnalysisState,
-  expireCaptureArchives,
   type AnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "../src/index.js";
@@ -69,7 +68,9 @@ const context = {
 const source = (artifact: RuntimeInstructionTraceArtifact) => ({
   metadata: validateRuntimeInstructionTraceMetadata(artifact),
   read: async (accept: (chunk: unknown) => void) => {
-    for (const chunk of artifact.chunks) accept(chunk);
+    for (const chunk of artifact.chunks) {
+      accept(chunk);
+    }
   },
 });
 const temporary = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "uttori-retention-"));
@@ -141,30 +142,30 @@ test("shared facts and virtual state pairs keep exact per-capture counts and det
   }
 });
 
-test("expired detail can be restored from an original file without recounting evidence", async (t) => {
+test("file imports retain receipts and exact counts without copying the source", async (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const directory = path.join(root, "analysis");
   writeAnalysisProject(directory, project());
   const file = path.join(root, "trace.json");
-  fs.writeFileSync(file, JSON.stringify(trace()));
+  const contents = JSON.stringify(trace());
+  fs.writeFileSync(file, contents);
   const first = await importRuntimeTraceIntoProject(file, directory, context);
+  const again = await importRuntimeTraceIntoProject(file, directory, context);
+  t.false(again.changed);
+  t.is(again.storage.after.captures, 1);
+  t.is(again.observedEvents, 3);
+  t.is(fs.readFileSync(file, "utf8"), contents);
+  t.deepEqual(fs.readdirSync(directory).sort(), ["analysis.json", "analysis.sqlite"]);
+  // Receipts and facts remain useful after the caller removes the original recording.
+  fs.unlinkSync(file);
   const store = openAnalysisProjectStore(directory);
   try {
-    const archive = path.join(
-      directory,
-      "archives",
-      String(store.captureReceipt(first.sourceSha256)!.archive_name),
-    );
-    fs.unlinkSync(archive);
+    t.is(store.captureReceipt(first.sourceSha256)?.observed_events, 3);
+    t.is(store.runtimeExecutionCounts().events, 3);
   } finally {
     store.close();
   }
-  const repaired = await importRuntimeTraceIntoProject(file, directory, context);
-  t.true(repaired.archive.archived);
-  t.false(repaired.changed);
-  t.is(repaired.storage.after.captures, 1);
-  t.is(repaired.observedEvents, 3);
 });
 
 test("cache eviction invalidates disposable projections and rebuilds them without touching facts", async (t) => {
@@ -243,42 +244,6 @@ test("format-one conversion preserves counts/provenance, narrows only paired nat
   } finally {
     store.close();
   }
-});
-
-test("archive byte expiry respects pins, preserves original files and receipts, and stays idempotent", async (t) => {
-  const root = temporary();
-  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  const directory = path.join(root, "analysis");
-  writeAnalysisProject(directory, project());
-  const firstFile = path.join(root, "first.json"),
-    secondFile = path.join(root, "second.json");
-  fs.writeFileSync(firstFile, JSON.stringify(trace()));
-  fs.writeFileSync(secondFile, JSON.stringify(trace("2")));
-  const first = await importRuntimeTraceIntoProject(firstFile, directory, context);
-  const second = await importRuntimeTraceIntoProject(secondFile, directory, context);
-  t.true(first.archive.archived);
-  t.true(second.archive.archived);
-  const store = openAnalysisProjectStore(directory);
-  try {
-    store.transaction(() => {
-      store.pinCapture(first.sourceSha256, true);
-      store.setStoragePolicy({ archiveMaxBytes: 0 });
-    });
-    const before = store.runtimeExecutionCounts();
-    t.deepEqual(expireCaptureArchives(store).expired, [second.sourceSha256]);
-    t.deepEqual(store.runtimeExecutionCounts(), before);
-    t.is(store.captureReceipt(first.sourceSha256)?.availability, "managed");
-    t.is(store.captureReceipt(second.sourceSha256)?.availability, "expired");
-    t.true(fs.existsSync(firstFile));
-    t.true(fs.existsSync(secondFile));
-    t.is(store.captureCatalog().length, 2);
-  } finally {
-    store.close();
-  }
-  const again = await importRuntimeTraceIntoProject(secondFile, directory, context);
-  t.false(again.changed);
-  t.is(again.added.runtime, 0);
-  t.false(again.archive.archived);
 });
 
 test("project byte ceiling rolls back a complete new publication and its capture receipt", async (t) => {

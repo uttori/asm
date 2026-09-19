@@ -230,8 +230,9 @@ test("source catalog orders durable import receipts newest first across reimport
     fs.rmSync(directory, { recursive: true, force: true });
   });
   store.transaction(() => {
-    for (const report of project.shards.imports.slice(0, 2))
+    for (const report of project.shards.imports.slice(0, 2)) {
       store.recordCaptureReceipt({ ...report, format: "uttori-asm-instruction-trace" });
+    }
   });
   const sql = new DatabaseSync(store.file);
   try {

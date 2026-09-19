@@ -27,4 +27,5 @@ runner or native test depends on JavaScript. On macOS SDK setups requiring an
 explicit standard-library include path, set `CPLUS_INCLUDE_PATH` to the SDK's
 `usr/include/c++/v1` directory before invoking the runner.
 
-See the [coverage audit and limits](../../../../docs/ares-benchmark-audit.md).
+See [capture workflows and limits](../../CAPTURE.md). Local benchmark results do not
+establish realtime behavior for other workloads or platforms.

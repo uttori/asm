@@ -1,6 +1,7 @@
 export const objectValue = (value, label) => {
-    if (value === undefined)
+    if (value === undefined) {
         return {};
+    }
     if (value === null || Array.isArray(value) || typeof value !== "object") {
         throw new Error(`${label} must be an object.`);
     }
@@ -14,8 +15,9 @@ export const integerOption = (options, key, bounds = {}) => {
         !Number.isSafeInteger(value) ||
         (bounds.minimum !== undefined && value < bounds.minimum) ||
         (bounds.maximum !== undefined && value > bounds.maximum)) {
-        if (value === undefined)
+        if (value === undefined) {
             return undefined;
+        }
         throw new Error(`Asset option '${key}' is outside its integer bounds.`);
     }
     return value;
@@ -29,8 +31,9 @@ export const stringOption = (options, key, fallback) => {
 };
 export const readBytes = (source, offset, size, owner) => {
     const bytes = source.read(offset, size);
-    if (!bytes)
+    if (!bytes) {
         throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+    }
     return bytes;
 };
 export const resolveCount = (context, unitSize, options = optionsFor(context)) => {
@@ -44,8 +47,9 @@ export const resolveCount = (context, unitSize, options = optionsFor(context)) =
     }
     const count = configured ?? length / unitSize;
     const size = count * unitSize;
-    if (!Number.isSafeInteger(size))
+    if (!Number.isSafeInteger(size)) {
         throw new Error(`SNES asset '${context.request.id}' overflowed.`);
+    }
     if (length !== undefined && length !== size) {
         throw new Error(`SNES asset '${context.request.id}' count ${count} requires ${size} bytes, not ${length}.`);
     }
@@ -79,8 +83,9 @@ export const resolveGrid = (context, unitSize) => {
 };
 export const decodedObject = (value, owner) => objectValue(value, `Decoded SNES asset '${owner}'`);
 export const arrayValue = (value, label) => {
-    if (!Array.isArray(value))
+    if (!Array.isArray(value)) {
         throw new Error(`${label} must be an array.`);
+    }
     return value;
 };
 export const integerValue = (value, label, minimum, maximum) => {

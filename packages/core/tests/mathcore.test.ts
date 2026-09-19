@@ -281,8 +281,12 @@ test("math - offset handles local label arguments", (t) => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
     resolveLabel: (label) => {
-      if (label === ".base") return 0x8871;
-      if (label === ".target") return 0x888a;
+      if (label === ".base") {
+        return 0x8871;
+      }
+      if (label === ".target") {
+        return 0x888a;
+      }
       return 0;
     },
   });
@@ -344,7 +348,7 @@ test("math - complex expressions", (t) => {
   t.is(mathCore.math("((2 + 3) * 4 + (6 / 2)) ** 2"), 23 * 23); // 529
 
   // Mix of different operations
-  // eslint-disable-next-line @stylistic/no-mixed-operators
+  // oxlint-disable-next-line @stylistic/no-mixed-operators
   t.is(mathCore.math("10 & 7 | 4 ^ 2 + 3 * 4 / 2"), (10 & 7) | (4 ^ (2 + 6))); // 2 | 4 ^ 8 = 14
 });
 
@@ -360,8 +364,12 @@ test("math - with label resolver", (t) => {
 
   mathCore.host = createExpressionHost({
     resolveLabel: (id) => {
-      if (id === "LABEL1") return 10;
-      if (id === "LABEL2") return 20;
+      if (id === "LABEL1") {
+        return 10;
+      }
+      if (id === "LABEL2") {
+        return 20;
+      }
       throw new Error(`Unknown label: ${id}`);
     },
   });
@@ -1047,8 +1055,12 @@ test("getnum - function calls", (t) => {
 
   mathCore.host = createExpressionHost({
     getExpressionObjectSize: (value) => {
-      if (value === "Foo[1]") return 8;
-      if (value === "Bar(2)") return 16;
+      if (value === "Foo[1]") {
+        return 8;
+      }
+      if (value === "Bar(2)") {
+        return 16;
+      }
       return 0;
     },
     isDefined: () => 0,
@@ -1114,7 +1126,9 @@ test("getnum - identifier resolution", (t) => {
 
   mathCore.host = createExpressionHost({
     resolveLabel: (value) => {
-      if (value === "LABEL1") return 100;
+      if (value === "LABEL1") {
+        return 100;
+      }
       return 0;
     },
   });
@@ -1126,7 +1140,9 @@ test("getnum - identifier resolution", (t) => {
 
   mathCore.host = createExpressionHost({
     resolveLabel: (value) => {
-      if (value === "STRUCT_NAME") return "MyStruct";
+      if (value === "STRUCT_NAME") {
+        return "MyStruct";
+      }
       return 0;
     },
   });
@@ -1141,7 +1157,9 @@ test("getnum - identifier resolution", (t) => {
 
   mathCore.host = createExpressionHost({
     resolveLabel: (value) => {
-      if (value === ".local") return "not-numeric";
+      if (value === ".local") {
+        return "not-numeric";
+      }
       return 0;
     },
   });
@@ -1176,10 +1194,18 @@ test("getnum - compound identifier resolution", (t) => {
 
   mathCore.host = createExpressionHost({
     resolveLabel: (value) => {
-      if (value === "MyStruct.Child") return 321;
-      if (value === "MyStruct[2].field") return 654;
-      if (value === "Config.Section") return "ConfigSection";
-      if (value === "TrailingDot") return 777;
+      if (value === "MyStruct.Child") {
+        return 321;
+      }
+      if (value === "MyStruct[2].field") {
+        return 654;
+      }
+      if (value === "Config.Section") {
+        return "ConfigSection";
+      }
+      if (value === "TrailingDot") {
+        return 777;
+      }
       return 0;
     },
   });
@@ -1867,9 +1893,15 @@ test("callBuiltInFunction - generic host functions with exactly 1 argument", (t)
     getFileStatus: (value) => (value === "test.bin" ? 1 : 0),
     isDefined: (value) => (value === "LABEL" ? 1 : 0),
     getExpressionObjectSize: (value, baseOnly = false) => {
-      if (baseOnly && value === "STRUCT") return 16;
-      if (!baseOnly && value === "OBJECT") return 32;
-      if (!baseOnly && value === "DATA") return 64;
+      if (baseOnly && value === "STRUCT") {
+        return 16;
+      }
+      if (!baseOnly && value === "OBJECT") {
+        return 32;
+      }
+      if (!baseOnly && value === "DATA") {
+        return 64;
+      }
       return 0;
     },
   });
@@ -1993,7 +2025,9 @@ test("callFunction - contributed canread functions", (t) => {
   });
   const canReadBaseImage = (args: readonly (number | string)[], size: number): number => {
     const position = args[0];
-    if (typeof position !== "number") throw new Error("position must be numeric");
+    if (typeof position !== "number") {
+      throw new Error("position must be numeric");
+    }
     return mathCore.host!.canReadBaseImage(position, size);
   };
   mathCore.registerExpressionFunction("canread", {
@@ -2001,7 +2035,9 @@ test("callFunction - contributed canread functions", (t) => {
     maximumArguments: 2,
     evaluate: (args) => {
       const size = args[1];
-      if (typeof size !== "number") throw new Error("size must be numeric");
+      if (typeof size !== "number") {
+        throw new Error("size must be numeric");
+      }
       return canReadBaseImage(args, size);
     },
   });
@@ -2632,8 +2668,12 @@ test("math - typed expression nodes", (t) => {
   const mathCore = new MathCore();
   mathCore.host = createExpressionHost({
     resolveLabel: (label) => {
-      if (label === "LABEL") return 16;
-      if (label === "STRUCT") return "MyStruct";
+      if (label === "LABEL") {
+        return 16;
+      }
+      if (label === "STRUCT") {
+        return "MyStruct";
+      }
       throw new Error(`Unknown label: ${label}`);
     },
     isDefined: (name) => (name === "FLAG" ? 1 : 0),

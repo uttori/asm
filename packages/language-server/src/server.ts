@@ -150,7 +150,9 @@ function stringArray(value: unknown): readonly string[] | undefined {
 }
 
 export function mergeServerSettings(previous: ServerSettings, value: unknown): ServerSettings {
-  if (!value || typeof value !== "object") return previous;
+  if (!value || typeof value !== "object") {
+    return previous;
+  }
   const next = value as Record<string, unknown>;
   const has = (key: string): boolean => Object.prototype.hasOwnProperty.call(next, key);
   return {
@@ -280,7 +282,9 @@ function enqueueProjectEnvironment(next: ServerSettings): void {
 }
 
 function scheduleReindex(): void {
-  if (reindexTimer) clearTimeout(reindexTimer);
+  if (reindexTimer) {
+    clearTimeout(reindexTimer);
+  }
   reindexTimer = setTimeout(() => {
     reindexTimer = undefined;
     connection.console.info("Full workspace reindex starting");
@@ -301,7 +305,9 @@ function scheduleReindex(): void {
 }
 
 function publishAllDiagnostics(): void {
-  if (!index) return;
+  if (!index) {
+    return;
+  }
   for (const document of documents.all()) {
     const file = uriToPath(document.uri);
     void connection.sendDiagnostics({
@@ -318,7 +324,9 @@ function publishAllDiagnostics(): void {
 }
 
 function notifyIndexUpdated(): void {
-  if (!index || !clientInitialized) return;
+  if (!index || !clientInitialized) {
+    return;
+  }
   void connection.sendNotification("asm/indexUpdated", index.getStatus());
 }
 
@@ -328,7 +336,9 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
     params.capabilities.workspace?.didChangeConfiguration?.dynamicRegistration,
   );
   workspaceRoots = (params.workspaceFolders ?? []).map((folder) => uriToPath(folder.uri));
-  if (workspaceRoots.length === 0 && params.rootUri) workspaceRoots = [uriToPath(params.rootUri)];
+  if (workspaceRoots.length === 0 && params.rootUri) {
+    workspaceRoots = [uriToPath(params.rootUri)];
+  }
   editorSettings = mergeServerSettings(defaultSettings, params.initializationOptions);
   const requested = applyConfigFileDefaults(editorSettings);
   try {
@@ -367,7 +377,9 @@ connection.onInitialized(() => {
   if (hasDidChangeConfigurationDynamicRegistration) {
     connection.client.register(DidChangeConfigurationNotification.type, undefined).catch(() => {});
   }
-  if (hasConfigurationCapability) void refreshConfiguration();
+  if (hasConfigurationCapability) {
+    void refreshConfiguration();
+  }
   notifyIndexUpdated();
 });
 
@@ -407,7 +419,9 @@ function resolveOptionalBuildPath(
   configured: string | undefined,
   file: string,
 ): string | undefined {
-  if (!configured) return undefined;
+  if (!configured) {
+    return undefined;
+  }
   return path.isAbsolute(configured)
     ? path.normalize(configured)
     : path.resolve(workspaceRoots[0] ?? path.dirname(file), configured);
@@ -545,12 +559,16 @@ function buildBinary(
  * @returns {string | undefined} A filesystem path, or undefined when omitted.
  */
 function argumentPath(value: string | undefined): string | undefined {
-  if (!value) return undefined;
+  if (!value) {
+    return undefined;
+  }
   return value.startsWith("file:") ? uriToPath(value) : value;
 }
 
 connection.onExecuteCommand(async (params) => {
-  if (params.command !== "asm.build") return undefined;
+  if (params.command !== "asm.build") {
+    return undefined;
+  }
   await configurationQueue;
   const args = (params.arguments ?? []) as Array<string | undefined>;
   return buildBinary(argumentPath(args[0]), argumentPath(args[1]), argumentPath(args[2]));
@@ -619,8 +637,11 @@ connection.onDidChangeWatchedFiles((params) => {
       index.invalidateFile(file);
     }
   }
-  if (reload) enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
-  else scheduleReindex();
+  if (reload) {
+    enqueueProjectEnvironment(applyConfigFileDefaults(editorSettings));
+  } else {
+    scheduleReindex();
+  }
 });
 
 documents.onDidOpen((event) => {
@@ -681,7 +702,9 @@ connection.onWorkspaceSymbol((params): SymbolInformation[] => {
 });
 connection.onSignatureHelp((params) => {
   const document = documents.get(params.textDocument.uri);
-  if (!document) return null;
+  if (!document) {
+    return null;
+  }
   const lineText = document.getText({
     start: { line: params.position.line, character: 0 },
     end: params.position,

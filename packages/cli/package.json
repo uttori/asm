@@ -44,6 +44,7 @@
     "@uttori/asm-plugin-snes": "1.0.0"
   },
   "devDependencies": {
+    "@types/node": "^26.6.1",
     "esbuild": "^0.28.2"
   },
   "engines": {

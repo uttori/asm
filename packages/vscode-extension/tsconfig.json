@@ -12,5 +12,5 @@
     "outDir": "out",
     "customConditions": ["uttori-source"]
   },
-  "include": ["src/**/*.ts", "tests-host/**/*.ts"]
+  "include": ["src/**/*.ts", "tests-host/**/*.ts", "tests/**/*.ts"]
 }

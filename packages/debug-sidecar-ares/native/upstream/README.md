@@ -41,6 +41,5 @@ The ares patches retain their Git authorship and are covered by the applicable
 ares/nall source licenses. Preserve the source tree's `LICENSE` and component/dependency notices when distributing a built runtime. The outer repository's
 license does not relicense these patches.
 
-See the [evidence and reproduction guide](../../../../docs/ares-upstream-u1-u6-evidence.md),
-[RFC](../../../../docs/ares-capture-rfc.md), and
-[neutral v2 design](../../../../docs/ares-capture-v2-design.md).
+See [capture modes and recovery](../../CAPTURE.md) for downstream capture workflows and
+[runtime distribution](../../RUNTIME.md) for staging and promotion requirements.

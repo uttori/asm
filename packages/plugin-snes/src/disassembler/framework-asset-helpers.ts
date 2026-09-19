@@ -37,12 +37,16 @@ const assertInteger = (value: number, name: string): void => {
 };
 
 const readLittleEndian = (bytes: Uint8Array, offset: number, width: number): number => {
-  if (!(bytes instanceof Uint8Array)) throw new Error("Framework table bytes must be Uint8Array.");
+  if (!(bytes instanceof Uint8Array)) {
+    throw new Error("Framework table bytes must be Uint8Array.");
+  }
   if (offset < 0 || offset + width > bytes.length) {
     throw new Error(`Framework table read ${offset}..${offset + width} is out of bounds.`);
   }
   let value = 0;
-  for (let index = 0; index < width; index++) value += bytes[offset + index] * 2 ** (index * 8);
+  for (let index = 0; index < width; index++) {
+    value += bytes[offset + index] * 2 ** (index * 8);
+  }
   return value;
 };
 
@@ -118,8 +122,11 @@ export const decodeFrameworkSamplePointers = (
       const startAddress = readLittleEndian(bytes, index * 4, 2);
       const loopAddress = readLittleEndian(bytes, index * 4 + 2, 2);
       let kind: FrameworkSamplePointer["kind"] = "sample";
-      if (startAddress === 0) kind = "zero";
-      else if (startAddress === 0xffff) kind = "unused";
+      if (startAddress === 0) {
+        kind = "zero";
+      } else if (startAddress === 0xffff) {
+        kind = "unused";
+      }
       if (kind !== "sample") {
         if (loopAddress !== startAddress) {
           throw new Error(
@@ -167,14 +174,17 @@ export const deriveFrameworkSampleExtractionRanges = (
   const starts: number[] = [];
   let lastSampleStart: number | undefined;
   for (const pointer of pointers) {
-    if (pointer.kind !== "sample") continue;
+    if (pointer.kind !== "sample") {
+      continue;
+    }
     if (lastSampleStart !== undefined && pointer.startAddress < lastSampleStart) {
       throw new Error("Framework sample pointers are not ordered by start address.");
     }
     lastSampleStart = pointer.startAddress;
     const indexes = groups.get(pointer.startAddress);
-    if (indexes) indexes.push(pointer.index);
-    else {
+    if (indexes) {
+      indexes.push(pointer.index);
+    } else {
       if (pointer.startAddress < aramDataBase) {
         throw new Error(`Framework sample pointer ${pointer.index} precedes the ARAM data base.`);
       }

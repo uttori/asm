@@ -31,6 +31,8 @@ export const builtinAssetCodecs: readonly AssetCodec[] = Object.freeze(
  */
 export const createBuiltinAssetCodecRegistry = (): AssetCodecRegistry => {
   const registry = new AssetCodecRegistry();
-  for (const codec of builtinAssetCodecs) registry.register(codec);
+  for (const codec of builtinAssetCodecs) {
+    registry.register(codec);
+  }
   return registry;
 };

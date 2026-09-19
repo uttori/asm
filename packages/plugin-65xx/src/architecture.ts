@@ -39,7 +39,9 @@ const absoluteToDirect: Readonly<Partial<Record<AddressingMode, AddressingMode>>
 
 const aliasToMnemonic = new Map<string, string>();
 for (const form of nmos6502DecodeTable) {
-  for (const alias of form.aliases ?? []) aliasToMnemonic.set(alias, form.mnemonic);
+  for (const alias of form.aliases ?? []) {
+    aliasToMnemonic.set(alias, form.mnemonic);
+  }
 }
 
 interface ParsedMnemonic {
@@ -58,10 +60,15 @@ function parseMnemonic(value: string): ParsedMnemonic {
     .trim()
     .toUpperCase()
     .match(/^([A-Z][\dA-Z]{2,4})(?:\.([BW]))?$/);
-  if (!match) return { mnemonic: value.trim().toUpperCase() };
+  if (!match) {
+    return { mnemonic: value.trim().toUpperCase() };
+  }
   let forcedWidth: 1 | 2 | undefined;
-  if (match[2] === "B") forcedWidth = 1;
-  else if (match[2] === "W") forcedWidth = 2;
+  if (match[2] === "B") {
+    forcedWidth = 1;
+  } else if (match[2] === "W") {
+    forcedWidth = 2;
+  }
   return {
     mnemonic: match[1],
     forcedWidth,
@@ -114,9 +121,11 @@ function splitTopLevelOperands(value: string): string[] {
   let start = 0;
   for (let index = 0; index < value.length; index++) {
     const character = value[index];
-    if (character === "(" || character === "[") depth++;
-    else if (character === ")" || character === "]") depth--;
-    else if (character === "," && depth === 0) {
+    if (character === "(" || character === "[") {
+      depth++;
+    } else if (character === ")" || character === "]") {
+      depth--;
+    } else if (character === "," && depth === 0) {
       operands.push(value.slice(start, index).trim());
       start = index + 1;
     }
@@ -153,7 +162,9 @@ export class Arch65xx implements ArchitectureEncoder {
       entries.push(form);
       grouped.set(form.mnemonic, entries);
     }
-    for (const [mnemonic, entries] of grouped) this.formsByMnemonic.set(mnemonic, entries);
+    for (const [mnemonic, entries] of grouped) {
+      this.formsByMnemonic.set(mnemonic, entries);
+    }
   }
 
   getInstructionCatalog(): InstructionDescriptor[] {
@@ -166,7 +177,9 @@ export class Arch65xx implements ArchitectureEncoder {
    * @returns {number} Encoded size in bytes, or 0 if unknown.
    */
   estimateSize(words: readonly string[]): number {
-    if (words.length === 0) return 0;
+    if (words.length === 0) {
+      return 0;
+    }
     const operand = words.slice(1).join(" ");
     return this.estimateResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
@@ -177,7 +190,9 @@ export class Arch65xx implements ArchitectureEncoder {
    * @returns {boolean} True if encoded.
    */
   encode(words: readonly string[]): boolean {
-    if (words.length === 0) return true;
+    if (words.length === 0) {
+      return true;
+    }
     const operand = words.slice(1).join(" ");
     return this.encodeResolved(words[0] ?? "", this.context.operands.lowerOperand(operand));
   }
@@ -197,7 +212,9 @@ export class Arch65xx implements ArchitectureEncoder {
 
   private encodeResolved(rawMnemonic: string, operand: LoweredOperand): boolean {
     const resolved = this.resolveForm(rawMnemonic, operand);
-    if (!resolved) return false;
+    if (!resolved) {
+      return false;
+    }
     const form = resolved;
     const relativeBaseOffset = form.relativeBaseOffset ?? modeSize(form);
     let branchDelta = 0;
@@ -217,9 +234,13 @@ export class Arch65xx implements ArchitectureEncoder {
     const compoundValues = this.readCompoundValues(form, compoundOperands);
     // Only unsigned codecs use the generic operand reader below.
     let operandWidth: 0 | 1 | 2 | 3 = 0;
-    if (form.codec === "unsigned8") operandWidth = 1;
-    else if (form.codec === "unsigned16-le") operandWidth = 2;
-    else if (form.codec === "unsigned24-le") operandWidth = 3;
+    if (form.codec === "unsigned8") {
+      operandWidth = 1;
+    } else if (form.codec === "unsigned16-le") {
+      operandWidth = 2;
+    } else if (form.codec === "unsigned24-le") {
+      operandWidth = 3;
+    }
     const operandKind = operandWidth === 1 ? "operand" : "address";
     let operandValue = 0;
     if (operandWidth !== 0) {
@@ -285,7 +306,9 @@ export class Arch65xx implements ArchitectureEncoder {
         this.context.emission.writeByte(specialPageValue & 0xff);
         return true;
       case "three-unsigned16-le":
-        for (const value of compoundValues) this.context.emission.writeValue(value, 2, "little");
+        for (const value of compoundValues) {
+          this.context.emission.writeValue(value, 2, "little");
+        }
         return true;
       case "immediate-unsigned8":
         this.context.emission.writeByte(compoundValues[0] ?? 0);
@@ -423,12 +446,17 @@ export class Arch65xx implements ArchitectureEncoder {
     }
 
     const hasOperand = operand.raw.trim() !== "";
-    if (mnemonic === "BRK" && forcedWidth === 2)
+    if (mnemonic === "BRK" && forcedWidth === 2) {
       throw this.context.diagnostics.error("BRK accepts at most an 8-bit signature byte.");
+    }
 
     let mode = operand.mode as AddressingMode | undefined;
-    if (operand.raw.trim().toUpperCase() === "A") mode = "accumulator";
-    if (operand.raw.trim().toUpperCase() === "Q") mode = "quadAccumulator";
+    if (operand.raw.trim().toUpperCase() === "A") {
+      mode = "accumulator";
+    }
+    if (operand.raw.trim().toUpperCase() === "Q") {
+      mode = "quadAccumulator";
+    }
     if (
       this.cpu.id === "65xx.m740" &&
       mnemonic === "JSR" &&
@@ -438,11 +466,17 @@ export class Arch65xx implements ArchitectureEncoder {
       mode = "specialPage";
     }
     // Branches: any operand is a target; don't treat `$12` as zp.
-    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) mode = "relative16";
-    else if (hasOperand && forms.some((entry) => entry.mode === "relative")) mode = "relative";
+    if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
+      mode = "relative16";
+    } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
+      mode = "relative";
+    }
     if (!hasOperand && !forms.some((entry) => entry.mode === "implied")) {
-      if (forms.some((entry) => entry.mode === "accumulator")) mode = "accumulator";
-      else if (forms.some((entry) => entry.mode === "quadAccumulator")) mode = "quadAccumulator";
+      if (forms.some((entry) => entry.mode === "accumulator")) {
+        mode = "accumulator";
+      } else if (forms.some((entry) => entry.mode === "quadAccumulator")) {
+        mode = "quadAccumulator";
+      }
     }
 
     if (forcedWidth) {
@@ -483,8 +517,11 @@ export class Arch65xx implements ArchitectureEncoder {
     const value = this.context.operands.getnum(expression);
     const minimum = width === 1 && immediate ? -128 : 0;
     let maximum = 0xff;
-    if (width === 2) maximum = 0xffff;
-    else if (width === 3) maximum = 0xffffff;
+    if (width === 2) {
+      maximum = 0xffff;
+    } else if (width === 3) {
+      maximum = 0xffffff;
+    }
     // Immediate `#-1` is allowed for 8-bit (signed); addresses stay unsigned.
     if (!Number.isInteger(value) || value < minimum || value > maximum) {
       throw this.context.diagnostics.error(
@@ -511,7 +548,9 @@ export class Arch65xx implements ArchitectureEncoder {
     relativeBaseOffset: number,
     width: 1 | 2,
   ): number {
-    if (!this.context.branches.enforceResolvedLabels()) return 0;
+    if (!this.context.branches.enforceResolvedLabels()) {
+      return 0;
+    }
     const reference = (this.context.sizing.getCurrentAddress() + relativeBaseOffset) & 0xffff;
     let target: number;
     // Unnamed labels: Asar `+`/`++` forward, `-`/`--` backward; ca65 `:+` / `:-`.

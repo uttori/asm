@@ -17,6 +17,8 @@ test("Uint8ArrayDecoderSource is immutable and bounds-safe", (t) => {
   t.is(source.readBytes(0, -1), undefined);
 
   const copy = source.readBytes(0, 1);
-  if (copy) copy[0] = 0xee;
+  if (copy) {
+    copy[0] = 0xee;
+  }
   t.is(source.readByte(0), 0x10);
 });

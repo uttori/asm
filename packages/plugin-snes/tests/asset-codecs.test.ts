@@ -36,7 +36,7 @@ class Bytes implements AssetByteSource {
   }
 
   read(offset: number, length: number): Uint8Array | undefined {
-    if (offset < 0 || length < 0 || offset + length > this.length) return undefined;
+    if (offset < 0 || length < 0 || offset + length > this.length) {return undefined;}
     return this.#bytes.slice(offset, offset + length);
   }
 }
@@ -64,7 +64,7 @@ test("SNES asset registry is stable and composes with target-neutral codecs", (t
     .list()
     .map((codec) => codec.id);
   t.true(combined.includes("uttori.asset.raw"));
-  for (const id of ids) t.true(combined.includes(id));
+  for (const id of ids) {t.true(combined.includes(id));}
 });
 
 test("SNES planar tile codecs reverse every supported bitplane layout", (t) => {
@@ -81,7 +81,7 @@ test("SNES planar tile codecs reverse every supported bitplane layout", (t) => {
 
   for (const format of formats) {
     const bytes = new Array<number>(format.bits * 8).fill(0);
-    for (const offset of format.planeOffsets) bytes[offset] = 0x80;
+    for (const offset of format.planeOffsets) {bytes[offset] = 0x80;}
     const source = new Bytes(bytes);
     const codecs = registry();
     const plan = planAssets(codecs, source, [request(format.id, bytes.length)]);
@@ -98,7 +98,7 @@ test("SNES planar tile codecs reverse every supported bitplane layout", (t) => {
     const edited = encodePlannedAsset(codecs, source, asset, {
       value: { kind: "snes-planar-tiles", tiles },
     });
-    for (const offset of format.planeOffsets) t.is(edited[offset], 0xc0);
+    for (const offset of format.planeOffsets) {t.is(edited[offset], 0xc0);}
     t.is(verifyAssetPlan(codecs, source, plan).assets.length, 1);
   }
 });

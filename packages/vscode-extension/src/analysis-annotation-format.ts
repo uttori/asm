@@ -12,16 +12,27 @@ const hexadecimal = (value: number): string =>
   `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
 
 const valueText = (value: unknown, present = true): string => {
-  if (!present) return "∅";
+  if (!present) {
+    return "∅";
+  }
   if (value !== null && typeof value === "object" && !Array.isArray(value)) {
     const record = value as Readonly<Record<string, unknown>>;
-    if (record.kind === "known" && "value" in record) return valueText(record.value);
-    if (record.kind === "unknown") return "?";
+    if (record.kind === "known" && "value" in record) {
+      return valueText(record.value);
+    }
+    if (record.kind === "unknown") {
+      return "?";
+    }
   }
-  if (typeof value === "string") return value;
-  if (typeof value === "number")
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number") {
     return Number.isInteger(value) ? hexadecimal(value) : String(value);
-  if (typeof value === "boolean") return String(value);
+  }
+  if (typeof value === "boolean") {
+    return String(value);
+  }
   const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
   return serialized.length > 60 ? `${serialized.slice(0, 57)}…` : serialized;
 };
@@ -47,9 +58,13 @@ const stateText = (observation: InstructionStateObservationAnnotation): string =
 
 const accessText = (access: InstructionMemoryAccessAnnotation): string => {
   let mode = "?";
-  if (access.access === "read") mode = "R";
-  else if (access.access === "write") mode = "W";
-  else if (access.access === "read-write") mode = "RW";
+  if (access.access === "read") {
+    mode = "R";
+  } else if (access.access === "write") {
+    mode = "W";
+  } else if (access.access === "read-write") {
+    mode = "RW";
+  }
   return `${access.actor ? `${access.actor}${access.channel === undefined ? "" : ` channel ${access.channel}`} ` : ""}${mode} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === undefined ? "" : `=${hexadecimal(access.value)}`} ${access.width}B ×${access.count}`;
 };
 
@@ -68,10 +83,16 @@ export const formatInstructionAnnotationSummary = (
 ): string => {
   const parts: string[] = [];
   parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text }) => text));
-  if (annotation.executionCount > 0) parts.push(`▶ ${annotation.executionCount}×`);
-  if (annotation.detailsLimited) parts.push("details limited");
+  if (annotation.executionCount > 0) {
+    parts.push(`▶ ${annotation.executionCount}×`);
+  }
+  if (annotation.detailsLimited) {
+    parts.push("details limited");
+  }
   const coverage = annotation.runtimeCoverage.map(({ coverage }) => coverage);
-  if (coverage.length > 0) parts.push(`coverage ${coverage.join("/")}`);
+  if (coverage.length > 0) {
+    parts.push(`coverage ${coverage.join("/")}`);
+  }
   parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
   parts.push(...annotation.memoryAccesses.slice(0, 2).map(accessText));
   parts.push(...annotation.stateTransitions.slice(0, 3).map(transitionText));
@@ -109,29 +130,39 @@ export const formatInstructionAnnotationDetails = (
   // because a single hot instruction can have more observations than V8 allows call arguments.
   if (annotation.runtimeCoverage.length > 0) {
     lines.push("Runtime coverage:");
-    for (const { coverage, count, recordIds } of annotation.runtimeCoverage)
+    for (const { coverage, count, recordIds } of annotation.runtimeCoverage) {
       lines.push(`  ${coverage} ×${count} (${recordIds.join(", ")})`);
+    }
   }
   if (annotation.effectiveAddresses.length > 0) {
     lines.push("Effective addresses:");
-    for (const address of annotation.effectiveAddresses)
+    for (const address of annotation.effectiveAddresses) {
       lines.push(`  ${effectiveAddressText(address)} — ${address.explanation}`);
+    }
   }
   if (annotation.memoryAccesses.length > 0) {
     lines.push("Runtime memory:");
-    for (const access of annotation.memoryAccesses) lines.push(`  ${accessText(access)}`);
+    for (const access of annotation.memoryAccesses) {
+      lines.push(`  ${accessText(access)}`);
+    }
   }
   if (annotation.stateTransitions.length > 0) {
     lines.push("Static state transitions:");
-    for (const transition of annotation.stateTransitions)
+    for (const transition of annotation.stateTransitions) {
       lines.push(`  ${transitionText(transition)}`);
+    }
   }
   if (annotation.stateObservations.length > 0) {
     lines.push("Known/observed state:");
-    for (const observation of annotation.stateObservations)
+    for (const observation of annotation.stateObservations) {
       lines.push(`  ${stateText(observation)}`);
+    }
   }
-  if (annotation.nodeIds.length > 0) lines.push(`CFG nodes: ${annotation.nodeIds.join(", ")}`);
-  if (annotation.evidence.length > 0) lines.push(`Evidence: ${annotation.evidence.join(", ")}`);
+  if (annotation.nodeIds.length > 0) {
+    lines.push(`CFG nodes: ${annotation.nodeIds.join(", ")}`);
+  }
+  if (annotation.evidence.length > 0) {
+    lines.push(`Evidence: ${annotation.evidence.join(", ")}`);
+  }
   return lines.join("\n");
 };

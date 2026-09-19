@@ -35,7 +35,8 @@ test("rich RSP parser rejects malformed, oversized, and inconsistent observation
     `1:1:0:0:${row.replace("8d1821", "0011223344")}`,
     `1:1:0:0:${row.repeat(241)}`,
     `1:ffffffffffffffff:0:0:${row}`,
-  ])
+  ]) {
     t.throws(() => parseAresTraceDetails(packet, 16));
+  }
   t.throws(() => parseAresTraceDetails(`1:1:0:0:${row.repeat(2)}`, 1));
 });

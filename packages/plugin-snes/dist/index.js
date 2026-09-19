@@ -275,10 +275,12 @@ const plugin = definePlugin({
                         const targetState = state.get(snesSessionStateKey);
                         const normalized = snesRomAddressSpace.normalizeForWrite(address, mappingContext());
                         // Unmapped writes are allowed (Asar); only mapped multi-byte stores check borders.
-                        if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0)
+                        if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) {
                             return;
-                        if (targetState.bankCrossMode === "off" || width <= 1)
+                        }
+                        if (targetState.bankCrossMode === "off" || width <= 1) {
                             return;
+                        }
                         const start = address & 0xffffff;
                         const end = (start + width - 1) & 0xffffff;
                         // `half` = 32 KiB ($8000) border; `full` = 64 KiB bank. Bit 23 is ignored
@@ -297,11 +299,13 @@ const plugin = definePlugin({
             create: ({ state }) => ({
                 finalize: ({ outputBytes }) => {
                     const targetState = state.get(snesSessionStateKey);
-                    if (!targetState.checksumEnabled)
+                    if (!targetState.checksumEnabled) {
                         return;
+                    }
                     const headerOffset = getChecksumHeaderOffset(targetState.mapper);
-                    if (outputBytes.length < headerOffset + 0x20)
+                    if (outputBytes.length < headerOffset + 0x20) {
                         return;
+                    }
                     // Zero the checksum fields first so they do not contribute to the sum
                     // (complement starts as $FFFF, checksum as $0000 - SNES header convention).
                     outputBytes[headerOffset + 0x1c] = 0xff;
@@ -394,11 +398,13 @@ const plugin = definePlugin({
                 shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
                 beforeWrite: ({ session, logicalAddress, width }) => {
                     const targetState = state.get(snesSessionStateKey);
-                    if (targetState.activeFreespaceStartOffset === null)
+                    if (targetState.activeFreespaceStartOffset === null) {
                         return;
+                    }
                     const outputOffset = session.outputWriter.toOutputOffset(logicalAddress);
-                    if (outputOffset < 0)
+                    if (outputOffset < 0) {
                         return;
+                    }
                     const endOffset = outputOffset + width - 1;
                     targetState.activeFreespaceEndOffset = Math.max(targetState.activeFreespaceEndOffset ?? endOffset, endOffset);
                 },
@@ -410,8 +416,9 @@ const plugin = definePlugin({
                     const start = targetState.activeFreespaceStartOffset;
                     const contentStart = targetState.activeFreespaceContentStartOffset;
                     const end = targetState.activeFreespaceEndOffset;
-                    if (start === null || contentStart === null || end === null || end < contentStart)
+                    if (start === null || contentStart === null || end === null || end < contentStart) {
                         return;
+                    }
                     // Asar STAR: bytes 4–5 = size-1, 6–7 = ~size-1. Empty payload → $0000 / $FFFF.
                     const lengthMinusOne = Math.max(0, end - contentStart) & 0xffff;
                     const complement = ~lengthMinusOne & 0xffff;

@@ -13,8 +13,12 @@ export const compareRuntimeRecordIds = (
   left: RuntimeEvidenceRecord,
   right: RuntimeEvidenceRecord,
 ): number => {
-  if (left.id < right.id) return -1;
-  if (left.id > right.id) return 1;
+  if (left.id < right.id) {
+    return -1;
+  }
+  if (left.id > right.id) {
+    return 1;
+  }
   return 0;
 };
 
@@ -201,8 +205,9 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
       ? {}
       : (JSON.parse(decodeSqlitePayload(fields.payload)) as Record<string, unknown>);
   // LEFT JOIN keeps a corrupt dictionary reference visible; silently omitting the row would lose history.
-  if (typeof fields.evidence !== "string")
+  if (typeof fields.evidence !== "string") {
     throw new Error("Missing SQLite runtime evidence dictionary entry.");
+  }
   const evidence = JSON.parse(fields.evidence) as readonly string[];
   const kind = fields.kind as RuntimeEvidenceRecord["kind"];
   const architecture = fields.architecture as string;
@@ -303,8 +308,9 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
       coverage: fields.coverage as "executed" | "operand" | "read" | "written",
     };
   }
-  if (kind !== "runtime-control-target")
+  if (kind !== "runtime-control-target") {
     throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
+  }
   return {
     id,
     kind: "runtime-control-target",
@@ -328,9 +334,11 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
 export const analysisAddress = (
   record: AnalysisRecord,
 ): { addressSpace: string | null; address: number | null } => {
-  if ("addressSpace" in record && "address" in record)
+  if ("addressSpace" in record && "address" in record) {
     return { addressSpace: record.addressSpace, address: record.address };
-  if ("addressSpace" in record && "fromAddress" in record)
+  }
+  if ("addressSpace" in record && "fromAddress" in record) {
     return { addressSpace: record.addressSpace, address: record.fromAddress };
+  }
   return { addressSpace: null, address: null };
 };

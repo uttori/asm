@@ -11,11 +11,14 @@ import {
   RomImage,
   loadAnalysisProject,
   migrateAnalysisProjectStorage,
+  openAnalysisProjectStore,
   SqliteAnalysisStore,
+  writeAnalysisProject,
   type AnalysisProject,
   type RuntimeEvidenceRecord,
 } from "../src/index.js";
 import { SQLITE_MIGRATION_DIRECTORY, SQLITE_MIGRATION_BACKUP } from "../src/sqlite-maintenance.js";
+import { CAPTURE_CATALOG_COLUMNS } from "../src/sqlite-storage-policy.js";
 import { writeLegacySqliteProject } from "./fixtures/legacy-sqlite.js";
 
 const fixture = (): AnalysisProject => {
@@ -202,7 +205,9 @@ test("cancellation at the final publication callback still preserves the origina
     migrateAnalysisProjectStorage(directory, {
       signal: controller.signal,
       onProgress: ({ phase }) => {
-        if (phase === "publish") controller.abort();
+        if (phase === "publish") {
+          controller.abort();
+        }
       },
     }),
     { name: "AbortError" },
@@ -221,8 +226,9 @@ test("cancellation queued during synchronous index construction is observed befo
     migrateAnalysisProjectStorage(directory, {
       signal: controller.signal,
       onProgress: ({ phase }) => {
-        if (phase === "indexes")
+        if (phase === "indexes") {
           setImmediate(() => controller.abort(new Error("cancel after indexes")));
+        }
       },
     }),
     { message: "cancel after indexes" },
@@ -314,8 +320,9 @@ test.serial(
     writeLegacySqliteProject(directory, fixture());
     const rename = fs.renameSync;
     const stub = sinon.stub(fs, "renameSync").callsFake((from, to) => {
-      if (to === path.join(directory, "analysis.sqlite"))
+      if (to === path.join(directory, "analysis.sqlite")) {
         throw new Error("simulated publication failure");
+      }
       rename(from, to);
     });
     try {
@@ -384,7 +391,9 @@ test("an automatic SQLite rollback during copy retains its original error and le
   await t.throwsAsync(
     migrateAnalysisProjectStorage(directory, {
       onProgress: ({ phase, table }) => {
-        if (phase !== "copy" || table !== "evidence") return;
+        if (phase !== "copy" || table !== "evidence") {
+          return;
+        }
         const staged = new DatabaseSync(
           path.join(directory, SQLITE_MIGRATION_DIRECTORY, "analysis.sqlite"),
         );
@@ -407,7 +416,9 @@ test("migration digest comparison catches changed destination facts before publi
   await t.throwsAsync(
     migrateAnalysisProjectStorage(directory, {
       onProgress: ({ phase, table }) => {
-        if (phase !== "copy" || table !== "runtime") return;
+        if (phase !== "copy" || table !== "runtime") {
+          return;
+        }
         const staged = new DatabaseSync(
           path.join(directory, SQLITE_MIGRATION_DIRECTORY, "analysis.sqlite"),
         );
@@ -421,6 +432,55 @@ test("migration digest comparison catches changed destination facts before publi
   t.true((await migrateAnalysisProjectStorage(directory)).changed);
 });
 
+test("current-format convert-runtime copies every capture_catalog column", async (t) => {
+  const directory = temporary();
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  writeAnalysisProject(directory, fixture());
+  const sha256 = "a".repeat(64);
+  const store = openAnalysisProjectStore(directory);
+  try {
+    store.transaction(() => {
+      store.recordCaptureReceipt({
+        id: "import:capture",
+        format: "uttori-asm-instruction-trace",
+        sourceName: "capture.json",
+        sourceSha256: sha256,
+        indexProfile: "full",
+        imported: { executionEvents: 3 },
+        unsupported: [],
+        warnings: [],
+      });
+    });
+  } finally {
+    store.close();
+  }
+  const migrated = await migrateAnalysisProjectStorage(directory, { convertRuntime: true });
+  t.true(migrated.changed);
+  t.true(fs.existsSync(migrated.backupFile!));
+  const after = openAnalysisProjectStore(directory);
+  try {
+    t.like(after.captureCatalog()[0], {
+      sha256,
+      profile: "full",
+      source_name: "capture.json",
+    });
+  } finally {
+    after.close();
+  }
+  const schema = new DatabaseSync(path.join(directory, "analysis.sqlite"));
+  try {
+    t.deepEqual(
+      schema
+        .prepare("PRAGMA table_info(capture_catalog)")
+        .all()
+        .map((column) => column.name),
+      [...CAPTURE_CATALOG_COLUMNS],
+    );
+  } finally {
+    schema.close();
+  }
+});
+
 test("migration streams history larger than a 96 MiB child heap", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -432,7 +492,7 @@ test("migration streams history larger than a 96 MiB child heap", async (t) => {
   );
   const payload = JSON.stringify({ state: { note: "history ".repeat(512) } });
   source.exec("BEGIN");
-  for (let index = 0; index < 40000; index++)
+  for (let index = 0; index < 40000; index++) {
     insert.run(
       `large:state:${String(index).padStart(8, "0")}`,
       "runtime-cpu-state",
@@ -443,6 +503,7 @@ test("migration streams history larger than a 96 MiB child heap", async (t) => {
       '["evidence:1"]',
       payload,
     );
+  }
   source.exec("COMMIT");
   source.close();
   t.true(fs.statSync(path.join(directory, "analysis.sqlite")).size > 96 * 1024 * 1024);

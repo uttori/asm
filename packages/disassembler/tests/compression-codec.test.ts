@@ -20,7 +20,9 @@ const rleCodec = (overrides: Partial<CompressionCodec> = {}): CompressionCodec =
     const output: number[] = [];
     for (let index = 0; index < decoded.length;) {
       let end = index + 1;
-      while (end < decoded.length && decoded[end] === decoded[index] && end - index < 0xff) end++;
+      while (end < decoded.length && decoded[end] === decoded[index] && end - index < 0xff) {
+        end++;
+      }
       output.push(end - index, decoded[index]);
       index = end;
     }

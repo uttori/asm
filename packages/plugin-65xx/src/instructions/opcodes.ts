@@ -97,22 +97,27 @@ const unstable = new Set([
 ]);
 
 const decoded = rows.flatMap((row) => row.split(" "));
-if (decoded.length !== 256)
+if (decoded.length !== 256) {
   throw new Error(`Expected 256 NMOS opcode entries, got ${decoded.length}.`);
+}
 
 type MutableForm = Omit<InstructionForm, "canonical"> & { canonical: boolean };
 
 const mutableForms: MutableForm[] = decoded.map((entry, opcode) => {
   const [mnemonic, shortMode] = entry.split(":");
   const mode = modeNames[shortMode];
-  if (!mnemonic || !mode)
+  if (!mnemonic || !mode) {
     throw new Error(`Invalid opcode table entry '${entry}' at $${opcode.toString(16)}.`);
+  }
   const documented = legalOpcodes.has(opcode);
   const codec = getOperandCodec(mode);
   const key = `${mnemonic}:${mode}`;
   let stability: InstructionForm["stability"] = "stable-undocumented";
-  if (documented) stability = "documented";
-  else if (unstable.has(key)) stability = "unstable-undocumented";
+  if (documented) {
+    stability = "documented";
+  } else if (unstable.has(key)) {
+    stability = "unstable-undocumented";
+  }
   let note: string | undefined;
   if (unstable.has(key)) {
     note =
@@ -148,7 +153,9 @@ for (const group of groups.values()) {
   const preferred = group.find((form) => form.documented) ?? group[0];
   // Duplicate encodings (e.g. unofficial NOP mirrors): prefer the documented
   // opcode when assembling; the full decode table still lists every cell.
-  if (preferred) preferred.canonical = true;
+  if (preferred) {
+    preferred.canonical = true;
+  }
 }
 
 /** Frozen 256-entry NMOS decode table (one form per opcode byte). */
@@ -223,7 +230,9 @@ export function getOpcodeForm(opcode: number): InstructionForm {
  */
 export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[] {
   const variantForms = variantFormsByCpuId[cpu.id];
-  if (variantForms) return variantForms;
+  if (variantForms) {
+    return variantForms;
+  }
   return nmos6502DecodeTable.filter((form) => matchesFeatures(form.availableWhen, cpu.features));
 }
 
@@ -235,6 +244,8 @@ export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[
  */
 export function getCpuAssemblyForms(cpu: CpuDefinition): readonly InstructionForm[] {
   const variantForms = variantFormsByCpuId[cpu.id];
-  if (variantForms) return variantForms;
+  if (variantForms) {
+    return variantForms;
+  }
   return cpu.features.has("undocumented") ? nmos6502xForms : nmos6502Forms;
 }

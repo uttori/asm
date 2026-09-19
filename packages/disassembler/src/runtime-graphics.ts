@@ -61,7 +61,9 @@ export interface RuntimeGraphicsSummary {
  * @returns {number} Mapped word address, before the emulator's physical VRAM mask.
  */
 const mapVram = (address: number, mapping: number): number => {
-  if (mapping === 0) return address;
+  if (mapping === 0) {
+    return address;
+  }
   const bits = mapping + 4;
   const lowMask = (1 << bits) - 1;
   const blockMask = (1 << (bits + 3)) - 1;
@@ -105,10 +107,14 @@ export const createRuntimeGraphicsAccumulator = (): {
    * @returns {void} Invalidates partial address knowledge when an unknown carry/increment is possible.
    */
   const advanceVram = (byte: number): void => {
-    if (vmain === null) vramKnown = 0;
-    else if (byte === vmain >> 7) {
-      if (vramKnown === 0xffff) vramAddress = (vramAddress + [1, 32, 128, 128][vmain & 3]) & 0xffff;
-      else vramKnown = 0;
+    if (vmain === null) {
+      vramKnown = 0;
+    } else if (byte === vmain >> 7) {
+      if (vramKnown === 0xffff) {
+        vramAddress = (vramAddress + [1, 32, 128, 128][vmain & 3]) & 0xffff;
+      } else {
+        vramKnown = 0;
+      }
     }
   };
 
@@ -116,9 +122,12 @@ export const createRuntimeGraphicsAccumulator = (): {
    * @returns {void} Preserves unknown phase/address instead of guessing alignment.
    */
   const advanceCgram = (): void => {
-    if (cgramHigh === null) cgramAddress = null;
-    else {
-      if (cgramHigh && cgramAddress !== null) cgramAddress = (cgramAddress + 1) & 0xff;
+    if (cgramHigh === null) {
+      cgramAddress = null;
+    } else {
+      if (cgramHigh && cgramAddress !== null) {
+        cgramAddress = (cgramAddress + 1) & 0xff;
+      }
       cgramHigh = !cgramHigh;
     }
   };
@@ -149,10 +158,14 @@ export const createRuntimeGraphicsAccumulator = (): {
     group.byteTargets += write.bytes.length;
     group.knownValueTargets += write.bytes.filter((byte) => byte.value !== null).length;
     // Each validated stream count fits a safe integer, but a paired write emits two candidates.
-    if (!Number.isSafeInteger(group.byteTargets))
+    if (!Number.isSafeInteger(group.byteTargets)) {
       throw new Error("Graphics byte count exceeds the safe range.");
-    if (writes.length < 64) writes.push(write);
-    else omittedWrites++;
+    }
+    if (writes.length < 64) {
+      writes.push(write);
+    } else {
+      omittedWrites++;
+    }
   };
 
   /** Consume actual bus operations, recognizing PPU mirrors only in banks 00–3f and 80–bf.
@@ -160,14 +173,22 @@ export const createRuntimeGraphicsAccumulator = (): {
    * @returns {void} Mutates bounded PPU state and reports only writes to graphics data ports.
    */
   const push = (access: RuntimeBusAccess): void => {
-    if ((access.address & 0x400000) !== 0) return;
+    if ((access.address & 0x400000) !== 0) {
+      return;
+    }
     const port = access.address & 0xffff;
-    if (port < 0x2100 || port > 0x213f) return;
+    if (port < 0x2100 || port > 0x213f) {
+      return;
+    }
     const { value } = access;
     if (access.direction === "read") {
-      if (port === 0x2139 || port === 0x213a) advanceVram(port - 0x2139);
-      else if (port === 0x213b) advanceCgram();
-      else if (port === 0x2138 && oamAddress !== null) oamAddress = (oamAddress + 1) & 0x3ff;
+      if (port === 0x2139 || port === 0x213a) {
+        advanceVram(port - 0x2139);
+      } else if (port === 0x213b) {
+        advanceCgram();
+      } else if (port === 0x2138 && oamAddress !== null) {
+        oamAddress = (oamAddress + 1) & 0x3ff;
+      }
       return;
     }
     switch (port) {
@@ -204,7 +225,9 @@ export const createRuntimeGraphicsAccumulator = (): {
         cgramHigh = false;
         return;
     }
-    if (port !== 0x2118 && port !== 0x2119 && port !== 0x2122 && port !== 0x2104) return;
+    if (port !== 0x2118 && port !== 0x2119 && port !== 0x2122 && port !== 0x2104) {
+      return;
+    }
     const data = { value, sourceSequence: access.sequence };
     const base = {
       sequence: access.sequence,
@@ -219,7 +242,7 @@ export const createRuntimeGraphicsAccumulator = (): {
       if (vmain !== null && vramKnown === 0xffff) {
         const address = mapVram(vramAddress, (vmain >> 2) & 3) * 2 + byte;
         record({ ...base, target: "vram", status: "addressed", bytes: [{ address, ...data }] });
-      } else
+      } else {
         record({
           ...base,
           target: "vram",
@@ -227,6 +250,7 @@ export const createRuntimeGraphicsAccumulator = (): {
           reason: "missing-vram-registers",
           bytes: [],
         });
+      }
       advanceVram(byte);
     } else if (port === 0x2122) {
       if (cgramHigh === false) {
@@ -262,7 +286,9 @@ export const createRuntimeGraphicsAccumulator = (): {
     } else {
       const address = oamAddress;
       oamAddress = (address + 1) & 0x3ff;
-      if ((address & 1) === 0) oamLatch = data;
+      if ((address & 1) === 0) {
+        oamLatch = data;
+      }
       if (address & 0x200) {
         // The high table writes immediately and mirrors every 32 bytes. Even high-table
         // writes also replace the latch later consumed by an odd low-table write.
@@ -282,7 +308,9 @@ export const createRuntimeGraphicsAccumulator = (): {
             { address, ...data },
           ],
         });
-      } else record({ ...base, target: "oam", status: "latched", bytes: [] });
+      } else {
+        record({ ...base, target: "oam", status: "latched", bytes: [] });
+      }
     }
   };
 

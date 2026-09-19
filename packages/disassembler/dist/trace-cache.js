@@ -21,10 +21,12 @@ export class TraceCache {
     get(key) {
         const value = this.#entries.get(key);
         if (this.#metrics) {
-            if (value === undefined)
+            if (value === undefined) {
                 this.#metrics.misses++;
-            else
+            }
+            else {
                 this.#metrics.hits++;
+            }
         }
         return value;
     }
@@ -50,13 +52,15 @@ export class TraceCache {
             displaced = { key: victim, value: this.#entries.get(victim) };
             this.#entries.delete(victim);
             this.#keys[slot] = key;
-            if (this.#metrics)
+            if (this.#metrics) {
                 this.#metrics.evictions++;
+            }
         }
         else {
             this.#keys.push(key);
-            if (this.#metrics)
+            if (this.#metrics) {
                 this.#metrics.peakEntries = Math.max(this.#metrics.peakEntries, this.#keys.length);
+            }
         }
         this.#entries.set(key, value);
         return displaced;

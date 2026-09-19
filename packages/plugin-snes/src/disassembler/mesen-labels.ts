@@ -110,7 +110,9 @@ const splitMesenLine = (line: string): readonly string[] => {
   let remainder = line;
   for (let index = 0; index < 3; index++) {
     const separator = remainder.indexOf(":");
-    if (separator < 0) break;
+    if (separator < 0) {
+      break;
+    }
     fields.push(remainder.slice(0, separator));
     remainder = remainder.slice(separator + 1);
   }
@@ -152,7 +154,9 @@ export const importMesenLabels = (
 
   for (const [lineIndex, rawLine] of text.split(/\r?\n/).entries()) {
     const line = lineIndex === 0 ? rawLine.replace(/^\uFEFF/, "") : rawLine;
-    if (line === "") continue;
+    if (line === "") {
+      continue;
+    }
     const fields = splitMesenLine(line);
     const memory = MEMORY_TYPES[fields[0] ?? ""];
     if (fields.length < 3 || !memory) {

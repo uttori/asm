@@ -250,7 +250,9 @@ export class SymbolScopeService {
     }
 
     if (isPositive) {
-      if (!this.host.forwardLabels[depth]) this.host.forwardLabels[depth] = [];
+      if (!this.host.forwardLabels[depth]) {
+        this.host.forwardLabels[depth] = [];
+      }
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.forwardLabels[depth].push({
           addr: targetAddress,
@@ -260,7 +262,9 @@ export class SymbolScopeService {
         this.host.forwardLabels[depth].push({ addr: targetAddress });
       }
     } else {
-      if (!this.host.backwardLabels[depth]) this.host.backwardLabels[depth] = [];
+      if (!this.host.backwardLabels[depth]) {
+        this.host.backwardLabels[depth] = [];
+      }
       if (isMacroLocal && this.host.inMacroExpansion) {
         this.host.backwardLabels[depth].push({
           addr: targetAddress,
@@ -287,8 +291,12 @@ export class SymbolScopeService {
       }
       return targetAddress;
     }
-    if (!this.host.forwardLabels[0]) this.host.forwardLabels[0] = [];
-    if (!this.host.backwardLabels[0]) this.host.backwardLabels[0] = [];
+    if (!this.host.forwardLabels[0]) {
+      this.host.forwardLabels[0] = [];
+    }
+    if (!this.host.backwardLabels[0]) {
+      this.host.backwardLabels[0] = [];
+    }
     const entry = { addr: targetAddress, unit: this.objectFileKey() };
     this.host.forwardLabels[0].push(entry);
     this.host.backwardLabels[0].push({ addr: targetAddress, unit: entry.unit });
@@ -609,8 +617,9 @@ export class SymbolScopeService {
    */
   resolveStructMember(compoundId: string): number {
     const firstId = compoundId.trim().match(/^([A-Z_a-z]\w*)/)?.[1];
-    if (!firstId || !this.host.structs.has(firstId))
+    if (!firstId || !this.host.structs.has(firstId)) {
       throw new Error(`Struct not found: ${compoundId}`);
+    }
 
     let rest = compoundId.substring(firstId.length).trim();
     let base = 0;
@@ -623,7 +632,9 @@ export class SymbolScopeService {
       if (rest.startsWith(".")) {
         rest = rest.substring(1).trim();
         const memberMatch = rest.match(/^([A-Z_a-z]\w*)/);
-        if (!memberMatch) throw new Error(`Invalid struct member: ${compoundId}`);
+        if (!memberMatch) {
+          throw new Error(`Invalid struct member: ${compoundId}`);
+        }
         const memberName = memberMatch[1];
         rest = rest.substring(memberName.length).trim();
 
@@ -640,10 +651,14 @@ export class SymbolScopeService {
         }
       } else if (rest.startsWith("[")) {
         const bracketEnd = rest.indexOf("]");
-        if (bracketEnd === -1) throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+        if (bracketEnd === -1) {
+          throw new Error(`Unclosed [ in struct ref: ${compoundId}`);
+        }
         const indexStr = rest.substring(1, bracketEnd).trim();
         const index = Number.parseInt(indexStr, 10);
-        if (Number.isNaN(index)) throw new Error(`Invalid struct index: ${indexStr}`);
+        if (Number.isNaN(index)) {
+          throw new Error(`Invalid struct index: ${indexStr}`);
+        }
         rest = rest.substring(bracketEnd + 1).trim();
         base += index * currentStruct.size;
       } else {

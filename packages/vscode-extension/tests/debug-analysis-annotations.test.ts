@@ -1,47 +1,59 @@
-import path from "node:path";
-import vm from "node:vm";
+import { registerHooks } from "node:module";
 
 import type { DebugMap } from "@uttori/asm-core/debug-map";
-import { build } from "esbuild";
 
 import { test } from "../../../tests/ava-helper.js";
 
-const bundled = await build({
-  entryPoints: [path.resolve("packages/vscode-extension/src/debug-analysis-annotations.ts")],
-  write: false,
-  bundle: true,
-  conditions: ["uttori-source"],
-  platform: "node",
-  format: "cjs",
-  external: ["./analysis-worker-client.js", "./coverage-tree.js"],
-});
+const host = {
+  calls: [] as { directory: string; operation: string; ranges?: unknown[] }[],
+  fail: false,
+};
 
-test("debugger annotations load lazily, batch a page, filter aliases, and tolerate query failure", async (t) => {
-  const calls: { directory: string; operation: string; ranges?: unknown[] }[] = [];
-  let fail = false;
-  const module = { exports: {} };
-  vm.runInNewContext(bundled.outputFiles[0].text, {
-    exports: module.exports,
-    module,
-    queueMicrotask,
-    require: (id: string) => {
-      if (id === "./coverage-tree.js")
-        return { findAnalysisProjectDirectories: async () => ["matching", "foreign"] };
-      if (id === "./analysis-worker-client.js")
-        return {
-          analysisWorker: () => ({
-            request: async (
-              directory: string,
-              operation: string,
-              input?: { ranges: unknown[] },
-            ) => {
-              calls.push({ directory, operation, ...input });
-              if (operation === "manifest")
+(globalThis as { __uttoriDebugAnnotationsTest?: typeof host }).__uttoriDebugAnnotationsTest = host;
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (
+      typeof context.parentURL === "string" &&
+      /[/\\]debug-analysis-annotations\.(ts|js|mts|mjs)/.test(context.parentURL)
+    ) {
+      if (specifier === "./coverage-tree.js") {
+        return { shortCircuit: true, url: "debug-annotations-test:coverage-tree" };
+      }
+      if (specifier === "./analysis-worker-client.js") {
+        return { shortCircuit: true, url: "debug-annotations-test:worker-client" };
+      }
+    }
+    return nextResolve(specifier, context);
+  },
+  load(url, context, nextLoad) {
+    if (url === "debug-annotations-test:coverage-tree") {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+          export const findAnalysisProjectDirectories = async () => ["matching", "foreign"];
+        `,
+      };
+    }
+    if (url === "debug-annotations-test:worker-client") {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+          const host = globalThis.__uttoriDebugAnnotationsTest;
+          export const analysisWorker = () => ({
+            request: async (directory, operation, input) => {
+              host.calls.push({ directory, operation, ...input });
+              if (operation === "manifest") {
                 return {
                   target: "fixture",
                   rom: { contentSha256: directory, contentSize: 1024 },
                 };
-              if (fail) throw new Error("Unavailable");
+              }
+              if (host.fail) {
+                throw new Error("Unavailable");
+              }
               return [
                 {
                   addressSpace: "cpu",
@@ -59,30 +71,37 @@ test("debugger annotations load lazily, batch a page, filter aliases, and tolera
                 },
               ];
             },
-          }),
-        };
-      throw new Error(`Unexpected import ${id}`);
-    },
-  });
-  const api = module.exports as typeof import("../src/debug-analysis-annotations.js");
-  const lookup = await api.createDebugInstructionAnnotation({
+          });
+        `,
+      };
+    }
+    return nextLoad(url, context);
+  },
+});
+
+const { createDebugInstructionAnnotation } = await import("../src/debug-analysis-annotations.js");
+
+test("debugger annotations load lazily, batch a page, filter aliases, and tolerate query failure", async (t) => {
+  host.calls = [];
+  host.fail = false;
+  const lookup = await createDebugInstructionAnnotation({
     target: "fixture",
     output: { sha256: "matching", size: 1024 },
   } as DebugMap);
   t.truthy(lookup);
   t.deepEqual(
-    calls.map(({ operation }) => operation),
+    host.calls.map(({ operation }) => operation),
     ["manifest", "manifest"],
   );
   const address = { architecture: "cpu", addressSpace: "cpu", address: 256, outputOffset: 0 };
   const mirror = { ...address, address: 512 };
   const values = await Promise.all([lookup!(address), lookup!(mirror), lookup!(address)]);
   t.deepEqual(values, ["12×", "12×", "12×"]);
-  t.is(calls.length, 3, "one page query serves concurrent addresses and duplicate requests");
-  t.is(calls[2].directory, "matching");
-  t.is(calls[2].ranges?.length, 2);
+  t.is(host.calls.length, 3, "one page query serves concurrent addresses and duplicate requests");
+  t.is(host.calls[2].directory, "matching");
+  t.is(host.calls[2].ranges?.length, 2);
   t.is(await lookup!(address), "12×");
-  t.is(calls.length, 3, "repeated disassembly uses the session cache");
-  fail = true;
+  t.is(host.calls.length, 3, "repeated disassembly uses the session cache");
+  host.fail = true;
   t.is(await lookup!({ ...address, address: 768 }), undefined);
 });

@@ -11,13 +11,15 @@ const objectValue = (value, name) => {
     return value;
 };
 const arrayValue = (value, name) => {
-    if (!Array.isArray(value))
+    if (!Array.isArray(value)) {
         throw new Error(`${name} must be an array.`);
+    }
     return value;
 };
 const numberValue = (value, name) => {
-    if (typeof value !== "number" || !Number.isFinite(value))
+    if (typeof value !== "number" || !Number.isFinite(value)) {
         throw new Error(`${name} must be numeric.`);
+    }
     return value;
 };
 const byteHex = (value) => Math.round(value).toString(16).padStart(2, "0");
@@ -106,14 +108,16 @@ export const snesSvgAssetPreviewRenderer = Object.freeze({
     ],
     render: ({ asset, decoded }) => {
         const value = objectValue(decoded.value, `SNES asset '${asset.id}' preview`);
-        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID)
+        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID) {
             return renderPalette(asset.id, value);
+        }
         if (asset.request.codecId === SNES_BG_TILEMAP_ASSET_CODEC_ID ||
             asset.request.codecId === SNES_MODE7_TILEMAP_ASSET_CODEC_ID) {
             return renderTilemap(asset.id, value);
         }
-        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID)
+        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) {
             return renderBrr(asset.id, value);
+        }
         return renderTiles(asset.id, value);
     },
 });

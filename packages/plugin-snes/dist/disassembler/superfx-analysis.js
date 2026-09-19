@@ -24,8 +24,9 @@ const contains = (entry, address) => entry.start <= address && address < entry.e
  * @returns {SuperFxAbstractState} State with the override applied.
  */
 const applyEntryState = (state, override) => {
-    if (!override)
+    if (!override) {
         return state;
+    }
     return {
         ...state,
         ...(override.alt === undefined ? {} : { alt: { kind: "known", value: override.alt } }),
@@ -166,7 +167,7 @@ const annotationsFor = (result, evidence) => result.nodes.flatMap((node) => {
             evidence: [...new Set([...node.evidence, evidence])].sort(),
         },
     ];
-    if (node.size > 1)
+    if (node.size > 1) {
         records.push({
             id: `static:superfx:operand:${address}`,
             addressSpace: SUPERFX_ROM_ADDRESS_SPACE,
@@ -176,6 +177,7 @@ const annotationsFor = (result, evidence) => result.nodes.flatMap((node) => {
             architecture: "snes.superfx",
             evidence: [...new Set([...node.evidence, evidence])].sort(),
         });
+    }
     return records;
 });
 /**
@@ -220,7 +222,7 @@ export const analyzeSuperFxRom = (image, options = {}) => {
         })),
         ...(options.entryPoints ?? []).map((entry) => {
             const evidenceId = entry.evidence?.[0] ?? `manual:entry:${entry.id}`;
-            if (!(options.evidence ?? []).some((value) => value.id === evidenceId))
+            if (!(options.evidence ?? []).some((value) => value.id === evidenceId)) {
                 evidenceRecords.push({
                     id: evidenceId,
                     source: "manual",
@@ -228,6 +230,7 @@ export const analyzeSuperFxRom = (image, options = {}) => {
                     confidence: "certain",
                     detail: `Configured SuperFX entry point $${entry.address.toString(16).padStart(6, "0")}.`,
                 });
+            }
             return {
                 id: `entry:${entry.id}`,
                 address: entry.address,
@@ -262,38 +265,43 @@ export const analyzeSuperFxRom = (image, options = {}) => {
         transfer: transferSuperFxState,
         decode: (address, state) => {
             const identity = image.identifyAddress(address);
-            if (!identity)
+            if (!identity) {
                 return { kind: "error", reason: "Address is outside the SuperFX image." };
+            }
             const blocked = annotations.find((entry) => contains(entry, address) && DATA_CLASSIFICATIONS.has(entry.classification));
-            if (blocked)
+            if (blocked) {
                 return {
                     kind: "blocked",
                     reason: `Analysis reached '${blocked.classification}' region '${blocked.id}'.`,
                     evidence: blocked.evidence,
                 };
+            }
             const decoded = decoder.decode({
                 source,
                 offset: identity.imageOffset,
                 logicalAddress: address,
                 state: superFxDecodeState(state),
             });
-            if (decoded.kind === "ambiguous")
+            if (decoded.kind === "ambiguous") {
                 return {
                     kind: "ambiguous",
                     reason: decoded.reason,
                     requiredState: decoded.requiredState,
                 };
-            if (decoded.kind === "error")
+            }
+            if (decoded.kind === "error") {
                 return { kind: "error", reason: decoded.message };
+            }
             const instruction = decoded.instruction;
             const crossing = annotations.find((entry) => DATA_CLASSIFICATIONS.has(entry.classification) &&
                 Array.from({ length: instruction.size }, (_, index) => address + index).some((value) => contains(entry, value)));
-            if (crossing)
+            if (crossing) {
                 return {
                     kind: "blocked",
                     reason: `Instruction crosses '${crossing.classification}' region '${crossing.id}'.`,
                     evidence: crossing.evidence,
                 };
+            }
             const normalized = {
                 specificationId: instruction.specificationId,
                 address,

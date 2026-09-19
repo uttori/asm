@@ -14,34 +14,58 @@ import { createOperandResolver, runtimeStub } from "./test-stubs.js";
 const evalRange = (expr: string | ExpressionNode, labels: Record<string, number> = {}): number => {
   if (typeof expr === "string") {
     const text = expr.trim();
-    if (text in labels) return labels[text];
-    if (/^\$[\da-f]+$/i.test(text)) return parseInt(text.slice(1), 16);
-    if (/^-?\d+$/.test(text)) return Number(text);
+    if (text in labels) {
+      return labels[text];
+    }
+    if (/^\$[\da-f]+$/i.test(text)) {
+      return parseInt(text.slice(1), 16);
+    }
+    if (/^-?\d+$/.test(text)) {
+      return Number(text);
+    }
     const times = text.match(/^(\d+)\s*\*\s*(\d+)$/);
-    if (times) return Number(times[1]) * Number(times[2]);
+    if (times) {
+      return Number(times[1]) * Number(times[2]);
+    }
     return evalRange(parseExpressionNode(text), labels);
   }
   if (expr.type === "identifier") {
-    if (expr.name in labels) return labels[expr.name];
+    if (expr.name in labels) {
+      return labels[expr.name];
+    }
     return 0;
   }
-  if (expr.type === "literal") return evalRange(expr.value, labels);
+  if (expr.type === "literal") {
+    return evalRange(expr.value, labels);
+  }
   if (expr.type === "raw") {
-    if (expr.value in labels) return labels[expr.value];
+    if (expr.value in labels) {
+      return labels[expr.value];
+    }
     return 0;
   }
   if (expr.type === "unary") {
     const value = evalRange(expr.argument, labels);
-    if (expr.operator === "-") return -value;
+    if (expr.operator === "-") {
+      return -value;
+    }
     return value;
   }
   if (expr.type === "binary") {
     const left = evalRange(expr.left, labels);
     const right = evalRange(expr.right, labels);
-    if (expr.operator === "*") return left * right;
-    if (expr.operator === "+") return left + right;
-    if (expr.operator === "-") return left - right;
-    if (expr.operator === "&") return left & right;
+    if (expr.operator === "*") {
+      return left * right;
+    }
+    if (expr.operator === "+") {
+      return left + right;
+    }
+    if (expr.operator === "-") {
+      return left - right;
+    }
+    if (expr.operator === "&") {
+      return left & right;
+    }
     return 0;
   }
   return 0;
@@ -63,7 +87,9 @@ const createContext = (overrides: IncludeSessionOverrides = {}) => {
     evaluateRangeExpression: (expr) => evalRange(expr, labels),
     symbolScope: {
       getLabelValue: (label: string) => {
-        if (label in labels) return labels[label];
+        if (label in labels) {
+          return labels[label];
+        }
         throw new Error(`unknown label ${label}`);
       },
     },

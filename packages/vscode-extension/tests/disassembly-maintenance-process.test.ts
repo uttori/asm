@@ -144,8 +144,9 @@ test("annotation refresh reuses analysis, preserves runtime, verifies renamed so
     .filter((file) => file.path.endsWith(".asm"))
     .map((file) => fs.readFileSync(path.join(sourceDirectory, file.path), "utf8"))
     .join("\n");
-  for (const value of ["AnnotatedEntry", "Entry documentation", "Label note", "Instruction note"])
+  for (const value of ["AnnotatedEntry", "Entry documentation", "Label note", "Instruction note"]) {
     t.true(text.includes(value));
+  }
   t.true((await client.run("verify", target, budget)).comparison.equal);
   t.is(await client.run("revision", target, budget), receipt.after);
   t.deepEqual(
@@ -253,7 +254,9 @@ test("maintenance processes import, analyze, export and verify without returning
   const timedBudget = {
     ...budget,
     onProgress: ({ timing }: { timing?: MaintenanceStageTiming }) => {
-      if (timing) stages.push(timing);
+      if (timing) {
+        stages.push(timing);
+      }
     },
   };
   await t.throwsAsync(
@@ -368,7 +371,7 @@ test.serial(
     // Each unique history value expands independently on load: over 156 MiB of text alone.
     // Streaming fixture construction keeps both the test host and the 128 MiB child bounded.
     function* history(): Generator<RuntimeEvidenceRecord> {
-      for (let index = 0; index < 40_000; index++)
+      for (let index = 0; index < 40_000; index++) {
         yield {
           id: `state:${index}`,
           kind: index % 2 ? "runtime-instruction" : "runtime-cpu-state",
@@ -380,6 +383,7 @@ test.serial(
           ...(index % 2 ? { bytes: [0xea] } : {}),
           evidence: [],
         };
+      }
       yield {
         id: "executed",
         kind: "runtime-execution",
@@ -393,7 +397,9 @@ test.serial(
     const store = openAnalysisProjectStore(projectDirectory);
     try {
       store.transaction(() => {
-        for (const record of history()) store.insertRuntime(record);
+        for (const record of history()) {
+          store.insertRuntime(record);
+        }
         store.publishManifest(manifest);
       });
       store.writePointer(projectDirectory);
@@ -448,7 +454,9 @@ test.serial(
       });
       fs.writeSync(descriptor, `${header.slice(0, -1)},"chunks":[`);
       for (let index = 0; index < 20_000; index++) {
-        if (index) fs.writeSync(descriptor, ",");
+        if (index) {
+          fs.writeSync(descriptor, ",");
+        }
         fs.writeSync(
           descriptor,
           JSON.stringify({
@@ -538,7 +546,9 @@ test("cancellation waits for the current phase, then prevents further jobs", asy
       ...budget,
       signal: cancellation.signal,
       onProgress: ({ message }) => {
-        if (message === "busy") cancellation.abort();
+        if (message === "busy") {
+          cancellation.abort();
+        }
       },
     }),
     { message: /cancelled after finishing the current step/ },

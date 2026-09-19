@@ -77,7 +77,9 @@ class FakeMesenDebugClient implements MesenDebugClient {
 
   async request(method: string, parameters: Readonly<Record<string, unknown>> = {}) {
     await Promise.resolve();
-    if (this.closed) throw new Error("fake Mesen client is closed");
+    if (this.closed) {
+      throw new Error("fake Mesen client is closed");
+    }
     if (method === "hello") {
       return {
         protocolVersion: 1,
@@ -87,7 +89,9 @@ class FakeMesenDebugClient implements MesenDebugClient {
         maxMemoryRead: 4096,
       };
     }
-    if (method === "shutdown") return { shuttingDown: true };
+    if (method === "shutdown") {
+      return { shuttingDown: true };
+    }
     const cpu = typeof parameters.cpu === "string" ? parameters.cpu : "65816";
     if (
       method === "status" ||
@@ -96,12 +100,17 @@ class FakeMesenDebugClient implements MesenDebugClient {
       method === "resume" ||
       method === "step"
     ) {
-      if (method === "reset") resetState(this.#state);
-      if (method === "pause") this.#state.stopped = true;
+      if (method === "reset") {
+        resetState(this.#state);
+      }
+      if (method === "pause") {
+        this.#state.stopped = true;
+      }
       if (method === "resume") {
         const breakpoint = [...this.#state.breakpoints][0];
-        if (breakpoint === undefined) this.#state.stopped = false;
-        else {
+        if (breakpoint === undefined) {
+          this.#state.stopped = false;
+        } else {
           this.#state.pc = breakpoint;
           this.#state.stopped = true;
         }
@@ -115,9 +124,13 @@ class FakeMesenDebugClient implements MesenDebugClient {
     }
     if (method === "setBreakpoints") {
       const addresses = parameters.addresses;
-      if (!Array.isArray(addresses)) throw new Error("fake breakpoint list missing");
+      if (!Array.isArray(addresses)) {
+        throw new Error("fake breakpoint list missing");
+      }
       this.#state.breakpoints.clear();
-      for (const address of addresses) this.#state.breakpoints.add(Number(address));
+      for (const address of addresses) {
+        this.#state.breakpoints.add(Number(address));
+      }
       return { count: addresses.length };
     }
     if (method === "readMemory") {
@@ -135,9 +148,13 @@ class FakeMesenDebugClient implements MesenDebugClient {
 
   async close(): Promise<void> {
     await Promise.resolve();
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
-    for (const listener of this.#closeListeners) listener();
+    for (const listener of this.#closeListeners) {
+      listener();
+    }
   }
 
   onClose(listener: (error?: Error) => void): DebugSubscription {
@@ -147,7 +164,9 @@ class FakeMesenDebugClient implements MesenDebugClient {
 
   fail(error: Error): void {
     this.closed = true;
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
   }
 
   #status(cpu: string) {
@@ -266,7 +285,9 @@ const fixture: DebugBackendConformanceFixture = {
 const createBackend = (state = fakeState()): MesenDebugBackend =>
   new MesenDebugBackend({
     createClient: ({ reset }) => {
-      if (reset) resetState(state);
+      if (reset) {
+        resetState(state);
+      }
       return new FakeMesenDebugClient(state);
     },
     pollIntervalMs: 1,
@@ -351,8 +372,9 @@ test("Mesen translator rejects malformed discovery and incoherent connect states
     [helloPayload({ maxMemoryRead: 0 }), /must be positive/],
     [helloPayload({ stopped: "yes" }), /stopped state must be a boolean/],
   ];
-  for (const [hello, message] of invalidHello)
+  for (const [hello, message] of invalidHello) {
     await t.throwsAsync(backendWithHello(hello).connect(), { message });
+  }
 
   t.throws(
     () =>
@@ -465,7 +487,9 @@ test("Mesen translator validates stopped state, addresses, and native responses"
   });
 
   client.request = async (method, parameters) => {
-    if (method === "setBreakpoints") return { count: 0 };
+    if (method === "setBreakpoints") {
+      return { count: 0 };
+    }
     return request(method, parameters);
   };
   await t.throwsAsync(backend.setBreakpoints([fixture.initialAddress]), {
@@ -490,7 +514,9 @@ test("Mesen translator validates stopped state, addresses, and native responses"
   const falseEmulationRequest = client.request.bind(client);
   client.request = async (method, parameters) => {
     const value = await falseEmulationRequest(method, parameters);
-    if (method !== "status" || typeof value !== "object" || !value) return value;
+    if (method !== "status" || typeof value !== "object" || !value) {
+      return value;
+    }
     const status = value as { registers: Readonly<Record<string, unknown>> };
     return { ...value, registers: { ...status.registers, emulationMode: false } };
   };
@@ -503,8 +529,10 @@ test("Mesen translator handles SuperFX state and execution failure paths", async
   const superClient = new FakeMesenDebugClient(fakeState());
   const superRequest = superClient.request.bind(superClient);
   superClient.request = async (method, parameters) => {
-    if (method === "hello") return helloPayload({ processors: ["65816", "spc700", "superfx"] });
-    if (method === "status" && parameters.cpu === "superfx")
+    if (method === "hello") {
+      return helloPayload({ processors: ["65816", "spc700", "superfx"] });
+    }
+    if (method === "status" && parameters.cpu === "superfx") {
       return {
         stopped: true,
         cpu: "superfx",
@@ -530,6 +558,7 @@ test("Mesen translator handles SuperFX state and execution failure paths", async
           cycleCount: 0x1234,
         },
       };
+    }
     return superRequest(method, parameters);
   };
   const superBackend = new MesenDebugBackend({ createClient: () => superClient });
@@ -581,9 +610,12 @@ test("Mesen translator handles SuperFX state and execution failure paths", async
   const invalidSuperClient = new FakeMesenDebugClient(fakeState());
   const invalidSuperRequest = invalidSuperClient.request.bind(invalidSuperClient);
   invalidSuperClient.request = async (method, parameters) => {
-    if (method === "hello") return helloPayload({ processors: ["65816", "superfx"] });
-    if (method === "status" && parameters.cpu === "superfx")
+    if (method === "hello") {
+      return helloPayload({ processors: ["65816", "superfx"] });
+    }
+    if (method === "status" && parameters.cpu === "superfx") {
       return { stopped: true, cpu: "superfx", programCounter: 0, registers: { R: [] } };
+    }
     return invalidSuperRequest(method, parameters);
   };
   const invalidSuper = new MesenDebugBackend({ createClient: () => invalidSuperClient });
@@ -617,8 +649,10 @@ test("Mesen translator handles SuperFX state and execution failure paths", async
   const pollingRequest = pollingClient.request.bind(pollingClient);
   pollingClient.request = async (method, parameters) => {
     // A third-party client can reject with a non-Error value; the backend must normalize it.
-    // oxlint-disable-next-line typescript/only-throw-error
-    if (method === "status") throw "poll failed";
+    if (method === "status") {
+      // oxlint-disable-next-line typescript/only-throw-error
+      throw "poll failed";
+    }
     return pollingRequest(method, parameters);
   };
   const polling = new MesenDebugBackend({ createClient: () => pollingClient, pollIntervalMs: 1 });

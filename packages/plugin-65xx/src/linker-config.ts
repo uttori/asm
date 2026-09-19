@@ -141,7 +141,9 @@ export function parseLd65Config(source: string): Ld65Config {
 export function linkerDefinedSymbolNames(config: Ld65Config): string[] {
   const names: string[] = [];
   for (const segment of config.segments.values()) {
-    if (!segment.define) continue;
+    if (!segment.define) {
+      continue;
+    }
     names.push(
       `__${segment.name}_LOAD__`,
       `__${segment.name}_RUN__`,
@@ -197,7 +199,9 @@ function parseNamedStatement(statement: string): NamedStatement {
   const attrs: Record<string, string> = {};
   for (const part of splitTopLevelCommas(statement.slice(colon + 1))) {
     const equals = part.indexOf("=");
-    if (equals <= 0) continue;
+    if (equals <= 0) {
+      continue;
+    }
     const key = part.slice(0, equals).trim().toLowerCase();
     const value = part.slice(equals + 1).trim();
     attrs[key] = value;
@@ -217,7 +221,9 @@ function splitTopLevelCommas(input: string): string[] {
   for (const char of input) {
     if (quote) {
       current += char;
-      if (char === quote) quote = undefined;
+      if (char === quote) {
+        quote = undefined;
+      }
       continue;
     }
     if (char === '"' || char === "'") {
@@ -227,14 +233,18 @@ function splitTopLevelCommas(input: string): string[] {
     }
     if (char === ",") {
       const trimmed = current.trim();
-      if (trimmed) parts.push(trimmed);
+      if (trimmed) {
+        parts.push(trimmed);
+      }
       current = "";
       continue;
     }
     current += char;
   }
   const trimmed = current.trim();
-  if (trimmed) parts.push(trimmed);
+  if (trimmed) {
+    parts.push(trimmed);
+  }
   return parts;
 }
 
@@ -244,7 +254,9 @@ function splitTopLevelCommas(input: string): string[] {
  * @returns {number | undefined} The numeric value.
  */
 function parseNumberToken(token: string | undefined): number | undefined {
-  if (token === undefined || token === "") return undefined;
+  if (token === undefined || token === "") {
+    return undefined;
+  }
   if (token.startsWith("$")) {
     const value = Number.parseInt(token.slice(1), 16);
     return Number.isFinite(value) ? value : undefined;
@@ -276,9 +288,15 @@ function requireNumber(attrs: Record<string, string>, key: string, owner: string
  * @returns {boolean | undefined} Parsed flag.
  */
 function parseYesNo(raw: string | undefined): boolean | undefined {
-  if (raw === undefined) return undefined;
+  if (raw === undefined) {
+    return undefined;
+  }
   const normalized = raw.toLowerCase();
-  if (normalized === "yes" || normalized === "true") return true;
-  if (normalized === "no" || normalized === "false") return false;
+  if (normalized === "yes" || normalized === "true") {
+    return true;
+  }
+  if (normalized === "no" || normalized === "false") {
+    return false;
+  }
   return undefined;
 }

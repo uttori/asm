@@ -38,10 +38,12 @@ const readWord = (image, address) => {
     return low === undefined || high === undefined ? undefined : low | (high << 8);
 };
 const controlTargetKind = (kind) => {
-    if (kind === "branch")
+    if (kind === "branch") {
         return "branch";
-    if (kind === "call")
+    }
+    if (kind === "call") {
         return "call";
+    }
     return "jump";
 };
 const controlsFor = (instruction, image) => {
@@ -252,11 +254,13 @@ export const analyzeSpc700Aram = (image, options = {}) => {
     const explicitStateOverrides = new Map();
     const conflictingExplicitStateOverrides = new Set();
     for (const entry of options.entryPoints ?? []) {
-        if (!entry.state || conflictingExplicitStateOverrides.has(entry.address))
+        if (!entry.state || conflictingExplicitStateOverrides.has(entry.address)) {
             continue;
+        }
         const existing = explicitStateOverrides.get(entry.address);
-        if (!existing)
+        if (!existing) {
             explicitStateOverrides.set(entry.address, entry.state);
+        }
         else if (JSON.stringify(existing) !== JSON.stringify(entry.state)) {
             explicitStateOverrides.delete(entry.address);
             conflictingExplicitStateOverrides.add(entry.address);
@@ -276,15 +280,17 @@ export const analyzeSpc700Aram = (image, options = {}) => {
         for (const { annotation } of matching) {
             state = applySpc700StateOverride(state, stateOverrideFor(annotation));
             // Keep every evidence identity without spreading it onto the native call stack.
-            for (const id of annotation.evidence)
+            for (const id of annotation.evidence) {
                 consumed.push(id);
+            }
         }
         return { state, evidence: [...new Set(consumed)].sort() };
     };
     const seeds = [];
     for (const label of options.labels ?? []) {
-        if (label.addressSpace !== SPC700_ARAM_ADDRESS_SPACE)
+        if (label.addressSpace !== SPC700_ARAM_ADDRESS_SPACE) {
             continue;
+        }
         const seeded = stateAtAddress(unknownSpc700State(), label.address);
         seeds.push({
             id: `label:${label.id}`,
@@ -330,8 +336,9 @@ export const analyzeSpc700Aram = (image, options = {}) => {
         });
     }
     for (const targetSet of options.targetSets ?? []) {
-        if (targetSet.addressSpace !== SPC700_ARAM_ADDRESS_SPACE)
+        if (targetSet.addressSpace !== SPC700_ARAM_ADDRESS_SPACE) {
             continue;
+        }
         for (const address of targetSet.targets) {
             const seeded = stateAtAddress(unknownSpc700State(), address);
             seeds.push({
@@ -363,8 +370,9 @@ export const analyzeSpc700Aram = (image, options = {}) => {
         transfer: transferSpc700State,
         decode: (address, state) => {
             const identity = image.identifyAddress(address);
-            if (!identity)
+            if (!identity) {
                 return { kind: "error", reason: "Address is outside the ARAM image." };
+            }
             const blocked = annotations.find((annotation) => intervalContains(annotation, address) &&
                 DATA_CLASSIFICATIONS.has(annotation.classification));
             if (blocked) {
@@ -387,8 +395,9 @@ export const analyzeSpc700Aram = (image, options = {}) => {
                     requiredState: decoded.requiredState,
                 };
             }
-            if (decoded.kind === "error")
+            if (decoded.kind === "error") {
                 return { kind: "error", reason: decoded.message };
+            }
             const instruction = decoded.instruction;
             const crossing = annotations.find((annotation) => DATA_CLASSIFICATIONS.has(annotation.classification) &&
                 Array.from({ length: instruction.size }, (_, index) => address + index).some((value) => intervalContains(annotation, value)));

@@ -113,7 +113,9 @@ const joinValue = (
   left: Cpu65816AbstractValue,
   right: Cpu65816AbstractValue,
 ): Cpu65816AbstractValue => {
-  if (left.kind === "unknown" || right.kind === "unknown") return unknown();
+  if (left.kind === "unknown" || right.kind === "unknown") {
+    return unknown();
+  }
   if (left.kind === "known" && right.kind === "known") {
     return left.value === right.value
       ? left
@@ -133,11 +135,15 @@ const joinStack = (
   left: Cpu65816AbstractStack,
   right: Cpu65816AbstractStack,
 ): Cpu65816AbstractStack => {
-  if (left.kind === "unknown" || right.kind === "unknown") return { kind: "unknown" };
+  if (left.kind === "unknown" || right.kind === "unknown") {
+    return { kind: "unknown" };
+  }
   if (left.kind === "conflicting" || right.kind === "conflicting") {
     return { kind: "conflicting" };
   }
-  if (left.entries.length !== right.entries.length) return { kind: "conflicting" };
+  if (left.entries.length !== right.entries.length) {
+    return { kind: "conflicting" };
+  }
   return left.entries.every((entry, index) => sameEntry(entry, right.entries[index]))
     ? left
     : { kind: "conflicting" };
@@ -280,9 +286,13 @@ export const cpu65816DecodeState = (state: Cpu65816AbstractState): Cpu65816Decod
 });
 
 const adjustStackPointer = (state: Cpu65816AbstractState, delta: number): Cpu65816AbstractValue => {
-  if (state.s.kind !== "known") return state.s.kind === "conflicting" ? state.s : unknown();
+  if (state.s.kind !== "known") {
+    return state.s.kind === "conflicting" ? state.s : unknown();
+  }
   let value = (state.s.value + delta) & 0xffff;
-  if (state.e.kind === "known" && state.e.value === 1) value = 0x0100 | (value & 0xff);
+  if (state.e.kind === "known" && state.e.value === 1) {
+    value = 0x0100 | (value & 0xff);
+  }
   return known(value);
 };
 
@@ -316,12 +326,16 @@ const pull = (
 const pushedBytes = (mnemonic: string, state: Cpu65816AbstractState): 1 | 2 | undefined => {
   if (mnemonic === "PHA") {
     const flag = decoderFlag(state.m);
-    if (flag === "unknown") return undefined;
+    if (flag === "unknown") {
+      return undefined;
+    }
     return flag === 0 ? 2 : 1;
   }
   if (mnemonic === "PHX" || mnemonic === "PHY") {
     const flag = decoderFlag(state.x);
-    if (flag === "unknown") return undefined;
+    if (flag === "unknown") {
+      return undefined;
+    }
     return flag === 0 ? 2 : 1;
   }
   return mnemonic === "PHD" || mnemonic === "PEA" || mnemonic === "PEI" || mnemonic === "PER"
@@ -332,12 +346,16 @@ const pushedBytes = (mnemonic: string, state: Cpu65816AbstractState): 1 | 2 | un
 const pulledBytes = (target: string, state: Cpu65816AbstractState): 1 | 2 | undefined => {
   if (target === "a") {
     const flag = decoderFlag(state.m);
-    if (flag === "unknown") return undefined;
+    if (flag === "unknown") {
+      return undefined;
+    }
     return flag === 0 ? 2 : 1;
   }
   if (target === "x" || target === "y") {
     const flag = decoderFlag(state.x);
-    if (flag === "unknown") return undefined;
+    if (flag === "unknown") {
+      return undefined;
+    }
     return flag === 0 ? 2 : 1;
   }
   return target === "d" || target === "pc" ? 2 : 1;
@@ -350,9 +368,15 @@ const loseStackPrecision = (state: Cpu65816AbstractState): Cpu65816AbstractState
 });
 
 const sourceValue = (source: string, state: Cpu65816AbstractState): Cpu65816AbstractValue => {
-  if (source === "pbr") return state.pbr;
-  if (source === "dbr") return state.dbr;
-  if (source === "d") return state.d;
+  if (source === "pbr") {
+    return state.pbr;
+  }
+  if (source === "dbr") {
+    return state.dbr;
+  }
+  if (source === "d") {
+    return state.d;
+  }
   return unknown();
 };
 
@@ -454,7 +478,9 @@ export const transferCpu65816State = (
     }
   }
 
-  if (CARRY_UNKNOWN_MNEMONICS.has(instruction.mnemonic)) state = { ...state, carry: unknown() };
+  if (CARRY_UNKNOWN_MNEMONICS.has(instruction.mnemonic)) {
+    state = { ...state, carry: unknown() };
+  }
   if (["BRK", "COP", "JSL", "JSR"].includes(instruction.mnemonic)) {
     state = loseStackPrecision(state);
   }

@@ -70,21 +70,27 @@ export const normalizedSeeds = (
   value: readonly DisassemblyEntrySeed[] | undefined,
   snapshot: { readonly shards: Pick<AnalysisProjectShards, "evidence"> },
 ): readonly Snes65816EntryPoint[] => {
-  if (!value?.length) return [];
+  if (!value?.length) {
+    return [];
+  }
   const evidence = new Set(snapshot.shards.evidence.map((record) => record.id));
   const unique = new Map<number, Set<string>>();
   for (const seed of value) {
-    if (!Number.isSafeInteger(seed.address) || seed.address < 0 || seed.address > 0xffffff)
+    if (!Number.isSafeInteger(seed.address) || seed.address < 0 || seed.address > 0xffffff) {
       throw new Error("Runtime code seeds must be 24-bit integer CPU addresses.");
+    }
     const accepted = (seed.evidence ?? []).filter((id) => evidence.has(id));
     const prior = unique.get(seed.address) ?? new Set<string>();
-    for (const id of accepted) prior.add(id);
+    for (const id of accepted) {
+      prior.add(id);
+    }
     unique.set(seed.address, prior);
   }
-  if (unique.size > MAX_RUNTIME_ENTRY_SEEDS)
+  if (unique.size > MAX_RUNTIME_ENTRY_SEEDS) {
     throw new Error(
       `Trace contains ${unique.size} unique PCs; capture a narrower window (limit ${MAX_RUNTIME_ENTRY_SEEDS}).`,
     );
+  }
   return [...unique]
     .sort(([left], [right]) => left - right)
     .map(([address, ids]) => ({

@@ -5,7 +5,7 @@ export interface SqliteMigrationProgress {
     readonly table?: ShardKind;
     readonly records?: number;
 }
-/** The original stays at backupFile until explicitly removed or archived after operational checks. */
+/** The original stays at backupFile until explicitly removed after operational checks. */
 export interface SqliteMigrationResult {
     readonly changed: boolean;
     readonly recovered: boolean;

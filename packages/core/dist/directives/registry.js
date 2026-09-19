@@ -99,20 +99,27 @@ export class DirectiveRegistry {
 export const createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
     const registry = new DirectiveRegistry(directivePrefixes);
     const enabled = new Set(enabledGroups);
-    if (enabled.has("include"))
+    if (enabled.has("include")) {
         registerIncludeSourceDirectives(registry, contexts.includeSource);
-    if (enabled.has("memory"))
+    }
+    if (enabled.has("memory")) {
         registerFillPadDirectives(registry, contexts.fillPad);
-    if (enabled.has("control"))
+    }
+    if (enabled.has("control")) {
         registerFlowControlDirectives(registry, contexts.flowControl);
-    if (enabled.has("namespace"))
+    }
+    if (enabled.has("namespace")) {
         registerNamespaceDirectives(registry, contexts.namespace);
-    if (enabled.has("layout"))
+    }
+    if (enabled.has("layout")) {
         registerLayoutDirectives(registry, contexts.layout);
-    if (enabled.has("data"))
+    }
+    if (enabled.has("data")) {
         registerDataDirectives(registry, contexts.data);
-    if (enabled.has("struct"))
+    }
+    if (enabled.has("struct")) {
         registerStructBinaryDirectives(registry, contexts.struct);
+    }
     if (enabled.has("table") || enabled.has("diagnostic")) {
         registerMiscDirectives(registry, {
             table: contexts.table,

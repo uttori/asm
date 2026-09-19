@@ -25,8 +25,8 @@ export interface SnesHardwareRegister {
  * @returns {SnesHardwareRegister | undefined} Volatile register identity, or `undefined` if not MMIO.
  */
 export declare const identifySnesHardwareRegister: (address: number) => SnesHardwareRegister | undefined;
-/** Stable source filename emitted beside every generated SNES disassembly. */
-export declare const SNES_HARDWARE_DEFINES_SOURCE = "snes-defines.asm";
+/** Architecture-neutral filename; the SNES exporter supplies the register definitions. */
+export declare const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
 /**
  * Returns the complete documented set of CPU-visible register constants used by generated source.
  * DMA channel registers are expanded so repeated `$43x0` access patterns remain obvious and every

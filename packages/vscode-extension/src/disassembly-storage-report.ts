@@ -6,7 +6,7 @@ import type { AnalysisStorageSnapshot } from "@uttori/asm-disassembler";
  */
 const mib = (bytes: number): string => `${(bytes / 1024 ** 2).toFixed(1)} MiB`;
 
-/** Durable facts, compact source relationships and optional archives are accounted separately.
+/** Durable facts, compact source relationships and database allocation are accounted separately.
  * @param {AnalysisStorageSnapshot} before Allocation before processing.
  * @param {AnalysisStorageSnapshot} after Allocation after processing.
  * @returns {string} Markdown storage comparison and interpretation.
@@ -27,9 +27,7 @@ export const renderDisassemblyStorage = (
     `| Shared runtime facts | ${before.facts} | ${after.facts} |`,
     `| Capture/fact relationships | ${before.observations} | ${after.observations} |`,
     `| Virtual paired CPU states | ${before.pairedStates} | ${after.pairedStates} |`,
-    `| Managed capture archives | ${mib(before.archiveBytes)} | ${mib(after.archiveBytes)} |`,
-    `| Pinned archives (included above) | ${mib(before.pinnedArchiveBytes)} | ${mib(after.pinnedArchiveBytes)} |`,
     `| Durable capture receipts | ${before.captures} | ${after.captures} |`,
     "",
-    "WAL bytes are allocated transaction space. Free pages are reusable; explicit compaction releases them to the filesystem. Archive expiry preserves code, counts, annotations and capture receipts.",
+    "WAL bytes are allocated transaction space. Free pages are reusable; explicit compaction releases them to the filesystem.",
   ].join("\n");

@@ -102,7 +102,9 @@ test("live worker stages provisional facts, then publishes the same result as of
     128,
   );
   t.teardown(() => client.cancel());
-  for (let i = 0; !progress && i < 200; i++) await delay(10);
+  for (let i = 0; !progress && i < 200; i++) {
+    await delay(10);
+  }
   t.is(progress?.busEvents, 1);
   t.true(progress?.provisional);
   t.is(loadAnalysisProject(directory).shards.runtime.length, 0);
@@ -118,9 +120,8 @@ test("live worker stages provisional facts, then publishes the same result as of
   const store = openAnalysisProjectStore(directory);
   try {
     const receipt = store.captureReceipt(result.sourceSha256);
-    t.is(receipt?.availability, "external");
-    t.is(receipt?.original_path, file);
-    t.is(receipt?.archive_bytes, 0);
+    t.is(receipt?.observed_events, 2);
+    t.true(fs.existsSync(file));
   } finally {
     store.close();
   }
@@ -161,10 +162,14 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
     );
     t.teardown(() => client.cancel());
     if (failure !== "lag" && failure !== "budget") {
-      for (let i = 0; !progress && i < 200; i++) await delay(10);
+      for (let i = 0; !progress && i < 200; i++) {
+        await delay(10);
+      }
       t.true(progress);
     }
-    if (failure === "cancel") client.cancel();
+    if (failure === "cancel") {
+      client.cancel();
+    }
     if (failure === "stale") {
       const changed = loadAnalysisProject(directory);
       writeAnalysisProject(directory, {
@@ -174,7 +179,9 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
     }
     if (failure === "corrupt" || failure === "stale") {
       const terminal = busJsonFrame("END2", busPosition("1", "1", "complete"));
-      if (failure === "corrupt") terminal[12] ^= 1;
+      if (failure === "corrupt") {
+        terminal[12] ^= 1;
+      }
       fs.appendFileSync(file + ".partial", terminal);
       fs.linkSync(file + ".partial", file);
       fs.unlinkSync(file + ".partial");

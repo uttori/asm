@@ -266,21 +266,29 @@ export function activate(context: ExtensionContext): void {
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
     window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
     window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
-      if (textEditor === window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
+      if (textEditor === window.activeTextEditor) {
+        analysisAnnotationController.refresh(textEditor);
+      }
     }),
     window.onDidChangeTextEditorOptions(({ textEditor }) => {
-      if (textEditor === window.activeTextEditor) analysisAnnotationController.refresh(textEditor);
+      if (textEditor === window.activeTextEditor) {
+        analysisAnnotationController.refresh(textEditor);
+      }
     }),
     workspace.onDidChangeTextDocument(({ document }) =>
       analysisAnnotationController.documentChanged(document),
     ),
     workspace.onDidSaveTextDocument(() => analysisAnnotationController.refresh()),
     vscodeDebug.onDidStartDebugSession((session) => {
-      if (session.configuration.uttoriRunAndWatch === true) watchedDebugSession = session;
+      if (session.configuration.uttoriRunAndWatch === true) {
+        watchedDebugSession = session;
+      }
       analysisAnnotationController.refresh();
     }),
     vscodeDebug.onDidTerminateDebugSession((session) => {
-      if (watchedDebugSession?.id === session.id) watchedDebugSession = undefined;
+      if (watchedDebugSession?.id === session.id) {
+        watchedDebugSession = undefined;
+      }
       analysisAnnotationController.refresh();
     }),
     commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
@@ -304,7 +312,9 @@ export function activate(context: ExtensionContext): void {
     commands.registerCommand("asm.sources.refresh", refreshAnalysisViews),
     commands.registerCommand("asm.analysis.navigate", (element?: unknown) => {
       const target = analysisGraphProvider.navigationTarget(element);
-      if (target) void navigateToAnalysisLocation(target);
+      if (target) {
+        void navigateToAnalysisLocation(target);
+      }
     }),
     commands.registerCommand("asm.coverage.classifyRange", (element?: unknown) =>
       analysisProjectEditor.classifyRange(coverageProvider.editTarget(element)),
@@ -337,8 +347,9 @@ export function activate(context: ExtensionContext): void {
       if (
         event.affectsConfiguration("asm.analysis.showAnnotations") ||
         event.affectsConfiguration("asm.analysis.annotationColumn")
-      )
+      ) {
         analysisAnnotationController.refresh();
+      }
       if (event.affectsConfiguration("asm")) {
         void panelProvider.refresh();
         outlineProvider.refresh();
@@ -418,7 +429,9 @@ function stopWatch(): void {
   saveListener?.dispose();
   saveListener = undefined;
   watchEntryUri = undefined;
-  if (watchTimer) clearTimeout(watchTimer);
+  if (watchTimer) {
+    clearTimeout(watchTimer);
+  }
   watchTimer = undefined;
   updateStatusItem();
 }
@@ -451,8 +464,12 @@ async function launchLiveBuild(
   const binding =
     configuredEmulatorRuntime(context, resource) ??
     (await configureEmulatorRuntime(context, resource));
-  if (!binding) return false;
-  if (watched && watchedDebugSession) await vscodeDebug.stopDebugging(watchedDebugSession);
+  if (!binding) {
+    return false;
+  }
+  if (watched && watchedDebugSession) {
+    await vscodeDebug.stopDebugging(watchedDebugSession);
+  }
   const configuration = {
     ...liveDebugConfiguration(binding, artifacts, folder),
     ...(watched ? { uttoriRunAndWatch: true } : {}),
@@ -462,12 +479,16 @@ async function launchLiveBuild(
 
 async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Promise<void> {
   const result = await runBuild(resolveBuildEntryUri());
-  if (!result?.ok) return;
+  if (!result?.ok) {
+    return;
+  }
   await launchLiveBuild(context, result, noDebug, false);
 }
 
 async function runAndWatch(context: ExtensionContext): Promise<void> {
-  if (watchEnabled) stopWatch();
+  if (watchEnabled) {
+    stopWatch();
+  }
   const entry = resolveWatchEntry();
   if (!entry) {
     void window.showErrorMessage(
@@ -487,7 +508,9 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
     );
     return;
   }
-  if (!(await launchLiveBuild(context, result, false, true))) stopWatch();
+  if (!(await launchLiveBuild(context, result, false, true))) {
+    stopWatch();
+  }
 }
 
 /**
@@ -550,10 +573,16 @@ function onDocumentSaved(document: TextDocument): void {
     watchTimer = undefined;
     const entry = watchEntryUri;
     void runBuild(entry, true).then(async (result) => {
-      if (!result?.ok || watchMode !== "emulator") return;
-      if (result.outputChanged === false && result.debugMapChanged === false) return;
+      if (!result?.ok || watchMode !== "emulator") {
+        return;
+      }
+      if (result.outputChanged === false && result.debugMapChanged === false) {
+        return;
+      }
       const context = extensionContext;
-      if (context) await launchLiveBuild(context, result, false, true);
+      if (context) {
+        await launchLiveBuild(context, result, false, true);
+      }
     });
   }, 250);
 }
@@ -626,9 +655,15 @@ async function initConfig(): Promise<void> {
   const architecture = config.get<string>("architecture", "");
   const buildOutput = config.get<string>("buildOutput", "");
   const baseImage = config.get<string>("baseImage", "");
-  if (architecture) body.architecture = architecture;
-  if (buildOutput) body.buildOutput = buildOutput;
-  if (baseImage) body.baseImage = baseImage;
+  if (architecture) {
+    body.architecture = architecture;
+  }
+  if (buildOutput) {
+    body.buildOutput = buildOutput;
+  }
+  if (baseImage) {
+    body.baseImage = baseImage;
+  }
 
   try {
     await workspace.fs.stat(configUri);

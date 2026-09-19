@@ -5,7 +5,8 @@
   "license": "MIT",
   "files": [
     "dist",
-    "src"
+    "src",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,

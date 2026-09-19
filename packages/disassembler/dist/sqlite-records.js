@@ -7,10 +7,12 @@ import { decodeSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-paylo
  * @returns {number} Lexical ID comparison; streaming consumers deliberately do not use this sort.
  */
 export const compareRuntimeRecordIds = (left, right) => {
-    if (left.id < right.id)
+    if (left.id < right.id) {
         return -1;
-    if (left.id > right.id)
+    }
+    if (left.id > right.id) {
         return 1;
+    }
     return 0;
 };
 /**
@@ -177,8 +179,9 @@ export const runtimeFromRow = (row) => {
         ? {}
         : JSON.parse(decodeSqlitePayload(fields.payload));
     // LEFT JOIN keeps a corrupt dictionary reference visible; silently omitting the row would lose history.
-    if (typeof fields.evidence !== "string")
+    if (typeof fields.evidence !== "string") {
         throw new Error("Missing SQLite runtime evidence dictionary entry.");
+    }
     const evidence = JSON.parse(fields.evidence);
     const kind = fields.kind;
     const architecture = fields.architecture;
@@ -274,8 +277,9 @@ export const runtimeFromRow = (row) => {
             coverage: fields.coverage,
         };
     }
-    if (kind !== "runtime-control-target")
+    if (kind !== "runtime-control-target") {
         throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
+    }
     return {
         id,
         kind: "runtime-control-target",
@@ -296,10 +300,12 @@ export const runtimeFromRow = (row) => {
  * @returns {object} Point or source coordinate, with null columns when no point is represented.
  */
 export const analysisAddress = (record) => {
-    if ("addressSpace" in record && "address" in record)
+    if ("addressSpace" in record && "address" in record) {
         return { addressSpace: record.addressSpace, address: record.address };
-    if ("addressSpace" in record && "fromAddress" in record)
+    }
+    if ("addressSpace" in record && "fromAddress" in record) {
         return { addressSpace: record.addressSpace, address: record.fromAddress };
+    }
     return { addressSpace: null, address: null };
 };
 //# sourceMappingURL=sqlite-records.js.map

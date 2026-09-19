@@ -59,7 +59,9 @@ export const preprocessBlockCommands = (
   for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
     let line = lines[lineIndex];
     line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
 
     // Preserve the special test directive comment so downstream handling can
     // detect and execute fixture setup behavior.
@@ -69,10 +71,14 @@ export const preprocessBlockCommands = (
     }
 
     line = removeInlineComment(line, syntaxProfile);
-    if (!line.trim()) continue;
+    if (!line.trim()) {
+      continue;
+    }
 
     if (isOpenStructInitializer(nextCommandBuffer + line)) {
-      if (nextCommandBuffer === "") bufferStartLine = lineIndex;
+      if (nextCommandBuffer === "") {
+        bufferStartLine = lineIndex;
+      }
       nextCommandBuffer += `${line} `;
     } else if (line.endsWith("\\")) {
       if (nextCommandBuffer === "") {

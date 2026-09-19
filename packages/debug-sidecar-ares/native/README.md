@@ -5,21 +5,19 @@ New desktop work lives in `fixtures/external/ares`, currently on
 contains separate U3 register, U4 safe-memory, and U5 execution-boundary commits,
 the submitted U1/U2 integration layers, the paused save/load follow-up, native
 tests, and exact series verification.
-See the [evidence guide](../../../docs/ares-upstream-u1-u6-evidence.md) for the
-desktop build and reproduction commands, and the [U6 RFC](../../../docs/ares-capture-rfc.md)
-for realtime discovery and lossless capture. This prepared debugger build has
+See the [contribution package](upstream/README.md) for source reconstruction and
+verification commands, and the [capture guide](../CAPTURE.md) for recording workflows and limits. This prepared debugger build has
 not replaced the staged rich-trace runtime.
 
 The active rich-trace runtime received a separate local paused save/load hotfix
 on 2026-09-09. It is installed at the existing editor launch path with verified
-manifest hashes and a retained rollback app. See the [runtime fix and desktop
-validation](../../../docs/ares-paused-state-runtime-fix.md). The original rich
+manifest hashes and a retained rollback app. The original rich
 source checkout remains preserved; maintenance lives on
 `codex/ares-rich-state-load-fix` in its own checkout.
 
 ## Downstream lossless instruction capture
 
-The [capture-v2 package](capture-v2/README.md) adds lossless 65816 instruction capture to the rich maintenance source on `codex/ares-capture-v2`, independently of the prepared upstream series. It includes exact source reconstruction, bounded queue/reserve tests, desktop TCP evidence, and partial-file recovery. The [implementation guide](../../../docs/ares-capture-v2-implementation.md) documents the staged runtime, editor setting, and instruction-only completeness boundary.
+The [capture-v2 package](capture-v2/README.md) adds lossless 65816 instruction capture to the rich maintenance source on `codex/ares-capture-v2`, independently of the prepared upstream series. It includes exact source reconstruction, bounded queue/reserve tests, desktop TCP evidence, and partial-file recovery. The [capture guide](../CAPTURE.md) documents runtime selection, editor settings, and the instruction-only completeness boundary.
 
 ## Historical execution detail supplement
 
@@ -44,9 +42,9 @@ Protocol additions:
 - Row: `pc,state,bytes,droppedMemory,accesses;`, with hexadecimal fields. State is ten 16-bit values: A/X/Y/S/D/DB/PB/PC/P/E. Each access is a 64-bit address, byte value, direction nibble (read/write/fetch = 0/1/2), actor nibble (CPU/DMA/HDMA = 0/1/2), and channel nibble (CPU = F, DMA = 0–7).
 - Named reads add physical `snes.sram` and `snes.spc700.aram` storage.
 
-No extra bus reads are used to acquire instruction bytes or memory events. Events become visible after instruction execution; starting or pausing at a PC does not itself create an execution event. The trace remains bounded and explicitly reports loss. See `docs/snes-function-heuristics-and-runtime-code.md` for limits and remaining processor coverage.
+No extra bus reads are used to acquire instruction bytes or memory events. Events become visible after instruction execution; starting or pausing at a PC does not itself create an execution event. The trace remains bounded and explicitly reports loss. See [SNES analysis](../../plugin-snes/ANALYSIS.md) for limits and remaining processor coverage.
 
-The [lossless capture and upstream contribution plan](../../../docs/ares-lossless-capture-and-upstream-plan.md) defines the next native/protocol milestones and carries forward the older ares contribution backlog. It also requires provenance checks for the complete layered patch series before promoting a new runtime.
+See [capture modes and recovery](../CAPTURE.md) for supported evidence scopes. Before promoting a runtime, verify the complete layered patch series and follow the [distribution gates](../RUNTIME.md#distribution-and-notices).
 
 Run the real 65816 capture and built-stdio transport tests against an explicitly staged runtime:
 
@@ -56,7 +54,7 @@ UTTORI_ARES_RICH_LIVE=1 UTTORI_ARES_RICH_RUNTIME=/absolute/runtime \
   npx ava packages/debug-sidecar-ares/tests/rich-trace-live.test.ts
 ```
 
-The tests require a local loopback debugger socket and a supplied ROM; no ROM is bundled. The project code and tests remain under the repository license; the patch applies to ares and must be distributed with the ares license/notices as described in `docs/ares-native-runtime-distribution.md`.
+The tests require a local loopback debugger socket and a supplied ROM; no ROM is bundled. The project code and tests remain under the repository license; the patch applies to ares and must be distributed with the ares license/notices as described in [runtime distribution](../RUNTIME.md).
 
 ## GDB polling-window correction (U2)
 

@@ -14,8 +14,9 @@ import { indexSnesStructFields, loadSnesStructMap, planSnesStructRomFields, rend
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 const byteList = (bytes) => [...bytes].map((byte) => hex(byte, 2)).join(", ");
 const asciiString = (bytes) => {
-    if (![...bytes].every((byte) => byte >= 0x20 && byte <= 0x7e))
+    if (![...bytes].every((byte) => byte >= 0x20 && byte <= 0x7e)) {
         return undefined;
+    }
     const value = String.fromCharCode(...bytes)
         .replaceAll("\\", "\\\\")
         .replaceAll("!", "\\!")
@@ -23,14 +24,18 @@ const asciiString = (bytes) => {
     return `"${value}"`;
 };
 const capacity = (bytes) => {
-    if (bytes === undefined)
+    if (bytes === undefined) {
         return "invalid size code";
-    if (bytes === 0)
+    }
+    if (bytes === 0) {
         return "none";
-    if (bytes >= 1024 * 1024 && bytes % (1024 * 1024) === 0)
+    }
+    if (bytes >= 1024 * 1024 && bytes % (1024 * 1024) === 0) {
         return `${bytes / (1024 * 1024)} MiB`;
-    if (bytes >= 1024 && bytes % 1024 === 0)
+    }
+    if (bytes >= 1024 && bytes % 1024 === 0) {
         return `${bytes / 1024} KiB`;
+    }
     return `${bytes} bytes`;
 };
 const bytesField = (start, bytes, symbol, comment, preferAscii = false) => ({
@@ -58,8 +63,9 @@ const asciiComment = (value) => `"${value.replaceAll('"', '\\"')}"`;
  */
 const structuredRomLayout = (rom, mapper) => {
     const header = parseSnesInternalRomHeader(rom, mapper);
-    if (!header)
+    if (!header) {
         return undefined;
+    }
     const base = header.offset;
     const rawHeader = rom.read(base, 0x20);
     const fields = [];
@@ -90,8 +96,9 @@ const structuredRomLayout = (rom, mapper) => {
     };
 };
 const known = (value) => {
-    if (!value || typeof value !== "object")
+    if (!value || typeof value !== "object") {
         return undefined;
+    }
     const entry = value;
     return entry.kind === "known" && typeof entry.value === "number" ? entry.value : undefined;
 };
@@ -186,8 +193,9 @@ export const formatSnes65816SourceInstruction = (instruction, ramVariables, sour
             // Canonical $7E variables can also be reached through $00-$3F/$80-$BF.
             symbolic = `(${variableExpression} & $FFFF)`;
             const encodedBank = rawValue & 0xff0000;
-            if (encodedBank !== 0)
+            if (encodedBank !== 0) {
                 symbolic += ` | ${hex(encodedBank, 6)}`;
+            }
         }
         else if (rawWidth !== 3) {
             symbolic = `${variableExpression} & ${rawWidth === 1 ? "$FF" : "$FFFF"}`;
@@ -199,29 +207,34 @@ export const formatSnes65816SourceInstruction = (instruction, ramVariables, sour
         instruction.mode === "absoluteIndexedY") {
         const value = instruction.operands[0]?.value;
         const register = dataAddress === undefined ? undefined : identifySnesHardwareRegister(dataAddress);
-        if (register && value !== undefined)
+        if (register && value !== undefined) {
             renderedOperand = operandText.replace(`$${value.toString(16).toUpperCase().padStart(4, "0")}`, register.symbol);
+        }
     }
     else if ((instruction.mode === "absoluteLong" || instruction.mode === "absoluteLongIndexedX") &&
         (instruction.operands[0]?.value ?? -1) <= 0xffff) {
         const value = instruction.operands[0]?.value;
         const register = dataAddress === undefined ? undefined : identifySnesHardwareRegister(dataAddress);
-        if (register && value !== undefined)
+        if (register && value !== undefined) {
             renderedOperand = operandText.replace(`$${value.toString(16).toUpperCase().padStart(6, "0")}`, register.symbol);
+        }
     }
     const flow = instruction.references.find((reference) => ["call", "jump", "branch"].includes(reference.kind) &&
         !reference.indirect &&
         reference.operandIndex === 0);
     if (flow && sourceLabels && rawValue !== undefined) {
         let target = flow.address;
-        if (rebaseRelative && sourceAddress !== undefined)
+        if (rebaseRelative && sourceAddress !== undefined) {
             target =
                 (sourceAddress & 0xff0000) | ((sourceAddress + instruction.size + rawValue) & 0xffff);
-        else if (instruction.mode === "absolute" && sourceAddress !== undefined)
+        }
+        else if (instruction.mode === "absolute" && sourceAddress !== undefined) {
             target = (sourceAddress & 0xff0000) | rawValue;
+        }
         const name = target === undefined ? undefined : sourceLabels.get(target);
-        if (name)
+        if (name) {
             renderedOperand = instruction.mode === "absolute" ? ` (${name} & $FFFF)` : ` ${name}`;
+        }
     }
     return `${mnemonic}${suffix}${renderedOperand}`;
 };
@@ -244,10 +257,12 @@ const roleAt = (start, end, annotations) => {
     return "raw";
 };
 const toFileOffset = (addressSpace, address, mapper, romSize) => {
-    if (addressSpace === SNES_FILE_ADDRESS_SPACE)
+    if (addressSpace === SNES_FILE_ADDRESS_SPACE) {
         return address < romSize ? address : undefined;
-    if (addressSpace !== SNES_CPU_ADDRESS_SPACE)
+    }
+    if (addressSpace !== SNES_CPU_ADDRESS_SPACE) {
         return undefined;
+    }
     const offset = snesRomAddressSpace.toOutputOffset(address, createSnesAddressContext(mapper));
     return offset >= 0 && offset < romSize ? offset : undefined;
 };
@@ -263,26 +278,31 @@ export const snesSourceLabelNames = (shards, mapper, romSize, ramNames = []) => 
     const offsets = new Set(shards.labels.map((label) => toFileOffset(label.addressSpace, label.address, mapper, romSize)));
     const reserved = [...renderSnesHardwareDefines().matchAll(/^([A-Z_a-z]\w*)\s*=/gm)].map((match) => match[1]);
     // User RAM maps can reserve arbitrarily many names; none should be lost to a call-argument limit.
-    for (const name of ramNames)
+    for (const name of ramNames) {
         reserved.push(name);
+    }
     for (const fn of shards.analysis) {
-        if (fn.kind !== "function")
+        if (fn.kind !== "function") {
             continue;
+        }
         const offset = toFileOffset(fn.addressSpace, fn.address, mapper, romSize);
-        if (offset !== undefined && !offsets.has(offset))
+        if (offset !== undefined && !offsets.has(offset)) {
             reserved.push(`Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`);
+        }
     }
     for (const label of shards.labels) {
-        if (label.sourceName && /^snes_/i.test(label.sourceName))
+        if (label.sourceName && /^snes_/i.test(label.sourceName)) {
             throw new Error(`Source label '${label.sourceName}' uses the reserved SNES_ namespace.`);
+        }
     }
     return projectSourceLabelNames(shards.labels, reserved);
 };
 const metadataLines = (shards, mapper, romSize, names) => {
     const values = new Map();
     const append = (offset, line) => {
-        if (offset === undefined)
+        if (offset === undefined) {
             return;
+        }
         values.set(offset, [...(values.get(offset) ?? []), line]);
     };
     for (const label of [...shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -294,8 +314,9 @@ const metadataLines = (shards, mapper, romSize, names) => {
     }
     for (const fn of shards.analysis.filter((record) => record.kind === "function")) {
         const offset = toFileOffset(fn.addressSpace, fn.address, mapper, romSize);
-        if (offset === undefined || values.get(offset)?.some((line) => line.name))
+        if (offset === undefined || values.get(offset)?.some((line) => line.name)) {
             continue;
+        }
         append(offset, { name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}` });
     }
     for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
@@ -313,47 +334,56 @@ const metadataLines = (shards, mapper, romSize, names) => {
     return values;
 };
 const renderedMetadata = (lines, hasInstruction = false) => {
-    if (!lines)
+    if (!lines) {
         return [];
+    }
     const output = [];
     for (const line of lines) {
         if (line.comment) {
-            for (const text of line.comment.split(/\r\n|[\n\r\u2028\u2029]/))
+            for (const text of line.comment.split(/\r\n|[\n\r\u2028\u2029]/)) {
                 output.push(`; ${text}`);
+            }
         }
-        if (line.name)
+        if (line.name) {
             output.push(`${line.name}:${line.inlineComment ? ` ; ${line.inlineComment}` : ""}`);
-        if (line.instructionComment && !hasInstruction)
+        }
+        if (line.instructionComment && !hasInstruction) {
             output.push(`; [Instruction comment; instruction unavailable] ${line.instructionComment}`);
+        }
     }
     return output;
 };
+/** Positive data classifications remain authoritative even when execution was observed. */
+const rawClassifications = new Set([
+    "data8",
+    "data16",
+    "data24",
+    "data32",
+    "pointer16",
+    "pointer24",
+    "pointer32",
+    "graphics",
+    "music",
+    "empty",
+    "text",
+]);
 /**
  * Reports whether project evidence requires one CFG instruction to remain raw bytes.
  * @param {InstructionExportRecord} node Candidate instruction and its ROM extent.
  * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
- * @returns {boolean} `true` when any non-code classification overlaps the instruction.
+ * @param {ReadonlySet<string>} runtimeEvidence IDs identifying actual runtime evidence sources.
+ * @returns {boolean} Whether a data classification or uncontradicted unreached interval blocks emission.
  */
-const rejectedByAnnotation = (node, annotations) => {
-    const rawClassifications = new Set([
-        "unreached",
-        "data8",
-        "data16",
-        "data24",
-        "data32",
-        "pointer16",
-        "pointer24",
-        "pointer32",
-        "graphics",
-        "music",
-        "empty",
-        "text",
-    ]);
+const rejectedByAnnotation = (node, annotations, runtimeEvidence) => {
+    // analyzeSnesRuntimeCode assigns this namespace and a fileOffset only after matching captured
+    // bytes to ROM. Static nodes may inherit runtime evidence, so provenance alone is insufficient.
+    const capturedRomInstruction = node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
     return (node.fileOffset === undefined ||
         annotations
             // Performance invariant: use one range query; do not scan every annotation for every CFG node.
             .overlapping(node.fileOffset, node.fileOffset + node.size)
-            .some((entry) => rawClassifications.has(entry.classification)));
+            .some((entry) => rawClassifications.has(entry.classification) ||
+            (entry.classification === "unreached" && !capturedRomInstruction)));
 };
 /**
  * Selects deterministic, conflict-free CFG nodes that can be emitted as native 65816 source.
@@ -379,6 +409,7 @@ const rejectedByAnnotation = (node, annotations) => {
 const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariables, structure, sourceLabels, structFields, indexedStructFields, instructionGroups, instructionUses) => {
     const decoder = new Cpu65816Decoder();
     const source = new Uint8ArrayDecoderSource(rom.bytes());
+    const runtimeEvidence = new Set(shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id));
     const conflictNodes = new Set(shards.analysis
         .filter((record) => record.kind === "conflict")
         .flatMap((record) => record.nodes));
@@ -390,18 +421,21 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
         let high = metadataOffsets.length;
         while (low < high) {
             const middle = (low + high) >>> 1;
-            if (metadataOffsets[middle] <= start)
+            if (metadataOffsets[middle] <= start) {
                 low = middle + 1;
-            else
+            }
+            else {
                 high = middle;
+            }
         }
         return low < metadataOffsets.length && metadataOffsets[low] < end;
     };
     const fallbackGroups = () => {
         const grouped = new Map();
         for (const record of shards.analysis) {
-            if (record.kind !== "cfg-node" || record.fileOffset === undefined || record.fileOffset < 0)
+            if (record.kind !== "cfg-node" || record.fileOffset === undefined || record.fileOffset < 0) {
                 continue;
+            }
             const group = grouped.get(record.fileOffset) ?? [];
             group.push(record);
             grouped.set(record.fileOffset, group);
@@ -413,13 +447,15 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
     let previousOffset = -1;
     // SQL callers hold only the current offset's variants; in-memory callers retain the same semantic path.
     for (const group of instructionGroups ?? fallbackGroups()) {
-        if (!group.length)
+        if (!group.length) {
             continue;
+        }
         const offset = group[0].fileOffset;
         if (offset === undefined ||
             offset <= previousOffset ||
-            group.some((record) => record.fileOffset !== offset))
+            group.some((record) => record.fileOffset !== offset)) {
             throw new Error("Export instruction groups must have distinct, ascending file offsets.");
+        }
         previousOffset = offset;
         const records = group.filter((record) => record.fileOffset !== undefined &&
             record.fileOffset >= 0 &&
@@ -428,13 +464,15 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
                 record.fileOffset < structure.end &&
                 structure.start < record.fileOffset + record.size) &&
             !conflictNodes.has(record.id) &&
-            !rejectedByAnnotation(record, annotations) &&
+            !rejectedByAnnotation(record, annotations, runtimeEvidence) &&
             !hasInteriorMetadata(record.fileOffset, record.fileOffset + record.size));
-        if (!records.length)
+        if (!records.length) {
             continue;
+        }
         const sourceAddress = snesRomAddressSpace.fromOutputOffset(offset, context);
-        if (sourceAddress < 0)
+        if (sourceAddress < 0) {
             continue;
+        }
         const variants = records
             .sort((left, right) => left.id.localeCompare(right.id))
             .map((record) => {
@@ -452,8 +490,9 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
                 source: formatSnes65816SourceInstruction(result.instruction, ramVariables, sourceAddress, sourceLabels, structFields, indexedStructFields),
             };
         });
-        if (variants.some((entry) => entry === undefined))
+        if (variants.some((entry) => entry === undefined)) {
             continue;
+        }
         const resolved = variants;
         const first = resolved[0];
         // Every variant reads the same ROM offset; matching size and specification establish one encoding.
@@ -470,16 +509,18 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
                 ...instruction,
                 references: instruction.references.filter((reference) => reference.kind !== "data"),
             }, undefined, sourceAddress, sourceLabels));
-            if (numericSources.some((source) => source !== numericSources[0]))
+            if (numericSources.some((source) => source !== numericSources[0])) {
                 continue;
+            }
             renderedSource = numericSources[0];
         }
         const use = instructionUses?.get(offset);
         if (use) {
             // Every context must agree with the explicit operand contract. Observed accesses remain
             // comments even when a different DBR/direct-page context forced the numeric fallback above.
-            for (const variant of resolved)
+            for (const variant of resolved) {
                 renderedSource = applySnesStructInstructionOperand(variant.instruction, renderedSource, use);
+            }
         }
         candidates.set(offset, {
             start: offset,
@@ -528,53 +569,71 @@ const planSpans = (rom, mapper, shards, instructions, metadata, annotations, str
     const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
     const cuts = new Set([0, rom.length]);
     const addExternalCut = (offset) => {
-        if (offset <= 0 || offset >= rom.length)
+        if (offset <= 0 || offset >= rom.length) {
             return;
-        if (structure && offset > structure.start && offset < structure.end)
+        }
+        if (structure && offset > structure.start && offset < structure.end) {
             return;
+        }
         cuts.add(offset);
     };
-    for (let offset = bankSize; offset < rom.length; offset += bankSize)
+    for (let offset = bankSize; offset < rom.length; offset += bankSize) {
         cuts.add(offset);
+    }
     for (const field of structure?.fields ?? []) {
         cuts.add(field.start);
         cuts.add(field.end);
     }
     const structIndex = new HalfOpenIntervalIndex(structFields);
+    const instructionIndex = new HalfOpenIntervalIndex([...instructions.values()]);
     for (const field of structFields) {
-        if (structure && field.start < structure.end && structure.start < field.end)
+        if (structure && field.start < structure.end && structure.start < field.end) {
             throw new Error(`Struct field '${field.expression}' overlaps the cartridge header/vectors.`);
+        }
         cuts.add(field.start);
         cuts.add(field.end);
     }
     for (const [offset, instruction] of instructions) {
-        if (structIndex.overlapping(offset, instruction.end).length > 0)
+        if (structIndex.overlapping(offset, instruction.end).length > 0) {
             throw new Error(`ROM struct overlaps decoded code at ${hex(offset)}. Resolve the conflicting evidence before export.`);
+        }
         cuts.add(offset);
         cuts.add(instruction.end);
     }
-    for (const offset of metadata.keys())
+    for (const offset of metadata.keys()) {
         addExternalCut(offset);
+    }
     for (const entry of shards.annotations) {
-        if (entry.addressSpace !== SNES_FILE_ADDRESS_SPACE)
+        if (entry.addressSpace !== SNES_FILE_ADDRESS_SPACE) {
             continue;
-        if (entry.classification === "opcode" || entry.classification === "operand")
+        }
+        if (entry.classification === "opcode" || entry.classification === "operand") {
             continue;
+        }
         // Byte-wise imported data classifications need not fragment an explicitly typed field.
         // Labels, comments, and region boundaries still receive their own cuts above/below.
         for (const offset of [entry.start, entry.end]) {
+            // Stale coverage can split an opcode from its operands. Once an instruction is accepted,
+            // those negative-coverage boundaries cannot split it back into raw source spans.
+            if (entry.classification === "unreached" &&
+                instructionIndex.overlapping(offset, offset + 1).some((node) => node.start < offset)) {
+                continue;
+            }
             const field = structIndex.overlapping(offset, offset + 1)[0];
-            if (!field || offset === field.start)
+            if (!field || offset === field.start) {
                 addExternalCut(offset);
+            }
         }
     }
     for (const region of shards.regions) {
         const start = toFileOffset(region.addressSpace, region.start, mapper, rom.length);
         const last = toFileOffset(region.addressSpace, region.end - 1, mapper, rom.length);
-        if (start !== undefined)
+        if (start !== undefined) {
             addExternalCut(start);
-        if (last !== undefined)
+        }
+        if (last !== undefined) {
             addExternalCut(last + 1);
+        }
     }
     const sorted = [...cuts].sort((left, right) => left - right);
     return sorted.slice(0, -1).map((start, index) => {
@@ -582,12 +641,15 @@ const planSpans = (rom, mapper, shards, instructions, metadata, annotations, str
         const instruction = instructions.get(start);
         const structured = structure?.byStart.get(start);
         const structField = structIndex.overlapping(start, end)[0];
-        if (instruction?.end === end)
+        if (instruction?.end === end) {
             return { start, end, role: "code", instruction };
-        if (structured?.end === end)
+        }
+        if (structured?.end === end) {
             return { start, end, role: structured.role, structured };
-        if (structField)
+        }
+        if (structField) {
             return { start, end, role: "raw", structField };
+        }
         return { start, end, role: roleAt(start, end, annotations) };
     });
 };
@@ -605,15 +667,18 @@ const planSpans = (rom, mapper, shards, instructions, metadata, annotations, str
 const groupStructRecords = (spans, metadata, shards, mapper, romSize) => {
     const protectedCuts = new Set(metadata.keys());
     const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
-    for (let offset = bankSize; offset < romSize; offset += bankSize)
+    for (let offset = bankSize; offset < romSize; offset += bankSize) {
         protectedCuts.add(offset);
+    }
     for (const region of shards.regions) {
         const start = toFileOffset(region.addressSpace, region.start, mapper, romSize);
         const last = toFileOffset(region.addressSpace, region.end - 1, mapper, romSize);
-        if (start !== undefined)
+        if (start !== undefined) {
             protectedCuts.add(start);
-        if (last !== undefined)
+        }
+        if (last !== undefined) {
             protectedCuts.add(last + 1);
+        }
     }
     const grouped = [];
     for (let index = 0; index < spans.length;) {
@@ -623,8 +688,9 @@ const groupStructRecords = (spans, metadata, shards, mapper, romSize) => {
         if (record && first.start === record.start) {
             while (next < spans.length &&
                 spans[next].structField?.record === record &&
-                (next === index || !protectedCuts.has(spans[next].start)))
+                (next === index || !protectedCuts.has(spans[next].start))) {
                 next++;
+            }
         }
         if (record && next > index && spans[next - 1].end === record.end) {
             grouped.push({ start: record.start, end: record.end, role: "raw", structRecord: record });
@@ -638,8 +704,9 @@ const groupStructRecords = (spans, metadata, shards, mapper, romSize) => {
     return grouped;
 };
 const preflight = (directory, force) => {
-    if (!fs.existsSync(directory))
+    if (!fs.existsSync(directory)) {
         return undefined;
+    }
     const manifestFile = path.join(directory, SOURCE_EXPORT_MANIFEST);
     if (!fs.existsSync(manifestFile)) {
         const unexpected = fs
@@ -651,8 +718,9 @@ const preflight = (directory, force) => {
         return undefined;
     }
     const manifest = loadSourceExportManifest(directory);
-    if (!force)
+    if (!force) {
         validateSourceExportFiles(directory, manifest);
+    }
     return manifest;
 };
 const writeFile = (root, relative, bytes, kind, files) => {
@@ -704,8 +772,9 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     ];
     const ramNames = new Set(ramMap.variables.map(({ name }) => name.toLowerCase()));
     for (const name of structNames) {
-        if (ramNames.has(name.toLowerCase()))
+        if (ramNames.has(name.toLowerCase())) {
             throw new Error(`Struct-map name '${name}' conflicts with a RAM variable.`);
+        }
     }
     const names = snesSourceLabelNames(project.shards, mapper, rom.length, [
         ...ramMap.variables.map(({ name }) => name),
@@ -714,14 +783,18 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     const metadata = metadataLines(project.shards, mapper, rom.length, names);
     const sourceLabels = new Map();
     for (const label of [...project.shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
-        if (!label.sourceName)
+        if (!label.sourceName) {
             continue;
+        }
         const offset = toFileOffset(label.addressSpace, label.address, mapper, rom.length);
-        if (offset === undefined || (structure && structure.start <= offset && offset < structure.end))
+        if (offset === undefined ||
+            (structure && structure.start <= offset && offset < structure.end)) {
             continue;
+        }
         const address = snesRomAddressSpace.fromOutputOffset(offset, context);
-        if (address >= 0 && !sourceLabels.has(address))
+        if (address >= 0 && !sourceLabels.has(address)) {
             sourceLabels.set(address, names.get(label.id));
+        }
     }
     // Build one immutable index for both instruction rejection and raw/padding span roles. Keeping a
     // single instance is essential: these consumers collectively issue a query for most CFG nodes
@@ -731,8 +804,9 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     // Rejected, overlapping and undecoded sites cannot silently acquire authoritative-looking uses.
     // Do this after instruction conflict resolution and before any generated file is written.
     for (const [offset, use] of instructionUses ?? []) {
-        if (!instructions.has(offset))
+        if (!instructions.has(offset)) {
             throw new Error(`Struct instruction use at ${hex(use.address)} requires an accepted instruction.`);
+        }
     }
     const fieldPlan = planSpans(rom, mapper, project.shards, instructions, metadata, annotations, structure, structRomFields);
     const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
@@ -770,8 +844,9 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         let table;
         for (const [spanIndex, span] of bankSpans.entries()) {
             const address = snesRomAddressSpace.fromOutputOffset(span.start, context);
-            if (address < 0)
+            if (address < 0) {
                 throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex(span.start)}.`);
+            }
             const named = span.structured
                 ? []
                 : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
@@ -789,14 +864,16 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
             if (named.length) {
                 lines.push("");
                 // Multiple imports can attach an input-sized set of labels/comments to the same offset.
-                for (const line of named)
+                for (const line of named) {
                     lines.push(line);
+                }
             }
             if (span.instruction) {
                 // Explicit operand-size suffixes fix the encoding. Emitting ambient M/X directives here
                 // would make identical instructions churn whenever the preferred captured state changes.
-                for (const comment of span.instruction.structComments ?? [])
+                for (const comment of span.instruction.structComments ?? []) {
                     lines.push(`; ${comment}`);
+                }
                 const inline = (metadata.get(span.start) ?? []).flatMap((line) => line.instructionComment ? [line.instructionComment] : []);
                 lines.push(`  ${span.instruction.source}${inline.length ? ` ; ${inline.join(" | ")}` : ""}`);
                 spans.push({
@@ -903,8 +980,9 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
             }
             nextAddress = address + span.end - span.start;
         }
-        if (table)
+        if (table) {
             lines.push("  endDataStructs");
+        }
         writeFile(directory, bankPath, `${lines.join("\n")}\n`, "source", files);
     }
     if (rom.identity.headerSize === 512) {
@@ -938,23 +1016,27 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     writeFile(directory, SNES_RAM_MAP_SCHEMA_SOURCE, renderSnesRamMapSchema(), "configuration", files);
     writeFile(directory, SNES_RAM_DEFINES_SOURCE, renderSnesRamDefines(ramMap.variables), "source", files);
     writeFile(directory, "main.asm", main, "source", files);
-    if (structMap)
+    if (structMap) {
         writeFile(directory, SNES_STRUCT_DEFINES_SOURCE, renderSnesStructDefines(structMap), "source", files);
+    }
     const annotationIssues = [...project.shards.labels, ...project.shards.comments]
         .flatMap((record) => {
         const offset = toFileOffset(record.addressSpace, record.address, mapper, rom.length);
         let reason;
-        if (offset === undefined)
+        if (offset === undefined) {
             reason =
                 "Address does not map to this ROM export. Annotation retained in the analysis project.";
-        else if (structure && structure.start <= offset && offset < structure.end)
+        }
+        else if (structure && structure.start <= offset && offset < structure.end) {
             reason =
                 "Annotation is inside a structured header/vector field. Annotation retained in the analysis project.";
+        }
         else if ("placement" in record &&
             record.placement === "inline-instruction" &&
-            !instructions.has(offset))
+            !instructions.has(offset)) {
             reason =
                 "No exportable instruction starts here. Rendered as a standalone comment; inline placement remains saved.";
+        }
         return reason
             ? [{ id: record.id, addressSpace: record.addressSpace, address: record.address, reason }]
             : [];
@@ -1016,11 +1098,13 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     };
     const currentPaths = new Set(manifest.files.map((file) => file.path));
     for (const stale of previousManifest?.files ?? []) {
-        if (currentPaths.has(stale.path))
+        if (currentPaths.has(stale.path)) {
             continue;
+        }
         const staleFile = path.join(directory, stale.path);
-        if (fs.existsSync(staleFile) && fs.statSync(staleFile).isFile())
+        if (fs.existsSync(staleFile) && fs.statSync(staleFile).isFile()) {
             fs.unlinkSync(staleFile);
+        }
     }
     fs.mkdirSync(directory, { recursive: true });
     fs.writeFileSync(path.join(directory, SOURCE_EXPORT_MANIFEST), canonicalSourceExportJson(manifest));

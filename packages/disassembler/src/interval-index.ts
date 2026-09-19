@@ -93,14 +93,19 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
     let high = this.#entries.length;
     while (low < high) {
       const middle = low + Math.floor((high - low) / 2);
-      if (this.#entries[middle].value.start < end) low = middle + 1;
-      else high = middle;
+      if (this.#entries[middle].value.start < end) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
     }
     const matches: IndexedInterval<Value>[] = [];
     // Prefix maxima provide the early-stop condition that a simple start-sorted array lacks.
     for (let index = low - 1; index >= 0 && this.#prefixMaximumEnd[index] > start; index--) {
       const entry = this.#entries[index];
-      if (entry.value.end > start) matches.push(entry);
+      if (entry.value.end > start) {
+        matches.push(entry);
+      }
     }
     // Consumers historically observed project input order from Array.filter/find. Preserve it even
     // though the index scans in reverse start order.

@@ -12,6 +12,7 @@ import {
   writeAnalysisProject,
   type AnalysisProject,
   type RuntimeEvidenceRecord,
+  type ProjectLabel,
 } from "../src/index.js";
 
 const fixture = (): AnalysisProject => ({
@@ -55,6 +56,25 @@ const fixture = (): AnalysisProject => ({
   },
 });
 
+test("explicit view replacements are persisted even when a JavaScript caller reuses an array", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-view-mutable-array-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  writeAnalysisProject(directory, fixture());
+  const snapshot = loadAnalysisProjectViewSnapshot(directory);
+  const labels = snapshot.view.labels as ProjectLabel[];
+  labels.push({
+    id: "entry",
+    addressSpace: "rom.file",
+    address: 1,
+    name: "Entry",
+    evidence: ["capture"],
+  });
+  commitAnalysisProjectViewUpdate(directory, snapshot, { labels });
+  const loaded = loadAnalysisProject(directory);
+  t.deepEqual(loaded.shards.labels, labels);
+  t.deepEqual(loaded.shards.runtime, fixture().shards.runtime);
+});
+
 test("project views preserve complete runtime bytes through metadata updates and stale revisions", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-project-view-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -65,7 +85,9 @@ test("project views preserve complete runtime bytes through metadata updates and
     const records: RuntimeEvidenceRecord[] = [];
     return {
       push: (record) => {
-        if (record.kind === "runtime-execution") records.push(record);
+        if (record.kind === "runtime-execution") {
+          records.push(record);
+        }
       },
       finish: () => records,
     };

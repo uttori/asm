@@ -44,7 +44,9 @@ test("sliced CRC agrees with an independent bitwise reader, including checksum w
       let crc = 0xffffffff;
       for (let i = 0; i < length; i++) {
         crc ^= zero && i >= 56 && i < 60 ? 0 : bytes[i];
-        for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (crc & 1 ? 0x82f63b78 : 0);
+        for (let bit = 0; bit < 8; bit++) {
+          crc = (crc >>> 1) ^ (crc & 1 ? 0x82f63b78 : 0);
+        }
       }
       t.is(captureCrc32c(bytes, zero), ~crc >>> 0);
       t.deepEqual(bytes, original);
@@ -96,7 +98,9 @@ test("live cursor rejects split/regressing watermarks, corrupt tails and replace
     const file = fixture(t);
     const prefix = Buffer.concat([header, pair(1)]);
     const tail = busJsonFrame("END2", busPosition("1", "1", "complete"));
-    if (failure === "corrupt") tail[12] ^= 1;
+    if (failure === "corrupt") {
+      tail[12] ^= 1;
+    }
     const all = Buffer.concat([prefix, failure === "missing-end" ? Buffer.alloc(0) : tail]);
     fs.writeFileSync(file, all);
     const cursor = await NativeCaptureFileCursor.open(file);
@@ -107,9 +111,15 @@ test("live cursor rejects split/regressing watermarks, corrupt tails and replace
         fs.writeFileSync(file, all);
       }
       let p = position(all.length, 1, true);
-      if (failure === "split") p = position(prefix.length + 1, 1);
-      if (failure === "regress") p = position(header.length, 0);
-      if (failure === "session") p = { ...p, session: "f".repeat(32) };
+      if (failure === "split") {
+        p = position(prefix.length + 1, 1);
+      }
+      if (failure === "regress") {
+        p = position(header.length, 0);
+      }
+      if (failure === "session") {
+        p = { ...p, session: "f".repeat(32) };
+      }
       await t.throwsAsync(cursor.readThrough(p, () => undefined, 16, file));
       await t.throwsAsync(
         cursor.readThrough(position(all.length, 1, true), () => undefined),

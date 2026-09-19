@@ -57,11 +57,13 @@ export class Spc700AramImage {
      * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
      */
     identifyAddress(address) {
-        if (!Number.isInteger(address) || address < this.loadAddress)
+        if (!Number.isInteger(address) || address < this.loadAddress) {
             return undefined;
+        }
         const imageOffset = address - this.loadAddress;
-        if (address > 0xffff || imageOffset >= this.length)
+        if (address > 0xffff || imageOffset >= this.length) {
             return undefined;
+        }
         return { addressSpace: SPC700_ARAM_ADDRESS_SPACE, address, imageOffset };
     }
     /**

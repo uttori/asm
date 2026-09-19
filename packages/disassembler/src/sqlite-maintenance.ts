@@ -11,10 +11,11 @@ export const SQLITE_MIGRATION_BACKUP = "analysis.sqlite.pre-retention.backup";
  * @param {string} file Database being opened or used for a new transaction.
  */
 export const assertNoSqliteMigration = (file: string): void => {
-  if (fs.existsSync(path.join(path.dirname(file), SQLITE_MIGRATION_DIRECTORY)))
+  if (fs.existsSync(path.join(path.dirname(file), SQLITE_MIGRATION_DIRECTORY))) {
     throw new Error(
       "Analysis storage migration is in progress. Retry after it completes, or run project-migrate to recover an interrupted migration.",
     );
+  }
 };
 
 /**

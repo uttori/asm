@@ -54,7 +54,9 @@ const sourcePaths = (
   source: DebugMapSource,
   candidate: AnalysisDebugMapCandidate,
 ): readonly string[] => {
-  if (path.isAbsolute(source.path)) return [source.path];
+  if (path.isAbsolute(source.path)) {
+    return [source.path];
+  }
   return sortedUnique([
     ...candidate.sourceRoots.map((root) => path.resolve(root, source.path)),
     path.resolve(path.dirname(candidate.file), source.path),
@@ -75,7 +77,9 @@ export const currentAnalysisSourcePath = (
   expectedFile?: string,
 ): string | undefined =>
   sourcePaths(source, candidate).find((file) => {
-    if (expectedFile !== undefined && path.resolve(file) !== expectedFile) return false;
+    if (expectedFile !== undefined && path.resolve(file) !== expectedFile) {
+      return false;
+    }
     try {
       return fs.statSync(file).isFile() && analysisSourceSha256(file) === source.sha256;
     } catch {
@@ -106,8 +110,9 @@ export const findAnalysisDebugMapCandidates = async (
             map.output.sha256 === candidate.romContentSha256 &&
             map.output.size === candidate.romContentSize,
         )
-      )
+      ) {
         continue;
+      }
       candidates.push({ ...descriptor, map });
     } catch {
       // Unrelated or malformed maps are not candidates.
@@ -152,8 +157,9 @@ export const discoverAnalysisDebugMapFiles = async (): Promise<
         let directory = path.dirname(file);
         directory !== root && directory.startsWith(`${root}${path.sep}`);
         directory = path.dirname(directory)
-      )
+      ) {
         ancestors.push(directory);
+      }
     }
     return {
       file,

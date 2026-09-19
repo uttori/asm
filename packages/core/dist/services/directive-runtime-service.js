@@ -128,8 +128,9 @@ export class DirectiveRuntimeService {
             const expandedValues = splitRespectingFunctions(resolved);
             if (expandedValues.length > 1) {
                 // A define can expand beyond V8's argument limit; never spread its tokens into a call.
-                for (let index = expandedValues.length - 1; index >= 0; index--)
+                for (let index = expandedValues.length - 1; index >= 0; index--) {
                     pendingValues.push(expandedValues[index]);
+                }
                 continue;
             }
             let num;
@@ -232,8 +233,9 @@ export class DirectiveRuntimeService {
             const expandedValues = splitRespectingFunctions(resolved);
             if (expandedValues.length > 1) {
                 // Count every expanded value without passing an input-sized list as call arguments.
-                for (let index = expandedValues.length - 1; index >= 0; index--)
+                for (let index = expandedValues.length - 1; index >= 0; index--) {
                     pendingValues.push(expandedValues[index]);
+                }
                 continue;
             }
             estimatedItems += 1;

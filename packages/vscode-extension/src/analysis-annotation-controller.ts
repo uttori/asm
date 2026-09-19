@@ -51,8 +51,11 @@ interface LoadedAnnotations {
 
 const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
   const entries = map.get(key);
-  if (entries) entries.push(value);
-  else map.set(key, [value]);
+  if (entries) {
+    entries.push(value);
+  } else {
+    map.set(key, [value]);
+  }
 };
 
 /** Maintains analysis suffixes on the active, byte-current mapped source editor. */
@@ -80,17 +83,23 @@ export class AnalysisAnnotationController implements Disposable {
         !workspace
           .getConfiguration("asm", visible.document.uri)
           .get("analysis.showAnnotations", true)
-      )
+      ) {
         visible.setDecorations(this.#decoration, []);
+      }
     }
-    if (!editor || editor.document.uri.scheme !== "file") return;
+    if (!editor || editor.document.uri.scheme !== "file") {
+      return;
+    }
     editor.setDecorations(this.#decoration, []);
     if (
       !workspace.getConfiguration("asm", editor.document.uri).get("analysis.showAnnotations", true)
-    )
+    ) {
       return;
+    }
     void this.#decorations(editor, generation).catch(() => {
-      if (generation === this.#generation) editor.setDecorations(this.#decoration, []);
+      if (generation === this.#generation) {
+        editor.setDecorations(this.#decoration, []);
+      }
     });
   }
 
@@ -100,8 +109,11 @@ export class AnalysisAnnotationController implements Disposable {
     const resource = window.activeTextEditor?.document.uri;
     const configuration = workspace.getConfiguration("asm", resource);
     const enabled = configuration.get("analysis.showAnnotations", true);
-    if (enabled)
-      for (const editor of window.visibleTextEditors) editor.setDecorations(this.#decoration, []);
+    if (enabled) {
+      for (const editor of window.visibleTextEditors) {
+        editor.setDecorations(this.#decoration, []);
+      }
+    }
     await configuration.update(
       "analysis.showAnnotations",
       !enabled,
@@ -118,7 +130,9 @@ export class AnalysisAnnotationController implements Disposable {
    */
   documentChanged(document: TextDocument): void {
     const editor = window.activeTextEditor;
-    if (!editor || editor.document !== document) return;
+    if (!editor || editor.document !== document) {
+      return;
+    }
     ++this.#generation;
     editor.setDecorations(this.#decoration, []);
   }
@@ -146,7 +160,9 @@ export class AnalysisAnnotationController implements Disposable {
       };
       loaded.push({ directory, identity });
     }
-    if (loaded.length === 0 || generation !== this.#generation) return;
+    if (loaded.length === 0 || generation !== this.#generation) {
+      return;
+    }
     const candidates = await findAnalysisDebugMapCandidates(loaded.map(({ identity }) => identity));
     for (const { directory, identity } of loaded) {
       for (const candidate of candidates) {
@@ -165,8 +181,12 @@ export class AnalysisAnnotationController implements Disposable {
             })
             .map(({ id }) => id),
         );
-        if (sourceIds.size === 0) continue;
-        if (generation !== this.#generation) return;
+        if (sourceIds.size === 0) {
+          continue;
+        }
+        if (generation !== this.#generation) {
+          return;
+        }
         const ranges = candidate.map.ranges
           .filter(
             (range) =>
@@ -177,7 +197,9 @@ export class AnalysisAnnotationController implements Disposable {
               ),
           )
           .slice(0, 2000);
-        if (ranges.length === 0) continue;
+        if (ranges.length === 0) {
+          continue;
+        }
         const rows = await analysisWorker().request<
           { line: number; annotation: InstructionAnalysisAnnotation }[]
         >(directory, "annotations", { ranges });
@@ -186,7 +208,9 @@ export class AnalysisAnnotationController implements Disposable {
         }
       }
     }
-    if (generation !== this.#generation || window.activeTextEditor !== editor) return;
+    if (generation !== this.#generation || window.activeTextEditor !== editor) {
+      return;
+    }
     const lines = [...byLine]
       .filter(([line]) => line >= 1 && line <= editor.document.lineCount)
       .sort(([left], [right]) => left - right);

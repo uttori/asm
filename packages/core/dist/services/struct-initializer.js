@@ -13,34 +13,40 @@ export function splitInitializerList(text) {
     for (let index = 0; index < text.length; index++) {
         const char = text[index];
         if (quote) {
-            if (char === quote && text[index - 1] !== "\\")
+            if (char === quote && text[index - 1] !== "\\") {
                 quote = "";
+            }
             continue;
         }
         if (char === '"' || char === "'") {
             quote = char;
             continue;
         }
-        if ("([{".includes(char))
+        if ("([{".includes(char)) {
             stack.push(char);
+        }
         else if (")]}".includes(char)) {
             const expected = { ")": "(", "]": "[", "}": "{" }[char];
-            if (stack.pop() !== expected)
+            if (stack.pop() !== expected) {
                 throw new Error("Mismatched initializer delimiters.");
+            }
         }
         else if (char === "," && stack.length === 0) {
             const entry = text.slice(start, index).trim();
-            if (!entry)
+            if (!entry) {
                 throw new Error("Empty initializer item.");
+            }
             entries.push(entry);
             start = index + 1;
         }
     }
-    if (quote || stack.length)
+    if (quote || stack.length) {
         throw new Error("Unclosed initializer delimiter.");
+    }
     const last = text.slice(start).trim();
-    if (last)
-        entries.push(last); // One trailing comma is allowed.
+    if (last) {
+        entries.push(last);
+    } // One trailing comma is allowed.
     return entries;
 }
 /**
@@ -56,18 +62,22 @@ export function parseStructInitializer(text) {
     const fields = new Map();
     for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
         const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
-        if (!match)
+        if (!match) {
             throw new Error(`Expected 'field = value' in initializer: ${entry}`);
+        }
         const [, name, value] = match;
-        if (fields.has(name))
+        if (fields.has(name)) {
             throw new Error(`Duplicate initializer field '${name}'.`);
+        }
         if (value.startsWith("[")) {
-            if (!value.endsWith("]"))
+            if (!value.endsWith("]")) {
                 throw new Error(`Unclosed array initializer '${name}'.`);
+            }
             fields.set(name, splitInitializerList(value.slice(1, -1)));
         }
-        else
+        else {
             fields.set(name, value);
+        }
     }
     return fields;
 }
@@ -77,22 +87,27 @@ export function parseStructInitializer(text) {
  * @returns {boolean} Whether another physical line is needed to close the literal.
  */
 export function isOpenStructInitializer(text) {
-    if (!/^(?:datastruct\b|\[)/i.test(text.trimStart()))
+    if (!/^(?:datastruct\b|\[)/i.test(text.trimStart())) {
         return false;
+    }
     let depth = 0;
     let quote = "";
     for (let index = 0; index < text.length; index++) {
         const char = text[index];
         if (quote) {
-            if (char === quote && text[index - 1] !== "\\")
+            if (char === quote && text[index - 1] !== "\\") {
                 quote = "";
+            }
         }
-        else if (char === '"' || char === "'")
+        else if (char === '"' || char === "'") {
             quote = char;
-        else if (char === "{")
+        }
+        else if (char === "{") {
             depth++;
-        else if (char === "}")
+        }
+        else if (char === "}") {
             depth--;
+        }
     }
     return depth > 0;
 }

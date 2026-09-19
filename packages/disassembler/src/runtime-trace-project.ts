@@ -1,9 +1,3 @@
-import {
-  archiveImportedCapture,
-  captureFileIdentity,
-  expireCaptureArchives,
-  type CaptureArchiveResult,
-} from "./capture-archives.js";
 import { openAnalysisProjectStore } from "./project-store.js";
 import {
   analysisProjectRevision,
@@ -32,8 +26,6 @@ import type { AnalysisStoragePolicy, AnalysisStorageSnapshot } from "./sqlite-st
 
 /** File validation limits plus named progress phases for indexing and atomic publication. */
 export interface RuntimeTraceProjectImportOptions extends RuntimeTraceFileOptions {
-  /** Optional original file for a managed archive; decoded in-memory sources may omit it. */
-  readonly archiveSourceFile?: string;
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
   readonly onStage?: (message: string) => void;
   /** Counts validated records merged so far; all remain provisional until publication commits. */
@@ -52,7 +44,6 @@ export interface RuntimeTraceProjectImportResult extends Omit<
     readonly reusedFacts: number;
     readonly checkpointBusy: boolean;
   };
-  readonly archive: CaptureArchiveResult;
   readonly warnings: readonly string[];
   readonly execution: readonly RuntimeExecutionRecord[];
   readonly changed: boolean;
@@ -76,10 +67,7 @@ export const importRuntimeTraceIntoProject = async (
   options: RuntimeTraceProjectImportOptions = {},
 ): Promise<RuntimeTraceProjectImportResult> => {
   const source = await createRuntimeTraceFileSource(file, options);
-  return importRuntimeTraceSourceIntoProject(source, directory, context, {
-    ...options,
-    archiveSourceFile: options.archiveSourceFile ?? file,
-  });
+  return importRuntimeTraceSourceIntoProject(source, directory, context, options);
 };
 
 /**
@@ -98,21 +86,20 @@ export const importRuntimeTraceSourceIntoProject = async (
   options: RuntimeTraceProjectImportOptions = {},
 ): Promise<RuntimeTraceProjectImportResult> => {
   options.signal?.throwIfAborted();
-  const archiveIdentity = options.archiveSourceFile
-    ? captureFileIdentity(options.archiveSourceFile)
-    : undefined;
   const store = openAnalysisProjectStore(directory);
   try {
-    if (options.storagePolicy)
+    if (options.storagePolicy) {
       store.transaction(() => store.setStoragePolicy(options.storagePolicy!));
+    }
     const beforeStorage = store.storageSnapshot();
     let retainedReport: ImportReport | undefined;
     const manifest = store.transaction(() => store.manifest(), false);
     const expected = analysisProjectRevision(manifest);
-    if (manifest.rom.contentSha256 !== context.projectRomContentSha256)
+    if (manifest.rom.contentSha256 !== context.projectRomContentSha256) {
       throw new Error(
         "ROM/project mismatch: destination project does not match the trace import context.",
       );
+    }
     const execution: RuntimeExecutionRecord[] = [];
     let addedRuntime = 0;
     let validate: ReturnType<typeof createRuntimeRecordValidator> | undefined;
@@ -124,14 +111,15 @@ export const importRuntimeTraceSourceIntoProject = async (
         onMergeProgress: options.onMergeProgress,
         onSource: (sha256, profile) => {
           const receipt = store.captureReceipt(sha256);
-          // A converted/expired capture cannot restore old full rows or double-count lifetime evidence.
+          // A previously imported capture cannot restore old full rows or double-count lifetime evidence.
           // Same-profile imports still repair missing rows with ordinary stable-ID checks.
           if (receipt && receipt.profile !== profile) {
             retainedReport = store
               .loadTable("imports")
               .find((report) => report.sourceSha256 === sha256);
-            if (!retainedReport)
+            if (!retainedReport) {
               throw new Error("Capture receipt has no retained import provenance.");
+            }
           }
         },
         onRecord: (record) => {
@@ -149,8 +137,12 @@ export const importRuntimeTraceSourceIntoProject = async (
             false,
           );
           validate(record);
-          if (!retainedReport && store.insertRuntime(record)) addedRuntime++;
-          if (record.kind === "runtime-execution") execution.push(record);
+          if (!retainedReport && store.insertRuntime(record)) {
+            addedRuntime++;
+          }
+          if (record.kind === "runtime-execution") {
+            execution.push(record);
+          }
         },
       });
       await source.read((chunk) => {
@@ -205,24 +197,15 @@ export const importRuntimeTraceSourceIntoProject = async (
         added: { runtime: addedRuntime, evidence: merged.added.evidence },
       };
     });
-    if (result.changed) store.writePointer(directory);
-    let archive: CaptureArchiveResult = { archived: false, expired: [], warnings: [] };
+    if (result.changed) {
+      store.writePointer(directory);
+    }
     let checkpointBusy = false;
     const maintenanceWarnings: string[] = [];
     // These actions follow COMMIT. A reader lock, disk error or cancellation callback must not
     // report a failed import after its durable counts and provenance have already been published.
     try {
       options.onStage?.("Runtime import committed; project pointer updated.");
-      options.onStage?.("Maintaining optional capture archives…");
-      archive =
-        options.archiveSourceFile && archiveIdentity
-          ? await archiveImportedCapture(
-              store,
-              result.sourceSha256,
-              options.archiveSourceFile,
-              archiveIdentity,
-            )
-          : { archived: false, ...expireCaptureArchives(store) };
       options.onStage?.("Recycling SQLite caches and WAL…");
       checkpointBusy = store.maintainStorage().checkpointBusy;
     } catch (error) {
@@ -234,7 +217,6 @@ export const importRuntimeTraceSourceIntoProject = async (
     const newFacts = afterStorage.facts - beforeStorage.facts;
     return {
       ...result,
-      archive,
       storage: {
         before: beforeStorage,
         after: afterStorage,
@@ -243,7 +225,6 @@ export const importRuntimeTraceSourceIntoProject = async (
         checkpointBusy,
       },
       warnings: [
-        ...archive.warnings,
         ...maintenanceWarnings,
         ...(retainedReport
           ? [
@@ -273,10 +254,14 @@ export const commitRuntimeEvidenceBatch = (
     const result = store.transaction(() => {
       assertAnalysisProjectRevision(store, expected);
       const result = store.mergeEvidenceBatch(batch);
-      if (result.changed) store.publishManifest(store.manifest());
+      if (result.changed) {
+        store.publishManifest(store.manifest());
+      }
       return result;
     });
-    if (result.changed) store.writePointer(directory);
+    if (result.changed) {
+      store.writePointer(directory);
+    }
     return result;
   } finally {
     store.close();

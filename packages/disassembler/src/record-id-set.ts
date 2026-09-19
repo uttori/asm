@@ -20,11 +20,17 @@ export class RecordIdSet {
    * @returns {boolean} False only for an exact duplicate.
    */
   add(id: string): boolean {
-    if (this.#insert) return this.#insert.run(id).changes !== 0;
-    if (this.#ids.has(id)) return false;
+    if (this.#insert) {
+      return this.#insert.run(id).changes !== 0;
+    }
+    if (this.#ids.has(id)) {
+      return false;
+    }
     this.#ids.add(id);
     this.#characters += id.length;
-    if (this.#characters > 4 * 1024 * 1024) this.#spill();
+    if (this.#characters > 4 * 1024 * 1024) {
+      this.#spill();
+    }
     return true;
   }
 
@@ -38,7 +44,9 @@ export class RecordIdSet {
         "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-4096; CREATE TABLE ids (id TEXT PRIMARY KEY) WITHOUT ROWID; BEGIN;",
       );
       this.#insert = this.#database.prepare("INSERT OR IGNORE INTO ids VALUES (?)");
-      for (const id of this.#ids) this.#insert.run(id);
+      for (const id of this.#ids) {
+        this.#insert.run(id);
+      }
       this.#ids.clear();
     } catch (error) {
       this.close();
@@ -54,7 +62,9 @@ export class RecordIdSet {
       this.#database = undefined;
       this.#insert = undefined;
       this.#ids.clear();
-      if (this.#directory) fs.rmSync(this.#directory, { recursive: true, force: true });
+      if (this.#directory) {
+        fs.rmSync(this.#directory, { recursive: true, force: true });
+      }
       this.#directory = undefined;
     }
   }

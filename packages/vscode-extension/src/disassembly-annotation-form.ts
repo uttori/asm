@@ -10,12 +10,15 @@ export interface DisassemblyAnnotationFields {
 }
 
 export const parseDisassemblyAnnotationFields = (value: unknown): DisassemblyAnnotationFields => {
-  if (!value || typeof value !== "object") throw new Error("Invalid annotation form.");
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid annotation form.");
+  }
   const input = value as Record<string, unknown>;
   const fields = ["name", "comment", "inlineComment", "instructionComment"] as const;
   for (const field of fields) {
-    if (typeof input[field] !== "string" || input[field].length > 65536)
+    if (typeof input[field] !== "string" || input[field].length > 65536) {
       throw new Error(`Invalid or oversized ${field}.`);
+    }
   }
   return Object.fromEntries(
     fields.map((field) => [field, input[field]]),
@@ -62,30 +65,40 @@ export const openDisassemblyAnnotationForm = (
   let regenerate: (() => Promise<void>) | undefined;
   let saving = false;
   const publish = (): void => {
-    if (ready && !disposed && state) void panel.webview.postMessage(state);
+    if (ready && !disposed && state) {
+      void panel.webview.postMessage(state);
+    }
   };
   const fail = (error: unknown): void => {
     state = { type: "error", message: error instanceof Error ? error.message : String(error) };
     publish();
   };
   const listener = panel.webview.onDidReceiveMessage(async (message: unknown) => {
-    if (!message || typeof message !== "object" || disposed) return;
+    if (!message || typeof message !== "object" || disposed) {
+      return;
+    }
     const input = message as Record<string, unknown>;
     if (input.type === "ready") {
       ready = true;
       publish();
       return;
     }
-    if (saving) return;
+    if (saving) {
+      return;
+    }
     if (input.type === "cancel") {
       panel.dispose();
       return;
     }
-    if (input.type !== "save" || !save || !regenerate) return;
+    if (input.type !== "save" || !save || !regenerate) {
+      return;
+    }
     saving = true;
     try {
       const fields = parseDisassemblyAnnotationFields(input.fields);
-      if (typeof input.regenerate !== "boolean") throw new Error("Invalid regeneration selection.");
+      if (typeof input.regenerate !== "boolean") {
+        throw new Error("Invalid regeneration selection.");
+      }
       await save(fields);
       panel.dispose();
     } catch (error) {

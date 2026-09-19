@@ -237,7 +237,9 @@ const asciiField = (bytes: Uint8Array): string =>
     .replaceAll(/(?: |\\x00)+$/g, "");
 
 const sizeBytes = (code: number, zeroMeansNone: boolean): number | undefined => {
-  if (zeroMeansNone && code === 0) return 0;
+  if (zeroMeansNone && code === 0) {
+    return 0;
+  }
   return code < 0x20 ? 1024 * 2 ** code : undefined;
 };
 
@@ -282,7 +284,9 @@ const chipsetDescription = (value: number): string => {
       0x5: "ROM + coprocessor + RAM + battery",
       0x6: "ROM + coprocessor + battery",
     }[value & 0x0f] ?? "Unknown cartridge contents";
-  if ((value & 0x0f) < 3) return contents;
+  if ((value & 0x0f) < 3) {
+    return contents;
+  }
   const coprocessor =
     {
       0x0: "DSP",
@@ -309,9 +313,13 @@ export const parseSnesInternalRomHeader = (
   mapper: SnesMapper,
 ): SnesInternalRomHeader | undefined => {
   const offset = snesInternalHeaderOffset(mapper);
-  if (offset === undefined) return undefined;
+  if (offset === undefined) {
+    return undefined;
+  }
   const bytes = rom.read(offset, 0x40);
-  if (!bytes) return undefined;
+  if (!bytes) {
+    return undefined;
+  }
   const developerId = bytes[0x1a];
   const expandedBytes =
     developerId === 0x33 && offset >= 0x10 ? rom.read(offset - 0x10, 0x10) : undefined;
@@ -417,7 +425,9 @@ const scoreCandidate = (
   spec: (typeof HEADER_SPECS)[number],
 ): MappingCandidate | undefined => {
   const header = rom.read(spec.offset, 0x40);
-  if (!header) return undefined;
+  if (!header) {
+    return undefined;
+  }
   const evidence: Array<{ kind: string; score: number; detail: string }> = [];
   const add = (kind: string, score: number, detail: string): void => {
     evidence.push({ kind, score, detail });

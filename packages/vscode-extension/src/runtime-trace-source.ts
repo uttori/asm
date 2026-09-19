@@ -28,20 +28,25 @@ export const createEditorRuntimeTraceSource = async (
     let offset = 0;
     while (offset < magic.length) {
       const { bytesRead } = await handle.read(magic, offset, magic.length - offset, offset);
-      if (bytesRead === 0) break;
+      if (bytesRead === 0) {
+        break;
+      }
       offset += bytesRead;
     }
   } finally {
     await handle.close();
   }
-  if (magic.toString("ascii") !== "ACS2") return createRuntimeTraceFileSource(file, options);
+  if (magic.toString("ascii") !== "ACS2") {
+    return createRuntimeTraceFileSource(file, options);
+  }
   const { readCaptureFileHeader, recoverCaptureFile } = await import("@uttori/asm-debug-adapter");
   const limits = { ...options, maxBytes: options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES };
   const header = await readCaptureFileHeader(file, limits);
-  if (header.scope !== "snes.65816.instructions")
+  if (header.scope !== "snes.65816.instructions") {
     throw new Error(
       "This ACT2 file contains CPU/DMA/HDMA bus accesses. Instruction import requires an instruction capture.",
     );
+  }
   const metadata = validateRuntimeInstructionTraceMetadata({
     ...header,
     format: "uttori-asm-instruction-trace",
@@ -54,12 +59,14 @@ export const createEditorRuntimeTraceSource = async (
         file,
         (chunk) => {
           // Recheck during consumption in case the path was replaced after reading its header.
-          if (chunk.scope !== "snes.65816.instructions")
+          if (chunk.scope !== "snes.65816.instructions") {
             throw new Error("Capture scope changed during instruction import.");
+          }
           // Project sequence numbers are safe JS integers even though ACT2 stores exact u64s.
           // Reject before narrowing; never silently round an otherwise valid archive position.
-          if (BigInt(chunk.through) >= BigInt(Number.MAX_SAFE_INTEGER))
+          if (BigInt(chunk.through) >= BigInt(Number.MAX_SAFE_INTEGER)) {
             throw new Error("Trace sequence exceeds the project index's safe integer range.");
+          }
           accept({
             sequenceStart: Number(chunk.first),
             addresses: chunk.instructions.map((instruction) => instruction.address),
@@ -72,9 +79,12 @@ export const createEditorRuntimeTraceSource = async (
         },
         limits,
       );
-      if (!result.complete) throw new Error(`Capture archive is incomplete: ${result.reason}`);
-      if (canonicalJson(result.header) !== canonicalJson(header))
+      if (!result.complete) {
+        throw new Error(`Capture archive is incomplete: ${result.reason}`);
+      }
+      if (canonicalJson(result.header) !== canonicalJson(header)) {
         throw new Error("Capture archive identity changed while importing.");
+      }
     },
   };
 };

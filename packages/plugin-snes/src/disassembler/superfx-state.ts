@@ -29,8 +29,12 @@ const joinValue = <T extends number>(
   left: SuperFxKnown<T>,
   right: SuperFxKnown<T>,
 ): SuperFxKnown<T> => {
-  if (left.kind === "unknown" || right.kind === "unknown") return { kind: "unknown" };
-  if (left.kind === "conflict" || right.kind === "conflict") return { kind: "conflict" };
+  if (left.kind === "unknown" || right.kind === "unknown") {
+    return { kind: "unknown" };
+  }
+  if (left.kind === "conflict" || right.kind === "conflict") {
+    return { kind: "conflict" };
+  }
   return left.value === right.value ? left : { kind: "conflict" };
 };
 
@@ -66,7 +70,9 @@ const detailNumber = (
   const effect = instruction.effects.find(
     (entry) => entry.kind === "custom" && entry.name === name,
   );
-  if (effect?.kind !== "custom") return undefined;
+  if (effect?.kind !== "custom") {
+    return undefined;
+  }
   const value = effect.details?.register ?? effect.details?.alt;
   return typeof value === "number" ? value : undefined;
 };
@@ -86,7 +92,9 @@ export const transferSuperFxState = (
     };
   }
   const destination = detailNumber(instruction, "select-superfx-destination");
-  if (destination !== undefined) return { ...state, destinationRegister: known(destination) };
+  if (destination !== undefined) {
+    return { ...state, destinationRegister: known(destination) };
+  }
   const paired = detailNumber(instruction, "select-superfx-source-destination");
   if (paired !== undefined) {
     return {
@@ -96,7 +104,9 @@ export const transferSuperFxState = (
     };
   }
   const source = detailNumber(instruction, "select-superfx-source");
-  if (source !== undefined) return { ...state, sourceRegister: known(source) };
+  if (source !== undefined) {
+    return { ...state, sourceRegister: known(source) };
+  }
   return {
     ...state,
     alt: known(0),

@@ -1,7 +1,7 @@
 # Native file capture
 
 Downstream C++ ACT2 writer and private RSP controls. See the
-[implementation and measured results](../../../../docs/ares-native-file-capture.md).
+[native file sink workflow and recovery](../../CAPTURE.md#native-file-sink).
 
 Apply `capture-file.patch` after `capture-v2`, `capture-bus`, `capture-transfer`,
 `capture-graphics/graphics-tests.patch`, and `capture-ppu`, on base

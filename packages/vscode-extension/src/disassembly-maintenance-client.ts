@@ -26,14 +26,17 @@ export class DisassemblyMaintenanceClient {
     input: MaintenanceJobs[K]["input"],
     options: MaintenanceRunOptions,
   ): Promise<MaintenanceJobs[K]["output"]> {
-    if (this.#disposed)
+    if (this.#disposed) {
       return Promise.reject(new Error("Disassembly maintenance client disposed."));
-    if (options.signal?.aborted)
+    }
+    if (options.signal?.aborted) {
       return Promise.reject(cancelled("Disassembly maintenance cancelled."));
-    if (!Number.isSafeInteger(options.maxMemoryMiB) || options.maxMemoryMiB < 128)
+    }
+    if (!Number.isSafeInteger(options.maxMemoryMiB) || options.maxMemoryMiB < 128) {
       return Promise.reject(
         new Error("asm.analysis.maxMemoryMiB must be a safe integer of at least 128."),
       );
+    }
     return new Promise((resolve, reject) => {
       const child = fork(this.processFile, [], {
         execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
@@ -60,17 +63,23 @@ export class DisassemblyMaintenanceClient {
         log?.stderr(chunk.toString());
       });
       const finish = (error?: Error, value?: MaintenanceJobs[K]["output"]): void => {
-        if (settled) return;
+        if (settled) {
+          return;
+        }
         settled = true;
         clearInterval(heartbeat);
         options.signal?.removeEventListener("abort", cancel);
-        if (!error && options.signal?.aborted)
+        if (!error && options.signal?.aborted) {
           error = cancelled(
             "Disassembly maintenance cancelled after finishing the current step. Check disassembly status before retrying.",
           );
+        }
         log?.finish(error);
-        if (error) reject(error);
-        else resolve(value);
+        if (error) {
+          reject(error);
+        } else {
+          resolve(value);
+        }
       };
       const cancel = (): void => {
         log?.progress({
@@ -82,10 +91,13 @@ export class DisassemblyMaintenanceClient {
         options.onProgress?.({
           message: "Cancellation requested; finishing the current safe step…",
         });
-        if (child.connected)
+        if (child.connected) {
           child.send({ type: "cancel" }, (error) => {
-            if (error) finish(error);
+            if (error) {
+              finish(error);
+            }
           });
+        }
       };
       options.signal?.addEventListener("abort", cancel, { once: true });
       child.on(
@@ -98,21 +110,32 @@ export class DisassemblyMaintenanceClient {
         }) => {
           if (message.type === "progress" && message.progress) {
             log?.progress(message.progress);
-            if (!options.signal?.aborted) options.onProgress?.(message.progress);
+            if (!options.signal?.aborted) {
+              options.onProgress?.(message.progress);
+            }
           } else if (message.type === "error") {
             const error = new Error(message.error?.message ?? "Disassembly maintenance failed.");
-            if (message.error?.stack) error.stack = message.error.stack;
-            if (message.error?.name) error.name = message.error.name;
+            if (message.error?.stack) {
+              error.stack = message.error.stack;
+            }
+            if (message.error?.name) {
+              error.name = message.error.name;
+            }
             response = { error };
-          } else if (message.type === "result") response = { value: message.value };
+          } else if (message.type === "result") {
+            response = { value: message.value };
+          }
         },
       );
       child.on("error", (error) => finish(error));
       child.on("exit", (code, signal) => {
         this.#children.delete(child);
         if (code === 0 && response) {
-          if ("error" in response) finish(response.error);
-          else finish(undefined, response.value);
+          if ("error" in response) {
+            finish(response.error);
+          } else {
+            finish(undefined, response.value);
+          }
           return;
         }
         finish(
@@ -122,14 +145,18 @@ export class DisassemblyMaintenanceClient {
         );
       });
       child.send({ type: "run", job: { operation, input } }, (error) => {
-        if (error) finish(error);
+        if (error) {
+          finish(error);
+        }
       });
     });
   }
 
   dispose(): void {
     this.#disposed = true;
-    for (const child of this.#children) child.kill();
+    for (const child of this.#children) {
+      child.kill();
+    }
     this.#children.clear();
   }
 }

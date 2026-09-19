@@ -77,8 +77,9 @@ export const prepareRuntimeConversion = async (
       record.addressSpace === "snes.cpu"
     ) {
       let bytes: readonly number[] | undefined;
-      if (record.kind === "runtime-instruction") bytes = record.bytes;
-      else {
+      if (record.kind === "runtime-instruction") {
+        bytes = record.bytes;
+      } else {
         const codeId = `runtime:instruction-trace:${match[1]}:code:${match[3]}`;
         const identity = sqliteRuntimeIdentity(codeId);
         const otherRow =
@@ -93,8 +94,9 @@ export const prepareRuntimeConversion = async (
           other.addressSpace === record.addressSpace &&
           other.address === record.address &&
           canonicalJson(other.state) === canonicalJson(record.state)
-        )
+        ) {
           bytes = other.bytes;
+        }
       }
       if (bytes) {
         remember.run(match[1]);
@@ -110,8 +112,9 @@ export const prepareRuntimeConversion = async (
       }
     }
     // Counts are the only additive field. Any conflicting stable identity aborts conversion.
-    if (insert.run(record.id, canonicalJson({ ...record, count: 0 }), record.count).changes !== 1)
+    if (insert.run(record.id, canonicalJson({ ...record, count: 0 }), record.count).changes !== 1) {
       throw new Error(`Conflicting projected runtime identity '${record.id}'.`);
+    }
     if (++records % 5000 === 0) {
       options.onProgress?.(records);
       await setImmediate();
@@ -123,8 +126,9 @@ export const prepareRuntimeConversion = async (
         "SELECT 1 FROM temp.converted_runtime WHERE typeof(count)!='integer' OR count>9007199254740991 LIMIT 1",
       )
       .get()
-  )
+  ) {
     throw new Error("Projected execution count exceeds the exact integer range.");
+  }
 };
 
 /** Read the finished projection once; no collection of full runtime history reaches the JS heap.
@@ -134,6 +138,7 @@ export const prepareRuntimeConversion = async (
 export function* convertedRuntimeRecords(
   db: DatabaseSync,
 ): IterableIterator<RuntimeEvidenceRecord> {
-  for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate())
+  for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate()) {
     yield { ...JSON.parse(String(row.payload)), count: Number(row.count) } as RuntimeEvidenceRecord;
+  }
 }

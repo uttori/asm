@@ -12,6 +12,7 @@ import { SQLITE_MIGRATION_BACKUP, SQLITE_MIGRATION_DIRECTORY, sqliteFileIdentity
 import { decodeSqlitePayload } from "./sqlite-payload.js";
 import { runtimeFromRow } from "./sqlite-records.js";
 import { RuntimeDigest, migrationRuntimeQuery, prepareRuntimeConversion, convertedRuntimeRecords, } from "./sqlite-runtime-conversion.js";
+import { CAPTURE_CATALOG_COLUMNS } from "./sqlite-storage-policy.js";
 import { ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SqliteAnalysisStore, } from "./sqlite-store.js";
 const TABLES = [
     "evidence",
@@ -42,8 +43,9 @@ const writeJournal = (stage, journal) => {
  * @returns {boolean} Whether ownership may still be active.
  */
 const processAlive = (pid) => {
-    if (!Number.isSafeInteger(pid) || pid <= 0)
+    if (!Number.isSafeInteger(pid) || pid <= 0) {
         throw new Error("Invalid SQLite migration owner.");
+    }
     try {
         process.kill(pid, 0);
         return true;
@@ -73,25 +75,30 @@ const sourceManifest = (database) => {
  */
 function* legacyRecords(database, kind, version, convert = false) {
     if (kind === "runtime") {
-        if (convert)
+        if (convert) {
             yield* convertedRuntimeRecords(database);
-        else
-            for (const row of database.prepare(migrationRuntimeQuery(version)).iterate())
+        }
+        else {
+            for (const row of database.prepare(migrationRuntimeQuery(version)).iterate()) {
                 yield runtimeFromRow(row);
+            }
+        }
         return;
     }
     for (const row of database.prepare(`SELECT * FROM ${kind} ORDER BY id`).iterate()) {
         let record = JSON.parse(decodeSqlitePayload(row.payload));
-        if (record.id !== row.id)
+        if (record.id !== row.id) {
             throw new Error(`Stored ${kind} ID differs from its payload.`);
+        }
         if (convert &&
             kind === "imports" &&
             "format" in record &&
             record.format === "uttori-asm-instruction-trace" &&
             database
                 .prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?")
-                .get(record.sourceSha256))
+                .get(record.sourceSha256)) {
             record = { ...record, indexProfile: RUNTIME_ANALYSIS_PROFILE };
+        }
         yield record;
     }
 }
@@ -105,33 +112,38 @@ const recoverMigration = (directory) => {
     const file = path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE);
     const backup = path.join(directory, SQLITE_MIGRATION_BACKUP);
     const journal = JSON.parse(fs.readFileSync(path.join(stage, "journal.json"), "utf8"));
-    if (!journal.released && processAlive(journal.pid))
+    if (!journal.released && processAlive(journal.pid)) {
         throw new Error("Another process owns the analysis storage migration.");
+    }
     const identity = sqliteFileIdentity(file);
     if (identity === journal.targetIdentity && journal.result) {
         const database = new DatabaseSync(file, { readOnly: true });
         try {
             if (createHash("sha256")
                 .update(canonicalJson(sourceManifest(database)))
-                .digest("hex") !== journal.manifestSha256)
+                .digest("hex") !== journal.manifestSha256) {
                 throw new Error("Published migration identity differs from its recovery journal.");
+            }
         }
         finally {
             database.close();
         }
-        if (sqliteFileIdentity(backup) !== journal.sourceIdentity)
+        if (sqliteFileIdentity(backup) !== journal.sourceIdentity) {
             throw new Error("Migration backup identity differs from its recovery journal.");
+        }
         fs.rmSync(stage, { recursive: true });
         syncSqlitePath(directory);
         return { ...journal.result, recovered: true };
     }
-    if (identity !== journal.sourceIdentity)
+    if (identity !== journal.sourceIdentity) {
         throw new Error("Analysis database identity changed outside the recorded migration; preserving recovery files.");
+    }
     // A crash after linking the backup but before the atomic replacement leaves two names for the
     // unchanged source. Remove only that proven duplicate link, never an unrelated backup file.
     if (fs.existsSync(backup)) {
-        if (sqliteFileIdentity(backup) !== identity)
+        if (sqliteFileIdentity(backup) !== identity) {
             throw new Error("An unrelated migration backup already exists; preserving both databases.");
+        }
         fs.unlinkSync(backup);
     }
     fs.rmSync(stage, { recursive: true });
@@ -153,27 +165,30 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
     const backup = path.join(directory, SQLITE_MIGRATION_BACKUP);
     if (fs.existsSync(stage)) {
         const recovered = recoverMigration(directory);
-        if (recovered)
+        if (recovered) {
             return recovered;
+        }
     }
     options.signal?.throwIfAborted();
-    if (fs.lstatSync(file).isSymbolicLink())
+    if (fs.lstatSync(file).isSymbolicLink()) {
         throw new Error("Migrate a regular analysis database file, not a symbolic link.");
+    }
     // Checking the header is read-only; opening the normal store would correctly reject this old format.
     const probe = new DatabaseSync(file, { readOnly: true });
     let version;
     let manifest;
     try {
         version = Number(probe.prepare("PRAGMA user_version").get()?.user_version);
-        if (![0, 1, ANALYSIS_SQLITE_STORAGE_VERSION].includes(version))
+        if (![0, 1, ANALYSIS_SQLITE_STORAGE_VERSION].includes(version)) {
             throw new Error(`Cannot migrate unsupported analysis storage format ${version}.`);
+        }
         manifest = sourceManifest(probe);
     }
     finally {
         probe.close();
     }
     let beforeBytes = fs.statSync(file).size;
-    if (version === ANALYSIS_SQLITE_STORAGE_VERSION && !options.convertRuntime)
+    if (version === ANALYSIS_SQLITE_STORAGE_VERSION && !options.convertRuntime) {
         return {
             changed: false,
             recovered: false,
@@ -183,14 +198,17 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
             tables: {},
             warnings: [],
         };
-    if (fs.existsSync(backup))
+    }
+    if (fs.existsSync(backup)) {
         throw new Error(`Migration backup already exists: ${backup}`);
+    }
     const disk = fs.statfsSync(directory);
     // The sample-based format budget reserves half the source for the destination, another quarter
     // for index construction, plus a fixed safety margin. Runtime checks handle estimation error.
     const required = Math.ceil(beforeBytes * 0.75) + RESERVE_BYTES;
-    if (disk.bavail * disk.bsize < required)
+    if (disk.bavail * disk.bsize < required) {
         throw new Error(`Insufficient migration workspace: need an estimated ${Math.ceil(required / 1024 / 1024)} MiB free.`);
+    }
     fs.mkdirSync(stage, { mode: 0o700 });
     let journal = {
         pid: process.pid,
@@ -257,12 +275,14 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
             let bytes = 0;
             let batch = [];
             const flush = async () => {
-                if (batch.length === 0)
+                if (batch.length === 0) {
                     return;
+                }
                 options.signal?.throwIfAborted();
                 const available = fs.statfsSync(directory);
-                if (available.bavail * available.bsize < RESERVE_BYTES)
+                if (available.bavail * available.bsize < RESERVE_BYTES) {
                     throw new Error("Migration stopped before exhausting free disk space.");
+                }
                 destination.transaction(() => destination.appendRecords(kind, batch));
                 batch = [];
                 bytes = 0;
@@ -275,8 +295,9 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
                 bytes += Buffer.byteLength(json);
                 batch.push(record);
                 count++;
-                if (batch.length >= 2000 || bytes >= 4 * 1024 * 1024)
+                if (batch.length >= 2000 || bytes >= 4 * 1024 * 1024) {
                     await flush();
+                }
             }
             await flush();
             tables[kind] = { records: count, sha256: String(hash.digest("hex")) };
@@ -304,16 +325,18 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
             let batch = [];
             let batchBytes = 0;
             const validateBatch = () => {
-                if (batch.length !== 0)
+                if (batch.length !== 0) {
                     validateLoadedShards({ ...context, [kind]: batch }, manifest);
+                }
                 batch = [];
                 batchBytes = 0;
             };
             for (const record of destination.records(kind)) {
                 const json = canonicalJson(record);
                 hash.update(json);
-                if (kind === "runtime")
+                if (kind === "runtime") {
                     validateRuntime(record);
+                }
                 else if (kind !== "evidence" && kind !== "regions") {
                     batch.push(record);
                     batchBytes += Buffer.byteLength(json);
@@ -327,33 +350,36 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
                 }
             }
             validateBatch();
-            if (records !== tables[kind].records || hash.digest("hex") !== tables[kind].sha256)
+            if (records !== tables[kind].records || hash.digest("hex") !== tables[kind].sha256) {
                 throw new Error(`Migrated ${kind} records differ from the original database.`);
+            }
             timings.push({ step: `Verify ${kind}`, durationMs: performance.now() - started });
         }
         validateRuntime.close();
         destination.transaction(() => {
-            for (const report of destination.loadTable("imports"))
+            for (const report of destination.loadTable("imports")) {
                 destination.recordCaptureReceipt(report);
+            }
         });
         if (version === ANALYSIS_SQLITE_STORAGE_VERSION) {
             const staged = new DatabaseSync(stagedFile);
             try {
                 staged.exec("BEGIN IMMEDIATE");
-                const save = staged.prepare("INSERT OR REPLACE INTO capture_catalog VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)");
-                for (const row of source.prepare("SELECT * FROM capture_catalog").iterate())
-                    save.run(...Object.values({
-                        ...row,
-                        profile: options.convertRuntime &&
-                            source
-                                .prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?")
-                                .get(row.sha256)
-                            ? RUNTIME_ANALYSIS_PROFILE
-                            : row.profile,
-                    }));
+                const catalogColumns = CAPTURE_CATALOG_COLUMNS.join(",");
+                const save = staged.prepare(`INSERT OR REPLACE INTO capture_catalog (${catalogColumns}) VALUES (${CAPTURE_CATALOG_COLUMNS.map(() => "?").join(",")})`);
+                const convertedCapture = options.convertRuntime
+                    ? source.prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?")
+                    : undefined;
+                for (const row of source
+                    .prepare(`SELECT ${catalogColumns} FROM capture_catalog`)
+                    .iterate()) {
+                    const converted = convertedCapture?.get(row.sha256);
+                    save.run(...CAPTURE_CATALOG_COLUMNS.map((column) => column === "profile" && converted ? RUNTIME_ANALYSIS_PROFILE : row[column]));
+                }
                 const policy = source.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
-                if (policy)
+                if (policy) {
                     staged.prepare("INSERT OR REPLACE INTO meta VALUES('storage-policy',?)").run(policy);
+                }
                 staged.exec("COMMIT");
             }
             finally {
@@ -424,18 +450,21 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
             // Release logical ownership before removing the directory so a cleanup failure is retryable
             // even in a long-lived host. A killed process instead leaves its live-owner journal intact.
             writeJournal(stage, { ...journal, released: true });
-            if (linked && !published && sqliteFileIdentity(file) === journal.sourceIdentity)
+            if (linked && !published && sqliteFileIdentity(file) === journal.sourceIdentity) {
                 fs.unlinkSync(backup);
+            }
             fs.rmSync(stage, { recursive: true, force: true });
             syncSqlitePath(directory);
         }
         catch (error) {
             const message = `SQLite migration cleanup needs recovery via project-migrate: ${String(error)}`;
             // As with transaction rollback, housekeeping must not hide the original disk/publication error.
-            if (failed)
+            if (failed) {
                 process.emitWarning(message);
-            else
+            }
+            else {
                 warnings.push(message);
+            }
         }
     }
 };

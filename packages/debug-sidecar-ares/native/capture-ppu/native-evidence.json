@@ -30,7 +30,7 @@
     "CPU, DMA and HDMA writes through the real coroutine",
     "minimum two-slot queue: held clocks, draining, CRC checked independently",
     "C++17 shell wire fixture: mixed 64/88-byte records and missing-hook failure",
-    "ACT2 decoder, SQL reopen, duplicate import and archive-expiry retention",
+    "ACT2 decoder, SQL reopen, duplicate import and durable facts",
     "desktop normal/delayed consumer: zero loss, long DMA step and pause control"
   ],
   "executables": {

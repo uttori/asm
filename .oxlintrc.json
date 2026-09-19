@@ -97,6 +97,7 @@
     "approx-constant": "error",
     "bad-bitwise-operator": "error",
     "branches-sharing-code": "error",
+    "curly": ["error", "all"],
     "no-array-constructor": "error",
     "no-empty": [
       "error",

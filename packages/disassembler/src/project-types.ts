@@ -6,13 +6,14 @@ import type { RuntimeBusFact } from "./runtime-bus-types.js";
 export const ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 /** Current analysis-project schema. Only the current SQLite container is supported. */
 export const ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
-/** Filename of the project manifest written at the project root. */
+/** Watcher pointer filename; the authoritative manifest lives in SQLite. */
 export const ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-/** Named address space advertised in the project (file offsets, CPU bus, or RAM). */
+/** Named byte-address space. Equal numeric addresses in different spaces are unrelated. */
 export interface AddressSpaceDescriptor {
   readonly id: string;
   readonly name: string;
+  /** Integer width from 1 through 53; addresses are nonnegative safe integers below 2 ** addressBits. */
   readonly addressBits: number;
   /** `file` is headerless ROM offsets; `cpu` is the target bus; `memory` is RAM/SRAM. */
   readonly kind: "file" | "cpu" | "memory";
@@ -28,7 +29,7 @@ export interface DetectionEvidence {
 /** One scored internal-header candidate produced during ROM ingestion. */
 export interface MappingCandidate {
   readonly mapper: string;
-  /** File offset of the 64-byte internal cartridge header, when applicable. */
+  /** Byte offset in headerless ROM content of the 64-byte cartridge header, when applicable. */
   readonly headerOffset: number;
   readonly score: number;
   readonly evidence: readonly DetectionEvidence[];
@@ -39,6 +40,7 @@ export interface ProjectMapping {
   readonly mapper: string;
   /** Cartridge speed when known (`slow` / `fast` on SNES). */
   readonly speed?: string;
+  /** Byte offset in headerless ROM content, excluding any copier header. */
   readonly headerOffset?: number;
   /** How the mapper was chosen. `import` is `.dizraw` and similar. */
   readonly source: "detected" | "override" | "import";
@@ -56,7 +58,7 @@ export type ShardKind =
   | "evidence"
   | "imports";
 
-/** Root `analysis.json` for a native analysis project. ROM bytes are never stored here. */
+/** Authoritative SQLite manifest, mirrored in `analysis.json` for watchers. Contains no ROM bytes. */
 export interface AnalysisProjectManifest {
   readonly format: typeof ANALYSIS_PROJECT_FORMAT;
   readonly schemaVersion: typeof ANALYSIS_PROJECT_SCHEMA_VERSION;
@@ -67,7 +69,7 @@ export interface AnalysisProjectManifest {
   /** Always empty: records live in SQLite tables. */
   readonly shards: readonly [];
   /**
-   * SQLite working-store path, supplied automatically when creating a project.
+   * Project-relative filename, fixed to `analysis.sqlite` on publication.
    */
   readonly db?: string;
   /** Monotonic SQLite publication counter, supplied by the store. */
@@ -451,7 +453,11 @@ export type RuntimeEvidenceRecord =
   | RuntimeCoverageRecord
   | RuntimeControlTargetRecord;
 
-/** In-memory shard payload matching the on-disk `analysis/*.json` files. */
+/**
+ * Logical SQLite collections. Readonly types do not freeze the decoded objects at runtime.
+ * A full load contains every record; a view can omit runtime or select records. Never publish
+ * a partial view through a full-replacement API: omitted records would be deleted.
+ */
 export interface AnalysisProjectShards {
   readonly analysis: readonly AnalysisRecord[];
   readonly annotations: readonly IntervalAnnotation[];
@@ -463,7 +469,7 @@ export interface AnalysisProjectShards {
   readonly imports: readonly ImportReport[];
 }
 
-/** Project ready to write: semantic manifest fields plus in-memory record collections. */
+/** Complete replacement for full writers; pure edit helpers can also operate on selected views. */
 export interface AnalysisProject {
   readonly manifest: Omit<AnalysisProjectManifest, "shards">;
   readonly shards: AnalysisProjectShards;

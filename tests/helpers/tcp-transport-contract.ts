@@ -32,7 +32,9 @@ class ControlledSocket extends EventEmitter {
     .stub()
     .callsFake((_data: Uint8Array, done: (error?: Error) => void) => done());
   readonly end = sinon.stub().callsFake(() => {
-    if (this.closeOnEnd) this.emit("close");
+    if (this.closeOnEnd) {
+      this.emit("close");
+    }
   });
   readonly destroy = sinon.stub().callsFake(() => {
     this.destroyed = true;

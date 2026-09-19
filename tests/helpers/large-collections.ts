@@ -74,8 +74,12 @@ const scenarios: Record<string, () => void | Promise<void>> = {
       structEngine: { hasStructReference: () => false },
       operandResolver: { getnum: Number },
       resolvedefines: (value: string) => {
-        if (value === "NEST") return '7,LIST,"AZ",8';
-        if (value === "LIST") return list;
+        if (value === "NEST") {
+          return '7,LIST,"AZ",8';
+        }
+        if (value === "LIST") {
+          return list;
+        }
         return value;
       },
       step: (bytes: number) => {
@@ -275,7 +279,9 @@ const scenarios: Record<string, () => void | Promise<void>> = {
       // Interleave disposable lifecycle events with a large diagnostic burst. Failure cleanup
       // must keep every output in order and preserve the original launch error.
       for (let index = 0; index < count; index++) {
-        if (index % 1000 === 0) emit({ type: "stopped", reason: "entry", threadId: 1 });
+        if (index % 1000 === 0) {
+          emit({ type: "stopped", reason: "entry", threadId: 1 });
+        }
         emit({ type: "output", category: "console", text: `diagnostic:${index}` });
       }
       throw new Error("large launch failed");

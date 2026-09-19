@@ -5,7 +5,7 @@ import path from "node:path";
  */
 export class NodeAssemblyFileProvider {
     /**
-     * Resolves path.
+     * Find the first existing path: macro directory, current source directory, include paths, then cwd.
      * @param {string} filename The filename.
      * @param {AssemblyFileResolutionOptions} [options] The options.
      * @returns {string | undefined} The result.
@@ -79,13 +79,14 @@ export class NodeAssemblyFileProvider {
  */
 export class MemoryAssemblyFileProvider {
     options;
+    /** Mutable document map; construction copies keys/entries but retains supplied byte-array values. */
     files;
     constructor(files = new Map(), options = {}) {
         this.options = options;
         this.files = files instanceof Map ? new Map(files) : new Map(Object.entries(files));
     }
     /**
-     * Resolves path.
+     * Match an exact virtual key, then search macro/source/include directories and workingDirectory.
      * @param {string} filename The filename.
      * @param {AssemblyFileResolutionOptions} [options] The options.
      * @returns {string | undefined} The result.

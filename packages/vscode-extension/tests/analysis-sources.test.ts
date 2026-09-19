@@ -1,8 +1,6 @@
-import { createRequire } from "node:module";
-import vm from "node:vm";
+import { registerHooks } from "node:module";
 
 import type { AnalysisEvidenceSource } from "@uttori/asm-disassembler";
-import { build } from "esbuild";
 
 import { test } from "../../../tests/ava-helper.js";
 import type {
@@ -10,31 +8,120 @@ import type {
   AnalysisSourcesTreeNode,
 } from "../src/analysis-sources-tree.js";
 
-const bundle = await build({
-  entryPoints: ["packages/vscode-extension/src/analysis-sources-tree.ts"],
-  bundle: true,
-  conditions: ["uttori-source"],
-  platform: "node",
-  format: "cjs",
-  write: false,
-  plugins: [
-    {
-      name: "sources-host",
-      setup(builder) {
-        builder.onResolve(
-          { filter: /^(vscode|\.\/analysis-worker-client\.js|\.\/coverage-tree\.js)$/ },
-          ({ path }) => ({ path, namespace: "host" }),
-        );
-        builder.onLoad({ filter: /.*/, namespace: "host" }, ({ path }) => ({
-          contents: `module.exports = globalThis.host[${JSON.stringify(path)}];`,
-        }));
-      },
-    },
-  ],
+const host = {
+  calls: [] as {
+    operation: string;
+    options?: { offset?: number; sourceId?: string };
+  }[],
+  sources: [] as AnalysisEvidenceSource[],
+};
+
+(globalThis as { __uttoriAnalysisSourcesTest?: typeof host }).__uttoriAnalysisSourcesTest = host;
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier === "vscode") {
+      return { shortCircuit: true, url: "analysis-sources-test:vscode" };
+    }
+    if (
+      typeof context.parentURL === "string" &&
+      /[/\\]analysis-sources-tree\.(ts|js|mts|mjs)/.test(context.parentURL)
+    ) {
+      if (specifier === "./coverage-tree.js") {
+        return { shortCircuit: true, url: "analysis-sources-test:coverage-tree" };
+      }
+      if (specifier === "./analysis-worker-client.js") {
+        return { shortCircuit: true, url: "analysis-sources-test:worker-client" };
+      }
+    }
+    return nextResolve(specifier, context);
+  },
+  load(url, context, nextLoad) {
+    if (url === "analysis-sources-test:vscode") {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+          export class EventEmitter {
+            event = () => {};
+            fire() {}
+            dispose() {}
+          }
+          export class ThemeIcon {
+            constructor(id) { this.id = id; }
+          }
+          export class TreeItem {
+            constructor(label, collapsibleState) {
+              this.label = label;
+              this.collapsibleState = collapsibleState;
+            }
+          }
+          export const TreeItemCollapsibleState = { None: 0, Collapsed: 1 };
+        `,
+      };
+    }
+    if (url === "analysis-sources-test:coverage-tree") {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+          export const findAnalysisProjectDirectories = async () => ["/fixture/analysis"];
+        `,
+      };
+    }
+    if (url === "analysis-sources-test:worker-client") {
+      return {
+        shortCircuit: true,
+        format: "module",
+        source: `
+          const host = globalThis.__uttoriAnalysisSourcesTest;
+          export const analysisWorker = () => ({
+            request: async (_directory, operation, options) => {
+              host.calls.push({ operation, options });
+              const manifest = {
+                target: "snes.sfc",
+                rom: { contentSha256: "a".repeat(64), contentSize: 1024 },
+              };
+              if (operation === "sources") {
+                return { manifest, sources: host.sources };
+              }
+              if (operation === "sourceSummary") {
+                return {
+                  manifest,
+                  summary: {
+                    source: host.sources[0],
+                    instructionCount: 450,
+                    memoryCount: 0,
+                    contributionCount: 0,
+                  },
+                };
+              }
+              return [
+                {
+                  id: "pc",
+                  label: "$C3002C",
+                  description: "snes.cpu",
+                  detail: "Captured bytes: A9 01",
+                  addressSpace: "snes.cpu",
+                  address: 0xc3002c,
+                  architecture: "snes.65816",
+                  outputOffsets: [0x3002c],
+                  recordIds: ["node"],
+                },
+              ];
+            },
+          });
+        `,
+      };
+    }
+    return nextLoad(url, context);
+  },
 });
 
+const { AnalysisSourcesProvider: Provider } = await import("../src/analysis-sources-tree.js");
+
 test("Sources lists metadata immediately, pages on demand, navigates qualified locations", async (t) => {
-  const sources: AnalysisEvidenceSource[] = ["capture-a", "capture-b"].map((name) => ({
+  host.sources = ["capture-a", "capture-b"].map((name) => ({
     id: name,
     name: `${name}.json`,
     names: [`${name}.json`],
@@ -43,80 +130,8 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     evidenceIds: [name],
     reports: [],
   }));
-  const calls: {
-    operation: string;
-    options?: { offset?: number; sourceId?: string };
-  }[] = [];
-  const host = {
-    vscode: {
-      EventEmitter: class {
-        event = () => {};
-        fire() {}
-        dispose() {}
-      },
-      ThemeIcon: class {
-        constructor(readonly id: string) {}
-      },
-      TreeItem: class {
-        constructor(
-          readonly label: string,
-          readonly collapsibleState: number,
-        ) {}
-      },
-      TreeItemCollapsibleState: { None: 0, Collapsed: 1 },
-    },
-    "./coverage-tree.js": { findAnalysisProjectDirectories: async () => ["/fixture/analysis"] },
-    "./analysis-worker-client.js": {
-      analysisWorker: () => ({
-        request: async (
-          _directory: string,
-          operation: string,
-          options?: (typeof calls)[number]["options"],
-        ) => {
-          calls.push({ operation, options });
-          const manifest = {
-            target: "snes.sfc",
-            rom: { contentSha256: "a".repeat(64), contentSize: 1024 },
-          };
-          if (operation === "sources") return { manifest, sources };
-          if (operation === "sourceSummary")
-            return {
-              manifest,
-              summary: {
-                source: sources[0],
-                instructionCount: 450,
-                memoryCount: 0,
-                contributionCount: 0,
-              },
-            };
-          return [
-            {
-              id: "pc",
-              label: "$C3002C",
-              description: "snes.cpu",
-              detail: "Captured bytes: A9 01",
-              addressSpace: "snes.cpu",
-              address: 0xc3002c,
-              architecture: "snes.65816",
-              outputOffsets: [0x3002c],
-              recordIds: ["node"],
-            },
-          ];
-        },
-      }),
-    },
-  };
-  const module = { exports: {} };
-  const context = vm.createContext({
-    module,
-    host,
-    exports: {},
-    require: createRequire(import.meta.url),
-  });
-  vm.runInContext(bundle.outputFiles[0].text, context);
-  const Provider = (module.exports as { AnalysisSourcesProvider: typeof AnalysisSourcesProvider })
-    .AnalysisSourcesProvider;
-  const provider = new Provider();
+  host.calls = [];
+  const provider = new Provider() as AnalysisSourcesProvider;
   t.teardown(() => provider.dispose());
   const roots = await provider.getChildren();
   t.deepEqual(
@@ -124,7 +139,7 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     ["capture-a.json", "capture-b.json"],
   );
   t.deepEqual(
-    calls.map(({ operation }) => operation),
+    host.calls.map(({ operation }) => operation),
     ["sources"],
   );
   t.is(provider.getTreeItem(roots[0]).contextValue, "analysisSource");
@@ -136,9 +151,9 @@ test("Sources lists metadata immediately, pages on demand, navigates qualified l
     pages.map(({ label }) => label),
     ["1–200", "201–400", "401–450"],
   );
-  t.is(calls.filter(({ operation }) => operation === "sourceEntries").length, 0);
+  t.is(host.calls.filter(({ operation }) => operation === "sourceEntries").length, 0);
   const entries = await provider.getChildren(pages[1]);
-  t.is(calls.at(-1)?.options?.offset, 200);
+  t.is(host.calls.at(-1)?.options?.offset, 200);
   const navigation = provider.getTreeItem(entries[0]).command!;
   t.is(navigation.command, "asm.analysis.navigate");
   t.deepEqual(JSON.parse(JSON.stringify(navigation.arguments?.[0])), {

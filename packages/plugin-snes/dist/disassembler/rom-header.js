@@ -161,8 +161,9 @@ const asciiField = (bytes) => [...bytes]
     .join("")
     .replaceAll(/(?: |\\x00)+$/g, "");
 const sizeBytes = (code, zeroMeansNone) => {
-    if (zeroMeansNone && code === 0)
+    if (zeroMeansNone && code === 0) {
         return 0;
+    }
     return code < 0x20 ? 1024 * 2 ** code : undefined;
 };
 const mapModeName = (value) => ({ 0x0: "LoROM", 0x1: "HiROM", 0x2: "S-DD1", 0x3: "SA-1", 0x5: "ExHiROM", 0xa: "SPC7110" })[value & 0x0f] ?? "Unknown";
@@ -199,8 +200,9 @@ const chipsetDescription = (value) => {
         0x5: "ROM + coprocessor + RAM + battery",
         0x6: "ROM + coprocessor + battery",
     }[value & 0x0f] ?? "Unknown cartridge contents";
-    if ((value & 0x0f) < 3)
+    if ((value & 0x0f) < 3) {
         return contents;
+    }
     const coprocessor = {
         0x0: "DSP",
         0x1: "GSU/Super FX",
@@ -222,11 +224,13 @@ const chipsetDescription = (value) => {
  */
 export const parseSnesInternalRomHeader = (rom, mapper) => {
     const offset = snesInternalHeaderOffset(mapper);
-    if (offset === undefined)
+    if (offset === undefined) {
         return undefined;
+    }
     const bytes = rom.read(offset, 0x40);
-    if (!bytes)
+    if (!bytes) {
         return undefined;
+    }
     const developerId = bytes[0x1a];
     const expandedBytes = developerId === 0x33 && offset >= 0x10 ? rom.read(offset - 0x10, 0x10) : undefined;
     const checksumComplement = bytes[0x1c] | (bytes[0x1d] << 8);
@@ -292,8 +296,9 @@ const defaultAddressContext = (mapper) => ({
 });
 const scoreCandidate = (rom, spec) => {
     const header = rom.read(spec.offset, 0x40);
-    if (!header)
+    if (!header) {
         return undefined;
+    }
     const evidence = [];
     const add = (kind, score, detail) => {
         evidence.push({ kind, score, detail });

@@ -1,6 +1,6 @@
 # Native CPU / DMA / HDMA capture
 
-First native increment of the [DMA/HDMA capture work](../../../../docs/ares-dma-hdma-capture.md).
+First native increment of the [DMA/HDMA capture work](../../CAPTURE.md).
 This source supplement extends the existing downstream capture-v2 producer with
 a separately negotiated bus scope. No emulator executable or editor default is
 replaced, and the prepared upstream series is unaffected.

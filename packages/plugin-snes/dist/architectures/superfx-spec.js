@@ -52,70 +52,100 @@ const nibble = (mnemonic, value, writesDestination = false) => ({
     ...(writesDestination ? { writesDestination: true } : {}),
 });
 const baseDefinition = (opcode) => {
-    if (opcode === 0x00)
+    if (opcode === 0x00) {
         return implied("STOP");
-    if (opcode === 0x01)
+    }
+    if (opcode === 0x01) {
         return implied("NOP");
-    if (opcode === 0x02)
+    }
+    if (opcode === 0x02) {
         return implied("CACHE");
-    if (opcode === 0x03)
+    }
+    if (opcode === 0x03) {
         return implied("LSR", true);
-    if (opcode === 0x04)
+    }
+    if (opcode === 0x04) {
         return implied("ROL", true);
+    }
     const branches = ["BRA", "BGE", "BLT", "BNE", "BEQ", "BPL", "BMI", "BCC", "BCS", "BVC", "BVS"];
     if (opcode >= 0x05 && opcode <= 0x0f) {
         return { mnemonic: branches[opcode - 0x05], encoding: "relative", size: 2 };
     }
-    if (opcode >= 0x10 && opcode <= 0x1f)
+    if (opcode >= 0x10 && opcode <= 0x1f) {
         return register("TO", opcode & 0x0f);
-    if (opcode >= 0x20 && opcode <= 0x2f)
+    }
+    if (opcode >= 0x20 && opcode <= 0x2f) {
         return register("WITH", opcode & 0x0f);
-    if (opcode >= 0x30 && opcode <= 0x3b)
+    }
+    if (opcode >= 0x30 && opcode <= 0x3b) {
         return registerIndirect("STW", opcode & 0x0f);
-    if (opcode === 0x3c)
+    }
+    if (opcode === 0x3c) {
         return implied("LOOP");
-    if (opcode === 0x3d)
+    }
+    if (opcode === 0x3d) {
         return implied("ALT1");
-    if (opcode === 0x3e)
+    }
+    if (opcode === 0x3e) {
         return implied("ALT2");
-    if (opcode === 0x3f)
+    }
+    if (opcode === 0x3f) {
         return implied("ALT3");
-    if (opcode >= 0x40 && opcode <= 0x4b)
+    }
+    if (opcode >= 0x40 && opcode <= 0x4b) {
         return registerIndirect("LDW", opcode & 0x0f, true);
-    if (opcode === 0x4c)
+    }
+    if (opcode === 0x4c) {
         return implied("PLOT");
-    if (opcode === 0x4d)
+    }
+    if (opcode === 0x4d) {
         return implied("SWAP", true);
-    if (opcode === 0x4e)
+    }
+    if (opcode === 0x4e) {
         return implied("COLOR");
-    if (opcode === 0x4f)
+    }
+    if (opcode === 0x4f) {
         return implied("NOT", true);
-    if (opcode >= 0x50 && opcode <= 0x5f)
+    }
+    if (opcode >= 0x50 && opcode <= 0x5f) {
         return register("ADD", opcode & 0x0f, true);
-    if (opcode >= 0x60 && opcode <= 0x6f)
+    }
+    if (opcode >= 0x60 && opcode <= 0x6f) {
         return register("SUB", opcode & 0x0f, true);
-    if (opcode === 0x70)
+    }
+    if (opcode === 0x70) {
         return implied("MERGE", true);
-    if (opcode >= 0x71 && opcode <= 0x7f)
+    }
+    if (opcode >= 0x71 && opcode <= 0x7f) {
         return register("AND", opcode & 0x0f, true);
-    if (opcode >= 0x80 && opcode <= 0x8f)
+    }
+    if (opcode >= 0x80 && opcode <= 0x8f) {
         return register("MULT", opcode & 0x0f, true);
-    if (opcode === 0x90)
+    }
+    if (opcode === 0x90) {
         return implied("SBK");
-    if (opcode >= 0x91 && opcode <= 0x94)
+    }
+    if (opcode >= 0x91 && opcode <= 0x94) {
         return nibble("LINK", opcode & 0x0f);
-    if (opcode === 0x95)
+    }
+    if (opcode === 0x95) {
         return implied("SEX", true);
-    if (opcode === 0x96)
+    }
+    if (opcode === 0x96) {
         return implied("ASR", true);
-    if (opcode === 0x97)
+    }
+    if (opcode === 0x97) {
         return implied("ROR", true);
-    if (opcode >= 0x98 && opcode <= 0x9d)
+    }
+    if (opcode >= 0x98 && opcode <= 0x9d) {
         return register("JMP", opcode & 0x0f);
-    if (opcode === 0x9e)
+    }
+    if (opcode === 0x9e) {
         return implied("LOB", true);
-    if (opcode === 0x9f)
+    }
+    if (opcode === 0x9f) {
         return implied("FMULT", true);
+    }
     if (opcode >= 0xa0 && opcode <= 0xaf) {
         return {
             mnemonic: "IBT",
@@ -124,20 +154,27 @@ const baseDefinition = (opcode) => {
             register: opcode & 0x0f,
         };
     }
-    if (opcode >= 0xb0 && opcode <= 0xbf)
+    if (opcode >= 0xb0 && opcode <= 0xbf) {
         return register("FROM", opcode & 0x0f);
-    if (opcode === 0xc0)
+    }
+    if (opcode === 0xc0) {
         return implied("HIB", true);
-    if (opcode >= 0xc1 && opcode <= 0xcf)
+    }
+    if (opcode >= 0xc1 && opcode <= 0xcf) {
         return register("OR", opcode & 0x0f, true);
-    if (opcode >= 0xd0 && opcode <= 0xde)
+    }
+    if (opcode >= 0xd0 && opcode <= 0xde) {
         return register("INC", opcode & 0x0f);
-    if (opcode === 0xdf)
+    }
+    if (opcode === 0xdf) {
         return implied("GETC");
-    if (opcode >= 0xe0 && opcode <= 0xee)
+    }
+    if (opcode >= 0xe0 && opcode <= 0xee) {
         return register("DEC", opcode & 0x0f);
-    if (opcode === 0xef)
+    }
+    if (opcode === 0xef) {
         return implied("GETB", true);
+    }
     return {
         mnemonic: "IWT",
         encoding: "registerImmediate16",
@@ -146,32 +183,44 @@ const baseDefinition = (opcode) => {
     };
 };
 const altDefinition = (alt, opcode) => {
-    if (alt === 0)
+    if (alt === 0) {
         return baseDefinition(opcode);
+    }
     const low = opcode & 0x0f;
     if (alt === 1) {
-        if (opcode >= 0x30 && opcode <= 0x3b)
+        if (opcode >= 0x30 && opcode <= 0x3b) {
             return registerIndirect("STB", low);
-        if (opcode >= 0x40 && opcode <= 0x4b)
+        }
+        if (opcode >= 0x40 && opcode <= 0x4b) {
             return registerIndirect("LDB", low, true);
-        if (opcode === 0x4c)
+        }
+        if (opcode === 0x4c) {
             return implied("RPIX", true);
-        if (opcode === 0x4e)
+        }
+        if (opcode === 0x4e) {
             return implied("CMODE");
-        if (opcode >= 0x50 && opcode <= 0x5f)
+        }
+        if (opcode >= 0x50 && opcode <= 0x5f) {
             return register("ADC", low, true);
-        if (opcode >= 0x60 && opcode <= 0x6f)
+        }
+        if (opcode >= 0x60 && opcode <= 0x6f) {
             return register("SBC", low, true);
-        if (opcode >= 0x71 && opcode <= 0x7f)
+        }
+        if (opcode >= 0x71 && opcode <= 0x7f) {
             return register("BIC", low, true);
-        if (opcode >= 0x80 && opcode <= 0x8f)
+        }
+        if (opcode >= 0x80 && opcode <= 0x8f) {
             return register("UMULT", low, true);
-        if (opcode === 0x96)
+        }
+        if (opcode === 0x96) {
             return implied("DIV2", true);
-        if (opcode >= 0x98 && opcode <= 0x9d)
+        }
+        if (opcode >= 0x98 && opcode <= 0x9d) {
             return register("LJMP", low);
-        if (opcode === 0x9f)
+        }
+        if (opcode === 0x9f) {
             return implied("LMULT", true);
+        }
         if (opcode >= 0xa0 && opcode <= 0xaf) {
             return {
                 mnemonic: "LMS",
@@ -180,10 +229,12 @@ const altDefinition = (alt, opcode) => {
                 register: low,
             };
         }
-        if (opcode >= 0xc1 && opcode <= 0xcf)
+        if (opcode >= 0xc1 && opcode <= 0xcf) {
             return register("XOR", low, true);
-        if (opcode === 0xef)
+        }
+        if (opcode === 0xef) {
             return implied("GETBH", true);
+        }
         if (opcode >= 0xf0) {
             return {
                 mnemonic: "LM",
@@ -194,14 +245,18 @@ const altDefinition = (alt, opcode) => {
         }
     }
     if (alt === 2) {
-        if (opcode >= 0x50 && opcode <= 0x5f)
+        if (opcode >= 0x50 && opcode <= 0x5f) {
             return nibble("ADD", low, true);
-        if (opcode >= 0x60 && opcode <= 0x6f)
+        }
+        if (opcode >= 0x60 && opcode <= 0x6f) {
             return nibble("SUB", low, true);
-        if (opcode >= 0x71 && opcode <= 0x7f)
+        }
+        if (opcode >= 0x71 && opcode <= 0x7f) {
             return nibble("AND", low, true);
-        if (opcode >= 0x80 && opcode <= 0x8f)
+        }
+        if (opcode >= 0x80 && opcode <= 0x8f) {
             return nibble("MULT", low, true);
+        }
         if (opcode >= 0xa0 && opcode <= 0xaf) {
             return {
                 mnemonic: "SMS",
@@ -210,12 +265,15 @@ const altDefinition = (alt, opcode) => {
                 register: low,
             };
         }
-        if (opcode >= 0xc1 && opcode <= 0xcf)
+        if (opcode >= 0xc1 && opcode <= 0xcf) {
             return nibble("OR", low, true);
-        if (opcode === 0xdf)
+        }
+        if (opcode === 0xdf) {
             return implied("RAMB");
-        if (opcode === 0xef)
+        }
+        if (opcode === 0xef) {
             return implied("GETBL", true);
+        }
         if (opcode >= 0xf0) {
             return {
                 mnemonic: "SM",
@@ -226,34 +284,46 @@ const altDefinition = (alt, opcode) => {
         }
     }
     if (alt === 3) {
-        if (opcode >= 0x50 && opcode <= 0x5f)
+        if (opcode >= 0x50 && opcode <= 0x5f) {
             return nibble("ADC", low, true);
-        if (opcode >= 0x60 && opcode <= 0x6f)
+        }
+        if (opcode >= 0x60 && opcode <= 0x6f) {
             return register("CMP", low);
-        if (opcode >= 0x71 && opcode <= 0x7f)
+        }
+        if (opcode >= 0x71 && opcode <= 0x7f) {
             return nibble("BIC", low, true);
-        if (opcode >= 0x80 && opcode <= 0x8f)
+        }
+        if (opcode >= 0x80 && opcode <= 0x8f) {
             return nibble("UMULT", low, true);
-        if (opcode >= 0xc1 && opcode <= 0xcf)
+        }
+        if (opcode >= 0xc1 && opcode <= 0xcf) {
             return nibble("XOR", low, true);
-        if (opcode === 0xdf)
+        }
+        if (opcode === 0xdf) {
             return implied("ROMB");
-        if (opcode === 0xef)
+        }
+        if (opcode === 0xef) {
             return implied("GETBS", true);
+        }
     }
     return baseDefinition(opcode);
 };
 const flowFor = (definition, opcode) => {
-    if (definition.mnemonic === "STOP")
+    if (definition.mnemonic === "STOP") {
         return { kind: "stop", fallthrough: false };
-    if (definition.mnemonic === "BRA")
+    }
+    if (definition.mnemonic === "BRA") {
         return { kind: "jump", fallthrough: false };
-    if (opcode >= 0x06 && opcode <= 0x0f)
+    }
+    if (opcode >= 0x06 && opcode <= 0x0f) {
         return { kind: "conditionalBranch", fallthrough: true };
-    if (definition.mnemonic === "LOOP")
+    }
+    if (definition.mnemonic === "LOOP") {
         return { kind: "conditionalBranch", fallthrough: true, indirect: true };
-    if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP")
+    }
+    if (definition.mnemonic === "JMP" || definition.mnemonic === "LJMP") {
         return { kind: "jump", fallthrough: false, indirect: true };
+    }
     return { kind: "fallthrough", fallthrough: true };
 };
 const effectsFor = (definition) => {
@@ -356,10 +426,12 @@ const fusedFlow = (destinationRegister) => destinationRegister === 15
     ? { kind: "jump", fallthrough: false, indirect: true }
     : { kind: "fallthrough", fallthrough: true };
 const fusedSyntax = (mode) => {
-    if (mode === "registerRegister")
+    if (mode === "registerRegister") {
         return "Rn,Rm";
-    if (mode === "registerRegisterIndirect")
+    }
+    if (mode === "registerRegisterIndirect") {
         return "Rn,(Rm)";
+    }
     return "(Rn),Rm";
 };
 const fused = (mnemonic, opcode, mode, destinationRegister, sourceRegister, pointerRegister) => Object.freeze({
@@ -406,8 +478,9 @@ export function buildSuperFxCatalog() {
         };
         const existing = grouped.get(entry.mnemonic);
         if (existing) {
-            if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode)))
+            if (!existing.modes.some((value) => JSON.stringify(value) === JSON.stringify(mode))) {
                 existing.modes.push(mode);
+            }
         }
         else {
             grouped.set(entry.mnemonic, {
@@ -455,8 +528,9 @@ export function buildSuperFxCatalog() {
             ],
         },
     ];
-    for (const entry of conveniences)
+    for (const entry of conveniences) {
         grouped.set(entry.mnemonic, entry);
+    }
     return [...grouped.values()].sort((left, right) => left.mnemonic.localeCompare(right.mnemonic));
 }
 //# sourceMappingURL=superfx-spec.js.map

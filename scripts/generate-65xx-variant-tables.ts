@@ -24,29 +24,41 @@ const tableNames = [
 
 function extractInstructionTable(name: string, sourceName: string): (string | number)[][] {
   const start = source.indexOf(`} InsTab${sourceName} = {`);
-  if (start < 0) throw new Error(`Unable to find InsTab${sourceName}.`);
+  if (start < 0) {
+    throw new Error(`Unable to find InsTab${sourceName}.`);
+  }
   const end = source.indexOf("/* END SORTED.SH */", start);
-  if (end < 0) throw new Error(`Unable to find the end of InsTab${name}.`);
+  if (end < 0) {
+    throw new Error(`Unable to find the end of InsTab${name}.`);
+  }
   const rows = [];
   const rowPattern =
     /{\s*"([\dA-Z]+)",\s*(0x[\dA-Fa-f]+),\s*(0x[\dA-Fa-f]+),\s*(\d+),\s*(\w+)\s*}/g;
   for (const match of source.slice(start, end).matchAll(rowPattern)) {
     rows.push([match[1], Number(match[2]), Number(match[3]), Number(match[4]), match[5]]);
   }
-  if (rows.length === 0) throw new Error(`InsTab${name} contained no instruction rows.`);
+  if (rows.length === 0) {
+    throw new Error(`InsTab${name} contained no instruction rows.`);
+  }
   return rows;
 }
 
 const eaStart = source.indexOf("static unsigned char EATab[16][AM65I_COUNT]");
 const eaEnd = source.indexOf("/* Table to build the effective SWEET16", eaStart);
-if (eaStart < 0 || eaEnd < 0) throw new Error("Unable to find EATab.");
+if (eaStart < 0 || eaEnd < 0) {
+  throw new Error("Unable to find EATab.");
+}
 const eaBody = source.slice(eaStart, eaEnd).replace(/\/\*[\S\s]*?\*\//g, "");
 const eaRows = [];
 for (const match of eaBody.matchAll(/{([^{}]+)}/g)) {
   const values = [...match[1].matchAll(/0x[\dA-Fa-f]+/g)].map(([value]) => Number(value));
-  if (values.length === 32) eaRows.push(values);
+  if (values.length === 32) {
+    eaRows.push(values);
+  }
 }
-if (eaRows.length !== 16) throw new Error(`Expected 16 EATab rows, got ${eaRows.length}.`);
+if (eaRows.length !== 16) {
+  throw new Error(`Expected 16 EATab rows, got ${eaRows.length}.`);
+}
 
 const tables = Object.fromEntries(
   tableNames.map(([name, sourceName]) => [name, extractInstructionTable(name, sourceName)]),

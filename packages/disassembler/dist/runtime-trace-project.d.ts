@@ -1,4 +1,3 @@
-import { type CaptureArchiveResult } from "./capture-archives.js";
 import { type AnalysisProjectRevision } from "./project-transaction.js";
 import { type AnalysisProjectShards, type RuntimeExecutionRecord } from "./project-types.js";
 import { type RuntimeEvidenceBatch } from "./runtime-evidence.js";
@@ -7,8 +6,6 @@ import { type RuntimeInstructionTraceImportContext, type RuntimeInstructionTrace
 import type { AnalysisStoragePolicy, AnalysisStorageSnapshot } from "./sqlite-storage-policy.js";
 /** File validation limits plus named progress phases for indexing and atomic publication. */
 export interface RuntimeTraceProjectImportOptions extends RuntimeTraceFileOptions {
-    /** Optional original file for a managed archive; decoded in-memory sources may omit it. */
-    readonly archiveSourceFile?: string;
     readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
     readonly onStage?: (message: string) => void;
     /** Counts validated records merged so far; all remain provisional until publication commits. */
@@ -23,7 +20,6 @@ export interface RuntimeTraceProjectImportResult extends Omit<RuntimeInstruction
         readonly reusedFacts: number;
         readonly checkpointBusy: boolean;
     };
-    readonly archive: CaptureArchiveResult;
     readonly warnings: readonly string[];
     readonly execution: readonly RuntimeExecutionRecord[];
     readonly changed: boolean;

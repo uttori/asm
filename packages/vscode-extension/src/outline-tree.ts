@@ -13,8 +13,8 @@ import {
   type Event,
   type TreeDataProvider,
 } from "vscode";
-import { SymbolKind } from "vscode-languageclient";
 import type { DocumentSymbol, LanguageClient } from "vscode-languageclient/node";
+import { SymbolKind } from "vscode-languageserver-types";
 
 type OutlineItem = {
   id: string;

@@ -27,10 +27,12 @@ export const splitTopLevelCommaOperands = (text) => {
     let level = 0;
     let current = "";
     for (const character of text) {
-        if (character === "(")
+        if (character === "(") {
             level++;
-        if (character === ")")
+        }
+        if (character === ")") {
             level--;
+        }
         if (character === "," && level === 0) {
             operands.push(current.trim());
             current = "";
@@ -39,8 +41,9 @@ export const splitTopLevelCommaOperands = (text) => {
             current += character;
         }
     }
-    if (current.trim())
+    if (current.trim()) {
         operands.push(current.trim());
+    }
     return operands;
 };
 //# sourceMappingURL=split-operands.js.map

@@ -69,7 +69,7 @@ test("native transfer framing survives chunk boundaries, archive recovery and ne
       romContentSha256: rom.contentSha256,
     }),
   ];
-  for (let i = 0; i < chunks.length; i++)
+  for (let i = 0; i < chunks.length; i++) {
     frames.push(
       chunks[i],
       busJsonFrame("ACK2", {
@@ -78,6 +78,7 @@ test("native transfer framing survives chunk boundaries, archive recovery and ne
         eventThrough: decoded[i].through,
       }),
     );
+  }
   frames.push(busJsonFrame("END2", terminal));
   await writeFile(file, Buffer.concat(frames));
   t.true((await recoverCaptureFile(file)).complete);
@@ -117,16 +118,10 @@ test("native transfer framing survives chunk boundaries, archive recovery and ne
     },
   });
   const context = { projectRomContentSha256: rom.contentSha256, sourceName: "native.act2" };
-  const committed = await importRuntimeBusTraceSourceIntoProject(source, directory, context, {
-    archiveSourceFile: file,
-  });
+  const committed = await importRuntimeBusTraceSourceIntoProject(source, directory, context);
   t.is(committed.report.imported["dma0.complete"], 1);
   t.regex(renderBusTraceReport(committed), /DMA\/0 \| complete/);
-  const duplicate = await importRuntimeBusTraceSourceIntoProject(source, directory, context, {
-    archiveSourceFile: file,
-    storagePolicy: { archiveMaxBytes: 0 },
-  });
+  const duplicate = await importRuntimeBusTraceSourceIntoProject(source, directory, context);
   t.false(duplicate.changed);
-  t.false(duplicate.archive.archived);
   t.is(loadAnalysisProject(directory).shards.imports[0].imported["dma0.attemptedSlots"], 2050);
 });

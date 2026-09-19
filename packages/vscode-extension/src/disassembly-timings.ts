@@ -59,7 +59,9 @@ export class DisassemblyTimings {
 }
 
 const duration = (milliseconds: number): string => {
-  if (milliseconds < 1000) return `${milliseconds.toFixed(1)} ms`;
+  if (milliseconds < 1000) {
+    return `${milliseconds.toFixed(1)} ms`;
+  }
   return `${(milliseconds / 1000).toFixed(3)} s`;
 };
 

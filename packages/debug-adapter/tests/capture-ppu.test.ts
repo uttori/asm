@@ -24,7 +24,7 @@ import {
   validateCapturePosition,
 } from "../src/capture-v2.js";
 
-test("native PPU effects survive framing, SQL import, duplicate import and archive expiry", async (t) => {
+test("native PPU effects survive framing, SQL import, duplicate import", async (t) => {
   const lines = execFileSync(
     "sh",
     ["packages/debug-sidecar-ares/native/capture-ppu/check-wire.sh"],
@@ -48,17 +48,19 @@ test("native PPU effects survive framing, SQL import, duplicate import and archi
   const events = decoded.flatMap((chunk) => chunk.events);
   const effect = events[6];
   t.false("kind" in effect);
-  if (!("kind" in effect))
+  if (!("kind" in effect)) {
     t.deepEqual(effect.ppu?.bytes, [
       { address: 536, value: 0xab },
       { address: 536, value: 255 },
     ]);
+  }
   for (const legacy of [
     "snes.65816.instructions",
     "snes.cpu-bus",
     "snes.cpu-bus-transfers",
-  ] as const)
+  ] as const) {
     t.throws(() => decodeCaptureChunk(chunks[0], start.session, legacy));
+  }
   // Mutate each independent extension invariant while preserving a valid CRC.
   for (const [offset, value] of [
     [64 + 64, 0],
@@ -93,7 +95,7 @@ test("native PPU effects survive framing, SQL import, duplicate import and archi
       romContentSha256: rom.contentSha256,
     }),
   ];
-  for (let i = 0; i < chunks.length; i++)
+  for (let i = 0; i < chunks.length; i++) {
     frames.push(
       chunks[i],
       busJsonFrame("ACK2", {
@@ -102,6 +104,7 @@ test("native PPU effects survive framing, SQL import, duplicate import and archi
         eventThrough: decoded[i].through,
       }),
     );
+  }
   frames.push(busJsonFrame("END2", terminal));
   await writeFile(file, Buffer.concat(frames));
   t.true((await recoverCaptureFile(file)).complete);
@@ -126,7 +129,9 @@ test("native PPU effects survive framing, SQL import, duplicate import and archi
     sourceName: "invalid.act2",
   });
   const first = events[0];
-  if ("kind" in first) throw new Error("Expected bus event");
+  if ("kind" in first) {
+    throw new Error("Expected bus event");
+  }
   t.throws(() => reject.push({ accesses: [{ ...first, ppu: undefined }] }));
   t.throws(() => reject.finish());
   const malformed = createRuntimeBusTraceImporter(source.metadata, {
@@ -160,18 +165,12 @@ test("native PPU effects survive framing, SQL import, duplicate import and archi
     },
   });
   const context = { projectRomContentSha256: rom.contentSha256, sourceName: "native.act2" };
-  const committed = await importRuntimeBusTraceSourceIntoProject(source, directory, context, {
-    archiveSourceFile: file,
-  });
+  const committed = await importRuntimeBusTraceSourceIntoProject(source, directory, context);
   t.is(committed.report.imported["ppu.byteWrites"], 6000);
   t.regex(renderBusTraceReport(committed), /Verified PPU writes/);
   t.regex(renderBusTraceReport(committed), /blocked/);
-  const duplicate = await importRuntimeBusTraceSourceIntoProject(source, directory, context, {
-    archiveSourceFile: file,
-    storagePolicy: { archiveMaxBytes: 0 },
-  });
+  const duplicate = await importRuntimeBusTraceSourceIntoProject(source, directory, context);
   t.false(duplicate.changed);
-  t.false(duplicate.archive.archived);
   const stored = loadAnalysisProject(directory);
   t.is(stored.shards.imports[0].imported["ppu.byteWrites"], 6000);
   const repeated = stored.shards.runtime.find(

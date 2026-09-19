@@ -206,9 +206,13 @@ liveTest("pinned MesenCE performs one exact stopped SPC700 instruction", async (
     const thread = (await backend.threads()).find(
       ({ architecture }) => architecture === "snes.spc700",
     );
-    if (!thread) throw new Error("Live MesenCE did not expose SPC700.");
+    if (!thread) {
+      throw new Error("Live MesenCE did not expose SPC700.");
+    }
     const frame = (await backend.stackFrames(thread.id))[0];
-    if (!frame) throw new Error("Live MesenCE did not expose an SPC700 frame.");
+    if (!frame) {
+      throw new Error("Live MesenCE did not expose an SPC700 frame.");
+    }
     const before = await backend.registers(frame.id);
     const beforeCycle = Number.parseInt(
       before.find(({ name }) => name === "Cycle")?.value ?? "",
@@ -246,7 +250,9 @@ superFxLiveTest(
       const threads = await backend.threads();
       const main = threads.find(({ architecture }) => architecture === "snes.65816");
       const superFx = threads.find(({ architecture }) => architecture === "snes.superfx");
-      if (!main || !superFx) throw new Error("Live MesenCE did not expose both SNES processors.");
+      if (!main || !superFx) {
+        throw new Error("Live MesenCE did not expose both SNES processors.");
+      }
 
       let exactStepObserved = false;
       for (let sample = 0; sample < 120; sample++) {
@@ -255,20 +261,25 @@ superFxLiveTest(
         await backend.pause(main.id);
 
         const sampledFrame = (await backend.stackFrames(superFx.id))[0];
-        if (!sampledFrame) throw new Error("Live MesenCE did not expose a SuperFX frame.");
+        if (!sampledFrame) {
+          throw new Error("Live MesenCE did not expose a SuperFX frame.");
+        }
         const sampledRegisters = await backend.registers(sampledFrame.id);
         if (
           registerNumber(sampledRegisters, "RUN") !== 1 ||
           registerNumber(sampledRegisters, "Cycle") <= 0
-        )
+        ) {
           continue;
+        }
 
         // The global stop was requested at a main-CPU boundary. Move once to a
         // GSU-owned stop, then prove the next unambiguous instruction boundary.
         await backend.step(superFx.id, "instruction");
         for (let alignedSample = 0; alignedSample < 64; alignedSample++) {
           const beforeFrame = (await backend.stackFrames(superFx.id))[0];
-          if (!beforeFrame) throw new Error("Live MesenCE lost its SuperFX frame.");
+          if (!beforeFrame) {
+            throw new Error("Live MesenCE lost its SuperFX frame.");
+          }
           const beforeRegisters = await backend.registers(beforeFrame.id);
           const running = registerNumber(beforeRegisters, "RUN");
           const beforeCycle = registerNumber(beforeRegisters, "Cycle");
@@ -276,7 +287,9 @@ superFxLiveTest(
           const destinationRegister = registerNumber(beforeRegisters, "DREG");
           const programBank = registerNumber(beforeRegisters, "PB");
           const nextProgramCounter = registerNumber(beforeRegisters, "R15");
-          if (running !== 1) break;
+          if (running !== 1) {
+            break;
+          }
           if (
             !Number.isSafeInteger(beforeCycle) ||
             beforeCycle <= 0 ||
@@ -295,7 +308,9 @@ superFxLiveTest(
           const eventStart = events.length;
           await backend.step(superFx.id, "instruction");
           const afterFrame = (await backend.stackFrames(superFx.id))[0];
-          if (!afterFrame) throw new Error("Live MesenCE lost its SuperFX frame after stepping.");
+          if (!afterFrame) {
+            throw new Error("Live MesenCE lost its SuperFX frame after stepping.");
+          }
           const afterRegisters = await backend.registers(afterFrame.id);
           const afterCycle = registerNumber(afterRegisters, "Cycle");
           // The GSU stops before its final sequential R15 increment. PB:R15
@@ -324,7 +339,9 @@ superFxLiveTest(
           exactStepObserved = true;
           break;
         }
-        if (exactStepObserved) break;
+        if (exactStepObserved) {
+          break;
+        }
       }
       t.true(exactStepObserved, "MesenCE did not reach a safe active SuperFX instruction in 30 s.");
     } finally {

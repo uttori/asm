@@ -48,12 +48,16 @@ const STATIC_CATALOG_IMPORTS = new Set([
 
 /** Scan implementation files only; generated declarations do not own dependencies. */
 const listTypeScriptFiles = (directory: string): string[] => {
-  if (!fs.existsSync(directory)) return [];
+  if (!fs.existsSync(directory)) {
+    return [];
+  }
   const files: string[] = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
     const resolved = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      for (const file of listTypeScriptFiles(resolved)) files.push(file);
+      for (const file of listTypeScriptFiles(resolved)) {
+        files.push(file);
+      }
     } else if (entry.isFile() && entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) {
       files.push(resolved);
     }
@@ -71,7 +75,9 @@ const sourceFileFor = (file: string): ParsedSource => {
   const text = fs.readFileSync(file, "utf8");
   const lineStarts = [0];
   for (let index = 0; index < text.length; index++) {
-    if (text[index] === "\n") lineStarts.push(index + 1);
+    if (text[index] === "\n") {
+      lineStarts.push(index + 1);
+    }
   }
   return { text, lineStarts };
 };
@@ -83,8 +89,11 @@ const lineFor = (sourceFile: ParsedSource, position: number): number => {
   let high = sourceFile.lineStarts.length;
   while (low < high) {
     const middle = Math.floor((low + high) / 2);
-    if (sourceFile.lineStarts[middle] <= position) low = middle + 1;
-    else high = middle;
+    if (sourceFile.lineStarts[middle] <= position) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
   }
   return low;
 };
@@ -97,7 +106,9 @@ const importSpecifiers = (
   const seen = new Set<string>();
   const add = (module: string, names: readonly string[], position: number): void => {
     const key = `${position}:${module}`;
-    if (seen.has(key)) return;
+    if (seen.has(key)) {
+      return;
+    }
     seen.add(key);
     imports.push({ module, names, position });
   };
@@ -200,10 +211,14 @@ function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundary
     const seen = new Set<string>();
     const addIdentifierViolation = (identifier: string, position: number): void => {
       const canonical = identifier.toLowerCase();
-      if (!PROHIBITED_CORE_IDENTIFIERS.has(canonical)) return;
+      if (!PROHIBITED_CORE_IDENTIFIERS.has(canonical)) {
+        return;
+      }
       const line = lineFor(sourceFile, position);
       const key = `${line}:${canonical}`;
-      if (seen.has(key)) return;
+      if (seen.has(key)) {
+        return;
+      }
       seen.add(key);
       violations.push({
         code: "CORE_CONTAINS_SNES_IDENTIFIER",

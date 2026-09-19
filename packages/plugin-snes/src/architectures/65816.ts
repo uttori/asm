@@ -555,7 +555,9 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // Handle Branch Instructions
-    if (this.handleBranchInstructions(opcode, operand)) return true;
+    if (this.handleBranchInstructions(opcode, operand)) {
+      return true;
+    }
 
     // Handle special cases where length is on the opcode
     let num = 0;
@@ -1839,8 +1841,11 @@ export class Arch65816 implements ArchitectureEncoder {
         }
 
         let mode = currentOpcode;
-        if (currentOpcode === "JMP") mode = "JML";
-        else if (currentOpcode === "JSR") mode = "JSL";
+        if (currentOpcode === "JMP") {
+          mode = "JML";
+        } else if (currentOpcode === "JSR") {
+          mode = "JSL";
+        }
         return { mode, address: resolvedAddress };
       }
 

@@ -13,10 +13,14 @@ export interface ResolveDebugSourceRootOptions {
 
 const sourceMatches = (root: string, source: DebugMap["sources"][number]): boolean => {
   // Absolute map paths already identify their files and cannot help choose a portable root.
-  if (path.isAbsolute(source.path)) return false;
+  if (path.isAbsolute(source.path)) {
+    return false;
+  }
   const resolved = path.resolve(root, source.path);
   const relative = path.relative(root, resolved);
-  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) return false;
+  if (!relative || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    return false;
+  }
   try {
     const stat = fs.statSync(resolved);
     return stat.isFile() && stat.size === source.size;
@@ -48,7 +52,9 @@ export const resolveDebugSourceRoot = (options: ResolveDebugSourceRootOptions): 
   const relativeSources = options.map.sources
     .filter((source) => !path.isAbsolute(source.path))
     .slice(0, 128);
-  if (relativeSources.length === 0) return configuredRoot;
+  if (relativeSources.length === 0) {
+    return configuredRoot;
+  }
   let bestRoot = configuredRoot;
   let bestMatches = relativeSources.filter((source) =>
     sourceMatches(configuredRoot, source),

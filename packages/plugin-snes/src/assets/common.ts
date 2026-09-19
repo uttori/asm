@@ -8,7 +8,9 @@ import type {
 export type SnesAssetObject = Readonly<Record<string, AssetValue>>;
 
 export const objectValue = (value: AssetValue | undefined, label: string): SnesAssetObject => {
-  if (value === undefined) return {};
+  if (value === undefined) {
+    return {};
+  }
   if (value === null || Array.isArray(value) || typeof value !== "object") {
     throw new Error(`${label} must be an object.`);
   }
@@ -31,7 +33,9 @@ export const integerOption = (
     (bounds.minimum !== undefined && value < bounds.minimum) ||
     (bounds.maximum !== undefined && value > bounds.maximum)
   ) {
-    if (value === undefined) return undefined;
+    if (value === undefined) {
+      return undefined;
+    }
     throw new Error(`Asset option '${key}' is outside its integer bounds.`);
   }
   return value;
@@ -52,7 +56,9 @@ export const readBytes = (
   owner: string,
 ): Uint8Array => {
   const bytes = source.read(offset, size);
-  if (!bytes) throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+  if (!bytes) {
+    throw new Error(`SNES asset '${owner}' source range is unreadable.`);
+  }
   return bytes;
 };
 
@@ -73,8 +79,9 @@ export const resolveCount = (
   }
   const count = configured ?? length! / unitSize;
   const size = count * unitSize;
-  if (!Number.isSafeInteger(size))
+  if (!Number.isSafeInteger(size)) {
     throw new Error(`SNES asset '${context.request.id}' overflowed.`);
+  }
   if (length !== undefined && length !== size) {
     throw new Error(
       `SNES asset '${context.request.id}' count ${count} requires ${size} bytes, not ${length}.`,
@@ -124,7 +131,9 @@ export const decodedObject = (value: AssetValue, owner: string): SnesAssetObject
   objectValue(value, `Decoded SNES asset '${owner}'`);
 
 export const arrayValue = (value: AssetValue | undefined, label: string): readonly AssetValue[] => {
-  if (!Array.isArray(value)) throw new Error(`${label} must be an array.`);
+  if (!Array.isArray(value)) {
+    throw new Error(`${label} must be an array.`);
+  }
   return value as readonly AssetValue[];
 };
 

@@ -24,8 +24,9 @@ const settings = (context) => {
         if (index === undefined || !id || !addressSpace || address === undefined) {
             throw new Error(`Index target ${position} is incomplete.`);
         }
-        if (indexes.has(index))
+        if (indexes.has(index)) {
             throw new Error(`Index target ${index} is duplicated.`);
+        }
         indexes.add(index);
         return { index, id, addressSpace, address };
     });
@@ -45,8 +46,9 @@ const indexesFor = (context) => {
 const referencesFor = (entries) => {
     const targets = new Map(entries.settings.targets.map((target) => [target.index, target]));
     return entries.indexes.flatMap((index, position) => {
-        if (index === null)
+        if (index === null) {
             return [];
+        }
         const target = targets.get(index);
         return target
             ? [

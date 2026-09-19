@@ -131,7 +131,9 @@ const coverageAddressSpace = (record: RuntimeEvidenceRecord): string | undefined
   if (record.kind === "runtime-coverage" || record.kind === "runtime-execution") {
     return record.addressSpace;
   }
-  if (record.kind === "runtime-memory-access") return record.accessedAddressSpace;
+  if (record.kind === "runtime-memory-access") {
+    return record.accessedAddressSpace;
+  }
   return undefined;
 };
 
@@ -221,7 +223,9 @@ export const buildRomCoverageMap = (
 
   for (const annotation of shards.annotations) {
     const classification = annotationClassification(annotation.classification);
-    if (!classification) continue;
+    if (!classification) {
+      continue;
+    }
     addAddressSpaceOverlay(
       { classification, annotationId: annotation.id },
       annotation.start,
@@ -240,7 +244,9 @@ export const buildRomCoverageMap = (
 
   const controlFlowNodes = new Map<string, AnalysisControlFlowNodeRecord>();
   for (const record of shards.analysis) {
-    if (record.kind !== "cfg-node") continue;
+    if (record.kind !== "cfg-node") {
+      continue;
+    }
     controlFlowNodes.set(record.id, record);
     if (record.fileOffset === undefined) {
       unprojected.push({
@@ -279,7 +285,9 @@ export const buildRomCoverageMap = (
     let projected = false;
     for (const nodeId of record.nodes) {
       const node = controlFlowNodes.get(nodeId);
-      if (!node || node.fileOffset === undefined) continue;
+      if (!node || node.fileOffset === undefined) {
+        continue;
+      }
       projected =
         addOverlay(
           { conflictId: record.id, analysisId: node.id },
@@ -299,7 +307,9 @@ export const buildRomCoverageMap = (
   };
 
   for (const record of shards.analysis) {
-    if (record.kind === "conflict") addConflict(record);
+    if (record.kind === "conflict") {
+      addConflict(record);
+    }
   }
 
   const addRuntimeAddressSpaceOverlay = (
@@ -349,7 +359,9 @@ export const buildRomCoverageMap = (
       continue;
     }
     if (record.kind === "runtime-memory-access") {
-      if (!fileAddressSpaceSet.has(record.accessedAddressSpace)) continue;
+      if (!fileAddressSpaceSet.has(record.accessedAddressSpace)) {
+        continue;
+      }
       if (record.access === "read" || record.access === "read-write") {
         addRuntimeAddressSpaceOverlay(
           record,
@@ -378,15 +390,23 @@ export const buildRomCoverageMap = (
   for (let index = 0; index + 1 < boundaries.length; index++) {
     const start = boundaries[index];
     const event = events.get(start)!;
-    for (const overlay of event.ends) active.delete(overlay.token);
-    for (const overlay of event.starts) active.set(overlay.token, overlay);
+    for (const overlay of event.ends) {
+      active.delete(overlay.token);
+    }
+    for (const overlay of event.starts) {
+      active.set(overlay.token, overlay);
+    }
     const end = boundaries[index + 1];
-    if (end <= start) continue;
+    if (end <= start) {
+      continue;
+    }
 
     const values = [...active.values()];
     const classifications = new Set<Exclude<RomCoverageClassification, "unknown">>();
     for (const { classification } of values) {
-      if (classification) classifications.add(classification);
+      if (classification) {
+        classifications.add(classification);
+      }
     }
     const sortedClassifications: RomCoverageClassification[] =
       classifications.size === 0 ? ["unknown"] : [...classifications];
@@ -397,8 +417,11 @@ export const buildRomCoverageMap = (
       ...new Set(values.flatMap(({ conflictId }) => (conflictId ? [conflictId] : []))),
     ].sort(compareStrings);
     let status: RomCoverageStatus = "classified";
-    if (classifications.size === 0 && conflictIds.length === 0) status = "unknown";
-    else if (classifications.size > 1 || conflictIds.length > 0) status = "conflict";
+    if (classifications.size === 0 && conflictIds.length === 0) {
+      status = "unknown";
+    } else if (classifications.size > 1 || conflictIds.length > 0) {
+      status = "conflict";
+    }
     const segment: RomCoverageSegment = {
       start,
       end,
@@ -450,10 +473,16 @@ export const buildRomCoverageMap = (
     for (const classification of segment.classifications) {
       bytesByClassification[classification] += size;
     }
-    for (const runtime of segment.runtime) bytesByRuntimeCoverage[runtime] += size;
-    if (segment.status === "classified") classifiedBytes += size;
-    else if (segment.status === "unknown") unknownBytes += size;
-    else conflictBytes += size;
+    for (const runtime of segment.runtime) {
+      bytesByRuntimeCoverage[runtime] += size;
+    }
+    if (segment.status === "classified") {
+      classifiedBytes += size;
+    } else if (segment.status === "unknown") {
+      unknownBytes += size;
+    } else {
+      conflictBytes += size;
+    }
   }
 
   return {

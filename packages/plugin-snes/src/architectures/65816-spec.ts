@@ -212,8 +212,12 @@ export const conditionalBranches: ReadonlySet<string> = new Set([
  * @returns {InstructionFlow} The flow for the instruction.
  */
 const flowFor = (mnemonic: string, addressingMode: string): InstructionFlow => {
-  if (conditionalBranches.has(mnemonic)) return { kind: "conditionalBranch", fallthrough: true };
-  if (mnemonic === "BRA" || mnemonic === "BRL") return { kind: "jump", fallthrough: false };
+  if (conditionalBranches.has(mnemonic)) {
+    return { kind: "conditionalBranch", fallthrough: true };
+  }
+  if (mnemonic === "BRA" || mnemonic === "BRL") {
+    return { kind: "jump", fallthrough: false };
+  }
   if (mnemonic === "JMP" || mnemonic === "JML") {
     return {
       kind: "jump",
@@ -234,8 +238,12 @@ const flowFor = (mnemonic: string, addressingMode: string): InstructionFlow => {
   if (mnemonic === "BRK" || mnemonic === "COP") {
     return { kind: "interrupt", fallthrough: false };
   }
-  if (mnemonic === "WAI") return { kind: "wait", fallthrough: false };
-  if (mnemonic === "STP") return { kind: "stop", fallthrough: false };
+  if (mnemonic === "WAI") {
+    return { kind: "wait", fallthrough: false };
+  }
+  if (mnemonic === "STP") {
+    return { kind: "stop", fallthrough: false };
+  }
   return { kind: "fallthrough", fallthrough: true };
 };
 
@@ -296,7 +304,9 @@ const effects: Readonly<Record<string, readonly InstructionStateEffect[]>> = {
  * The entries for the 65816 instructions.
  */
 const entries = opcodeRows.flatMap((row) => row.split(" "));
-if (entries.length !== 256) throw new Error(`65816 opcode table has ${entries.length} entries.`);
+if (entries.length !== 256) {
+  throw new Error(`65816 opcode table has ${entries.length} entries.`);
+}
 
 /**
  * The specifications for the 65816 instructions.
@@ -306,10 +316,15 @@ export const cpu65816Specifications: readonly Cpu65816InstructionSpecification[]
     const [mnemonic, modeKeyText] = entry.split(":");
     const modeKey = modeKeyText as Cpu65816ModeKey;
     const definition = cpu65816Modes[modeKey];
-    if (!mnemonic || !definition) throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+    if (!mnemonic || !definition) {
+      throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+    }
     let operandStatusEffect: "clearBits" | "setBits" | undefined;
-    if (mnemonic === "REP") operandStatusEffect = "clearBits";
-    else if (mnemonic === "SEP") operandStatusEffect = "setBits";
+    if (mnemonic === "REP") {
+      operandStatusEffect = "clearBits";
+    } else if (mnemonic === "SEP") {
+      operandStatusEffect = "setBits";
+    }
     return Object.freeze({
       id: `snes.65816.${opcode.toString(16).padStart(2, "0")}`,
       architecture: "snes.65816",
@@ -344,8 +359,9 @@ export function buildCpu65816Catalog(): InstructionDescriptor[] {
         : {}),
     };
     const descriptor = grouped.get(specification.mnemonic);
-    if (descriptor) descriptor.modes.push(addressingMode);
-    else {
+    if (descriptor) {
+      descriptor.modes.push(addressingMode);
+    } else {
       grouped.set(specification.mnemonic, {
         mnemonic: specification.mnemonic,
         summary: specification.summary,

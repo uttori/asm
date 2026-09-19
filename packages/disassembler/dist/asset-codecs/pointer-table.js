@@ -12,8 +12,9 @@ const settings = (context) => {
         maximum: 2 ** (width * 8) - 1,
     });
     const addressSpace = stringOption(options, "addressSpace", context.request.addressSpace);
-    if (addressSpace === "")
+    if (addressSpace === "") {
         throw new Error("Pointer target address space cannot be empty.");
+    }
     const { count, size } = resolveCountAndSize(context, width, options);
     const targetIdsValue = options.targetAssetIds;
     let targetAssetIds = [];
@@ -46,8 +47,9 @@ const entriesFor = (context) => {
     const bytes = readAssetBytes(context, resolved.size);
     const rawValues = Array.from({ length: resolved.count }, (_, index) => readInteger(bytes, index * resolved.width, resolved.width, resolved.endian));
     const addresses = rawValues.map((raw) => {
-        if (resolved.nullValue !== undefined && raw === resolved.nullValue)
+        if (resolved.nullValue !== undefined && raw === resolved.nullValue) {
             return null;
+        }
         const address = resolved.base + raw * resolved.scale;
         if (!Number.isSafeInteger(address) || address < 0) {
             throw new Error(`Pointer asset '${context.request.id}' produced an invalid address.`);

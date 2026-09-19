@@ -61,7 +61,9 @@ export class MaintenanceLog {
       const percent = value.totalBytes > 0 ? (value.bytesRead / value.totalBytes) * 100 : 100;
       this.#counts = `${mib(value.bytesRead)} / ${mib(value.totalBytes)} read (${percent.toFixed(1)}%)`;
       complete = value.bytesRead === value.totalBytes;
-    } else return;
+    } else {
+      return;
+    }
     if (complete || now - this.#lastCount >= 5000) {
       this.#write(
         "info",
@@ -82,10 +84,14 @@ export class MaintenanceLog {
   tick(): void {
     this.#flushStderr();
     const now = this.now();
-    if (now - this.#lastHeartbeat < 10000) return;
+    if (now - this.#lastHeartbeat < 10000) {
+      return;
+    }
     this.#lastHeartbeat = now;
     const silence = now - this.#lastWorker;
-    if (silence < 10000) return;
+    if (silence < 10000) {
+      return;
+    }
     const detail = this.#counts ? `; last count: ${this.#counts}` : "";
     this.#write(
       silence >= 60000 ? "warn" : "info",
@@ -98,13 +104,17 @@ export class MaintenanceLog {
    */
   finish(error?: Error): void {
     this.#flushStderr();
-    if (error)
+    if (error) {
       this.#write(error.name === "AbortError" ? "warn" : "error", error.stack ?? error.message);
-    else this.#write("info", "Completed; worker exited");
+    } else {
+      this.#write("info", "Completed; worker exited");
+    }
   }
 
   #flushStderr(): void {
-    if (!this.#stderr) return;
+    if (!this.#stderr) {
+      return;
+    }
     this.#write("warn", `Worker stderr: ${this.#stderr.trim()}`);
     this.#stderr = "";
   }

@@ -15,13 +15,15 @@ const MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
  */
 async function* traceEntries(file, options) {
     const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
-    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1)
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
         throw new Error("Trace import maximum bytes must be a positive safe integer.");
+    }
     options.signal?.throwIfAborted();
     const before = await stat(file);
     const checkSize = (size) => {
-        if (size > maxBytes)
+        if (size > maxBytes) {
             throw new Error(`Instruction trace is ${(size / 1024 / 1024).toFixed(1)} MiB; import limit is ${(maxBytes / 1024 / 1024).toFixed(1)} MiB. Increase asm.trace.maxImportSizeMiB in the project settings to import this capture.`);
+        }
     };
     checkSize(before.size);
     let mode = "start";
@@ -40,8 +42,9 @@ async function* traceEntries(file, options) {
     };
     const append = (text) => {
         length += text.length;
-        if (length > MAX_VALUE_CHARACTERS)
+        if (length > MAX_VALUE_CHARACTERS) {
             throw new Error("Instruction trace chunk or metadata value exceeds the 32 MiB text limit.");
+        }
         parts.push(text);
     };
     const decoder = new StringDecoder("utf8");
@@ -60,10 +63,12 @@ async function* traceEntries(file, options) {
                     let done = false;
                     let delimiter = false;
                     if (inString) {
-                        if (escaped)
+                        if (escaped) {
                             escaped = false;
-                        else if (char === "\\")
+                        }
+                        else if (char === "\\") {
                             escaped = true;
+                        }
                         else if (char === '"') {
                             inString = false;
                             done = depth === 0;
@@ -75,24 +80,28 @@ async function* traceEntries(file, options) {
                             delimiter = true;
                         }
                     }
-                    else if (char === '"')
+                    else if (char === '"') {
                         inString = true;
-                    else if (char === "{" || char === "[")
+                    }
+                    else if (char === "{" || char === "[") {
                         depth++;
+                    }
                     else if (char === "}" || char === "]") {
                         depth--;
                         done = depth === 0;
                     }
-                    if (!done)
+                    if (!done) {
                         continue;
+                    }
                     append(text.slice(tokenStart, delimiter ? index : index + 1));
                     const value = JSON.parse(parts.join(""));
                     parts = [];
                     length = 0;
                     tokenStart = -1;
                     if (tokenKind === "key") {
-                        if (typeof value !== "string" || keys.has(value))
+                        if (typeof value !== "string" || keys.has(value)) {
                             fail();
+                        }
                         key = value;
                         keys.add(key);
                         mode = "colon";
@@ -105,12 +114,14 @@ async function* traceEntries(file, options) {
                         mode = "property-end";
                         yield { kind: "property", key, value };
                     }
-                    if (delimiter)
+                    if (delimiter) {
                         index--;
+                    }
                     continue;
                 }
-                if (char === " " || char === "\n" || char === "\r" || char === "\t")
+                if (char === " " || char === "\n" || char === "\r" || char === "\t") {
                     continue;
+                }
                 if (mode === "start" && char === "{") {
                     mode = "key";
                     allowEnd = true;
@@ -151,8 +162,9 @@ async function* traceEntries(file, options) {
                     continue;
                 }
                 if (mode === "value" && key === "chunks") {
-                    if (char !== "[")
+                    if (char !== "[") {
                         fail();
+                    }
                     mode = "chunk";
                     allowEnd = true;
                     continue;
@@ -161,13 +173,16 @@ async function* traceEntries(file, options) {
                     (mode === "key" && char !== '"') ||
                     char === "]" ||
                     char === "}" ||
-                    char === ",")
+                    char === ",") {
                     fail();
+                }
                 tokenKind = "property";
-                if (mode === "key")
+                if (mode === "key") {
                     tokenKind = "key";
-                else if (mode === "chunk")
+                }
+                else if (mode === "chunk") {
                     tokenKind = "chunk";
+                }
                 mode = "token";
                 tokenStart = index;
                 inString = char === '"';
@@ -175,17 +190,22 @@ async function* traceEntries(file, options) {
                 depth = char === "{" || char === "[" ? 1 : 0;
                 primitive = !inString && depth === 0;
             }
-            if (tokenStart >= 0)
+            if (tokenStart >= 0) {
                 append(text.slice(tokenStart));
+            }
             options.onProgress?.(bytesRead, before.size);
         }
         // The final progress callback can cancel too; no next read exists to check that signal.
         options.signal?.throwIfAborted();
-        if (decoder.end() || String(mode) !== "end" || !keys.has("chunks"))
+        if (decoder.end() || String(mode) !== "end" || !keys.has("chunks")) {
             fail();
+        }
         const after = await stat(file);
-        if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+        if (bytesRead !== before.size ||
+            after.size !== before.size ||
+            after.mtimeMs !== before.mtimeMs) {
             throw new Error("Instruction trace changed while it was being read; stop recording before importing.");
+        }
     }
     finally {
         stream.destroy();
@@ -200,8 +220,9 @@ async function* traceEntries(file, options) {
 export const readRuntimeTraceFileMetadata = async (file, options = {}) => {
     const metadata = {};
     for await (const entry of traceEntries(file, options)) {
-        if (entry.kind !== "property")
+        if (entry.kind !== "property") {
             continue;
+        }
         Object.defineProperty(metadata, entry.key, {
             value: entry.value,
             enumerable: true,
@@ -214,8 +235,9 @@ export const readRuntimeTraceFileMetadata = async (file, options = {}) => {
             "addressSpace",
             "romContentSha256",
             "producer",
-        ].every((key) => Object.hasOwn(metadata, key)))
+        ].every((key) => Object.hasOwn(metadata, key))) {
             return validateRuntimeInstructionTraceMetadata(metadata);
+        }
     }
     return validateRuntimeInstructionTraceMetadata(metadata);
 };
@@ -231,17 +253,20 @@ export const readRuntimeTraceFileMetadata = async (file, options = {}) => {
 async function* traceFileChunks(file, metadata, options = {}) {
     const properties = {};
     for await (const entry of traceEntries(file, options)) {
-        if (entry.kind === "chunk")
+        if (entry.kind === "chunk") {
             yield entry.value;
-        else
+        }
+        else {
             Object.defineProperty(properties, entry.key, {
                 value: entry.value,
                 enumerable: true,
                 configurable: true,
             });
+        }
     }
-    if (canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata))
+    if (canonicalJson(validateRuntimeInstructionTraceMetadata(properties)) !== canonicalJson(metadata)) {
         throw new Error("Instruction trace identity changed while importing.");
+    }
 }
 /**
  * Read and normalize ordered chunks for callers that need standalone validated data.
@@ -252,8 +277,9 @@ async function* traceFileChunks(file, metadata, options = {}) {
  */
 export async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
     const validateChunk = createRuntimeTraceChunkValidator();
-    for await (const chunk of traceFileChunks(file, metadata, options))
+    for await (const chunk of traceFileChunks(file, metadata, options)) {
         yield validateChunk(chunk);
+    }
 }
 /**
  * Open a bounded JSON source for an importer that already validates every chunk. Keeping validation
@@ -267,8 +293,9 @@ export const createRuntimeTraceFileSource = async (file, options = {}) => {
     return {
         metadata,
         read: async (accept) => {
-            for await (const chunk of traceFileChunks(file, metadata, options))
+            for await (const chunk of traceFileChunks(file, metadata, options)) {
                 accept(chunk);
+            }
         },
     };
 };

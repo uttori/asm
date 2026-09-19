@@ -47,7 +47,9 @@ const settings = (context: Parameters<AssetCodec["inspect"]>[0]) => {
     if (index === undefined || !id || !addressSpace || address === undefined) {
       throw new Error(`Index target ${position} is incomplete.`);
     }
-    if (indexes.has(index)) throw new Error(`Index target ${index} is duplicated.`);
+    if (indexes.has(index)) {
+      throw new Error(`Index target ${index} is duplicated.`);
+    }
     indexes.add(index);
     return { index, id, addressSpace, address };
   });
@@ -74,7 +76,9 @@ const indexesFor = (
 const referencesFor = (entries: ReturnType<typeof indexesFor>): readonly AssetReference[] => {
   const targets = new Map(entries.settings.targets.map((target) => [target.index, target]));
   return entries.indexes.flatMap((index, position) => {
-    if (index === null) return [];
+    if (index === null) {
+      return [];
+    }
     const target = targets.get(index);
     return target
       ? [

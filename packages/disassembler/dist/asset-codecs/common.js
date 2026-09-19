@@ -1,7 +1,8 @@
 export const objectValue = (value, label) => {
     if (value === undefined || value === null || Array.isArray(value) || typeof value !== "object") {
-        if (value === undefined)
+        if (value === undefined) {
             return {};
+        }
         throw new Error(`${label} must be an object.`);
     }
     return value;
@@ -9,24 +10,29 @@ export const objectValue = (value, label) => {
 export const optionsFor = (context) => objectValue(context.request.options, `Asset '${context.request.id}' options`);
 export const stringOption = (options, key, fallback) => {
     const value = options[key];
-    if (value === undefined)
+    if (value === undefined) {
         return fallback;
-    if (typeof value !== "string")
+    }
+    if (typeof value !== "string") {
         throw new Error(`Asset option '${key}' must be a string.`);
+    }
     return value;
 };
 export const booleanOption = (options, key, fallback = false) => {
     const value = options[key];
-    if (value === undefined)
+    if (value === undefined) {
         return fallback;
-    if (typeof value !== "boolean")
+    }
+    if (typeof value !== "boolean") {
         throw new Error(`Asset option '${key}' must be boolean.`);
+    }
     return value;
 };
 export const integerOption = (options, key, settings = {}) => {
     const value = options[key] ?? settings.fallback;
-    if (value === undefined)
+    if (value === undefined) {
         return undefined;
+    }
     if (typeof value !== "number" ||
         !Number.isSafeInteger(value) ||
         (settings.minimum !== undefined && value < settings.minimum) ||
@@ -47,8 +53,9 @@ export const readExactAssetBytes = (context, size = context.inspection.size) => 
 };
 export const readAssetBytes = (context, size) => {
     const bytes = context.source.read(context.request.sourceOffset, size);
-    if (!bytes)
+    if (!bytes) {
         throw new Error(`Asset '${context.request.id}' source range is unreadable.`);
+    }
     return bytes;
 };
 export const resolveCountAndSize = (context, unitSize, options = optionsFor(context)) => {
@@ -65,8 +72,9 @@ export const resolveCountAndSize = (context, unitSize, options = optionsFor(cont
     }
     const count = configuredCount ?? requestedLength / unitSize;
     const size = count * unitSize;
-    if (!Number.isSafeInteger(size))
+    if (!Number.isSafeInteger(size)) {
         throw new Error(`Asset '${context.request.id}' size overflowed.`);
+    }
     if (requestedLength !== undefined && requestedLength !== size) {
         throw new Error(`Asset '${context.request.id}' count ${count} requires ${size} bytes, not ${requestedLength}.`);
     }
@@ -97,8 +105,9 @@ export const writeInteger = (bytes, offset, width, endian, value, signed = false
 };
 export const decodedObject = (value, owner) => objectValue(value, `Decoded asset '${owner}'`);
 export const numberArray = (value, label) => {
-    if (!Array.isArray(value))
+    if (!Array.isArray(value)) {
         throw new Error(`${label} must be an array.`);
+    }
     return value.map((entry) => {
         if (typeof entry !== "number" || !Number.isSafeInteger(entry)) {
             throw new Error(`${label} must contain only safe integers.`);

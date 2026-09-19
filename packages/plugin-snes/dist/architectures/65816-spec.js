@@ -172,10 +172,12 @@ export const conditionalBranches = new Set([
  * @returns {InstructionFlow} The flow for the instruction.
  */
 const flowFor = (mnemonic, addressingMode) => {
-    if (conditionalBranches.has(mnemonic))
+    if (conditionalBranches.has(mnemonic)) {
         return { kind: "conditionalBranch", fallthrough: true };
-    if (mnemonic === "BRA" || mnemonic === "BRL")
+    }
+    if (mnemonic === "BRA" || mnemonic === "BRL") {
         return { kind: "jump", fallthrough: false };
+    }
     if (mnemonic === "JMP" || mnemonic === "JML") {
         return {
             kind: "jump",
@@ -196,10 +198,12 @@ const flowFor = (mnemonic, addressingMode) => {
     if (mnemonic === "BRK" || mnemonic === "COP") {
         return { kind: "interrupt", fallthrough: false };
     }
-    if (mnemonic === "WAI")
+    if (mnemonic === "WAI") {
         return { kind: "wait", fallthrough: false };
-    if (mnemonic === "STP")
+    }
+    if (mnemonic === "STP") {
         return { kind: "stop", fallthrough: false };
+    }
     return { kind: "fallthrough", fallthrough: true };
 };
 /**
@@ -258,8 +262,9 @@ const effects = {
  * The entries for the 65816 instructions.
  */
 const entries = opcodeRows.flatMap((row) => row.split(" "));
-if (entries.length !== 256)
+if (entries.length !== 256) {
     throw new Error(`65816 opcode table has ${entries.length} entries.`);
+}
 /**
  * The specifications for the 65816 instructions.
  */
@@ -267,13 +272,16 @@ export const cpu65816Specifications = Object.freeze(entries.map((entry, opcode) 
     const [mnemonic, modeKeyText] = entry.split(":");
     const modeKey = modeKeyText;
     const definition = cpu65816Modes[modeKey];
-    if (!mnemonic || !definition)
+    if (!mnemonic || !definition) {
         throw new Error(`Invalid 65816 opcode entry '${entry}'.`);
+    }
     let operandStatusEffect;
-    if (mnemonic === "REP")
+    if (mnemonic === "REP") {
         operandStatusEffect = "clearBits";
-    else if (mnemonic === "SEP")
+    }
+    else if (mnemonic === "SEP") {
         operandStatusEffect = "setBits";
+    }
     return Object.freeze({
         id: `snes.65816.${opcode.toString(16).padStart(2, "0")}`,
         architecture: "snes.65816",
@@ -306,8 +314,9 @@ export function buildCpu65816Catalog() {
                 : {}),
         };
         const descriptor = grouped.get(specification.mnemonic);
-        if (descriptor)
+        if (descriptor) {
             descriptor.modes.push(addressingMode);
+        }
         else {
             grouped.set(specification.mnemonic, {
                 mnemonic: specification.mnemonic,

@@ -573,8 +573,9 @@ export class MathCore {
             // Peek for the next operator allowed at this precedence depth
             const op = this.peekNextOperator(this.operators, depth);
             // No valid operator at this level => done with this level
-            if (!op)
+            if (!op) {
                 break;
+            }
             // Consume the operator from the source
             this.advance(op.length);
             this.skipWhitespace();
@@ -1013,7 +1014,7 @@ export class MathCore {
             const argValue = args[i];
             // Escape parameter names before matching whole words, so punctuation stays literal.
             const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-            // eslint-disable-next-line security/detect-non-literal-regexp
+            // oxlint-disable-next-line security/detect-non-literal-regexp
             const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
             const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
             content = content.replace(regex, replacement);
@@ -1061,22 +1062,25 @@ export class MathCore {
             }
             // Min, Max, Clamp
             case "min": {
-                if (args.length < 2)
+                if (args.length < 2) {
                     throw new Error("min() expects at least 2 numeric arguments.");
+                }
                 // Binary Math.min calls retain NaN/signed-zero semantics without V8's argument-count limit.
                 const numArgs = args.map((arg) => this.numArg(name, arg));
                 return numArgs.reduce((minimum, value) => Math.min(minimum, value), Infinity);
             }
             case "max": {
-                if (args.length < 2)
+                if (args.length < 2) {
                     throw new Error("max() expects at least 2 numeric arguments.");
+                }
                 // Keep the same numeric conversion and special-value behavior for arbitrarily long lists.
                 const numArgs = args.map((arg) => this.numArg(name, arg));
                 return numArgs.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
             }
             case "clamp": {
-                if (args.length !== 3)
+                if (args.length !== 3) {
                     throw new Error("clamp() expects exactly 3 numeric arguments.");
+                }
                 const value = this.numArg(name, args[0]);
                 const minVal = this.numArg(name, args[1]);
                 const maxVal = this.numArg(name, args[2]);
@@ -1084,16 +1088,18 @@ export class MathCore {
             }
             // --- Safe Division and Conditional Selection ---
             case "safediv": {
-                if (args.length !== 3)
+                if (args.length !== 3) {
                     throw new Error("safediv() expects exactly 3 numeric arguments.");
+                }
                 const dividend = this.numArg(name, args[0]);
                 const divisor = this.numArg(name, args[1]);
                 const defaultValue = this.numArg(name, args[2]);
                 return divisor === 0 ? defaultValue : dividend / divisor;
             }
             case "select": {
-                if (args.length !== 3)
+                if (args.length !== 3) {
                     throw new Error("select() expects exactly 3 numeric arguments.");
+                }
                 const statement = this.numArg(name, args[0]);
                 const trueVal = this.numArg(name, args[1]);
                 const falseVal = this.numArg(name, args[2]);
@@ -1101,100 +1107,117 @@ export class MathCore {
             }
             // --- Logical Operations ---
             case "not": {
-                if (args.length !== 1)
+                if (args.length !== 1) {
                     throw new Error("not() expects exactly 1 numeric argument.");
+                }
                 const value = this.numArg(name, args[0]);
                 return value === 0 ? 1 : 0;
             }
             case "bank": {
-                if (args.length !== 1)
+                if (args.length !== 1) {
                     throw new Error("bank() expects exactly 1 numeric argument.");
+                }
                 // Return the bank of the value by shifting 16 bits to the right and masking with 0xFF
                 return (this.numArg(name, args[0]) >> 16) & 0xff;
             }
             case "offset": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("offset() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[1]) - this.numArg(name, args[0]);
             }
             // --- Comparison Functions ---
             case "equal": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("equal() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) === this.numArg(name, args[1]) ? 1 : 0;
             }
             case "notequal": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("notequal() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) !== this.numArg(name, args[1]) ? 1 : 0;
             }
             case "less": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("less() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) < this.numArg(name, args[1]) ? 1 : 0;
             }
             case "lessequal": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("lessequal() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) <= this.numArg(name, args[1]) ? 1 : 0;
             }
             case "greater": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("greater() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
             }
             case "greaterequal": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("greaterequal() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
             }
             // --- Logical Bitwise Operations ---
             case "and": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("and() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
             }
             case "or": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("or() expects exactly 2 numeric arguments.");
+                }
                 return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
             }
             case "nand": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("nand() expects exactly 2 numeric arguments.");
+                }
                 return !(this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
             }
             case "nor": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("nor() expects exactly 2 numeric arguments.");
+                }
                 return !(this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
             }
             case "xor": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("xor() expects exactly 2 numeric arguments.");
+                }
                 const a = this.numArg(name, args[0]);
                 const b = this.numArg(name, args[1]);
                 return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
             }
             // --- Rounding ---
             case "round": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("round() expects exactly 2 numeric arguments.");
+                }
                 const number = this.numArg(name, args[0]);
                 const precision = this.numArg(name, args[1]);
                 return parseFloat(number.toFixed(precision));
             }
             // --- String Comparisons ---
             case "stringsequal": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("stringsequal() expects exactly 2 string arguments.");
+                }
                 const str1 = this.strArg(name, args[0]);
                 const str2 = this.strArg(name, args[1]);
                 return str1 === str2 ? 1 : 0;
             }
             case "stringsequalnocase": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
+                }
                 const str1 = this.strArg(name, args[0]);
                 const str2 = this.strArg(name, args[1]);
                 return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
@@ -1202,8 +1225,9 @@ export class MathCore {
             // --- Filesize & File Status ---
             case "filesize":
             case "getfilestatus": {
-                if (args.length !== 1)
+                if (args.length !== 1) {
                     throw new Error(`${name}() expects exactly 1 argument.`);
+                }
                 const value = this.strArg(name, args[0]);
                 return name === "filesize"
                     ? this.getHost().getFileSize(value)
@@ -1214,19 +1238,22 @@ export class MathCore {
             case "bytesof":
             case "startof":
             case "endof": {
-                if (args.length !== 1)
+                if (args.length !== 1) {
                     throw new Error(`${name}() expects exactly 1 argument.`);
+                }
                 const host = this.getHost();
-                if (!host.getExpressionStructMetadata)
+                if (!host.getExpressionStructMetadata) {
                     throw new Error(`${name}() requires a struct metadata host.`);
+                }
                 return host.getExpressionStructMetadata(this.strArg(name, args[0]), name);
             }
             case "defined":
             case "sizeof":
             case "objectsize":
             case "datasize": {
-                if (args.length !== 1)
+                if (args.length !== 1) {
                     throw new Error(`${name}() expects exactly 1 argument.`);
+                }
                 const value = this.strArg(name, args[0]);
                 if (name === "defined") {
                     return this.getHost().isDefined(value);
@@ -1238,15 +1265,17 @@ export class MathCore {
             case "canreadfile2":
             case "canreadfile3":
             case "canreadfile4": {
-                if (args.length !== 2)
+                if (args.length !== 2) {
                     throw new Error(`${name}() expects exactly 2 arguments.`);
+                }
                 const filename = this.strArg(name, args[0]);
                 const pos = this.numArg(name, args[1]);
                 return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
             }
             case "canreadfile": {
-                if (args.length !== 3)
+                if (args.length !== 3) {
                     throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
+                }
                 const filename = this.strArg(name, args[0]);
                 const pos = this.numArg(name, args[1]);
                 const num = this.numArg(name, args[2]);
@@ -1257,8 +1286,9 @@ export class MathCore {
             case "readfile2":
             case "readfile3":
             case "readfile4": {
-                if (args.length < 2 || args.length > 3)
+                if (args.length < 2 || args.length > 3) {
                     throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
+                }
                 const filename = this.strArg(name, args[0]);
                 const pos = this.numArg(name, args[1]);
                 const size = parseInt(name.slice(-1), 10);
@@ -1273,8 +1303,9 @@ export class MathCore {
             // --- PC/Realbase ---
             case "pc":
             case "realbase": {
-                if (args.length !== 0)
+                if (args.length !== 0) {
                     throw new Error(`${name}() expects no arguments.`);
+                }
                 return name === "pc"
                     ? this.getHost().getCurrentAddress()
                     : this.getHost().getCurrentBaseAddress();
@@ -1315,7 +1346,7 @@ export class MathCore {
         // Remove line continuations (backslash-newline)
         const cleanDef = this.str.replace(/\\\s*\n/g, "");
         // Regex: function <name>([param1, param2, ...]) = <expression>
-        // eslint-disable-next-line security/detect-unsafe-regex
+        // oxlint-disable-next-line security/detect-unsafe-regex
         const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
         const match = cleanDef.match(regex);
         if (!match || !match[1] || !match[3]) {

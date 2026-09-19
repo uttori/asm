@@ -25,7 +25,9 @@ test("terminal detach accepts native EOF before OK and still terminates the owne
   const client = new FakeAresRspClient(fakeState());
   const original = client.request.bind(client);
   client.request = async (command) => {
-    if (command !== "D") return original(command);
+    if (command !== "D") {
+      return original(command);
+    }
     await client.close();
     throw new Error("RSP transport closed.");
   };
@@ -59,9 +61,13 @@ test("capture v2 rejects legacy runtimes and preserves exact acknowledgement int
   const original = client.request.bind(client);
   let sent = "";
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    if (!command.startsWith("qUttoriCapture:")) {
+      return original(command);
+    }
     sent = command;
-    if (command.includes(":read:")) return "";
+    if (command.includes(":read:")) {
+      return "";
+    }
     return "E07";
   };
   const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
@@ -87,13 +93,18 @@ test("bus capture negotiates distinct RSP commands and rejects scope changes", a
   const commands: string[] = [];
   let scopeChanged = false;
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    if (!command.startsWith("qUttoriCapture:")) {
+      return original(command);
+    }
     commands.push(command);
     let value: unknown = busPosition();
-    if (command.endsWith(":bus-capabilities")) value = busCapabilities;
-    else if (command.endsWith(":capabilities"))
+    if (command.endsWith(":bus-capabilities")) {
+      value = busCapabilities;
+    } else if (command.endsWith(":capabilities")) {
       value = { ...busCapabilities, scope: "snes.65816.instructions", requiredReserveBytes: 71 };
-    else if (scopeChanged) value = { ...busPosition(), scope: "snes.65816.instructions" };
+    } else if (scopeChanged) {
+      value = { ...busPosition(), scope: "snes.65816.instructions" };
+    }
     return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
   };
   const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
@@ -134,14 +145,18 @@ test("transfer capture negotiates separately and keeps long steps drainable", as
   const commands: string[] = [];
   let scopeChanged = false;
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    if (!command.startsWith("qUttoriCapture:")) {
+      return original(command);
+    }
     commands.push(command);
     let value: unknown = position();
-    if (command.endsWith(":transfer-capabilities"))
+    if (command.endsWith(":transfer-capabilities")) {
       value = { ...busCapabilities, scope, requiredReserveBytes: 80 };
-    else if (command.endsWith(":capabilities"))
+    } else if (command.endsWith(":capabilities")) {
       value = { ...busCapabilities, scope: "snes.65816.instructions", requiredReserveBytes: 71 };
-    else if (scopeChanged) value = { ...busPosition(), scope: "snes.65816.instructions" };
+    } else if (scopeChanged) {
+      value = { ...busPosition(), scope: "snes.65816.instructions" };
+    }
     return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
   };
   const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
@@ -185,14 +200,18 @@ test("PPU effects negotiate separately and keeps long steps drainable", async (t
   const commands: string[] = [];
   let scopeChanged = false;
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    if (!command.startsWith("qUttoriCapture:")) {
+      return original(command);
+    }
     commands.push(command);
     let value: unknown = position();
-    if (command.endsWith(":ppu-capabilities"))
+    if (command.endsWith(":ppu-capabilities")) {
       value = { ...busCapabilities, scope, requiredReserveBytes: 88 };
-    else if (command.endsWith(":capabilities"))
+    } else if (command.endsWith(":capabilities")) {
       value = { ...busCapabilities, scope: "snes.65816.instructions", requiredReserveBytes: 71 };
-    else if (scopeChanged) value = { ...busPosition(), scope: "snes.65816.instructions" };
+    } else if (scopeChanged) {
+      value = { ...busPosition(), scope: "snes.65816.instructions" };
+    }
     return "J" + Buffer.from(JSON.stringify(value)).toString("hex");
   };
   const backend = new AresRspDebugBackend({ createClient: () => Promise.resolve(client) });
@@ -225,7 +244,7 @@ test("PPU effects negotiate separately and keeps long steps drainable", async (t
 });
 
 test("instruction-only capture runtimes reject bus setup before start", async (t) => {
-  for (const reply of ["", "E05"])
+  for (const reply of ["", "E05"]) {
     for (const [scope, operation] of [
       [busScope, "bus-capabilities"],
       ["snes.cpu-bus-ppu", "ppu-capabilities"],
@@ -238,7 +257,9 @@ test("instruction-only capture runtimes reject bus setup before start", async (t
       const original = client.request.bind(client);
       const commands: string[] = [];
       client.request = async (command) => {
-        if (!command.startsWith("qUttoriCapture:")) return original(command);
+        if (!command.startsWith("qUttoriCapture:")) {
+          return original(command);
+        }
         commands.push(command);
         return reply;
       };
@@ -250,6 +271,7 @@ test("instruction-only capture runtimes reject bus setup before start", async (t
       t.deepEqual(commands, [`qUttoriCapture:${operation}`]);
       await backend.disconnect();
     }
+  }
 });
 
 test("wrong-scope bus start is aborted before setup failure escapes", async (t) => {
@@ -261,7 +283,9 @@ test("wrong-scope bus start is aborted before setup failure escapes", async (t) 
   const original = client.request.bind(client);
   const commands: string[] = [];
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriCapture:")) return original(command);
+    if (!command.startsWith("qUttoriCapture:")) {
+      return original(command);
+    }
     commands.push(command);
     const value = command.endsWith(":bus-capabilities")
       ? busCapabilities
@@ -396,12 +420,22 @@ class FakeAresRspClient implements AresGdbRspClient {
   }
 
   async request(command: string): Promise<string> {
-    if (!this.#started || this.closed) throw new Error("fake RSP client is unavailable");
+    if (!this.#started || this.closed) {
+      throw new Error("fake RSP client is unavailable");
+    }
     this.commands.push(command);
-    if (command === "qSupported") return this.#supported;
-    if (command.startsWith("qXfer:features:read:target.xml:")) return `l${this.#targetXml}`;
-    if (command === "g") return registerPayload(this.#state);
-    if (command === "D") return "OK";
+    if (command === "qSupported") {
+      return this.#supported;
+    }
+    if (command.startsWith("qXfer:features:read:target.xml:")) {
+      return `l${this.#targetXml}`;
+    }
+    if (command === "g") {
+      return registerPayload(this.#state);
+    }
+    if (command === "D") {
+      return "OK";
+    }
     if (command === "QUttoriTrace:1") {
       this.#traceActive = true;
       this.#traceAddresses = [];
@@ -438,8 +472,9 @@ class FakeAresRspClient implements AresGdbRspClient {
     if (namedMemory) {
       const address = Number.parseInt(namedMemory[2], 16);
       const count = Number.parseInt(namedMemory[3], 16);
-      if (this.#namedMemoryResponse)
+      if (this.#namedMemoryResponse) {
         return this.#namedMemoryResponse(namedMemory[1], address, count);
+      }
       const source = namedMemory[1] === "snes.cartridge-rom" ? this.#state.cartridgeRom : new Map();
       return Array.from({ length: count }, (_, index) =>
         (source.get(address + index) ?? 0).toString(16).padStart(2, "0"),
@@ -449,15 +484,20 @@ class FakeAresRspClient implements AresGdbRspClient {
     const breakpoint = /^([Zz])0,([\dA-Fa-f]+),1$/.exec(command);
     if (breakpoint) {
       const address = Number.parseInt(breakpoint[2], 16);
-      if (breakpoint[1] === "Z") this.#state.breakpoints.add(address);
-      else this.#state.breakpoints.delete(address);
+      if (breakpoint[1] === "Z") {
+        this.#state.breakpoints.add(address);
+      } else {
+        this.#state.breakpoints.delete(address);
+      }
       return "OK";
     }
     throw new Error(`Unexpected fake RSP command '${command}'.`);
   }
 
   async requestStop(command: string): Promise<string> {
-    if (command !== "?") throw new Error(`Unexpected fake stop command '${command}'.`);
+    if (command !== "?") {
+      throw new Error(`Unexpected fake stop command '${command}'.`);
+    }
     await this.#emitStop();
     return "T05";
   }
@@ -476,7 +516,9 @@ class FakeAresRspClient implements AresGdbRspClient {
     const logicalPc = (this.#state.pb << 16) | this.#state.pc;
     this.#state.pc = (this.#state.pc + 1) & 0xffff;
     this.#state.a++;
-    if ((logicalPc & 0xffff) === 0xffff) this.#state.pb = (this.#state.pb + 1) & 0xff;
+    if ((logicalPc & 0xffff) === 0xffff) {
+      this.#state.pb = (this.#state.pb + 1) & 0xff;
+    }
     this.#recordTrace();
     await this.#emitStop();
   }
@@ -486,9 +528,13 @@ class FakeAresRspClient implements AresGdbRspClient {
   }
 
   async close(): Promise<void> {
-    if (this.closed) return;
+    if (this.closed) {
+      return;
+    }
     this.closed = true;
-    for (const listener of this.#closeListeners) listener(new Error("fake RSP client closed"));
+    for (const listener of this.#closeListeners) {
+      listener(new Error("fake RSP client closed"));
+    }
   }
 
   onStop(listener: (event: GdbRspStop) => void): DebugSubscription {
@@ -503,20 +549,26 @@ class FakeAresRspClient implements AresGdbRspClient {
 
   fail(error: Error): void {
     this.closed = true;
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
   }
 
   async #emitStop(): Promise<void> {
     await new Promise<void>((resolve) => {
       queueMicrotask(() => {
-        for (const listener of this.#stopListeners) listener({ signal: 5, payload: "S05" });
+        for (const listener of this.#stopListeners) {
+          listener({ signal: 5, payload: "S05" });
+        }
         resolve();
       });
     });
   }
 
   #recordTrace(): void {
-    if (!this.#traceActive) return;
+    if (!this.#traceActive) {
+      return;
+    }
     if (this.#traceAddresses.length === ARES_TRACE_BUFFER_EVENTS) {
       this.#traceAddresses.shift();
       this.#traceDroppedEvents++;
@@ -601,7 +653,9 @@ const createBackend = (): AresRspDebugBackend => {
   const state = fakeState();
   return new AresRspDebugBackend({
     createClient: ({ reset }) => {
-      if (reset) resetState(state);
+      if (reset) {
+        resetState(state);
+      }
       return new FakeAresRspClient(state);
     },
   });
@@ -647,7 +701,9 @@ test("ares RSP backend preserves the stopped RSP session across logical reconnec
   const backend = new AresRspDebugBackend({
     createClient: ({ reset }) => {
       clients++;
-      if (reset) resetState(state);
+      if (reset) {
+        resetState(state);
+      }
       return new FakeAresRspClient(state);
     },
   });
@@ -803,7 +859,9 @@ test("native file capture binds local manifest identity and keeps event bytes of
   const original = client.request.bind(client),
     commands: string[] = [];
   client.request = async (command) => {
-    if (!command.startsWith("qUttoriCaptureFile:")) return original(command);
+    if (!command.startsWith("qUttoriCaptureFile:")) {
+      return original(command);
+    }
     commands.push(command);
     const value = command.includes(":capabilities:")
       ? { ...busCapabilities, nativeFile: true }

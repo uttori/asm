@@ -72,8 +72,12 @@ export const CONFIGURE_HEURISTICS_COMMAND = "asm.heuristics.configure";
 export const PREVIEW_HEURISTICS_COMMAND = "asm.heuristics.preview";
 
 const formatBytes = (bytes: number): string => {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KiB`;
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MiB`;
+  }
+  if (bytes >= 1024) {
+    return `${(bytes / 1024).toFixed(1)} KiB`;
+  }
   return `${bytes} bytes`;
 };
 
@@ -168,7 +172,9 @@ const showMarkdown = async (content: string): Promise<void> => {
 const insideWorkspace = (directory: string): boolean => {
   const absolute = path.resolve(directory);
   return (workspace.workspaceFolders ?? []).some((folder) => {
-    if (folder.uri.scheme !== "file") return false;
+    if (folder.uri.scheme !== "file") {
+      return false;
+    }
     const relative = path.relative(path.resolve(folder.uri.fsPath), absolute);
     return (
       relative === "" ||
@@ -189,11 +195,13 @@ const chooseProject = async (
   romContentSha256?: string,
 ): Promise<ProjectChoice | undefined> => {
   if (preferred) {
-    if (!insideWorkspace(preferred))
+    if (!insideWorkspace(preferred)) {
       throw new Error("The analysis project must be inside the trusted workspace.");
+    }
     const selected = readProjectChoice(preferred);
-    if (romContentSha256 && selected.manifest.rom.contentSha256 !== romContentSha256)
+    if (romContentSha256 && selected.manifest.rom.contentSha256 !== romContentSha256) {
       throw new Error("The selected trace and analysis project describe different ROM content.");
+    }
     return selected;
   }
   const choices = (await findAnalysisProjectDirectories())
@@ -208,8 +216,12 @@ const chooseProject = async (
         return [];
       }
     });
-  if (choices.length === 0) return undefined;
-  if (choices.length === 1) return choices[0];
+  if (choices.length === 0) {
+    return undefined;
+  }
+  if (choices.length === 1) {
+    return choices[0];
+  }
   return (
     await window.showQuickPick(
       choices.map((choice) => ({
@@ -229,7 +241,9 @@ const chooseProject = async (
 export const chooseLiveBusProject = async (
   romContentSha256: string,
 ): Promise<string | undefined> => {
-  if (!workspace.isTrusted) throw new Error("Live bus analysis requires a trusted workspace.");
+  if (!workspace.isTrusted) {
+    throw new Error("Live bus analysis requires a trusted workspace.");
+  }
   return (await chooseProject(undefined, romContentSha256))?.directory;
 };
 
@@ -250,16 +264,20 @@ const chooseSource = async (
   preferred?: string,
 ): Promise<{ directory: string; manifest: SourceExportManifest } | undefined> => {
   if (preferred) {
-    if (!insideWorkspace(preferred))
+    if (!insideWorkspace(preferred)) {
       throw new Error("Generated source must be inside the trusted workspace.");
+    }
     const manifest = sourceMatches(path.resolve(preferred), project);
-    if (!manifest)
+    if (!manifest) {
       throw new Error("The selected source export does not match this analysis project.");
+    }
     return { directory: path.resolve(preferred), manifest };
   }
   const nearby = path.dirname(project.directory);
   const nearManifest = sourceMatches(nearby, project);
-  if (nearManifest) return { directory: nearby, manifest: nearManifest };
+  if (nearManifest) {
+    return { directory: nearby, manifest: nearManifest };
+  }
   const files = await workspace.findFiles(
     `**/${SOURCE_EXPORT_MANIFEST}`,
     "**/{node_modules,.git}/**",
@@ -270,8 +288,12 @@ const chooseSource = async (
     const manifest = insideWorkspace(directory) ? sourceMatches(directory, project) : undefined;
     return manifest ? [{ directory, manifest }] : [];
   });
-  if (matches.length === 0) return undefined;
-  if (matches.length === 1) return matches[0];
+  if (matches.length === 0) {
+    return undefined;
+  }
+  if (matches.length === 1) {
+    return matches[0];
+  }
   return (
     await window.showQuickPick(
       matches.map((match) => ({
@@ -323,12 +345,15 @@ const chooseRom = async (
     filters: { "SNES ROM": ["sfc", "smc", "bin", "rom"], "All files": ["*"] },
   });
   const file = selected?.[0]?.fsPath;
-  if (!file) return undefined;
+  if (!file) {
+    return undefined;
+  }
   const rom = exactRom(file, project.manifest);
-  if (!rom)
+  if (!rom) {
     throw new Error(
       `ROM identity mismatch; the project expects ${project.manifest.rom.contentSha256}.`,
     );
+  }
   await rememberSnesRom(context, rom.identity, file);
   return file;
 };
@@ -360,7 +385,9 @@ const resolveTarget = async (
   expectedRom?: string,
 ): Promise<ResolvedTarget | undefined> => {
   const resolved = await resolveProjectSource(target, expectedRom);
-  if (!resolved) return undefined;
+  if (!resolved) {
+    return undefined;
+  }
   const project = readProjectChoice(resolved.projectDirectory);
   const romFile = await chooseRom(
     context,
@@ -379,16 +406,15 @@ const traceStoragePolicy = (directory: string) => {
   const config = workspace.getConfiguration("asm", Uri.file(directory));
   const policy: Record<string, number> = {};
   for (const [setting, key, multiplier] of [
-    ["trace.archiveMaxMiB", "archiveMaxBytes", 1024 ** 2],
-    ["trace.archiveMaxAgeDays", "archiveMaxAgeDays", 1],
-    ["trace.archiveMaxCaptures", "archiveMaxCaptures", 1],
     ["analysis.cacheMaxMiB", "cacheMaxBytes", 1024 ** 2],
     ["analysis.storageMaxMiB", "databaseMaxBytes", 1024 ** 2],
   ] as const) {
     const inspected = config.inspect<number>(setting);
     const value =
       inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? inspected?.globalValue;
-    if (value !== undefined) policy[key] = value * multiplier;
+    if (value !== undefined) {
+      policy[key] = value * multiplier;
+    }
   }
   return policy;
 };
@@ -437,8 +463,11 @@ const runTimedJob = <K extends keyof MaintenanceJobs>(
     client.run(operation, input, {
       ...options,
       onProgress: (progress) => {
-        if (progress.timing) recordStage(progress.timing);
-        else options.onProgress?.(progress);
+        if (progress.timing) {
+          recordStage(progress.timing);
+        } else {
+          options.onProgress?.(progress);
+        }
       },
     }),
   );
@@ -452,8 +481,9 @@ const regenerate = async (
   const maxWorkItems = workspace
     .getConfiguration("asm", Uri.file(resolved.sourceDirectory))
     .get<number>("analysis.maxWorkItems", 100_000);
-  if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems < 1)
+  if (!Number.isSafeInteger(maxWorkItems) || maxWorkItems < 1) {
     throw new Error("asm.analysis.maxWorkItems must be a positive safe integer.");
+  }
   return withMaintenanceProgress(
     "Assembly: analyzing and regenerating disassembly",
     async (options) => {
@@ -478,10 +508,11 @@ const regenerate = async (
       const exported = await runTimedJob(timings, client, "export", resolved, options);
       options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
       const roundTrip = await runTimedJob(timings, client, "verify", resolved, options);
-      if (!roundTrip.comparison.equal)
+      if (!roundTrip.comparison.equal) {
         throw new Error(
           `Generated source differed at ROM offset ${roundTrip.comparison.firstDifference}.`,
         );
+      }
       options.onProgress?.({ message: "Summarizing updated analysis…" });
       const after = await runTimedJob(
         timings,
@@ -494,10 +525,11 @@ const regenerate = async (
         "Check final revision and compare generated file manifests",
         () => {
           // Keep a rejected publication check visible as a failed report step, even after verification.
-          if (after.manifestSha256 !== exported.manifest.sourceProjectSha256)
+          if (after.manifestSha256 !== exported.manifest.sourceProjectSha256) {
             throw new Error(
               "Analysis changed while source was being regenerated. Run regeneration again to use the latest edits.",
             );
+          }
           return fileChanges(resolved.sourceManifest, exported.manifest);
         },
       );
@@ -579,13 +611,16 @@ const statusReport = async (
 };
 
 const traceFileFrom = async (argument?: unknown): Promise<string | undefined> => {
-  if (argument instanceof Uri && argument.scheme === "file") return argument.fsPath;
+  if (argument instanceof Uri && argument.scheme === "file") {
+    return argument.fsPath;
+  }
   if (
     argument &&
     typeof argument === "object" &&
     typeof (argument as { fsPath?: unknown }).fsPath === "string"
-  )
+  ) {
     return (argument as { fsPath: string }).fsPath;
+  }
   const selected = await window.showOpenDialog({
     title: "Select an Uttori ASM trace capture",
     canSelectFiles: true,
@@ -601,10 +636,11 @@ const traceImportMaxBytes = (sourceDirectory: string): number => {
     .getConfiguration("asm", Uri.file(sourceDirectory))
     .get<number>("trace.maxImportSizeMiB", 2048);
   const bytes = mib * 1024 * 1024;
-  if (!Number.isSafeInteger(mib) || mib < 1 || !Number.isSafeInteger(bytes))
+  if (!Number.isSafeInteger(mib) || mib < 1 || !Number.isSafeInteger(bytes)) {
     throw new Error(
       "asm.trace.maxImportSizeMiB must be a positive integer representing a safe byte limit.",
     );
+  }
   return bytes;
 };
 
@@ -633,7 +669,9 @@ const withMaintenanceProgress = async <T>(
             totalBytes: total = 0,
             timing,
           }) => {
-            if (timing) return;
+            if (timing) {
+              return;
+            }
             if (processedRecords !== undefined && totalRecords !== undefined) {
               progress.report({
                 message: `Merging runtime facts: ${processedRecords.toLocaleString()} / ${totalRecords.toLocaleString()} records…`,
@@ -684,7 +722,9 @@ export const registerDisassemblyMaintenance = (
           "Show Output",
         )
         .then((choice) => {
-          if (choice === "Show Output") outputChannel?.show(true);
+          if (choice === "Show Output") {
+            outputChannel?.show(true);
+          }
         });
       return;
     }
@@ -697,7 +737,9 @@ export const registerDisassemblyMaintenance = (
         void window
           .showErrorMessage(`Assembly disassembly update: ${message}`, "Show Output")
           .then((choice) => {
-            if (choice === "Show Output") outputChannel?.show(true);
+            if (choice === "Show Output") {
+              outputChannel?.show(true);
+            }
           });
       })
       .finally(() => {
@@ -711,10 +753,13 @@ export const registerDisassemblyMaintenance = (
       REGENERATE_DISASSEMBLY_COMMAND,
       (target?: DisassemblyMaintenanceTarget) =>
         run(async () => {
-          if (!workspace.isTrusted)
+          if (!workspace.isTrusted) {
             throw new Error("Analysis and source regeneration require a trusted workspace.");
+          }
           const resolved = await resolveTarget(context, target);
-          if (!resolved) return;
+          if (!resolved) {
+            return;
+          }
           const timings = new DisassemblyTimings();
           if (target?.annotationRefresh && !target.entrySeeds?.length) {
             const receipt = target.annotationRefresh;
@@ -735,7 +780,9 @@ export const registerDisassemblyMaintenance = (
                     ),
                 );
                 options.signal?.throwIfAborted();
-                if (!exported) return false;
+                if (!exported) {
+                  return false;
+                }
                 options.onProgress?.({ message: "Rebuilding and checking every ROM byte…" });
                 const verified = await runTimedJob(timings, client, "verify", resolved, options);
                 const revision = await runTimedJob(timings, client, "revision", resolved, options);
@@ -743,10 +790,11 @@ export const registerDisassemblyMaintenance = (
                   !verified.comparison.equal ||
                   revision !== receipt.after ||
                   exported.manifest.sourceProjectSha256 !== revision
-                )
+                ) {
                   throw new Error(
                     "Analysis changed during source refresh. Run regeneration again.",
                   );
+                }
                 refresh();
                 const changes = await timings.measure("Compare generated file manifests", () =>
                   fileChanges(resolved.sourceManifest, exported.manifest),
@@ -762,7 +810,9 @@ export const registerDisassemblyMaintenance = (
               },
               resolved.sourceDirectory,
             );
-            if (refreshed) return;
+            if (refreshed) {
+              return;
+            }
           }
           const summary = await regenerate(client, resolved, target?.entrySeeds, timings);
           refresh();
@@ -779,12 +829,16 @@ export const registerDisassemblyMaintenance = (
       CONFIGURE_HEURISTICS_COMMAND,
       (target?: DisassemblyMaintenanceTarget) =>
         run(async () => {
-          if (!workspace.isTrusted)
+          if (!workspace.isTrusted) {
             throw new Error("Editing heuristic rules requires a trusted workspace.");
+          }
           const selected = await chooseProject(target?.projectDirectory);
-          if (!selected) throw new Error("No native analysis project was found in the workspace.");
-          if (selected.manifest.target !== "snes.sfc")
+          if (!selected) {
+            throw new Error("No native analysis project was found in the workspace.");
+          }
+          if (selected.manifest.target !== "snes.sfc") {
             throw new Error("Function heuristics require a SNES analysis project.");
+          }
           const file = path.join(selected.directory, "heuristics.json");
           try {
             await fs.promises.writeFile(
@@ -802,7 +856,9 @@ export const registerDisassemblyMaintenance = (
               { flag: "wx" },
             );
           } catch (error) {
-            if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+            if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
+              throw error;
+            }
           }
           await window.showTextDocument(Uri.file(file), { preview: false });
         }),
@@ -810,14 +866,17 @@ export const registerDisassemblyMaintenance = (
     commands.registerCommand(PREVIEW_HEURISTICS_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
       run(async () => {
         const selected = await chooseProject(target?.projectDirectory);
-        if (!selected) throw new Error("No native analysis project was found in the workspace.");
+        if (!selected) {
+          throw new Error("No native analysis project was found in the workspace.");
+        }
         const file = path.join(selected.directory, "heuristics.json");
         if (
           workspace.textDocuments.some(
             (document) => document.uri.fsPath === file && document.isDirty,
           )
-        )
+        ) {
           throw new Error("Save heuristics.json before previewing its rules.");
+        }
         const result = await window.withProgress(
           {
             location: ProgressLocation.Notification,
@@ -867,10 +926,13 @@ export const registerDisassemblyMaintenance = (
     ),
     commands.registerCommand(OPEN_RAM_MAP_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
       run(async () => {
-        if (!workspace.isTrusted)
+        if (!workspace.isTrusted) {
           throw new Error("Opening a RAM map requires a trusted workspace.");
+        }
         const resolved = await resolveProjectSource(target);
-        if (!resolved) return;
+        if (!resolved) {
+          return;
+        }
         loadSnesRamMap(resolved.sourceDirectory);
         await window.showTextDocument(
           Uri.file(path.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
@@ -881,15 +943,20 @@ export const registerDisassemblyMaintenance = (
     commands.registerCommand(DISASSEMBLY_STATUS_COMMAND, (target?: DisassemblyMaintenanceTarget) =>
       run(async () => {
         const resolved = await resolveProjectSource(target);
-        if (resolved) await showMarkdown(await statusReport(client, resolved));
+        if (resolved) {
+          await showMarkdown(await statusReport(client, resolved));
+        }
       }),
     ),
     commands.registerCommand(IMPORT_BUS_TRACE_COMMAND, (argument?: unknown) =>
       run(async () => {
-        if (!workspace.isTrusted)
+        if (!workspace.isTrusted) {
           throw new Error("Bus capture import requires a trusted workspace.");
+        }
         const traceFile = await traceFileFrom(argument);
-        if (!traceFile) return;
+        if (!traceFile) {
+          return;
+        }
         // Read bounded identity before selecting the project whose configured byte budget applies.
         const { metadata } = await createEditorRuntimeBusSource(traceFile, {
           maxBytes: Number.MAX_SAFE_INTEGER,
@@ -918,7 +985,9 @@ export const registerDisassemblyMaintenance = (
           selected.directory,
         );
         refresh();
-        for (const warning of result.warnings) outputChannel?.warn(warning);
+        for (const warning of result.warnings) {
+          outputChannel?.warn(warning);
+        }
         outputChannel?.info(
           `Bus capture imported: ${result.observedEvents} access(es), ${result.added.runtime} new fact(s).`,
         );
@@ -927,17 +996,22 @@ export const registerDisassemblyMaintenance = (
     ),
     commands.registerCommand(IMPORT_TRACE_AND_REGENERATE_COMMAND, (argument?: unknown) =>
       run(async () => {
-        if (!workspace.isTrusted)
+        if (!workspace.isTrusted) {
           throw new Error("Trace import and source regeneration require a trusted workspace.");
+        }
         const traceFile = await traceFileFrom(argument);
-        if (!traceFile) return;
+        if (!traceFile) {
+          return;
+        }
         const timings = new DisassemblyTimings();
         // Read only the identity to select the project whose size setting applies.
         const { metadata: trace } = await timings.measure("Read trace identity", () =>
           createEditorRuntimeTraceSource(traceFile, { maxBytes: Number.MAX_SAFE_INTEGER }),
         );
         const resolved = await resolveTarget(context, {}, trace.romContentSha256);
-        if (!resolved) return;
+        if (!resolved) {
+          return;
+        }
         await timings.measure("Validate generated files before import", () =>
           validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest),
         );
@@ -962,14 +1036,18 @@ export const registerDisassemblyMaintenance = (
             ),
           resolved.sourceDirectory,
         );
-        for (const warning of imported.warnings ?? []) outputChannel?.warn(warning);
+        for (const warning of imported.warnings ?? []) {
+          outputChannel?.warn(warning);
+        }
         const seeds = imported.seeds;
         let summary: DisassemblyRegenerationSummary;
         try {
           summary = await regenerate(client, resolved, seeds, timings);
         } catch (error) {
           refresh();
-          if (error instanceof Error && error.name === "AbortError") throw error;
+          if (error instanceof Error && error.name === "AbortError") {
+            throw error;
+          }
           outputChannel?.error(
             `Disassembly regeneration failed: ${error instanceof Error ? (error.stack ?? error.message) : String(error)}`,
           );
