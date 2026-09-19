@@ -1,12 +1,27 @@
+import type { Serializable } from "node:child_process";
+
 import { runMaintenanceJob, type MaintenanceJob } from "./disassembly-maintenance-jobs.js";
 
 const cancellation = new AbortController();
 let started = false;
 
+/**
+ * Starts at most one maintenance job per child and keeps cancellation responsive.
+ * The final response is flushed before disconnect; progress messages need no callback.
+ * @param {object} message Parent run/cancel request.
+ * @param {Function} send IPC writer, injectable for process-lifecycle tests.
+ * @returns {void}
+ */
 export const handleMaintenanceProcessMessage = (
   message: { type: "cancel" } | { type: "run"; job: MaintenanceJob },
-  send: (response: unknown, callback?: () => void) => void = (response, callback) =>
-    process.send?.(response as Parameters<NonNullable<typeof process.send>>[0], callback),
+  send: (response: unknown, callback?: () => void) => void = (response, callback) => {
+    const payload = response as Serializable;
+    if (callback) {
+      process.send?.(payload, callback);
+    } else {
+      process.send?.(payload);
+    }
+  },
 ): void => {
   if (message.type === "cancel") {
     cancellation.abort();

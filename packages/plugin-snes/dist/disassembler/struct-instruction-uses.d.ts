@@ -28,7 +28,13 @@ export interface SnesStructInstructionUse {
     /** Complete instruction encoding, including opcode; stale metadata aborts export before writes. */
     readonly expectedBytes: readonly number[];
     readonly reason: string;
+    /** Immediate value expression; mutually exclusive with memoryOperand and access observations. */
     readonly operand?: {
+        readonly expression: string;
+        readonly value: number;
+    };
+    /** Encoded direct memory address, before indexing/DB/D; never a resolved runtime effective address. */
+    readonly memoryOperand?: {
         readonly expression: string;
         readonly value: number;
     };
@@ -54,12 +60,12 @@ export declare const validateSnesStructInstructionUses: (value: unknown, structu
  */
 export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructInstructionUse[] | undefined, rom: RomImage, toFileOffset: (address: number) => number | undefined) => ReadonlyMap<number, SnesStructInstructionUse> | undefined;
 /**
- * Replace a proven immediate with its native struct expression, preserving the encoded width.
+ * Replace a proven immediate or direct memory operand, preserving its encoded width and indexing.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
  * @param {DecodedInstruction} instruction One accepted decode context.
  * @param {string} source Existing formatted source, including any conservative numeric fallback.
  * @param {SnesStructInstructionUse} use Validated metadata at this ROM instruction.
- * @returns {string} Width-preserving symbolic immediate, or the original instruction for observations.
+ * @returns {string} Width-preserving symbolic operand, or the original instruction for observations.
  */
 export declare const applySnesStructInstructionOperand: (instruction: DecodedInstruction, source: string, use: SnesStructInstructionUse) => string;
 /**

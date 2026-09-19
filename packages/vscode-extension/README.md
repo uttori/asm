@@ -38,6 +38,17 @@ Run **Assembly: Create Disassembly Project from ROM** to start analysis. Use **E
 Annotation** and **Open Disassembly RAM Map** for edits that survive regeneration. Generated source
 is hash-checked; changing it directly can block regeneration.
 
+## Source breakpoints
+
+Click beside a line number or press **F9** in **Uttori SNES** or **Uttori 65xx** source.
+Launch with the matching binary and debug map to verify the marker. Comments and labels move
+to the next mapped executable line; unmapped locations remain unverified.
+
+For supported SNES cartridge mappings, a source breakpoint covers every confirmed ROM alias,
+so code mapped at `$C08005` can also stop when executed at `$008005`. Instruction breakpoints
+keep the exact address requested. You can add or remove source breakpoints while ares runs;
+the adapter briefly pauses execution to update its breakpoint table.
+
 ## Configuration and limits
 
 Use `uttori-asm.config.json` for project plugins, target, architecture, and paths. VS Code's `asm.*`

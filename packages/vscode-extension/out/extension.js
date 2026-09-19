@@ -35349,7 +35349,7 @@ var init_capture_v2 = __esm({
 });
 
 // packages/debug-adapter/src/dap.ts
-var import_node_async_hooks, import_node_path9, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
+var import_node_async_hooks, import_node_path9, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
   "packages/debug-adapter/src/dap.ts"() {
     "use strict";
@@ -35372,12 +35372,17 @@ var init_dap = __esm({
     formatDebugAddress = (address5) => `${address5.architecture}|${address5.addressSpace}|0x${address5.address.toString(16)}${address5.outputOffset === void 0 ? "" : `|0x${address5.outputOffset.toString(16)}`}`;
     parseDebugAddress = (reference) => {
       const [architecture, addressSpace, rawAddress, rawOutputOffset, extra] = reference.split("|");
-      if (!architecture || !addressSpace || !rawAddress || extra !== void 0) return void 0;
-      const address5 = Number(rawAddress);
-      if (!Number.isSafeInteger(address5) || address5 < 0) return void 0;
-      const outputOffset = rawOutputOffset === void 0 ? void 0 : Number(rawOutputOffset);
-      if (outputOffset !== void 0 && (!Number.isSafeInteger(outputOffset) || outputOffset < 0))
+      if (!architecture || !addressSpace || !rawAddress || extra !== void 0) {
         return void 0;
+      }
+      const address5 = Number(rawAddress);
+      if (!Number.isSafeInteger(address5) || address5 < 0) {
+        return void 0;
+      }
+      const outputOffset = rawOutputOffset === void 0 ? void 0 : Number(rawOutputOffset);
+      if (outputOffset !== void 0 && (!Number.isSafeInteger(outputOffset) || outputOffset < 0)) {
+        return void 0;
+      }
       return {
         architecture,
         addressSpace,
@@ -35423,28 +35428,43 @@ var init_dap = __esm({
       ...breakpoint2.message ? { message: breakpoint2.message } : {}
     });
     bytesText = (instruction2) => instruction2.bytes.map((value) => value.toString(16).padStart(2, "0")).join(" ");
+    breakpointKey = ({ architecture, addressSpace, address: address5 }) => formatDebugAddress({ architecture, addressSpace, address: address5 });
     BREAKPOINT_UPDATE_STOP_TIMEOUT_MS = 5e3;
     registerNumber = (register5) => {
-      if (!register5) return void 0;
+      if (!register5) {
+        return void 0;
+      }
       const normalized = register5.value.startsWith("0x") ? register5.value.slice(2) : register5.value;
       const value = Number.parseInt(normalized, 16);
       return Number.isSafeInteger(value) ? value : void 0;
     };
     processorLabel = (architecture) => {
-      if (architecture === "snes.65816") return "65816";
-      if (architecture === "snes.spc700") return "SPC700";
-      if (architecture === "snes.superfx") return "Super FX";
+      if (architecture === "snes.65816") {
+        return "65816";
+      }
+      if (architecture === "snes.spc700") {
+        return "SPC700";
+      }
+      if (architecture === "snes.superfx") {
+        return "Super FX";
+      }
       return architecture;
     };
     DebugAdapterSession = class {
       #backend;
       #map;
       #sourceRoot;
+      #sourceBreakpointAddresses;
+      #sourceOutputOffset;
       #instructionAnnotation;
       #onMessage;
       #mapIssues;
       #sourceBreakpoints = /* @__PURE__ */ new Map();
       #instructionBreakpoints = /* @__PURE__ */ new Map();
+      /** Last confirmed native table, used to recover a partially rejected replacement. */
+      #verifiedBreakpoints = [];
+      /** A failed table recovery must be reconciled before any execution can resume. */
+      #breakpointTableReliable = true;
       #variableContainers = /* @__PURE__ */ new Map();
       #frames = /* @__PURE__ */ new Map();
       #threads = /* @__PURE__ */ new Map();
@@ -35464,12 +35484,17 @@ var init_dap = __esm({
       #cancelConfiguration;
       /** Needed because ares and MesenCE accept breakpoint-table changes only while stopped. */
       #executionState = "unknown";
+      /** Monotonic event/transition revision prevents a failed request undoing a newer stop. */
+      #executionRevision = 0;
+      #executionEnded = false;
+      /** Queued user pauses take precedence over an internal automatic resume. */
+      #userPauseRequests = 0;
       /** In-flight internal pause whose stopped event must not look like a user-visible stop. */
       #maintenancePause;
       /** Thread whose internal resume event must likewise remain invisible to the IDE. */
       #maintenanceResumeThreadId;
-      /** Tail of serialized, whole-table breakpoint replacements. */
-      #breakpointUpdateQueue = Promise.resolve();
+      /** Execution commands share the table-update queue; backend events never wait on it. */
+      #executionUpdateQueue = Promise.resolve();
       /**
        * Creates a DAP session around one backend.
        * @param {DebugAdapterSessionOptions} options Backend, map, and host callbacks.
@@ -35478,6 +35503,8 @@ var init_dap = __esm({
         this.#backend = options.backend;
         this.#map = options.debugMap;
         this.#sourceRoot = import_node_path9.default.resolve(options.sourceRoot ?? process.cwd());
+        this.#sourceBreakpointAddresses = options.sourceBreakpointAddresses;
+        this.#sourceOutputOffset = options.sourceOutputOffset;
         this.#instructionAnnotation = options.instructionAnnotation;
         this.#onMessage = options.onMessage;
         this.#configurationHandshake = options.configurationHandshake ?? false;
@@ -35486,6 +35513,8 @@ var init_dap = __esm({
       }
       /** Releases the backend event subscription. */
       dispose() {
+        this.#executionEnded = true;
+        this.#executionRevision++;
         this.#cancelConfiguration?.();
         this.#cancelMaintenancePause(new Error("Debugger session disposed."));
         this.#subscription.dispose();
@@ -35513,7 +35542,11 @@ var init_dap = __esm({
           } catch (error) {
             if (request.command === "launch" || request.command === "attach") {
               let retained = 0;
-              for (const event of pending) if (event.event === "output") pending[retained++] = event;
+              for (const event of pending) {
+                if (event.event === "output") {
+                  pending[retained++] = event;
+                }
+              }
               pending.length = retained;
             }
             response = {
@@ -35534,8 +35567,12 @@ var init_dap = __esm({
             response,
             ...pending.map((event) => ({ ...event, seq: this.#nextSequence++ }))
           ];
-          for (const message of messages) this.#onMessage?.(message);
-          if (request.command === "configurationDone" && response.success) this.#configurationDone?.();
+          for (const message of messages) {
+            this.#onMessage?.(message);
+          }
+          if (request.command === "configurationDone" && response.success) {
+            this.#configurationDone?.();
+          }
           return messages;
         });
       }
@@ -35547,7 +35584,9 @@ var init_dap = __esm({
        * @returns {Promise<void>} Resolves after the client finishes breakpoint configuration.
        */
       async #configure() {
-        if (!this.#configurationHandshake) return;
+        if (!this.#configurationHandshake) {
+          return;
+        }
         const configured = new Promise((resolve11, reject) => {
           const timer = setTimeout(() => {
             this.#configurationDone = void 0;
@@ -35575,12 +35614,16 @@ var init_dap = __esm({
           case "initialize":
             return this.#capabilities();
           case "launch":
-            if (this.#mapIssues.length > 0) throw new Error(this.#mapIssues.join(" "));
+            if (this.#mapIssues.length > 0) {
+              throw new Error(this.#mapIssues.join(" "));
+            }
             await this.#backend.connect({ reset: true });
             await this.#configure();
             return {};
           case "attach":
-            if (this.#mapIssues.length > 0) throw new Error(this.#mapIssues.join(" "));
+            if (this.#mapIssues.length > 0) {
+              throw new Error(this.#mapIssues.join(" "));
+            }
             await this.#backend.connect({ reset: false });
             await this.#configure();
             return {};
@@ -35599,37 +35642,44 @@ var init_dap = __esm({
           case "readMemory":
             return this.#readMemory(args);
           case "setBreakpoints":
-            return this.#queueBreakpointUpdate(() => this.#setSourceBreakpoints(args));
+            return this.#queueExecutionUpdate(() => this.#setSourceBreakpoints(args));
           case "setInstructionBreakpoints":
-            return this.#queueBreakpointUpdate(() => this.#setInstructionBreakpoints(args));
+            return this.#queueExecutionUpdate(() => this.#setInstructionBreakpoints(args));
           case "breakpointLocations":
             return this.#breakpointLocations(args);
           case "pause":
-            await this.#assertThreadCapability(numeric(args.threadId), "pause");
-            await this.#backend.pause(numeric(args.threadId));
-            return {};
+            this.#userPauseRequests++;
+            try {
+              return await this.#queueExecutionUpdate(async () => {
+                await this.#assertThreadCapability(numeric(args.threadId), "pause");
+                await this.#backend.pause(numeric(args.threadId));
+                return {};
+              });
+            } finally {
+              this.#userPauseRequests--;
+            }
           case "continue":
-            await this.#assertThreadCapability(numeric(args.threadId), "pause");
-            await this.#backend.continue(numeric(args.threadId));
-            return { allThreadsContinued: true };
+            return this.#queueExecutionUpdate(async () => {
+              await this.#assertThreadCapability(numeric(args.threadId), "pause");
+              await this.#resumeExecution(() => this.#backend.continue(numeric(args.threadId)));
+              return { allThreadsContinued: true };
+            });
           case "next":
-            await this.#assertStepCapability(
-              numeric(args.threadId),
-              args.granularity === "instruction" ? "instruction" : "over"
-            );
-            await this.#backend.step(
-              numeric(args.threadId),
-              args.granularity === "instruction" ? "instruction" : "over"
-            );
-            return {};
           case "stepIn":
-            await this.#assertStepCapability(numeric(args.threadId), "in");
-            await this.#backend.step(numeric(args.threadId), "in");
-            return {};
           case "stepOut":
-            await this.#assertStepCapability(numeric(args.threadId), "out");
-            await this.#backend.step(numeric(args.threadId), "out");
-            return {};
+            return this.#queueExecutionUpdate(async () => {
+              let kind;
+              if (command === "next") {
+                kind = args.granularity === "instruction" ? "instruction" : "over";
+              } else if (command === "stepIn") {
+                kind = "in";
+              } else {
+                kind = "out";
+              }
+              await this.#assertStepCapability(numeric(args.threadId), kind);
+              await this.#resumeExecution(() => this.#backend.step(numeric(args.threadId), kind));
+              return {};
+            });
           case "disassemble":
             return this.#disassemble(args);
           case "source":
@@ -35639,12 +35689,15 @@ var init_dap = __esm({
           case "uttori/capture": {
             const request = args;
             validateCaptureRequest(request);
-            if (!this.#backend.capture) throw new Error("This backend does not support capture v2.");
+            if (!this.#backend.capture) {
+              throw new Error("This backend does not support capture v2.");
+            }
             return this.#backend.capture(request);
           }
           case "uttori/startTrace":
-            if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full")
+            if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full") {
               throw new Error("Unsupported trace detail mode.");
+            }
             await this.#backend.startTrace({
               ...args.detail === void 0 ? {} : { detail: args.detail },
               architecture: typeof args.architecture === "string" ? args.architecture : "",
@@ -35658,6 +35711,12 @@ var init_dap = __esm({
             return {};
           case "disconnect":
             this.#cancelConfiguration?.();
+            this.#executionEnded = true;
+            this.#executionRevision++;
+            this.#cancelMaintenancePause(
+              new Error("Debugger disconnected while updating breakpoints.")
+            );
+            await this.#executionUpdateQueue;
             await this.#backend.disconnect({ terminate: args.terminateDebuggee !== false });
             return {};
           default:
@@ -35685,7 +35744,9 @@ var init_dap = __esm({
       async #threadList() {
         const threads = await this.#backend.threads();
         this.#threads.clear();
-        for (const thread2 of threads) this.#threads.set(thread2.id, thread2);
+        for (const thread2 of threads) {
+          this.#threads.set(thread2.id, thread2);
+        }
         return {
           threads: threads.map((thread2) => {
             const capabilities = this.#architectureCapabilities(thread2.architecture);
@@ -35697,8 +35758,12 @@ var init_dap = __esm({
               !capabilities.disassemble ? "disassembly" : void 0
             ].filter((entry) => Boolean(entry)) : ["all inspection"];
             const supportedSteps = capabilities?.stepKinds ?? ["instruction", "over", "in", "out"];
-            if (capabilities?.step && !supportedSteps.includes("over")) unavailable.push("step over");
-            if (capabilities?.step && !supportedSteps.includes("out")) unavailable.push("step out");
+            if (capabilities?.step && !supportedSteps.includes("over")) {
+              unavailable.push("step over");
+            }
+            if (capabilities?.step && !supportedSteps.includes("out")) {
+              unavailable.push("step out");
+            }
             return {
               ...thread2,
               name: unavailable.length === 0 ? thread2.name : `${thread2.name} (unavailable: ${unavailable.join(", ")})`
@@ -35707,27 +35772,35 @@ var init_dap = __esm({
         };
       }
       async #assertThreadCapability(threadId, operation) {
-        if (!this.#threads.has(threadId)) await this.#threadList();
+        if (!this.#threads.has(threadId)) {
+          await this.#threadList();
+        }
         const thread2 = this.#threads.get(threadId);
-        if (!thread2) throw new Error(`Unknown debugger thread ${threadId}.`);
+        if (!thread2) {
+          throw new Error(`Unknown debugger thread ${threadId}.`);
+        }
         const capabilities = this.#architectureCapabilities(thread2.architecture);
-        if (!capabilities?.[operation])
+        if (!capabilities?.[operation]) {
           throw new Error(`${processorLabel(thread2.architecture)} does not support ${operation}.`);
+        }
       }
       async #assertStepCapability(threadId, kind) {
         await this.#assertThreadCapability(threadId, "step");
         const thread2 = this.#threads.get(threadId);
         const capabilities = this.#architectureCapabilities(thread2.architecture);
         const supported = capabilities.stepKinds ?? ["instruction", "over", "in", "out"];
-        if (!supported.includes(kind))
+        if (!supported.includes(kind)) {
           throw new Error(`${processorLabel(thread2.architecture)} does not support step ${kind}.`);
+        }
       }
       #traceCapabilities() {
         const traces = [];
         for (const architecture of this.#backend.capabilities.architectures) {
           const trace = architecture.trace;
-          if (!trace) continue;
-          for (const addressSpace of trace.addressSpaces)
+          if (!trace) {
+            continue;
+          }
+          for (const addressSpace of trace.addressSpaces) {
             traces.push({
               architecture: architecture.architecture,
               addressSpace,
@@ -35735,12 +35808,15 @@ var init_dap = __esm({
               maxBatchEvents: trace.maxBatchEvents,
               ...trace.instructionDetails === void 0 ? {} : { instructionDetails: trace.instructionDetails }
             });
+          }
         }
         return { traces };
       }
       async #stackTrace(threadId) {
         const frames = await this.#backend.stackFrames(threadId);
-        for (const frame of frames) this.#frames.set(frame.id, frame);
+        for (const frame of frames) {
+          this.#frames.set(frame.id, frame);
+        }
         return {
           stackFrames: frames.map((frame) => {
             const range = this.#rangeForAddress(frame.pc);
@@ -35785,9 +35861,13 @@ var init_dap = __esm({
       }
       async #scopes(frameId) {
         const frame = this.#frames.get(frameId);
-        if (!frame) throw new Error("Unknown stack frame; refresh the call stack and try again.");
+        if (!frame) {
+          throw new Error("Unknown stack frame; refresh the call stack and try again.");
+        }
         const capabilities = this.#architectureCapabilities(frame.pc.architecture);
-        if (!capabilities) return { scopes: [] };
+        if (!capabilities) {
+          return { scopes: [] };
+        }
         const scopes = [];
         const registers2 = capabilities.registers ? await this.#backend.registers(frameId) : [];
         const groups = [...new Set(registers2.map((register5) => register5.group ?? "Registers"))];
@@ -35838,7 +35918,9 @@ var init_dap = __esm({
           (register5) => ["S", "SP"].includes(register5.name.toUpperCase())
         );
         const stackPointer = registerNumber(stackRegister);
-        if (stackPointer === void 0) return void 0;
+        if (stackPointer === void 0) {
+          return void 0;
+        }
         if (architecture === "snes.65816") {
           const addressSpace = spaces.find((space) => space === "snes.wram") ?? spaces[0];
           return addressSpace ? { architecture, addressSpace, address: Math.min(131071, stackPointer + 1) } : void 0;
@@ -35856,7 +35938,9 @@ var init_dap = __esm({
         const emulation = registerNumber(
           registers2.find((register5) => register5.name.toUpperCase() === "E")
         );
-        if (status === void 0) return [];
+        if (status === void 0) {
+          return [];
+        }
         const flags = [
           ["N", 7],
           ["V", 6],
@@ -35889,7 +35973,9 @@ var init_dap = __esm({
       }
       async #variables(variablesReference) {
         const container = this.#variableContainers.get(variablesReference);
-        if (!container) throw new Error("Unknown variables reference.");
+        if (!container) {
+          throw new Error("Unknown variables reference.");
+        }
         if (container.kind === "registers") {
           return {
             variables: container.registers.filter((register5) => (register5.group ?? "Registers") === container.group).map((register5) => ({
@@ -35900,7 +35986,9 @@ var init_dap = __esm({
             }))
           };
         }
-        if (container.kind === "flags") return { variables: this.#flagVariables(container.registers) };
+        if (container.kind === "flags") {
+          return { variables: this.#flagVariables(container.registers) };
+        }
         if (container.kind === "memory-spaces") {
           return {
             variables: container.spaces.map((addressSpace) => ({
@@ -35929,20 +36017,24 @@ var init_dap = __esm({
             variablesReference: 0
           });
         }
-        if (memory.unreadableBytes > 0)
+        if (memory.unreadableBytes > 0) {
           rows.push({
             name: "unreadable",
             value: `${memory.unreadableBytes} byte(s)`,
             variablesReference: 0
           });
+        }
         return { variables: rows };
       }
       async #evaluate(args) {
-        if (!this.#backend.capabilities.registers)
+        if (!this.#backend.capabilities.registers) {
           throw new Error("Debugger expression evaluation requires register support.");
+        }
         const expression = typeof args.expression === "string" ? args.expression : "";
         const frameId = numeric(args.frameId, -1);
-        if (frameId < 1) throw new Error("Debugger expression evaluation requires a stack frame.");
+        if (frameId < 1) {
+          throw new Error("Debugger expression evaluation requires a stack frame.");
+        }
         const result = evaluateDebugExpression(expression, await this.#backend.registers(frameId));
         return {
           result: formatDebugExpressionValue(result.value),
@@ -35953,15 +36045,18 @@ var init_dap = __esm({
       async #readMemory(args) {
         const reference = typeof args.memoryReference === "string" ? args.memoryReference : "";
         const address5 = parseDebugAddress(reference);
-        if (!address5) throw new Error("Invalid memoryReference.");
+        if (!address5) {
+          throw new Error("Invalid memoryReference.");
+        }
         const capabilities = this.#architectureCapabilities(address5.architecture);
         const memorySpace = capabilities?.memorySpaces.find(
           (candidate) => candidate.addressSpace === address5.addressSpace
         );
-        if (!memorySpace?.sideEffectFree)
+        if (!memorySpace?.sideEffectFree) {
           throw new Error(
             `Memory space '${address5.addressSpace}' is unavailable or not guaranteed side-effect-free.`
           );
+        }
         const offset = numeric(args.offset);
         const count2 = numeric(args.count);
         const result = await this.#backend.readMemory(
@@ -35981,32 +36076,50 @@ var init_dap = __esm({
        * @returns {Promise<Record<string, unknown>>} Verified or rejected breakpoint results.
        */
       async #setSourceBreakpoints(args) {
-        if (!this.#map) throw new Error("Source breakpoints require a debug map.");
+        if (!this.#map) {
+          throw new Error("Source breakpoints require a debug map.");
+        }
         const source = args.source;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
-        if (!sourcePath) throw new Error("Source breakpoint request requires source.path.");
-        const requested = records(args.breakpoints);
+        if (!sourcePath) {
+          throw new Error("Source breakpoint request requires source.path.");
+        }
         const addresses3 = [];
-        const resolved = [];
-        for (const breakpoint2 of requested) {
+        const resolved = records(args.breakpoints).map((breakpoint2) => {
           const requestedLine = numeric(breakpoint2.line);
           const range = this.#sourceBreakpointRange(sourcePath, requestedLine);
           const address5 = range ? this.#addressForRange(range) : void 0;
-          if (address5 && this.#supportsBreakpoint(address5)) addresses3.push(address5);
-          resolved.push({ requestedLine, line: range?.line ?? requestedLine, address: address5 });
-        }
-        this.#sourceBreakpoints.set(sourcePath, addresses3);
-        const applied = await this.#applyBreakpoints();
+          const aliases = address5 ? this.#sourceBreakpointAddresses?.(address5) ?? [address5] : [];
+          if (address5 && this.#supportsBreakpoint(address5)) {
+            for (const alias of aliases) {
+              addresses3.push(alias);
+            }
+          }
+          return { requestedLine, line: range?.line ?? requestedLine, address: address5, aliases };
+        });
+        const sources = new Map(this.#sourceBreakpoints);
+        sources.set(sourcePath, addresses3);
+        const applied = await this.#applyBreakpoints(sources, this.#instructionBreakpoints);
         return {
-          breakpoints: resolved.map(({ requestedLine, line, address: address5 }) => {
-            const match = address5 ? applied.get(formatDebugAddress(address5)) : void 0;
-            return {
-              ...match ? dapBreakpoint(match) : {
-                verified: false,
-                message: address5 && !this.#supportsBreakpoint(address5) ? `Breakpoints are unavailable for ${processorLabel(address5.architecture)}.` : `No executable range at or after line ${requestedLine}.`
-              },
-              line
-            };
+          breakpoints: resolved.map(({ requestedLine, line, address: address5, aliases }) => {
+            const matches = aliases.map((alias) => applied.get(breakpointKey(alias)));
+            const match = address5 ? applied.get(breakpointKey(address5)) : void 0;
+            if (match) {
+              const verified = matches.length > 0 && matches.every((entry) => entry?.verified);
+              const result = { ...dapBreakpoint(match), verified, line };
+              if (!verified) {
+                return {
+                  ...result,
+                  message: matches.find((entry) => !entry?.verified)?.message ?? "One or more source breakpoint addresses could not be installed."
+                };
+              }
+              return result;
+            }
+            let message = `No executable range at or after line ${requestedLine}.`;
+            if (address5 && !this.#supportsBreakpoint(address5)) {
+              message = `Breakpoints are unavailable for ${processorLabel(address5.architecture)}.`;
+            }
+            return { verified: false, message, line };
           })
         };
       }
@@ -36017,10 +36130,14 @@ var init_dap = __esm({
        * @returns {Record<string, unknown>} Executable source locations in the requested range.
        */
       #breakpointLocations(args) {
-        if (!this.#map) throw new Error("Breakpoint locations require a debug map.");
+        if (!this.#map) {
+          throw new Error("Breakpoint locations require a debug map.");
+        }
         const source = args.source;
         const sourcePath = typeof source?.path === "string" ? source.path : "";
-        if (!sourcePath) throw new Error("Breakpoint location request requires source.path.");
+        if (!sourcePath) {
+          throw new Error("Breakpoint location request requires source.path.");
+        }
         const startLine = numeric(args.line);
         const endLine = Math.max(startLine, numeric(args.endLine, startLine));
         const lines = new Set(
@@ -36033,7 +36150,7 @@ var init_dap = __esm({
         };
       }
       async #setInstructionBreakpoints(args) {
-        this.#instructionBreakpoints.clear();
+        const instructions = /* @__PURE__ */ new Map();
         const requested = records(args.breakpoints);
         const parsed = requested.map((breakpoint2) => {
           const reference = typeof breakpoint2.instructionReference === "string" ? breakpoint2.instructionReference : "";
@@ -36041,20 +36158,25 @@ var init_dap = __esm({
           if (address5) {
             const offset = numeric(breakpoint2.offset);
             const adjusted = { ...address5, address: address5.address + offset };
-            if (this.#supportsBreakpoint(adjusted))
-              this.#instructionBreakpoints.set(formatDebugAddress(adjusted), adjusted);
+            if (this.#supportsBreakpoint(adjusted)) {
+              instructions.set(formatDebugAddress(adjusted), adjusted);
+            }
             return adjusted;
           }
           return void 0;
         });
-        const applied = await this.#applyBreakpoints();
+        const applied = await this.#applyBreakpoints(this.#sourceBreakpoints, instructions);
         return {
           breakpoints: parsed.map((address5) => {
-            const match = address5 ? applied.get(formatDebugAddress(address5)) : void 0;
-            return match ? dapBreakpoint(match) : {
-              verified: false,
-              message: address5 && !this.#supportsBreakpoint(address5) ? `Breakpoints are unavailable for ${processorLabel(address5.architecture)}.` : "Invalid address."
-            };
+            const match = address5 ? applied.get(breakpointKey(address5)) : void 0;
+            if (match) {
+              return dapBreakpoint(match);
+            }
+            let message = "Invalid address.";
+            if (address5 && !this.#supportsBreakpoint(address5)) {
+              message = `Breakpoints are unavailable for ${processorLabel(address5.architecture)}.`;
+            }
+            return { verified: false, message };
           })
         };
       }
@@ -36064,25 +36186,80 @@ var init_dap = __esm({
       /**
        * Applies the union of source and instruction breakpoints as one backend table.
        * Live emulators require a stopped CPU for this mutation, so a running session is
-       * paused briefly and resumed after the replacement succeeds or fails.
+       * paused briefly. A failed replacement restores the confirmed table before resuming;
+       * failed recovery leaves a visible stop and blocks execution until a successful edit.
+       * @param {Map<string, DebugAddress[]>} sources Proposed per-source requests.
+       * @param {Map<string, DebugAddress>} instructions Proposed instruction requests.
        * @returns {Promise<Map<string, DebugBreakpoint>>} Applied breakpoints keyed by address.
        */
-      async #applyBreakpoints() {
-        const source = [...this.#sourceBreakpoints.values()].flat();
-        const instruction2 = [...this.#instructionBreakpoints.values()];
+      async #applyBreakpoints(sources, instructions) {
+        const source = [...sources.values()].flat();
+        const instruction2 = [...instructions.values()];
         const unique2 = new Map(
-          [...source, ...instruction2].map((address5) => [formatDebugAddress(address5), address5])
+          [...source, ...instruction2].map((address5) => [breakpointKey(address5), address5])
         );
         const addresses3 = [...unique2.values()].filter((address5) => this.#supportsBreakpoint(address5));
         const paused = await this.#pauseForBreakpointUpdate(addresses3);
+        this.#assertExecutionActive();
+        let result = [];
+        let failure;
         try {
-          const breakpoints = await this.#backend.setBreakpoints(addresses3);
-          return new Map(
-            breakpoints.map((breakpoint2) => [formatDebugAddress(breakpoint2.address), breakpoint2])
-          );
-        } finally {
-          if (paused?.resume) await this.#resumeAfterBreakpointUpdate(paused.threadId);
+          result = await this.#backend.setBreakpoints(addresses3);
+          this.#assertExecutionActive();
+          this.#sourceBreakpoints = sources;
+          this.#instructionBreakpoints = instructions;
+          this.#verifiedBreakpoints = result.filter(({ verified }) => verified);
+          this.#breakpointTableReliable = true;
+        } catch (error) {
+          this.#assertExecutionActive();
+          failure = error instanceof Error ? error : new Error(String(error));
+          try {
+            const restored = await this.#backend.setBreakpoints(
+              this.#verifiedBreakpoints.map(({ address: address5 }) => address5)
+            );
+            this.#assertExecutionActive();
+            if (restored.some(({ verified }) => !verified)) {
+              throw new Error("Breakpoint recovery was not verified.");
+            }
+            this.#verifiedBreakpoints = restored;
+            this.#breakpointTableReliable = true;
+          } catch (recoveryError) {
+            this.#breakpointTableReliable = false;
+            const detail = recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+            failure = new Error(
+              `Breakpoint update failed and the previous table could not be restored: ${detail}`,
+              { cause: error }
+            );
+            for (const breakpoint2 of this.#verifiedBreakpoints) {
+              this.#emitBackendEvent({
+                type: "breakpoint",
+                breakpoint: {
+                  ...breakpoint2,
+                  verified: false,
+                  message: "Native breakpoint table is uncertain; edit breakpoints again before continuing."
+                }
+              });
+            }
+          }
         }
+        if (paused?.resume && this.#executionRevision === paused.revision && !this.#executionEnded) {
+          if (this.#breakpointTableReliable && this.#userPauseRequests === 0) {
+            try {
+              await this.#resumeAfterBreakpointUpdate(paused.threadId);
+            } catch (error) {
+              if (this.#executionState === "stopped" && !this.#executionEnded) {
+                this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
+              }
+              throw error;
+            }
+          } else {
+            this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
+          }
+        }
+        if (failure) {
+          throw failure;
+        }
+        return new Map(result.map((breakpoint2) => [breakpointKey(breakpoint2.address), breakpoint2]));
       }
       /**
        * Finds ranges for either a portable map path or its absolute workspace spelling.
@@ -36090,7 +36267,9 @@ var init_dap = __esm({
        * @returns {readonly DebugMapRange[]} All mapped ranges belonging to the source.
        */
       #sourceRanges(sourcePath) {
-        if (!this.#map) return [];
+        if (!this.#map) {
+          return [];
+        }
         const normalized = sourcePath.split(import_node_path9.default.sep).join("/");
         const sourceIds = new Set(
           this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
@@ -36111,19 +36290,49 @@ var init_dap = __esm({
         ).sort((left, right) => left.line - right.line || left.start - right.start)[0];
       }
       /**
-       * Serializes breakpoint requests because DAP may issue one per source concurrently,
-       * while the emulator API replaces one global table. Overlapping replacements could
-       * otherwise restore a stale union and silently lose a breakpoint.
-       * @param {() => Promise<T>} update Deferred breakpoint-table replacement.
-       * @returns {Promise<T>} Result of the replacement after earlier updates settle.
+       * Serializes execution and whole-table writes without blocking backend events.
+       * Otherwise a user Continue could resume the CPU during a maintenance table write.
+       * @param {() => Promise<T>} update Deferred execution or breakpoint mutation.
+       * @returns {Promise<T>} Result after earlier mutations settle.
        */
-      #queueBreakpointUpdate(update) {
-        const result = this.#breakpointUpdateQueue.then(update, update);
-        this.#breakpointUpdateQueue = result.then(
+      #queueExecutionUpdate(update) {
+        const result = this.#executionUpdateQueue.then(() => {
+          this.#assertExecutionActive();
+          return update();
+        });
+        this.#executionUpdateQueue = result.then(
           () => void 0,
           () => void 0
         );
         return result;
+      }
+      #assertExecutionActive() {
+        if (this.#executionEnded) {
+          throw new Error("Debugger execution session has ended.");
+        }
+      }
+      /**
+       * Records execution intent before the backend can resolve ahead of its continued
+       * event. A newer stop/termination owns the state even if the operation later rejects.
+       * @param {() => Promise<void>} resume Backend Continue or supported step operation.
+       * @returns {Promise<void>} Resolves on backend acceptance, not on event delivery.
+       */
+      async #resumeExecution(resume) {
+        this.#assertExecutionActive();
+        if (!this.#breakpointTableReliable) {
+          throw new Error("Edit breakpoints to reconcile the native table before continuing.");
+        }
+        const previous = this.#executionState;
+        const revision = ++this.#executionRevision;
+        this.#executionState = "running";
+        try {
+          await resume();
+        } catch (error) {
+          if (this.#executionRevision === revision) {
+            this.#executionState = previous;
+          }
+          throw error;
+        }
       }
       /**
        * Stops a running emulator long enough to change its breakpoint table.
@@ -36132,23 +36341,35 @@ var init_dap = __esm({
        * with our pause request. In that case the real stop remains visible and must not be
        * undone by an automatic continue.
        * @param {readonly DebugAddress[]} addresses Breakpoints about to replace the table.
-       * @returns {Promise<{ readonly threadId: number; readonly resume: boolean } | undefined>}
+       * @returns {Promise<{ readonly threadId: number; readonly resume: boolean; readonly revision: number } | undefined>}
        * Maintenance state, or undefined when the emulator was not running.
        */
       async #pauseForBreakpointUpdate(addresses3) {
-        if (this.#executionState !== "running") return void 0;
-        if (this.#threads.size === 0) await this.#threadList();
+        if (this.#executionState !== "running") {
+          return void 0;
+        }
+        if (this.#threads.size === 0) {
+          await this.#threadList();
+        }
+        this.#assertExecutionActive();
+        if (this.#executionState !== "running") {
+          return void 0;
+        }
         const architectures = new Set(addresses3.map(({ architecture }) => architecture));
         const thread2 = [...this.#threads.values()].find(({ architecture }) => architectures.has(architecture)) ?? [...this.#threads.values()].find(
           ({ architecture }) => Boolean(this.#architectureCapabilities(architecture)?.breakpoints)
         );
-        if (!thread2) throw new Error("No breakpoint-capable debugger thread is available.");
+        if (!thread2) {
+          throw new Error("No breakpoint-capable debugger thread is available.");
+        }
         let resolvePause;
         let rejectPause;
-        const stopped = new Promise((resolve11, reject) => {
-          resolvePause = resolve11;
-          rejectPause = reject;
-        });
+        const stopped = new Promise(
+          (resolve11, reject) => {
+            resolvePause = resolve11;
+            rejectPause = reject;
+          }
+        );
         const timer = setTimeout(
           () => rejectPause(new Error("Timed out while pausing to update emulator breakpoints.")),
           BREAKPOINT_UPDATE_STOP_TIMEOUT_MS
@@ -36156,10 +36377,13 @@ var init_dap = __esm({
         timer.unref();
         this.#maintenancePause = { resolve: resolvePause, reject: rejectPause, timer };
         try {
-          await this.#backend.pause(thread2.id);
-          return { threadId: thread2.id, resume: await stopped };
+          const pause2 = Promise.resolve().then(() => this.#backend.pause(thread2.id));
+          const [, stop] = await Promise.all([pause2, stopped]);
+          return { threadId: thread2.id, ...stop };
         } finally {
-          if (this.#maintenancePause?.timer === timer) this.#maintenancePause = void 0;
+          if (this.#maintenancePause?.timer === timer) {
+            this.#maintenancePause = void 0;
+          }
           clearTimeout(timer);
         }
       }
@@ -36171,9 +36395,11 @@ var init_dap = __esm({
       async #resumeAfterBreakpointUpdate(threadId) {
         this.#maintenanceResumeThreadId = threadId;
         try {
-          await this.#backend.continue(threadId);
+          await this.#resumeExecution(() => this.#backend.continue(threadId));
         } catch (error) {
-          if (this.#maintenanceResumeThreadId === threadId) this.#maintenanceResumeThreadId = void 0;
+          if (this.#maintenanceResumeThreadId === threadId) {
+            this.#maintenanceResumeThreadId = void 0;
+          }
           throw error;
         }
       }
@@ -36184,7 +36410,9 @@ var init_dap = __esm({
        */
       #cancelMaintenancePause(error) {
         const maintenance = this.#maintenancePause;
-        if (!maintenance) return;
+        if (!maintenance) {
+          return;
+        }
         this.#maintenancePause = void 0;
         clearTimeout(maintenance.timer);
         maintenance.reject(error);
@@ -36192,7 +36420,9 @@ var init_dap = __esm({
       async #disassemble(args) {
         const reference = typeof args.memoryReference === "string" ? args.memoryReference : "";
         const address5 = parseDebugAddress(reference);
-        if (!address5) throw new Error("Invalid memoryReference.");
+        if (!address5) {
+          throw new Error("Invalid memoryReference.");
+        }
         const instructions = await this.#backend.disassemble(
           { ...address5, address: address5.address + numeric(args.instructionOffset) },
           numeric(args.instructionCount)
@@ -36211,7 +36441,9 @@ var init_dap = __esm({
       }
       async #source(sourceReference) {
         const address5 = this.#virtualSources.get(sourceReference);
-        if (!address5) throw new Error("Unknown source reference.");
+        if (!address5) {
+          throw new Error("Unknown source reference.");
+        }
         const instructions = await this.#backend.disassemble(address5, 32);
         const texts = await Promise.all(
           instructions.map((instruction2) => this.#annotatedInstructionText(instruction2))
@@ -36228,7 +36460,7 @@ var init_dap = __esm({
       #rangeForAddress(address5) {
         return this.#map ? debugMapRangesForAddress(this.#map, address5.addressSpace, address5.address, {
           architecture: address5.architecture,
-          outputOffset: address5.outputOffset
+          outputOffset: address5.outputOffset ?? this.#sourceOutputOffset?.(address5)
         })[0] : void 0;
       }
       async #annotatedInstructionText(instruction2) {
@@ -36250,7 +36482,9 @@ var init_dap = __esm({
       #virtualSourceReference(address5) {
         const key2 = formatDebugAddress(address5);
         const existing = this.#virtualReferences.get(key2);
-        if (existing !== void 0) return existing;
+        if (existing !== void 0) {
+          return existing;
+        }
         const reference = this.#nextSourceReference++;
         this.#virtualReferences.set(key2, reference);
         this.#virtualSources.set(reference, address5);
@@ -36258,6 +36492,7 @@ var init_dap = __esm({
       }
       #emitBackendEvent(event) {
         if (event.type === "stopped") {
+          this.#executionRevision++;
           this.#executionState = "stopped";
           this.#frames.clear();
           this.#variableContainers.clear();
@@ -36268,16 +36503,21 @@ var init_dap = __esm({
             this.#maintenancePause = void 0;
             clearTimeout(maintenance.timer);
             const resume = event.reason === "pause";
-            maintenance.resolve(resume);
-            if (resume) return;
+            maintenance.resolve({ resume, revision: this.#executionRevision });
+            if (resume) {
+              return;
+            }
           }
         } else if (event.type === "continued") {
+          this.#executionRevision++;
           this.#executionState = "running";
           if (this.#maintenanceResumeThreadId === event.threadId) {
             this.#maintenanceResumeThreadId = void 0;
             return;
           }
         } else if (event.type === "terminated") {
+          this.#executionRevision++;
+          this.#executionEnded = true;
           this.#executionState = "unknown";
           this.#maintenanceResumeThreadId = void 0;
           this.#cancelMaintenancePause(new Error("Debugger terminated while updating breakpoints."));
@@ -36309,13 +36549,19 @@ var init_dap = __esm({
         const messages = [];
         while (true) {
           const separator = this.#buffer.indexOf("\r\n\r\n");
-          if (separator < 0) break;
+          if (separator < 0) {
+            break;
+          }
           const header = this.#buffer.subarray(0, separator).toString("ascii");
           const match = header.toLowerCase().match(/(?:^|\r\n)content-length: (\d+)(?:\r\n|$)/);
-          if (!match) throw new Error("DAP frame is missing Content-Length.");
+          if (!match) {
+            throw new Error("DAP frame is missing Content-Length.");
+          }
           const length = Number(match[1]);
           const start = separator + 4;
-          if (this.#buffer.length < start + length) break;
+          if (this.#buffer.length < start + length) {
+            break;
+          }
           const body = this.#buffer.subarray(start, start + length).toString("utf8");
           this.#buffer = this.#buffer.subarray(start + length);
           messages.push(JSON.parse(body));
@@ -66030,6 +66276,14 @@ var init_struct_instruction_uses = __esm({
           const resolved = resolver.resolve(entry.operand);
           operand = { expression: resolved.expression, value: integer4(resolved.value, 0, 65535) };
         }
+        let memoryOperand;
+        if (entry.memoryOperand !== void 0) {
+          const resolved = resolver.resolve(entry.memoryOperand);
+          memoryOperand = {
+            expression: resolved.expression,
+            value: integer4(resolved.value, 0, 16777215)
+          };
+        }
         if (entry.observations !== void 0 && !Array.isArray(entry.observations)) {
           throw new Error("Struct observations must be an array.");
         }
@@ -66067,10 +66321,10 @@ var init_struct_instruction_uses = __esm({
             };
           }
         );
-        if (!operand && observations.length === 0) {
+        if (!operand && !memoryOperand && observations.length === 0) {
           throw new Error("A struct instruction use requires an operand or observations.");
         }
-        if (operand && observations.length) {
+        if (operand && (memoryOperand || observations.length)) {
           throw new Error(
             "A struct instruction use cannot combine an immediate and memory observations."
           );
@@ -66080,6 +66334,7 @@ var init_struct_instruction_uses = __esm({
           expectedBytes,
           reason: text(entry.reason),
           ...operand ? { operand } : {},
+          ...memoryOperand ? { memoryOperand } : {},
           observations
         };
       }).sort((a, b) => a.address - b.address);
@@ -66119,6 +66374,27 @@ var init_struct_instruction_uses = __esm({
       }
       if (use.observations.length && !instruction2.references.some(({ kind }) => kind === "data" || kind === "pointer")) {
         throw new Error(`Struct observations at ${hex10(use.address)} require a memory operand.`);
+      }
+      if (use.memoryOperand) {
+        const modes = {
+          direct: [1, ""],
+          directIndexedX: [1, ",x"],
+          directIndexedY: [1, ",y"],
+          absolute: [2, ""],
+          absoluteIndexedX: [2, ",x"],
+          absoluteIndexedY: [2, ",y"],
+          absoluteLong: [3, ""],
+          absoluteLongIndexedX: [3, ",x"]
+        };
+        const mode3 = modes[instruction2.mode];
+        const operand2 = instruction2.operands[0];
+        if (!mode3 || instruction2.operands.length !== 1 || operand2?.kind !== "address" || operand2.width !== mode3[0] || operand2.value !== use.memoryOperand.value || !instruction2.references.some(({ kind }) => kind === "data")) {
+          throw new Error(
+            `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex10(use.address)}.`
+          );
+        }
+        const width2 = ["", "b", "w", "l"][mode3[0]];
+        return `${instruction2.mnemonic}.${width2} ${use.memoryOperand.expression}${mode3[1]}`;
       }
       if (!use.operand) {
         return source;
@@ -75625,6 +75901,45 @@ var createDebugInstructionAnnotation = async (map) => {
   };
 };
 
+// packages/vscode-extension/src/debug-rom-addresses.ts
+init_src();
+init_src4();
+var createSnesDebugAddressResolvers = (map, output) => {
+  if (map.target !== "snes.sfc") {
+    return {};
+  }
+  let rom;
+  try {
+    rom = new RomImage(output);
+  } catch {
+    return {};
+  }
+  const { mapper } = detectSnesRom(rom);
+  if (!mapper || !["lorom", "hirom", "exlorom", "exhirom"].includes(mapper)) {
+    return {};
+  }
+  const context = createSnesAddressContext(mapper);
+  const identity2 = (address5) => {
+    if (address5.architecture !== "snes.65816" || address5.addressSpace !== "snes.cpu") {
+      return void 0;
+    }
+    return identifySnesCpuAddress(address5.address, context, rom.length);
+  };
+  return {
+    sourceBreakpointAddresses: (address5) => {
+      const mapped = identity2(address5);
+      if (!mapped || address5.outputOffset !== mapped.fileOffset + rom.identity.headerSize) {
+        return [address5];
+      }
+      return mapped.mirrors.map((alias) => ({ ...address5, address: alias }));
+    },
+    sourceOutputOffset: (address5) => {
+      const mapped = identity2(address5);
+      return mapped ? mapped.fileOffset + rom.identity.headerSize : void 0;
+    }
+  };
+};
+
 // packages/vscode-extension/src/debug-source-root.ts
 var import_node_fs12 = __toESM(require("node:fs"));
 var import_node_path17 = __toESM(require("node:path"));
@@ -78122,6 +78437,7 @@ var InlineDebugAdapter = class {
       debugMap: loaded.map,
       output: loaded.output,
       sourceRoot: loaded.sourceRoot,
+      ...createSnesDebugAddressResolvers(loaded.map, loaded.output),
       ...instructionAnnotation ? { instructionAnnotation } : {},
       configurationHandshake: true,
       onMessage: (message) => {

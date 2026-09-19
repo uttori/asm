@@ -35,7 +35,10 @@ export interface SnesStructInstructionUse {
   /** Complete instruction encoding, including opcode; stale metadata aborts export before writes. */
   readonly expectedBytes: readonly number[];
   readonly reason: string;
+  /** Immediate value expression; mutually exclusive with memoryOperand and access observations. */
   readonly operand?: { readonly expression: string; readonly value: number };
+  /** Encoded direct memory address, before indexing/DB/D; never a resolved runtime effective address. */
+  readonly memoryOperand?: { readonly expression: string; readonly value: number };
   readonly observations: readonly SnesStructAccessObservation[];
 }
 
@@ -109,6 +112,14 @@ export const validateSnesStructInstructionUses = (
         const resolved = resolver.resolve(entry.operand);
         operand = { expression: resolved.expression, value: integer(resolved.value, 0, 0xffff) };
       }
+      let memoryOperand: SnesStructInstructionUse["memoryOperand"];
+      if (entry.memoryOperand !== undefined) {
+        const resolved = resolver.resolve(entry.memoryOperand);
+        memoryOperand = {
+          expression: resolved.expression,
+          value: integer(resolved.value, 0, 0xffffff),
+        };
+      }
       if (entry.observations !== undefined && !Array.isArray(entry.observations)) {
         throw new Error("Struct observations must be an array.");
       }
@@ -150,12 +161,12 @@ export const validateSnesStructInstructionUses = (
           };
         },
       );
-      if (!operand && observations.length === 0) {
+      if (!operand && !memoryOperand && observations.length === 0) {
         throw new Error("A struct instruction use requires an operand or observations.");
       }
       // An immediate denotes a value, while a captured access denotes a memory operand.
       // Combining them at one instruction would assign incompatible meanings to that operand.
-      if (operand && observations.length) {
+      if (operand && (memoryOperand || observations.length)) {
         throw new Error(
           "A struct instruction use cannot combine an immediate and memory observations.",
         );
@@ -165,6 +176,7 @@ export const validateSnesStructInstructionUses = (
         expectedBytes,
         reason: text(entry.reason),
         ...(operand ? { operand } : {}),
+        ...(memoryOperand ? { memoryOperand } : {}),
         observations,
       };
     })
@@ -213,12 +225,12 @@ export const indexSnesStructInstructionUses = (
 };
 
 /**
- * Replace a proven immediate with its native struct expression, preserving the encoded width.
+ * Replace a proven immediate or direct memory operand, preserving its encoded width and indexing.
  * This runs for every accepted state variant. A size/value mismatch is an error, never truncation.
  * @param {DecodedInstruction} instruction One accepted decode context.
  * @param {string} source Existing formatted source, including any conservative numeric fallback.
  * @param {SnesStructInstructionUse} use Validated metadata at this ROM instruction.
- * @returns {string} Width-preserving symbolic immediate, or the original instruction for observations.
+ * @returns {string} Width-preserving symbolic operand, or the original instruction for observations.
  */
 export const applySnesStructInstructionOperand = (
   instruction: DecodedInstruction,
@@ -240,6 +252,37 @@ export const applySnesStructInstructionOperand = (
     !instruction.references.some(({ kind }) => kind === "data" || kind === "pointer")
   ) {
     throw new Error(`Struct observations at ${hex(use.address)} require a memory operand.`);
+  }
+  if (use.memoryOperand) {
+    // A curated overlay names the encoded address, not a captured post-index address. Restrict
+    // replacement to direct memory modes so calls, indirect pointers and stack syntax cannot
+    // accidentally be reformatted as ordinary loads/stores.
+    const modes: Record<string, readonly [number, string]> = {
+      direct: [1, ""],
+      directIndexedX: [1, ",x"],
+      directIndexedY: [1, ",y"],
+      absolute: [2, ""],
+      absoluteIndexedX: [2, ",x"],
+      absoluteIndexedY: [2, ",y"],
+      absoluteLong: [3, ""],
+      absoluteLongIndexedX: [3, ",x"],
+    };
+    const mode = modes[instruction.mode];
+    const operand = instruction.operands[0];
+    if (
+      !mode ||
+      instruction.operands.length !== 1 ||
+      operand?.kind !== "address" ||
+      operand.width !== mode[0] ||
+      operand.value !== use.memoryOperand.value ||
+      !instruction.references.some(({ kind }) => kind === "data")
+    ) {
+      throw new Error(
+        `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex(use.address)}.`,
+      );
+    }
+    const width = ["", "b", "w", "l"][mode[0]];
+    return `${instruction.mnemonic}.${width} ${use.memoryOperand.expression}${mode[1]}`;
   }
   if (!use.operand) {
     return source;

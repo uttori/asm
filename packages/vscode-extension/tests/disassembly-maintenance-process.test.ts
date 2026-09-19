@@ -372,17 +372,21 @@ test.serial(
     // Streaming fixture construction keeps both the test host and the 128 MiB child bounded.
     function* history(): Generator<RuntimeEvidenceRecord> {
       for (let index = 0; index < 40_000; index++) {
-        yield {
+        const state = {
           id: `state:${index}`,
-          kind: index % 2 ? "runtime-instruction" : "runtime-cpu-state",
           architecture: "snes.65816",
           addressSpace: "snes.cpu",
           address: 0x8000,
           count: 1,
           state: { p: 0x30, e: 1, a: index, history: `${index}:${"x".repeat(4096)}` },
-          ...(index % 2 ? { bytes: [0xea] } : {}),
           evidence: [],
         };
+        // Keep the discriminant and required instruction bytes in the same branch.
+        if (index % 2) {
+          yield { ...state, kind: "runtime-instruction", bytes: [0xea] };
+        } else {
+          yield { ...state, kind: "runtime-cpu-state" };
+        }
       }
       yield {
         id: "executed",

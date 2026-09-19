@@ -19719,6 +19719,14 @@ var init_struct_instruction_uses = __esm({
           const resolved = resolver.resolve(entry.operand);
           operand = { expression: resolved.expression, value: integer(resolved.value, 0, 65535) };
         }
+        let memoryOperand;
+        if (entry.memoryOperand !== void 0) {
+          const resolved = resolver.resolve(entry.memoryOperand);
+          memoryOperand = {
+            expression: resolved.expression,
+            value: integer(resolved.value, 0, 16777215)
+          };
+        }
         if (entry.observations !== void 0 && !Array.isArray(entry.observations)) {
           throw new Error("Struct observations must be an array.");
         }
@@ -19756,10 +19764,10 @@ var init_struct_instruction_uses = __esm({
             };
           }
         );
-        if (!operand && observations.length === 0) {
+        if (!operand && !memoryOperand && observations.length === 0) {
           throw new Error("A struct instruction use requires an operand or observations.");
         }
-        if (operand && observations.length) {
+        if (operand && (memoryOperand || observations.length)) {
           throw new Error(
             "A struct instruction use cannot combine an immediate and memory observations."
           );
@@ -19769,6 +19777,7 @@ var init_struct_instruction_uses = __esm({
           expectedBytes,
           reason: text(entry.reason),
           ...operand ? { operand } : {},
+          ...memoryOperand ? { memoryOperand } : {},
           observations
         };
       }).sort((a, b) => a.address - b.address);
@@ -19808,6 +19817,27 @@ var init_struct_instruction_uses = __esm({
       }
       if (use.observations.length && !instruction.references.some(({ kind }) => kind === "data" || kind === "pointer")) {
         throw new Error(`Struct observations at ${hex5(use.address)} require a memory operand.`);
+      }
+      if (use.memoryOperand) {
+        const modes = {
+          direct: [1, ""],
+          directIndexedX: [1, ",x"],
+          directIndexedY: [1, ",y"],
+          absolute: [2, ""],
+          absoluteIndexedX: [2, ",x"],
+          absoluteIndexedY: [2, ",y"],
+          absoluteLong: [3, ""],
+          absoluteLongIndexedX: [3, ",x"]
+        };
+        const mode3 = modes[instruction.mode];
+        const operand2 = instruction.operands[0];
+        if (!mode3 || instruction.operands.length !== 1 || operand2?.kind !== "address" || operand2.width !== mode3[0] || operand2.value !== use.memoryOperand.value || !instruction.references.some(({ kind }) => kind === "data")) {
+          throw new Error(
+            `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex5(use.address)}.`
+          );
+        }
+        const width2 = ["", "b", "w", "l"][mode3[0]];
+        return `${instruction.mnemonic}.${width2} ${use.memoryOperand.expression}${mode3[1]}`;
       }
       if (!use.operand) {
         return source;

@@ -295,16 +295,21 @@ test("symbolic immediate operands retain bytes and indirect consumers retain add
       logicalAddress: use.address,
       state: { e: 0, m: 0, x: 1 },
     });
-    if (decoded.kind !== "instruction") {throw new Error("Expected fixture instruction.");}
+    if (decoded.kind !== "instruction") {
+      throw new Error("Expected fixture instruction.");
+    }
     const original = formatSnes65816SourceInstruction(decoded.instruction);
     const symbolic = applySnesStructInstructionOperand(decoded.instruction, original, use);
     const assembler = new Assembler();
     const source = `lorom\norg $808000\n${renderSnesStructDefines(map)}\n.a16\n.i8\n${symbolic}`;
     const program = assembler.buildProgramModel(source, "struct-use.asm");
-    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const)
-      {assembler.runStage(stage, program);}
+    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+      assembler.runStage(stage, program);
+    }
     t.deepEqual([...assembler.getBinaryOutput()], use.expectedBytes);
-    if (!use.operand) {t.is(symbolic, "LDA [$D1],y");}
+    if (!use.operand) {
+      t.is(symbolic, "LDA [$D1],y");
+    }
     t.throws(
       () =>
         applySnesStructInstructionOperand(decoded.instruction, original, {
@@ -341,6 +346,112 @@ test("observations retain alternatives and provenance without injecting source l
   t.regex(comments[2], /observed read.*Commands\.target.*capture STP/);
 });
 
+test("curated memory overlays preserve encoded widths and indexing without changing global bindings", (t) => {
+  const decoder = new Cpu65816Decoder();
+  for (const [bytes, expression, ending] of [
+    [[0xb5, 2], "Tint.target", ",x"],
+    [[0xbd, 2, 0xe1], "($E100 + Tint.target)", ",x"],
+    [[0xb9, 2, 0xe1], "($E100 + Tint.target)", ",y"],
+    [[0x9d, 2, 0xe1], "($E100 + Tint.target)", ",x"],
+    [[0xbf, 2, 0xe1, 0x7e], "($7EE100 + Tint.target)", ",x"],
+  ] as const) {
+    const input = {
+      ...inputMap(),
+      instructionUses: [
+        {
+          address: 0x808000,
+          expectedBytes: [...bytes],
+          reason: "This instruction uses an actor overlay.",
+          memoryOperand: expression,
+        },
+      ],
+    };
+    const map = { ...validateSnesStructMap(input), sourceBytes: new Uint8Array() };
+    const use = map.instructionUses![0];
+    const decoded = decoder.decode({
+      source: new Uint8ArrayDecoderSource(Uint8Array.from(bytes)),
+      offset: 0,
+      logicalAddress: use.address,
+      state: { e: 0, m: 0, x: 1, dataBank: 0x7e },
+    });
+    if (decoded.kind !== "instruction") {
+      throw new Error("Expected fixture instruction.");
+    }
+    const symbolic = applySnesStructInstructionOperand(
+      decoded.instruction,
+      "LDA.w Wrong.hp,x",
+      use,
+    );
+    t.true(symbolic.endsWith(ending));
+    t.false(symbolic.includes("Wrong"));
+    t.falsy(use.operand);
+    const assembler = new Assembler();
+    const source = `lorom\norg $808000\n${renderSnesStructDefines(map)}\n.a16\n.i8\n${symbolic}`;
+    const program = assembler.buildProgramModel(source, "overlay.asm");
+    for (const stage of ["collectDefinitions", "resolveLayout", "emitProgram"] as const) {
+      assembler.runStage(stage, program);
+    }
+    t.deepEqual([...assembler.getBinaryOutput()], [...bytes]);
+    t.throws(
+      () =>
+        applySnesStructInstructionOperand(decoded.instruction, "", {
+          ...use,
+          memoryOperand: { ...use.memoryOperand!, value: use.memoryOperand!.value + 1 },
+        }),
+      { message: /encoded memory address/ },
+    );
+  }
+});
+
+test("memory overlays reject control-flow, indirect addressing and incompatible immediate metadata", (t) => {
+  for (const bytes of [
+    [0x20, 2, 0],
+    [0xfc, 2, 0],
+    [0x6c, 2, 0],
+    [0xb7, 2],
+    [0xa9, 2, 0],
+  ]) {
+    const input = {
+      ...inputMap(),
+      instructionUses: [
+        {
+          address: 0x808000,
+          expectedBytes: bytes,
+          reason: "Must not reinterpret a call or indirect pointer as a direct address.",
+          memoryOperand: "Tint.target",
+        },
+      ],
+    };
+    const use = validateSnesStructMap(input).instructionUses![0];
+    const decoded = new Cpu65816Decoder().decode({
+      source: new Uint8ArrayDecoderSource(Uint8Array.from(bytes)),
+      offset: 0,
+      logicalAddress: use.address,
+      state: { e: 0, m: 0, x: 1 },
+    });
+    if (decoded.kind !== "instruction") {
+      throw new Error("Expected fixture instruction.");
+    }
+    t.throws(() => applySnesStructInstructionOperand(decoded.instruction, "", use), {
+      message: /encoded memory address/,
+    });
+  }
+  const input = inputMap();
+  t.throws(
+    () =>
+      validateSnesStructMap({
+        ...input,
+        instructionUses: [
+          {
+            ...input.instructionUses[0],
+            memoryOperand: "Tint.target",
+          },
+        ],
+      }),
+    { message: /cannot combine/ },
+  );
+});
+
 test("capture annotations require explicit memory operands and complete matching bytes", (t) => {
   const use = validateSnesStructMap(inputMap()).instructionUses![1];
   const decoder = new Cpu65816Decoder();
@@ -351,7 +462,9 @@ test("capture annotations require explicit memory operands and complete matching
       logicalAddress: use.address,
       state: { e: 0, m: 0, x: 1 },
     });
-    if (result.kind !== "instruction") {throw new Error("Expected fixture instruction.");}
+    if (result.kind !== "instruction") {
+      throw new Error("Expected fixture instruction.");
+    }
     return result.instruction;
   };
   t.throws(
@@ -432,9 +545,11 @@ test("exported uses survive regeneration and full roundtrip; stale or ambiguous 
   }
   const groups = project.shards.analysis.filter((record) => record.kind === "cfg-node");
   const grouped = new Map<number, typeof groups>();
-  for (const node of groups)
-    {if (node.fileOffset !== undefined)
-      {grouped.set(node.fileOffset, [...(grouped.get(node.fileOffset) ?? []), node]);}}
+  for (const node of groups) {
+    if (node.fileOffset !== undefined) {
+      grouped.set(node.fileOffset, [...(grouped.get(node.fileOffset) ?? []), node]);
+    }
+  }
   t.deepEqual(
     exportSnes65816Source(project, rom, outputDirectory, {
       ...options,
@@ -573,8 +688,9 @@ test("rejects unsafe, unknown, ambiguous and imprecise expressions", (t) => {
     "Tint +",
     "(".repeat(1025),
     `sizeof(Tint)${" + 1".repeat(129)}`,
-  ])
-    {t.throws(() => resolver.resolve(expression), undefined, JSON.stringify(expression));}
+  ]) {
+    t.throws(() => resolver.resolve(expression), undefined, JSON.stringify(expression));
+  }
   for (const expression of [
     "-sizeof(Tint)",
     "Commands",
@@ -697,10 +813,11 @@ test("the complete struct format remains schema version one", (t) => {
   const input = inputMap();
   t.is(input.schemaVersion, 1);
   t.is(validateSnesStructMap(input).instructionUses?.length, 3);
-  for (const schemaVersion of [undefined, 0, 2, 3])
-    {t.throws(() => validateSnesStructMap({ ...input, schemaVersion }), {
+  for (const schemaVersion of [undefined, 0, 2, 3]) {
+    t.throws(() => validateSnesStructMap({ ...input, schemaVersion }), {
       message: /Unsupported SNES struct-map/,
-    });}
+    });
+  }
   const { target: _target, ...evidence } = observation();
   t.throws(
     () =>

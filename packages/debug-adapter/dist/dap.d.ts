@@ -32,6 +32,10 @@ export interface DebugAdapterSessionOptions {
     readonly debugMap?: DebugMap;
     readonly output?: Uint8Array;
     readonly sourceRoot?: string;
+    /** Host-confirmed ROM aliases for a source location; instruction breakpoints stay exact. */
+    readonly sourceBreakpointAddresses?: (address: DebugAddress) => readonly DebugAddress[];
+    /** Physical output byte for a runtime PC when the backend omits mirror identity. */
+    readonly sourceOutputOffset?: (address: DebugAddress) => number | undefined;
     /** Optional display suffix. Async providers can batch a page; failures leave instruction text intact. */
     readonly instructionAnnotation?: (address: DebugAddress) => string | undefined | Promise<string | undefined>;
     readonly onMessage?: (message: DapProtocolMessage) => void;

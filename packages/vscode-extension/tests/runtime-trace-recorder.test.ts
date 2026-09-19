@@ -92,7 +92,10 @@ test("VS Code recorder streams, drains, and closes an importable native trace", 
     t.is(imported.observedEvents, 3);
     t.is(imported.droppedEvents, 0);
     t.deepEqual(
-      imported.batch.runtime.map(({ address }) => address),
+      (imported.batch.runtime ?? []).map((record) => {
+        t.is(record.kind, "runtime-execution");
+        return record.kind === "runtime-execution" ? record.address : undefined;
+      }),
       [0x808000, 0x808001, 0x808002],
     );
   } finally {

@@ -47,6 +47,7 @@ import {
 } from "vscode";
 
 import { createDebugInstructionAnnotation } from "./debug-analysis-annotations.js";
+import { createSnesDebugAddressResolvers } from "./debug-rom-addresses.js";
 import { resolveDebugSourceRoot } from "./debug-source-root.js";
 import { chooseLiveBusProject } from "./disassembly-maintenance.js";
 import { LiveBusAnalysis } from "./live-bus-analysis.js";
@@ -820,6 +821,7 @@ class InlineDebugAdapter implements DebugAdapter {
       debugMap: loaded.map,
       output: loaded.output,
       sourceRoot: loaded.sourceRoot,
+      ...createSnesDebugAddressResolvers(loaded.map, loaded.output),
       ...(instructionAnnotation ? { instructionAnnotation } : {}),
       configurationHandshake: true,
       onMessage: (message) => {

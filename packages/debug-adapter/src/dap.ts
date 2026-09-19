@@ -58,6 +58,10 @@ export interface DebugAdapterSessionOptions {
   readonly debugMap?: DebugMap;
   readonly output?: Uint8Array;
   readonly sourceRoot?: string;
+  /** Host-confirmed ROM aliases for a source location; instruction breakpoints stay exact. */
+  readonly sourceBreakpointAddresses?: (address: DebugAddress) => readonly DebugAddress[];
+  /** Physical output byte for a runtime PC when the backend omits mirror identity. */
+  readonly sourceOutputOffset?: (address: DebugAddress) => number | undefined;
   /** Optional display suffix. Async providers can batch a page; failures leave instruction text intact. */
   readonly instructionAnnotation?: (
     address: DebugAddress,
@@ -102,12 +106,17 @@ export const formatDebugAddress = (address: DebugAddress): string =>
  */
 export const parseDebugAddress = (reference: string): DebugAddress | undefined => {
   const [architecture, addressSpace, rawAddress, rawOutputOffset, extra] = reference.split("|");
-  if (!architecture || !addressSpace || !rawAddress || extra !== undefined) return undefined;
-  const address = Number(rawAddress);
-  if (!Number.isSafeInteger(address) || address < 0) return undefined;
-  const outputOffset = rawOutputOffset === undefined ? undefined : Number(rawOutputOffset);
-  if (outputOffset !== undefined && (!Number.isSafeInteger(outputOffset) || outputOffset < 0))
+  if (!architecture || !addressSpace || !rawAddress || extra !== undefined) {
     return undefined;
+  }
+  const address = Number(rawAddress);
+  if (!Number.isSafeInteger(address) || address < 0) {
+    return undefined;
+  }
+  const outputOffset = rawOutputOffset === undefined ? undefined : Number(rawOutputOffset);
+  if (outputOffset !== undefined && (!Number.isSafeInteger(outputOffset) || outputOffset < 0)) {
+    return undefined;
+  }
   return {
     architecture,
     addressSpace,
@@ -159,21 +168,29 @@ const bytesText = (instruction: DebugInstruction): string =>
   instruction.bytes.map((value) => value.toString(16).padStart(2, "0")).join(" ");
 
 /**
+ * Physical-map metadata must not create duplicate execute breakpoints at one bus address.
+ * @param {DebugAddress} address Qualified bus address, with optional source metadata.
+ * @returns {string} Native breakpoint identity without the physical output offset.
+ */
+const breakpointKey = ({ architecture, addressSpace, address }: DebugAddress): string =>
+  formatDebugAddress({ architecture, addressSpace, address });
+
+/**
  * Maximum time to wait for the asynchronous stopped event that acknowledges an
  * internal pause. A bound prevents an unresponsive emulator from hanging a DAP
  * `setBreakpoints` request indefinitely.
  */
 const BREAKPOINT_UPDATE_STOP_TIMEOUT_MS = 5_000;
 
-/** Last execution state reported by the backend, or `unknown` before/after a session. */
+/** Running includes an accepted/in-flight resume whose continued event has not arrived yet. */
 type ExecutionState = "unknown" | "running" | "stopped";
 
 /**
  * Completion hooks for a pause requested solely to edit the emulator's breakpoint table.
- * The resolved boolean says whether the adapter should resume after the edit.
+ * The result records whether to resume and the exact stop revision that permits it.
  */
 type MaintenancePause = {
-  readonly resolve: (resume: boolean) => void;
+  readonly resolve: (stop: { readonly resume: boolean; readonly revision: number }) => void;
   readonly reject: (error: Error) => void;
   readonly timer: ReturnType<typeof setTimeout>;
 };
@@ -193,16 +210,24 @@ type VariableContainer =
   | { readonly kind: "stack"; readonly address: DebugAddress; readonly count: number };
 
 const registerNumber = (register: DebugRegister | undefined): number | undefined => {
-  if (!register) return undefined;
+  if (!register) {
+    return undefined;
+  }
   const normalized = register.value.startsWith("0x") ? register.value.slice(2) : register.value;
   const value = Number.parseInt(normalized, 16);
   return Number.isSafeInteger(value) ? value : undefined;
 };
 
 const processorLabel = (architecture: string): string => {
-  if (architecture === "snes.65816") return "65816";
-  if (architecture === "snes.spc700") return "SPC700";
-  if (architecture === "snes.superfx") return "Super FX";
+  if (architecture === "snes.65816") {
+    return "65816";
+  }
+  if (architecture === "snes.spc700") {
+    return "SPC700";
+  }
+  if (architecture === "snes.superfx") {
+    return "Super FX";
+  }
   return architecture;
 };
 
@@ -214,11 +239,17 @@ export class DebugAdapterSession {
   readonly #backend: DebugBackend;
   readonly #map?: DebugMap;
   readonly #sourceRoot: string;
+  readonly #sourceBreakpointAddresses?: DebugAdapterSessionOptions["sourceBreakpointAddresses"];
+  readonly #sourceOutputOffset?: DebugAdapterSessionOptions["sourceOutputOffset"];
   readonly #instructionAnnotation?: DebugAdapterSessionOptions["instructionAnnotation"];
   readonly #onMessage?: (message: DapProtocolMessage) => void;
   readonly #mapIssues: readonly string[];
-  readonly #sourceBreakpoints = new Map<string, DebugAddress[]>();
-  readonly #instructionBreakpoints = new Map<string, DebugAddress>();
+  #sourceBreakpoints = new Map<string, DebugAddress[]>();
+  #instructionBreakpoints = new Map<string, DebugAddress>();
+  /** Last confirmed native table, used to recover a partially rejected replacement. */
+  #verifiedBreakpoints: readonly DebugBreakpoint[] = [];
+  /** A failed table recovery must be reconciled before any execution can resume. */
+  #breakpointTableReliable = true;
   readonly #variableContainers = new Map<number, VariableContainer>();
   readonly #frames = new Map<number, DebugStackFrame>();
   readonly #threads = new Map<number, DebugThread>();
@@ -241,12 +272,17 @@ export class DebugAdapterSession {
   #cancelConfiguration?: () => void;
   /** Needed because ares and MesenCE accept breakpoint-table changes only while stopped. */
   #executionState: ExecutionState = "unknown";
+  /** Monotonic event/transition revision prevents a failed request undoing a newer stop. */
+  #executionRevision = 0;
+  #executionEnded = false;
+  /** Queued user pauses take precedence over an internal automatic resume. */
+  #userPauseRequests = 0;
   /** In-flight internal pause whose stopped event must not look like a user-visible stop. */
   #maintenancePause?: MaintenancePause;
   /** Thread whose internal resume event must likewise remain invisible to the IDE. */
   #maintenanceResumeThreadId?: number;
-  /** Tail of serialized, whole-table breakpoint replacements. */
-  #breakpointUpdateQueue: Promise<void> = Promise.resolve();
+  /** Execution commands share the table-update queue; backend events never wait on it. */
+  #executionUpdateQueue: Promise<void> = Promise.resolve();
 
   /**
    * Creates a DAP session around one backend.
@@ -256,6 +292,8 @@ export class DebugAdapterSession {
     this.#backend = options.backend;
     this.#map = options.debugMap;
     this.#sourceRoot = path.resolve(options.sourceRoot ?? process.cwd());
+    this.#sourceBreakpointAddresses = options.sourceBreakpointAddresses;
+    this.#sourceOutputOffset = options.sourceOutputOffset;
     this.#instructionAnnotation = options.instructionAnnotation;
     this.#onMessage = options.onMessage;
     this.#configurationHandshake = options.configurationHandshake ?? false;
@@ -265,6 +303,8 @@ export class DebugAdapterSession {
 
   /** Releases the backend event subscription. */
   dispose(): void {
+    this.#executionEnded = true;
+    this.#executionRevision++;
     this.#cancelConfiguration?.();
     this.#cancelMaintenancePause(new Error("Debugger session disposed."));
     this.#subscription.dispose();
@@ -296,7 +336,11 @@ export class DebugAdapterSession {
           // Compact in place so the active event context keeps its array and large output bursts
           // cannot overflow the argument stack while we are already handling a launch failure.
           let retained = 0;
-          for (const event of pending) if (event.event === "output") pending[retained++] = event;
+          for (const event of pending) {
+            if (event.event === "output") {
+              pending[retained++] = event;
+            }
+          }
           pending.length = retained;
         }
         response = {
@@ -321,8 +365,12 @@ export class DebugAdapterSession {
         response,
         ...pending.map((event) => ({ ...event, seq: this.#nextSequence++ })),
       ];
-      for (const message of messages) this.#onMessage?.(message);
-      if (request.command === "configurationDone" && response.success) this.#configurationDone?.();
+      for (const message of messages) {
+        this.#onMessage?.(message);
+      }
+      if (request.command === "configurationDone" && response.success) {
+        this.#configurationDone?.();
+      }
       return messages;
     });
   }
@@ -335,7 +383,9 @@ export class DebugAdapterSession {
    * @returns {Promise<void>} Resolves after the client finishes breakpoint configuration.
    */
   async #configure(): Promise<void> {
-    if (!this.#configurationHandshake) return;
+    if (!this.#configurationHandshake) {
+      return;
+    }
     const configured = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.#configurationDone = undefined;
@@ -364,12 +414,16 @@ export class DebugAdapterSession {
       case "initialize":
         return this.#capabilities();
       case "launch":
-        if (this.#mapIssues.length > 0) throw new Error(this.#mapIssues.join(" "));
+        if (this.#mapIssues.length > 0) {
+          throw new Error(this.#mapIssues.join(" "));
+        }
         await this.#backend.connect({ reset: true });
         await this.#configure();
         return {};
       case "attach":
-        if (this.#mapIssues.length > 0) throw new Error(this.#mapIssues.join(" "));
+        if (this.#mapIssues.length > 0) {
+          throw new Error(this.#mapIssues.join(" "));
+        }
         await this.#backend.connect({ reset: false });
         await this.#configure();
         return {};
@@ -388,37 +442,44 @@ export class DebugAdapterSession {
       case "readMemory":
         return this.#readMemory(args);
       case "setBreakpoints":
-        return this.#queueBreakpointUpdate(() => this.#setSourceBreakpoints(args));
+        return this.#queueExecutionUpdate(() => this.#setSourceBreakpoints(args));
       case "setInstructionBreakpoints":
-        return this.#queueBreakpointUpdate(() => this.#setInstructionBreakpoints(args));
+        return this.#queueExecutionUpdate(() => this.#setInstructionBreakpoints(args));
       case "breakpointLocations":
         return this.#breakpointLocations(args);
       case "pause":
-        await this.#assertThreadCapability(numeric(args.threadId), "pause");
-        await this.#backend.pause(numeric(args.threadId));
-        return {};
+        this.#userPauseRequests++;
+        try {
+          return await this.#queueExecutionUpdate(async () => {
+            await this.#assertThreadCapability(numeric(args.threadId), "pause");
+            await this.#backend.pause(numeric(args.threadId));
+            return {};
+          });
+        } finally {
+          this.#userPauseRequests--;
+        }
       case "continue":
-        await this.#assertThreadCapability(numeric(args.threadId), "pause");
-        await this.#backend.continue(numeric(args.threadId));
-        return { allThreadsContinued: true };
+        return this.#queueExecutionUpdate(async () => {
+          await this.#assertThreadCapability(numeric(args.threadId), "pause");
+          await this.#resumeExecution(() => this.#backend.continue(numeric(args.threadId)));
+          return { allThreadsContinued: true };
+        });
       case "next":
-        await this.#assertStepCapability(
-          numeric(args.threadId),
-          args.granularity === "instruction" ? "instruction" : "over",
-        );
-        await this.#backend.step(
-          numeric(args.threadId),
-          args.granularity === "instruction" ? "instruction" : "over",
-        );
-        return {};
       case "stepIn":
-        await this.#assertStepCapability(numeric(args.threadId), "in");
-        await this.#backend.step(numeric(args.threadId), "in");
-        return {};
       case "stepOut":
-        await this.#assertStepCapability(numeric(args.threadId), "out");
-        await this.#backend.step(numeric(args.threadId), "out");
-        return {};
+        return this.#queueExecutionUpdate(async () => {
+          let kind: "instruction" | "over" | "in" | "out";
+          if (command === "next") {
+            kind = args.granularity === "instruction" ? "instruction" : "over";
+          } else if (command === "stepIn") {
+            kind = "in";
+          } else {
+            kind = "out";
+          }
+          await this.#assertStepCapability(numeric(args.threadId), kind);
+          await this.#resumeExecution(() => this.#backend.step(numeric(args.threadId), kind));
+          return {};
+        });
       case "disassemble":
         return this.#disassemble(args);
       case "source":
@@ -428,12 +489,15 @@ export class DebugAdapterSession {
       case "uttori/capture": {
         const request = args as CaptureRequestV2;
         validateCaptureRequest(request);
-        if (!this.#backend.capture) throw new Error("This backend does not support capture v2.");
+        if (!this.#backend.capture) {
+          throw new Error("This backend does not support capture v2.");
+        }
         return this.#backend.capture(request);
       }
       case "uttori/startTrace":
-        if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full")
+        if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full") {
           throw new Error("Unsupported trace detail mode.");
+        }
         await this.#backend.startTrace({
           ...(args.detail === undefined ? {} : { detail: args.detail }),
           architecture: typeof args.architecture === "string" ? args.architecture : "",
@@ -447,6 +511,14 @@ export class DebugAdapterSession {
         return {};
       case "disconnect":
         this.#cancelConfiguration?.();
+        // Cancellation must bypass the queue: a table update may be waiting for a stop
+        // that will never arrive. Drain its cleanup before closing the transport.
+        this.#executionEnded = true;
+        this.#executionRevision++;
+        this.#cancelMaintenancePause(
+          new Error("Debugger disconnected while updating breakpoints."),
+        );
+        await this.#executionUpdateQueue;
         await this.#backend.disconnect({ terminate: args.terminateDebuggee !== false });
         return {};
       default:
@@ -478,7 +550,9 @@ export class DebugAdapterSession {
   async #threadList(): Promise<Record<string, unknown>> {
     const threads = await this.#backend.threads();
     this.#threads.clear();
-    for (const thread of threads) this.#threads.set(thread.id, thread);
+    for (const thread of threads) {
+      this.#threads.set(thread.id, thread);
+    }
     return {
       threads: threads.map((thread) => {
         const capabilities = this.#architectureCapabilities(thread.architecture);
@@ -492,8 +566,12 @@ export class DebugAdapterSession {
             ].filter((entry): entry is string => Boolean(entry))
           : ["all inspection"];
         const supportedSteps = capabilities?.stepKinds ?? ["instruction", "over", "in", "out"];
-        if (capabilities?.step && !supportedSteps.includes("over")) unavailable.push("step over");
-        if (capabilities?.step && !supportedSteps.includes("out")) unavailable.push("step out");
+        if (capabilities?.step && !supportedSteps.includes("over")) {
+          unavailable.push("step over");
+        }
+        if (capabilities?.step && !supportedSteps.includes("out")) {
+          unavailable.push("step out");
+        }
         return {
           ...thread,
           name:
@@ -506,12 +584,17 @@ export class DebugAdapterSession {
   }
 
   async #assertThreadCapability(threadId: number, operation: "pause" | "step"): Promise<void> {
-    if (!this.#threads.has(threadId)) await this.#threadList();
+    if (!this.#threads.has(threadId)) {
+      await this.#threadList();
+    }
     const thread = this.#threads.get(threadId);
-    if (!thread) throw new Error(`Unknown debugger thread ${threadId}.`);
+    if (!thread) {
+      throw new Error(`Unknown debugger thread ${threadId}.`);
+    }
     const capabilities = this.#architectureCapabilities(thread.architecture);
-    if (!capabilities?.[operation])
+    if (!capabilities?.[operation]) {
       throw new Error(`${processorLabel(thread.architecture)} does not support ${operation}.`);
+    }
   }
 
   async #assertStepCapability(
@@ -522,16 +605,19 @@ export class DebugAdapterSession {
     const thread = this.#threads.get(threadId)!;
     const capabilities = this.#architectureCapabilities(thread.architecture)!;
     const supported = capabilities.stepKinds ?? ["instruction", "over", "in", "out"];
-    if (!supported.includes(kind))
+    if (!supported.includes(kind)) {
       throw new Error(`${processorLabel(thread.architecture)} does not support step ${kind}.`);
+    }
   }
 
   #traceCapabilities(): Record<string, unknown> {
     const traces: Array<Record<string, unknown>> = [];
     for (const architecture of this.#backend.capabilities.architectures) {
       const trace = architecture.trace;
-      if (!trace) continue;
-      for (const addressSpace of trace.addressSpaces)
+      if (!trace) {
+        continue;
+      }
+      for (const addressSpace of trace.addressSpaces) {
         traces.push({
           architecture: architecture.architecture,
           addressSpace,
@@ -541,13 +627,16 @@ export class DebugAdapterSession {
             ? {}
             : { instructionDetails: trace.instructionDetails }),
         });
+      }
     }
     return { traces };
   }
 
   async #stackTrace(threadId: number): Promise<Record<string, unknown>> {
     const frames = await this.#backend.stackFrames(threadId);
-    for (const frame of frames) this.#frames.set(frame.id, frame);
+    for (const frame of frames) {
+      this.#frames.set(frame.id, frame);
+    }
     return {
       stackFrames: frames.map((frame) => {
         const range = this.#rangeForAddress(frame.pc);
@@ -596,9 +685,13 @@ export class DebugAdapterSession {
 
   async #scopes(frameId: number): Promise<Record<string, unknown>> {
     const frame = this.#frames.get(frameId);
-    if (!frame) throw new Error("Unknown stack frame; refresh the call stack and try again.");
+    if (!frame) {
+      throw new Error("Unknown stack frame; refresh the call stack and try again.");
+    }
     const capabilities = this.#architectureCapabilities(frame.pc.architecture);
-    if (!capabilities) return { scopes: [] };
+    if (!capabilities) {
+      return { scopes: [] };
+    }
     const scopes: Array<Record<string, unknown>> = [];
     const registers = capabilities.registers ? await this.#backend.registers(frameId) : [];
     const groups = [...new Set(registers.map((register) => register.group ?? "Registers"))];
@@ -659,7 +752,9 @@ export class DebugAdapterSession {
       ["S", "SP"].includes(register.name.toUpperCase()),
     );
     const stackPointer = registerNumber(stackRegister);
-    if (stackPointer === undefined) return undefined;
+    if (stackPointer === undefined) {
+      return undefined;
+    }
     if (architecture === "snes.65816") {
       const addressSpace = spaces.find((space) => space === "snes.wram") ?? spaces[0];
       return addressSpace
@@ -682,7 +777,9 @@ export class DebugAdapterSession {
     const emulation = registerNumber(
       registers.find((register) => register.name.toUpperCase() === "E"),
     );
-    if (status === undefined) return [];
+    if (status === undefined) {
+      return [];
+    }
     const flags = [
       ["N", 7],
       ["V", 6],
@@ -718,7 +815,9 @@ export class DebugAdapterSession {
 
   async #variables(variablesReference: number): Promise<Record<string, unknown>> {
     const container = this.#variableContainers.get(variablesReference);
-    if (!container) throw new Error("Unknown variables reference.");
+    if (!container) {
+      throw new Error("Unknown variables reference.");
+    }
     if (container.kind === "registers") {
       return {
         variables: container.registers
@@ -731,7 +830,9 @@ export class DebugAdapterSession {
           })),
       };
     }
-    if (container.kind === "flags") return { variables: this.#flagVariables(container.registers) };
+    if (container.kind === "flags") {
+      return { variables: this.#flagVariables(container.registers) };
+    }
     if (container.kind === "memory-spaces") {
       return {
         variables: container.spaces.map((addressSpace) => ({
@@ -760,21 +861,25 @@ export class DebugAdapterSession {
         variablesReference: 0,
       });
     }
-    if (memory.unreadableBytes > 0)
+    if (memory.unreadableBytes > 0) {
       rows.push({
         name: "unreadable",
         value: `${memory.unreadableBytes} byte(s)`,
         variablesReference: 0,
       });
+    }
     return { variables: rows };
   }
 
   async #evaluate(args: Record<string, unknown>): Promise<Record<string, unknown>> {
-    if (!this.#backend.capabilities.registers)
+    if (!this.#backend.capabilities.registers) {
       throw new Error("Debugger expression evaluation requires register support.");
+    }
     const expression = typeof args.expression === "string" ? args.expression : "";
     const frameId = numeric(args.frameId, -1);
-    if (frameId < 1) throw new Error("Debugger expression evaluation requires a stack frame.");
+    if (frameId < 1) {
+      throw new Error("Debugger expression evaluation requires a stack frame.");
+    }
     const result = evaluateDebugExpression(expression, await this.#backend.registers(frameId));
     return {
       result: formatDebugExpressionValue(result.value),
@@ -786,15 +891,18 @@ export class DebugAdapterSession {
   async #readMemory(args: Record<string, unknown>): Promise<Record<string, unknown>> {
     const reference = typeof args.memoryReference === "string" ? args.memoryReference : "";
     const address = parseDebugAddress(reference);
-    if (!address) throw new Error("Invalid memoryReference.");
+    if (!address) {
+      throw new Error("Invalid memoryReference.");
+    }
     const capabilities = this.#architectureCapabilities(address.architecture);
     const memorySpace = capabilities?.memorySpaces.find(
       (candidate) => candidate.addressSpace === address.addressSpace,
     );
-    if (!memorySpace?.sideEffectFree)
+    if (!memorySpace?.sideEffectFree) {
       throw new Error(
         `Memory space '${address.addressSpace}' is unavailable or not guaranteed side-effect-free.`,
       );
+    }
     const offset = numeric(args.offset);
     const count = numeric(args.count);
     const result = await this.#backend.readMemory(
@@ -815,37 +923,54 @@ export class DebugAdapterSession {
    * @returns {Promise<Record<string, unknown>>} Verified or rejected breakpoint results.
    */
   async #setSourceBreakpoints(args: Record<string, unknown>): Promise<Record<string, unknown>> {
-    if (!this.#map) throw new Error("Source breakpoints require a debug map.");
+    if (!this.#map) {
+      throw new Error("Source breakpoints require a debug map.");
+    }
     const source = args.source as Record<string, unknown> | undefined;
     const sourcePath = typeof source?.path === "string" ? source.path : "";
-    if (!sourcePath) throw new Error("Source breakpoint request requires source.path.");
-    const requested = records(args.breakpoints);
+    if (!sourcePath) {
+      throw new Error("Source breakpoint request requires source.path.");
+    }
     const addresses: DebugAddress[] = [];
-    const resolved: Array<{ requestedLine: number; line: number; address?: DebugAddress }> = [];
-    for (const breakpoint of requested) {
+    const resolved = records(args.breakpoints).map((breakpoint) => {
       const requestedLine = numeric(breakpoint.line);
       const range = this.#sourceBreakpointRange(sourcePath, requestedLine);
       const address = range ? this.#addressForRange(range) : undefined;
-      if (address && this.#supportsBreakpoint(address)) addresses.push(address);
-      resolved.push({ requestedLine, line: range?.line ?? requestedLine, address });
-    }
-    this.#sourceBreakpoints.set(sourcePath, addresses);
-    const applied = await this.#applyBreakpoints();
+      const aliases = address ? (this.#sourceBreakpointAddresses?.(address) ?? [address]) : [];
+      if (address && this.#supportsBreakpoint(address)) {
+        for (const alias of aliases) {
+          addresses.push(alias);
+        }
+      }
+      return { requestedLine, line: range?.line ?? requestedLine, address, aliases };
+    });
+    const sources = new Map(this.#sourceBreakpoints);
+    sources.set(sourcePath, addresses);
+    const applied = await this.#applyBreakpoints(sources, this.#instructionBreakpoints);
     return {
-      breakpoints: resolved.map(({ requestedLine, line, address }) => {
-        const match = address ? applied.get(formatDebugAddress(address)) : undefined;
-        return {
-          ...(match
-            ? dapBreakpoint(match)
-            : {
-                verified: false,
-                message:
-                  address && !this.#supportsBreakpoint(address)
-                    ? `Breakpoints are unavailable for ${processorLabel(address.architecture)}.`
-                    : `No executable range at or after line ${requestedLine}.`,
-              }),
-          line,
-        };
+      breakpoints: resolved.map(({ requestedLine, line, address, aliases }) => {
+        const matches = aliases.map((alias) => applied.get(breakpointKey(alias)));
+        const match = address ? applied.get(breakpointKey(address)) : undefined;
+        if (match) {
+          // One gutter marker represents all ROM aliases; partial native acceptance
+          // must not turn it into a misleading verified breakpoint.
+          const verified = matches.length > 0 && matches.every((entry) => entry?.verified);
+          const result = { ...dapBreakpoint(match), verified, line };
+          if (!verified) {
+            return {
+              ...result,
+              message:
+                matches.find((entry) => !entry?.verified)?.message ??
+                "One or more source breakpoint addresses could not be installed.",
+            };
+          }
+          return result;
+        }
+        let message = `No executable range at or after line ${requestedLine}.`;
+        if (address && !this.#supportsBreakpoint(address)) {
+          message = `Breakpoints are unavailable for ${processorLabel(address.architecture)}.`;
+        }
+        return { verified: false, message, line };
       }),
     };
   }
@@ -857,10 +982,14 @@ export class DebugAdapterSession {
    * @returns {Record<string, unknown>} Executable source locations in the requested range.
    */
   #breakpointLocations(args: Record<string, unknown>): Record<string, unknown> {
-    if (!this.#map) throw new Error("Breakpoint locations require a debug map.");
+    if (!this.#map) {
+      throw new Error("Breakpoint locations require a debug map.");
+    }
     const source = args.source as Record<string, unknown> | undefined;
     const sourcePath = typeof source?.path === "string" ? source.path : "";
-    if (!sourcePath) throw new Error("Breakpoint location request requires source.path.");
+    if (!sourcePath) {
+      throw new Error("Breakpoint location request requires source.path.");
+    }
     const startLine = numeric(args.line);
     const endLine = Math.max(startLine, numeric(args.endLine, startLine));
     const lines = new Set(
@@ -883,7 +1012,7 @@ export class DebugAdapterSession {
   async #setInstructionBreakpoints(
     args: Record<string, unknown>,
   ): Promise<Record<string, unknown>> {
-    this.#instructionBreakpoints.clear();
+    const instructions = new Map<string, DebugAddress>();
     const requested = records(args.breakpoints);
     const parsed = requested.map((breakpoint) => {
       const reference =
@@ -892,25 +1021,25 @@ export class DebugAdapterSession {
       if (address) {
         const offset = numeric(breakpoint.offset);
         const adjusted = { ...address, address: address.address + offset };
-        if (this.#supportsBreakpoint(adjusted))
-          this.#instructionBreakpoints.set(formatDebugAddress(adjusted), adjusted);
+        if (this.#supportsBreakpoint(adjusted)) {
+          instructions.set(formatDebugAddress(adjusted), adjusted);
+        }
         return adjusted;
       }
       return undefined;
     });
-    const applied = await this.#applyBreakpoints();
+    const applied = await this.#applyBreakpoints(this.#sourceBreakpoints, instructions);
     return {
       breakpoints: parsed.map((address) => {
-        const match = address ? applied.get(formatDebugAddress(address)) : undefined;
-        return match
-          ? dapBreakpoint(match)
-          : {
-              verified: false,
-              message:
-                address && !this.#supportsBreakpoint(address)
-                  ? `Breakpoints are unavailable for ${processorLabel(address.architecture)}.`
-                  : "Invalid address.",
-            };
+        const match = address ? applied.get(breakpointKey(address)) : undefined;
+        if (match) {
+          return dapBreakpoint(match);
+        }
+        let message = "Invalid address.";
+        if (address && !this.#supportsBreakpoint(address)) {
+          message = `Breakpoints are unavailable for ${processorLabel(address.architecture)}.`;
+        }
+        return { verified: false, message };
       }),
     };
   }
@@ -922,26 +1051,90 @@ export class DebugAdapterSession {
   /**
    * Applies the union of source and instruction breakpoints as one backend table.
    * Live emulators require a stopped CPU for this mutation, so a running session is
-   * paused briefly and resumed after the replacement succeeds or fails.
+   * paused briefly. A failed replacement restores the confirmed table before resuming;
+   * failed recovery leaves a visible stop and blocks execution until a successful edit.
+   * @param {Map<string, DebugAddress[]>} sources Proposed per-source requests.
+   * @param {Map<string, DebugAddress>} instructions Proposed instruction requests.
    * @returns {Promise<Map<string, DebugBreakpoint>>} Applied breakpoints keyed by address.
    */
-  async #applyBreakpoints(): Promise<Map<string, DebugBreakpoint>> {
-    const source = [...this.#sourceBreakpoints.values()].flat();
-    const instruction = [...this.#instructionBreakpoints.values()];
+  async #applyBreakpoints(
+    sources: Map<string, DebugAddress[]>,
+    instructions: Map<string, DebugAddress>,
+  ): Promise<Map<string, DebugBreakpoint>> {
+    const source = [...sources.values()].flat();
+    const instruction = [...instructions.values()];
     const unique = new Map(
-      [...source, ...instruction].map((address) => [formatDebugAddress(address), address]),
+      [...source, ...instruction].map((address) => [breakpointKey(address), address]),
     );
     const addresses = [...unique.values()].filter((address) => this.#supportsBreakpoint(address));
     // The pause is protocol maintenance, not a debugging stop the user asked to observe.
     const paused = await this.#pauseForBreakpointUpdate(addresses);
+    this.#assertExecutionActive();
+    let result: readonly DebugBreakpoint[] = [];
+    let failure: Error | undefined;
     try {
-      const breakpoints = await this.#backend.setBreakpoints(addresses);
-      return new Map(
-        breakpoints.map((breakpoint) => [formatDebugAddress(breakpoint.address), breakpoint]),
-      );
-    } finally {
-      if (paused?.resume) await this.#resumeAfterBreakpointUpdate(paused.threadId);
+      result = await this.#backend.setBreakpoints(addresses);
+      this.#assertExecutionActive();
+      // Commit desired requests only after native confirmation. A rejected source edit
+      // must not reappear when a later request updates an unrelated source file.
+      this.#sourceBreakpoints = sources;
+      this.#instructionBreakpoints = instructions;
+      this.#verifiedBreakpoints = result.filter(({ verified }) => verified);
+      this.#breakpointTableReliable = true;
+    } catch (error) {
+      this.#assertExecutionActive();
+      failure = error instanceof Error ? error : new Error(String(error));
+      try {
+        const restored = await this.#backend.setBreakpoints(
+          this.#verifiedBreakpoints.map(({ address }) => address),
+        );
+        this.#assertExecutionActive();
+        if (restored.some(({ verified }) => !verified)) {
+          throw new Error("Breakpoint recovery was not verified.");
+        }
+        this.#verifiedBreakpoints = restored;
+        this.#breakpointTableReliable = true;
+      } catch (recoveryError) {
+        this.#breakpointTableReliable = false;
+        const detail =
+          recoveryError instanceof Error ? recoveryError.message : String(recoveryError);
+        failure = new Error(
+          `Breakpoint update failed and the previous table could not be restored: ${detail}`,
+          { cause: error },
+        );
+        for (const breakpoint of this.#verifiedBreakpoints) {
+          this.#emitBackendEvent({
+            type: "breakpoint",
+            breakpoint: {
+              ...breakpoint,
+              verified: false,
+              message:
+                "Native breakpoint table is uncertain; edit breakpoints again before continuing.",
+            },
+          });
+        }
+      }
     }
+    // A newer real stop/termination wins over this maintenance operation. Also honor
+    // a user pause queued while the hidden stop or table write was in flight.
+    if (paused?.resume && this.#executionRevision === paused.revision && !this.#executionEnded) {
+      if (this.#breakpointTableReliable && this.#userPauseRequests === 0) {
+        try {
+          await this.#resumeAfterBreakpointUpdate(paused.threadId);
+        } catch (error) {
+          if (this.#executionState === "stopped" && !this.#executionEnded) {
+            this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
+          }
+          throw error;
+        }
+      } else {
+        this.#emitBackendEvent({ type: "stopped", reason: "pause", threadId: paused.threadId });
+      }
+    }
+    if (failure) {
+      throw failure;
+    }
+    return new Map(result.map((breakpoint) => [breakpointKey(breakpoint.address), breakpoint]));
   }
 
   /**
@@ -950,7 +1143,9 @@ export class DebugAdapterSession {
    * @returns {readonly DebugMapRange[]} All mapped ranges belonging to the source.
    */
   #sourceRanges(sourcePath: string): readonly DebugMapRange[] {
-    if (!this.#map) return [];
+    if (!this.#map) {
+      return [];
+    }
     const normalized = sourcePath.split(path.sep).join("/");
     const sourceIds = new Set(
       this.#map.sources
@@ -981,19 +1176,51 @@ export class DebugAdapterSession {
   }
 
   /**
-   * Serializes breakpoint requests because DAP may issue one per source concurrently,
-   * while the emulator API replaces one global table. Overlapping replacements could
-   * otherwise restore a stale union and silently lose a breakpoint.
-   * @param {() => Promise<T>} update Deferred breakpoint-table replacement.
-   * @returns {Promise<T>} Result of the replacement after earlier updates settle.
+   * Serializes execution and whole-table writes without blocking backend events.
+   * Otherwise a user Continue could resume the CPU during a maintenance table write.
+   * @param {() => Promise<T>} update Deferred execution or breakpoint mutation.
+   * @returns {Promise<T>} Result after earlier mutations settle.
    */
-  #queueBreakpointUpdate<T>(update: () => Promise<T>): Promise<T> {
-    const result = this.#breakpointUpdateQueue.then(update, update);
-    this.#breakpointUpdateQueue = result.then(
+  #queueExecutionUpdate<T>(update: () => Promise<T>): Promise<T> {
+    const result = this.#executionUpdateQueue.then(() => {
+      this.#assertExecutionActive();
+      return update();
+    });
+    this.#executionUpdateQueue = result.then(
       () => undefined,
       () => undefined,
     );
     return result;
+  }
+
+  #assertExecutionActive(): void {
+    if (this.#executionEnded) {
+      throw new Error("Debugger execution session has ended.");
+    }
+  }
+
+  /**
+   * Records execution intent before the backend can resolve ahead of its continued
+   * event. A newer stop/termination owns the state even if the operation later rejects.
+   * @param {() => Promise<void>} resume Backend Continue or supported step operation.
+   * @returns {Promise<void>} Resolves on backend acceptance, not on event delivery.
+   */
+  async #resumeExecution(resume: () => Promise<void>): Promise<void> {
+    this.#assertExecutionActive();
+    if (!this.#breakpointTableReliable) {
+      throw new Error("Edit breakpoints to reconcile the native table before continuing.");
+    }
+    const previous = this.#executionState;
+    const revision = ++this.#executionRevision;
+    this.#executionState = "running";
+    try {
+      await resume();
+    } catch (error) {
+      if (this.#executionRevision === revision) {
+        this.#executionState = previous;
+      }
+      throw error;
+    }
   }
 
   /**
@@ -1003,14 +1230,25 @@ export class DebugAdapterSession {
    * with our pause request. In that case the real stop remains visible and must not be
    * undone by an automatic continue.
    * @param {readonly DebugAddress[]} addresses Breakpoints about to replace the table.
-   * @returns {Promise<{ readonly threadId: number; readonly resume: boolean } | undefined>}
+   * @returns {Promise<{ readonly threadId: number; readonly resume: boolean; readonly revision: number } | undefined>}
    * Maintenance state, or undefined when the emulator was not running.
    */
   async #pauseForBreakpointUpdate(
     addresses: readonly DebugAddress[],
-  ): Promise<{ readonly threadId: number; readonly resume: boolean } | undefined> {
-    if (this.#executionState !== "running") return undefined;
-    if (this.#threads.size === 0) await this.#threadList();
+  ): Promise<
+    { readonly threadId: number; readonly resume: boolean; readonly revision: number } | undefined
+  > {
+    if (this.#executionState !== "running") {
+      return undefined;
+    }
+    if (this.#threads.size === 0) {
+      await this.#threadList();
+    }
+    this.#assertExecutionActive();
+    // Thread discovery can yield long enough for a real breakpoint to stop the CPU.
+    if (this.#executionState !== "running") {
+      return undefined;
+    }
     const architectures = new Set(addresses.map(({ architecture }) => architecture));
     // Prefer the processor receiving a breakpoint. For an empty replacement (removal),
     // fall back to any processor whose debugger owns a breakpoint table.
@@ -1019,14 +1257,18 @@ export class DebugAdapterSession {
       [...this.#threads.values()].find(({ architecture }) =>
         Boolean(this.#architectureCapabilities(architecture)?.breakpoints),
       );
-    if (!thread) throw new Error("No breakpoint-capable debugger thread is available.");
+    if (!thread) {
+      throw new Error("No breakpoint-capable debugger thread is available.");
+    }
 
-    let resolvePause!: (resume: boolean) => void;
+    let resolvePause!: MaintenancePause["resolve"];
     let rejectPause!: (error: Error) => void;
-    const stopped = new Promise<boolean>((resolve, reject) => {
-      resolvePause = resolve;
-      rejectPause = reject;
-    });
+    const stopped = new Promise<{ readonly resume: boolean; readonly revision: number }>(
+      (resolve, reject) => {
+        resolvePause = resolve;
+        rejectPause = reject;
+      },
+    );
     const timer = setTimeout(
       () => rejectPause(new Error("Timed out while pausing to update emulator breakpoints.")),
       BREAKPOINT_UPDATE_STOP_TIMEOUT_MS,
@@ -1034,10 +1276,15 @@ export class DebugAdapterSession {
     timer.unref();
     this.#maintenancePause = { resolve: resolvePause, reject: rejectPause, timer };
     try {
-      await this.#backend.pause(thread.id);
-      return { threadId: thread.id, resume: await stopped };
+      // Observe both promises immediately so cancellation/timeout cannot become an
+      // unhandled rejection while the backend pause request is still pending.
+      const pause = Promise.resolve().then(() => this.#backend.pause(thread.id));
+      const [, stop] = await Promise.all([pause, stopped]);
+      return { threadId: thread.id, ...stop };
     } finally {
-      if (this.#maintenancePause?.timer === timer) this.#maintenancePause = undefined;
+      if (this.#maintenancePause?.timer === timer) {
+        this.#maintenancePause = undefined;
+      }
       clearTimeout(timer);
     }
   }
@@ -1050,9 +1297,11 @@ export class DebugAdapterSession {
   async #resumeAfterBreakpointUpdate(threadId: number): Promise<void> {
     this.#maintenanceResumeThreadId = threadId;
     try {
-      await this.#backend.continue(threadId);
+      await this.#resumeExecution(() => this.#backend.continue(threadId));
     } catch (error) {
-      if (this.#maintenanceResumeThreadId === threadId) this.#maintenanceResumeThreadId = undefined;
+      if (this.#maintenanceResumeThreadId === threadId) {
+        this.#maintenanceResumeThreadId = undefined;
+      }
       throw error;
     }
   }
@@ -1064,7 +1313,9 @@ export class DebugAdapterSession {
    */
   #cancelMaintenancePause(error: Error): void {
     const maintenance = this.#maintenancePause;
-    if (!maintenance) return;
+    if (!maintenance) {
+      return;
+    }
     this.#maintenancePause = undefined;
     clearTimeout(maintenance.timer);
     maintenance.reject(error);
@@ -1073,7 +1324,9 @@ export class DebugAdapterSession {
   async #disassemble(args: Record<string, unknown>): Promise<Record<string, unknown>> {
     const reference = typeof args.memoryReference === "string" ? args.memoryReference : "";
     const address = parseDebugAddress(reference);
-    if (!address) throw new Error("Invalid memoryReference.");
+    if (!address) {
+      throw new Error("Invalid memoryReference.");
+    }
     const instructions = await this.#backend.disassemble(
       { ...address, address: address.address + numeric(args.instructionOffset) },
       numeric(args.instructionCount),
@@ -1093,7 +1346,9 @@ export class DebugAdapterSession {
 
   async #source(sourceReference: number): Promise<Record<string, unknown>> {
     const address = this.#virtualSources.get(sourceReference);
-    if (!address) throw new Error("Unknown source reference.");
+    if (!address) {
+      throw new Error("Unknown source reference.");
+    }
     const instructions = await this.#backend.disassemble(address, 32);
     const texts = await Promise.all(
       instructions.map((instruction) => this.#annotatedInstructionText(instruction)),
@@ -1112,7 +1367,7 @@ export class DebugAdapterSession {
     return this.#map
       ? debugMapRangesForAddress(this.#map, address.addressSpace, address.address, {
           architecture: address.architecture,
-          outputOffset: address.outputOffset,
+          outputOffset: address.outputOffset ?? this.#sourceOutputOffset?.(address),
         })[0]
       : undefined;
   }
@@ -1139,7 +1394,9 @@ export class DebugAdapterSession {
   #virtualSourceReference(address: DebugAddress): number {
     const key = formatDebugAddress(address);
     const existing = this.#virtualReferences.get(key);
-    if (existing !== undefined) return existing;
+    if (existing !== undefined) {
+      return existing;
+    }
     const reference = this.#nextSourceReference++;
     this.#virtualReferences.set(key, reference);
     this.#virtualSources.set(reference, address);
@@ -1148,6 +1405,7 @@ export class DebugAdapterSession {
 
   #emitBackendEvent(event: DebugBackendEvent): void {
     if (event.type === "stopped") {
+      this.#executionRevision++;
       this.#executionState = "stopped";
       this.#frames.clear();
       this.#variableContainers.clear();
@@ -1160,12 +1418,15 @@ export class DebugAdapterSession {
         // Only a `pause` stop acknowledges our request. If execution hit a breakpoint,
         // exception, or step first, preserve that event and leave the emulator stopped.
         const resume = event.reason === "pause";
-        maintenance.resolve(resume);
+        maintenance.resolve({ resume, revision: this.#executionRevision });
         // Hiding the transient stop prevents UI flicker and prevents VS Code from issuing
         // stack/register reads while the adapter is immediately replacing breakpoints.
-        if (resume) return;
+        if (resume) {
+          return;
+        }
       }
     } else if (event.type === "continued") {
+      this.#executionRevision++;
       this.#executionState = "running";
       if (this.#maintenanceResumeThreadId === event.threadId) {
         this.#maintenanceResumeThreadId = undefined;
@@ -1173,6 +1434,8 @@ export class DebugAdapterSession {
         return;
       }
     } else if (event.type === "terminated") {
+      this.#executionRevision++;
+      this.#executionEnded = true;
       this.#executionState = "unknown";
       this.#maintenanceResumeThreadId = undefined;
       this.#cancelMaintenancePause(new Error("Debugger terminated while updating breakpoints."));
@@ -1211,13 +1474,19 @@ export class DapMessageParser {
     const messages: DapRequest[] = [];
     while (true) {
       const separator = this.#buffer.indexOf("\r\n\r\n");
-      if (separator < 0) break;
+      if (separator < 0) {
+        break;
+      }
       const header = this.#buffer.subarray(0, separator).toString("ascii");
       const match = header.toLowerCase().match(/(?:^|\r\n)content-length: (\d+)(?:\r\n|$)/);
-      if (!match) throw new Error("DAP frame is missing Content-Length.");
+      if (!match) {
+        throw new Error("DAP frame is missing Content-Length.");
+      }
       const length = Number(match[1]);
       const start = separator + 4;
-      if (this.#buffer.length < start + length) break;
+      if (this.#buffer.length < start + length) {
+        break;
+      }
       const body = this.#buffer.subarray(start, start + length).toString("utf8");
       this.#buffer = this.#buffer.subarray(start + length);
       messages.push(JSON.parse(body) as DapRequest);

@@ -9,6 +9,7 @@ import { AnalysisSourcesProvider } from "../src/analysis-sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis-worker-client.js";
 import { AnalysisCoverageProvider } from "../src/coverage-tree.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
+import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
 
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
@@ -90,8 +91,9 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
     while (
       !messages.some((message) => message.event === "stopped") &&
       Date.now() - started < 25_000
-    )
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 50));
+    }
     assert.ok(
       messages.some((message) => message.event === "stopped"),
       `No stopped event: ${JSON.stringify(messages)}`,
@@ -158,7 +160,9 @@ async function runLiveLaunch(folder: vscode.WorkspaceFolder): Promise<void> {
         threadId: threads.threads[0].id,
       })) as { stackFrames: { source?: LiveSource }[] };
       const source = stepped.stackFrames[0].source;
-      if (source?.sourceReference) await waitForVirtualEditor(source);
+      if (source?.sourceReference) {
+        await waitForVirtualEditor(source);
+      }
     }
     const observed = (await session.customRequest("uttori/readTrace", { maxEvents: 240 })) as {
       addresses: number[];
@@ -200,17 +204,30 @@ async function waitForLanguageServer(uri: vscode.Uri): Promise<void> {
       "vscode.executeDocumentSymbolProvider",
       uri,
     );
-    if (Array.isArray(symbols)) return;
+    if (Array.isArray(symbols)) {
+      return;
+    }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
   throw new Error("Uttori language server did not register within 20 seconds.");
 }
 
+/**
+ * Exercises the editor's language gate before checking DAP source-line resolution.
+ * API-created breakpoints bypass the gate shared by F9 and gutter clicks.
+ * @param {vscode.WorkspaceFolder} folder Temporary smoke-test workspace.
+ * @param {vscode.Uri} sourceUri Built assembly source containing an instruction on line 4.
+ * @param {vscode.Uri} programUri Binary matching the debug map.
+ * @param {vscode.Uri} debugMapUri Source map emitted by the smoke-test build.
+ * @param {string} languageId Assembly language whose breakpoint contribution is under test.
+ * @returns {Promise<void>} Rejects if editor toggling or DAP verification fails.
+ */
 async function verifyReplaySourceBreakpoint(
   folder: vscode.WorkspaceFolder,
   sourceUri: vscode.Uri,
   programUri: vscode.Uri,
   debugMapUri: vscode.Uri,
+  languageId: string,
 ): Promise<void> {
   const messages: Array<{
     type?: string;
@@ -223,12 +240,27 @@ async function verifyReplaySourceBreakpoint(
       onDidSendMessage: (message: unknown) => messages.push(message as (typeof messages)[number]),
     }),
   });
-  // VS Code positions are zero-based, so row 3 asks DAP for mapped source line 4.
-  const breakpoint = new vscode.SourceBreakpoint(
-    new vscode.Location(sourceUri, new vscode.Position(3, 0)),
-  );
-  vscode.debug.addBreakpoints([breakpoint]);
+  const document = await vscode.workspace.openTextDocument(sourceUri);
+  const originalLanguageId = document.languageId;
+  let breakpoint: vscode.SourceBreakpoint | undefined;
   try {
+    assert.equal(
+      vscode.workspace.getConfiguration("debug").get("allowBreakpointsEverywhere"),
+      false,
+      "The editor smoke test must exercise the language breakpoint contribution.",
+    );
+    await vscode.languages.setTextDocumentLanguage(document, languageId);
+    const editor = await vscode.window.showTextDocument(document);
+    // VS Code positions are zero-based, so row 3 asks DAP for mapped source line 4.
+    editor.selection = new vscode.Selection(3, 0, 3, 0);
+    await vscode.commands.executeCommand("editor.debug.action.toggleBreakpoint");
+    breakpoint = vscode.debug.breakpoints.find(
+      (entry): entry is vscode.SourceBreakpoint =>
+        entry instanceof vscode.SourceBreakpoint &&
+        entry.location.uri.toString() === sourceUri.toString() &&
+        entry.location.range.start.line === 3,
+    );
+    assert.ok(breakpoint, `Editor breakpoint toggle is unavailable for ${languageId}.`);
     assert.equal(
       await vscode.debug.startDebugging(folder, {
         type: "uttori-asm",
@@ -245,8 +277,9 @@ async function verifyReplaySourceBreakpoint(
     while (
       !messages.some((message) => message.command === "setBreakpoints") &&
       Date.now() < deadline
-    )
+    ) {
       await new Promise((resolve) => setTimeout(resolve, 25));
+    }
     const response = messages.find((message) => message.command === "setBreakpoints");
     assert.equal(response?.success, true, "VS Code source-breakpoint request failed.");
     assert.deepEqual(response?.body?.breakpoints, [
@@ -259,7 +292,10 @@ async function verifyReplaySourceBreakpoint(
     ]);
   } finally {
     await vscode.debug.stopDebugging(vscode.debug.activeDebugSession);
-    vscode.debug.removeBreakpoints([breakpoint]);
+    if (breakpoint) {
+      vscode.debug.removeBreakpoints([breakpoint]);
+    }
+    await vscode.languages.setTextDocumentLanguage(document, originalLanguageId);
     tracker.dispose();
   }
 }
@@ -318,7 +354,12 @@ export async function run(): Promise<void> {
   }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
-  if (process.env.UTTORI_VSCODE_LIVE_WORKSPACE) return runLiveLaunch(folder);
+  if (process.env.UTTORI_VSCODE_LIVE_BREAKPOINTS === "1") {
+    return runLiveBreakpointSmoke(folder);
+  }
+  if (process.env.UTTORI_VSCODE_LIVE_WORKSPACE) {
+    return runLiveLaunch(folder);
+  }
 
   const commands = new Set(await vscode.commands.getCommands(true));
   for (const command of REQUIRED_COMMANDS) {
@@ -346,7 +387,9 @@ export async function run(): Promise<void> {
     try {
       const ready = new Promise<void>((resolve, reject) => {
         subscription = view.webview.onDidReceiveMessage((message: { type?: string }) => {
-          if (message.type === "ready") resolve();
+          if (message.type === "ready") {
+            resolve();
+          }
         });
         timer = setTimeout(
           () => reject(new Error(`${name} webview assets did not load under CSP.`)),
@@ -428,5 +471,7 @@ export async function run(): Promise<void> {
   assert.equal(debugMap.output?.size, output.length, "Debug map does not identify the built ROM.");
   assert.match(debugMap.output?.sha256 ?? "", /^[\da-f]{64}$/);
   assert.match(debugMap.fingerprint?.value ?? "", /^[\da-f]{64}$/);
-  await verifyReplaySourceBreakpoint(folder, sourceUri, outputUri, debugMapUri);
+  for (const languageId of ["uttori-snes", "uttori-65xx"]) {
+    await verifyReplaySourceBreakpoint(folder, sourceUri, outputUri, debugMapUri, languageId);
+  }
 }

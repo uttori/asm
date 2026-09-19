@@ -488,6 +488,14 @@
         "configuration": "./language-configuration.json"
       }
     ],
+    "breakpoints": [
+      {
+        "language": "uttori-snes"
+      },
+      {
+        "language": "uttori-65xx"
+      }
+    ],
     "debuggers": [
       {
         "type": "uttori-asm",
