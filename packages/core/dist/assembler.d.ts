@@ -120,15 +120,15 @@ export type AssemblerOptions = {
     environment: AssemblerEnvironment;
     /** Target contribution ID or alias. */
     target: string;
-    /** Architecture ID or alias within the target; defaults to the target's defaultArchitecture. */
+    /** Architecture ID or alias within the target. Defaults to the target's defaultArchitecture. */
     architecture?: string;
-    /** Validated by the target's createOptions hook; nonempty options require that hook. */
+    /** Validated by the target's createOptions hook. Nonempty options require that hook. */
     targetOptions?: unknown;
-    /** Base image copied at construction; source/output directives determine the resulting patch extent. */
+    /** Base image copied at construction. Source/output directives determine the resulting patch extent. */
     baseImage?: number[] | Uint8Array;
-    /** Borrowed synchronous provider; defaults to NodeAssemblyFileProvider and is not disposed by the session. */
+    /** Borrowed synchronous provider. Defaults to NodeAssemblyFileProvider and is not disposed by the session. */
     fileProvider?: AssemblyFileProvider;
-    /** Collect byte-to-source metadata for debug maps; defaults to true. */
+    /** Collect byte-to-source metadata for debug maps. Defaults to true. */
     collectSourceMetadata?: boolean;
 };
 /** Controls recovery-oriented analysis performed in an isolated temporary session. */
@@ -145,7 +145,7 @@ type ActiveLifecycle = {
 /**
  * Mutable, synchronous build session. Share its frozen environment with other sessions, not its state.
  * Use assembleSource/assembleProgram for builds and analyzeSource for recovering diagnostics.
- * Dispose the session before its plugin manager or loader; use a fresh session after a failed build.
+ * Dispose the session before its plugin manager or loader. Use a fresh session after a failed build.
  * Public runtime fields and service methods support directives and tooling and require stage invariants.
  */
 export declare class Assembler {
@@ -455,11 +455,6 @@ export declare class Assembler {
      * @returns {DirectiveRegistry} A registry bound to the provided session.
      */
     cloneDirectiveRegistryForSession(session: Assembler): DirectiveRegistry;
-    /**
-     * Analyzes program.
-     * @param {ProgramModel} program The program.
-     * @returns {AssemblyAnalysisResult} The result.
-     */
     analyzeProgram(program: ProgramModel): AssemblyAnalysisResult;
     /**
      * Builds and analyzes raw source without throwing on the first error.
@@ -472,12 +467,6 @@ export declare class Assembler {
     analyzeSource(source: string, sourceFile?: string, startLine?: number, options?: ProgramAnalysisOptions): AssemblyAnalysisResult & {
         program: ProgramModel;
     };
-    /**
-     * Analyzes workspace.
-     * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
-     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-     * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
-     */
     analyzeWorkspace(documents: Array<{
         source: string;
         sourceFile: string;
@@ -490,10 +479,6 @@ export declare class Assembler {
      * Loads base-image data.
      */
     seedOutputFromBaseImage(): void;
-    /**
-     * Creates services.
-     * @returns {AssemblerServiceBag} The result.
-     */
     private createServices;
     /**
      * Resolve the target and instantiate per-session factories. Throws on invalid selection/options
@@ -521,93 +506,37 @@ export declare class Assembler {
     recordSourceWrite(logicalAddress: number, outputOffset: number): void;
     /**
      * Run lifecycle disposal in reverse registration order, then dispose live state slots.
-     * Idempotent; attempts all cleanup and throws AggregateError for failures. The environment
+     * Idempotent. Attempts all cleanup and throws AggregateError for failures. The environment
      * and file provider remain owned by the host. Do not use this session afterward.
      */
     dispose(): void;
-    /**
-     * Reads little endian.
-     * @param {Uint8Array} bytes The bytes.
-     * @param {number} pos The pos.
-     * @param {number} width The width.
-     * @returns {number | undefined} The result.
-     */
     readLittleEndian(bytes: Uint8Array, pos: number, width: number): number | undefined;
     /**
-     * Checks whether it can read byte range.
-     * @param {number} sourceLength The source length.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @returns {number} The result.
+     * Check a byte interval after truncating its position and size to integers.
+     * @param {number} sourceLength Available source bytes.
+     * @param {number} position Zero-based byte offset.
+     * @param {number} size Requested byte count, which may be zero.
+     * @returns {number} Numeric 1 or 0 for use by assembly expressions.
      */
     canReadByteRange(sourceLength: number, position: number, size: number): number;
     /**
-     * Reads byte range.
-     * @param {Uint8Array} source The source.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @param {number | undefined} defaultValue The default value.
-     * @param {string} errorMessage The error message.
-     * @returns {number} The result.
+     * Read an unsigned little-endian value after truncating offset and width.
+     * @param {Uint8Array} source Borrowed input bytes, never modified.
+     * @param {number} position Zero-based byte offset.
+     * @param {number} size Width in bytes, used by the 1–4-byte expression readers.
+     * @param {number | undefined} defaultValue Returned for an out-of-bounds read when supplied.
+     * @param {string} errorMessage Error thrown for an out-of-bounds read without a default.
+     * @returns {number} Unsigned value or the supplied default.
      */
     readByteRange(source: Uint8Array, position: number, size: number, defaultValue: number | undefined, errorMessage: string): number;
-    /**
-     * Resolves readable path.
-     * @param {string} filename The filename.
-     * @returns {string | undefined} The result.
-     */
     resolveReadablePath(filename: string): string | undefined;
-    /**
-     * Resolves expression host label.
-     * @param {string} identifier The identifier.
-     * @returns {number | string} The result.
-     */
     resolveExpressionHostLabel(identifier: string): number | string;
-    /**
-     * Gets expression object size.
-     * @param {string} identifier The identifier.
-     * @param {boolean} [baseOnly] Whether to return only the base object size.
-     * @returns {number} The result.
-     */
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
-    /**
-     * Looks up define value.
-     * @param {string} varName The var name.
-     * @returns {string | undefined} The result.
-     */
     lookupDefineValue(varName: string): string | undefined;
     get currentMacroSourceFile(): string | undefined;
-    /**
-     * Checks whether it can read the base image.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @returns {number} The result.
-     */
     canReadBaseImage(position: number, size: number): number;
-    /**
-     * Reads the base image.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @param {number} [defaultValue] The default value.
-     * @returns {number} The result.
-     */
     readBaseImage(position: number, size: number, defaultValue?: number): number;
-    /**
-     * Checks whether it can read expression file.
-     * @param {string} filename The filename.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @returns {number} The result.
-     */
     canReadExpressionFile(filename: string, position: number, size: number): number;
-    /**
-     * Reads expression file.
-     * @param {string} filename The filename.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @param {number} [defaultValue] The default value.
-     * @returns {number} The result.
-     */
     readExpressionFile(filename: string, position: number, size: number, defaultValue?: number): number;
     /**
      * Installs the active target's expression contributions into this session.
@@ -632,34 +561,15 @@ export declare class Assembler {
      * @param {number} length The length of the section to fill.
      */
     fillOutputBytes(start: number, value: number, length: number): void;
-    /**
-     * Creates ephemeral stage execution state.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {StageExecutionState} The result.
-     */
     createEphemeralStageExecutionState(stage: AssemblyStageName): StageExecutionState;
     /**
      * Synchronizes active stage execution state.
      * @param {AssemblyStageName} stage The stage.
      */
     syncActiveStageExecutionState(stage: AssemblyStageName): void;
-    /**
-     * Gets active stage capabilities.
-     * @returns {StageExecutionCapabilities} The result.
-     */
     getActiveStageCapabilities(): StageExecutionCapabilities;
     get traceStage(): AssemblyStageName;
-    /**
-     * Lays out instruction.
-     * @param {string[] | LoweredInstruction} input The input.
-     * @returns {boolean} The result.
-     */
     layoutInstruction(input: string[] | LoweredInstruction): boolean;
-    /**
-     * Emits instruction.
-     * @param {string[] | LoweredInstruction} input The input.
-     * @returns {boolean} The result.
-     */
     emitInstruction(input: string[] | LoweredInstruction): boolean;
     /**
      * Picks the appropriate instruction handler based on architecture.
@@ -667,10 +577,6 @@ export declare class Assembler {
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
     asblock_pick(input: string[] | LoweredInstruction): boolean;
-    /**
-     * Resolves active architecture.
-     * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
-     */
     resolveActiveArchitecture(): {
         name: string;
         definition?: ArchitectureDefinition;
@@ -719,32 +625,9 @@ export declare class Assembler {
      * @returns {number} The byte read from the output image.
      */
     read1(logicalPosition: number): number;
-    /**
-     * Reads 2.
-     * @param {number} logicalPosition The logical address.
-     * @returns {number} The result.
-     */
     read2(logicalPosition: number): number;
-    /**
-     * Reads 3.
-     * @param {number} logicalPosition The logical address.
-     * @returns {number} The result.
-     */
     read3(logicalPosition: number): number;
-    /**
-     * Rewrites raw command.
-     * @param {string} command The command.
-     * @returns {string} The result.
-     */
     rewriteRawCommand(command: string): string;
-    /**
-     * Creates normalized command from raw.
-     * @param {string} command The command.
-     * @param {string} sourceFile The source file.
-     * @param {number} sourceLine The source line.
-     * @param {boolean} [allowEmpty] The allow empty.
-     * @returns {NormalizedCommand | null} The result.
-     */
     createNormalizedCommandFromRaw(command: string, sourceFile: string, sourceLine: number, allowEmpty?: boolean): NormalizedCommand | null;
     /**
      * Applies a `!name =` assignment without routing it through the incremental if-tree.
@@ -758,17 +641,7 @@ export declare class Assembler {
      * @returns {boolean} `true` when the line was a character mapping.
      */
     tryHandleCharacterMapping(command: string): boolean;
-    /**
-     * Preprocesses normalized command.
-     * @param {NormalizedCommand} state The state.
-     * @returns {CommandPreprocessResult} The result.
-     */
     preprocessNormalizedCommand(state: NormalizedCommand): CommandPreprocessResult;
-    /**
-     * Prepares normalized command for dispatch.
-     * @param {NormalizedCommand} state The state.
-     * @returns {boolean} The result.
-     */
     prepareNormalizedCommandForDispatch(state: NormalizedCommand): boolean;
     /**
      * Processes a command from an internal re-entrant source.
@@ -782,12 +655,6 @@ export declare class Assembler {
      * @param {boolean} [rewriteRaw] The rewrite raw.
      */
     processNormalizedCommand(state: NormalizedCommand, rewriteRaw?: boolean): void;
-    /**
-     * Gets or create lowered program.
-     * @param {StageExecutionState} stageState The stage state.
-     * @param {ProgramModel} program The program.
-     * @returns {LoweredProgram} The result.
-     */
     getOrCreateLoweredProgram(stageState: StageExecutionState, program: ProgramModel): LoweredProgram;
     /**
      * Dispatches lowered node.
@@ -814,7 +681,7 @@ export declare class Assembler {
     evaluateRangeExpression(expr: string | ExpressionNode): number;
     /**
      * Replace include search paths before assembly. Retains the array without copying.
-     * @param {string[]} paths Provider-specific search paths; Node resolves relative paths from cwd.
+     * @param {string[]} paths Provider-specific search paths. Node resolves relative paths from cwd.
      */
     setIncludePaths(paths: string[]): void;
     /**
@@ -935,17 +802,7 @@ export declare class Assembler {
      * @param {number} line - The line number to set.
      */
     setCurrentLine(line: number): void;
-    /**
-     * Gets stage descriptor.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
-     */
     getStageDescriptor(stage: AssemblyStageName): Pick<StageExecutionState, "stage" | "capabilities">;
-    /**
-     * Clones relative labels.
-     * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
-     * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
-     */
     cloneRelativeLabels(source: {
         [depth: number]: {
             addr: number;
@@ -957,11 +814,6 @@ export declare class Assembler {
             macroInstance?: number;
         }[];
     };
-    /**
-     * Creates stage execution state.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {StageExecutionState} The result.
-     */
     createStageExecutionState(stage: AssemblyStageName): StageExecutionState;
     /**
      * Applies stage execution state.
@@ -973,39 +825,21 @@ export declare class Assembler {
      * @param {StageExecutionState} stageState The stage state.
      */
     captureStageExecutionState(stageState: StageExecutionState): void;
-    /**
-     * Gets or create stage execution state.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {StageExecutionState} The result.
-     */
     getOrCreateStageExecutionState(stage: AssemblyStageName): StageExecutionState;
-    /**
-     * Builds program model.
-     * @param {string} source The source.
-     * @param {string} [sourceFile] The source file.
-     * @param {number} [startLine] The start line.
-     * @returns {ProgramModel} The result.
-     */
     buildProgramModel(source: string, sourceFile?: string, startLine?: number): ProgramModel;
-    /**
-     * Runs stage.
-     * @param {AssemblyStageName} stage The stage.
-     * @param {ProgramModel} program The program.
-     * @returns {StageExecutionState} The result.
-     */
     runStage(stage: AssemblyStageName, program: ProgramModel): StageExecutionState;
     /**
      * Run definition collection, layout resolution, and byte emission synchronously in that order.
-     * Throws at the first unrecovered failure; partial state/output is not a successful binary.
+     * Throws at the first unrecovered failure. Partial state/output is not a successful binary.
      * @param {ProgramModel} program Parsed source model produced for this target's syntax.
      */
     assembleProgram(program: ProgramModel): void;
     /**
-     * Parse and run all three assembly stages; includes are read through the configured provider.
+     * Parse and run all three assembly stages. Includes are read through the configured provider.
      * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
      * @param {string} source Assembly source text, not a filename.
-     * @param {string} [sourceFile] Source identity and include-resolution base; defaults to currentFile.
-     * @param {number} [startLine] Zero-based line offset; defaults to zero.
+     * @param {string} [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
+     * @param {number} [startLine] Zero-based line offset. Defaults to zero.
      * @returns {ProgramModel} Parsed model used for this build.
      */
     assembleSource(source: string, sourceFile?: string, startLine?: number): ProgramModel;
@@ -1026,7 +860,7 @@ export declare class Assembler {
     finalizeOutput(): void;
     /**
      * Materialize the target format's current bytes without assembling or finalizing again.
-     * @returns {Uint8Array} Output whose ownership depends on the formatter; copy before retaining or mutating independently.
+     * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
      */
     getBinaryOutput: () => Uint8Array;
     /**
@@ -1034,11 +868,6 @@ export declare class Assembler {
      * @param {ExecutableNode[]} nodes The runtime nodes to lower and execute.
      */
     lowerAndExecuteRuntimeNodes(nodes: ExecutableNode[]): void;
-    /**
-     * Resolves for loop bounds.
-     * @param {LoweredLoopNode} forBlock The for block.
-     * @returns {{ variable?: string; start?: number; end?: number; }} The result.
-     */
     resolveForLoopBounds(forBlock: LoweredLoopNode): {
         variable?: string;
         start?: number;
@@ -1073,11 +902,6 @@ export declare class Assembler {
      * @param {LoweredLoopNode} whileBlock The while block.
      */
     executeLoweredWhileLoop(whileBlock: LoweredLoopNode): void;
-    /**
-     * Gets lowered node span.
-     * @param {LoweredExecutableNode} node The node.
-     * @returns {SourceSpan | undefined} The result.
-     */
     getLoweredNodeSpan(node: LoweredExecutableNode): SourceSpan | undefined;
     /**
      * Executes a tree or lowered node while routing analysis-mode failures into diagnostics.

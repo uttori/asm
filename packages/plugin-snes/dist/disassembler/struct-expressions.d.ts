@@ -1,5 +1,5 @@
 import type { SnesStructBinding, SnesStructLayout } from "./struct-map.js";
-/** A closed expression over this map; binding identities are retained for span ownership checks. */
+/** A closed expression over this map. Binding identities are retained for span ownership checks. */
 export interface SnesStructExpression {
     readonly expression: string;
     readonly value: number;
@@ -32,7 +32,7 @@ export declare class SnesStructExpressionResolver {
 /**
  * Split a CPU access across fields, opaque gaps and adjacent records of one physical binding.
  * @param {SnesStructBinding} binding Sole owner referenced by the target expression.
- * @param {number} address Resolved CPU start address; biased index-zero bases are not physical data.
+ * @param {number} address Resolved CPU start address. Biased index-zero bases are not physical data.
  * @param {number} width CPU access width in bytes (one or two).
  * @returns {readonly SnesStructAccessPart[]} Ordered parts covering every byte exactly once.
  */

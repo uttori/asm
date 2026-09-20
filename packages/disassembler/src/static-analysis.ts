@@ -1,6 +1,6 @@
 /**
  * Target-neutral control-flow kinds emitted by a static-analysis adapter.
- * `stop` / `wait` do not fall through; `return` pops the call context when present.
+ * `stop` / `wait` do not fall through. `return` pops the call context when present.
  */
 export type StaticControlFlowKind =
   | "call"
@@ -83,8 +83,8 @@ export interface StaticInstruction {
 }
 
 /**
- * Adapter decode outcome. `ambiguous` needs more CPU state; `blocked` hit a
- * data-classified interval; `error` is an unmapped or invalid fetch.
+ * Adapter decode outcome. `ambiguous` needs more CPU state. `blocked` hit a
+ * data-classified interval. `error` is an unmapped or invalid fetch.
  */
 export type StaticDecodeResult =
   | { readonly kind: "instruction"; readonly instruction: StaticInstruction }
@@ -112,7 +112,7 @@ export interface StaticAnalysisSeed<State> {
   readonly detail?: string;
 }
 
-/** Manual resolution of an indirect control-flow site; at most one per address. */
+/** Manual resolution of an indirect control-flow site. At most one per address. */
 export interface StaticTargetOverride {
   readonly id: string;
   readonly address: number;
@@ -125,7 +125,9 @@ export interface StaticTargetOverride {
  * Defaults inside `analyzeStaticControlFlow` are 100_000 items and call depth 8.
  */
 export interface StaticAnalysisLimits {
+  /** Positive safe integer work budget. Reaching it returns an incomplete result with a reason. */
   readonly maxWorkItems?: number;
+  /** Nonnegative call-context depth. Zero discards call history, and deeper calls report a bound. */
   readonly maxCallDepth?: number;
 }
 
@@ -135,14 +137,14 @@ export interface StaticAnalysisAdapter<State> {
   readonly backingSize: number;
   /**
    * Fetch and classify the instruction at `address` under `state`.
-   * Must not throw; return `error` / `blocked` / `ambiguous` instead.
+   * Must not throw. Return `error` / `blocked` / `ambiguous` instead.
    */
   decode(address: number, state: State): StaticDecodeResult;
   /** Apply `instruction.effects` to produce the outgoing abstract state. */
   transfer(instruction: StaticInstruction, state: State): State;
-  /** Lattice join at a CFG merge. */
+  /** Lattice join at a CFG merge. Must converge under repeated joins and preserve both input states. */
   join(left: State, right: State): State;
-  /** Stable identity for a state; used to skip re-processing unchanged joins. */
+  /** Stable identity for a state. Used to skip re-processing unchanged joins. */
   stateKey(state: State): string;
   /** Applies address-derived state such as a program bank before decode. */
   enterAddress?(state: State, address: number): State;
@@ -338,7 +340,7 @@ class StaticWorkQueue<State> {
   push(item: WorkItem<State>): void {
     const queued = { item, sequence: this.#nextSequence++ };
     this.#values.push(queued);
-    // Performance invariant: sift up only the appended item; sorting #values here reintroduces
+    // Performance invariant: sift up only the appended item. Sorting #values here reintroduces
     // the full-queue O(n log n) cost that dominated large ROM analysis.
     let index = this.#values.length - 1;
     while (index > 0) {

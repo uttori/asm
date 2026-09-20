@@ -22,7 +22,7 @@ test("replacing a catalog updates existing aliases without affecting other archi
   registry.register("CPU", replacement);
   t.is(registry.getInstructionCatalog("legacy"), replacement);
   t.is(registry.getInstructionCatalog("other"), first);
-  // The public maps can be edited by the host; dangling aliases must remain a safe miss.
+  // The public maps can be edited by the host. Dangling aliases must remain a safe miss.
   registry.catalogs.delete("cpu");
   t.deepEqual(registry.getInstructionCatalog("legacy"), []);
 });

@@ -27,7 +27,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/vscode-extension/src/live-bus-analysis-process.ts
+// src/runtime/live-bus-analysis-process.ts
 var live_bus_analysis_process_exports = {};
 __export(live_bus_analysis_process_exports, {
   handleLiveBusProcessMessage: () => handleLiveBusProcessMessage,
@@ -36,7 +36,7 @@ __export(live_bus_analysis_process_exports, {
 module.exports = __toCommonJS(live_bus_analysis_process_exports);
 var import_promises3 = require("node:timers/promises");
 
-// packages/debug-adapter/src/capture-v2.ts
+// ../debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
   if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
@@ -339,18 +339,18 @@ var decodePPUEffect = (b, offset, port) => {
   };
 };
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var import_promises = require("node:fs/promises");
 var import_promises2 = require("node:timers/promises");
 
-// packages/debug-adapter/src/capture-file-reader.ts
+// ../debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader = class {
   #read;
   #windowBytes;
   #buffer = Buffer.alloc(0);
   #start = 0;
   #valid = 0;
-  /** Window bytes are in [1, 1048576], default 1 MiB; every component must fit.
+  /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
    * The cap amortizes small metadata reads without loading an entire archive.
    */
   constructor(read, windowBytes = 1048576) {
@@ -360,7 +360,7 @@ var CaptureFrameReader = class {
     this.#windowBytes = windowBytes;
   }
   /** Read one validated component (at most 256 KiB), bounded by a snapshot or
-   * durable watermark. Short I/O is retried; premature EOF is always an error.
+   * durable watermark. Short I/O is retried. Premature EOF is always an error.
    * @param {number} length Component bytes, no larger than the read window.
    * @param {number} offset Absolute nonnegative file position.
    * @param {number} limit Exclusive snapshot/durable byte boundary.
@@ -391,7 +391,7 @@ var CaptureFrameReader = class {
   }
 };
 
-// packages/debug-adapter/src/capture-file.ts
+// ../debug-adapter/src/capture-file.ts
 var metadataValid = (m) => {
   if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision)
     throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
@@ -402,7 +402,7 @@ var checkCaptureSize = (size, options) => {
     throw new Error("Capture maximum bytes must be a positive safe integer.");
   if (size > limit)
     throw new Error(
-      "Capture exceeds the import byte limit; increase asm.trace.maxImportSizeMiB to import it."
+      "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
     );
 };
 var validateCaptureFileHeader = (value) => {
@@ -487,9 +487,9 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
   }
   /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
    * that durable watermark is ignored even if an unsynced ACK2 is already visible.
-   * A failure permanently poisons the cursor; callers must discard staged facts.
+   * A failure permanently poisons the cursor. Callers must discard staged facts.
    * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-   * @param {Function} accept Provisional synchronous chunk consumer; exceptions poison this cursor.
+   * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
    * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
    * @param {string} publishedFile Final path whose inode must agree before completion.
    * @returns {Promise<void>} Settlement of one bounded read slice.
@@ -590,7 +590,7 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
       throw error;
     }
   }
-  /** Close the pinned inode; pending analysis remains caller-owned and provisional. */
+  /** Close the pinned inode. Pending analysis remains caller-owned and provisional. */
   async close() {
     await this.#handle.close();
   }
@@ -610,7 +610,7 @@ var nativePosition = (value, session, scope) => {
   return position;
 };
 
-// packages/disassembler/src/canonical-json.ts
+// ../disassembler/src/canonical-json.ts
 var canonicalValue = (value) => {
   if (Array.isArray(value)) {
     return value.map(canonicalValue);
@@ -642,13 +642,13 @@ var canonicalValue = (value) => {
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var import_node_crypto3 = require("node:crypto");
 var import_node_fs4 = __toESM(require("node:fs"), 1);
 var import_node_path4 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
 
-// packages/disassembler/src/analysis-sources.ts
+// ../disassembler/src/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].sort();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -704,19 +704,19 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var import_node_crypto = require("node:crypto");
 
-// packages/disassembler/src/project-types.ts
+// ../disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// packages/disassembler/src/record-id-set.ts
+// ../disassembler/src/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
@@ -779,7 +779,7 @@ var RecordIdSet = class {
   }
 };
 
-// packages/disassembler/src/runtime-ppu.ts
+// ../disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect = (effect, access) => {
   const port = access.address & 65535;
   let target = "vram";
@@ -872,7 +872,7 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime-bus-types.ts
+// ../disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact = (fact) => {
   if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
     throw new Error("Invalid bus access coordinates, value, direction or context.");
@@ -906,7 +906,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// packages/disassembler/src/trace-detail.ts
+// ../disassembler/src/trace-detail.ts
 var isArray = (value) => Array.isArray(value);
 var validateRuntimeInstructionDetails = (value, count) => {
   if (!Array.isArray(value) || value.length !== count) {
@@ -942,7 +942,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
   });
 };
 
-// packages/disassembler/src/project-validation.ts
+// ../disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest = (manifest) => {
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
@@ -978,7 +978,7 @@ var validateAnalysisProjectManifest = (manifest) => {
     throw new Error("Invalid analysis sqlite revision.");
   }
   if (manifest.shards.length !== 0) {
-    throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+    throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
   }
 };
 var FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
@@ -1369,7 +1369,7 @@ var validateLoadedShards = (shards, project) => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 var ANALYSIS_PROJECT_REVISION_VERSION = 1;
 var AnalysisProjectStaleError = class extends Error {
@@ -1396,7 +1396,7 @@ var assertAnalysisProjectRevision = (store, expected) => {
   }
 };
 
-// packages/disassembler/src/sqlite-payload.ts
+// ../disassembler/src/sqlite-payload.ts
 var import_node_util = require("node:util");
 var import_node_zlib = require("node:zlib");
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
@@ -1473,7 +1473,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// packages/disassembler/src/sqlite-records.ts
+// ../disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -1752,7 +1752,7 @@ var analysisAddress = (record) => {
   return { addressSpace: null, address: null };
 };
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var parseAnalysisProjectManifest = (input) => {
   if (!input || typeof input !== "object") {
     throw new Error("Invalid analysis project manifest.");
@@ -1760,12 +1760,12 @@ var parseAnalysisProjectManifest = (input) => {
   const manifest = input;
   if (manifest.schemaVersion > 3) {
     throw new Error(
-      `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3; refusing to downgrade.`
+      `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
     );
   }
   validateAnalysisProjectManifest(manifest);
   if (manifest.db !== "analysis.sqlite") {
-    throw new Error("Legacy analysis storage is no longer supported; use a SQLite project.");
+    throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
   }
   return manifest;
 };
@@ -1776,7 +1776,7 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// packages/disassembler/src/project-edit.ts
+// ../disassembler/src/project-edit.ts
 var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
@@ -1813,7 +1813,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record, evidence, referencedBy, conflicts };
 };
 
-// packages/disassembler/src/runtime-evidence.ts
+// ../disassembler/src/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1974,7 +1974,7 @@ var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
       }
     } else {
       throw new Error(
-        `Runtime evidence id '${record.id}' in '${kind}' changed content; use a content-derived id.`
+        `Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`
       );
     }
   }
@@ -1988,7 +1988,7 @@ var mergeRuntimeEvidence = (shards, batch) => {
     }
     if (traceProfiles.has(report.sourceSha256) && traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
       throw new Error(
-        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`
+        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
       );
     }
     traceProfiles.set(report.sourceSha256, report.indexProfile);
@@ -2055,7 +2055,7 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// packages/disassembler/src/sqlite-annotation-query.ts
+// ../disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 var decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
 var runtimeSelect = (pairedState = false) => {
@@ -2181,7 +2181,7 @@ var ensureAnnotationQueryIndexes = (database) => {
 };
 var readSqliteAnnotationView = (database, manifest, ranges) => {
   if (!annotationQueryIndexesReady(database)) {
-    throw new Error("Analysis query indexes changed; refresh the annotation view.");
+    throw new Error("Analysis query indexes changed. Refresh the annotation view.");
   }
   if (ranges.length > 2e3) {
     throw new Error("At most 2000 visible source ranges may be projected per request.");
@@ -2397,7 +2397,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   };
 };
 
-// packages/disassembler/src/sqlite-query-cache.ts
+// ../disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 var upgradeQueryCacheStorage = (db) => {
   const schema = db.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='query_cache'").get();
@@ -2454,7 +2454,7 @@ var writeQueryCache = (db, key2, signature, value) => {
   );
 };
 
-// packages/disassembler/src/sqlite-coverage-query.ts
+// ../disassembler/src/sqlite-coverage-query.ts
 var decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
 var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 var cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
@@ -2790,7 +2790,7 @@ var coveragePage = (db, kind, offset) => {
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
 
-// packages/disassembler/src/sqlite-graph-query.ts
+// ../disassembler/src/sqlite-graph-query.ts
 var decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
 var unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 var numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
@@ -2970,7 +2970,7 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// packages/disassembler/src/sqlite-maintenance.ts
+// ../disassembler/src/sqlite-maintenance.ts
 var import_node_fs2 = __toESM(require("node:fs"), 1);
 var import_node_path3 = __toESM(require("node:path"), 1);
 var SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
@@ -2986,7 +2986,7 @@ var sqliteFileIdentity = (file) => {
   return `${stat.dev}:${stat.ino}`;
 };
 
-// packages/disassembler/src/sqlite-runtime-storage.ts
+// ../disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto2 = require("node:crypto");
 var RUNTIME_STORAGE_SCHEMA = `
 CREATE TABLE runtime_facts (
@@ -3121,7 +3121,7 @@ var SqliteRuntimeWriter = class {
     const fingerprint = (0, import_node_crypto2.createHash)("sha256").update(
       // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
       // per row. Nulls, two-space indentation and the trailing newline preserve
-      // persisted v2 fingerprints; changing the layout would duplicate old facts.
+      // persisted v2 fingerprints. Changing the layout would duplicate old facts.
       // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
       JSON.stringify(
         {
@@ -3185,7 +3185,7 @@ var SqliteRuntimeWriter = class {
   }
 };
 
-// packages/disassembler/src/sqlite-source-query.ts
+// ../disassembler/src/sqlite-source-query.ts
 var collections = ["labels", "comments", "annotations", "regions"];
 var sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
@@ -3272,7 +3272,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
       id: JSON.stringify([row.architecture, row.address_space, row.address]),
       label: hex(Number(row.address)),
       description: `${String(row.executions)} recorded executions`,
-      detail: "Directly observed instruction address. CPU-state variants do not inflate the address count; execution counts exclude duplicate fetched-instruction facts.",
+      detail: "Directly observed instruction address. CPU-state variants do not inflate the address count. Execution counts exclude duplicate fetched-instruction facts.",
       architecture: String(row.architecture),
       addressSpace: String(row.address_space),
       address: Number(row.address),
@@ -3327,7 +3327,7 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// packages/disassembler/src/sqlite-storage-policy.ts
+// ../disassembler/src/sqlite-storage-policy.ts
 var import_node_fs3 = __toESM(require("node:fs"), 1);
 var DEFAULT_ANALYSIS_STORAGE_POLICY = {
   cacheMaxBytes: 256 * 1024 ** 2,
@@ -3390,7 +3390,7 @@ var enforceDatabaseBudget = (db) => {
   const bytes = pages * Number(db.prepare("PRAGMA page_size").get().page_size);
   if (bytes > budget) {
     throw new Error(
-      `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back; increase the budget or run storage maintenance.`
+      `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back. Increase the budget or run storage maintenance.`
     );
   }
 };
@@ -3442,17 +3442,17 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// packages/disassembler/src/trace-cache.ts
+// ../disassembler/src/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
-  /** Dense victim slots avoid scanning the Map; hits never reorder either structure. */
+  /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
   #keys = [];
   #metrics;
   #random = 2654435769;
   constructor(metrics) {
     this.#metrics = metrics;
   }
-  /** Look up a value; undefined is reserved for misses.
+  /** Look up a value. Undefined is reserved for misses.
    * @param {string} key Complete semantic key, never a lossy coordinate projection.
    * @returns {T | undefined} Retained value, or a cache miss.
    */
@@ -3499,12 +3499,12 @@ var TraceCache = class {
     return displaced;
   }
   /** Iterate the retained working set, for a final durable delta flush.
-   * @returns {MapIterator} Live entries; do not insert while iterating.
+   * @returns {MapIterator} Live entries. Do not insert while iterating.
    */
   entries() {
     return this.#entries.entries();
   }
-  /** Drop retained values after a flush or failed import; diagnostics remain cumulative. */
+  /** Drop retained values after a flush or failed import. Diagnostics remain cumulative. */
   clear() {
     this.#entries.clear();
     this.#keys.length = 0;
@@ -3512,7 +3512,7 @@ var TraceCache = class {
   }
 };
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 var ANALYSIS_SQLITE_STORAGE_VERSION = 2;
 var SCHEMA = `
@@ -3603,7 +3603,7 @@ var parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
 var SqliteAnalysisStore = class {
   #database;
   #fileIdentity;
-  /** Database path as supplied at construction; resolves relative to cwd when not absolute. */
+  /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
   file;
   #insertEvidence;
   #insertLabel;
@@ -3621,10 +3621,10 @@ var SqliteAnalysisStore = class {
   /**
    * Opens or creates a project database.
    * Opening validates physical format, not every semantic record, and may create SQLite journal files.
-   * Connections use a 5,000 ms busy timeout; lock contention can still throw a SQLite error.
-   * @param {string} file SQLite path; parent directory must already exist.
-   * @param {boolean} [createSchema] Defaults to true; permit initialization of an empty database, never upgrade an existing one.
-   * @param {boolean} [deferIndexes] Defaults to false; migration-only bulk load, completed by finishMigration.
+   * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
+   * @param {string} file SQLite path. Parent directory must already exist.
+   * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+   * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
    */
   constructor(file, createSchema = true, deferIndexes = false) {
     assertNoSqliteMigration(file);
@@ -3655,7 +3655,7 @@ var SqliteAnalysisStore = class {
       const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
       if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
         throw new Error(
-          `Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+          `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
         );
       }
       this.#database.exec(
@@ -3716,7 +3716,7 @@ var SqliteAnalysisStore = class {
     this.#dictionaryCacheBytes = 0;
   }
   /**
-   * Intern exact text with a bounded cache; callers hold the SQLite writer lock.
+   * Intern exact text with a bounded cache. Callers hold the SQLite writer lock.
    * @param {string} table One of the two prepared dictionary tables.
    * @param {string} value Exact prefix or serialized evidence list.
    * @returns {number} Transactionally created or existing dictionary rowid.
@@ -3814,18 +3814,18 @@ var SqliteAnalysisStore = class {
   /**
    * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
    * the revision so a competing process cannot slip between the stale check and publication.
-   * Throwing rolls back records and manifest changes. Promise/thenable results are rejected; perform
+   * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
    * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
-   * the manifest themselves when changing semantic records; prefer the commitAnalysisProject APIs.
-   * @param {Function} action Synchronous work; cursors must be consumed before returning.
-   * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE); false uses deferred BEGIN for reads, not an enforced read-only connection.
+   * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
+   * @param {Function} action Synchronous work. Cursors must be consumed before returning.
+   * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
    * @returns {T} Callback result after a successful commit.
    */
   transaction(action, write = true) {
     assertNoSqliteMigration(this.file);
     if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
       throw new Error(
-        "Analysis database was replaced; close this connection and reload the project."
+        "Analysis database was replaced. Close this connection and reload the project."
       );
     }
     this.#clearDictionaryCache();
@@ -3856,7 +3856,7 @@ var SqliteAnalysisStore = class {
    * main, allowing other project writers to proceed during asynchronous capture parsing.
    * @param {Function} action Async parser using only the supplied temporary counter index.
    * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-   * @returns {Promise} Parser result after temporary counters commit; the index lives until connection close.
+   * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
    */
   async indexTrace(action, metrics) {
     this.#database.exec(`CREATE TEMP TABLE trace_facts (
@@ -3944,7 +3944,7 @@ var SqliteAnalysisStore = class {
       throw new Error("Analysis mutation requires a transaction.");
     }
   }
-  /** Apply a selected metadata edit by stable ID; omitted records are never deleted.
+  /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
    * Validation and optimistic revision checks belong to the publication API.
    * @param {AnalysisProjectShards} before Original selected view.
    * @param {AnalysisProjectShards} after Edited selected view.
@@ -3971,7 +3971,7 @@ var SqliteAnalysisStore = class {
         }
         const stored = find.get(id);
         if (canonicalJson(stored ? parseRecord(stored.payload) : void 0) !== canonicalJson(prior)) {
-          throw new Error(`Selected ${kind} record '${id}' changed; reload before editing.`);
+          throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
         }
         remove.run(id);
         if (record) {
@@ -3996,7 +3996,7 @@ var SqliteAnalysisStore = class {
   /**
    * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
    * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
-   * Semantic validation belongs to the project publication API; this method must run in its transaction.
+   * Semantic validation belongs to the project publication API. This method must run in its transaction.
    * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
    */
   replaceTables(shards) {
@@ -4049,7 +4049,7 @@ var SqliteAnalysisStore = class {
   }
   /**
    * Replace runtime by interned external identities, including virtual paired-state records.
-   * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
+   * @param {Array} records Complete semantic runtime replacement. Duplicate IDs remain errors.
    */
   #replaceRuntime(records) {
     this.#database.exec(
@@ -4081,7 +4081,7 @@ var SqliteAnalysisStore = class {
    * Append validated migration rows without materializing a complete table. Runtime IDs are checked
    * through the logical view because paired states share physical storage with an instruction.
    * @param {ShardKind} kind Destination semantic table.
-   * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+   * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
    */
   appendRecords(kind, records) {
     this.#requireTransaction();
@@ -4096,10 +4096,10 @@ var SqliteAnalysisStore = class {
     }
   }
   /**
-   * Insert a content-addressed runtime fact once; an ID collision with different content is an
+   * Insert a content-addressed runtime fact once. An ID collision with different content is an
    * error, never a silent no-op. Count values are already aggregated within the source capture.
    * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-   * @returns {boolean} True when inserted; identical facts return false and conflicting facts throw.
+   * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
    */
   insertRuntime(record) {
     this.#requireTransaction();
@@ -4117,9 +4117,9 @@ var SqliteAnalysisStore = class {
     return true;
   }
   /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
-   * New namespaces need no per-record existence query; SQL uniqueness still rejects repeated IDs.
+   * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
    * Existing/partially pruned sources use full idempotency and collision checks for every record.
-   * The callback must not escape its transaction; any insertion error must abort the whole batch.
+   * The callback must not escape its transaction. Any insertion error must abort the whole batch.
    * @param {string} prefix Exact ID prefix including its final colon.
    * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
    */
@@ -4184,7 +4184,7 @@ var SqliteAnalysisStore = class {
   }
   /**
    * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
-   * Use a transaction when combining it with other reads; this does not validate the entire project.
+   * Use a transaction when combining it with other reads. This does not validate the entire project.
    * @returns {AnalysisProjectManifest} Pointer manifest.
    */
   manifest() {
@@ -4196,7 +4196,7 @@ var SqliteAnalysisStore = class {
   }
   /**
    * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-   * @param {Array} kinds Runtime discriminators to include; empty selects nothing.
+   * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
    * @returns {IterableIterator} Cursor consumed within the owning read transaction.
    * @yields {RuntimeEvidenceRecord} One matching decoded fact.
    */
@@ -4213,7 +4213,7 @@ var SqliteAnalysisStore = class {
   }
   /**
    * Stream runtime facts without retaining the complete table. Consume before the owning transaction
-   * returns or the connection closes; an escaped iterator does not preserve its original snapshot.
+   * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
    * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
    * @yields {RuntimeEvidenceRecord} One runtime fact.
    */
@@ -4223,7 +4223,7 @@ var SqliteAnalysisStore = class {
     }
   }
   /**
-   * Read one metadata table directly; Sources must not load unrelated CFG or runtime tables.
+   * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
    * @param {string} kind Metadata table name from the semantic collection contract.
    * @returns {Array} Decoded metadata in deterministic display order.
    */
@@ -4288,7 +4288,7 @@ var SqliteAnalysisStore = class {
     };
   }
   /** Produce an explicit complete evidence report one qualified PC at a time.
-   * Only report output accumulates; unused instruction/memory histories and CFG contexts are never loaded.
+   * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
    * @returns {object} Runtime record count, conflicts, and metadata explanations.
    */
   inspectEvidence() {
@@ -4325,8 +4325,8 @@ var SqliteAnalysisStore = class {
       explanations: inspectRuntimeEvidence(shards).explanations
     };
   }
-  /** Select record choices before decoding; explicit IDs bypass unrelated history entirely.
-   * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs; omitted lists the first 200 records per collection.
+  /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+   * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
    * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
    */
   evidenceChoices(selected) {
@@ -4438,7 +4438,7 @@ var SqliteAnalysisStore = class {
       return { ...base, referencedBy, referencedByTotal };
     }, false);
   }
-  /** Exact coverage totals; build only when classifications, code, or runtime facts changed.
+  /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
    * @returns {object} Persisted summary and detail count.
    */
   coverageSummary() {
@@ -4457,7 +4457,7 @@ var SqliteAnalysisStore = class {
       );
       const published = cachedCoverage(this.#database, this.manifest());
       if (!published) {
-        throw new Error("Project changed while building coverage; refresh the view.");
+        throw new Error("Project changed while building coverage. Refresh the view.");
       }
       return published;
     } finally {
@@ -4490,7 +4490,7 @@ var SqliteAnalysisStore = class {
       );
       const published = readQueryCache(this.#database, "graph", "2");
       if (!published) {
-        throw new Error("Analysis changed while building the graph; refresh the view.");
+        throw new Error("Analysis changed while building the graph. Refresh the view.");
       }
       graph = published;
     } finally {
@@ -4507,13 +4507,13 @@ var SqliteAnalysisStore = class {
       }))
     };
   }
-  /** Cache a compact target-specific result; callers declare every persisted input it consumes.
+  /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
    * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
-   * Concurrent input changes discard cache publication; results still belong to one read snapshot.
+   * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
    * @param {string} key Internal stable query name.
    * @param {string} signature Layout/configuration fingerprint.
    * @param {readonly ShardKind[]} dependencies Source collections.
-   * @param {Function} compute Synchronous reader; must not open another transaction.
+   * @param {Function} compute Synchronous reader. Must not open another transaction.
    * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
    * @returns {T} Current projected value.
    */
@@ -4536,7 +4536,7 @@ var SqliteAnalysisStore = class {
     });
     return result;
   }
-  /** CPU architectures at one PC from indexed scalar columns; register payloads are untouched.
+  /** CPU architectures at one PC from indexed scalar columns. Register payloads are untouched.
    * @param {string} space Exact logical address space.
    * @param {number} address Instruction address.
    * @returns {string[]} Distinct observed architecture IDs.
@@ -4565,7 +4565,7 @@ var SqliteAnalysisStore = class {
         }
       );
       if (!readQueryCache(this.#database, "runtime_architectures", "2")) {
-        throw new Error("Runtime changed while building processor hints; refresh the view.");
+        throw new Error("Runtime changed while building processor hints. Refresh the view.");
       }
     } finally {
       this.#database.exec("DROP TABLE IF EXISTS temp.runtime_architectures_pending");
@@ -4603,7 +4603,7 @@ var SqliteAnalysisStore = class {
    * @param {string} architecture Exact runtime architecture.
    * @param {string} space Instruction and accessed logical space.
    * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-   * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations; counts/provenance stay exact.
+   * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
    * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
    */
   *runtimeMemoryAtAddresses(architecture, space, addresses) {
@@ -4617,7 +4617,7 @@ var SqliteAnalysisStore = class {
       yield runtimeFromRow({ ...row, count: row.total });
     }
   }
-  /** Decode-state variants aggregated in SQL; raw register histories never become a JS array.
+  /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
    * The signature includes the ordered state fields and architecture. Aliases remain distinct so
    * the target decoder retains its original precedence and validation rules.
    * @param {string} architecture Exact instruction architecture.
@@ -4687,7 +4687,7 @@ var SqliteAnalysisStore = class {
         }
       );
       if (!readQueryCache(this.#database, "instruction_variants", signature)) {
-        throw new Error("Runtime changed while building instruction variants; retry reanalysis.");
+        throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
       }
     } finally {
       this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
@@ -4752,7 +4752,7 @@ var SqliteAnalysisStore = class {
     );
     return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
   }
-  /** Exact SQL counts for a catalog source; no baseline or inferred static execution.
+  /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
    * @param {string} sourceId Catalog source ID.
    * @returns {object} Manifest and source counts.
    */
@@ -4796,7 +4796,7 @@ var SqliteAnalysisStore = class {
     validateLoadedShards(shards, manifest);
     return { manifest, shards };
   }
-  /** Small export metadata; instruction candidates are supplied separately by an ordered SQL cursor.
+  /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
    * @returns {object} Validated manifest, metadata, and an empty runtime collection.
    */
   sourceExportView() {
@@ -4815,7 +4815,7 @@ var SqliteAnalysisStore = class {
     return { manifest, shards };
   }
   /**
-   * Stream one file-offset group at a time; do not retain the complete CFG to plan source.
+   * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
    * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
    * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
    * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
@@ -4849,7 +4849,7 @@ var SqliteAnalysisStore = class {
   /**
    * Read and validate only the requested instruction metadata and bounded runtime details.
    * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-   * @returns {SqliteAnnotationView} Small view; consume inside the caller's read transaction.
+   * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
    */
   instructionAnnotationView(ranges) {
     const manifest = this.manifest();
@@ -4880,7 +4880,7 @@ var SqliteAnalysisStore = class {
    * @param {string} addressSpace Exact debug-map/native address space.
    * @param {number} address Instruction start in that space.
    * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-   * @returns {AnalysisProjectShards["analysis"]} Location representatives; state variants need not be loaded to edit a comment.
+   * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
    */
   annotationNodesAt(addressSpace, address, outputOffset) {
     const rows = this.#database.prepare(`SELECT payload FROM analysis WHERE rowid IN (
@@ -4924,7 +4924,7 @@ var SqliteAnalysisStore = class {
   }
   /**
    * Build deferred indexes and check all physical structures before closing a staged migration file.
-   * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+   * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
    * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
    */
   finishMigration() {
@@ -4944,7 +4944,7 @@ var SqliteAnalysisStore = class {
   }
   /**
    * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-   * @param {boolean} [runtime] Defaults to true; false omits runtime and must not be treated as a complete replacement.
+   * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
    * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
    */
   loadShards(runtime = true) {
@@ -5025,14 +5025,14 @@ var SqliteAnalysisStore = class {
       }
     }
   }
-  /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
+  /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
   compact() {
     const disk = import_node_fs4.default.statfsSync(import_node_path4.default.dirname(this.file));
     const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
     const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
     if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
       throw new Error(
-        "Insufficient free disk space for SQLite VACUUM; allow twice the database size."
+        "Insufficient free disk space for SQLite VACUUM. Allow twice the database size."
       );
     }
     this.transaction(() => {
@@ -5043,7 +5043,7 @@ var SqliteAnalysisStore = class {
     });
     this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
   }
-  /** Current persisted policy; defaults do not write or change the semantic revision.
+  /** Current persisted policy. Defaults do not write or change the semantic revision.
    * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
    */
   storagePolicy() {
@@ -5065,7 +5065,7 @@ var SqliteAnalysisStore = class {
   storageSnapshot() {
     return storageSnapshot(this.#database, this.file);
   }
-  /** Optional projection allocation, including secondary indexes; reserved for explicit accounting.
+  /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
    * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
    */
   storageCacheBytes() {
@@ -5084,7 +5084,7 @@ var SqliteAnalysisStore = class {
   captureCatalog() {
     return this.#database.prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256").all();
   }
-  /** Record the first successful import atomically with its facts; reimports only refresh last-seen time.
+  /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
    * @param {ImportReport} report Successfully validated native trace import.
    */
   recordCaptureReceipt(report) {
@@ -5124,10 +5124,10 @@ var SqliteAnalysisStore = class {
   }
 };
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var import_node_crypto4 = require("node:crypto");
 
-// packages/disassembler/src/runtime-graphics.ts
+// ../disassembler/src/runtime-graphics.ts
 var mapVram = (address, mapping) => {
   if (mapping === 0) {
     return address;
@@ -5354,7 +5354,7 @@ var createRuntimeGraphicsAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime-transfer.ts
+// ../disassembler/src/runtime-transfer.ts
 var validateRuntimeTransferBoundary = (marker) => {
   const { configuration: c } = marker;
   if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
@@ -5456,7 +5456,7 @@ var createRuntimeTransferAccumulator = () => {
     }
   };
   return {
-    /** Attach only DMA/HDMA payload events; table/pointer fetches remain separate bus evidence.
+    /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
      * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
      */
     push: (event) => {
@@ -5542,7 +5542,7 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
 var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 var unsigned = (value) => {
@@ -5884,7 +5884,7 @@ ${JSON.stringify(meta)}
         unsupported: [],
         warnings: [
           "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
-          transfers ? "Transfer totals use explicit native boundaries. Partial windows stay explicit; full configuration and ordered history require the capture archive." : "Activity counts describe observed bus accesses; transfer boundaries, register setup and source instructions are not inferred."
+          transfers ? "Transfer totals use explicit native boundaries. Partial windows stay explicit. Full configuration and ordered history require the capture archive." : "Activity counts describe observed bus accesses. Transfer boundaries, register setup and source instructions are not inferred."
         ]
       };
       return {
@@ -5910,7 +5910,7 @@ ${JSON.stringify(meta)}
               source: "runtime",
               sourceId: `${meta.producer.id}:${meta.producer.revision}`,
               confidence: "certain",
-              detail: `${observed} lossless bus accesses; ${observed - contexts.instruction} without an owning instruction.`,
+              detail: `${observed} lossless bus accesses. ${observed - contexts.instruction} without an owning instruction.`,
               artifact: {
                 format: RUNTIME_BUS_TRACE_FORMAT,
                 formatVersion: "1",
@@ -5929,7 +5929,7 @@ ${JSON.stringify(meta)}
   return { push, finish };
 };
 
-// packages/disassembler/src/runtime-bus-project.ts
+// ../disassembler/src/runtime-bus-project.ts
 var import_node_fs5 = __toESM(require("node:fs"), 1);
 var captureFileIdentity = (file) => {
   const stat = import_node_fs5.default.statSync(file, { bigint: true });
@@ -6050,7 +6050,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
       options.onStage?.("Recycling SQLite caches and WAL\u2026");
       checkpointBusy = store.maintainStorage().checkpointBusy;
     } catch (error) {
-      warnings.push(`Bus import committed; storage maintenance deferred: ${String(error)}`);
+      warnings.push(`Bus import committed. Storage maintenance deferred: ${String(error)}`);
     }
     const after = store.storageSnapshot();
     const newFacts = after.facts - before.facts;
@@ -6070,7 +6070,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   }
 };
 
-// packages/vscode-extension/src/live-bus-analysis-process.ts
+// src/runtime/live-bus-analysis-process.ts
 var cancellation = new AbortController();
 var latest;
 var started = false;
@@ -6174,7 +6174,7 @@ async function runLiveBusAnalysis(options) {
             peakLagBytes = Math.max(peakLagBytes, lag);
             if (lag > options.maxLagBytes) {
               throw new Error(
-                "Live analysis exceeded its lag budget; recording continues. Import the completed archive offline."
+                "Live analysis exceeded its lag budget. Recording continues. Import the completed archive offline."
               );
             }
             const sliceStarted = profile ? performance.now() : 0;

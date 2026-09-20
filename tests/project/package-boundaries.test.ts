@@ -46,7 +46,7 @@ const STATIC_CATALOG_IMPORTS = new Set([
   "superFxCatalog",
 ]);
 
-/** Scan implementation files only; generated declarations do not own dependencies. */
+/** Scan implementation files only. Generated declarations do not own dependencies. */
 const listTypeScriptFiles = (directory: string): string[] => {
   if (!fs.existsSync(directory)) {
     return [];
@@ -298,7 +298,7 @@ function collectPackageBoundaryViolations(root = process.cwd()): PackageBoundary
   return violations;
 }
 
-/** Create a minimal workspace; each caller removes it with t.teardown. */
+/** Create a minimal workspace. Each caller removes it with t.teardown. */
 const boundaryFixture = (): string => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-boundaries-"));
   const write = (file: string, contents: string): void => {

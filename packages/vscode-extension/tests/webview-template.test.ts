@@ -37,7 +37,7 @@ const extensionRoot = path.resolve("packages/vscode-extension");
 const uri = (file: string) => ({ fsPath: file, toString: () => `file://${file}` });
 
 const render = (
-  name: "annotation" | "panel",
+  name: "annotation" | "panel" | "disassembly",
   options: {
     root?: string;
     cspSource?: string;
@@ -71,7 +71,7 @@ const nonce = (html: string): string => {
 };
 
 test("packaged templates fill CSP, shared nonce and media URLs", (t) => {
-  for (const name of ["annotation", "panel"] as const) {
+  for (const name of ["annotation", "panel", "disassembly"] as const) {
     const { html, assets } = render(name);
     t.false(html.includes("{{"));
     t.true(html.includes("style-src https://webview.example"));

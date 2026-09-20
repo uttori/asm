@@ -37,22 +37,9 @@ export class DirectiveRegistry {
     registerLowered(keyword, context, handler) {
         this.register(keyword, context, handler, "lowered");
     }
-    /**
-     * Checks whether it has the value.
-     * @param {string} keyword The keyword.
-     * @returns {boolean} The result.
-     */
     has(keyword) {
         return this.lookup(keyword) !== undefined;
     }
-    /**
-     * Dispatches the value.
-     * @param {string} keyword The keyword.
-     * @param {readonly string[]} words The words.
-     * @param {string} raw The raw.
-     * @param {NormalizedCommand} [command] The command.
-     * @returns {boolean} The result.
-     */
     dispatch(keyword, words, raw, command) {
         const handler = this.lookup(keyword);
         if (!handler) {

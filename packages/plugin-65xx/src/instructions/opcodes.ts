@@ -12,7 +12,7 @@ import { variantFormsByCpuId } from "./variants.js";
 /**
  * 16×16 NMOS 6502 decode grid (row = high nibble, column = low nibble).
  * Each cell is `MNEMONIC:mode`. Undocumented opcodes stay in the table so
- * `65xx.6502x` can assemble them; `65xx.6502` filters to `legalOpcodes`.
+ * `65xx.6502x` can assemble them. `65xx.6502` filters to `legalOpcodes`.
  */
 const rows = [
   "BRK:imp ORA:inx JAM:imp SLO:inx NOP:zp ORA:zp ASL:zp SLO:zp PHP:imp ORA:imm ASL:acc ANC:imm NOP:abs ORA:abs ASL:abs SLO:abs",
@@ -84,7 +84,7 @@ const aliases: Readonly<Record<string, readonly string[]>> = {
 
 /**
  * Unofficial opcodes whose result depends on analog bus behavior / die revision.
- * We still emit a ca65-compatible byte; we do not promise runtime semantics.
+ * We still emit a ca65-compatible byte. We do not promise runtime semantics.
  */
 const unstable = new Set([
   "ANE:immediate",
@@ -121,7 +121,7 @@ const mutableForms: MutableForm[] = decoded.map((entry, opcode) => {
   let note: string | undefined;
   if (unstable.has(key)) {
     note =
-      "Opcode semantics are unstable or chip-dependent; assembly emits the canonical ca65-compatible byte.";
+      "Opcode semantics are unstable or chip-dependent. Assembly emits the canonical ca65-compatible byte.";
   } else if (opcode === 0x6c) {
     note =
       "NMOS hardware wraps the high-byte fetch within the same page when the indirect pointer ends in $FF.";
@@ -152,7 +152,7 @@ for (const form of mutableForms) {
 for (const group of groups.values()) {
   const preferred = group.find((form) => form.documented) ?? group[0];
   // Duplicate encodings (e.g. unofficial NOP mirrors): prefer the documented
-  // opcode when assembling; the full decode table still lists every cell.
+  // opcode when assembling. The full decode table still lists every cell.
   if (preferred) {
     preferred.canonical = true;
   }
@@ -165,7 +165,7 @@ export const nmos6502DecodeTable: readonly InstructionForm[] = Object.freeze(
 
 /**
  * ca65-guide BRK signature: `BRK #$nn` / zp / abs all emit `$00` + one byte.
- * Pinned ca65 V2.19 rejects this; we keep it for current-guide compatibility.
+ * Pinned ca65 V2.19 rejects this. We keep it for current-guide compatibility.
  */
 const brkSignatureForms: readonly InstructionForm[] = Object.freeze(
   (["immediate", "zeroPage", "absolute"] as const).map<InstructionForm>((mode) => ({
@@ -179,7 +179,7 @@ const brkSignatureForms: readonly InstructionForm[] = Object.freeze(
     canonical: true,
     documented: true,
     stability: "documented",
-    note: "Current ca65-guide BRK signature extension; pinned ca65 V2.19 rejects this form.",
+    note: "Current ca65-guide BRK signature extension. Pinned ca65 V2.19 rejects this form.",
   })),
 );
 
@@ -213,7 +213,7 @@ export const nmos6502xCpu: CpuDefinition = Object.freeze({
  * Looks up the NMOS decode-table form for a byte.
  *
  * @param {number} opcode Opcode 0–255.
- * @returns {InstructionForm} The form at that slot (always defined; unofficial included).
+ * @returns {InstructionForm} The form at that slot (always defined, unofficial included).
  */
 export function getOpcodeForm(opcode: number): InstructionForm {
   if (!Number.isInteger(opcode) || opcode < 0 || opcode > 0xff) {
@@ -223,7 +223,7 @@ export function getOpcodeForm(opcode: number): InstructionForm {
 }
 
 /**
- * Full decode table for a CPU: CMOS variants use generated tables;
+ * Full decode table for a CPU: CMOS variants use generated tables.
  * NMOS uses {@link nmos6502DecodeTable} filtered by features.
  * @param {CpuDefinition} cpu The CPU definition.
  * @returns {readonly InstructionForm[]} The decode table.
@@ -238,7 +238,7 @@ export function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[
 
 /**
  * Forms the assembler will encode (canonical only). Decode tables keep
- * duplicate unofficial encodings; assembly does not.
+ * duplicate unofficial encodings. Assembly does not.
  * @param {CpuDefinition} cpu The CPU definition.
  * @returns {readonly InstructionForm[]} The assembly forms.
  */

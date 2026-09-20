@@ -1,7 +1,7 @@
 import type { ExpressionNode } from "./ir/expression-node.js";
 import type { NormalizedCommand } from "./ir/normalized-command.js";
 import type { OperandSyntax } from "./operand-syntax.js";
-/** Expression values are numeric or string literals; conversion is the caller's responsibility. */
+/** Expression values are numeric or string literals. Conversion is the caller's responsibility. */
 export type MathValue = number | string;
 /** Text after define/expression expansion with target-neutral lexical information. */
 export interface ExpandedOperand {
@@ -10,10 +10,10 @@ export interface ExpandedOperand {
     expanded: string;
     /** Target-neutral byte width inferred from the resolved value or literal spelling. */
     length: number;
-    /** Lexical facts only; register and addressing-mode validity remain architecture-owned. */
+    /** Lexical facts only. Register and addressing-mode validity remain architecture-owned. */
     syntax: OperandSyntax;
 }
-/** Operand classification passed to encoders; architecture-specific modes live in mode/metadata. */
+/** Operand classification passed to encoders. Architecture-specific modes live in mode/metadata. */
 export interface LoweredOperand {
     /** Architecture-owned addressing-mode identifier. */
     mode?: string;
@@ -51,7 +51,7 @@ export interface EncoderEmissionContext {
     write3(value: number): void;
     writeByte(value: number): void;
     writeBytes(values: readonly number[]): void;
-    /** Width is in bytes; omitted endianness means little-endian. */
+    /** Width is in bytes. Omitted endianness means little-endian. */
     writeValue(value: number, width: number, endianness?: "little" | "big"): void;
 }
 /** Current logical byte address used for layout and branch-size estimates. */
@@ -64,7 +64,7 @@ export interface EncoderBranchContext {
     findNextLabel(label: string, referenceAddress: number): number;
     findPreviousLabel(label: string, referenceAddress: number): number;
 }
-/** Creates source-attributed errors; the encoder decides when to throw them. */
+/** Creates source-attributed errors. The encoder decides when to throw them. */
 export interface EncoderDiagnosticContext {
     error(message: string): Error;
 }
@@ -76,7 +76,7 @@ export interface ArchitectureEncoderContext {
     branches: EncoderBranchContext;
     diagnostics: EncoderDiagnosticContext;
 }
-/** Convenience facade over encoder capabilities; address and label policy remain live getters. */
+/** Convenience facade over encoder capabilities. Address and label policy remain live getters. */
 export interface EncoderRuntime {
     operandResolver: OperandResolutionContext;
     write1(value: number): void;
@@ -99,7 +99,7 @@ export interface EncoderRuntime {
  * @returns {EncoderRuntime} A facade whose address and label-policy getters read live session values.
  */
 export declare const createEncoderRuntime: (context: ArchitectureEncoderContext) => EncoderRuntime;
-/** Host services used by the expression evaluator; logical addresses are distinct from file offsets. */
+/** Host services used by the expression evaluator. Logical addresses are distinct from file offsets. */
 export interface ExpressionHost {
     resolveLabel(identifier: string): MathValue;
     convertLogicalToOutputOffset(address: number): number;
@@ -108,7 +108,7 @@ export interface ExpressionHost {
     getCurrentBaseAddress(): number;
     isDefined(identifier: string): number;
     getExpressionObjectSize(identifier: string, baseOnly?: boolean): number;
-    /** Optional for non-assembler hosts; reflects declared bounds, never reads emitted data. */
+    /** Optional for non-assembler hosts. Reflects declared bounds, never reads emitted data. */
     getExpressionStructMetadata?(identifier: string, property: import("./services/struct-metadata.js").StructMetadataProperty): number;
     getFileSize(filename: string): number;
     getFileStatus(filename: string): number;
@@ -157,11 +157,11 @@ export interface InstructionDescriptor {
     /** The addressing-mode forms supported by the mnemonic. */
     modes: InstructionAddressingMode[];
 }
-/** Per-session encoder. Sizing returns byte counts; encoding reports whether it handled the instruction. */
+/** Per-session encoder. Sizing returns byte counts. Encoding reports whether it handled the instruction. */
 export interface ArchitectureEncoder {
-    /** Estimate total instruction bytes without emitting output; words include the mnemonic. */
+    /** Estimate total instruction bytes without emitting output. Words include the mnemonic. */
     estimateSize(words: readonly string[]): number;
-    /** Emit through the supplied emission context; false indicates an unrecognized instruction. */
+    /** Emit through the supplied emission context. False indicates an unrecognized instruction. */
     encode(words: readonly string[]): boolean;
     estimateInstruction?(instruction: LoweredInstruction): number;
     encodeInstruction?(instruction: LoweredInstruction): boolean;

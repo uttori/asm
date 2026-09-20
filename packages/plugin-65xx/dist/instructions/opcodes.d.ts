@@ -11,11 +11,11 @@ export declare const nmos6502xCpu: CpuDefinition;
  * Looks up the NMOS decode-table form for a byte.
  *
  * @param {number} opcode Opcode 0–255.
- * @returns {InstructionForm} The form at that slot (always defined; unofficial included).
+ * @returns {InstructionForm} The form at that slot (always defined, unofficial included).
  */
 export declare function getOpcodeForm(opcode: number): InstructionForm;
 /**
- * Full decode table for a CPU: CMOS variants use generated tables;
+ * Full decode table for a CPU: CMOS variants use generated tables.
  * NMOS uses {@link nmos6502DecodeTable} filtered by features.
  * @param {CpuDefinition} cpu The CPU definition.
  * @returns {readonly InstructionForm[]} The decode table.
@@ -23,7 +23,7 @@ export declare function getOpcodeForm(opcode: number): InstructionForm;
 export declare function getCpuDecodeTable(cpu: CpuDefinition): readonly InstructionForm[];
 /**
  * Forms the assembler will encode (canonical only). Decode tables keep
- * duplicate unofficial encodings; assembly does not.
+ * duplicate unofficial encodings. Assembly does not.
  * @param {CpuDefinition} cpu The CPU definition.
  * @returns {readonly InstructionForm[]} The assembly forms.
  */

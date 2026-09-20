@@ -2,7 +2,11 @@ import { chmodSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { build } from "esbuild";
+import { build as esbuild } from "esbuild";
+
+import { withBundleNotices } from "../../scripts/bundle-notices.mjs";
+
+const build = withBundleNotices(esbuild);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outfile = path.join(here, "out/cli.mjs");

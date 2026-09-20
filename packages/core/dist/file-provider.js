@@ -6,9 +6,9 @@ import path from "node:path";
 export class NodeAssemblyFileProvider {
     /**
      * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-     * @param {string} filename The filename.
-     * @param {AssemblyFileResolutionOptions} [options] The options.
-     * @returns {string | undefined} The result.
+     * @param {string} filename Include path token, optionally quoted.
+     * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
+     * @returns {string | undefined} First existing file identity, or undefined.
      */
     resolvePath(filename, options = {}) {
         if (!filename) {
@@ -35,11 +35,6 @@ export class NodeAssemblyFileProvider {
         }
         return undefined;
     }
-    /**
-     * Reads metadata for the value.
-     * @param {string} filePath The file path.
-     * @returns {AssemblyFileStat} The result.
-     */
     stat(filePath) {
         let st;
         try {
@@ -56,20 +51,9 @@ export class NodeAssemblyFileProvider {
             return { exists: true, readable: false, mtimeMs: st.mtimeMs };
         }
     }
-    /**
-     * Reads file.
-     * @param {string} filePath The file path.
-     * @returns {Uint8Array} The result.
-     */
     readFile(filePath) {
         return new Uint8Array(fs.readFileSync(filePath));
     }
-    /**
-     * Reads text file.
-     * @param {string} filePath The file path.
-     * @param {BufferEncoding} [encoding] The encoding.
-     * @returns {string} The result.
-     */
     readTextFile(filePath, encoding = "utf8") {
         return fs.readFileSync(filePath, encoding);
     }
@@ -79,7 +63,7 @@ export class NodeAssemblyFileProvider {
  */
 export class MemoryAssemblyFileProvider {
     options;
-    /** Mutable document map; construction copies keys/entries but retains supplied byte-array values. */
+    /** Mutable document map. Construction copies keys/entries but retains supplied byte-array values. */
     files;
     constructor(files = new Map(), options = {}) {
         this.options = options;
@@ -87,9 +71,9 @@ export class MemoryAssemblyFileProvider {
     }
     /**
      * Match an exact virtual key, then search macro/source/include directories and workingDirectory.
-     * @param {string} filename The filename.
-     * @param {AssemblyFileResolutionOptions} [options] The options.
-     * @returns {string | undefined} The result.
+     * @param {string} filename Include path token, optionally quoted.
+     * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
+     * @returns {string | undefined} First existing file identity, or undefined.
      */
     resolvePath(filename, options = {}) {
         if (!filename) {
@@ -116,11 +100,6 @@ export class MemoryAssemblyFileProvider {
         }
         return undefined;
     }
-    /**
-     * Reads metadata for the value.
-     * @param {string} filePath The file path.
-     * @returns {AssemblyFileStat} The result.
-     */
     stat(filePath) {
         const entry = this.files.get(filePath);
         if (entry === undefined) {
@@ -135,11 +114,6 @@ export class MemoryAssemblyFileProvider {
             size: typeof entry === "string" ? Buffer.byteLength(entry, "utf8") : entry.length,
         };
     }
-    /**
-     * Reads file.
-     * @param {string} filePath The file path.
-     * @returns {Uint8Array} The result.
-     */
     readFile(filePath) {
         const entry = this.files.get(filePath);
         if (entry === undefined) {
@@ -149,12 +123,6 @@ export class MemoryAssemblyFileProvider {
             ? new Uint8Array(Buffer.from(entry, "utf8"))
             : new Uint8Array(entry);
     }
-    /**
-     * Reads text file.
-     * @param {string} filePath The file path.
-     * @param {BufferEncoding} [encoding] The encoding.
-     * @returns {string} The result.
-     */
     readTextFile(filePath, encoding = "utf8") {
         const entry = this.files.get(filePath);
         if (entry === undefined) {

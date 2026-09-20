@@ -5,7 +5,7 @@ export interface AssetPreviewContext {
     readonly decoded: AssetDecodeResult;
     readonly verification: AssetVerificationRecord;
 }
-/** Optional presentation layer; never participates in binary encoding. */
+/** Optional presentation layer. Never participates in binary encoding. */
 export interface AssetPreviewRenderer {
     readonly id: string;
     readonly version: string;

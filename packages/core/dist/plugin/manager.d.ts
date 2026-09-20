@@ -1,12 +1,12 @@
 import type { AssemblerPlugin, AssemblerPluginManifest, PluginDisposable, PluginLogger } from "./contracts.js";
 import { AssemblerEnvironment } from "./environment.js";
-/** In-memory plugin activation; module text is diagnostic context, never imported by the manager. */
+/** In-memory plugin activation. Module text is diagnostic context, never imported by the manager. */
 export interface PluginActivationRequest {
     readonly plugin: AssemblerPlugin<unknown>;
     readonly options?: unknown;
     readonly pluginModule?: string;
 }
-/** Already-imported module namespace; its default export must satisfy AssemblerPlugin. */
+/** Already-imported module namespace. Its default export must satisfy AssemblerPlugin. */
 export interface PluginModuleActivationRequest {
     readonly module: unknown;
     readonly options?: unknown;
@@ -38,19 +38,19 @@ export declare class PluginManager implements PluginDisposable {
      * Activate dependencies first, preserving input order among ready plugins.
      * Each plugin commits independently: earlier successes remain active if a later one fails.
      * Throws PluginError for invalid input, dependency conflicts, or activation failure.
-     * Activation is unavailable after freeze or disposal; dispose the manager after a failed batch.
+     * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
      * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
      */
     activatePlugins(requests: readonly PluginActivationRequest[]): Promise<void>;
     /**
      * Validate target references and aliases, then seal registration. Repeated calls return the
      * same environment. Throws PluginError for invalid graphs or a disposed manager.
-     * @returns {AssemblerEnvironment} The validated, shared contribution graph; resources remain owned by this manager.
+     * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
      */
     freeze(): AssemblerEnvironment;
     /**
      * Release plugin resources in reverse activation order, attempting every disposable.
-     * Idempotent and terminal; rejects with AggregateError after cleanup failures.
+     * Idempotent and terminal. Rejects with AggregateError after cleanup failures.
      * Does not dispose assembler sessions or make their continued use safe.
      */
     dispose(): Promise<void>;

@@ -255,7 +255,7 @@
     },
     {
       // Test doubles and deliberately malformed inputs exercise runtime validation.
-      // Async doubles preserve real signatures even when resolving immediately; spies capture detached methods.
+      // Async doubles preserve real signatures even when resolving immediately. Spies capture detached methods.
       // Keep these rules enabled for production code and development scripts.
       "files": ["tests/**", "packages/*/tests/**", "packages/*/tests-host/**"],
       "rules": {

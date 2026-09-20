@@ -38,7 +38,7 @@ const syntax: Readonly<Record<InstructionForm["mode"], string>> = {
   quadAccumulator: "Q",
 };
 
-/** Documented-mnemonic summaries; unofficial ops fall back in {@link buildInstructionCatalog}. */
+/** Documented-mnemonic summaries. Unofficial ops fall back in {@link buildInstructionCatalog}. */
 const summaries: Readonly<Record<string, string>> = {
   ADC: "Add memory to the accumulator with carry.",
   AND: "Bitwise AND memory with the accumulator.",

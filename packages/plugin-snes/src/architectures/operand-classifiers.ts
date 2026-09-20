@@ -82,7 +82,7 @@ function apply65816WidthPolicy(
 
 /**
  * True when the source is hex/define/numeric rather than a label or struct.
- * `!s_spr_wildcard_5_lo_dp = $76` must keep DP width; `test[1].size` → `$7` must not.
+ * `!s_spr_wildcard_5_lo_dp = $76` must keep DP width. `test[1].size` → `$7` must not.
  * @param {string} raw Source operand.
  * @returns {boolean} True for numeric/define spellings.
  */
@@ -102,7 +102,7 @@ function sourceUsesNumericSpelling(raw: string): boolean {
 
 /**
  * Explicit DP is 1–2 digit hex in the source, or the same after define expansion.
- * Label resolution to `$7` is not explicit; that would ignore `optimize dp none`.
+ * Label resolution to `$7` is not explicit. That would ignore `optimize dp none`.
  * @param {string} raw Source operand.
  * @param {string} expanded Resolved operand.
  * @param {boolean} indexedX Match `$xx,x` instead of `$xx`.
@@ -296,7 +296,7 @@ export function classifyExpanded65816Operand(
 }
 
 /**
- * Classifies SPC700 operands. No 65816 bank-shortening; hex spelling owns width.
+ * Classifies SPC700 operands. No 65816 bank-shortening. Hex spelling owns width.
  * @param {OperandResolutionContext} resolver Operand resolver dependency.
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.

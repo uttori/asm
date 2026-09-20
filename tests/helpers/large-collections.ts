@@ -30,7 +30,7 @@ import {
   Spc700AramImage,
   SPC700_ARAM_ADDRESS_SPACE,
 } from "../../packages/plugin-snes/src/index.js";
-import { formatInstructionAnnotationDetails } from "../../packages/vscode-extension/src/analysis-annotation-format.js";
+import { formatInstructionAnnotationDetails } from "../../packages/vscode-extension/src/analysis/annotation-format.js";
 import { benchmarkStatistics } from "../../scripts/benchmark-report.js";
 
 // Above the default V8 argument-count limit, but small enough for routine CI execution.

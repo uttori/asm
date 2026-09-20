@@ -59,7 +59,7 @@ const configuredPluginModules = (
 
 /**
  * Owns the active language-server plugin environment and replaces it transactionally.
- * Candidate plugins are activated in a fresh loader; the old environment remains live
+ * Candidate plugins are activated in a fresh loader. The old environment remains live
  * until the replacement index has been constructed and populated successfully.
  */
 export class ProjectEnvironmentController {

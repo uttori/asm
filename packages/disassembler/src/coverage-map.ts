@@ -144,7 +144,7 @@ const coverageAddressSpace = (record: RuntimeEvidenceRecord): string | undefined
  * @param {Pick<AnalysisProjectManifest, "addressSpaces" | "rom">} manifest Validated project manifest.
  * @param {AnalysisProjectShards} shards Validated project shards.
  * @returns {RomCoverageMap} Coalesced map, summaries, and projection diagnostics.
- * @param {Iterable} [runtime] Optional streamed history; avoids retaining decoded SQLite rows.
+ * @param {Iterable} [runtime] Optional streamed history. Avoids retaining decoded SQLite rows.
  */
 export const buildRomCoverageMap = (
   manifest: Pick<AnalysisProjectManifest, "addressSpaces" | "rom">,

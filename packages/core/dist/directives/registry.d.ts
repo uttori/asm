@@ -40,20 +40,7 @@ export declare class DirectiveRegistry {
      * @param {NarrowDirectiveHandler<Context>} handler The handler.
      */
     registerLowered<Context>(keyword: string | string[], context: Context, handler: NarrowDirectiveHandler<Context>): void;
-    /**
-     * Checks whether it has the value.
-     * @param {string} keyword The keyword.
-     * @returns {boolean} The result.
-     */
     has(keyword: string): boolean;
-    /**
-     * Dispatches the value.
-     * @param {string} keyword The keyword.
-     * @param {readonly string[]} words The words.
-     * @param {string} raw The raw.
-     * @param {NormalizedCommand} [command] The command.
-     * @returns {boolean} The result.
-     */
     dispatch(keyword: string, words: readonly string[], raw: string, command?: NormalizedCommand): boolean;
     /**
      * Resolves a directive handler using prefixes supplied by the active syntax profile.

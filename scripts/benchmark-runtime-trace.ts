@@ -22,11 +22,11 @@ import {
   type AnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "../packages/disassembler/src/index.js";
-import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src/runtime-trace-source.js";
+import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src/runtime/trace-source.js";
 import { writeCaptureFixture, captureFixtureHeader } from "../tests/helpers/capture-archive.js";
 
 /**
- * Deterministic rich hot-loop trace; register variation exercises both indexing profiles.
+ * Deterministic rich hot-loop trace. Register variation exercises both indexing profiles.
  * @param {number} events Positive instruction count.
  * @returns {RuntimeInstructionTraceArtifact} Bounded chunks with repeated code and bus variants.
  */
@@ -81,7 +81,7 @@ const fixture = (events: number): RuntimeInstructionTraceArtifact => {
  * Validate command-line counts before allocating the fixture.
  * @param {string} name Option flag.
  * @param {number} fallback Default count when absent.
- * @param {number} minimum Smallest accepted count; warmups may be zero.
+ * @param {number} minimum Smallest accepted count. Warmups may be zero.
  * @returns {number} Safe integer count.
  */
 const countOption = (name: string, fallback: number, minimum = 1): number => {
@@ -101,9 +101,9 @@ if (archiveIndex >= 0 && (!inputArchive || inputArchive.startsWith("--")))
   throw new Error("--archive requires a capture path.");
 
 /**
- * Read a bounded event prefix from an explicitly selected local capture; never import its project.
+ * Read a bounded event prefix from an explicitly selected local capture. Never import its project.
  * @param {string} file Selected trace or ACT2 archive.
- * @returns {Promise<RuntimeInstructionTraceArtifact>} Benchmark-only prefix; the archive tail is not checked.
+ * @returns {Promise<RuntimeInstructionTraceArtifact>} Benchmark-only prefix. The archive tail is not checked.
  */
 const archivePrefix = async (file: string): Promise<RuntimeInstructionTraceArtifact> => {
   const source = await createEditorRuntimeTraceSource(file, { maxBytes: Number.MAX_SAFE_INTEGER });
@@ -126,7 +126,7 @@ const archivePrefix = async (file: string): Promise<RuntimeInstructionTraceArtif
     if (error !== stop) throw error;
   }
   if (count !== events)
-    throw new Error(`Capture only contains ${count} events; request a smaller --events prefix.`);
+    throw new Error(`Capture only contains ${count} events. Request a smaller --events prefix.`);
   return { ...source.metadata, chunks };
 };
 
@@ -145,7 +145,7 @@ let expectedHash: string | undefined;
 let recording = false;
 
 /**
- * Boundary deltas include temporary allocations, not process peaks; explicit GC precedes each stage.
+ * Boundary deltas include temporary allocations, not process peaks. Explicit GC precedes each stage.
  * @param {string} name Stable stage identifier in the report.
  * @param {Function} run Timed operation with setup already complete.
  * @returns {Promise<T>} Result retained through the memory sample for correctness checks.
@@ -272,7 +272,7 @@ try {
       prefixOnly: !!inputArchive,
       archiveFixture: inputArchive ? undefined : "act2-loop-v1",
       archiveBytes: inputArchive ? undefined : (await fs.stat(archive)).size,
-      memorySampling: "stage-boundary-deltas; same process, not peaks",
+      memorySampling: "stage-boundary-deltas. Same process, not peaks",
     },
     sourceSha256: expectedHash,
     stages: Object.fromEntries(

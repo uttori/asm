@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { DatabaseSync } from "node:sqlite";
 
-/** Budgets use bytes. Zero disables the database ceiling; a zero cache budget evicts optional projections. */
+/** Budgets use bytes. Zero disables the database ceiling. A zero cache budget evicts optional projections. */
 export interface AnalysisStoragePolicy {
   readonly cacheMaxBytes: number;
   readonly databaseMaxBytes: number;
@@ -42,8 +42,8 @@ export const readStoragePolicy = (db: DatabaseSync): AnalysisStoragePolicy => {
   );
 };
 
-/** Merge explicit overrides with defaults; all limits must be finite, nonnegative safe integers.
- * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields; unknown fields are rejected.
+/** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
+ * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields. Unknown fields are rejected.
  * @returns {AnalysisStoragePolicy} Complete validated byte limits.
  */
 export const validateStoragePolicy = (
@@ -65,7 +65,7 @@ export const validateStoragePolicy = (
   return policy;
 };
 
-/** Lightweight accounting for final reports; bytes allocated to freelist pages are separately visible. */
+/** Lightweight accounting for final reports. Bytes allocated to freelist pages are separately visible. */
 export interface AnalysisStorageSnapshot {
   readonly databaseBytes: number;
   readonly walBytes: number;
@@ -110,7 +110,7 @@ export const storageSnapshot = (db: DatabaseSync, file: string): AnalysisStorage
   };
 };
 
-/** Reject the owning publication before COMMIT; retained facts are never truncated to meet a quota.
+/** Reject the owning publication before COMMIT. Retained facts are never truncated to meet a quota.
  * @param {DatabaseSync} db Writer transaction whose publication has not committed.
  */
 export const enforceDatabaseBudget = (db: DatabaseSync): void => {
@@ -124,7 +124,7 @@ export const enforceDatabaseBudget = (db: DatabaseSync): void => {
   const bytes = pages * Number(db.prepare("PRAGMA page_size").get()!.page_size);
   if (bytes > budget) {
     throw new Error(
-      `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back; increase the budget or run storage maintenance.`,
+      `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back. Increase the budget or run storage maintenance.`,
     );
   }
 };
@@ -151,7 +151,7 @@ const cacheTableBytes = (db: DatabaseSync, table: string): number => {
     .reduce((bytes, row) => bytes + Number(allocation.get(row.name)!.bytes), 0);
 };
 
-/** Explicit accounting for optional caches; editor/export indexes are excluded from this budget.
+/** Explicit accounting for optional caches. Editor/export indexes are excluded from this budget.
  * @param {DatabaseSync} db Open project connection.
  * @returns {number} Allocated bytes including projection indexes and cache result payloads.
  */

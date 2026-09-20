@@ -1,7 +1,7 @@
 # @uttori/asm-debug-sidecar-mesence
 
 Node.js process host and protocol translator for MesenCE, used by the Uttori ASM debugger.
-Experimental. Requires a separately patched MesenCE runtime matching its manifest; stock MesenCE is not a compatible live-debug runtime.
+Experimental. Requires a separately patched MesenCE runtime matching its manifest. Stock MesenCE is not a compatible live-debug runtime.
 
 ## Install
 
@@ -26,7 +26,7 @@ uttori-asm-debug-sidecar-mesence --manifest runtime.json --mesen /path/to/emulat
   --rom game.sfc --runtime-dir /path/to/runtime
 ```
 
-This command serves framed protocol messages on stdin/stdout; it is not an interactive terminal
+This command serves framed protocol messages on stdin/stdout. It is not an interactive terminal
 session. In VS Code, use **Assembly: Configure Emulator Runtime**, then **Debug in Emulator**.
 
 Supports negotiated 65816, SPC700, and Super FX inspection and exact stepping. Instruction tracing and SPC700/Super FX breakpoints are unsupported. Capabilities and runtime
@@ -39,6 +39,7 @@ resources, and their separate licenses are not included.
 
 ## Documentation and support
 
+[Runtime contract](https://github.com/uttori/asm/blob/master/packages/debug-sidecar-mesence/RUNTIME.md) ·
 [VS Code setup](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md#live-debugging) ·
 [Protocol reference](https://github.com/uttori/asm/blob/master/packages/debug-adapter/PROTOCOL.md).
 

@@ -365,7 +365,7 @@ connection.onInitialize(async (params: InitializeParams): Promise<InitializeResu
       renameProvider: { prepareProvider: true },
       signatureHelpProvider: { triggerCharacters: [" ", ","] },
       // Do not advertise `asm.build` here. The VS Code client registers that
-      // command for the palette/UI; vscode-languageclient would also register
+      // command for the palette/UI. Vscode-languageclient would also register
       // advertised executeCommandProvider IDs and throw "already exists".
       semanticTokensProvider: { legend: semanticTokensLegend, full: true },
     },

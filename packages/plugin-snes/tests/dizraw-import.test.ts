@@ -47,7 +47,7 @@ test(".dizraw import preserves metadata, state, labels, comments, regions, and l
 });
 
 test("compressed .diz input is rejected", (t) => {
-  t.throws(() => importDizRaw("not XML"), { message: /compressed \.diz/ });
+  t.throws(() => importDizRaw("not XML"), { message: /Compressed \.diz/ });
   t.throws(() => importDizRaw(fixture, { maximumMetadataBytes: 2 }), {
     message: /safety limit/,
   });

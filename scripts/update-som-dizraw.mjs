@@ -134,7 +134,7 @@ for (const [index, { cells }] of priceRows.entries()) {
   const entryIndex = isItem ? index : index - itemNames.length;
   const englishName = (isItem ? itemNames[entryIndex] : armorNames[entryIndex]) || `${cells[1]}_${entryIndex.toString(16).toUpperCase()}`;
   addLabel(pc, `${isItem ? 'Item' : 'Armor'}_Price_${englishName}`,
-    `som.md Item Prices ${hex(pc)}: ${cells[1]}; ${cells[2]}; price ${cells[3]}`, 40);
+    `som.md Item Prices ${hex(pc)}: ${cells[1]}; ${cells[2]}. Price ${cells[3]}`, 40);
 }
 
 for (const { cells } of tableRows('Color Palettes').filter(({ cells }) => /^0[0-9A-F]{5}/i.test(cells[0] ?? ''))) {

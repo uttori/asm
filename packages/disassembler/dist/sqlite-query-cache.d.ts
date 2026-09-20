@@ -6,14 +6,14 @@ import type { ShardKind } from "./project-types.js";
  * @param {DatabaseSync} db Project connection with an active write transaction.
  */
 export declare const upgradeQueryCacheStorage: (db: DatabaseSync) => void;
-/** Install dependency-specific invalidation; cached projections survive unrelated publications.
+/** Install dependency-specific invalidation. Cached projections survive unrelated publications.
  * The caller owns the writer transaction. Trigger names and tables come only from internal constants.
  * @param {DatabaseSync} db Open project database.
  * @param {string} key Internal projection identifier (letters/digits/underscores).
  * @param {readonly ShardKind[]} dependencies Collections consumed by the projection.
  */
 export declare const installQueryCache: (db: DatabaseSync, key: string, dependencies: readonly ShardKind[]) => void;
-/** Read a dependency-validated projection; configuration and layout belong in its signature.
+/** Read a dependency-validated projection. Configuration and layout belong in its signature.
  * @param {DatabaseSync} db Open project database.
  * @param {string} key Internal projection identifier.
  * @param {string} signature Configuration/layout fingerprint.

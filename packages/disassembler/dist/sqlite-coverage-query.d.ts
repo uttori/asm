@@ -1,7 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { RomCoverageMap } from "./coverage-map.js";
 import type { AnalysisProjectManifest } from "./project-types.js";
-/** Compact cache header; segment/detail bodies stay paged in SQLite. */
+/** Compact cache header. Segment/detail bodies stay paged in SQLite. */
 export type SqliteCoverageSummary = Omit<RomCoverageMap, "segments" | "unprojected" | "diagnostics"> & {
     readonly segments: readonly never[];
     readonly unprojected: readonly never[];
@@ -16,17 +16,17 @@ export declare const coverageSignature: (manifest: AnalysisProjectManifest) => s
  */
 export declare const cachedCoverage: (db: DatabaseSync, manifest: AnalysisProjectManifest) => SqliteCoverageSummary | undefined;
 /** Build disk-backed events and sweep them with only the active interval identities in memory.
- * Explicit offsets are used; CPU bus addresses are never guessed to be ROM offsets.
- * @param {DatabaseSync} db Read transaction with prepared instruction/offset indexes; writes stay in temporary tables.
+ * Explicit offsets are used. CPU bus addresses are never guessed to be ROM offsets.
+ * @param {DatabaseSync} db Read transaction with prepared instruction/offset indexes. Writes stay in temporary tables.
  * @param {AnalysisProjectManifest} manifest Validated ROM identity and address spaces.
- * @returns {SqliteCoverageSummary} Exact totals; records and diagnostics remain SQL-paged.
+ * @returns {SqliteCoverageSummary} Exact totals. Records and diagnostics remain SQL-paged.
  */
 export declare const prepareCoverage: (db: DatabaseSync, manifest: AnalysisProjectManifest) => SqliteCoverageSummary;
 /** Publish complete segment/detail tables under a short writer lock.
  * @param {DatabaseSync} db Connection retaining the completed temporary projection.
  */
 export declare const publishCoverage: (db: DatabaseSync) => void;
-/** Select a bounded persisted page; callers ensure the header is current first.
+/** Select a bounded persisted page. Callers ensure the header is current first.
  * @param {DatabaseSync} db Connection in a read snapshot.
  * @param {"segments" | "details"} kind Page collection.
  * @param {number} offset Nonnegative row offset.

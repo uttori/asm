@@ -1,6 +1,6 @@
 /**
  * Small, deliberately separate grammar for named records. Expressions remain
- * assembler expressions; this parser only recognizes their outer delimiters.
+ * assembler expressions. This parser only recognizes their outer delimiters.
  * Do not use split(','): arrays and functions both contain their own commas.
  * @param {string} text Comma-separated fields or expressions.
  * @returns {string[]} Complete items with their nested expressions intact.

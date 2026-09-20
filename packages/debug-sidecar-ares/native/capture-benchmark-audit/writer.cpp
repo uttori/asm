@@ -6,7 +6,7 @@ using namespace ares_capture;
 using Clock = std::chrono::steady_clock;
 
 // Native test hooks hold/fail only the data-batch sync. Production code and
-// checkpoint policy are unchanged; the header is durable before timing starts.
+// checkpoint policy are unchanged. The header is durable before timing starts.
 auto hexPath(const std::string& value) -> std::string {
   std::string out;
   for(unsigned char c : value) { out += "0123456789abcdef"[c >> 4]; out += "0123456789abcdef"[c & 15]; }

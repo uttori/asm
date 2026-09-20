@@ -63,7 +63,7 @@ export class RootAnalysisCache {
                         }
                     }
                     catch {
-                        // File is missing or unreadable; fall through to hashFile which
+                        // File is missing or unreadable. Fall through to hashFile which
                         // returns undefined and will cause a cache miss below.
                     }
                 }
@@ -113,7 +113,7 @@ export class RootAnalysisCache {
             incrementInternalCounter("cacheWriteBytes", json.length);
         }
         catch {
-            // Cache is a speed optimization; a write failure must not surface to the user.
+            // Cache is a speed optimization. A write failure must not surface to the user.
         }
     }
     /**

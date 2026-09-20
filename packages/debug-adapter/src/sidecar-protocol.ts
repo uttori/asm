@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 /** Stable identity of the emulator-neutral sidecar wire protocol. */
 export const DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar" as const;
 
-/** Initial sidecar wire revision. This project is unreleased, so the revision remains version 1. */
+/** Supported wire revision. Peers reject messages with any other version. */
 export const DEBUG_SIDECAR_PROTOCOL_VERSION = 1 as const;
 
 /** Commands available across the sidecar boundary. */
@@ -39,13 +39,21 @@ export const DEBUG_SIDECAR_EVENTS = Object.freeze([
 
 /** Protocol limits enforced before emulator-specific code sees a request. */
 export interface DebugSidecarProtocolLimits {
+  /** JSON payload bytes per frame, excluding its four-byte length prefix. Default 1 MiB. */
   readonly maxFrameBytes: number;
+  /** Bytes retained by the incremental parser. Default 2 MiB. */
   readonly maxBufferedBytes: number;
+  /** Requested bytes per readMemory command. Default 1 MiB, subject to backend limits. */
   readonly maxMemoryReadBytes: number;
+  /** Instructions per disassemble command. Default 4096. */
   readonly maxDisassemblyInstructions: number;
+  /** Addresses in one complete breakpoint replacement set. Default 4096. */
   readonly maxBreakpoints: number;
+  /** Events per destructive trace pull. Default 4096, subject to negotiated producer limits. */
   readonly maxTraceBatchEvents: number;
+  /** Pending requests or outgoing queued messages per connection. Default 1024. */
   readonly maxQueuedMessages: number;
+  /** Framed bytes awaiting transport writes. Default 8 MiB. */
   readonly maxQueuedBytes: number;
 }
 
@@ -274,7 +282,7 @@ export class DebugSidecarMessageParser {
   }
 }
 
-/** Bounded FIFO for encoded messages; overflow is explicit rather than silently dropping events. */
+/** Bounded FIFO for encoded messages. Overflow is explicit rather than silently dropping events. */
 export class DebugSidecarMessageQueue {
   readonly #limits: DebugSidecarProtocolLimits;
   readonly #frames: Uint8Array[] = [];

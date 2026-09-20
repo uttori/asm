@@ -1,7 +1,7 @@
 # @uttori/asm-core
 
 Architecture-neutral assembly, symbols, macros, includes, diagnostics, and plugin contracts.
-The core requires an explicit plugin environment and target; it has no default processor.
+The core requires an explicit plugin environment and target. It has no default processor.
 
 ## Install
 
@@ -29,8 +29,8 @@ try {
 }
 ```
 
-Pass `fileProvider` and call `setIncludePaths()` for host-managed includes; use `baseImage` for patching.
-`analyzeSource()` provides recovery-oriented diagnostics; assembly errors throw.
+Pass `fileProvider` and call `setIncludePaths()` for host-managed includes. Use `baseImage` for patching.
+`analyzeSource()` provides recovery-oriented diagnostics. Assembly errors throw.
 Dispose each assembler session and any `PluginManager` your host creates.
 
 ## Entry points

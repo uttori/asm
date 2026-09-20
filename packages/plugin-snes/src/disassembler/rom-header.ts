@@ -377,7 +377,7 @@ export const parseSnesInternalRomHeader = (
 export interface SnesRomDetectionOptions {
   /** Force this mapper instead of scoring internal headers. */
   readonly mapper?: SnesMapper;
-  /** Must equal `rom.identity.headerSize` when set; used as a consistency check. */
+  /** Must equal `rom.identity.headerSize` when set. Used as a consistency check. */
   readonly headerSize?: 0 | 512;
 }
 
@@ -386,9 +386,9 @@ export interface SnesRomDetectionOptions {
  * `ambiguous` means the caller must pass `--mapper` before creating a project.
  */
 export interface SnesRomDetection {
-  /** `detected` when one candidate wins; `override` when `options.mapper` is set; else `ambiguous`. */
+  /** `detected` when one candidate wins. `override` when `options.mapper` is set. Else `ambiguous`. */
   readonly status: "detected" | "override" | "ambiguous";
-  /** Winning or forced mapper; omitted when `status` is `ambiguous`. */
+  /** Winning or forced mapper. Omitted when `status` is `ambiguous`. */
   readonly mapper?: SnesMapper;
   /** From map-mode bit 4 at the selected header (`$30` FastROM vs `$20` SlowROM). */
   readonly speed?: "slow" | "fast";
@@ -475,7 +475,7 @@ const scoreCandidate = (
   add(
     "declared-size",
     sizePlausible ? 3 : -1,
-    `declared ${declaredSize || "invalid"} bytes; loaded ${rom.length} bytes`,
+    `declared ${declaredSize || "invalid"} bytes. Loaded ${rom.length} bytes`,
   );
 
   const title = header.slice(0, 21);
@@ -573,6 +573,6 @@ export const detectSnesRom = (
     status: "ambiguous",
     candidates,
     message:
-      "SNES mapper/header detection is ambiguous; provide an explicit --mapper override before creating the project.",
+      "SNES mapper/header detection is ambiguous. Provide an explicit --mapper override before creating the project.",
   };
 };

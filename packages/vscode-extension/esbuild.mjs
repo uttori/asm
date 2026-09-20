@@ -2,14 +2,19 @@ import { chmodSync, cpSync, mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { build } from "esbuild";
+import { build as esbuild } from "esbuild";
+
+import { withBundleNotices } from "../../scripts/bundle-notices.mjs";
+
+const build = withBundleNotices(esbuild);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-// VS Code 1.128 embeds Node 24. Standalone tools target Node 26; every executable shipped
+// VS Code 1.128 embeds Node 24. Standalone tools target Node 26. Every executable shipped
 // inside the VSIX is built separately for the editor's runtime, including forked workers.
 const editorRuntime = "node24";
+// Worker sources live with their features; keep output names aligned with the process launchers.
 await build({
-  entryPoints: [path.join(here, "src/live-bus-analysis-process.ts")],
+  entryPoints: [path.join(here, "src/runtime/live-bus-analysis-process.ts")],
   outfile: path.join(here, "out/live-bus-analysis-process.cjs"),
   bundle: true,
   conditions: ["uttori-source"],
@@ -19,7 +24,7 @@ await build({
   logLevel: "info",
 });
 await build({
-  entryPoints: [path.join(here, "src/disassembly-maintenance-process.ts")],
+  entryPoints: [path.join(here, "src/disassembly/maintenance-process.ts")],
   outfile: path.join(here, "out/disassembly-maintenance-process.cjs"),
   bundle: true,
   conditions: ["uttori-source"],
@@ -35,7 +40,7 @@ cpSync(
 );
 
 await build({
-  entryPoints: [path.join(here, "src/analysis-worker.ts")],
+  entryPoints: [path.join(here, "src/analysis/worker.ts")],
   outfile: path.join(here, "out/analysis-worker.cjs"),
   bundle: true,
   conditions: ["uttori-source"],

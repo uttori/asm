@@ -66,7 +66,7 @@ export type ChecksumMode = "asar" | "simple";
 /**
  * Super FX `MOVE Rn, (xx)` / `MOVE (xx), Rn` short-form address encoding.
  * Hardware LMS/SMS store a word index (`addr >> 1`). Asar writes the raw byte
- * (`addr & 0xff`). `$00` is identical either way; `$40` is `$20` vs `$40`.
+ * (`addr & 0xff`). `$00` is identical either way. `$40` is `$20` vs `$40`.
  */
 export type SuperFxMoveShortAddressMode = "hardware" | "asar";
 

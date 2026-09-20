@@ -16,6 +16,9 @@ const captureFileIdentity = (file) => {
     return `${stat.dev}:${stat.ino}:${stat.size}:${stat.mtimeNs}:${stat.ctimeNs}`;
 };
 /** Stage counters off heap and atomically publish only after the entire lossless stream validates.
+ * Owns and closes its SQLite connection, but does not own or delete the caller's source archive.
+ * Cancellation is checked between chunks and records. Facts and requested storage limits roll back
+ * together before commit. A pointer-file failure can reject after commit, so reopen before retrying.
  * @param {RuntimeBusTraceSource} source Bounded reader that rejects incomplete or changed captures.
  * @param {string} directory Destination SQLite project root.
  * @param {RuntimeBusTraceImportContext} context Expected ROM identity and distinct-fact budget.
@@ -135,14 +138,14 @@ export const importRuntimeBusTraceSourceIntoProject = async (source, directory, 
         }
         let checkpointBusy = false;
         const warnings = [];
-        // Optional cache failures happen after durable publication; report them without
+        // Optional cache failures happen after durable publication. Report them without
         // pretending the facts rolled back or asking the caller to import them again.
         try {
             options.onStage?.("Recycling SQLite caches and WAL…");
             checkpointBusy = store.maintainStorage().checkpointBusy;
         }
         catch (error) {
-            warnings.push(`Bus import committed; storage maintenance deferred: ${String(error)}`);
+            warnings.push(`Bus import committed. Storage maintenance deferred: ${String(error)}`);
         }
         const after = store.storageSnapshot();
         const newFacts = after.facts - before.facts;

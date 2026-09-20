@@ -2,7 +2,7 @@
 export interface AddressSpaceContext {
     /** Canonical mapper name (`lorom`, `hirom`, `sa1rom`, `norom`, ...). */
     mapper: string;
-    /** SA-1 LoROM bank bases in 1 MiB units; unused slots are `-1`. */
+    /** SA-1 LoROM bank bases in 1 MiB units. Unused slots are `-1`. */
     sa1banks: readonly number[];
     /** PC wrap policy from `check bankcross`. */
     bankCrossCheckMode?: "off" | "full" | "half";

@@ -14,7 +14,9 @@ export interface SnesProjectInitializationProgress {
 }
 /** Shared cancellation and progress controls for long-running operations. */
 export interface SnesProjectOperationOptions {
+    /** Checked at operation boundaries. Synchronous analysis and filesystem writes are not preempted. */
     readonly signal?: AbortSignal;
+    /** Called synchronously. A throw stops the operation and can leave an existing export partially written. */
     readonly onProgress?: (progress: SnesProjectInitializationProgress) => void;
 }
 /** Thrown when a project operation observes an aborted signal. */
@@ -39,12 +41,16 @@ export interface SnesProjectProbeResult {
     /** Human-readable reason for requesting a mapper. */
     readonly mapperSelectionReason?: string;
 }
+/** Read-only inspection inputs. Relative paths resolve from process.cwd(). */
 export interface ProbeSnesProjectOptions extends SnesProjectOperationOptions {
     readonly romFile: string;
     readonly dizRawFile?: string;
+    /** Explicit cartridge mapping. Omit for detection, which can require a user choice. */
     readonly mapper?: SnesMapper;
+    /** Copier-header byte count. Omit for file-size-based detection. */
     readonly headerSize?: 0 | 512;
 }
+/** Creates a project only in a missing or empty directory, without copying the ROM. */
 export interface CreateSnesAnalysisProjectOptions extends ProbeSnesProjectOptions {
     readonly projectDirectory: string;
 }
@@ -55,12 +61,16 @@ export interface CreateSnesAnalysisProjectResult {
     readonly manifest: AnalysisProjectManifest;
     readonly importReport?: ImportReport;
 }
+/** Reanalysis preserves manual annotations and runtime evidence, and rejects concurrent project edits. */
 export interface AnalyzeSnesProjectOptions extends SnesProjectOperationOptions {
     readonly heuristics?: SnesHeuristicConfiguration;
     readonly projectDirectory: string;
     readonly romFile: string;
+    /** Additional CPU bus addresses with explicit state, alongside vector and saved runtime seeds. */
     readonly entryPoints?: readonly Snes65816EntryPoint[];
+    /** Positive safe integer work limit, default 100000. */
     readonly maxWorkItems?: number;
+    /** Nonnegative call-context depth, default 8. Zero discards call history. */
     readonly maxCallDepth?: number;
 }
 /** Structured summary of one bounded static-analysis pass. */
@@ -82,10 +92,12 @@ export interface AnalyzeSnesProjectResult {
     readonly omittedRuntimeSeeds: number;
     readonly incompleteReasons: readonly StaticAnalysisIncompleteReason[];
 }
+/** Regenerates files owned by the export manifest while retaining user-owned input maps. */
 export interface ExportSnesProjectOptions extends SnesProjectOperationOptions {
     readonly projectDirectory: string;
     readonly romFile: string;
     readonly sourceDirectory: string;
+    /** Allow replacing modified generated files. Does not permit code regression or delete input maps. */
     readonly force?: boolean;
     /** Explicitly permit previously emitted instructions to become raw bytes. */
     readonly allowCodeRegression?: boolean;
@@ -98,6 +110,7 @@ export interface ExportSnesProjectResult {
     readonly manifest: SourceExportManifest;
     readonly codeBytes: number;
 }
+/** Requires unchanged generated files, current map inputs, and the original ROM identity. */
 export interface VerifySnesProjectRoundTripOptions extends SnesProjectOperationOptions {
     readonly sourceDirectory: string;
     readonly romFile: string;
@@ -150,12 +163,17 @@ export declare const probeSnesProject: (options: ProbeSnesProjectOptions) => Sne
 export declare const createSnesAnalysisProject: (options: CreateSnesAnalysisProjectOptions) => CreateSnesAnalysisProjectResult;
 /**
  * Runs bounded conservative 65816 analysis and atomically updates the native project.
+ * Completion describes explored work, not proof that all code was found. An incomplete pass that
+ * would discard previously decoded code throws before replacing saved analysis. This synchronous
+ * operation checks cancellation at phase boundaries and cannot observe queued abort callbacks mid-pass.
  * @param {AnalyzeSnesProjectOptions} options Project, ROM, entry points, and work limits.
  * @returns {AnalyzeSnesProjectResult} Structured analysis counts and completion state.
  */
 export declare const analyzeSnesProject: (options: AnalyzeSnesProjectOptions) => AnalyzeSnesProjectResult;
 /**
  * Exports deterministic editable source from a verified native project.
+ * Unjustified bytes remain raw assets. File hashes and code-preservation checks run before writes,
+ * but regeneration is not a multi-file transaction. Preserve edits and retry after an I/O failure.
  * @param {ExportSnesProjectOptions} options Project, ROM, destination, and overwrite policy.
  * @returns {ExportSnesProjectResult} Source manifest and native-code coverage count.
  */

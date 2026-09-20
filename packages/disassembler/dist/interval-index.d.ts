@@ -11,7 +11,7 @@ export interface HalfOpenInterval {
  * interval can still overlap. This replaces repeated full annotation scans in analysis and source
  * export without changing their observable ordering: matches are restored to original input order
  * before being returned. Keep the prefix maxima and input indices together if this representation
- * changes; dropping either silently turns lookups back into O(n) scans or changes deterministic
+ * changes. Dropping either silently turns lookups back into O(n) scans or changes deterministic
  * first-match behavior.
  */
 export declare class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {

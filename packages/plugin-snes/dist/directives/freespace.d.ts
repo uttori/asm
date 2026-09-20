@@ -36,7 +36,7 @@ export declare function handleFreespaceByte(session: Assembler, state: SnesSessi
  * no 16-bit count, so >85 labels wrap.
  *
  * @param {Assembler} session Host assembler.
- * @param {readonly string[]} words Tokenized line; labels after the keyword, comma-separated.
+ * @param {readonly string[]} words Tokenized line. Labels after the keyword, comma-separated.
  */
 export declare function handleProt(session: Assembler, words: readonly string[]): void;
 //# sourceMappingURL=freespace.d.ts.map

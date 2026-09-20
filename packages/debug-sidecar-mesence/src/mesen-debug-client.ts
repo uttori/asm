@@ -41,7 +41,7 @@ const positiveInteger = (value: number, context: string): number => {
   return value;
 };
 
-/** Bounded, authenticated, sequential client for the maintained MesenCE native seam. */
+/** Bounded, authenticated, sequential client for the patched MesenCE debugger. */
 export class FramedMesenDebugClient implements MesenDebugClient {
   readonly #transport: MesenDebugTransport;
   readonly #token: string;

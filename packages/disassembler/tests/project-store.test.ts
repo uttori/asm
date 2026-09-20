@@ -422,7 +422,7 @@ test("manifest validation rejects obsolete storage and never downgrades newer sc
         ...future,
         schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION + 1,
       }),
-    { message: /refusing to downgrade/ },
+    { message: /Refusing to downgrade/ },
   );
   t.is(canonicalJson({ z: 1, a: 2 }), '{\n  "a": 2,\n  "z": 1\n}\n');
   t.is(

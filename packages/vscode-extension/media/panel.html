@@ -22,56 +22,10 @@
         </button>
       </div>
     </header>
-    <p id="trustNotice" class="notice" hidden>
-      Trust this workspace to edit annotations, regenerate source, or capture execution.
-    </p>
+    <p id="trustNotice" class="notice" hidden>Trust this workspace to edit project settings.</p>
     <p id="actionStatus" class="action-status" role="status" aria-live="polite" hidden></p>
     <main>
-      <section class="section" aria-labelledby="disassemblyHeading">
-        <h2 id="disassemblyHeading">Disassembly</h2>
-        <button class="primary full" data-cmd="regenerateDisassembly" data-trusted>
-          Analyze & Regenerate
-        </button>
-        <p class="hint">
-          Update source from saved annotations, rules, and trace evidence. Verify the ROM round
-          trip.
-        </p>
-        <div class="button-grid">
-          <button data-cmd="editAnnotation" data-trusted>Edit Annotation</button>
-          <button data-cmd="openRamMap" data-trusted>RAM Map</button>
-        </div>
-        <button class="quiet" data-cmd="disassemblyStatus">Check Source Status</button>
-      </section>
-
-      <details id="heuristicsSection" open>
-        <summary>Heuristics <span class="detail-hint">Find Routine Roles</span></summary>
-        <div class="section-content">
-          <p class="hint">
-            Preview role suggestions from existing analysis, then regenerate to apply their
-            comments.
-          </p>
-          <div class="button-grid">
-            <button data-cmd="configureHeuristics" data-trusted>Edit Rules</button>
-            <button data-cmd="previewHeuristics">Run Preview</button>
-          </div>
-        </div>
-      </details>
-
-      <details id="captureSection">
-        <summary>Runtime Capture</summary>
-        <div class="section-content">
-          <p class="hint">Record a session and identify the routines that ran.</p>
-          <div class="button-grid">
-            <button data-cmd="startExecutionCapture" data-trusted>Start Recording</button>
-            <button data-cmd="stopExecutionCapture" data-trusted>Stop & Analyze</button>
-          </div>
-          <button class="full" data-cmd="importRuntimeTrace" data-trusted>
-            Import Saved Trace
-          </button>
-        </div>
-      </details>
-
-      <details id="settingsSection">
+      <details id="settingsSection" open>
         <summary>Project Settings <span class="detail-hint">Build & Paths</span></summary>
         <div class="section-content">
           <button class="full" id="configAction" data-cmd="initConfig" data-trusted>

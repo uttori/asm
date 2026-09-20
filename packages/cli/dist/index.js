@@ -58,7 +58,7 @@ const commandsWithOutput = new Set([
     "evidence-report",
     "mesen-labels-export",
 ]);
-/** Installed executable's help text. All flags are long options; -- ends option parsing. */
+/** Installed executable's help text. All flags are long options. -- ends option parsing. */
 export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm assemble <input.asm> [output] [assemble-options]
   uttori-asm disassemble <rom> [project-directory] [creation-options]
@@ -77,10 +77,10 @@ Creation options (disassemble):
   --mapper <${SNES_MAPPERS.join("|")}>
   --header-size <0|512>
   --dizraw <path>              Import uncompressed DiztinGUIsh XML
-  Defaults: <rom stem>.analysis; copier header and mapper detected unless overridden.
+  Defaults: <rom stem>.analysis. Copier header and mapper detected unless overridden.
 
 ROM identity (analyze, export, verify-roundtrip, evidence-import, mesen-labels-export):
-  --rom <path>                Required original ROM; optional with project-validate
+  --rom <path>                Required original ROM. Optional with project-validate
 
 Evidence options (evidence-import):
   --mesen-cdl <path>           Import verified MesenCE CDLv2 coverage
@@ -92,7 +92,7 @@ Evidence options (evidence-import):
   --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
 
 Analysis options (analyze):
-  --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal; quote $hex in shells)
+  --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
   --max-work-items <count>     Positive work limit (default 100000)
   --max-call-depth <count>     Nonnegative call-context depth (default 8)
 
@@ -101,14 +101,14 @@ Export options (export):
   --allow-code-regression      Allow previously exported code to become raw bytes
   Default destination: <project stem>.source
 
-Storage options (project-storage; budget options also accepted by evidence-import):
-  --convert-runtime           project-migrate only: convert trace detail; retain backup
+Storage options (project-storage, budget options also accepted by evidence-import):
+  --convert-runtime           project-migrate only: convert trace detail. Retain backup
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
 
 Assemble options:
   --config <uttori-asm.config.json>
-  --plugin <module>            Repeatable; appended after configured plugins
+  --plugin <module>            Repeatable. Appended after configured plugins
   --target <target-id>
   --architecture <architecture-id>
   --base-image <path>          Patch a copy, preserving unwritten bytes
@@ -122,13 +122,13 @@ Assemble options:
 Use --flag=value or --flag value for valued options. Boolean flags take no value.
 Use -- before positional paths beginning with --. Quote paths containing spaces.
 Exit status: 0 success/help (including explicitly incomplete analysis), 1 failure.
-Terminal signals retain Node's default termination behavior; no graceful cancellation is installed.`;
+Terminal signals retain Node's default termination behavior. No graceful cancellation is installed.`;
 /**
  * Parse arguments without reading files or loading plugins. Unknown/inapplicable flags, boolean
  * values, invalid numeric limits, and excess positionals throw Error. Required input/ROM presence
  * is checked by runCli so a bare --help remains valid. -- treats all following strings as paths.
- * @param {readonly string[]} argv Tokens excluding the Node executable and script name; not mutated.
- * @returns {CliArguments} New parsed object; list fields and the outer option map are shallow-frozen.
+ * @param {readonly string[]} argv Tokens excluding the Node executable and script name. Not mutated.
+ * @returns {CliArguments} New parsed object. List fields and the outer option map are shallow-frozen.
  */
 export const parseCliArguments = (argv) => {
     const positional = [];
@@ -195,7 +195,7 @@ export const parseCliArguments = (argv) => {
         }
         // In particular, --force=false must never turn a user's refusal into overwrite permission.
         if (booleanOptions.has(flag) && inlineValue !== undefined) {
-            throw new Error(`${flag} takes no value; omit it to disable it.`);
+            throw new Error(`${flag} takes no value. Omit it to disable it.`);
         }
         suppliedOptions.add(flag);
         if (flag === "--convert-runtime") {
@@ -454,7 +454,7 @@ const createAnalysisProject = (parsed, cwd) => {
         });
         console.log(`Success: Analysis project written to '${outputDirectory}'.`);
         if (result.importReport) {
-            console.log(`Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes; ${result.importReport.unsupported.length} unsupported field group(s).`);
+            console.log(`Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`);
         }
         return 0;
     }
@@ -548,7 +548,7 @@ const importProjectEvidence = async (parsed, cwd) => {
                 console.warn(warning);
             }
             const action = result.changed ? "updated" : "no-op reimport for";
-            console.log(`Success: ${action} '${directory}'; ${result.added.runtime} new runtime record(s).`);
+            console.log(`Success: ${action} '${directory}'. ${result.added.runtime} new runtime record(s).`);
             console.log(`Import: ${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported.`);
             return 0;
         }
@@ -631,7 +631,7 @@ const importProjectEvidence = async (parsed, cwd) => {
         if (includeDiagnostics) {
             diagnosticSummary = `incoming batch: ${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
         }
-        console.log(`Success: ${importAction} '${directory}'; ${diagnosticSummary}`);
+        console.log(`Success: ${importAction} '${directory}'. ${diagnosticSummary}`);
         for (const report of reports) {
             console.log(`Import: ${report}.`);
         }
@@ -715,7 +715,7 @@ const exportProjectMesenLabels = (parsed, cwd) => {
         const result = exportMesenLabels(loaded.view.labels, loaded.view.comments, rom, loaded.manifest.mapping.mapper, path.basename(output));
         fs.mkdirSync(path.dirname(output), { recursive: true });
         fs.writeFileSync(output, result.text);
-        console.log(`Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'; ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`);
+        console.log(`Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'. ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`);
         return 0;
     }
     catch (error) {
@@ -747,7 +747,7 @@ const analyzeProject = (parsed, cwd) => {
             ...(parsed.maxCallDepth === undefined ? {} : { maxCallDepth: parsed.maxCallDepth }),
         });
         console.log(`Success: ${result.status} 65816 analysis wrote ${result.instructions} instruction(s), ${result.functions} function candidate(s), ${result.conflicts} conflict(s), and ${result.unresolved} unresolved flow(s).`);
-        console.log(`Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code; ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}; observed PCs without code: ${result.runtimePcsWithoutCode}; heuristic findings: ${result.heuristicRoles}.`);
+        console.log(`Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code. ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}. Observed PCs without code: ${result.runtimePcsWithoutCode}. Heuristic findings: ${result.heuristicRoles}.`);
         if (result.status === "incomplete") {
             console.log(`Incomplete: ${result.incompleteReasons.map((reason) => reason.message).join(" ")}`);
         }
@@ -781,7 +781,7 @@ const exportProjectSource = (parsed, cwd) => {
             force: parsed.force,
             allowCodeRegression: parsed.allowCodeRegression,
         });
-        console.log(`Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s); ${result.codeBytes} byte(s) emitted as native 65816 source.`);
+        console.log(`Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s). ${result.codeBytes} byte(s) emitted as native 65816 source.`);
         console.log(`RAM map: ${result.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0} variable(s) applied from '${path.join(outputDirectory, "ram-map.json")}'.`);
         console.log(`Manifest: '${path.join(outputDirectory, SOURCE_EXPORT_MANIFEST)}'.`);
         return 0;
@@ -850,7 +850,7 @@ const assemble = async (parsed, cwd) => {
             baseImage,
             collectSourceMetadata: parsed.debug,
         });
-        // The core base image supplies reads; CLI patching also preserves every unwritten byte.
+        // The core base image supplies reads. CLI patching also preserves every unwritten byte.
         // A growable array lets source directives extend the image beyond its original length.
         if (baseImage) {
             assembler.outputBytes = Array.from(baseImage);
@@ -897,7 +897,7 @@ const assemble = async (parsed, cwd) => {
         return 1;
     }
     finally {
-        // Session cleanup can throw too; the owned plugin environment still needs disposal.
+        // Session cleanup can throw too. The owned plugin environment still needs disposal.
         try {
             assembler?.dispose();
         }
@@ -963,7 +963,7 @@ const verifyRoundTrip = async (parsed, cwd) => {
                     addressDetail += ` / CPU $${identity.canonicalCpuAddress.toString(16).toUpperCase().padStart(6, "0")}`;
                 }
             }
-            console.error(`Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}; first difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`);
+            console.error(`Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}. First difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`);
             return 1;
         }
         // Keep a previously verified image intact when rebuilding or comparison fails.
@@ -978,13 +978,13 @@ const verifyRoundTrip = async (parsed, cwd) => {
 };
 /**
  * Run one invocation using process.cwd(), the real filesystem, and the process console. Status/help
- * goes to stdout; errors/warnings go to stderr. Output is human-readable, not a stable JSON protocol.
- * Owns and disposes its assembler/plugin environment; failures including cleanup return 1. Plugins
+ * goes to stdout. Errors/warnings go to stderr. Output is human-readable, not a stable JSON protocol.
+ * Owns and disposes its assembler/plugin environment. Failures including cleanup return 1. Plugins
  * execute trusted code in-process. The host must serialize calls if it changes cwd or intercepts console.
  * No AbortSignal or signal handlers are installed: terminal termination can skip cleanup. Use the
  * underlying libraries for cooperative cancellation or structured results. This function neither
- * calls process.exit nor sets process.exitCode; the executable wrapper sets the returned status.
- * @param {readonly string[]} [argv] Argument tokens, defaulting to process.argv.slice(2); not mutated.
+ * calls process.exit nor sets process.exitCode. The executable wrapper sets the returned status.
+ * @param {readonly string[]} [argv] Argument tokens, defaulting to process.argv.slice(2). Not mutated.
  * @returns {Promise<number>} 0 for success/help (including incomplete analysis), 1 for reported failure.
  */
 export const runCli = async (argv = process.argv.slice(2)) => {
@@ -1014,7 +1014,7 @@ export const runCli = async (argv = process.argv.slice(2)) => {
     }
 };
 /**
- * Dispatch a validated invocation; unexpected failures are reported by runCli's outer boundary.
+ * Dispatch a validated invocation. Unexpected failures are reported by runCli's outer boundary.
  * @param {CliArguments} parsed Parsed options with a required input already checked.
  * @param {string} cwd Invocation working directory, captured before asynchronous work.
  * @returns {Promise<number>} Command status after its owned resources are released.
@@ -1051,7 +1051,7 @@ const runCommand = async (parsed, cwd) => {
                     }
                 },
             });
-            console.log(`Success: storage format ${result.storageVersion}; ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`);
+            console.log(`Success: storage format ${result.storageVersion}. ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`);
             for (const step of result.timings ?? []) {
                 console.log(`${step.step}: ${(step.durationMs / 1000).toFixed(3)} s`);
             }
@@ -1101,7 +1101,7 @@ const runCommand = async (parsed, cwd) => {
     if (parsed.command === "project-compact") {
         try {
             const result = compactAnalysisProject(path.resolve(cwd, parsed.input));
-            console.log(`Success: compacted analysis storage; freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`);
+            console.log(`Success: compacted analysis storage. Freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`);
             return result.maintenance.warnings.length ? 1 : 0;
         }
         catch (error) {

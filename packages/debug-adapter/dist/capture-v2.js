@@ -2,7 +2,7 @@ const maxU64 = (1n << 64n) - 1n;
 /**
  * Validate the explicit stream dictionary. Callers choose the instruction default only on omission.
  * @param {unknown} value Scope supplied by the caller or archive header.
- * @returns {CaptureScopeV2} Supported stream identity; unknown values throw.
+ * @returns {CaptureScopeV2} Supported stream identity. Unknown values throw.
  */
 export const captureScope = (value) => {
     if (value !== "snes.65816.instructions" &&
@@ -25,7 +25,7 @@ export const captureSession = (value) => {
 export const validateCaptureRequest = (value) => {
     if (!value || typeof value !== "object")
         throw new Error("Invalid capture request.");
-    // File negotiation has its own packet family; unsupported runtimes must fail
+    // File negotiation has its own packet family. Unsupported runtimes must fail
     // before arming instead of silently streaming a user-selected native capture.
     if (value.operation === "file-capabilities") {
         if (Object.keys(value).some((key) => !["operation", "scope"].includes(key)))
@@ -75,7 +75,7 @@ export const validateCaptureRequest = (value) => {
     if (value.operation === "ack")
         fields = ["operation", "session", "chunk", "event"];
     if (Object.keys(value).some((key) => !fields.includes(key)))
-        throw new Error("Unsupported capture negotiation field; capture requires an explicit supported stream with durable ownership.");
+        throw new Error("Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership.");
     if (value.operation === "capabilities" || value.operation === "start") {
         if (value.scope !== undefined)
             captureScope(value.scope);
@@ -111,7 +111,7 @@ export const validateCaptureRequest = (value) => {
     throw new Error("Unsupported capture operation.");
 };
 /**
- * Require the requested scope and its reservation size; never downgrade to a different stream.
+ * Require the requested scope and its reservation size. Never downgrade to a different stream.
  * @param {unknown} value Native capability reply.
  * @param {CaptureScopeV2} scope Requested stream, defaulting to instructions for older callers.
  * @returns {CaptureCapabilitiesV2} Verified lossless ownership and allocation contract.
@@ -144,10 +144,10 @@ export const validateCaptureCapabilities = (value, scope = "snes.65816.instructi
     return expected;
 };
 /**
- * Scope is stable for a session; only legacy instruction positions may omit it.
+ * Scope is stable for a session. Only legacy instruction positions may omit it.
  * @param {unknown} value Native status or archive terminal frame.
  * @param {string} session Expected identity when an active session is already known.
- * @param {CaptureScopeV2} scope Expected stream; bus positions must explicitly confirm it.
+ * @param {CaptureScopeV2} scope Expected stream. Bus positions must explicitly confirm it.
  * @returns {CapturePositionV2} Validated ownership boundaries and integrity state.
  */
 export const validateCapturePosition = (value, session, scope) => {
@@ -211,7 +211,7 @@ export const captureCrc32c = (bytes, zeroChecksum = false) => {
     let crc = 0xffffffff;
     let i = 0;
     for (; i + 8 <= bytes.length; i += 8) {
-        // The checksum occupies aligned bytes 56–59. Treat only that word as zero;
+        // The checksum occupies aligned bytes 56–59. Treat only that word as zero.
         // never mutate the caller's shared buffer while validating an ACT2 chunk.
         let low = bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24);
         if (zeroChecksum && i === 56)
@@ -346,7 +346,7 @@ export function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructi
  * @param {number} count Bounded, nonzero record count.
  * @param {boolean} transfers Whether the negotiated scope also permits boundary markers.
  * @param {boolean} ppu Require verified effects on every mapped graphics data-port write.
- * @returns {readonly (CaptureBusAccessV2 | CaptureTransferV2)[]} Decoded accesses and markers; invalid fields reject the whole chunk.
+ * @returns {readonly (CaptureBusAccessV2 | CaptureTransferV2)[]} Decoded accesses and markers. Invalid fields reject the whole chunk.
  */
 const decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
     if (!transfers && b.length !== 64 + count * 64)
@@ -434,7 +434,7 @@ const decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
         throw new Error("Capture record count does not consume the payload exactly.");
     return accesses;
 };
-/** Decode a native boundary after envelope validation; cross-record lifecycle validation belongs to analysis.
+/** Decode a native boundary after envelope validation. Cross-record lifecycle validation belongs to analysis.
  * @param {Buffer} b Complete envelope and payload.
  * @param {number} offset Start of the 80-byte marker.
  * @param {bigint} event Expected global event sequence.
@@ -493,7 +493,7 @@ const decodeTransfer = (b, offset, event) => {
         },
     };
 };
-/** Decode the fixed 24-byte effect extension; malformed results reject the whole chunk.
+/** Decode the fixed 24-byte effect extension. Malformed results reject the whole chunk.
  * @param {Buffer} b Fully bounded record bytes.
  * @param {number} offset Beginning of the 88-byte bus record.
  * @param {number} port Mapped graphics data port, already checked against direction and bank.

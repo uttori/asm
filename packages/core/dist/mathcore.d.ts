@@ -31,7 +31,7 @@ export declare class MathCore {
     readonly operators: OperatorTable;
     /** Full expression currently being scanned. */
     scanSource: string;
-    /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+    /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
     scanIndex: number;
     /**
      * Remaining unconsumed expression text.
@@ -122,62 +122,16 @@ export declare class MathCore {
      * @returns {number} The numeric result.
      */
     evaluateExpressionNode(expression: ExpressionNode): number;
-    /**
-     * Evaluates call argument.
-     * @param {string} functionName The function name.
-     * @param {number} argumentIndex The argument index.
-     * @param {ExpressionNode} argument The argument.
-     * @returns {number | string} The result.
-     */
     evaluateCallArgument(functionName: string, argumentIndex: number, argument: ExpressionNode): number | string;
-    /**
-     * Evaluates unary expression node.
-     * @param {UnaryOperator} operator The operator.
-     * @param {ExpressionNode} argument The argument.
-     * @returns {number} The result.
-     */
     evaluateUnaryExpressionNode(operator: UnaryOperator, argument: ExpressionNode): number;
-    /**
-     * Evaluates binary expression node.
-     * @param {BinaryOperator} operator The operator.
-     * @param {ExpressionNode} left The left.
-     * @param {ExpressionNode} right The right.
-     * @returns {number} The result.
-     */
     evaluateBinaryExpressionNode(operator: BinaryOperator, left: ExpressionNode, right: ExpressionNode): number;
-    /**
-     * Resolves numeric identifier argument.
-     * @param {string} identifier The identifier.
-     * @returns {number | string} The result.
-     */
     resolveNumericIdentifierArgument(identifier: string): number | string;
-    /**
-     * Evaluates reference expression node.
-     * @param {ReferenceExpressionNode} expression The expression.
-     * @returns {number} The result.
-     */
     evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number;
-    /**
-     * Resolves leading local label reference.
-     * @param {string} input The input.
-     * @returns {{ label: string; length: number } | undefined} The result.
-     */
     resolveLeadingLocalLabelReference(input: string): {
         label: string;
         length: number;
     } | undefined;
-    /**
-     * Checks whether string argument.
-     * @param {string} functionName The function name.
-     * @param {number} argumentIndex The argument index.
-     * @returns {boolean} The result.
-     */
     isStringArgument(functionName: string, argumentIndex: number): boolean;
-    /**
-     * Parses literal node.
-     * @param {string} value The value.
-     * @returns {number} The result.
-     */
     parseLiteralNode(value: string): number;
     /**
      * Evaluates a mathematical expression.
@@ -264,10 +218,6 @@ export declare class MathCore {
      * Parses a function definition.
      */
     parseFunctionDefinition: () => void;
-    /**
-     * Gets host.
-     * @returns {ExpressionHost} The result.
-     */
     getHost(): ExpressionHost;
 }
 export {};

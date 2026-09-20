@@ -1,7 +1,7 @@
 import { type DebugAddress, type DebugBackend, type DebugExecutionCapabilities, type DebugMemorySpaceCapabilities } from "./contracts.js";
 /** Frozen contract revision shared by replay and live-emulator backend tests. */
 export declare const DEBUG_BACKEND_CONFORMANCE_VERSION: 1;
-/** Stable scenario identifiers; emulator integrations must not replace them with private suites. */
+/** Stable scenario identifiers. Emulator integrations must not replace them with private suites. */
 export declare const DEBUG_BACKEND_CONFORMANCE_SCENARIOS: readonly ["protocol-and-capabilities", "connect-and-inspect", "exact-instruction-step", "continue-to-breakpoint", "reconnect-without-reset", "request-bounds"];
 /** One architecture expected from capability negotiation. */
 export interface DebugBackendConformanceArchitecture {

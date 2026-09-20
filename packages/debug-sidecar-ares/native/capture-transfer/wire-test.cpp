@@ -5,7 +5,7 @@
 using ares_capture::Capture;
 
 // Native framing fixture: a large DMA run crosses chunks and remains one transfer.
-// Output is consumed by the existing TypeScript decoder tests; this harness needs only C++17.
+// Output is consumed by the existing TypeScript decoder tests. This harness needs only C++17.
 auto main() -> int {
   Capture capture;
   std::cout << capture.command("transfer-capabilities") << '\n';

@@ -58,11 +58,11 @@ export interface DebugAdapterSessionOptions {
   readonly debugMap?: DebugMap;
   readonly output?: Uint8Array;
   readonly sourceRoot?: string;
-  /** Host-confirmed ROM aliases for a source location; instruction breakpoints stay exact. */
+  /** Host-confirmed ROM aliases for a source location. Instruction breakpoints stay exact. */
   readonly sourceBreakpointAddresses?: (address: DebugAddress) => readonly DebugAddress[];
   /** Physical output byte for a runtime PC when the backend omits mirror identity. */
   readonly sourceOutputOffset?: (address: DebugAddress) => number | undefined;
-  /** Optional display suffix. Async providers can batch a page; failures leave instruction text intact. */
+  /** Optional display suffix. Async providers can batch a page. Failures leave instruction text intact. */
   readonly instructionAnnotation?: (
     address: DebugAddress,
   ) => string | undefined | Promise<string | undefined>;
@@ -84,7 +84,7 @@ const records = (value: unknown): readonly Record<string, unknown>[] =>
 const VIRTUAL_DISASSEMBLY_HEADER = [
   "; Debugger disassembly (temporary, read-only view)",
   "; Shown because the current instruction has no matching source line in this project.",
-  "; Instructions are decoded from the debug session; edit project source files to change code.",
+  "; Instructions are decoded from the debug session. Edit project source files to change code.",
   "; Columns: address, instruction bytes, assembly instruction.",
   "",
 ];
@@ -281,7 +281,7 @@ export class DebugAdapterSession {
   #maintenancePause?: MaintenancePause;
   /** Thread whose internal resume event must likewise remain invisible to the IDE. */
   #maintenanceResumeThreadId?: number;
-  /** Execution commands share the table-update queue; backend events never wait on it. */
+  /** Execution commands share the table-update queue. Backend events never wait on it. */
   #executionUpdateQueue: Promise<void> = Promise.resolve();
 
   /**
@@ -378,7 +378,7 @@ export class DebugAdapterSession {
   /**
    * Runs the DAP configuration window after the live backend is connected.
    * VS Code sends its initial breakpoints between `initialized` and
-   * `configurationDone`; connecting first leaves the emulator stopped and able to
+   * `configurationDone`. Connecting first leaves the emulator stopped and able to
    * accept those breakpoint-table writes before execution begins.
    * @returns {Promise<void>} Resolves after the client finishes breakpoint configuration.
    */
@@ -686,7 +686,7 @@ export class DebugAdapterSession {
   async #scopes(frameId: number): Promise<Record<string, unknown>> {
     const frame = this.#frames.get(frameId);
     if (!frame) {
-      throw new Error("Unknown stack frame; refresh the call stack and try again.");
+      throw new Error("Unknown stack frame. Refresh the call stack and try again.");
     }
     const capabilities = this.#architectureCapabilities(frame.pc.architecture);
     if (!capabilities) {
@@ -952,7 +952,7 @@ export class DebugAdapterSession {
         const matches = aliases.map((alias) => applied.get(breakpointKey(alias)));
         const match = address ? applied.get(breakpointKey(address)) : undefined;
         if (match) {
-          // One gutter marker represents all ROM aliases; partial native acceptance
+          // One gutter marker represents all ROM aliases. Partial native acceptance
           // must not turn it into a misleading verified breakpoint.
           const verified = matches.length > 0 && matches.every((entry) => entry?.verified);
           const result = { ...dapBreakpoint(match), verified, line };
@@ -1051,8 +1051,8 @@ export class DebugAdapterSession {
   /**
    * Applies the union of source and instruction breakpoints as one backend table.
    * Live emulators require a stopped CPU for this mutation, so a running session is
-   * paused briefly. A failed replacement restores the confirmed table before resuming;
-   * failed recovery leaves a visible stop and blocks execution until a successful edit.
+   * paused briefly. A failed replacement restores the confirmed table before resuming.
+   * Failed recovery leaves a visible stop and blocks execution until a successful edit.
    * @param {Map<string, DebugAddress[]>} sources Proposed per-source requests.
    * @param {Map<string, DebugAddress>} instructions Proposed instruction requests.
    * @returns {Promise<Map<string, DebugBreakpoint>>} Applied breakpoints keyed by address.
@@ -1109,7 +1109,7 @@ export class DebugAdapterSession {
               ...breakpoint,
               verified: false,
               message:
-                "Native breakpoint table is uncertain; edit breakpoints again before continuing.",
+                "Native breakpoint table is uncertain. Edit breakpoints again before continuing.",
             },
           });
         }

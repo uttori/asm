@@ -77,29 +77,9 @@ export declare class SymbolScopeService {
      * @returns {string} The rewritten name.
      */
     toCheapDotLabel(name: string): string;
-    /**
-     * Finds nearest hierarchy ancestor.
-     * @param {string} label The label.
-     * @returns {string | null} The result.
-     */
     findNearestHierarchyAncestor(label: string): string | null;
-    /**
-     * Gets hierarchy chain.
-     * @param {string} label The label.
-     * @returns {string[]} The result.
-     */
     getHierarchyChain(label: string): string[];
-    /**
-     * Gets ancestor prefixes.
-     * @param {string} label The label.
-     * @returns {string[]} The result.
-     */
     getAncestorPrefixes(label: string): string[];
-    /**
-     * Gets scoped parent label.
-     * @param {number} dotCount The dot count.
-     * @returns {string} The result.
-     */
     getScopedParentLabel(dotCount: number): string;
     /**
      * Checks if a label is in scope.
@@ -194,7 +174,7 @@ export declare class SymbolScopeService {
     getObjectSize(identifier: string, baseOnly?: boolean): number;
     /**
      * Returns the outline container for a stored label name.
-     * Sublabels nest under their parent; namespaced labels nest under the namespace.
+     * Sublabels nest under their parent. Namespaced labels nest under the namespace.
      * @param {string} fullLabel The stored label name.
      * @param {boolean} isGlobal Whether the label is global.
      * @returns {string | undefined} The container name, if any.

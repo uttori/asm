@@ -6,7 +6,7 @@ export type AddressingMode = "implied" | "accumulator" | "immediate" | "zeroPage
 export type OperandCodecId = "none" | "unsigned8" | "unsigned16-le" | "unsigned24-le" | "relative8" | "relative16" | "zero-page-relative8" | "accumulator-relative8" | "zero-page-immediate8" | "special-page" | "three-unsigned16-le" | "immediate-unsigned8" | "immediate-unsigned16";
 /**
  * Boolean combination of {@link CpuFeature}s. Empty `anyOf` is treated as
- * "no restriction"; `allOf`/`noneOf` are vacuously true when omitted.
+ * "no restriction". `allOf`/`noneOf` are vacuously true when omitted.
  */
 export interface FeatureExpression {
     readonly allOf?: readonly CpuFeature[];
@@ -58,7 +58,7 @@ export interface CpuDefinition {
  */
 export declare function matchesFeatures(expression: FeatureExpression, features: ReadonlySet<CpuFeature>): boolean;
 /**
- * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`;
+ * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`.
  * 24-bit `absoluteLongIndexedX` is the MEGA65/4510 long-x form.
  *
  * @param {AddressingMode} mode Addressing mode.

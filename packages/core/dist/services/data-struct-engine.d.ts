@@ -12,8 +12,8 @@ export interface DataStructHost {
 }
 /**
  * Emits complete records through the normal writer (mapper, trace and debug
- * ownership included). The layout stage reserves the same width as emission;
- * values and placement are checked at emission, once forward labels are known.
+ * ownership included). The layout stage reserves the same width as emission.
+ * Values and placement are checked at emission, once forward labels are known.
  * Array blocks own only sequencing state, never an independent write cursor.
  */
 export declare class DataStructEngine {

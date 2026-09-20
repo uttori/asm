@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 /** Stable identity of the emulator-neutral sidecar wire protocol. */
 export const DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
-/** Initial sidecar wire revision. This project is unreleased, so the revision remains version 1. */
+/** Supported wire revision. Peers reject messages with any other version. */
 export const DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 /** Commands available across the sidecar boundary. */
 export const DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -200,7 +200,7 @@ export class DebugSidecarMessageParser {
         return messages;
     }
 }
-/** Bounded FIFO for encoded messages; overflow is explicit rather than silently dropping events. */
+/** Bounded FIFO for encoded messages. Overflow is explicit rather than silently dropping events. */
 export class DebugSidecarMessageQueue {
     #limits;
     #frames = [];

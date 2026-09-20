@@ -522,7 +522,7 @@ function cursorWord(index: WorkspaceIndex, file: string, position: Position): st
 
 /**
  * Splits a compound identifier on `_`, keeping a leading `.` / `_` on the first
- * part. `.idx_beginner` → `[".idx", "beginner"]`; `_018049_8053` → `["_018049", "8053"]`.
+ * part. `.idx_beginner` → `[".idx", "beginner"]`. `_018049_8053` → `["_018049", "8053"]`.
  * @param {string} word The identifier text.
  * @returns {string[]} The source segments.
  */
@@ -660,7 +660,7 @@ function alignedHierarchy(
 
 /**
  * Source ranges for each segment of a compound identifier on a line.
- * `.idx_beginner` → `.idx` and `beginner`; `_018049_8053` → `_018049` and `8053`.
+ * `.idx_beginner` → `.idx` and `beginner`. `_018049_8053` → `_018049` and `8053`.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @param {number} line The zero-based line number.
@@ -906,7 +906,7 @@ export function documentSymbolsFor(index: WorkspaceIndex, file: string): Documen
 
 /**
  * Builds the workspace include DAG for the project outline TreeView.
- * File nodes do not embed symbols; the client loads those via documentSymbol.
+ * File nodes do not embed symbols. The client loads those via documentSymbol.
  * @param {WorkspaceIndex} index The workspace index.
  * @returns {ProjectOutlineNode[]} Root outline nodes (entries, then orphans).
  */
@@ -1763,7 +1763,7 @@ function dedupeOutlineChildren(children: DocumentSymbol[]): DocumentSymbol[] {
     const existing = seen.get(key);
     const childCount = child.children?.length ?? 0;
     const existingCount = existing?.children?.length ?? 0;
-    // Prefer nodes with more children; when equal, prefer the node that carries
+    // Prefer nodes with more children. When equal, prefer the node that carries
     // an address value in its detail (the setLabel recording) over a bare "label"
     // detail (the FEC raw-name recording which has no value).
     const childHasValue = child.detail?.includes("$") ?? false;

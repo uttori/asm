@@ -2,15 +2,31 @@
   "name": "@uttori/asm-cli",
   "version": "1.0.0",
   "description": "Command-line interface for Uttori ASM projects.",
+  "keywords": [
+    "assembler",
+    "cli",
+    "disassembler",
+    "snes"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/cli#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
   "author": "Matthew Callis <matthew.callis@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/cli"
+  },
   "bin": {
     "uttori-asm": "out/cli.mjs"
   },
   "files": [
     "dist",
     "out",
-    "src"
+    "src",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,
@@ -23,6 +39,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node esbuild.mjs",

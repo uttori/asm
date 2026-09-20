@@ -26,7 +26,7 @@ export * from "./assets/index.js";
 export declare const SNES_TARGET_ID = "snes.sfc";
 /**
  * Target options accepted by `validateOptions` / `createOptions`.
- * Unknown keys are ignored; `checksumMode` is the only enum that throws.
+ * Unknown keys are ignored. `checksumMode` is the only enum that throws.
  */
 export interface SnesTargetOptions extends Record<string, unknown> {
     readonly checksumMode: "asar" | "simple";

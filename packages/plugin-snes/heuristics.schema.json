@@ -61,7 +61,7 @@
               "minimum": 0,
               "maximum": 16777215
             },
-            "description": "CPU bus hardware-register addresses; RAM lookalikes are rejected."
+            "description": "CPU bus hardware-register addresses. RAM lookalikes are rejected."
           },
           "access": {
             "enum": [

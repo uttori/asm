@@ -26,10 +26,10 @@ uttori-asm-debug-sidecar-ares --manifest runtime.json --ares /path/to/emulator \
   --rom game.sfc --runtime-dir /path/to/runtime
 ```
 
-This command serves framed protocol messages on stdin/stdout; it is not an interactive terminal
+This command serves framed protocol messages on stdin/stdout. It is not an interactive terminal
 session. In VS Code, use **Assembly: Configure Emulator Runtime**, then **Debug in Emulator**.
 
-The base profile exposes 65816 control; additional trace and capture features require matching native capabilities. SPC700/Super FX emulation alone does not imply debugger support. Capabilities and runtime
+The base profile exposes 65816 control. Additional trace and capture features require matching native capabilities. SPC700/Super FX emulation alone does not imply debugger support. Capabilities and runtime
 identity must match the host profile. Native platform validation is tracked separately from the
 portable JavaScript tests.
 

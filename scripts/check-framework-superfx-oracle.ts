@@ -112,7 +112,7 @@ if (!executableAvailable) {
       ? "is unavailable"
       : `is not the SNES Asar executable${versionText ? ` (${versionText})` : ""}`;
   console.log(
-    `SNES-ROM-Framework source agrees on all ${observed.size} SuperFX opcode mnemonics; executable oracle skipped because '${executable}' ${reason}.`,
+    `SNES-ROM-Framework source agrees on all ${observed.size} SuperFX opcode mnemonics. Executable oracle skipped because '${executable}' ${reason}.`,
   );
   process.exit(0);
 }

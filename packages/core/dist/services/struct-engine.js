@@ -252,7 +252,7 @@ export class StructEngine {
         let candidate = labelRef;
         let extraMember = "";
         // First `[...]` is the array index. Hardware-register structs use hex
-        // (`DMA[$00].Parameters`); decimal `obj[2]` still works via getnum.
+        // (`DMA[$00].Parameters`). Decimal `obj[2]` still works via getnum.
         const arrayMatch = candidate.match(/^(.*?)\[([^\]]+)](.*)$/);
         if (arrayMatch) {
             candidate = arrayMatch[1];

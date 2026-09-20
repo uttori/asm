@@ -16,7 +16,7 @@ import { verifySnesProjectRoundTrip } from "../src/disassembler/project-initiali
 import { analyzeSnesRuntimeCode } from "../src/disassembler/runtime-code.js";
 import { exportSnes65816Source } from "../src/disassembler/source-export.js";
 
-/** Complete instruction observations; LoROM bank aliases intentionally share physical bytes. */
+/** Complete instruction observations. LoROM bank aliases intentionally share physical bytes. */
 const capture = (
   id: string,
   address: number,
@@ -105,7 +105,7 @@ test("captured ROM instructions supersede unreached in memory and SQL without pr
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const { rom, project } = fixture();
   // Simulate static propagation carrying the same trace provenance. Only the executed prefix
-  // may override unreached; the statically decoded RTS at offset 5 must stay raw.
+  // may override unreached. The statically decoded RTS at offset 5 must stay raw.
   const staticAnalysis = analyzeSnesRuntimeCode(project.shards, rom, "lorom", [
     capture("static-return", 0x808005, [0x60]),
   ])

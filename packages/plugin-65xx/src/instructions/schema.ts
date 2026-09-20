@@ -65,7 +65,7 @@ export type OperandCodecId =
 
 /**
  * Boolean combination of {@link CpuFeature}s. Empty `anyOf` is treated as
- * "no restriction"; `allOf`/`noneOf` are vacuously true when omitted.
+ * "no restriction". `allOf`/`noneOf` are vacuously true when omitted.
  */
 export interface FeatureExpression {
   readonly allOf?: readonly CpuFeature[];
@@ -136,7 +136,7 @@ export function matchesFeatures(
 }
 
 /**
- * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`;
+ * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`.
  * 24-bit `absoluteLongIndexedX` is the MEGA65/4510 long-x form.
  *
  * @param {AddressingMode} mode Addressing mode.

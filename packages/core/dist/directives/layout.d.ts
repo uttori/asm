@@ -15,8 +15,8 @@ export declare const handlePushBase: ({ session }: AddressStackDirectiveContext)
 export declare const handlePullBase: ({ session }: AddressStackDirectiveContext) => void;
 /**
  * Selects the architecture named by `words[1]`.
- * Prefers {@link DirectiveArchitectureCapability.selectArchitecture} when present;
- * otherwise writes `session.arch` after checking `availableArchitectures`.
+ * Prefers {@link DirectiveArchitectureCapability.selectArchitecture} when present.
+ * Otherwise writes `session.arch` after checking `availableArchitectures`.
  * @param {ArchitectureDirectiveContext} ctx The architecture-capable session.
  * @param {readonly string[]} words Tokenized line, keyword first.
  * @returns {void}

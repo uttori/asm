@@ -107,7 +107,7 @@ const reserveLoopbackPort = async () => {
     }));
     return address.port;
 };
-/** Default Node platform operations; the RSP listener itself remains numeric-loopback-only. */
+/** Default Node platform operations. The RSP listener itself remains numeric-loopback-only. */
 export const nodeAresProcessRuntime = Object.freeze({
     platform: process.platform,
     architecture: process.arch,
@@ -357,7 +357,7 @@ export class AresProcessHost {
         await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
         await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
         for (const resource of this.#manifest.resources) {
-            // path.join already normalizes manifest separators; keep the path as one argument.
+            // path.join already normalizes manifest separators. Keep the path as one argument.
             await this.#verifyHash(path.join(this.#runtimeDirectory, resource.path), resource.sha256, `resource '${resource.path}'`);
         }
     }

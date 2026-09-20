@@ -25,7 +25,7 @@ const text = (value) => {
 const hex = (value) => `$${value.toString(16).toUpperCase()}`;
 /**
  * Resolve optional instructionUses against already validated layouts and bindings.
- * Native expressions name exact operands; observations describe complete spans within a binding.
+ * Native expressions name exact operands. Observations describe complete spans within a binding.
  * @param {unknown} value Optional instructionUses array from JSON.
  * @param {readonly SnesStructLayout[]} structures Validated zero-based layouts.
  * @param {readonly SnesStructBinding[]} bindings Validated physical record bindings.
@@ -129,7 +129,7 @@ export const validateSnesStructInstructionUses = (value, structures, bindings) =
 /**
  * Index only annotated instructions, O(uses), rather than scanning uses for every CFG variant.
  * Mapper aliases, complete byte encodings and capture ROM identities are checked before export.
- * The callback returns undefined for unmapped addresses; instruction bytes must map contiguously.
+ * The callback returns undefined for unmapped addresses. Instruction bytes must map contiguously.
  * @param {readonly SnesStructInstructionUse[] | undefined} uses Validated instruction uses.
  * @param {RomImage} rom Immutable ROM supplying instruction bytes and capture identity.
  * @param {Function} toFileOffset Mapper-specific CPU-to-ROM translation.
@@ -222,7 +222,7 @@ export const applySnesStructInstructionOperand = (instruction, source, use) => {
     return `${instruction.mnemonic}.${operand.width === 1 ? "b" : "w"} #${use.operand.expression}`;
 };
 /**
- * Render all capture alternatives as comments; they never become fixed-address CPU operands.
+ * Render all capture alternatives as comments. They never become fixed-address CPU operands.
  * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
  * @returns {readonly string[]} Individual comment bodies without the leading semicolon.
  */
@@ -231,9 +231,9 @@ export const renderSnesStructUseComments = (use) => [
     ...use.observations.map((observation) => {
         let coverage = "";
         if (observation.parts.length > 1 || !observation.parts[0].field) {
-            coverage = `; covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+            coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
         }
-        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex(observation.address)}, ${observation.width} byte(s))${coverage}; ${observation.source}: ${observation.detail}`;
+        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex(observation.address)}, ${observation.width} byte(s))${coverage}. ${observation.source}: ${observation.detail}`;
     }),
 ];
 //# sourceMappingURL=struct-instruction-uses.js.map

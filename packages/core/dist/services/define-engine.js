@@ -4,11 +4,6 @@ export class DefineEngine {
     constructor(host) {
         this.host = host;
     }
-    /**
-     * Checks whether pure math expression.
-     * @param {string} value The value.
-     * @returns {boolean} The result.
-     */
     isPureMathExpression(value) {
         // oxlint-disable-next-line security/detect-unsafe-regex -- Anchors bound the complete token grammar.
         return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);

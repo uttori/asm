@@ -18,7 +18,7 @@ export const detectCopierHeaderSize = (fileSize) => {
     if (remainder === 512) {
         return 512;
     }
-    throw new Error(`ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header; pass an explicit header override.`);
+    throw new Error(`ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header. Pass an explicit header override.`);
 };
 /**
  * Immutable, bounds-safe view of a user-supplied ROM.
@@ -32,7 +32,7 @@ export class RomImage {
     #fileBytes;
     #contentBytes;
     /**
-     * @param {Uint8Array} bytes Complete file bytes; copied immediately.
+     * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
      * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
      */
     constructor(bytes, options = {}) {
@@ -92,7 +92,7 @@ export class RomImage {
         return this.#contentBytes.slice(offset, offset + length);
     }
     /**
-     * Returns a defensive copy; callers cannot mutate the loaded image.
+     * Returns a defensive copy. Callers cannot mutate the loaded image.
      * @returns {Uint8Array} The headerless ROM content.
      */
     bytes() {

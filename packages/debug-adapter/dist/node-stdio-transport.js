@@ -6,7 +6,7 @@ const positiveInteger = (value, name) => {
     if (!Number.isSafeInteger(value) || value <= 0)
         throw new Error(`${name} must be a positive safe integer.`);
 };
-/** Restartable Node transport that isolates native emulator failures from the extension host. */
+/** Owns one child process. Create a new instance to restart after close or process failure. */
 export class NodeStdioSidecarTransport {
     #child;
     #session;

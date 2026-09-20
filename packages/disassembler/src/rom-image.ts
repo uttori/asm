@@ -14,13 +14,13 @@ export interface RomIdentity {
   readonly fileSize: number;
   /** Byte length after stripping the copier header. */
   readonly contentSize: number;
-  /** `0` or `512`; matches `fileSize - contentSize`. */
+  /** `0` or `512`. Matches `fileSize - contentSize`. */
   readonly headerSize: CopierHeaderSize;
 }
 
 /** Options for constructing a `RomImage`. Omitted `headerSize` is auto-detected. */
 export interface RomLoadOptions {
-  /** Explicit copier-header size; required when the file size is not 32 KiB aligned. */
+  /** Explicit copier-header size. Required when the file size is not 32 KiB aligned. */
   readonly headerSize?: CopierHeaderSize;
 }
 
@@ -44,7 +44,7 @@ export const detectCopierHeaderSize = (fileSize: number): CopierHeaderSize => {
     return 512;
   }
   throw new Error(
-    `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header; pass an explicit header override.`,
+    `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header. Pass an explicit header override.`,
   );
 };
 
@@ -61,7 +61,7 @@ export class RomImage {
   readonly #contentBytes: Uint8Array;
 
   /**
-   * @param {Uint8Array} bytes Complete file bytes; copied immediately.
+   * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
    * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
    */
   constructor(bytes: Uint8Array, options: RomLoadOptions & { readonly sourcePath?: string } = {}) {
@@ -128,7 +128,7 @@ export class RomImage {
   }
 
   /**
-   * Returns a defensive copy; callers cannot mutate the loaded image.
+   * Returns a defensive copy. Callers cannot mutate the loaded image.
    * @returns {Uint8Array} The headerless ROM content.
    */
   bytes(): Uint8Array {

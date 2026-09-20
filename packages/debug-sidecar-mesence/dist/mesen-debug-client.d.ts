@@ -17,7 +17,7 @@ export interface FramedMesenDebugClientOptions {
     readonly maxQueuedRequests?: number;
     readonly maxQueuedBytes?: number;
 }
-/** Bounded, authenticated, sequential client for the maintained MesenCE native seam. */
+/** Bounded, authenticated, sequential client for the patched MesenCE debugger. */
 export declare class FramedMesenDebugClient implements MesenDebugClient {
     #private;
     /** @param {FramedMesenDebugClientOptions} options Transport, one-session token, and bounds. */

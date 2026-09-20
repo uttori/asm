@@ -33,7 +33,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
     /**
      * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
      * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
-     * not stall; encode will still reject them.
+     * not stall. Encode will still reject them.
      *
      * @param {string} mnemonic The mnemonic.
      * @param {string} operandText The operand text.
@@ -150,7 +150,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
     /**
      * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
      * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
-     * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+     * indirectX (no extra byte). `($dp+X)` is indirectDpX.
      *
      * @param {string} operand Right-hand operand of an A-destination ALU op.
      * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
@@ -170,7 +170,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     isDpOrAbs(operand: string): boolean;
     /**
-     * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+     * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc. `DEC X`/`DEC Y` and
      * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
      * {@link getAddressSize} (spelling), not the numeric value.
      *
@@ -182,7 +182,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      */
     handleShiftIncDec(opcode: string, operand: string, forcedLen: number | null, explicitlen: boolean): boolean;
     /**
-     * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+     * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic. Asar also accepts
      * `SET1 $13.7` where `.n` overrides the mnemonic digit.
      *
      * @param {string} opcode SET/CLR mnemonic with bit digit.
@@ -218,7 +218,7 @@ export declare class ArchSPC700 implements ArchitectureEncoder {
      * @param {string} left Register, `$dp`, or `$dp+X`.
      * @param {string} right Branch target.
      * @param {LoweredOperand} [leftLowered] Lowered left operand.
-     * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+     * @param {LoweredOperand} [_rightLowered] Unused. Kept for call-site symmetry.
      * @returns {boolean} True if encoded.
      */
     handleDbnzCbne(opcode: string, left: string, right: string, leftLowered?: LoweredOperand, _rightLowered?: LoweredOperand): boolean;

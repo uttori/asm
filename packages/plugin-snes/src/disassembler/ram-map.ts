@@ -17,7 +17,7 @@ export const SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
 /** One editable RAM variable as represented in `ram-map.json`. */
 export interface SnesRamMapVariableInput {
   readonly name: string;
-  /** CPU bus address as `$7EA171`, `0x7EA171`, or an integer; never a physical SRAM offset. */
+  /** CPU bus address as `$7EA171`, `0x7EA171`, or an integer. Never a physical SRAM offset. */
   readonly address: string | number;
   /** Defaults to WRAM. SRAM is an explicit cartridge-window declaration with exact-address lookup. */
   readonly memory?: "wram" | "sram";
@@ -41,7 +41,7 @@ export interface SnesRamMapFile {
 export interface SnesRamMapVariable {
   readonly name: string;
   readonly address: number;
-  /** Omitted means WRAM; SRAM addresses are not normalized across cartridge-dependent mirrors. */
+  /** Omitted means WRAM. SRAM addresses are not normalized across cartridge-dependent mirrors. */
   readonly memory?: "wram" | "sram";
   readonly size: number;
   readonly category?: string;
@@ -87,7 +87,7 @@ const sramWindowEnd = (address: number): number | undefined => {
  * Parses a CPU address and enforces the selected RAM domain before ranges are indexed.
  * @param {string | number} value Hexadecimal string or integer CPU address.
  * @param {"wram" | "sram"} memory Explicit SRAM declaration, or the WRAM default.
- * @returns {number} Valid bus address; throws for malformed or out-of-domain values.
+ * @returns {number} Valid bus address. Throws for malformed or out-of-domain values.
  */
 const parseAddress = (value: string | number, memory: "wram" | "sram"): number => {
   let address: number;
@@ -164,7 +164,7 @@ export const validateSnesRamMap = (value: unknown): readonly SnesRamMapVariable[
     }
     const address = parseAddress(record.address, memory);
     if (addresses.has(address)) {
-      throw new Error(`Duplicate RAM-map address '${hex(address)}'; combine aliases in one entry.`);
+      throw new Error(`Duplicate RAM-map address '${hex(address)}'. Combine aliases in one entry.`);
     }
     addresses.add(address);
     const size = record.size ?? 1;
@@ -359,7 +359,7 @@ export const renderSnesRamMapSchema = (): string =>
               enum: ["wram", "sram"],
               default: "wram",
               description:
-                "SRAM requires a standard LoROM/HiROM cartridge window; confirm the actual cartridge mapping and size separately.",
+                "SRAM requires a standard LoROM/HiROM cartridge window. Confirm the actual cartridge mapping and size separately.",
             },
             size: { type: "integer", minimum: 1, maximum: 0x20000 },
             category: { type: "string", minLength: 1 },

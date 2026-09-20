@@ -14,7 +14,7 @@ import {
 import { exportSnesProject, verifySnesProjectRoundTrip } from "@uttori/asm-plugin-snes";
 import { build } from "esbuild";
 
-import { AnalysisWorkerClient } from "../packages/vscode-extension/src/analysis-worker-client.js";
+import { AnalysisWorkerClient } from "../packages/vscode-extension/src/analysis/worker-client.js";
 
 const { values } = parseArgs({
   options: {
@@ -114,7 +114,7 @@ try {
     verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false }),
   );
   await build({
-    entryPoints: [path.resolve("packages/vscode-extension/src/analysis-worker.ts")],
+    entryPoints: [path.resolve("packages/vscode-extension/src/analysis/worker.ts")],
     outfile: workerFile,
     bundle: true,
     platform: "node",
@@ -127,7 +127,7 @@ try {
       await measure(operation + "Cold", () => client.request(projectDirectory, operation));
       await measure(operation + "Warm", () => client.request(projectDirectory, operation));
     } catch {
-      /* A timeout is a benchmark result; continue to check independent projections. */
+      /* A timeout is a benchmark result. Continue to check independent projections. */
     }
   }
   await measure("segmentsPage", () =>
@@ -138,7 +138,7 @@ try {
     await measure("sourceIndexes", () => reopened.prepareSourceQueries());
     const sources = reopened.sourceCatalog().sources;
     for (const [index, entry] of sources.slice(0, 2).entries()) {
-      // Captures can share the same kinds; keep each sampled source's measurements distinct.
+      // Captures can share the same kinds. Keep each sampled source's measurements distinct.
       const sample = `${index + 1}:${entry.kinds.join("+")}`;
       await measure("sourceSummary:" + sample, () => reopened.sourceSummary(entry.id));
       await measure("sourcePage:" + sample, () => reopened.sourcePage(entry.id, "instructions"));

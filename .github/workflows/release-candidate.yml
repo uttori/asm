@@ -45,7 +45,7 @@ jobs:
       - name: Build the unreleased VS Code package
         run: npm run vscode:package
 
-      # Linux GitHub runners have no display server; Electron still needs a virtual X display even
+      # Linux GitHub runners have no display server. Electron still needs a virtual X display even
       # though this smoke never shows UI or starts an emulator.
       - name: Real VS Code Extension Host smoke (Linux)
         if: runner.os == 'Linux'

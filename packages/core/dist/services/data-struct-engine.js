@@ -3,8 +3,8 @@ import { splitCommandIntoWords } from "./command-text-service.js";
 import { parseStructInitializer, splitInitializerList } from "./struct-initializer.js";
 /**
  * Emits complete records through the normal writer (mapper, trace and debug
- * ownership included). The layout stage reserves the same width as emission;
- * values and placement are checked at emission, once forward labels are known.
+ * ownership included). The layout stage reserves the same width as emission.
+ * Values and placement are checked at emission, once forward labels are known.
  * Array blocks own only sequencing state, never an independent write cursor.
  */
 export class DataStructEngine {
@@ -89,13 +89,13 @@ export class DataStructEngine {
     }
     fieldsFor(definition) {
         if (definition.parent || definition.extensionSize > 0) {
-            throw new Error(`dataStruct does not initialize extended layouts ('${definition.name}'); use raw data directives.`);
+            throw new Error(`dataStruct does not initialize extended layouts ('${definition.name}'). Use raw data directives.`);
         }
         const fields = [...(definition.fields?.values() ?? [])].sort((a, b) => a.offset - b.offset);
         let end = 0;
         for (const field of fields) {
             if (field.offset !== end) {
-                throw new Error(`Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`);
+                throw new Error(`Layout '${definition.name}' has overlapping or unnamed bytes. Name every byte before initialization.`);
             }
             end += field.width * field.count;
         }

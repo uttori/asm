@@ -3,10 +3,22 @@
   "displayName": "Uttori Assembly",
   "version": "1.0.0",
   "private": true,
-  "description": "Assembly language support powered by uttori-asm, with bundled SNES support.",
+  "description": "Assembly editing, builds, ROM analysis, and debugging for SNES and 65xx.",
   "categories": [
     "Programming Languages"
   ],
+  "keywords": [
+    "6502",
+    "65xx",
+    "assembly",
+    "debugger",
+    "disassembler",
+    "snes"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/vscode-extension#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
   "author": "Matthew Callis <matthew.callis@gmail.com>",
   "repository": {
@@ -555,12 +567,12 @@
               },
               "aresSystem": {
                 "type": "string",
-                "description": "Optional ares system name; defaults to Super Famicom."
+                "description": "Optional ares system name. Defaults to Super Famicom."
               },
               "fastBoot": {
                 "type": "boolean",
                 "default": true,
-                "description": "Use ares fast boot; ignored by other backends."
+                "description": "Use ares fast boot. Ignored by other backends."
               }
             }
           }
@@ -715,6 +727,16 @@
           "name": "Outline"
         },
         {
+          "type": "webview",
+          "id": "uttori-asm.disassemblyPanel",
+          "name": "Disassembly"
+        },
+        {
+          "type": "tree",
+          "id": "uttori-asm.sources",
+          "name": "Sources"
+        },
+        {
           "type": "tree",
           "id": "uttori-asm.analysisCoverage",
           "name": "Analysis Coverage"
@@ -724,11 +746,6 @@
           "id": "uttori-asm.analysisGraph",
           "name": "Functions & Calls",
           "visibility": "hidden"
-        },
-        {
-          "type": "tree",
-          "id": "uttori-asm.sources",
-          "name": "Sources"
         }
       ]
     },
@@ -844,14 +861,14 @@
           "scope": "resource",
           "minimum": 1,
           "default": 100000,
-          "description": "Maximum static-analysis work items when regenerating disassembly. This limits CPU-state and call-path exploration, not imported trace events. Increase for larger analyses; higher values require more time and memory. Incomplete analysis cannot discard known code."
+          "description": "Maximum static-analysis work items when regenerating disassembly. This limits CPU-state and call-path exploration, not imported trace events. Increase for larger analyses. Higher values require more time and memory. Incomplete analysis cannot discard known code."
         },
         "asm.analysis.maxMemoryMiB": {
           "type": "integer",
           "scope": "resource",
           "minimum": 128,
           "default": 4096,
-          "description": "JavaScript heap budget in MiB for the isolated analysis-view process and each disassembly maintenance process. Increase for large analysis projects. Maintenance phases exit before the next starts; views reuse a validated project cache. Total process memory may exceed the heap budget."
+          "description": "JavaScript heap budget in MiB for the isolated analysis-view process and each disassembly maintenance process. Increase for large analysis projects. Maintenance phases exit before the next starts. Views reuse a validated project cache. Total process memory may exceed the heap budget."
         },
         "asm.trace.indexMode": {
           "type": "string",
@@ -869,7 +886,7 @@
           "scope": "resource",
           "minimum": 1,
           "default": 2048,
-          "description": "Maximum native runtime trace file size in MiB (2048 = 2 GiB). Set in the project workspace settings for unusually large captures. Trace chunks are read incrementally; memory use also depends on the number of distinct execution observations. This is separate from the static-analysis work budget."
+          "description": "Maximum native runtime trace file size in MiB (2048 = 2 GiB). Set in the project workspace settings for unusually large captures. Trace chunks are read incrementally. Memory use also depends on the number of distinct execution observations. This is separate from the static-analysis work budget."
         },
         "uttoriAsmLanguageServer.trace.server": {
           "scope": "window",
@@ -903,13 +920,13 @@
           ],
           "default": "live",
           "enumDescriptions": [
-            "Live instruction trace with bounded buffering; dropped events are reported.",
+            "Live instruction trace with bounded buffering. Dropped events are reported.",
             "Lossless fetched instruction bytes and CPU state, saved to ACT2 for disassembly import. Requires the capture-v2 ares runtime.",
             "Lossless CPU/DMA/HDMA bus accesses with timing, channel and transfer phase, saved to ACT2 for bus activity import. Requires the capture-bus ares runtime.",
-            "Lossless bus accesses plus explicit DMA run and HDMA payload-burst boundaries and channel snapshots. Requires the capture-transfer runtime; imports show completed, interrupted and partial transfer windows.",
+            "Lossless bus accesses plus explicit DMA run and HDMA payload-burst boundaries and channel snapshots. Requires the capture-transfer runtime. Imports show completed, interrupted and partial transfer windows.",
             "Lossless bus and transfer capture with verified VRAM/CGRAM/OAM write destinations, blocked writes and latch-only outcomes, including during rendering. Requires the capture-ppu runtime."
           ],
-          "description": "Runtime trace recording mode. Lossless modes slow emulation while storage drains and require a matching ares runtime. Instruction and bus capture are separate streams; bus mode does not include fetched instruction bytes or full CPU registers."
+          "description": "Runtime trace recording mode. Lossless modes slow emulation while storage drains and require a matching ares runtime. Instruction and bus capture are separate streams. Bus mode does not include fetched instruction bytes or full CPU registers."
         },
         "asm.debug.traceDetail": {
           "type": "string",
@@ -919,7 +936,7 @@
             "pc"
           ],
           "default": "full",
-          "description": "Full capture requires a runtime supplying execution-time instruction bytes, registers and bus accesses; unsupported runtimes are rejected. Select pc explicitly to record addresses only. Both modes use bounded buffers and report dropped events."
+          "description": "Full capture requires a runtime supplying execution-time instruction bytes, registers and bus accesses. Unsupported runtimes are rejected. Select pc explicitly to record addresses only. Both modes use bounded buffers and report dropped events."
         },
         "asm.analysis.cacheMaxMiB": {
           "type": "integer",
@@ -945,7 +962,7 @@
           "default": 256,
           "minimum": 16,
           "maximum": 4096,
-          "description": "Maximum unread durable capture backlog for live bus analysis, in MiB. Exceeding it stops analysis while native recording continues; import the final archive offline."
+          "description": "Maximum unread durable capture backlog for live bus analysis, in MiB. Exceeding it stops analysis while native recording continues. Import the final archive offline."
         }
       }
     },

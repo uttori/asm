@@ -138,7 +138,7 @@ test("large capture replies survive fragmentation, buffer reuse and transport-ow
   await client.start();
   const payload = "0123456789abcdef".repeat(32768);
   const bytes = Buffer.from(packet(payload), "ascii");
-  // Odd fragments split payload/checksum positions differently; single-byte input
+  // Odd fragments split payload/checksum positions differently. Single-byte input
   // exercises growth and delimiter scanning without any timing-based assertion.
   for (const width of [65536, 1023, 1]) {
     const response = client.request("qUttoriCapture:read:test:1");

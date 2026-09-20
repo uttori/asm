@@ -35,7 +35,7 @@ registerHooks({
       return { shortCircuit: true, url: "extension-test:language-client-common" };
     }
     if (
-      specifier === "./analysis-worker-client.js" &&
+      specifier === "./analysis/worker-client.js" &&
       typeof context.parentURL === "string" &&
       /[/\\]extension\.(ts|js|mts|mjs)/.test(context.parentURL)
     ) {

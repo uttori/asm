@@ -5,6 +5,7 @@ import type { CaptureRequestV2, CaptureResultV2 } from "./capture-v2.js";
 export interface DebugAddress {
     readonly architecture: string;
     readonly addressSpace: string;
+    /** Nonnegative integer in the named space. Equal numbers in different spaces are unrelated. */
     readonly address: number;
     /** Physical output offset when the logical address is a mirror of ROM content. */
     readonly outputOffset?: number;
@@ -13,7 +14,7 @@ export interface DebugAddress {
 export interface DebugExecutionCapabilities {
     readonly pause: boolean;
     readonly step: boolean;
-    /** Exact step semantics; omitted by protocol-v1 peers means all legacy kinds. */
+    /** Exact step semantics. Omitted by protocol-v1 peers means all legacy kinds. */
     readonly stepKinds?: readonly DebugStepKind[];
     readonly registers: boolean;
     readonly memory: boolean;
@@ -34,14 +35,14 @@ export interface DebugTraceCapabilities {
     readonly maxBufferedEvents: number;
     /** Maximum instruction addresses returned by one pull. */
     readonly maxBatchEvents: number;
-    /** Optional execution-time bytes/state and bus accesses; absent means PC-only. */
+    /** Optional execution-time bytes/state and bus accesses. Absent means PC-only. */
     readonly instructionDetails?: boolean;
 }
 /** Explicit operations and address spaces available for one emulated processor architecture. */
 export interface DebugArchitectureCapabilities extends DebugExecutionCapabilities {
     readonly architecture: string;
     readonly addressSpaces: readonly string[];
-    /** Readable spaces; address spaces omitted here must be rejected by `readMemory`. */
+    /** Readable spaces. Address spaces omitted here must be rejected by `readMemory`. */
     readonly memorySpaces: readonly DebugMemorySpaceCapabilities[];
     /** `null` explicitly reports that this architecture cannot capture instruction traces. */
     readonly trace: DebugTraceCapabilities | null;
@@ -99,10 +100,7 @@ export interface DebugTraceStartOptions {
     readonly architecture: string;
     readonly addressSpace: string;
 }
-/**
- * One destructive pull from a bounded instruction-trace buffer.
- * Sequence numbers include producer-side losses, making gaps and ordering independently visible.
- */
+/** Bytes and state captured at execution time for the address at the same batch index. */
 export interface DebugTraceInstructionDetail {
     readonly bytes: readonly number[];
     readonly state: Readonly<Record<string, string | number | boolean>>;
@@ -117,6 +115,7 @@ export interface DebugTraceInstructionDetail {
         readonly channel?: number;
     }[];
 }
+/** Destructive producer pull. Sequence gaps and cumulative loss remain visible to the recorder. */
 export interface DebugTraceBatch {
     readonly details?: readonly DebugTraceInstructionDetail[];
     readonly unattributedMemoryAccesses?: number;
@@ -172,7 +171,9 @@ export interface DebugBackend {
     capture?(request: CaptureRequestV2): Promise<CaptureResultV2>;
     readonly protocolVersion: typeof DEBUG_BACKEND_PROTOCOL_VERSION;
     readonly capabilities: DebugBackendCapabilities;
+    /** Attach before execution or inspection. reset defaults to true, including on reconnect. */
     connect(options?: DebugBackendConnectOptions): Promise<void>;
+    /** Detach and terminate by default. Pass terminate: false to retain a sidecar for reconnect. */
     disconnect(options?: {
         readonly terminate?: boolean;
     }): Promise<void>;
@@ -182,7 +183,9 @@ export interface DebugBackend {
     threads(): Promise<readonly DebugThread[]>;
     stackFrames(threadId: number): Promise<readonly DebugStackFrame[]>;
     registers(frameId: number): Promise<readonly DebugRegister[]>;
+    /** Read a bounded byte count from an explicitly readable space while stopped. Does not run the CPU. */
     readMemory(address: DebugAddress, count: number): Promise<DebugMemoryRead>;
+    /** Replace the complete execute-breakpoint set. Empty input clears it. Inspect each verification result. */
     setBreakpoints(addresses: readonly DebugAddress[]): Promise<readonly DebugBreakpoint[]>;
     disassemble(address: DebugAddress, count: number): Promise<readonly DebugInstruction[]>;
     /** Starts a new explicit trace recording and discards any prior buffered trace. */
@@ -191,6 +194,7 @@ export interface DebugBackend {
     readTrace(maxEvents: number): Promise<DebugTraceBatch>;
     /** Stops capture without discarding events that have not yet been pulled. */
     stopTrace(): Promise<void>;
+    /** Subscribe before connect to observe entry events. Dispose the subscription and do not throw in listeners. */
     onEvent(listener: (event: DebugBackendEvent) => void): DebugSubscription;
 }
 //# sourceMappingURL=contracts.d.ts.map

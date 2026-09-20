@@ -210,7 +210,7 @@ const DIZ_SPEEDS = {
  * Imports uncompressed XML `.dizraw` (DiztinGUIsh project) into native shards.
  * Compressed `.diz` is rejected. Mapper, speed, labels, comments, regions,
  * per-byte classification, architecture, M/X, DBR, direct page, and in/out/end/read
- * points are imported; UI settings and context-mapping aliases are reported as loss.
+ * points are imported. UI settings and context-mapping aliases are reported as loss.
  * @param {string} xml Uncompressed `.dizraw` XML document.
  * @param {DizRawImportOptions} [options] Source name, ROM-size check, and expansion cap.
  * @returns {DizRawImportResult} Mapping, shards, loss report, and metadata row count.
@@ -218,7 +218,7 @@ const DIZ_SPEEDS = {
 export const importDizRaw = (xml, options = {}) => {
     if (!xml.trimStart().startsWith("<?xml") &&
         !xml.trimStart().startsWith("<ProjectXmlSerializer-Root")) {
-        throw new Error("Only uncompressed XML .dizraw input is supported; compressed .diz input is not supported.");
+        throw new Error("Only uncompressed XML .dizraw input is supported. Compressed .diz input is not supported.");
     }
     const rootMatch = /<ProjectXmlSerializer-Root\b([^>]*)>/.exec(xml);
     const projectMatch = /<Project\b([^>]*)>/.exec(xml);

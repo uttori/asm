@@ -14,7 +14,7 @@ export const MESEN_SUPERFX_RAM_ADDRESS_SPACE = "superfx.ram" as const;
 export const MESEN_NATIVE_MAX_MEMORY_READ = 4_096;
 const MESEN_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>(["instruction", "in"]);
 
-/** Immutable editor/sidecar negotiation profile for the maintained MesenCE seam. */
+/** Immutable editor/sidecar negotiation profile for the patched MesenCE debugger. */
 export const MESEN_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
   pause: true,
   step: true,

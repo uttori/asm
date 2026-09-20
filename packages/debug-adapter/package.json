@@ -2,7 +2,22 @@
   "name": "@uttori/asm-debug-adapter",
   "version": "1.0.0",
   "description": "Emulator-neutral debugger backend contract and Debug Adapter Protocol bridge for Uttori ASM.",
+  "keywords": [
+    "debug-adapter-protocol",
+    "debugger",
+    "emulator",
+    "replay"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/debug-adapter#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/debug-adapter"
+  },
   "files": [
     "dist",
     "src",
@@ -20,6 +35,9 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "make-types": "tsc --project tsconfig.json",

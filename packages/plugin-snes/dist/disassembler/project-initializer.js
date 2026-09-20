@@ -43,7 +43,7 @@ const throwIfCancelled = (signal) => {
 };
 const assertDizRawFile = (file) => {
     if (path.extname(file).toLowerCase() !== ".dizraw") {
-        throw new Error("Only uncompressed .dizraw imports are supported; compressed .diz input is not supported.");
+        throw new Error("Only uncompressed .dizraw imports are supported. Compressed .diz input is not supported.");
     }
 };
 const importDizRawFile = (file, rom) => {
@@ -249,6 +249,9 @@ export const createSnesAnalysisProject = (options) => {
 };
 /**
  * Runs bounded conservative 65816 analysis and atomically updates the native project.
+ * Completion describes explored work, not proof that all code was found. An incomplete pass that
+ * would discard previously decoded code throws before replacing saved analysis. This synchronous
+ * operation checks cancellation at phase boundaries and cannot observe queued abort callbacks mid-pass.
  * @param {AnalyzeSnesProjectOptions} options Project, ROM, entry points, and work limits.
  * @returns {AnalyzeSnesProjectResult} Structured analysis counts and completion state.
  */
@@ -473,6 +476,8 @@ export const analyzeSnesProject = (options) => {
 };
 /**
  * Exports deterministic editable source from a verified native project.
+ * Unjustified bytes remain raw assets. File hashes and code-preservation checks run before writes,
+ * but regeneration is not a multi-file transaction. Preserve edits and retry after an I/O failure.
  * @param {ExportSnesProjectOptions} options Project, ROM, destination, and overwrite policy.
  * @returns {ExportSnesProjectResult} Source manifest and native-code coverage count.
  */

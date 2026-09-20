@@ -9,10 +9,10 @@ export const coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, 
  */
 export const cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
 /** Build disk-backed events and sweep them with only the active interval identities in memory.
- * Explicit offsets are used; CPU bus addresses are never guessed to be ROM offsets.
- * @param {DatabaseSync} db Read transaction with prepared instruction/offset indexes; writes stay in temporary tables.
+ * Explicit offsets are used. CPU bus addresses are never guessed to be ROM offsets.
+ * @param {DatabaseSync} db Read transaction with prepared instruction/offset indexes. Writes stay in temporary tables.
  * @param {AnalysisProjectManifest} manifest Validated ROM identity and address spaces.
- * @returns {SqliteCoverageSummary} Exact totals; records and diagnostics remain SQL-paged.
+ * @returns {SqliteCoverageSummary} Exact totals. Records and diagnostics remain SQL-paged.
  */
 export const prepareCoverage = (db, manifest) => {
     db.exec(`CREATE TEMP TABLE query_coverage_segments (start INTEGER PRIMARY KEY, payload TEXT NOT NULL);
@@ -207,7 +207,7 @@ export const prepareCoverage = (db, manifest) => {
             bytesByClassification: { opcode: 0, operand: 0, data: 0, asset: 0, unknown: 0 },
             bytesByRuntimeCoverage: { executed: 0, operand: 0, read: 0, written: 0 },
         };
-        // Local mutable counters are finalized once; no segment array accumulates in this process.
+        // Local mutable counters are finalized once. No segment array accumulates in this process.
         let classifiedBytes = 0, unknownBytes = 0, conflictBytes = 0, segmentCount = 0;
         const classificationTotals = { ...summary.bytesByClassification };
         const runtimeTotals = { ...summary.bytesByRuntimeCoverage };
@@ -330,7 +330,7 @@ export const publishCoverage = (db) => {
     DELETE FROM main.query_coverage_segments;INSERT INTO main.query_coverage_segments SELECT * FROM temp.query_coverage_segments;
     DELETE FROM main.query_coverage_details;INSERT INTO main.query_coverage_details SELECT * FROM temp.query_coverage_details;`);
 };
-/** Select a bounded persisted page; callers ensure the header is current first.
+/** Select a bounded persisted page. Callers ensure the header is current first.
  * @param {DatabaseSync} db Connection in a read snapshot.
  * @param {"segments" | "details"} kind Page collection.
  * @param {number} offset Nonnegative row offset.

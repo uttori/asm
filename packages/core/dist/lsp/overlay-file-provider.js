@@ -31,7 +31,7 @@ export class OverlayFileProvider {
             return undefined;
         }
         const normalized = stripWrappingQuotes(filename);
-        // Let the backing provider resolve real files first; the overlay only
+        // Let the backing provider resolve real files first. The overlay only
         // changes the bytes we return at read time, not where files live on disk.
         const baseResolved = this.base.resolvePath(filename, options);
         if (baseResolved) {

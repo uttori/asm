@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { canonicalJson } from "./canonical-json.js";
 import { sqliteRuntimeIdentity, encodeSqlitePayload, decodeSqlitePayload, } from "./sqlite-payload.js";
 import { runtimeColumns } from "./sqlite-records.js";
-/** Shared facts own coordinates/payload; observations own source identity and exact counts.
+/** Shared facts own coordinates/payload. Observations own source identity and exact counts.
  * A trace instruction owns its paired CPU-state observation, exposed with a negative virtual rowid.
  * Standalone state records remain independent. JSONB avoids reparsing stored payloads in SQL views.
  */
@@ -144,7 +144,7 @@ export class SqliteRuntimeWriter {
             .update(
         // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
         // per row. Nulls, two-space indentation and the trailing newline preserve
-        // persisted v2 fingerprints; changing the layout would duplicate old facts.
+        // persisted v2 fingerprints. Changing the layout would duplicate old facts.
         // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
         JSON.stringify({
             accessedAddress: columns.accessedAddress,
@@ -169,7 +169,7 @@ export class SqliteRuntimeWriter {
         let fid = found?.fid;
         if (fid === undefined) {
             // Existing shared facts need only a new observation. Encode payloads only
-            // on insertion; large snapshots retain the bounded legacy codec.
+            // on insertion. Large snapshots retain the bounded legacy codec.
             const encoded = payload === null ? null : encodeSqlitePayload(payload);
             fid = this.#insertFact.run(fingerprint, record.kind, record.architecture, columns.addressSpace, columns.address, columns.start, columns.end, columns.fromAddressSpace, columns.fromAddress, columns.toAddressSpace, columns.toAddress, columns.instructionAddressSpace, columns.instructionAddress, columns.accessedAddressSpace, columns.accessedAddress, columns.coverage, encoded, encoded, encoded).lastInsertRowid;
         }

@@ -2,7 +2,22 @@
   "name": "@uttori/asm-debug-sidecar-ares",
   "version": "1.0.0",
   "description": "Restartable ares debugger sidecar for Uttori ASM.",
+  "keywords": [
+    "ares",
+    "debugger",
+    "sidecar",
+    "snes"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/debug-sidecar-ares#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/debug-sidecar-ares"
+  },
   "bin": {
     "uttori-asm-debug-sidecar-ares": "out/sidecar.mjs"
   },
@@ -34,6 +49,9 @@
       "types": "./dist/ares-process-host.d.ts",
       "import": "./dist/ares-process-host.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node esbuild.mjs",

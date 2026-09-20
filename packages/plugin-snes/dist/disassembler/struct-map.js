@@ -8,7 +8,7 @@ export const SNES_STRUCT_MAP_SOURCE = "struct-map.json";
 export const SNES_STRUCT_DEFINES_SOURCE = "structs.asm";
 const widths = { db: 1, dw: 2, dl: 3, dd: 4 };
 /**
- * Preserve the old renderer's size convention unless metadata specifies a shape.
+ * Infer scalar widths for 1–4-byte fields and byte arrays for larger fields without an explicit type.
  * @param {SnesStructField} field Validated field or synthesized opaque gap.
  * @returns {string} Native scalar/array declaration.
  */
@@ -44,6 +44,31 @@ const notes = (value) => {
         throw new Error("Struct-map notes must be an array of strings.");
     }
     return value.map(comment);
+};
+/**
+ * Normalize optional ROM entry names/descriptions without interpreting them as assembly.
+ * Keys are canonical decimal logical indexes, so one-based bindings cannot silently shift names.
+ * @param {unknown} value Untrusted JSON object mapping logical indexes to comment text.
+ * @param {number} firstIndex Lowest allowed logical index, from the validated binding.
+ * @param {number} count Number of physical records owned by that binding.
+ * @returns {Readonly<Record<number, string>>} Non-empty, single-line comments for valid indexes.
+ */
+const entryComments = (value, firstIndex, count) => {
+    const result = {};
+    for (const [key, text] of Object.entries(object(value))) {
+        const index = Number(key);
+        if (!/^(0|[1-9]\d*)$/.test(key) ||
+            !Number.isSafeInteger(index) ||
+            index < firstIndex ||
+            index >= firstIndex + count) {
+            throw new Error(`Struct entry comment index '${key}' is outside the binding's logical indexes.`);
+        }
+        if (typeof text !== "string" || !comment(text)) {
+            throw new Error(`Struct entry comment '${key}' must be a non-empty string.`);
+        }
+        result[index] = comment(text);
+    }
+    return result;
 };
 /**
  * Validate layouts and non-overlapping bindings before any generated files are changed.
@@ -144,6 +169,9 @@ export const validateSnesStructMap = (value) => {
         if (fileOffset === undefined && (address < 0x7e0000 || address + length > 0x800000)) {
             throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
         }
+        if (entry.entryComments !== undefined && fileOffset === undefined) {
+            throw new Error(`Struct entry comments require a ROM binding ('${name}').`);
+        }
         return {
             name,
             structure,
@@ -152,6 +180,11 @@ export const validateSnesStructMap = (value) => {
             firstIndex,
             ...(fileOffset === undefined ? {} : { fileOffset }),
             notes: notes(entry.notes),
+            ...(entry.entryComments === undefined
+                ? {}
+                : {
+                    entryComments: entryComments(entry.entryComments, firstIndex, count),
+                }),
         };
     })
         .sort((a, b) => a.address - b.address);
@@ -175,7 +208,7 @@ export const validateSnesStructMap = (value) => {
     return { structures, bindings, ...(instructionUses.length ? { instructionUses } : {}) };
 };
 /**
- * Load optional layout metadata; existing projects without a struct map export as before.
+ * Load optional layout metadata. Existing projects without a struct map export as before.
  * @param {string} directory Source-export root.
  * @returns {LoadedSnesStructMap | undefined} Validated metadata when present.
  */
@@ -211,17 +244,17 @@ const completeFields = (structure) => {
 /**
  * Render both reusable offsets and addressed native structs from the same field definitions.
  * @param {LoadedSnesStructMap} map Validated layouts and bindings.
- * @returns {string} Native assembler source; structs reserve offsets without emitting bytes.
+ * @returns {string} Native assembler source. Structs reserve offsets without emitting bytes.
  */
 export const renderSnesStructDefines = (map) => {
     const lines = [
         "; Generated from struct-map.json. Edit that input and export again.",
-        "; Layouts have base zero; bindings use CPU addresses. Indexed fields use sizeof(struct).",
+        "; Layouts have base zero. Bindings use CPU addresses. Indexed fields use sizeof(struct).",
         "",
     ];
     const render = (name, base, structure, detail, binding) => {
         lines.push(`; ${name}: ${hex(structure.size)} bytes per record.`);
-        // Notes come from the struct map; retain their order without an input-sized argument list.
+        // Notes come from the struct map. Retain their order without an input-sized argument list.
         for (const note of detail) {
             lines.push(`; ${note}`);
         }

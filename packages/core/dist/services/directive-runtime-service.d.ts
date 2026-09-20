@@ -70,7 +70,7 @@ export declare class DirectiveRuntimeService {
     writeDataByLength(len: number, value: number): void;
     /**
      * Estimates data size with the same expansion order as emission, without resolving final values.
-     * @param {number} len Bytes per numeric item (1–4); string characters each occupy one item.
+     * @param {number} len Bytes per numeric item (1–4). String characters each occupy one item.
      * @param {string[]} params Source operands, including defines that may expand to data lists.
      */
     estimateDataDirectiveSize(len: number, params: string[]): void;

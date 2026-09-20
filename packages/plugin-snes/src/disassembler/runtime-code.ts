@@ -19,7 +19,7 @@ import { identifySnesHardwareRegister } from "./hardware-registers.js";
 import type { SnesMapper } from "./rom-header.js";
 
 /**
- * Extract only state used by the decoder; aliases, unknowns and emulation widths match analysis.
+ * Extract only state used by the decoder. Aliases, unknowns and emulation widths match analysis.
  * @param {RuntimeInstructionRecord} sample Execution-time instruction and paired registers.
  * @returns {Cpu65816DecodeState} Width and bank state actually consumed by decoding.
  */
@@ -168,7 +168,7 @@ export const analyzeSnesRuntimeCode = (
             volatile: !!hardware,
             ...(hardware ? { symbol: hardware.symbol } : {}),
             explanation: indexed
-              ? "Captured instruction has an unresolved indexed/indirect operand; consult observed bus accesses."
+              ? "Captured instruction has an unresolved indexed/indirect operand. Consult observed bus accesses."
               : "Decoded from execution-time bytes and processor state.",
           };
         }),
@@ -212,7 +212,7 @@ export const analyzeSnesRuntimeCode = (
         edgeKind: target.kind,
         indirect: target.indirect ?? false,
         explanation:
-          "Possible edge decoded from captured bytes; does not assert that this branch was taken.",
+          "Possible edge decoded from captured bytes. Does not assert that this branch was taken.",
         evidence: node.evidence,
       });
     }
@@ -285,7 +285,7 @@ export const analyzeSnesRuntimeCode = (
         address,
         conflictKind: "runtime-code-variants",
         message:
-          "Captured executions disagree on instruction bytes or decoding; all variants and their trace evidence are retained.",
+          "Captured executions disagree on instruction bytes or decoding. All variants and their trace evidence are retained.",
         nodes: variants.map((node) => node.id),
         evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort(),
       });

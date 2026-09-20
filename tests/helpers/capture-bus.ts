@@ -58,7 +58,7 @@ export interface BusWireAccess {
   readonly vcounter?: number;
 }
 
-/** Encode a checksummed kind-2 frame; default records are CPU opcode reads owned by instruction 1. */
+/** Encode a checksummed kind-2 frame. Default records are CPU opcode reads owned by instruction 1. */
 export const busChunk = (
   records: readonly BusWireAccess[] = [{}],
   sequence = 1n,

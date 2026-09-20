@@ -4,7 +4,7 @@ import { type ArchitectureEncoder, type ArchitectureEncoderContext, type Encoder
  * track SEP/REP so immediates (`LDA #expr`) match the current register width.
  *
  * `optimizeDirectPage` is a session callback - `optimize dp ram|always` can
- * change mid-source; we must not snapshot it in the constructor.
+ * change mid-source. We must not snapshot it in the constructor.
  *
  * `smartMode` mirrors ca65's `.smart` directive. When `true` (the default),
  * `SEP`/`REP` instructions automatically update M/X width hints. When `false`,
@@ -20,7 +20,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
     x16: boolean;
     /**
      * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
-     * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+     * Set to false by `.smart off`. Re-enabled by `.smart` or `.smart on`.
      */
     smartMode: boolean;
     constructor(context: ArchitectureEncoderContext, optimizeDirectPage?: () => boolean);
@@ -130,7 +130,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
     encodeResolvedInstruction(mnemonic: string, rawOperand: string, operand: string, operandLength: number): boolean;
     /**
      * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
-     * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+     * {@link handleLogicAndCompareOperations}. STA has no immediate form.
      *
      * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
      * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
@@ -155,7 +155,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
      * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
      * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
      * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
-     * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+     * (`len === 2`). This family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
      * long / stack forms.
      *
      * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
@@ -168,7 +168,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
     handleLogicAndCompareOperations(opcode: string, operand: string, len: number, explicitlen: boolean, rawOperand?: string): boolean;
     /**
      * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
-     * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+     * `expandOperand` may turn `#10` into `#$A`. Strip `$` before parseInt.
      * Count `0` emits nothing (still "handled").
      * @param {string} opcode The opcode to handle.
      * @param {string} operand The operand to handle.
@@ -218,7 +218,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
      */
     handlePER(operand: string): boolean;
     /**
-     * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+     * Encodes STX / STY / STZ. STX indexes Y only (no abs,y). STY indexes X only
      * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
      *
      * @param {string} opcode STX, STY, or STZ.
@@ -229,7 +229,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
      */
     handleStoreOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
     /**
-     * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+     * MVN/MVP. WDC and the hover catalog spell `dest, src`. We still write bytes
      * in source order (first operand, then second) - Asar's wire format. Locals
      * are named src/dest after that write order, not WDC's dest-then-src names.
      *
@@ -254,7 +254,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
     handleBitTestOperations(opcode: string, operand: string, len: number, explicitlen: boolean): boolean;
     /**
      * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
-     * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+     * always 16-bit. The rest are 8-bit. `.b/.w` on REP/SEP only validates range.
      * @param {string} opcode Candidate mnemonic.
      * @param {number} num Already-evaluated operand value.
      * @param {number} len Inferred width (REP/SEP range check).
@@ -291,7 +291,7 @@ export declare class Arch65816 implements ArchitectureEncoder {
     };
     /**
      * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
-     * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
+     * 65816 has no 32-bit immediate. Callers treat it as width 4 for PEA-like repeats.
      * @param {string} c The opcode suffix to resolve the length of.
      * @returns {number} The operand length.
      * @throws {Error} If the opcode length is invalid.

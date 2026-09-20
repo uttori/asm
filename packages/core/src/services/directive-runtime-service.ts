@@ -176,7 +176,7 @@ export class DirectiveRuntimeService {
 
       const expandedValues = splitRespectingFunctions(resolved);
       if (expandedValues.length > 1) {
-        // A define can expand beyond V8's argument limit; never spread its tokens into a call.
+        // A define can expand beyond V8's argument limit. Never spread its tokens into a call.
         for (let index = expandedValues.length - 1; index >= 0; index--) {
           pendingValues.push(expandedValues[index]);
         }
@@ -245,7 +245,7 @@ export class DirectiveRuntimeService {
 
   /**
    * Estimates data size with the same expansion order as emission, without resolving final values.
-   * @param {number} len Bytes per numeric item (1–4); string characters each occupy one item.
+   * @param {number} len Bytes per numeric item (1–4). String characters each occupy one item.
    * @param {string[]} params Source operands, including defines that may expand to data lists.
    */
   estimateDataDirectiveSize(len: number, params: string[]): void {
@@ -262,7 +262,7 @@ export class DirectiveRuntimeService {
         const unquoted = value.slice(1, -1);
         try {
           // Pass 0 needs byte counts, not final values. If defines in a string
-          // are known, use the expanded length; otherwise fall back to literal
+          // are known, use the expanded length. Otherwise fall back to literal
           // length so layout can keep moving.
           estimatedItems += this.host.defineEngine.resolveDefinesInStringLiteral(unquoted).length;
         } catch {
@@ -336,7 +336,7 @@ export class DirectiveRuntimeService {
     }
 
     const state = this.host.pushpcStack.pop();
-    // Restore exactly the state captured by `pushpc`; directives such as
+    // Restore exactly the state captured by `pushpc`. Directives such as
     // `incbin -> label` depend on this to resume emission at the original site.
     if (state) {
       this.host.currentTargetAddress = state.currentTargetAddress;

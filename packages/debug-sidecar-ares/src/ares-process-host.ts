@@ -77,18 +77,32 @@ export interface AresProcessRuntime {
 
 /** Configuration for one restartable, manifest-verified ares process. */
 export interface AresProcessHostOptions {
+  /** Absolute path to the executable whose hash is pinned by the manifest. */
   readonly executable: string;
+  /** Absolute ROM file path. The manifest hashes the entire file, including any copier header. */
   readonly rom: string;
+  /** Absolute working directory containing the declared runtime resources. */
+  /** Platform operations override, primarily for process-host tests. */
   readonly runtimeDirectory: string;
+  /** Validated identity for this executable, ROM, platform, and native protocol. */
   readonly manifest: AresRuntimeManifest;
+  /** Emulator system name. Defaults to Super Famicom. */
   readonly system?: string;
+  /** Skip the emulator boot sequence when supported. Defaults to true. */
   readonly fastBoot?: boolean;
+  /** Child environment overrides. Inherited values are used unless overridden. */
   readonly env?: Readonly<Record<string, string | undefined>>;
+  /** Positive integer startup deadline in milliseconds. Defaults to 10,000. */
   readonly startupTimeoutMs?: number;
+  /** Positive integer native request deadline in milliseconds. Defaults to 3,000. */
   readonly requestTimeoutMs?: number;
+  /** Positive integer wait after SIGTERM in milliseconds, before SIGKILL. Defaults to 2,000. */
   readonly shutdownTimeoutMs?: number;
+  /** Positive integer delay between startup connection attempts in milliseconds. Defaults to 25. */
   readonly connectRetryMs?: number;
+  /** Positive integer retained stdout/stderr tail size in bytes. Defaults to 65,536. */
   readonly maxOutputBytes?: number;
+  /** Synchronous output observer. Must not throw. */
   readonly onOutput?: (stream: "stdout" | "stderr", text: string) => void;
   readonly runtime?: AresProcessRuntime;
 }
@@ -209,7 +223,7 @@ const reserveLoopbackPort = async (): Promise<number> => {
   return address.port;
 };
 
-/** Default Node platform operations; the RSP listener itself remains numeric-loopback-only. */
+/** Default Node platform operations. The RSP listener itself remains numeric-loopback-only. */
 export const nodeAresProcessRuntime = Object.freeze<AresProcessRuntime>({
   platform: process.platform,
   architecture: process.arch,
@@ -506,7 +520,7 @@ export class AresProcessHost {
     await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
     await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
     for (const resource of this.#manifest.resources) {
-      // path.join already normalizes manifest separators; keep the path as one argument.
+      // path.join already normalizes manifest separators. Keep the path as one argument.
       await this.#verifyHash(
         path.join(this.#runtimeDirectory, resource.path),
         resource.sha256,

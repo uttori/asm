@@ -1001,7 +1001,7 @@ test("E2E: runCli analyze persists conservative 65816 analysis without embedding
   await fs.writeFile(rom, bytes);
   t.is(await runCli(["disassemble", rom, project, "--mapper=lorom"]), 0);
   t.is(await runCli(["analyze", project, "--rom", rom]), 0);
-  // Transactions publish analysis rows in SQLite;
+  // Transactions publish analysis rows in SQLite.
   // the original conventional path is no longer the current snapshot.
   const records = loadAnalysisProject(project).shards.analysis;
   t.true(records.some((record) => record.kind === "cfg-node" && record.mnemonic === "STP"));
@@ -1338,7 +1338,7 @@ test("E2E: runCli export keeps friendly function names and all comment placement
   t.is(await runCli(["export", project, source, "--rom", rom, "--allow-code-regression"]), 0);
   t.regex(
     await fs.readFile(bankFile, "utf8"),
-    /; \[Instruction comment; instruction unavailable] Save the data bank/,
+    /; \[Instruction comment. Instruction unavailable] Save the data bank/,
   );
   const report = JSON.parse(
     await fs.readFile(path.join(source, "annotation-report.json"), "utf8"),

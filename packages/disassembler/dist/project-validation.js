@@ -42,7 +42,7 @@ export const validateAnalysisProjectManifest = (manifest) => {
         throw new Error("Invalid analysis sqlite revision.");
     }
     if (manifest.shards.length !== 0) {
-        throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+        throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
     }
 };
 const FORBIDDEN_ROM_PAYLOAD_KEYS = new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
@@ -125,7 +125,7 @@ const assertCodecReference = (reference, location) => {
  * @param {object} project ROM bounds and named address spaces.
  * @param {Array} evidence Evidence available to every retained runtime fact.
  * @param {boolean} [checkDuplicateIds] False only for rows from a primary-key constrained table.
- * @returns {Function} Stateful validator; close it after success or failure to release its temporary index.
+ * @returns {Function} Stateful validator. Close it after success or failure to release its temporary index.
  */
 export const createRuntimeRecordValidator = (project, evidence, checkDuplicateIds = true) => {
     const ids = checkDuplicateIds ? new RecordIdSet() : undefined;
@@ -454,7 +454,7 @@ export const validateLoadedShards = (shards, project) => {
             if ("toAddress" in record && record.toAddress !== undefined) {
                 addresses.push(record.toAddress);
             }
-            // Imported target lists can outgrow the engine's call-argument limit; validate every target.
+            // Imported target lists can outgrow the engine's call-argument limit. Validate every target.
             if ("targets" in record) {
                 for (const target of record.targets) {
                     addresses.push(target);

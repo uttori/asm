@@ -1,21 +1,17 @@
 # Contributing to Uttori ASM
 
-Thank you for improving Uttori ASM. This guide is the starting point for contributors who are new
-to TypeScript or emulator tooling and for maintainers changing the project format, analysis engine,
-debugger, or release gates.
+Thanks for improving Uttori ASM. This guide is the starting point for contributors who are new to TypeScript or emulator tooling and for maintainers changing the project format, analysis engine, debugger, or whatever else.
 
-Read this file once from top to bottom before making a structural change. Then use the links in the
-area-specific table rather than trying to infer ownership from directory names.
+Read this file once from top to bottom before making a structural change. Then use the links in the area-specific table rather than trying to infer ownership from directory names.
 
-## Start here
+## Start Here
 
 You need:
 
-- Node.js 26 or newer (`node --version`);
-- npm from that Node installation (`npm --version`);
-- Git; and
-- macOS, Linux, or Windows for the TypeScript toolchain. macOS arm64 is the first validated native
-  emulator host; checked-in CI is responsible for the portable TypeScript matrix.
+- Node.js 26 or newer (`node --version`)
+- npm from that Node installation (`npm --version`)
+- git
+- macOS, Linux, or Windows for the TypeScript toolchain
 
 Clone and install:
 
@@ -27,8 +23,7 @@ npm run typecheck
 npm test
 ```
 
-Use `npm ci` instead of `npm install` in a clean CI checkout. Do not initialize external fixture
-submodules unless your change needs them.
+Use `npm ci` instead of `npm install` in a clean CI checkout. Do not initialize external fixture submodules unless your change needs them.
 
 Before opening a pull request, run:
 
@@ -37,8 +32,7 @@ npm run verify
 npm run pack:check
 ```
 
-The complete gate map, including fixtures and the Extension Host smoke, is in
-[Testing and release gates](TESTING.md).
+The complete gate map, including fixtures and the Extension Host smoke, is in [testing and release gates](TESTING.md).
 
 ## Choose the right starting document
 
@@ -96,14 +90,14 @@ The deeper dependency and data-flow description is in
 | CFG              | Control-flow graph: decoded instruction nodes and branch/call/return edges.                                      |
 | DAP              | Visual Studio Code's Debug Adapter Protocol. Only the adapter/editor layer speaks it.                            |
 | sidecar          | A restartable child process translating the neutral debug protocol to one emulator.                              |
-| fixture          | A stable input and expected result used by a test. Some are redistributable; ROM-backed fixtures are local only. |
+| fixture          | A stable input and expected result used by a test. Some are redistributable. ROM-backed fixtures are local only. |
 | round trip       | Export native source, reassemble it, and compare the complete rebuilt byte image with the input.                 |
 
 ## Make a focused change
 
 1. Establish the current behavior with the narrowest existing test.
 2. Add or update a test that fails for the missing behavior.
-3. Change the smallest owning package; avoid moving target knowledge upward.
+3. Change the smallest owning package. Avoid moving target knowledge upward.
 4. Run the focused test and the package type/lint checks.
 5. Regenerate compiled JavaScript and declarations with `npm run make-types` when a public surface changes.
 6. Run the repository and package gates appropriate to the risk.
@@ -119,7 +113,7 @@ your change merely to make `git status` shorter.
 
 Public npm exports resolve to compiled ESM in `dist/`. The explicit `uttori-source` condition selects
 TypeScript source for repository development. Root scripts, AVA workers, source subprocesses, and
-esbuild use that condition; direct development commands should include `--conditions=uttori-source`
+esbuild use that condition. Direct development commands should include `--conditions=uttori-source`
 alongside `--import=tsx`. Consumer verification deliberately enables neither. Keep this distinction
 so tests cannot pass against stale output or mask an installed-package resolution error.
 
@@ -140,17 +134,17 @@ that editor's own API declarations and checks SQLite in the real Extension Host.
 - Add short inline comments immediately before complex branches and non-obvious logic. Explain
   why the path exists, which invariant it protects, or why ordering matters, especially around
   validation, fallbacks, state transitions, cancellation/recovery, and compatibility behavior.
-  Keep explanations close to the code, usually one or two sentences; do not narrate each statement.
+  Keep explanations close to the code, usually one or two sentences. Do not narrate each statement.
 - Any performance or allocation optimization must have an adjacent inline invariant comment and
   thorough JSDoc where applicable. Explain its complexity, ordering, allocation, determinism, and
   validation constraints so a locally attractive rewrite cannot reintroduce the original problem.
 - Comments should explain why a constraint exists. Tests should show the externally observable
-  contract. Update or remove stale comments when behavior changes; tests and final summaries do
+  contract. Update or remove stale comments when behavior changes. Tests and final summaries do
   not replace explanations in the source.
 - Do not write nested ternaries, including within template interpolations. Use named intermediate
   values, explicit if/else branches, or a small helper to make the decision readable.
 - Do not spread input-sized collections into function arguments (`push`, `unshift`, `splice`,
-  `Math.min`/`Math.max`, or similar calls); fitting in memory does not avoid the engine's argument
+  `Math.min`/`Math.max`, or similar calls). Fitting in memory does not avoid the engine's argument
   limit. Append iteratively, use numeric folds, or use a stack that preserves processing order.
   Array/object spread is unaffected. Call spread is acceptable when a small bound is enforced
   before the call. Test large-input regressions in a normal Node child because AVA workers have
@@ -206,26 +200,26 @@ repository floors and higher per-file floors for historically fragile core modul
 4. Preserve decode-format-encode tests across every opcode/state variant.
 5. Run the architecture test and `npm test`.
 
-65816 is the primary processor; SPC700 and SuperFX use the same reversible-contract standard.
+65816 is the primary processor. SPC700 and SuperFX use the same reversible-contract standard.
 
 ### Add a project schema field
 
 1. Decide which existing semantic collection/table owns the fact. Keep storage and public record contracts aligned.
 2. Add a stable, JSON-safe type and validation at load and write boundaries.
 3. Update canonical ordering when the field affects deterministic output.
-4. Support the currently declared format and document deliberate future changes; do not add compatibility for earlier development layouts.
-5. Reject future versions; never downgrade them.
+4. Support the currently declared format and document deliberate future changes. Do not add compatibility for earlier development layouts.
+5. Reject future versions. Never downgrade them.
 6. Test malformed input, deterministic rewrite, missing evidence/address spaces, and ROM-payload
    exclusion.
 7. Document merge and recovery behavior.
 
 SQLite owns the authoritative manifest and revision. Check the expected revision under the writer
-lock and commit records and revision atomically. Refresh `analysis.json` after commit; it is a watcher
+lock and commit records and revision atomically. Refresh `analysis.json` after commit. It is a watcher
 pointer, not the authority for recovery or conflict detection.
 
 ### Add an analysis rule
 
-1. Put generic traversal behavior in `@uttori/asm-disassembler`; put processor semantics in the
+1. Put generic traversal behavior in `@uttori/asm-disassembler`. Put processor semantics in the
    target plugin adapter.
 2. State the evidence required to accept a boundary or target.
 3. Stop or emit an explicit conflict/unresolved result when that evidence is absent.
@@ -256,7 +250,7 @@ or source-export integration may consume it. Recompression may not move followin
 1. Extend the emulator-neutral `DebugBackend` contract and capability negotiation first.
 2. Add replay coverage and frozen conformance semantics.
 3. Extend the authenticated bounded sidecar protocol and validate decoded `unknown` before dispatch.
-4. Translate separately in each emulator sidecar; do not expose native command names above it.
+4. Translate separately in each emulator sidecar. Do not expose native command names above it.
 5. Map the neutral operation to DAP and VS Code only after the backend behavior is proven.
 6. Test deadlines, queue/buffer limits, replayed sequences, child loss, reconnect, and reduced
    capabilities.
@@ -265,10 +259,23 @@ Never put the session token on a command line or allow an emulator to write prot
 
 ### Add a VS Code feature
 
+The extension's `src/` and `tests/` directories share feature folders:
+
+- `analysis/`: annotations, navigation, coverage/source/graph trees, and analysis workers.
+- `debug/`: debugger sessions, address resolution, source roots, and debug annotations.
+- `disassembly/`: annotation editing, maintenance jobs/processes, storage reports, and the panel.
+- `runtime/`: trace recording/import, live bus analysis, runtime bindings, and trace ownership.
+- `project/`: the project panel, outline, creation wizard, and remembered ROM bindings.
+
+Keep `extension.ts` and the shared `webview-template.ts` helper at the source root. Module filenames
+omit the feature prefix supplied by their folder; tests use the corresponding folder and module name.
+Worker bundles keep their existing names in `out/`; update source entry points in `esbuild.mjs` when
+moving a worker.
+
 Keep data derivation in a target-neutral or target package and presentation in the extension.
 Commands that write a project require Workspace Trust and must use the transaction/edit APIs.
 Read-only inspection may remain available in a restricted workspace. Source navigation requires an
-exact target, ROM identity, and current source hash; otherwise use explicit virtual disassembly or
+exact target, ROM identity, and current source hash. Otherwise use explicit virtual disassembly or
 persisted records without mapper inference.
 
 Run unit/contract tests, `npm run vscode:typecheck`, `npm run vscode:package`, and
@@ -281,21 +288,21 @@ Read [Disassembler performance baselines](packages/disassembler/PERFORMANCE.md) 
 the inline `Performance invariant`, `Security invariant`, and `TOCTOU invariant` comments. Add or
 update semantic tests first, then run the focused benchmark and compare the complete distribution,
 not one favorable measurement. Only the matching Apple M1 Max host may enforce the checked-in M1
-budget; other machines collect observations without pretending to satisfy that policy.
+budget. Other machines collect observations without pretending to satisfy that policy.
 
 ## Fixtures, licenses, and private material
 
 All repository code is MIT unless a notice says otherwise. Do not copy GPL implementation code into
 an MIT package. GPL projects may be used as external executables, separately maintained patches,
 read-only oracles, or test fixtures under their own licenses. Reimplement behavior from documented
-formats and observed contracts; preserve notices for distributed native artifacts.
+formats and observed contracts. Preserve notices for distributed native artifacts.
 
 The following never belong in a commit, npm tarball, VSIX, test snapshot, benchmark report, or issue:
 
-- commercial ROM bytes or extracted copyrighted assets;
-- files from `Local Only/`;
-- session tokens, private runtime manifests, or machine-specific credentials;
-- generated analysis/source trees derived from a private ROM; or
+- commercial ROM bytes or extracted copyrighted assets.
+- files from `Local Only/`.
+- session tokens, private runtime manifests, or machine-specific credentials.
+- generated analysis/source trees derived from a private ROM. Or
 - emulator binaries/libraries unless an explicit distribution review and allow-listed manifest
   authorizes them.
 
@@ -311,19 +318,10 @@ redistributable dummy ROM.
 Change documentation in the same pull request when behavior, a command, a file format, a capability,
 or a validation claim changes. Use this ownership order:
 
-- package README or another Markdown file at that package's top level: public API and end-user behavior;
-- `packages/disassembler/ARCHITECTURE.md`: system boundaries and invariants;
-- `TESTING.md`: commands, CI, fixtures, and release evidence;
+- package README or another Markdown file at that package's top level: public API and end-user behavior.
+- `packages/disassembler/ARCHITECTURE.md`: system boundaries and invariants.
+- `TESTING.md`: commands, CI, fixtures, and release evidence.
 - ADR: a durable decision with alternatives and consequences.
-
-Keep research and bookkeeping in the internal `docs/` directory. Public documents must contain
-the relevant user guidance themselves or link to another public package/root guide; they must not
-link into internal research. Include package-level guides in the published package's `files` list.
-`npm run docs:check` enforces the link boundary, and `npm run pack:check` verifies guide inclusion.
-
-Say “implemented”, “locally passed on macOS”, and “passed hosted matrix” only when each is true.
-Never infer a Windows/Linux, native runtime, semantic completeness, or performance claim from a
-TypeScript unit test.
 
 ## Pull-request checklist
 
@@ -342,10 +340,10 @@ TypeScript unit test.
 ## Troubleshooting
 
 `npm run make-types` should work on all supported shells. If it fails after interrupted output,
-rerun it; its cleanup helper removes only the explicit generated `dist` directories.
+rerun it. Its cleanup helper removes only the explicit generated `dist` directories.
 
 If VS Code smoke testing fails before launch, confirm network access and remove only the incomplete
-version directory beneath `.vscode-test/`; do not delete the whole repository or a user VS Code
+version directory beneath `.vscode-test/`. Do not delete the whole repository or a user VS Code
 profile. Linux needs `xvfb-run` in headless environments.
 
 If a project write reports stale or locked state, reload it after the active writer finishes. Do not

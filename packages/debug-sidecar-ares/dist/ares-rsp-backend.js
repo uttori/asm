@@ -232,7 +232,7 @@ export class AresRspDebugBackend {
         }
         catch (error) {
             // Ares may close its socket before its queued detach OK is transmitted.
-            // That EOF fulfils this terminal request; other errors remain visible.
+            // That EOF fulfils this terminal request. Other errors remain visible.
             const failure = asError(error);
             if (!client.closed || failure.message !== "RSP transport closed.")
                 detachError = failure;
@@ -278,7 +278,7 @@ export class AresRspDebugBackend {
         this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
         // Sidecar requests are serialized. A single DMA instruction can fill the bus
         // queue, so waiting here would block the drain requests needed to finish it.
-        // Return after sending; the ordinary asynchronous stop event completes the step.
+        // Return after sending. The ordinary asynchronous stop event completes the step.
         if (this.#captureSession && this.#captureScope !== "snes.65816.instructions") {
             await client.step();
             return;
@@ -578,7 +578,7 @@ export class AresRspDebugBackend {
             throw new Error(`Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`);
         const client = this.#requireStopped();
         if (options.detail === "full" && !this.#richTrace)
-            throw new Error("This runtime supports PC-only traces; rebuild the maintained runtime for captured bytes/state and bus accesses.");
+            throw new Error("This runtime supports PC-only traces. Rebuild the maintained runtime for captured bytes/state and bus accesses.");
         expectOkay(await client.request(options.detail === "full" ? "QUttoriTrace:2" : "QUttoriTrace:1"), "Start instruction trace");
         this.#trace = { ...options, active: true };
     }

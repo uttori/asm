@@ -19,7 +19,7 @@ import {
 } from "../packages/disassembler/src/index.js";
 
 // Measure the actual SQLite import into a disposable project. The supplied archive
-// is read-only; ROM identity is copied into a benchmark-only manifest, never a user project.
+// is read-only. ROM identity is copied into a benchmark-only manifest, never a user project.
 const archive = process.argv[2];
 const output = process.argv[3];
 if (!archive || !output) {

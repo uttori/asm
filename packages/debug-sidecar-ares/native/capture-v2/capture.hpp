@@ -1,7 +1,7 @@
 #pragma once
 
 // Downstream prototype: instruction-only ACT2 producer. No ares or transport
-// dependencies; the CPU owns all calls on its emulation thread.
+// dependencies. The CPU owns all calls on its emulation thread.
 #include <array>
 #include <charconv>
 #include <cstdint>
@@ -34,7 +34,7 @@ public:
   auto clockRate(uint64_t numerator, uint64_t denominator) -> void { clockNumerator = numerator; clockDenominator = denominator; }
 
   // Called BEFORE an instruction begins. A false return requires a scheduler
-  // exit without advancing any processor; the frontend must continue polling.
+  // exit without advancing any processor. The frontend must continue polling.
   auto ready() -> bool {
     if(failed) return false;
     if(!recording) return true;

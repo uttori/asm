@@ -18,7 +18,7 @@ type IndexedInterval<Value extends HalfOpenInterval> = {
  * interval can still overlap. This replaces repeated full annotation scans in analysis and source
  * export without changing their observable ordering: matches are restored to original input order
  * before being returned. Keep the prefix maxima and input indices together if this representation
- * changes; dropping either silently turns lookups back into O(n) scans or changes deterministic
+ * changes. Dropping either silently turns lookups back into O(n) scans or changes deterministic
  * first-match behavior.
  */
 export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
@@ -41,7 +41,7 @@ export class HalfOpenIntervalIndex<Value extends HalfOpenInterval> {
         throw new Error("Interval index entries must be non-negative safe half-open ranges.");
       }
     }
-    // Search order is deliberately separate from semantic order; inputIndex restores the latter.
+    // Search order is deliberately separate from semantic order. InputIndex restores the latter.
     this.#entries = values
       .map((value, inputIndex): IndexedInterval<Value> => ({ value, inputIndex }))
       .sort(

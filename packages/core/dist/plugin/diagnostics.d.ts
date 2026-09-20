@@ -1,6 +1,6 @@
-/** Stable categories for host handling; message text is intended for people, not matching. */
+/** Stable categories for host handling. Message text is intended for people, not matching. */
 export type PluginDiagnosticCode = "PLUGIN_MODULE_NOT_FOUND" | "PLUGIN_INVALID_EXPORT" | "PLUGIN_INVALID_MANIFEST" | "PLUGIN_API_INCOMPATIBLE" | "PLUGIN_DEPENDENCY_MISSING" | "PLUGIN_DEPENDENCY_INCOMPATIBLE" | "PLUGIN_DEPENDENCY_CYCLE" | "PLUGIN_ACTIVATION_FAILED" | "PLUGIN_CONTRIBUTION_DUPLICATE" | "PLUGIN_ALIAS_DUPLICATE" | "PLUGIN_TARGET_INVALID" | "PLUGIN_CONFIGURATION_INVALID" | "PLUGIN_HOOK_FAILED";
-/** Available attribution for a failure; fields are absent when the failing entity is not yet known. */
+/** Available attribution for a failure. Fields are absent when the failing entity is not yet known. */
 export interface PluginDiagnosticContext {
     code: PluginDiagnosticCode;
     pluginId?: string;

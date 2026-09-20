@@ -5,11 +5,6 @@ export class OperandResolver {
     constructor(deps) {
         this.deps = deps;
     }
-    /**
-     * Normalizes numeric base member.
-     * @param {string} operand The operand.
-     * @returns {string} The result.
-     */
     normalizeNumericBaseMember(operand) {
         // oxlint-disable-next-line security/detect-unsafe-regex -- Anchored alternatives have distinct prefixes.
         const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
@@ -19,11 +14,6 @@ export class OperandResolver {
         const [, immediatePrefix, literal, indexSuffix = ""] = match;
         return `${immediatePrefix}${literal}${indexSuffix}`;
     }
-    /**
-     * Splits math operand suffix.
-     * @param {string} operand The operand.
-     * @returns {{ expression: string; suffix: string }} The result.
-     */
     splitMathOperandSuffix(operand) {
         const trimmed = operand.trim();
         const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
@@ -37,19 +27,9 @@ export class OperandResolver {
             suffix: indexedMatch[2],
         };
     }
-    /**
-     * Checks whether numeric token.
-     * @param {string} token The token.
-     * @returns {boolean} The result.
-     */
     isNumericToken(token) {
         return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
     }
-    /**
-     * Resolves arithmetic token.
-     * @param {string} token The token.
-     * @returns {number} The result.
-     */
     resolveArithmeticToken(token) {
         if (this.isNumericToken(token)) {
             return this.getnum(token);
@@ -59,11 +39,6 @@ export class OperandResolver {
         }
         return this.deps.resolveLabel(token, false);
     }
-    /**
-     * Attempts to resolve simple arithmetic.
-     * @param {string} operand The operand.
-     * @returns {number | null} The result.
-     */
     tryResolveSimpleArithmetic(operand) {
         const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
         const match = operand.match(new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`));
@@ -89,11 +64,6 @@ export class OperandResolver {
                 return null;
         }
     }
-    /**
-     * Determines value length.
-     * @param {string | number} value The value.
-     * @returns {number} The result.
-     */
     determineValueLength(value) {
         if (typeof value !== "string" && typeof value !== "number") {
             throw new Error(`Invalid value type for length determination: ${typeof value}`);
@@ -116,11 +86,6 @@ export class OperandResolver {
         }
         return Math.max(1, Math.ceil(hexString.length / 2));
     }
-    /**
-     * Checks whether math expression.
-     * @param {string} expression The expression.
-     * @returns {boolean} The result.
-     */
     isMathExpression(expression) {
         if (!expression || typeof expression !== "string") {
             return false;
@@ -138,11 +103,6 @@ export class OperandResolver {
             expression.includes("<<") ||
             expression.includes(">>"));
     }
-    /**
-     * Attempts to resolve label in operand.
-     * @param {string} operand The operand.
-     * @returns {string} The result.
-     */
     tryResolveLabelInOperand(operand) {
         if (operand.startsWith("#")) {
             const inner = operand.substring(1).trim();
@@ -185,9 +145,10 @@ export class OperandResolver {
         return operand;
     }
     /**
-     * Gets num.
-     * @param {string | ExpressionNode} operand The operand.
-     * @returns {number} The result.
+     * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.
+     * Deferred expression failures yield zero during sizing passes and throw during final emission.
+     * @param {string | ExpressionNode} operand Source operand or parsed expression, including an optional immediate prefix.
+     * @returns {number} Resolved value, or the deferred sizing placeholder.
      */
     getnum(operand) {
         if (typeof operand !== "string") {
@@ -255,9 +216,9 @@ export class OperandResolver {
         }
     }
     /**
-     * Gets num from node.
-     * @param {ExpressionNode} operand The operand.
-     * @returns {number} The result.
+     * Evaluate an already parsed operand with the same deferred-expression policy as getnum.
+     * @param {ExpressionNode} operand Numeric expression. Range nodes are rejected.
+     * @returns {number} Resolved value, or zero for a deferred expression failure.
      */
     getnumFromNode(operand) {
         if (isReferenceExpressionNode(operand)) {
@@ -284,11 +245,6 @@ export class OperandResolver {
                 }
         }
     }
-    /**
-     * Resolves reference value.
-     * @param {string} reference The reference.
-     * @returns {number} The result.
-     */
     resolveReferenceValue(reference) {
         if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
             if (this.deps.isStructReference(reference)) {
@@ -303,11 +259,6 @@ export class OperandResolver {
         }
         return this.getnum(reference);
     }
-    /**
-     * Expands operand.
-     * @param {string} operand The operand.
-     * @returns {ExpandedOperand} The result.
-     */
     expandOperand(operand) {
         const raw = operand.trim();
         const syntax = parseOperandSyntax(raw);
@@ -384,11 +335,6 @@ export class OperandResolver {
         }
         return { raw, expanded, length: expectedLength, syntax };
     }
-    /**
-     * Lowers operand.
-     * @param {string} operand The operand.
-     * @returns {LoweredOperand} The result.
-     */
     lowerOperand(operand) {
         const raw = operand.trim();
         const expandedOperand = this.expandOperand(raw);

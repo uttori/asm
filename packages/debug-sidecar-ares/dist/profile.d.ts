@@ -8,6 +8,6 @@ export declare const ARES_65816_THREAD_ID: 1;
 export declare const ARES_65816_FRAME_ID: 1;
 export declare const ARES_TRACE_BUFFER_EVENTS = 65536;
 export declare const ARES_TRACE_BATCH_EVENTS = 240;
-/** Immutable editor/sidecar negotiation profile for the maintained ares RSP seam. */
+/** Immutable editor/sidecar negotiation profile for the patched ares RSP interface. */
 export declare const ARES_RSP_CAPABILITIES: Readonly<DebugBackendCapabilities>;
 //# sourceMappingURL=profile.d.ts.map

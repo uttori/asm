@@ -115,7 +115,7 @@ const effectiveAddressesFor = (instruction) => instruction.references
         ...(indexed ? { baseAddress: reference.address } : { address: reference.address }),
         volatile: false,
         explanation: indexed
-            ? "The encoded address is only a base; indexing or indirection prevents a static effective address."
+            ? "The encoded address is only a base. Indexing or indirection prevents a static effective address."
             : "Address resolves within the 16-bit SPC700 memory space.",
     };
 });
@@ -231,7 +231,7 @@ const annotationsFor = (result, runEvidence) => {
 };
 /**
  * Runs conservative SPC700 CFG analysis over one contiguous ARAM image.
- * Entry points are explicit or project-derived; the analyzer does not assume
+ * Entry points are explicit or project-derived. The analyzer does not assume
  * that a standalone payload represents reset-time memory.
  * @param {Spc700AramImage} image Immutable contiguous ARAM bytes and load address.
  * @param {Spc700AnalysisOptions} [options] Project inputs, entry points, overrides, and limits.

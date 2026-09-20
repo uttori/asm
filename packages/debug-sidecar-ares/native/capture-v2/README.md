@@ -3,7 +3,7 @@
 This package implements the instruction-only scope described in
 [the capture guide](../../CAPTURE.md).
 It is independent of the unpublished U3–U6 contribution series. The prototype
-uses private `qUttoriCapture` packets; no upstream namespace is claimed.
+uses private `qUttoriCapture` packets. No upstream namespace is claimed.
 
 `capture-v2.patch` applies to the clean rich maintenance revision
 `be548251b537334f4f2054c7d86171da22fdc6ca`. It contains the generic bounded producer,
@@ -15,13 +15,13 @@ against the built checkout, `Local Only/ares-rich-state-load-fix`, on its new
 
 The 2026-09-12 [bus capture increment](../capture-bus/README.md) adds a second
 source supplement to that checkout. Reconstruct its current source by applying
-both patches; this package still identifies the original instruction-only layer.
+both patches. This package still identifies the original instruction-only layer.
 
 `capture.hpp`, `send-all.hpp`, and `core-test.cpp` here are reviewable copies of
 the corresponding patch files. `queue-test.cpp` tests producer ownership,
 bounded reservation and send progress without ares. The outer TypeScript tests
 decode its native ACT2 output for CRC/framing interoperability. Native additions
-are distributed with the ares/nall source and notices; this package does not
+are distributed with the ares/nall source and notices. This package does not
 relicense existing emulator code.
 
 ```sh
@@ -36,7 +36,7 @@ SNES core. On the tested CLT host, prefix the build command with
 `CPLUS_INCLUDE_PATH=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1`.
 
 `runtime.json` identifies the signed local runtime. `desktop-evidence.json` and
-`desktop-normal-evidence.json` record direct TCP checks; `sidecar-evidence.json`
+`desktop-normal-evidence.json` record direct TCP checks. `sidecar-evidence.json`
 records the editor's bundled sidecar and DAP capture path with a verified runtime
 launch. All use an original synthetic ROM and isolated settings/saves.
 

@@ -5,7 +5,7 @@ import { normalizeRuntimePPUEffect } from "./runtime-ppu.js";
  * effect for fact identity, keeping transport-only raster fields on the raw event.
  * @param {RuntimeBusFact} fact Byte-access coordinates and attribution.
  * @returns {RuntimePPUEffect | undefined} Canonical PPU effect when present, for reuse by the importer.
- * Throws on inconsistent actor, channel, phase, effect or out-of-range values; never mutates the input.
+ * Throws on inconsistent actor, channel, phase, effect or out-of-range values. Never mutates the input.
  */
 export const validateRuntimeBusFact = (fact) => {
     if (fact.addressSpace !== "snes.cpu" ||

@@ -39,7 +39,7 @@ export interface CaptureFileTimings {
     }>>;
 }
 export interface CaptureFileSummary {
-    /** Diagnostic wall-clock spans; excluded from archive identity and durable accounting. */
+    /** Diagnostic wall-clock spans. Excluded from archive identity and durable accounting. */
     readonly timings?: CaptureFileTimings;
     /** Selected output: ACT2 directly, or legacy JSON when explicitly requested. */
     readonly file: string;
@@ -51,26 +51,26 @@ export interface CaptureFileSummary {
     readonly complete: boolean;
     readonly position: CapturePositionV2;
 }
-/** One bounded chunk at a time; acceptance follows data sync AND checkpoint sync. */
+/** One bounded chunk at a time. Acceptance follows data sync AND checkpoint sync. */
 export declare class LosslessCaptureFileRecorder {
     #private;
     readonly completion: Promise<CaptureFileSummary>;
     private constructor();
     /**
-     * Reserve a new output and start lossless recording. ACT2 output publishes only the archive;
-     * legacy JSON output additionally exports a compatible trace after draining the producer.
+     * Reserve a new output and start lossless recording. ACT2 output publishes only the archive.
+     * Legacy JSON output additionally exports a compatible trace after draining the producer.
      * @param {object} options Output format, identity and serialized producer transport.
-     * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder; stop() drains and syncs it.
+     * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder. Stop() drains and syncs it.
      */
     static create(options: CaptureFileMetadata & {
         readonly file: string;
         readonly transport: CaptureTransportV2;
         readonly bufferBytes?: number;
-        /** Opt-in stage profiling; no clock reads or diagnostic allocations when omitted. */
+        /** Opt-in stage profiling. No clock reads or diagnostic allocations when omitted. */
         readonly measureStages?: boolean;
         /** Defaults to instructions. CPU/DMA/HDMA bus capture requires ACT2 output. */
         readonly scope?: CaptureScopeV2;
-        /** Defaults to legacy JSON plus ACT2; act2 skips all post-capture JSON conversion. */
+        /** Defaults to legacy JSON plus ACT2. Act2 skips all post-capture JSON conversion. */
         readonly format?: "json" | "act2";
     }): Promise<LosslessCaptureFileRecorder>;
     stop(): Promise<CaptureFileSummary>;
@@ -88,14 +88,14 @@ export interface CaptureFileReadOptions {
     readonly maxBytes?: number;
     readonly signal?: AbortSignal;
     readonly onProgress?: (readBytes: number, totalBytes: number) => void;
-    /** Opt-in chunk/frame timings in milliseconds; no clock reads when omitted. */
+    /** Opt-in chunk/frame timings in milliseconds. No clock reads when omitted. */
     readonly onTiming?: (stage: "read" | "decode" | "consume", milliseconds: number) => void;
 }
 /**
  * Read only the checksummed session header, without scanning the archive's event chunks.
  * @param {string} file ACT2 archive path.
  * @param {CaptureFileReadOptions} options Byte budget and cancellation.
- * @returns {Promise<CaptureFileHeader>} Validated identity; completion is checked during consumption.
+ * @returns {Promise<CaptureFileHeader>} Validated identity. Completion is checked during consumption.
  */
 export declare const readCaptureFileHeader: (file: string, options?: CaptureFileReadOptions) => Promise<CaptureFileHeader>;
 /**
@@ -121,7 +121,7 @@ export interface NativeCaptureFilePosition extends CapturePositionV2 {
     readonly fileState: "preparing" | "writing" | "complete" | "incomplete";
     readonly fileBytes: string;
     readonly fileBatches: string;
-    /** Nanosecond spans; writer times overlap emulation and cannot be summed as wall shares. */
+    /** Nanosecond spans. Writer times overlap emulation and cannot be summed as wall shares. */
     readonly fileProfile?: Readonly<Record<"sealNs" | "copyNs" | "writeNs" | "syncNs", string>>;
 }
 /** Append-only native archive cursor. Reads only the producer's synced byte prefix,
@@ -146,24 +146,24 @@ export declare class NativeCaptureFileCursor {
     get complete(): boolean;
     /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
      * that durable watermark is ignored even if an unsynced ACK2 is already visible.
-     * A failure permanently poisons the cursor; callers must discard staged facts.
+     * A failure permanently poisons the cursor. Callers must discard staged facts.
      * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-     * @param {Function} accept Provisional synchronous chunk consumer; exceptions poison this cursor.
+     * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
      * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
      * @param {string} publishedFile Final path whose inode must agree before completion.
      * @returns {Promise<void>} Settlement of one bounded read slice.
      */
     readThrough(value: NativeCaptureFilePosition, accept: (chunk: CaptureChunkV2) => void, maxChunks?: number, publishedFile?: string): Promise<void>;
-    /** Close the pinned inode; pending analysis remains caller-owned and provisional. */
+    /** Close the pinned inode. Pending analysis remains caller-owned and provisional. */
     close(): Promise<void>;
 }
 /** Controls a local native ACT2 writer. No event bytes cross RSP/DAP and no live
- * decoding occurs here; the existing bounded archive reader validates on import.
+ * decoding occurs here. The existing bounded archive reader validates on import.
  */
 export declare class NativeCaptureFileRecorder {
     #private;
     readonly completion: Promise<CaptureFileSummary>;
-    /** Latest validated durable position; observing it never reads or drains event bytes.
+    /** Latest validated durable position. Observing it never reads or drains event bytes.
      * @returns {NativeCaptureFilePosition} Read-only status snapshot from the control pump.
      */
     get position(): NativeCaptureFilePosition;
@@ -184,8 +184,8 @@ export declare class NativeCaptureFileRecorder {
      * @returns {Promise<CaptureFileSummary>} Published complete archive, or a writer failure.
      */
     stop(): Promise<CaptureFileSummary>;
-    /** Leave a recoverable partial artifact; never publish an interrupted session.
-     * @returns {Promise<CaptureFileSummary>} Existing completion; rejects on cancellation.
+    /** Leave a recoverable partial artifact. Never publish an interrupted session.
+     * @returns {Promise<CaptureFileSummary>} Existing completion. Rejects on cancellation.
      */
     finishIncomplete(): Promise<CaptureFileSummary>;
 }

@@ -25,14 +25,14 @@ import {
   type OwnedContribution,
 } from "./environment.js";
 
-/** In-memory plugin activation; module text is diagnostic context, never imported by the manager. */
+/** In-memory plugin activation. Module text is diagnostic context, never imported by the manager. */
 export interface PluginActivationRequest {
   readonly plugin: AssemblerPlugin<unknown>;
   readonly options?: unknown;
   readonly pluginModule?: string;
 }
 
-/** Already-imported module namespace; its default export must satisfy AssemblerPlugin. */
+/** Already-imported module namespace. Its default export must satisfy AssemblerPlugin. */
 export interface PluginModuleActivationRequest {
   readonly module: unknown;
   readonly options?: unknown;
@@ -164,7 +164,7 @@ const validateManifest = (manifest: unknown, pluginModule?: string): AssemblerPl
   }
   if (manifest.apiVersion !== PLUGIN_API_VERSION) {
     throw new PluginError(
-      `Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}; this host supports ${PLUGIN_API_VERSION}.`,
+      `Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}. This host supports ${PLUGIN_API_VERSION}.`,
       { code: "PLUGIN_API_INCOMPATIBLE", pluginId: id, pluginModule },
     );
   }
@@ -325,7 +325,7 @@ export class PluginManager implements PluginDisposable {
    * Activate dependencies first, preserving input order among ready plugins.
    * Each plugin commits independently: earlier successes remain active if a later one fails.
    * Throws PluginError for invalid input, dependency conflicts, or activation failure.
-   * Activation is unavailable after freeze or disposal; dispose the manager after a failed batch.
+   * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
    * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
    */
   async activatePlugins(requests: readonly PluginActivationRequest[]): Promise<void> {
@@ -568,7 +568,7 @@ export class PluginManager implements PluginDisposable {
     }
     for (const record of transaction.architectures) {
       validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-      // Analysis-only contributions omit an encoder; Assembler rejects those when
+      // Analysis-only contributions omit an encoder. Assembler rejects those when
       // constructing a build session. Optional factories must still be callable.
       if (
         typeof record.value.displayName !== "string" ||
@@ -726,7 +726,7 @@ export class PluginManager implements PluginDisposable {
       }
     }
     // Plugin contributions are input-sized. A spread could fail after earlier lists were committed,
-    // leaving a partially registered plugin; iterative appends preserve each list's order.
+    // leaving a partially registered plugin. Iterative appends preserve each list's order.
     for (const record of transaction.sessionStates) {
       this.#sessionStates.push(record);
     }
@@ -756,7 +756,7 @@ export class PluginManager implements PluginDisposable {
   /**
    * Validate target references and aliases, then seal registration. Repeated calls return the
    * same environment. Throws PluginError for invalid graphs or a disposed manager.
-   * @returns {AssemblerEnvironment} The validated, shared contribution graph; resources remain owned by this manager.
+   * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
    */
   freeze(): AssemblerEnvironment {
     if (this.#disposed) {
@@ -784,7 +784,7 @@ export class PluginManager implements PluginDisposable {
 
   /**
    * Release plugin resources in reverse activation order, attempting every disposable.
-   * Idempotent and terminal; rejects with AggregateError after cleanup failures.
+   * Idempotent and terminal. Rejects with AggregateError after cleanup failures.
    * Does not dispose assembler sessions or make their continued use safe.
    */
   async dispose(): Promise<void> {

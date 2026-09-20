@@ -32,7 +32,7 @@ test("synchronous transactions reject promises and roll back their writes and re
   const before = loadAnalysisProjectSnapshot(directory);
   const store = openAnalysisProjectStore(directory);
   try {
-    // Simulate an untyped JavaScript caller; an async callback cannot own this synchronous lock.
+    // Simulate an untyped JavaScript caller. An async callback cannot own this synchronous lock.
     const action = async () => {
       store.replaceTables({ labels: [] });
       store.publishManifest(before.manifest);

@@ -9,6 +9,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node", "vscode"],
+    "rootDir": "../..",
     "outDir": "out",
     "customConditions": ["uttori-source"]
   },

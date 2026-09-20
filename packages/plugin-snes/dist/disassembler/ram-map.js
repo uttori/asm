@@ -38,7 +38,7 @@ const sramWindowEnd = (address) => {
  * Parses a CPU address and enforces the selected RAM domain before ranges are indexed.
  * @param {string | number} value Hexadecimal string or integer CPU address.
  * @param {"wram" | "sram"} memory Explicit SRAM declaration, or the WRAM default.
- * @returns {number} Valid bus address; throws for malformed or out-of-domain values.
+ * @returns {number} Valid bus address. Throws for malformed or out-of-domain values.
  */
 const parseAddress = (value, memory) => {
     let address;
@@ -117,7 +117,7 @@ export const validateSnesRamMap = (value) => {
         }
         const address = parseAddress(record.address, memory);
         if (addresses.has(address)) {
-            throw new Error(`Duplicate RAM-map address '${hex(address)}'; combine aliases in one entry.`);
+            throw new Error(`Duplicate RAM-map address '${hex(address)}'. Combine aliases in one entry.`);
         }
         addresses.add(address);
         const size = record.size ?? 1;
@@ -288,7 +288,7 @@ export const renderSnesRamMapSchema = () => canonicalSourceExportJson({
                     memory: {
                         enum: ["wram", "sram"],
                         default: "wram",
-                        description: "SRAM requires a standard LoROM/HiROM cartridge window; confirm the actual cartridge mapping and size separately.",
+                        description: "SRAM requires a standard LoROM/HiROM cartridge window. Confirm the actual cartridge mapping and size separately.",
                     },
                     size: { type: "integer", minimum: 1, maximum: 0x20000 },
                     category: { type: "string", minLength: 1 },

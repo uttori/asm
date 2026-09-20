@@ -1,5 +1,5 @@
 // Original redistributable homebrew fixture, under this repository's MIT license.
-// SEI; CLD; LDX #$FF; TXS; loop: INC $00; BRA loop.
+// SEI. CLD. LDX #$FF. TXS. Loop: INC $00. BRA loop.
 // The reset vector is $008000; SRAM is present for storage-boundary tests.
 export function syntheticRom({ quiescent = false } = {}) {
   const rom = Buffer.alloc(0x8000, 0xea);

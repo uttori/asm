@@ -135,7 +135,7 @@ export function classify65xxOperand(resolver, operand) {
         raw,
         expanded,
         length,
-        // 24-bit values are not 6502-legal; encoder can still emit long-x on 4510.
+        // 24-bit values are not 6502-legal. Encoder can still emit long-x on 4510.
         metadata: length > 2 ? { addressOutOfRange: true } : undefined,
     };
 }

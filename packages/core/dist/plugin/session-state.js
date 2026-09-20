@@ -81,7 +81,7 @@ export class PluginSessionStateStore {
     }
     /**
      * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
-     * Subsequent writes mutate this map; the previous snapshot is not individually disposed.
+     * Subsequent writes mutate this map. The previous snapshot is not individually disposed.
      * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
      */
     restore(snapshot) {

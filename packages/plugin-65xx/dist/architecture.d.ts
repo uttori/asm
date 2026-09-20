@@ -2,7 +2,7 @@ import type { ArchitectureEncoder, ArchitectureEncoderContext, InstructionDescri
 import { type CpuDefinition, type InstructionForm } from "./instructions/schema.js";
 /**
  * Concatenates opcode/prefix bytes with already-encoded operand bytes.
- * Used by tests and tooling; the live encoder writes through `emission` instead.
+ * Used by tests and tooling. The live encoder writes through `emission` instead.
  * @param {InstructionForm} form The instruction form.
  * @param {readonly number[]} operandBytes The operand bytes.
  * @returns {Uint8Array} The materialized opcode form.
@@ -10,7 +10,7 @@ import { type CpuDefinition, type InstructionForm } from "./instructions/schema.
 export declare function materializeOpcodeForm(form: InstructionForm, operandBytes?: readonly number[]): Uint8Array;
 /**
  * Table-driven encoder for one {@link CpuDefinition}. Unknown mnemonics that
- * exist only on another CPU get a targeted diagnostic; truly unknown ops
+ * exist only on another CPU get a targeted diagnostic. Truly unknown ops
  * return false so the assembler can try the next architecture.
  */
 export declare class Arch65xx implements ArchitectureEncoder {

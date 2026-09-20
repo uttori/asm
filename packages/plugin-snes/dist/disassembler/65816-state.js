@@ -63,7 +63,7 @@ export const resetCpu65816State = () => ({
     stack: { kind: "known", entries: [] },
 });
 /**
- * Native-mode interrupt entry: E=0 and PBR=0; M/X/C/DBR/D/S/stack stay unknown.
+ * Native-mode interrupt entry: E=0 and PBR=0. M/X/C/DBR/D/S/stack stay unknown.
  * @returns {Cpu65816AbstractState} State for native COP/BRK/ABORT/NMI/IRQ.
  */
 export const nativeVectorCpu65816State = () => ({
@@ -72,7 +72,7 @@ export const nativeVectorCpu65816State = () => ({
     pbr: known(0),
 });
 /**
- * Emulation-mode interrupt entry: E=M=X=1 and PBR=0; C/DBR/D/S/stack stay unknown.
+ * Emulation-mode interrupt entry: E=M=X=1 and PBR=0. C/DBR/D/S/stack stay unknown.
  * @returns {Cpu65816AbstractState} State for emulation COP/ABORT/NMI/IRQ/BRK.
  */
 export const emulationVectorCpu65816State = () => ({
@@ -83,7 +83,7 @@ export const emulationVectorCpu65816State = () => ({
     pbr: known(0),
 });
 /**
- * Lattice join at a CFG merge. `unknown` absorbs; two distinct known values
+ * Lattice join at a CFG merge. `unknown` absorbs. Two distinct known values
  * become `conflicting`. E=1 still forces M=X=1 after the join.
  * @param {Cpu65816AbstractState} left Incoming state from one predecessor.
  * @param {Cpu65816AbstractState} right Incoming state from another predecessor.
@@ -103,7 +103,7 @@ export const joinCpu65816States = (left, right) => normalize({
 const flagOverride = (value) => value === undefined ? undefined : known(value === true || value === 1 ? 1 : 0);
 /**
  * Overlays known fields from a project annotation or configured entry point.
- * Banks are masked to 8 bits; D and S are masked to 16 bits.
+ * Banks are masked to 8 bits. D and S are masked to 16 bits.
  * @param {Cpu65816AbstractState} state State to update.
  * @param {Cpu65816StateOverride} override Partial known values to apply.
  * @returns {Cpu65816AbstractState} Normalized state with the overlay applied.
@@ -128,10 +128,10 @@ export const applyCpu65816StateOverride = (state, override) => normalize({
 export const enterCpu65816Address = (state, address) => ({ ...state, pbr: known((address >>> 16) & 0xff) });
 const decoderFlag = (value) => value.kind === "known" && (value.value === 0 || value.value === 1) ? value.value : "unknown";
 /**
- * Projects the analysis lattice onto decoder flags. Known E/M/X become 0/1;
- * anything else is `"unknown"`. Known PBR/DBR/D are copied when present.
+ * Projects the analysis lattice onto decoder flags. Known E/M/X become 0/1.
+ * Anything else is `"unknown"`. Known PBR/DBR/D are copied when present.
  * @param {Cpu65816AbstractState} state Analysis state at the instruction.
- * @returns {Cpu65816DecodeState} Decoder input; omitted banks/page stay unset.
+ * @returns {Cpu65816DecodeState} Decoder input. Omitted banks/page stay unset.
  */
 export const cpu65816DecodeState = (state) => ({
     e: decoderFlag(state.e),
@@ -238,7 +238,7 @@ const CARRY_UNKNOWN_MNEMONICS = new Set([
 ]);
 /**
  * Applies one instruction's decoded effects conservatively.
- * Tracks SEP/REP, PHP/PLP, PHB/PLB, PHD/PLD, XCE, and TCD/TCS; loses stack
+ * Tracks SEP/REP, PHP/PLP, PHB/PLB, PHD/PLD, XCE, and TCD/TCS. Loses stack
  * precision on `BRK`/`COP`/`JSR`/`JSL` and when M/X width is unknown at a push/pull.
  * @param {StaticInstruction} instruction Normalized instruction from the worklist.
  * @param {Cpu65816AbstractState} input State immediately before the instruction.

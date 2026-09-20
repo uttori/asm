@@ -297,7 +297,7 @@ test("bus reimport repairs a partial namespace and still rejects altered survivi
     message: /changed content/,
   });
   // Removing every observation also remains repairable even though the import
-  // report and prefix dictionary still exist; neither alone proves completeness.
+  // report and prefix dictionary still exist. Neither alone proves completeness.
   modify([]);
   const all = await importRuntimeBusTraceSourceIntoProject(source(), directory, context);
   t.is(all.added.runtime, original.length);

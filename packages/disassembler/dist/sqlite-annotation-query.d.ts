@@ -1,7 +1,7 @@
 /** Indexed, bounded editor projections. Full analysis/export APIs retain their complete views. */
 import type { DatabaseSync } from "node:sqlite";
 import type { AnalysisProjectManifest, AnalysisProjectShards, AnalysisControlFlowNodeRecord } from "./project-types.js";
-/** Exact logical/output coordinates from a validated debug map; ranges are half-open. */
+/** Exact logical/output coordinates from a validated debug map. Ranges are half-open. */
 export interface AnnotationQueryRange {
     readonly addressSpace: string;
     readonly start: number;
@@ -32,7 +32,7 @@ export declare const annotationQueryIndexesReady: (database: DatabaseSync) => bo
 export declare const ensureAnnotationQueryIndexes: (database: DatabaseSync) => void;
 /**
  * Read requested instructions and their evidence, never a whole-project annotation projection.
- * Hot PCs have a bounded preview of variants/state/memory facts; execution totals remain exact.
+ * Hot PCs have a bounded preview of variants/state/memory facts. Execution totals remain exact.
  * @param {DatabaseSync} database Connection with initialized indexes, inside a read transaction.
  * @param {AnalysisProjectManifest} manifest Authoritative manifest for this read snapshot.
  * @param {readonly AnnotationQueryRange[]} ranges At most 2000 validated source/debugger ranges.

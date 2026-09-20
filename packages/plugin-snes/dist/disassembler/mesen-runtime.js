@@ -130,7 +130,7 @@ export const importMesenSnesCdl = (bytes, rom, mapper, context) => {
     assertContext(rom, mapper, context);
     if (bytes.length < CDL_HEADER_SIZE ||
         !CDL_HEADER.every((value, index) => bytes[index] === value)) {
-        throw new Error("MesenCE CDL import requires a CDLv2 header; CRC-less legacy CDL is unsafe.");
+        throw new Error("MesenCE CDL import requires a CDLv2 header. CRC-less legacy CDL is unsafe.");
     }
     if (bytes.length !== CDL_HEADER_SIZE + rom.length) {
         throw new Error(`MesenCE CDL payload mismatch: expected ${rom.length} bytes, received ${bytes.length - CDL_HEADER_SIZE}.`);
@@ -617,14 +617,14 @@ export const importMesen65816Trace = (text, metadata, rom, mapper, context) => {
             ]
             : []),
     ], [
-        "Raw trace text has no embedded ROM identity; required capture metadata supplied the checked ROM and mapper.",
+        "Raw trace text has no embedded ROM identity. Required capture metadata supplied the checked ROM and mapper.",
         ...(metadata.mesenRevision && metadata.mesenRevision !== MESEN_CE_EVIDENCE_REVISION
             ? [
-                `Trace reports MesenCE revision ${metadata.mesenRevision}; importer was checked against ${MESEN_CE_EVIDENCE_REVISION}.`,
+                `Trace reports MesenCE revision ${metadata.mesenRevision}. Importer was checked against ${MESEN_CE_EVIDENCE_REVISION}.`,
             ]
             : []),
     ]);
-    const evidence = evidenceRecord("trace", sourceSha256, rom, mapper, `MesenCE trace with ${parsed.length} decoded 65816 line(s); capture identity metadata schema 1.`);
+    const evidence = evidenceRecord("trace", sourceSha256, rom, mapper, `MesenCE trace with ${parsed.length} decoded 65816 line(s). Capture identity metadata schema 1.`);
     return {
         report,
         batch: {

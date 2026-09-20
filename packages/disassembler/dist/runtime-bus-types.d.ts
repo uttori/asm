@@ -7,12 +7,12 @@ export interface RuntimeBusFact {
     readonly ppu?: RuntimePPUEffect;
     readonly addressSpace: "snes.cpu";
     readonly address: number;
-    /** Instruction start only in instruction context; otherwise the observed CPU program counter. */
+    /** Instruction start only in instruction context. Otherwise the observed CPU program counter. */
     readonly pc: number;
     readonly value: number;
     readonly direction: "read" | "write";
     readonly actor: "cpu" | "dma" | "hdma";
-    /** CPU accesses have no channel; DMA and HDMA use channels 0–7. */
+    /** CPU accesses have no channel. DMA and HDMA use channels 0–7. */
     readonly channel: number | null;
     readonly phase: "cpu" | "dma" | "hdma-table" | "hdma-indirect" | "hdma-transfer";
     readonly context: RuntimeBusContext;
@@ -38,7 +38,7 @@ export interface RuntimeBusAccess extends Omit<RuntimeBusFact, "addressSpace" | 
  * effect for fact identity, keeping transport-only raster fields on the raw event.
  * @param {RuntimeBusFact} fact Byte-access coordinates and attribution.
  * @returns {RuntimePPUEffect | undefined} Canonical PPU effect when present, for reuse by the importer.
- * Throws on inconsistent actor, channel, phase, effect or out-of-range values; never mutates the input.
+ * Throws on inconsistent actor, channel, phase, effect or out-of-range values. Never mutates the input.
  */
 export declare const validateRuntimeBusFact: (fact: RuntimeBusFact) => RuntimePPUEffect | undefined;
 //# sourceMappingURL=runtime-bus-types.d.ts.map

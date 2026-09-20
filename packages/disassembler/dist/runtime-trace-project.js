@@ -7,12 +7,14 @@ import { createRuntimeInstructionTraceImporter, } from "./runtime-trace.js";
 /**
  * Stream capture chunks into connection-local counters, then publish final runtime facts,
  * provenance and revision in one write transaction. Failed parsing, cancellation, stale readers,
- * ROM mismatch and conflicting stable IDs leave the entire project unchanged.
+ * ROM mismatch and conflicting stable IDs leave previously published facts and revision unchanged.
+ * An explicit storage policy is saved separately before import. The input file is never moved or deleted.
+ * A pointer-file error can reject after SQLite has committed. Reopen the project before retrying.
  * @param {string} file Native instruction trace path.
  * @param {string} directory Destination SQLite project root.
  * @param {RuntimeInstructionTraceImportContext} context Required ROM identity and requested indexing profile.
  * @param {RuntimeTraceProjectImportOptions} [options] Input budget, progress callbacks and cancellation signal.
- * @returns {Promise<RuntimeTraceProjectImportResult>} Committed counts and execution seeds; failures publish nothing.
+ * @returns {Promise<RuntimeTraceProjectImportResult>} Committed counts, execution seeds, and maintenance warnings.
  */
 export const importRuntimeTraceIntoProject = async (file, directory, context, options = {}) => {
     const source = await createRuntimeTraceFileSource(file, options);
@@ -20,12 +22,15 @@ export const importRuntimeTraceIntoProject = async (file, directory, context, op
 };
 /**
  * Import decoded producer chunks without an intermediate JSON artifact. Chunk memory is released
- * after each push; distinct facts use the existing SQLite index and atomic publication path.
+ * after each push. Distinct facts use the existing SQLite index and atomic publication path.
+ * The caller owns the source and its cancellation behavior. This function closes its SQLite connection.
+ * Cancellation is cooperative at read/merge boundaries, not preemptive during synchronous finalization.
+ * Storage-policy changes and post-commit pointer failures follow importRuntimeTraceIntoProject.
  * @param {RuntimeTraceSource} source Ordered reader that rejects any invalid or incomplete envelope.
  * @param {string} directory Destination SQLite project root.
  * @param {RuntimeInstructionTraceImportContext} context Expected ROM, source name and index budget.
- * @param {RuntimeTraceProjectImportOptions} options Cancellation and progress; byte limits belong to the source.
- * @returns {Promise<RuntimeTraceProjectImportResult>} Committed facts; reader failures publish nothing.
+ * @param {RuntimeTraceProjectImportOptions} options Cancellation and progress. Byte limits belong to the source.
+ * @returns {Promise<RuntimeTraceProjectImportResult>} Committed facts. Reader failures publish nothing.
  */
 export const importRuntimeTraceSourceIntoProject = async (source, directory, context, options = {}) => {
     options.signal?.throwIfAborted();
@@ -65,7 +70,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                 },
                 onRecord: (record) => {
                     options.signal?.throwIfAborted();
-                    // finish() assigns one source identity to every emitted fact; its complete provenance
+                    // finish() assigns one source identity to every emitted fact. Its complete provenance
                     // is validated below before commit. SQLite and the counter index guarantee unique IDs.
                     validate ??= createRuntimeRecordValidator(manifest, record.evidence.map((id) => ({
                         id,
@@ -143,12 +148,12 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
         // These actions follow COMMIT. A reader lock, disk error or cancellation callback must not
         // report a failed import after its durable counts and provenance have already been published.
         try {
-            options.onStage?.("Runtime import committed; project pointer updated.");
+            options.onStage?.("Runtime import committed. Project pointer updated.");
             options.onStage?.("Recycling SQLite caches and WAL…");
             checkpointBusy = store.maintainStorage().checkpointBusy;
         }
         catch (error) {
-            maintenanceWarnings.push(`Trace import committed; storage maintenance deferred: ${String(error)}`);
+            maintenanceWarnings.push(`Trace import committed. Storage maintenance deferred: ${String(error)}`);
         }
         const afterStorage = store.storageSnapshot();
         const newFacts = afterStorage.facts - beforeStorage.facts;
@@ -165,7 +170,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
                 ...maintenanceWarnings,
                 ...(retainedReport
                     ? [
-                        "This capture was already imported with a different profile; its retained facts and counts were reused.",
+                        "This capture was already imported with a different profile. Its retained facts and counts were reused.",
                     ]
                     : []),
             ],
@@ -178,7 +183,7 @@ export const importRuntimeTraceSourceIntoProject = async (source, directory, con
 /** Publish a combined offline batch without expanding the destination runtime history.
  * @param {string} directory Existing SQL project root.
  * @param {AnalysisProjectRevision} expected Revision used to verify the import ROM/mapper.
- * @param {RuntimeEvidenceBatch} batch Validated importer output; stable-ID conflicts roll back the entire batch.
+ * @param {RuntimeEvidenceBatch} batch Validated importer output. Stable-ID conflicts roll back the entire batch.
  * @returns {object} Atomic import changes and counts.
  */
 export const commitRuntimeEvidenceBatch = (directory, expected, batch) => {

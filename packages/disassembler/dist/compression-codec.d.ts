@@ -17,12 +17,12 @@ export interface CompressionRangeConstraints {
     readonly sourceOffset: number;
     /** Exact existing ROM extent. Recompression never changes this replacement size. */
     readonly originalSize: number;
-    /** Largest legal compressed stream; defaults to `originalSize`. */
+    /** Largest legal compressed stream. Defaults to `originalSize`. */
     readonly maximumSize?: number;
     /** Optional half-open bank bounds. Both values must be supplied together. */
     readonly bankStart?: number;
     readonly bankEnd?: number;
-    /** Fill unused bytes after a shorter stream; otherwise preserve the original tail. */
+    /** Fill unused bytes after a shorter stream. Otherwise preserve the original tail. */
     readonly fillByte?: number;
 }
 /** Deterministic verification of one existing compressed stream. */

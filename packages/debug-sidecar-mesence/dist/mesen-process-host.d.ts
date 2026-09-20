@@ -54,17 +54,30 @@ export interface MesenProcessRuntime {
 }
 /** Configuration for one restartable manifest-verified MesenCE process. */
 export interface MesenProcessHostOptions {
+    /** Absolute path to the executable whose hash is pinned by the manifest. */
     readonly executable: string;
+    /** Absolute ROM file path. The manifest hashes the entire file, including any copier header. */
     readonly rom: string;
+    /** Absolute working directory containing the declared runtime resources. */
+    /** Platform operations override, primarily for process-host tests. */
     readonly runtimeDirectory: string;
+    /** Validated identity for this executable, ROM, platform, and native protocol. */
     readonly manifest: MesenRuntimeManifest;
+    /** Child environment overrides. Inherited values are used unless overridden. */
     readonly env?: Readonly<Record<string, string | undefined>>;
+    /** Positive integer startup deadline in milliseconds. Defaults to 10,000. */
     readonly startupTimeoutMs?: number;
+    /** Positive integer native request deadline in milliseconds. Defaults to 5,000. */
     readonly requestTimeoutMs?: number;
+    /** Positive integer wait after SIGTERM in milliseconds, before SIGKILL. Defaults to 2,000. */
     readonly shutdownTimeoutMs?: number;
+    /** Positive integer delay between startup connection attempts in milliseconds. Defaults to 25. */
     readonly connectRetryMs?: number;
+    /** Positive integer native server lifetime in seconds. Defaults to 86,400 (24 hours). */
     readonly nativeLifetimeSeconds?: number;
+    /** Positive integer retained stdout/stderr tail size in bytes. Defaults to 65,536. */
     readonly maxOutputBytes?: number;
+    /** Synchronous output observer. Must not throw. */
     readonly onOutput?: (stream: "stdout" | "stderr", text: string) => void;
     readonly runtime?: MesenProcessRuntime;
 }

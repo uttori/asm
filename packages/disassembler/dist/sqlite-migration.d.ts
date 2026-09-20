@@ -1,5 +1,5 @@
 import type { ShardKind } from "./project-types.js";
-/** Migration stages are cancellable until publication; reported record counts are per table. */
+/** Migration stages are cancellable until publication. Reported record counts are per table. */
 export interface SqliteMigrationProgress {
     readonly phase: "project" | "copy" | "verify" | "indexes" | "publish";
     readonly table?: ShardKind;
@@ -18,7 +18,7 @@ export interface SqliteMigrationResult {
         readonly sha256: string;
     }>>;
     readonly warnings: readonly string[];
-    /** Expected conversion notices; these do not indicate a failed migration. */
+    /** Expected conversion notices. These do not indicate a failed migration. */
     readonly notes?: readonly string[];
     /** Non-overlapping copy, projection, validation and index costs in wall-clock milliseconds. */
     readonly timings?: readonly {
@@ -26,7 +26,7 @@ export interface SqliteMigrationResult {
         readonly durationMs: number;
     }[];
 }
-/** Callbacks report progress only; cancellation is observed between bounded copy/verification batches. */
+/** Callbacks report progress only. Cancellation is observed between bounded copy/verification batches. */
 export interface SqliteMigrationOptions {
     /** Explicitly discard full register-index detail after retaining the original database as backup. */
     readonly convertRuntime?: boolean;
@@ -34,8 +34,8 @@ export interface SqliteMigrationOptions {
     readonly onProgress?: (progress: SqliteMigrationProgress) => void;
 }
 /**
- * Convert supported SQLite layouts with per-table content digests; optional runtime projection is explicit.
- * The process gate blocks new clients; switching WAL to DELETE under exclusive locking also requires
+ * Convert supported SQLite layouts with per-table content digests. Optional runtime projection is explicit.
+ * The process gate blocks new clients. Switching WAL to DELETE under exclusive locking also requires
  * existing SQLite readers to release the source. No source row or logical revision is changed.
  * @param {string} directory Existing project root, on a filesystem supporting same-directory hard links.
  * @param {SqliteMigrationOptions} [options] Cancellation and progress reporting.

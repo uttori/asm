@@ -2,7 +2,7 @@
 
 The sidecar requires a separately built ares runtime with the capabilities and hashes declared
 by its runtime manifest. Stock ares is not a compatible debugger runtime. Native validation has
-been performed on macOS; Linux and Windows native-runtime validation remains open.
+been performed on macOS. Linux and Windows native-runtime validation remains open.
 
 ## Configure a runtime
 
@@ -13,11 +13,11 @@ for launch settings and the [sidecar README](README.md#runtime-setup) for standa
 
 Keep the executable, required databases/resources, settings, and manifest together. The manifest
 binds the executable and resource hashes to the source revision, patches, and build configuration.
-The host verifies them before launch. Capture features require their own negotiated capabilities;
-an emulator's ability to run a processor does not imply debugger or capture support for it.
+The host verifies them before launch. Capture features require their own negotiated capabilities.
+An emulator's ability to run a processor does not imply debugger or capture support for it.
 
 Native capture candidates are separate from the default runtime. Select a manifest that explicitly
-supports the requested [capture mode and sink](CAPTURE.md); an unsupported request fails.
+supports the requested [capture mode and sink](CAPTURE.md). An unsupported request fails.
 
 ## Build and stage
 
@@ -26,7 +26,7 @@ identify the patch layers and reproduction commands. Apply only patches matching
 base revision. The prepared upstream series and downstream capture supplements have distinct bases.
 
 Stage into a new directory and retain the previous runtime for rollback. Copy the built executable
-and its required resources; on macOS, sign the staged app before hashing it. Update the executable
+and its required resources. On macOS, sign the staged app before hashing it. Update the executable
 and resource hashes in the manifest, include the complete source patches as hashed resources, and
 record their build configuration. Keep ROMs and user saves outside distribution archives.
 
@@ -52,5 +52,5 @@ metadata. It excludes ROMs, saves, user settings, build trees, and npm-sidecar i
 Two invocations with identical inputs must produce the same digest.
 
 Before publishing, rebuild from pinned sources and toolchains, verify the exact final artifact,
-and run the frozen live conformance suite against that manifest-bound runtime. The portable
+and run the shared live conformance suite against that manifest-bound runtime. The portable
 JavaScript suite alone does not establish native platform support. See [testing and release gates](https://github.com/uttori/asm/blob/master/TESTING.md#debugger-and-native-runtime-gates).

@@ -28,8 +28,8 @@ export const readStoragePolicy = (db) => {
     const value = db.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
     return validateStoragePolicy(value ? JSON.parse(String(value)) : {});
 };
-/** Merge explicit overrides with defaults; all limits must be finite, nonnegative safe integers.
- * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields; unknown fields are rejected.
+/** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
+ * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields. Unknown fields are rejected.
  * @returns {AnalysisStoragePolicy} Complete validated byte limits.
  */
 export const validateStoragePolicy = (value) => {
@@ -79,7 +79,7 @@ export const storageSnapshot = (db, file) => {
         captures: Number(captures.n),
     };
 };
-/** Reject the owning publication before COMMIT; retained facts are never truncated to meet a quota.
+/** Reject the owning publication before COMMIT. Retained facts are never truncated to meet a quota.
  * @param {DatabaseSync} db Writer transaction whose publication has not committed.
  */
 export const enforceDatabaseBudget = (db) => {
@@ -91,7 +91,7 @@ export const enforceDatabaseBudget = (db) => {
         Number(db.prepare("PRAGMA freelist_count").get().freelist_count);
     const bytes = pages * Number(db.prepare("PRAGMA page_size").get().page_size);
     if (bytes > budget) {
-        throw new Error(`Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back; increase the budget or run storage maintenance.`);
+        throw new Error(`Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back. Increase the budget or run storage maintenance.`);
     }
 };
 /** Disposable projections, ordered by eviction preference. Core editor/export indexes stay available. */
@@ -114,7 +114,7 @@ const cacheTableBytes = (db, table) => {
         .all(table)
         .reduce((bytes, row) => bytes + Number(allocation.get(row.name).bytes), 0);
 };
-/** Explicit accounting for optional caches; editor/export indexes are excluded from this budget.
+/** Explicit accounting for optional caches. Editor/export indexes are excluded from this budget.
  * @param {DatabaseSync} db Open project connection.
  * @returns {number} Allocated bytes including projection indexes and cache result payloads.
  */

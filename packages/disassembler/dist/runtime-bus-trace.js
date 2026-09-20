@@ -5,18 +5,18 @@ import { createRuntimePPUAccumulator, } from "./runtime-ppu.js";
 import { createRuntimeTransferAccumulator, validateRuntimeTransferBoundary, } from "./runtime-transfer.js";
 import { TraceCache } from "./trace-cache.js";
 export const RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
-/** Aggregates byte-access variants; ordered timing and raster history require the capture archive. */
+/** Aggregates byte-access variants. Ordered timing and raster history require the capture archive. */
 export const RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 /** Parse a canonical unsigned wire integer without rounding through JavaScript numbers.
  * @param {unknown} value Decimal string, with no sign or leading zeroes.
- * @returns {number | bigint} Exact u64; common small values avoid BigInt allocation. Invalid input throws.
+ * @returns {number | bigint} Exact u64. Common small values avoid BigInt allocation. Invalid input throws.
  */
 const unsigned = (value) => {
     if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value)) {
         throw new Error("Bus trace requires canonical unsigned 64-bit decimal strings.");
     }
     // Most event counters fit in 15 digits, which is always exact and avoids a
-    // BigInt allocation. Sixteen-digit strings straddle the safe-integer boundary;
+    // BigInt allocation. Sixteen-digit strings straddle the safe-integer boundary.
     // converting those to Number before checking the range could already round.
     if (value.length <= 15) {
         return Number(value);
@@ -26,7 +26,7 @@ const unsigned = (value) => {
         throw new Error("Bus trace integer exceeds u64.");
     }
     // Normalize every safe value to Number so sequence equality against the Number
-    // event count remains valid beyond the 15-digit fast path; larger values stay exact.
+    // event count remains valid beyond the 15-digit fast path. Larger values stay exact.
     if (number <= BigInt(Number.MAX_SAFE_INTEGER)) {
         return Number(number);
     }
@@ -34,7 +34,7 @@ const unsigned = (value) => {
 };
 /** Normalize only semantic metadata, excluding archive allocation and file framing.
  * @param {unknown} value Producer metadata, possibly with transport-specific fields.
- * @returns {RuntimeBusTraceMetadata} Fresh canonical identity; invalid metadata throws.
+ * @returns {RuntimeBusTraceMetadata} Fresh canonical identity. Invalid metadata throws.
  */
 export const validateRuntimeBusTraceMetadata = (value) => {
     const meta = value;
@@ -80,7 +80,7 @@ export const validateRuntimeBusTraceMetadata = (value) => {
  * @param {unknown} metadata Producer identity and clock.
  * @param {RuntimeBusTraceImportContext} context Expected ROM and distinct-fact budget.
  * @param {RuntimeTraceImporterStorage} storage Optional SQLite counters and transactional record sink.
- * @returns {object} Single-use push/finish importer; any failed push permanently prevents publication.
+ * @returns {object} Single-use push/finish importer. Any failed push permanently prevents publication.
  */
 export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
     const meta = validateRuntimeBusTraceMetadata(metadata);
@@ -111,7 +111,7 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
     // Hash each normalized event, never chunk boundaries. Reframing a capture must not duplicate its counts.
     const hash = createHash("sha256").update(`uttori-bus-index-v1\n${JSON.stringify(meta)}\n`);
     // Cache only a bounded working set. Keys use the complete canonical fact JSON,
-    // so eviction changes cost, never identity or counts; raster stays event-owned.
+    // so eviction changes cost, never identity or counts. Raster stays event-owned.
     const factKeys = new TraceCache(context.cacheMetrics?.facts);
     const activity = new Map();
     const contexts = {
@@ -134,7 +134,7 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
     let lastPc = 0;
     let finished = false;
     let failed = false;
-    /** Index one bounded chunk; counters remain provisional until the source confirms a complete tail.
+    /** Index one bounded chunk. Counters remain provisional until the source confirms a complete tail.
      * @param {unknown} chunk Object containing 1–4095 ordered accesses.
      * @returns {void} Throws and discards the index on any invalid event or exhausted fact budget.
      */
@@ -158,7 +158,7 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
                 const sequence = unsigned(access.sequence);
                 const ordinal = unsigned(access.ordinal);
                 const cycle = unsigned(access.cycle);
-                // Accepted sequence counts are safe Numbers from unsigned(); comparing
+                // Accepted sequence counts are safe Numbers from unsigned(). Comparing
                 // directly avoids allocating a BigInt for each otherwise-small counter.
                 if (streamEvents === Number.MAX_SAFE_INTEGER || sequence !== streamEvents + 1) {
                     throw new Error("Bus trace event sequence is not contiguous or exceeds the safe count range.");
@@ -342,7 +342,7 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
         }
     };
     /** Assign stable source identities and emit records once, inside the caller's publication transaction.
-     * @returns {RuntimeBusTraceImportResult} Aggregates and provenance; releases the temporary index even if the sink fails.
+     * @returns {RuntimeBusTraceImportResult} Aggregates and provenance. Releases the temporary index even if the sink fails.
      */
     const finish = () => {
         if (finished || failed) {
@@ -424,8 +424,8 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
                 warnings: [
                     "Bus facts retain byte-access variants and exact counts. Ordered timing, raster and instruction-ordinal history require the capture archive.",
                     transfers
-                        ? "Transfer totals use explicit native boundaries. Partial windows stay explicit; full configuration and ordered history require the capture archive."
-                        : "Activity counts describe observed bus accesses; transfer boundaries, register setup and source instructions are not inferred.",
+                        ? "Transfer totals use explicit native boundaries. Partial windows stay explicit. Full configuration and ordered history require the capture archive."
+                        : "Activity counts describe observed bus accesses. Transfer boundaries, register setup and source instructions are not inferred.",
                 ],
             };
             return {
@@ -455,7 +455,7 @@ export const createRuntimeBusTraceImporter = (metadata, context, storage) => {
                             source: "runtime",
                             sourceId: `${meta.producer.id}:${meta.producer.revision}`,
                             confidence: "certain",
-                            detail: `${observed} lossless bus accesses; ${observed - contexts.instruction} without an owning instruction.`,
+                            detail: `${observed} lossless bus accesses. ${observed - contexts.instruction} without an owning instruction.`,
                             artifact: {
                                 format: RUNTIME_BUS_TRACE_FORMAT,
                                 formatVersion: "1",

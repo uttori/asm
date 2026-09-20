@@ -132,7 +132,7 @@ export class MathCore {
     operators = OPERATORS;
     /** Full expression currently being scanned. */
     scanSource = "";
-    /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+    /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
     scanIndex = 0;
     /**
      * Remaining unconsumed expression text.
@@ -214,7 +214,7 @@ export class MathCore {
         this.pureStringClassification.clear();
         this.instrumentedExpressionStrings.clear();
         this.instrumentedPureExpressionStrings.clear();
-        // WeakSet has no clear(); drop the previous generation by replacing the set.
+        // WeakSet has no clear(). Drop the previous generation by replacing the set.
         this.instrumentedExpressionNodes = new WeakSet();
         this.instrumentedPureExpressionNodes = new WeakSet();
     }
@@ -373,13 +373,6 @@ export class MathCore {
                 return this.evaluateStringExpression(expression.value);
         }
     }
-    /**
-     * Evaluates call argument.
-     * @param {string} functionName The function name.
-     * @param {number} argumentIndex The argument index.
-     * @param {ExpressionNode} argument The argument.
-     * @returns {number | string} The result.
-     */
     evaluateCallArgument(functionName, argumentIndex, argument) {
         if (this.isStringArgument(functionName, argumentIndex)) {
             // String slots (defined, sizeof, filesize, ...) keep the source text, not a label value.
@@ -412,12 +405,6 @@ export class MathCore {
                 return this.evaluateExpressionNode(argument);
         }
     }
-    /**
-     * Evaluates unary expression node.
-     * @param {UnaryOperator} operator The operator.
-     * @param {ExpressionNode} argument The argument.
-     * @returns {number} The result.
-     */
     evaluateUnaryExpressionNode(operator, argument) {
         const value = this.evaluateExpressionNode(argument);
         switch (operator) {
@@ -438,22 +425,10 @@ export class MathCore {
                 return value;
         }
     }
-    /**
-     * Evaluates binary expression node.
-     * @param {BinaryOperator} operator The operator.
-     * @param {ExpressionNode} left The left.
-     * @param {ExpressionNode} right The right.
-     * @returns {number} The result.
-     */
     evaluateBinaryExpressionNode(operator, left, right) {
         const spec = this.operators[operator];
         return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
     }
-    /**
-     * Resolves numeric identifier argument.
-     * @param {string} identifier The identifier.
-     * @returns {number | string} The result.
-     */
     resolveNumericIdentifierArgument(identifier) {
         try {
             const resolved = this.getHost().resolveLabel(identifier);
@@ -463,11 +438,6 @@ export class MathCore {
             return identifier;
         }
     }
-    /**
-     * Evaluates reference expression node.
-     * @param {ReferenceExpressionNode} expression The expression.
-     * @returns {number} The result.
-     */
     evaluateReferenceExpressionNode(expression) {
         if (expression.type === "defineReference") {
             throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
@@ -481,11 +451,6 @@ export class MathCore {
         }
         throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
     }
-    /**
-     * Resolves leading local label reference.
-     * @param {string} input The input.
-     * @returns {{ label: string; length: number } | undefined} The result.
-     */
     resolveLeadingLocalLabelReference(input) {
         const match = input.match(/^(\.+\w+)/);
         if (!match) {
@@ -493,12 +458,6 @@ export class MathCore {
         }
         return { label: match[1], length: match[1].length };
     }
-    /**
-     * Checks whether string argument.
-     * @param {string} functionName The function name.
-     * @param {number} argumentIndex The argument index.
-     * @returns {boolean} The result.
-     */
     isStringArgument(functionName, argumentIndex) {
         if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
             return argumentIndex === 0;
@@ -511,11 +470,6 @@ export class MathCore {
         }
         return false;
     }
-    /**
-     * Parses literal node.
-     * @param {string} value The value.
-     * @returns {number} The result.
-     */
     parseLiteralNode(value) {
         if (/^-?\d+$/.test(value)) {
             return Number.parseInt(value, 10);
@@ -910,7 +864,7 @@ export class MathCore {
      * @returns {string} The parsed string literal.
      */
     parseStringLiteral = () => {
-        // We know the cursor is on a double-quote; no escape sequences.
+        // We know the cursor is on a double-quote. No escape sequences.
         const source = this.scanSource;
         const start = this.scanIndex + 1; // skip leading "
         let index = start;
@@ -1367,10 +1321,6 @@ export class MathCore {
         // Store the user-defined function, overwriting any existing function of the same name
         this.userFunctions.set(name, { args: params, content });
     };
-    /**
-     * Gets host.
-     * @returns {ExpressionHost} The result.
-     */
     getHost() {
         if (!this.host) {
             throw new Error("ExpressionHost not set.");

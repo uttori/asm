@@ -68,7 +68,7 @@ auto nall::main(Arguments args) -> void {
       assert(server.capture.state == "complete" && events == 200000);
     }
     const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started).count();
-    // First sample warms each mode; keep it visible so the median calculation is auditable.
+    // First sample warms each mode. Keep it visible so the median calculation is auditable.
     if(comma) results << ",\n";
     comma = true;
     results << "{\"blank\":" << (blank ? "true" : "false") << ",\"mode\":" << mode << ",\"sample\":" << sample

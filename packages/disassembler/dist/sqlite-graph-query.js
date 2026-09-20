@@ -4,8 +4,8 @@ const unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 const numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
 /** Index only graph ownership and relevant edges, with bounded payload decoding on rebuild.
  * Context/state payloads never remain in memory. Ownership uses the last function entry in each
- * evidence path; missing owners remain explicit.
- * @param {DatabaseSync} db Connection in a read transaction; computation writes only temporary tables.
+ * evidence path. Missing owners remain explicit.
+ * @param {DatabaseSync} db Connection in a read transaction. Computation writes only temporary tables.
  * @returns {AnalysisCallGraph} Compact call graph backed by indexed node ownership.
  */
 export const prepareGraph = (db) => {

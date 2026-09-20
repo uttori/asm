@@ -31,7 +31,7 @@ export declare function classify65816Operand(resolver: OperandResolutionContext,
  */
 export declare function classifyExpanded65816Operand(resolver: OperandResolutionContext, input: ClassificationInput): LoweredOperand;
 /**
- * Classifies SPC700 operands. No 65816 bank-shortening; hex spelling owns width.
+ * Classifies SPC700 operands. No 65816 bank-shortening. Hex spelling owns width.
  * @param {OperandResolutionContext} resolver Operand resolver dependency.
  * @param {string} operand Raw operand text.
  * @returns {LoweredOperand} Lowered operand metadata.

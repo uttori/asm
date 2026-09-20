@@ -1,4 +1,4 @@
-/** Benchmark actual editor worker requests on an online SQLite backup; never edit the input project. */
+/** Benchmark actual editor worker requests on an online SQLite backup. Never edit the input project. */
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -13,8 +13,8 @@ import {
 } from "@uttori/asm-disassembler";
 import { build } from "esbuild";
 
-import { AnalysisWorkerClient } from "../packages/vscode-extension/src/analysis-worker-client.js";
-import type { AnnotationLookupResult } from "../packages/vscode-extension/src/disassembly-annotation-data.js";
+import { AnalysisWorkerClient } from "../packages/vscode-extension/src/analysis/worker-client.js";
+import type { AnnotationLookupResult } from "../packages/vscode-extension/src/disassembly/annotation-data.js";
 
 const { values } = parseArgs({
   options: {
@@ -43,7 +43,7 @@ const client = new AnalysisWorkerClient(worker);
 const stages: Record<string, { ms: number; error?: string }> = {};
 
 /**
- * Record process startup, query work and IPC together; propagate unexpected failures.
+ * Record process startup, query work and IPC together. Propagate unexpected failures.
  * @param {string} name Stable report phase key.
  * @param {Function} action One worker request or backup operation.
  * @returns {Promise<T>} The measured operation's result.
@@ -95,14 +95,14 @@ try {
         baseline.request(directory, "annotations", { ranges }),
       );
     } catch (error) {
-      // A reproduced 60-second timeout is a baseline result; other failures invalidate the comparison.
+      // A reproduced 60-second timeout is a baseline result. Other failures invalidate the comparison.
       if (!(error instanceof Error) || !error.message.includes("exceeded 60 seconds")) throw error;
     } finally {
       baseline.dispose();
     }
   }
   await build({
-    entryPoints: [path.resolve("packages/vscode-extension/src/analysis-worker.ts")],
+    entryPoints: [path.resolve("packages/vscode-extension/src/analysis/worker.ts")],
     outfile: worker,
     bundle: true,
     platform: "node",
@@ -155,7 +155,7 @@ try {
     previewLimited: first.some(({ annotation }) => annotation.detailsLimited),
     namedChoices: form.choices.length,
     notes:
-      "One local run on an online backup, with the normal 60-second/4096-MiB worker budget. First request includes index setup only if missing/stale. No UI rendering or source regeneration is timed. Setup does not change the semantic revision. Preview details are bounded; execution totals remain exact.",
+      "One local run on an online backup, with the normal 60-second/4096-MiB worker budget. First request includes index setup only if missing/stale. No UI rendering or source regeneration is timed. Setup does not change the semantic revision. Preview details are bounded. Execution totals remain exact.",
   };
   console.log(JSON.stringify(report, null, 2));
   if (values.output)

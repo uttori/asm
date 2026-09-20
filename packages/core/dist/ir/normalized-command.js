@@ -295,7 +295,7 @@ function deriveCommandSemantics(command, words) {
             };
         }
     }
-    // void command;
+    // void command.
     return semantics;
 }
 /**

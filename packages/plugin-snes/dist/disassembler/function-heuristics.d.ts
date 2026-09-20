@@ -40,7 +40,7 @@ export declare const SNES_HEURISTIC_RULE_IDS: readonly [...string[], "observed-a
  */
 export declare const validateSnesHeuristicConfiguration: (value: unknown) => SnesHeuristicConfiguration;
 /**
- * Bounded structural matching; never renames symbols or changes code/data classifications.
+ * Bounded structural matching. Never renames symbols or changes code/data classifications.
  * @param {AnalysisProjectShards} shards Persisted analysis and observations.
  * @param {SnesHeuristicConfiguration} options Declarative rule configuration.
  * @param {Iterable} [runtime] Optional streamed runtime observations.

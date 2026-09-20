@@ -52,11 +52,11 @@ const escapedPayload = (payload: string): Uint8Array => {
 };
 
 /** Decode wire escapes without allocating a number array for large hex capture replies.
- * @param {Buffer} payload Checked wire payload; this view is valid only during receive processing.
+ * @param {Buffer} payload Checked wire payload. This view is valid only during receive processing.
  * @returns {string} Owned ASCII response. Unescaped RLE or a truncated escape throws.
  */
 const unescapePayload = (payload: Buffer): string => {
-  // Capture replies contain only hexadecimal ASCII. Decode that common case directly;
+  // Capture replies contain only hexadecimal ASCII. Decode that common case directly.
   // escaped control replies still need the byte walk to distinguish escaped literal '*'.
   if (!payload.includes(0x7d)) {
     if (payload.includes(0x2a))
@@ -80,7 +80,7 @@ const unescapePayload = (payload: Buffer): string => {
   return result.toString("ascii", 0, length);
 };
 
-/** Parse exactly one ASCII checksum digit; unlike parseInt, invalid suffixes cannot be ignored.
+/** Parse exactly one ASCII checksum digit. Unlike parseInt, invalid suffixes cannot be ignored.
  * @param {number} byte Raw wire byte, without ASCII high-bit masking.
  * @returns {number} Nibble value, or -1 for any non-hexadecimal byte.
  */
@@ -107,7 +107,7 @@ export class GdbRspClient {
   readonly #dataSubscription: DebugSubscription;
   readonly #closeSubscription: DebugSubscription;
   #buffer = Buffer.alloc(0);
-  /** Unconsumed bytes occupy [start, end); capacity grows geometrically within the receive bound. */
+  /** Unconsumed bytes occupy [start, end). Capacity grows geometrically within the receive bound. */
   #start = 0;
   #end = 0;
   /** First unchecked position for '#', or the delimiter while awaiting checksum bytes. */
@@ -307,8 +307,8 @@ export class GdbRspClient {
   }
 
   /** Append one owned transport fragment without repeatedly copying its accumulated prefix.
-   * @param {Uint8Array} data Incoming bytes; the transport may reuse them after this call returns.
-   * @returns {void} Grows/compacts only when tail capacity is exhausted; exceeding the bound throws.
+   * @param {Uint8Array} data Incoming bytes. The transport may reuse them after this call returns.
+   * @returns {void} Grows/compacts only when tail capacity is exhausted. Exceeding the bound throws.
    */
   #append(data: Uint8Array): void {
     const used = this.#end - this.#start;

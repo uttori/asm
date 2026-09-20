@@ -128,7 +128,7 @@ export class NodePluginLoader {
     /**
      * Read, resolve, import, and activate plugins, then select a target and architecture.
      * An unchanged normalized configuration reuses the current handle. Changed configuration
-     * disposes the old environment before activation; activation failure leaves no replacement.
+     * disposes the old environment before activation. Activation failure leaves no replacement.
      * Module contents, logger identity, and bundled plugin object identity are not cache keys.
      * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
      * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
@@ -239,7 +239,7 @@ export class NodePluginLoader {
             if (!targetCandidate) {
                 throw new PluginError(targets.length === 0
                     ? "No target is configured and the active plugins provide no targets."
-                    : `No target is configured; choose one of: ${targets.map((target) => target.id).join(", ")}.`, { code: "PLUGIN_TARGET_INVALID" });
+                    : `No target is configured. Choose one of: ${targets.map((target) => target.id).join(", ")}.`, { code: "PLUGIN_TARGET_INVALID" });
             }
             const target = environment.resolveTargetId(targetCandidate);
             if (!target) {
@@ -375,7 +375,7 @@ const defaultEnvironments = new Map();
 /**
  * Convenience loader shared by absolute cwd. Calls for that cwd share ownership, not references:
  * disposing any current handle disposes its environment for all callers. Reconfiguration replaces it.
- * Use separate NodePluginLoader instances for independent lifetimes; serialize calls for each cwd.
+ * Use separate NodePluginLoader instances for independent lifetimes. Serialize calls for each cwd.
  * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
  * @returns {Promise<LoadedProjectEnvironment>} A handle to the environment shared by this absolute cwd.
  */
@@ -405,6 +405,6 @@ export const loadProjectEnvironment = async (options) => {
         },
     });
 };
-/** Syntactic test for absolute paths, ./, ../, and file: specifiers; performs no existence check. */
+/** Syntactic test for absolute paths, ./, ../, and file: specifiers. Performs no existence check. */
 export const isPluginPathSpecifier = isPathSpecifier;
 //# sourceMappingURL=loader.js.map

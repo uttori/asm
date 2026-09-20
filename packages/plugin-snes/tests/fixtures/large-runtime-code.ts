@@ -6,7 +6,7 @@ import {
 
 import { analyzeSnesRuntimeCode } from "../../src/disassembler/runtime-code.js";
 
-/** Build a large graph in a normal Node process; report only invariants to the AVA host. */
+/** Build a large graph in a normal Node process. Report only invariants to the AVA host. */
 const summarizeLargeRuntimeGraph = () => {
   // Two decoding states across WRAM produce 131,072 nodes and 262,144 edges.
   // This exceeds V8's call-argument limit without requiring a multi-gigabyte capture fixture.

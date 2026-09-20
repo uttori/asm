@@ -50,7 +50,7 @@ export function createInitialNesState(context) {
 }
 /**
  * Maps CPU addresses through the current load MEMORY region into the iNES image.
- * Overlay run addresses are never written; `base` keeps the load cursor for stores.
+ * Overlay run addresses are never written. `base` keeps the load cursor for stores.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */

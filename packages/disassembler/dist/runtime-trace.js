@@ -4,12 +4,12 @@ import { project65816AnalysisState, RUNTIME_ANALYSIS_PROFILE } from "./runtime-t
 import { validateRuntimeInstructionDetails, } from "./trace-detail.js";
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
-/** Initial trace-artifact schema. The project is unreleased, so this remains version 1. */
+/** Supported trace-artifact schema. Readers reject other revisions. */
 export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
-/** Compact-index default; full snapshots retain a larger compatibility budget. */
+/** Default distinct-fact budget for compact indexes. Full indexes default to 8,000,000. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
-// P/E control instruction widths; D/DB resolve direct-page and data-bank operands.
+// P/E control instruction widths. D/DB resolve direct-page and data-bank operands.
 // Preserve PB/PC observations with them so projection does not invent state combinations.
 const DISASSEMBLY_STATE_FIELDS = new Set(["p", "e", "d", "db", "pb", "pc"]);
 const record = (value, context) => {
@@ -172,12 +172,12 @@ const createMemoryFactIndex = () => {
 };
 /**
  * Aggregate a trace one validated chunk at a time, preserving canonical import identities.
- * The default memory index grows with distinct facts; callers can supply a disk index and sink.
- * Paired code/state facts share one accumulator until finalization; record budgets do not bound bytes.
+ * The default memory index grows with distinct facts. Callers can supply a disk index and sink.
+ * Paired code/state facts share one accumulator until finalization. Record budgets do not bound bytes.
  * @param {RuntimeInstructionTraceMetadata} value Trace identity.
  * @param {RuntimeInstructionTraceImportContext} context Destination identity.
  * @param {RuntimeTraceImporterStorage} [storage] Caller-owned counter index and optional bounded record sink.
- * @returns {RuntimeInstructionTraceImporter} Incremental importer; finish only after the file validates.
+ * @returns {RuntimeInstructionTraceImporter} Incremental importer. Finish only after the file validates.
  */
 export const createRuntimeInstructionTraceImporter = (value, context, storage) => {
     const artifact = validateRuntimeInstructionTraceMetadata(value);
@@ -199,7 +199,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
     if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode)) {
         throw new Error("Unsupported runtime trace index mode.");
     }
-    // This projection follows the 65816 decoder's inputs; another CPU may need the omitted registers.
+    // This projection follows the 65816 decoder's inputs. Another CPU may need the omitted registers.
     if (indexMode !== "full" &&
         (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")) {
         throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
@@ -230,7 +230,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                 hint =
                     "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
             }
-            throw new Error(`Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged; no partial import was committed.`);
+            throw new Error(`Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged. No partial import was committed.`);
         }
         indexRecords += count;
     };
@@ -279,7 +279,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             }
             const content = canonicalJson({ address, bytes: detail.bytes, state });
             // Full snapshots may contain large or mostly unique register objects.
-            // Keep their map keys fixed-size; compact states benefit from reusing the
+            // Keep their map keys fixed-size. Compact states benefit from reusing the
             // content key without hashing every repetition of a hot instruction.
             const key = indexMode === "full" ? sha256(content) : content;
             if (index.add(`code:${key}`, () => ({
@@ -436,7 +436,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
             confidence: droppedEvents === 0 && memoryLoss === 0 && unattributed === 0 && complete
                 ? "certain"
                 : "high",
-            detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
+            detail: `${observedEvents} instruction event(s) observed. ${droppedEvents} producer event(s) dropped.`,
             artifact: {
                 format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
                 formatVersion: String(RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION),
@@ -477,7 +477,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                 ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
                 ...(detailedEvents < observedEvents
                     ? [
-                        `${observedEvents - detailedEvents} instruction observations have no captured bytes/state; RAM code cannot be recovered from PCs alone.`,
+                        `${observedEvents - detailedEvents} instruction observations have no captured bytes/state. RAM code cannot be recovered from PCs alone.`,
                     ]
                     : []),
                 ...(memoryLoss
@@ -485,7 +485,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
                     : []),
                 ...(unattributed
                     ? [
-                        `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods); they have no saved address/value detail.`,
+                        `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods). They have no saved address/value detail.`,
                     ]
                     : []),
             ],

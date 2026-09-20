@@ -2,7 +2,7 @@ import type { DebugTraceInstructionDetail } from "./contracts.js";
 
 /** Exact counters crossing JavaScript/JSON boundaries. */
 export type CaptureU64 = string;
-/** Mutually exclusive streams; bus scope does not contain fetched instruction bytes or registers. */
+/** Mutually exclusive streams. Bus scope does not contain fetched instruction bytes or registers. */
 export type CaptureScopeV2 =
   | "snes.65816.instructions"
   | "snes.cpu-bus"
@@ -17,12 +17,12 @@ export interface CaptureCapabilitiesV2 {
   readonly requiredReserveBytes: 71 | 64 | 80 | 88;
   readonly overheadBytes: 4194304;
   readonly resumeSession: false;
-  /** Explicit native file capability; omitted by streamed-only producers. */
+  /** Explicit native file capability. Omitted by streamed-only producers. */
   readonly nativeFile?: true;
 }
 export interface CapturePositionV2 {
   readonly session: string;
-  /** Older instruction producers omit this field; bus producers must identify their scope. */
+  /** Older instruction producers omit this field. Bus producers must identify their scope. */
   readonly scope?: CaptureScopeV2;
   readonly state:
     | "armed"
@@ -51,7 +51,7 @@ export type CaptureRequestV2 =
   | { readonly operation: "file-capabilities"; readonly scope?: CaptureScopeV2 }
   | {
       readonly operation: "file-start";
-      /** Optional native chunk/writer timings; omitted for ordinary recording. */
+      /** Optional native chunk/writer timings. Omitted for ordinary recording. */
       readonly measureStages?: boolean;
       readonly scope?: CaptureScopeV2;
       readonly bufferBytes: number;
@@ -81,7 +81,7 @@ const maxU64 = (1n << 64n) - 1n;
 /**
  * Validate the explicit stream dictionary. Callers choose the instruction default only on omission.
  * @param {unknown} value Scope supplied by the caller or archive header.
- * @returns {CaptureScopeV2} Supported stream identity; unknown values throw.
+ * @returns {CaptureScopeV2} Supported stream identity. Unknown values throw.
  */
 export const captureScope = (value: unknown): CaptureScopeV2 => {
   if (
@@ -105,7 +105,7 @@ export const captureSession = (value: unknown): string => {
 };
 export const validateCaptureRequest = (value: CaptureRequestV2): void => {
   if (!value || typeof value !== "object") throw new Error("Invalid capture request.");
-  // File negotiation has its own packet family; unsupported runtimes must fail
+  // File negotiation has its own packet family. Unsupported runtimes must fail
   // before arming instead of silently streaming a user-selected native capture.
   if (value.operation === "file-capabilities") {
     if (Object.keys(value).some((key) => !["operation", "scope"].includes(key)))
@@ -161,7 +161,7 @@ export const validateCaptureRequest = (value: CaptureRequestV2): void => {
   if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
   if (Object.keys(value).some((key) => !fields.includes(key)))
     throw new Error(
-      "Unsupported capture negotiation field; capture requires an explicit supported stream with durable ownership.",
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership.",
     );
   if (value.operation === "capabilities" || value.operation === "start") {
     if (value.scope !== undefined) captureScope(value.scope);
@@ -199,7 +199,7 @@ export const validateCaptureRequest = (value: CaptureRequestV2): void => {
   throw new Error("Unsupported capture operation.");
 };
 /**
- * Require the requested scope and its reservation size; never downgrade to a different stream.
+ * Require the requested scope and its reservation size. Never downgrade to a different stream.
  * @param {unknown} value Native capability reply.
  * @param {CaptureScopeV2} scope Requested stream, defaulting to instructions for older callers.
  * @returns {CaptureCapabilitiesV2} Verified lossless ownership and allocation contract.
@@ -234,10 +234,10 @@ export const validateCaptureCapabilities = (
   return expected;
 };
 /**
- * Scope is stable for a session; only legacy instruction positions may omit it.
+ * Scope is stable for a session. Only legacy instruction positions may omit it.
  * @param {unknown} value Native status or archive terminal frame.
  * @param {string} session Expected identity when an active session is already known.
- * @param {CaptureScopeV2} scope Expected stream; bus positions must explicitly confirm it.
+ * @param {CaptureScopeV2} scope Expected stream. Bus positions must explicitly confirm it.
  * @returns {CapturePositionV2} Validated ownership boundaries and integrity state.
  */
 export const validateCapturePosition = (
@@ -314,7 +314,7 @@ export const captureCrc32c = (bytes: Uint8Array, zeroChecksum = false): number =
   let crc = 0xffffffff;
   let i = 0;
   for (; i + 8 <= bytes.length; i += 8) {
-    // The checksum occupies aligned bytes 56–59. Treat only that word as zero;
+    // The checksum occupies aligned bytes 56–59. Treat only that word as zero.
     // never mutate the caller's shared buffer while validating an ACT2 chunk.
     let low = bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24);
     if (zeroChecksum && i === 56) low = 0;
@@ -341,7 +341,7 @@ export interface CaptureInstructionV2 {
   readonly detail: DebugTraceInstructionDetail;
 }
 /** Actual PPU write decision, attached to the completing CPU-bus access.
- * Byte destinations are physical offsets; duplicate offsets retain write order.
+ * Byte destinations are physical offsets. Duplicate offsets retain write order.
  * The two raster counters describe the PPU decision, which may differ from the CPU counter.
  */
 export interface CapturePPUEffectV2 {
@@ -360,7 +360,7 @@ export interface CaptureBusAccessV2 {
   /** Present only on data-port writes in the explicitly negotiated PPU scope. */
   readonly ppu?: CapturePPUEffectV2;
   readonly sequence: CaptureU64;
-  /** Zero means no observed instruction owns the access; this is not an instruction event count. */
+  /** Zero means no observed instruction owns the access. This is not an instruction event count. */
   readonly ordinal: CaptureU64;
   /** Monotonic SNES master-clock ticks in the archive's rational clock domain. */
   readonly cycle: CaptureU64;
@@ -370,7 +370,7 @@ export interface CaptureBusAccessV2 {
   readonly value: number;
   readonly direction: "read" | "write";
   readonly actor: "cpu" | "dma" | "hdma";
-  /** DMA/HDMA channel 0..7; CPU accesses have no channel. */
+  /** DMA/HDMA channel 0..7. CPU accesses have no channel. */
   readonly channel: number | null;
   readonly phase: "cpu" | "dma" | "hdma-table" | "hdma-indirect" | "hdma-transfer";
   /** CPU execution context, not a claim that an instruction caused asynchronous HDMA. */
@@ -395,7 +395,7 @@ export interface CaptureTransferV2 {
   readonly context: CaptureBusAccessV2["context"];
   readonly hcounter: number;
   readonly vcounter: number;
-  /** Attempted byte slots, including hardware-suppressed accesses; zero on begin markers. */
+  /** Attempted byte slots, including hardware-suppressed accesses. Zero on begin markers. */
   readonly transferred: number;
   /** Raw channel registers at this boundary: DMAP control, BBAD port offset, A1B:A1T source,
    * DAS size/indirect address, DASB indirect bank, A2A table address, and NTLR line counter.
@@ -451,7 +451,7 @@ export const captureChunkRecords = (
  * Validate the entire envelope and every record before accepting any event.
  * @param {Uint8Array} bytes Bounded encoded chunk.
  * @param {string} session Negotiated session identity.
- * @param {CaptureScopeV2} scope Negotiated stream; omission preserves instruction-only callers.
+ * @param {CaptureScopeV2} scope Negotiated stream. Omission preserves instruction-only callers.
  * @returns {CaptureChunkV2} Fully validated ordered records in exactly the requested scope.
  */
 export function decodeCaptureChunk(
@@ -592,7 +592,7 @@ export function decodeCaptureChunk(
  * @param {number} count Bounded, nonzero record count.
  * @param {boolean} transfers Whether the negotiated scope also permits boundary markers.
  * @param {boolean} ppu Require verified effects on every mapped graphics data-port write.
- * @returns {readonly (CaptureBusAccessV2 | CaptureTransferV2)[]} Decoded accesses and markers; invalid fields reject the whole chunk.
+ * @returns {readonly (CaptureBusAccessV2 | CaptureTransferV2)[]} Decoded accesses and markers. Invalid fields reject the whole chunk.
  */
 const decodeBusAccesses = (
   b: Buffer,
@@ -692,7 +692,7 @@ const decodeBusAccesses = (
   return accesses;
 };
 
-/** Decode a native boundary after envelope validation; cross-record lifecycle validation belongs to analysis.
+/** Decode a native boundary after envelope validation. Cross-record lifecycle validation belongs to analysis.
  * @param {Buffer} b Complete envelope and payload.
  * @param {number} offset Start of the 80-byte marker.
  * @param {bigint} event Expected global event sequence.
@@ -764,7 +764,7 @@ const decodeTransfer = (b: Buffer, offset: number, event: bigint): CaptureTransf
   };
 };
 
-/** Decode the fixed 24-byte effect extension; malformed results reject the whole chunk.
+/** Decode the fixed 24-byte effect extension. Malformed results reject the whole chunk.
  * @param {Buffer} b Fully bounded record bytes.
  * @param {number} offset Beginning of the 88-byte bus record.
  * @param {number} port Mapped graphics data port, already checked against direction and bank.

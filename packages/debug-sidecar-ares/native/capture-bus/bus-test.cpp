@@ -262,7 +262,7 @@ auto nall::main(Arguments args) -> void {
   assert(reader.nextEvent - 1 == 1048576);
   for(auto count : counts) assert(count == 131072);
 
-  // Stop fixes an exact prefix at a suspended access; abort preserves incomplete
+  // Stop fixes an exact prefix at a suspended access. Abort preserves incomplete
   // integrity while allowing the coroutine to finish its current transfer.
   for(bool abort : {false, true}) {
     Reader prefix;

@@ -41,7 +41,7 @@ The `@uttori/asm-cli` package uses this plugin by default. To configure it expli
 ```
 
 `targetOptions` controls checksums and target behavior. Choose mapper and instruction widths
-explicitly when source or evidence is ambiguous. Asar compatibility is partial; unsupported syntax
+explicitly when source or evidence is ambiguous. Asar compatibility is partial. Unsupported syntax
 and accepted no-op directives are listed in the manual. ROMs and emulator binaries are not included.
 
 ## Documentation and support
@@ -49,7 +49,7 @@ and accepted no-op directives are listed in the manual. ROMs and emulator binari
 [SNES manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md) ·
 [Analysis heuristics](https://github.com/uttori/asm/blob/master/packages/plugin-snes/ANALYSIS.md) ·
 [Instruction structure references](https://github.com/uttori/asm/blob/master/packages/plugin-snes/INSTRUCTION_USES.md) ·
-[Analysis workflow](https://github.com/uttori/asm/blob/master/packages/cli/README.md#analysis-projects) ·
+[Analysis workflow](https://github.com/uttori/asm/blob/master/packages/cli/GUIDE.md#analysis-projects) ·
 [Configuration](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md).
 
 [Report an issue](https://github.com/uttori/asm/issues). Licensed under

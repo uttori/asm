@@ -1,4 +1,4 @@
-/** Contract revision required by PluginManager; independent of npm package versions. */
+/** Contract revision required by PluginManager. Independent of npm package versions. */
 export const PLUGIN_API_VERSION = 1;
 /**
  * Preserve the plugin's option type without runtime validation.

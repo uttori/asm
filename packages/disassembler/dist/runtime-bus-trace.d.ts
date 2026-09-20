@@ -7,7 +7,7 @@ import type { RuntimeTraceImporterStorage } from "./runtime-trace.js";
 import { type RuntimeTransferSummary } from "./runtime-transfer.js";
 import { type TraceCacheMetrics, type TraceIndexMetrics } from "./trace-cache.js";
 export declare const RUNTIME_BUS_TRACE_FORMAT: "uttori-asm-bus-trace";
-/** Aggregates byte-access variants; ordered timing and raster history require the capture archive. */
+/** Aggregates byte-access variants. Ordered timing and raster history require the capture archive. */
 export declare const RUNTIME_BUS_INDEX_PROFILE: "bus-access-v1";
 /** Identity of a complete lossless SNES bus stream, independent of its file or transport framing. */
 export interface RuntimeBusTraceMetadata {
@@ -38,14 +38,14 @@ export interface RuntimeBusTraceSource {
      */
     readonly completedFile?: string;
 }
-/** ROM guard and distinct-fact limit; the default is two million variants, with an eight-million hard cap. */
+/** ROM guard and distinct-fact limit. The default is two million variants, with an eight-million hard cap. */
 export interface RuntimeBusTraceImportContext {
     readonly projectRomContentSha256: string;
     readonly sourceName: string;
     readonly maxIndexRecords?: number;
-    /** Chunk-level provisional progress; never evidence of a complete or published capture. */
+    /** Chunk-level provisional progress. Never evidence of a complete or published capture. */
     readonly onProgress?: (progress: RuntimeBusTraceProgress) => void;
-    /** Optional caller-owned diagnostic counters; omit for uninstrumented timings. */
+    /** Optional caller-owned diagnostic counters. Omit for uninstrumented timings. */
     readonly cacheMetrics?: {
         readonly facts?: TraceCacheMetrics;
         readonly index?: TraceIndexMetrics;
@@ -75,11 +75,11 @@ export interface RuntimeBusActivity {
     readonly firstCycle: string;
     lastCycle: string;
 }
-/** Event totals stay exact; the capture clock is retained for interpreting elapsed master clocks. */
+/** Event totals stay exact. The capture clock is retained for interpreting elapsed master clocks. */
 export interface RuntimeBusTraceSummary {
     readonly clock: RuntimeBusTraceMetadata["clock"];
     readonly transfers?: RuntimeTransferSummary;
-    /** Recomputed from ordered accesses; deliberately excluded from stable bus facts and provenance. */
+    /** Recomputed from ordered accesses. Deliberately excluded from stable bus facts and provenance. */
     readonly graphics?: RuntimeGraphicsSummary;
     /** Native outcomes, independent of the candidate port reconstruction. */
     readonly ppu?: RuntimePPUSummary;
@@ -88,7 +88,7 @@ export interface RuntimeBusTraceSummary {
     readonly contexts: Readonly<Record<RuntimeBusContext, number>>;
     readonly activity: readonly RuntimeBusActivity[];
 }
-/** Provenance plus a bounded report; runtime records can be emitted directly to the working store. */
+/** Provenance plus a bounded report. Runtime records can be emitted directly to the working store. */
 export interface RuntimeBusTraceImportResult {
     readonly batch: RuntimeEvidenceBatch;
     readonly report: ImportReport;
@@ -99,14 +99,14 @@ export interface RuntimeBusTraceImportResult {
 }
 /** Normalize only semantic metadata, excluding archive allocation and file framing.
  * @param {unknown} value Producer metadata, possibly with transport-specific fields.
- * @returns {RuntimeBusTraceMetadata} Fresh canonical identity; invalid metadata throws.
+ * @returns {RuntimeBusTraceMetadata} Fresh canonical identity. Invalid metadata throws.
  */
 export declare const validateRuntimeBusTraceMetadata: (value: unknown) => RuntimeBusTraceMetadata;
 /** Validate and aggregate a stream with bounded chunks and a caller-owned, optionally disk-backed index.
  * @param {unknown} metadata Producer identity and clock.
  * @param {RuntimeBusTraceImportContext} context Expected ROM and distinct-fact budget.
  * @param {RuntimeTraceImporterStorage} storage Optional SQLite counters and transactional record sink.
- * @returns {object} Single-use push/finish importer; any failed push permanently prevents publication.
+ * @returns {object} Single-use push/finish importer. Any failed push permanently prevents publication.
  */
 export declare const createRuntimeBusTraceImporter: (metadata: unknown, context: RuntimeBusTraceImportContext, storage?: RuntimeTraceImporterStorage) => {
     push: (chunk: unknown) => void;

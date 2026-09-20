@@ -1,9 +1,9 @@
 # ares capture modes and recovery
 
 Capture requires a manifest-matched downstream ares runtime and matching sidecar/editor builds.
-Select it through the [runtime setup](RUNTIME.md). Capabilities are negotiated before recording;
-unsupported scopes or sinks fail instead of silently dropping requested evidence. Native candidates
-and prepared upstream contributions are separate; these features are not stock ares APIs.
+Select it through the [runtime setup](RUNTIME.md). Capabilities are negotiated before recording.
+Unsupported scopes or sinks fail instead of silently dropping requested evidence. Native candidates
+and prepared upstream contributions are separate. These features are not stock ares APIs.
 
 ## Select a scope
 
@@ -11,7 +11,7 @@ Set `asm.debug.traceMode` in VS Code:
 
 | Mode                     | Recorded evidence                                                                                                                       |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `live`                   | Bounded legacy instruction observations, with explicit loss/truncation counters; `asm.debug.traceDetail` selects PC-only or full detail |
+| `live`                   | Bounded legacy instruction observations, with explicit loss/truncation counters. `asm.debug.traceDetail` selects PC-only or full detail |
 | `lossless-instructions`  | Executed 65816 instructions, fetched bytes, and decoding/register state                                                                 |
 | `lossless-bus`           | Actual CPU/DMA/HDMA bus accesses, including accesses without an instruction owner                                                       |
 | `lossless-bus-transfers` | Bus accesses plus DMA/HDMA boundaries and channel snapshots                                                                             |
@@ -35,9 +35,9 @@ also export JSON for the CLI's `evidence-import --instruction-trace` workflow. U
 **Assembly: Import Bus Capture and Show DMA/HDMA Activity** (`asm.trace.importBus`) for bus archives.
 
 Keep original captures: project storage retains facts, counts, and provenance, while ordered
-history and omitted registers remain in the capture. `asm.trace.maxImportSizeMiB` defaults to 2048;
-raise it deliberately for larger files. `asm.trace.indexMode` selects instruction retention;
-see the [CLI evidence reference](https://github.com/uttori/asm/blob/master/packages/cli/README.md#offline-runtime-evidence).
+history and omitted registers remain in the capture. `asm.trace.maxImportSizeMiB` defaults to 2048.
+Raise it deliberately for larger files. `asm.trace.indexMode` selects instruction retention.
+See the [CLI evidence reference](https://github.com/uttori/asm/blob/master/packages/cli/GUIDE.md#offline-runtime-evidence).
 Import validates ROM identity and the entire stream before publication. A failed, cancelled,
 oversized, or stale-revision import cannot publish partial evidence. If import succeeds but source
 regeneration fails, retry **Assembly: Analyze and Regenerate Disassembly** using the saved evidence.
@@ -46,13 +46,13 @@ regeneration fails, retry **Assembly: Analyze and Regenerate Disassembly** using
 
 One boundary pair describes a DMA channel run or one HDMA payload burst, not an entire table or
 frame. Reports distinguish complete, interrupted, and partial windows. A capture may start after
-a transfer begins or stop before it ends. Raw bus totals count accesses, not transfers; boundary
+a transfer begins or stop before it ends. Raw bus totals count accesses, not transfers. Boundary
 snapshots do not identify the CPU instructions that configured a channel.
 
 Bus-only graphics reconstruction reports register-derived VRAM/CGRAM/OAM destination candidates.
 Unknown setup and latch state remain unknown. Actual internal writes, suppression, and latch-only
 outcomes require the separately negotiated PPU scope. Reports retain bounded detail and aggregate
-totals; the original archive is required to reconstruct ordered transfer history.
+totals. The original archive is required to reconstruct ordered transfer history.
 
 ## Native file sink
 
@@ -66,13 +66,13 @@ directly, avoiding event transport through RSP/DAP:
 }
 ```
 
-The verified local process host binds the destination and capture identity to the launch manifest;
-native paths are not sent to arbitrary remote servers. The sink supports instruction, bus,
+The verified local process host binds the destination and capture identity to the launch manifest.
+Native paths are not sent to arbitrary remote servers. The sink supports instruction, bus,
 transfer, and PPU scopes without changing their evidence. It preserves existing destinations,
 partial files, and symlinks. Stop drains and syncs the writer before no-clobber publication.
 
 On failure, retain the partial artifact. Recovery validates CRCs, sequences, and checkpoints in
-order and exposes only a valid prefix; it cannot resume the original session or manufacture
+order and exposes only a valid prefix. It cannot resume the original session or manufacture
 completion. Restart debugging to recover ordinary control, or use the failed-session `file-release`
 protocol operation once the writer stops. Reset, unload, and disconnect invalidate active capture.
 Directory and hardware power-loss guarantees beyond the platform sync operation are not promised.
@@ -92,13 +92,13 @@ Live analysis is opt-in for native-file bus, transfer, and PPU scopes:
 
 Select a matching analysis project when recording starts. The status bar reports provisional
 counts and unread durable bytes. **Assembly: Stop Live Bus Analysis** cancels analysis while
-recording continues. Only one live worker runs at a time; finish or cancel its catch-up before
+recording continues. Only one live worker runs at a time. Finish or cancel its catch-up before
 starting another live analysis.
 
 The worker reads only synced data, validates the archive, and publishes facts transactionally
 after completion. Cancellation, lag overflow, corruption, replacement, worker failure, or a stale
 project revision discards provisional analysis. The worker also observes import-size, distinct-fact,
-and configured heap limits; native recording remains available for later offline import.
+and configured heap limits. Native recording remains available for later offline import.
 Dense captures can outpace analysis indefinitely, so the backlog limit stops analysis instead of
 allowing unbounded growth. Native allocation and filesystem buffers are outside the JavaScript heap.
 

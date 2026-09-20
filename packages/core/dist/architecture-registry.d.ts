@@ -17,17 +17,7 @@ export declare class ArchitectureRegistry {
      * @param {string[]} [aliases] The aliases.
      */
     register(definition: ArchitectureDefinition, aliases?: string[]): void;
-    /**
-     * Gets canonical name.
-     * @param {string} name The name.
-     * @returns {string | undefined} The result.
-     */
     getCanonicalName(name: string): string | undefined;
-    /**
-     * Gets definition.
-     * @param {string} name The name.
-     * @returns {ArchitectureDefinition | undefined} The result.
-     */
     getDefinition(name: string): ArchitectureDefinition | undefined;
     /**
      * Returns editor metadata from the same registered encoder used for builds.

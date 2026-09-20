@@ -2,7 +2,22 @@
   "name": "@uttori/asm-plugin-loader-node",
   "version": "1.0.0",
   "description": "Node.js plugin discovery and project configuration for Uttori ASM.",
+  "keywords": [
+    "assembler",
+    "configuration",
+    "node",
+    "plugin"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/plugin-loader-node#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/plugin-loader-node"
+  },
   "files": [
     "dist",
     "src",
@@ -21,6 +36,9 @@
       "import": "./dist/index.js"
     },
     "./asm-config.schema.json": "./asm-config.schema.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "make-types": "tsc --project tsconfig.json",

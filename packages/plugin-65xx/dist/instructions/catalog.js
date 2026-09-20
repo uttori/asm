@@ -33,7 +33,7 @@ const syntax = {
     basePageIndirectIndexedZ: "[zp],z",
     quadAccumulator: "Q",
 };
-/** Documented-mnemonic summaries; unofficial ops fall back in {@link buildInstructionCatalog}. */
+/** Documented-mnemonic summaries. Unofficial ops fall back in {@link buildInstructionCatalog}. */
 const summaries = {
     ADC: "Add memory to the accumulator with carry.",
     AND: "Bitwise AND memory with the accumulator.",

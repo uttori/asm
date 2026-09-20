@@ -151,20 +151,20 @@ export const directiveCatalog: DirectiveDescriptor[] = [
       },
       {
         keyword: "firstindex",
-        summary: "First valid logical index (default zero); requires count.",
+        summary: "First valid logical index (default zero). Requires count.",
         syntax: "endstruct count value firstindex value",
       },
     ],
   ),
   descriptor(
     "datastruct",
-    "Emit one complete named record at its struct address; checks fields, widths and pc().",
+    "Emit one complete named record at its struct address. Checks fields, widths and pc().",
     "dataStruct Record[index], { field = value, bytes = [value, ...] }",
     "struct",
   ),
   descriptor(
     "datastructs",
-    "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+    "Begin consecutive indexed named records. Preserves logical IDs and validates placement.",
     "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
     "struct",
   ),

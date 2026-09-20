@@ -162,7 +162,7 @@ export class ProgramModelBuilder {
         }
         if (state.inMacroDefinition) {
             // Macro bodies are stored as source commands and interpreted when the
-            // macro expands; even instruction-looking lines require preprocessing.
+            // macro expands. Even instruction-looking lines require preprocessing.
             setCommandKind(command, "macroDefinitionOrInvoke");
             this.pushToCurrent(state, command);
             if (keyword === "endmacro") {
@@ -283,22 +283,12 @@ export class ProgramModelBuilder {
         }
         this.pushToCurrent(state, command);
     }
-    /**
-     * Checks whether node complete.
-     * @param {ExecutableNode} node The node.
-     * @returns {boolean} The result.
-     */
     isNodeComplete(node) {
         if ("source" in node) {
             return true;
         }
         return node.endLine !== undefined;
     }
-    /**
-     * Drains completed roots.
-     * @param {IncrementalProgramParseState} state The state.
-     * @returns {ExecutableNode[]} The result.
-     */
     drainCompletedRoots(state) {
         let completedCount = 0;
         while (completedCount < state.roots.length &&

@@ -26,7 +26,7 @@ interface SidecarLifecycleOptions {
   runExport: string;
   /** Actual ESM dependencies returned to the transformed entry point. */
   imports: Record<string, unknown>;
-  /** Real process host prototype; spawning is replaced by an explicit failure in these tests. */
+  /** Real process host prototype. Spawning is replaced by an explicit failure in these tests. */
   host: {
     createClient(options: { readonly reset?: boolean }): Promise<unknown>;
     terminate(): Promise<void>;

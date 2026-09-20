@@ -1,6 +1,6 @@
 {
   "extends": "../tsconfig.base.json",
-  "include": ["./*.ts", "../fixtures/fixture-manifest.ts"],
+  "include": ["./*.ts", "../fixtures/fixture-manifest.ts", "./bundle-notices.mjs"],
   "compilerOptions": {
     "declaration": false,
     "declarationMap": false,

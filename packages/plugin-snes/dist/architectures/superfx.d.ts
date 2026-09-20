@@ -11,7 +11,7 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
     /**
      * @param {ArchitectureEncoderContext} context Encoder host.
      * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
-     *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+     *   Hardware stores a word index (`addr >> 1`). Asar stores `addr & 0xff`. Explicit
      *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
      */
     constructor(context: ArchitectureEncoderContext, asarMoveShortAddress?: () => boolean);
@@ -56,7 +56,7 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
     encode(words: string[]): boolean;
     /**
      * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
-     * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+     * operands. Unknown mnemonics return false (`unknownInstructionBehavior` is
      * `returnFalse` so 65816 can try next).
      *
      * @param {string} mnemonic The mnemonic.
@@ -74,11 +74,11 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     handleSingleWordOpcode(opcode: string): boolean;
     /**
-     * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+     * Single-operand Super FX: short branches (`$XX` is a raw offset, labels stay
      * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
      * @param {string} opcode Uppercased mnemonic.
      * @param {string} operand The operand.
-     * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+     * @param {number} operandLength Logged only. Encoded size is fixed per opcode family.
      * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
      * @returns {boolean} True if the instruction was handled, false otherwise.
      */
@@ -131,7 +131,7 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
     rangeCheck(min: number, mid: number, max: number): void;
     /**
      * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
-     * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+     * Encode then stores `addr >> 1`. This check is the byte-address constraint.
      * @param {number} num RAM byte address (not the word index).
      * @returns {boolean} Always `true` when the address is valid.
      * @throws {Error} If the address is odd or outside the short-RAM window.
@@ -145,7 +145,7 @@ export declare class ArchSuperFX implements ArchitectureEncoder {
      */
     isRawBranchOffset(operand: string): boolean;
     /**
-     * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+     * Fallback width when lowering did not supply `length`. `$XX` is 1. Everything else is 2.
      * Super FX uses this for one-operand branches when `loweredOperand` is missing.
      * @param {string} operand Operand text.
      * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.

@@ -24,7 +24,7 @@ export declare const handlePushTable: ({ session }: TableDirectiveContext) => vo
  * Failed asserts match asar's `Eassertion_failed`: `"Assertion failed."` or
  * `"Assertion failed: " + message`.
  * @param {DiagnosticDirectiveContext} ctx Session with `evaluateExpression`.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the condition is missing or evaluates to zero.
  */
@@ -32,7 +32,7 @@ export declare const handleAssert: ({ session }: DiagnosticDirectiveContext, _wo
 /**
  * Asar `error [print-args...]`. Always fails the assemble.
  * @param {DiagnosticDirectiveContext} _ctx Unused session.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} Always. Message matches asar's `Eerror_command`.
  */
@@ -49,7 +49,7 @@ export declare const handleClearTable: ({ session }: TableDirectiveContext) => v
  * of filling a garbage sentinel - SMRPG dialogue only uses listed glyphs, and
  * remaining bank data is raw `db $xx` after `cleartable`.
  * @param {TableDirectiveContext} ctx Session with `includeSource.readFile`.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the filename is missing or a table line is invalid.
  */
@@ -58,7 +58,7 @@ export declare const handleTable: ({ session }: TableDirectiveContext, _words: r
  * Deprecated asar `warnpc addr`, equivalent to `assert pc() <= addr`.
  * Fails only when the logical program counter is strictly past the bound.
  * @param {DiagnosticDirectiveContext} ctx Session with PC and numeric evaluation.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the address is missing or `pc > addr`.
  */

@@ -6,7 +6,7 @@ const positiveInteger = (value, context) => {
         throw new Error(`${context} must be a positive safe integer.`);
     return value;
 };
-/** Bounded, authenticated, sequential client for the maintained MesenCE native seam. */
+/** Bounded, authenticated, sequential client for the patched MesenCE debugger. */
 export class FramedMesenDebugClient {
     #transport;
     #token;

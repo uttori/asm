@@ -225,7 +225,7 @@ test("instruction annotations merge static, project, and runtime evidence withou
     {
       recordId: "node:first",
       message:
-        "Ignored malformed effective-address metadata; required operandIndex, volatile, and explanation fields were not valid.",
+        "Ignored malformed effective-address metadata. Required operandIndex, volatile, and explanation fields were not valid.",
     },
   ]);
 

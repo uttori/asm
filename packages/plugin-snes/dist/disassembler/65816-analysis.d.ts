@@ -3,7 +3,7 @@ import { type Cpu65816AbstractState, type Cpu65816StateOverride } from "./65816-
 import { type SnesMapper } from "./rom-header.js";
 /** Extra analysis seed beyond hardware vectors, labels, and `points: ["in"]` annotations. */
 export interface Snes65816EntryPoint {
-    /** Stable project id; used as `entry:<id>` in the worklist and evidence. */
+    /** Stable project id. Used as `entry:<id>` in the worklist and evidence. */
     readonly id: string;
     /** 24-bit SNES CPU address. */
     readonly address: number;
@@ -11,16 +11,16 @@ export interface Snes65816EntryPoint {
     readonly kind?: "configured" | "observation";
     /** Optional known E/M/X/banks/D/S overlay applied after annotation state. */
     readonly state?: Cpu65816StateOverride;
-    /** Evidence ids to attach; a synthetic `manual:entry:<id>` is created if omitted. */
+    /** Evidence ids to attach. A synthetic `manual:entry:<id>` is created if omitted. */
     readonly evidence?: readonly string[];
 }
 /**
  * Project shards and worklist limits for `analyzeSnes65816`.
- * Data-classified intervals block decode; opcode/operand intervals are ignored
+ * Data-classified intervals block decode. Opcode/operand intervals are ignored
  * as input (the run rewrites `static:65816:*` annotations on the way out).
  */
 export interface Snes65816AnalysisOptions extends StaticAnalysisLimits {
-    /** Existing project intervals; `static:65816:*` ids are stripped then regenerated. */
+    /** Existing project intervals. `static:65816:*` ids are stripped then regenerated. */
     readonly annotations?: readonly IntervalAnnotation[];
     /** Named labels used as additional CFG seeds. */
     readonly labels?: readonly ProjectLabel[];
@@ -28,7 +28,7 @@ export interface Snes65816AnalysisOptions extends StaticAnalysisLimits {
     readonly evidence?: readonly EvidenceRecord[];
     /** Configured entry points (overlays, engines, banked dispatch). */
     readonly entryPoints?: readonly Snes65816EntryPoint[];
-    /** Named target collections; every address is seeded. */
+    /** Named target collections. Every address is seeded. */
     readonly targetSets?: readonly AnalysisTargetSetRecord[];
     /** Manual resolutions for indirect control-flow sites. */
     readonly targetOverrides?: readonly AnalysisTargetOverrideRecord[];
@@ -46,7 +46,7 @@ export interface Snes65816AnalysisResult extends StaticAnalysisResult<Cpu65816Ab
  * Runs conservative 65816 CFG analysis over a headerless immutable ROM view.
  * Seeds from RESET/interrupt vectors, labels, `points: ["in"]` annotations,
  * configured entry points, and target sets. Data-classified intervals block
- * decode; hardware I/O is never treated as ROM.
+ * decode. Hardware I/O is never treated as ROM.
  * @param {RomImage} rom Immutable ROM content and identity.
  * @param {SnesMapper} mapper Explicitly detected or user-selected SNES mapper.
  * @param {Snes65816AnalysisOptions} [options] Project annotations, seeds, overrides, and deterministic limits.

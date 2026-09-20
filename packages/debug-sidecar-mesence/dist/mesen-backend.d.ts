@@ -1,6 +1,6 @@
 import { type DebugAddress, type DebugBackend, type DebugBackendConnectOptions, type DebugBackendEvent, type DebugBreakpoint, type DebugInstruction, type DebugMemoryRead, type DebugRegister, type DebugStackFrame, type DebugStepKind, type DebugSubscription, type DebugThread, type DebugTraceBatch, type DebugTraceStartOptions } from "@uttori/asm-debug-adapter";
 export * from "./profile.js";
-/** Small client seam implemented by the framed loopback transport and deterministic tests. */
+/** Client interface implemented by the framed loopback transport and deterministic tests. */
 export interface MesenDebugClient {
     readonly closed: boolean;
     request(method: string, parameters?: Readonly<Record<string, unknown>>): Promise<unknown>;

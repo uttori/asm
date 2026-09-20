@@ -22,7 +22,7 @@ export function parseExpressionNode(input) {
         return { type: "raw", value: "", span: createSourceSpan(0, 0) };
     }
     // Immediate addressing (`#label`, `#label>>8`) is not part of the
-    // expression language; strip it so the inner expression still parses.
+    // expression language. Strip it so the inner expression still parses.
     if (trimmed.startsWith("#") && trimmed.length > 1) {
         return parseExpressionNode(trimmed.slice(1));
     }
@@ -523,11 +523,6 @@ class ExpressionParser {
     constructor(tokens) {
         this.tokens = tokens;
     }
-    /**
-     * Parses expression.
-     * @param {number} [minPrecedence] The minimum binary-operator precedence.
-     * @returns {ExpressionNode} The result.
-     */
     parseExpression(minPrecedence = 0) {
         let left = this.parsePrefix();
         while (true) {
@@ -551,17 +546,9 @@ class ExpressionParser {
         }
         return left;
     }
-    /**
-     * Checks whether at end.
-     * @returns {boolean} The result.
-     */
     isAtEnd() {
         return this.index >= this.tokens.length;
     }
-    /**
-     * Parses prefix.
-     * @returns {ExpressionNode} The result.
-     */
     parsePrefix() {
         const token = this.peek();
         if (!token) {
@@ -577,10 +564,6 @@ class ExpressionParser {
         }
         return this.parsePostfix(this.parsePrimary());
     }
-    /**
-     * Parses primary.
-     * @returns {ExpressionNode} The result.
-     */
     parsePrimary() {
         if (this.peek()?.type === "dot") {
             let name = "";
@@ -620,11 +603,6 @@ class ExpressionParser {
                 throw new Error(`Unexpected token ${token.type}`);
         }
     }
-    /**
-     * Parses postfix.
-     * @param {ExpressionNode} expression The expression.
-     * @returns {ExpressionNode} The result.
-     */
     parsePostfix(expression) {
         let current = expression;
         while (true) {
@@ -670,10 +648,6 @@ class ExpressionParser {
             return current;
         }
     }
-    /**
-     * Parses call arguments.
-     * @returns {ExpressionNode[]} The result.
-     */
     parseCallArguments() {
         const args = [];
         if (this.match({ type: "rparen" })) {
@@ -695,11 +669,6 @@ class ExpressionParser {
             throw new Error(`Expected token ${type}`);
         }
     }
-    /**
-     * Matches a value.
-     * @param {Pick<Token, "type">} expected The expected.
-     * @returns {boolean} The result.
-     */
     match(expected) {
         const token = this.peek();
         if (token && token.type === expected.type) {
@@ -708,19 +677,11 @@ class ExpressionParser {
         }
         return false;
     }
-    /**
-     * Consumes a value.
-     * @returns {Token | undefined} The result.
-     */
     consume() {
         const token = this.tokens[this.index];
         this.index++;
         return token;
     }
-    /**
-     * Gets the next a value.
-     * @returns {Token | undefined} The result.
-     */
     peek() {
         return this.tokens[this.index];
     }

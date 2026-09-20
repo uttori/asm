@@ -61,12 +61,12 @@ path with your package name.
 - Default-export an `AssemblerPlugin` created with `definePlugin()` from `@uttori/asm-core/plugin`.
   Declare a unique manifest ID, version, and `PLUGIN_API_VERSION`.
 - Validate options before activation. Name every contribution and alias to avoid collisions.
-- Register immutable contributions during activation; allocate mutable state through session slots.
+- Register immutable contributions during activation. Allocate mutable state through session slots.
 - Implement bounds-safe decoding and explicit encoder sizing. A decoder-only architecture cannot
   serve as an assembly target.
 - Release external resources through the plugin disposal contract. Hosts dispose sessions before
   disposing the manager/environment they own.
-- Import public core entry points; do not import files from another package's internal source tree.
+- Import public core entry points. Do not import files from another package's internal source tree.
 
 Before publishing, test malformed options, repeated sessions, decoder bounds, encode/decode vectors,
 and disposal. Run `npm pack`, install that archive in a separate project, and repeat the one-byte

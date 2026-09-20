@@ -279,7 +279,7 @@ function printPhaseTable(label: string, phasesMs: Record<string, number>): void 
     .filter(([name]) => !CHILD_PHASES.has(name))
     .sort(([, a], [, b]) => b - a);
 
-  // Instrumentation can add phases; compute display widths without variadic argument growth.
+  // Instrumentation can add phases. Compute display widths without variadic argument growth.
   const numLen = entries.reduce((width, [, ms]) => Math.max(width, ms.toFixed(1).length), 0) + 3; // " ms"
   const nameLen = entries.reduce((width, [name]) => Math.max(width, name.length), 0) + 4; // indent + extra
 

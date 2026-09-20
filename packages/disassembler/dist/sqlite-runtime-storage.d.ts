@@ -1,6 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { RuntimeEvidenceRecord } from "./project-types.js";
-/** Shared facts own coordinates/payload; observations own source identity and exact counts.
+/** Shared facts own coordinates/payload. Observations own source identity and exact counts.
  * A trace instruction owns its paired CPU-state observation, exposed with a negative virtual rowid.
  * Standalone state records remain independent. JSONB avoids reparsing stored payloads in SQL views.
  */

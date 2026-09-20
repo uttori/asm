@@ -157,7 +157,7 @@ const immediate = (node) => node.mode.startsWith("immediate") && node.bytes?.len
     ? node.bytes.slice(1).reduce((sum, byte, index) => sum + byte * 2 ** (8 * index), 0)
     : undefined;
 /**
- * Bounded structural matching; never renames symbols or changes code/data classifications.
+ * Bounded structural matching. Never renames symbols or changes code/data classifications.
  * @param {AnalysisProjectShards} shards Persisted analysis and observations.
  * @param {SnesHeuristicConfiguration} options Declarative rule configuration.
  * @param {Iterable} [runtime] Optional streamed runtime observations.
@@ -240,7 +240,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
             }
         }
         if (["MVN", "MVP"].includes(node.mnemonic)) {
-            emit(node, "block-copy", "memory.block-copy", "high", [node], "Block move instruction; payload purpose requires destination provenance.");
+            emit(node, "block-copy", "memory.block-copy", "high", [node], "Block move instruction. Payload purpose requires destination provenance.");
         }
         const trail = window(node);
         if (node.mnemonic === "STA" && ports.includes(0x420b)) {
@@ -326,7 +326,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
             trail.some((step) => immediate(step) === 7) &&
             trail.filter((step) => writes.has(step.mnemonic) &&
                 addresses(step).some((address) => address >= 0x211b && address <= 0x2120)).length >= 4) {
-            emit(node, "mode7-setup", "graphics.mode7-setup", "medium", trail, "Matrix/center writes and a nearby mode-7 constant; confirm the value reaching BGMODE.");
+            emit(node, "mode7-setup", "graphics.mode7-setup", "medium", trail, "Matrix/center writes and a nearby mode-7 constant. Confirm the value reaching BGMODE.");
         }
     }
     for (const edge of edges) {
@@ -359,7 +359,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
             emit(start, "vblank-wait", "timing.vblank-wait", "high", loop, "Backward loop tests HVBJOY bit 7.");
         }
         if (has(writes, 0x2100) && loop.some((node) => ["INC", "DEC"].includes(node.mnemonic))) {
-            emit(start, "display-fade", "graphics.brightness-ramp", "medium", loop, "Repeated brightness writes with an increment/decrement; frame synchronization needs caller/trace evidence.");
+            emit(start, "display-fade", "graphics.brightness-ramp", "medium", loop, "Repeated brightness writes with an increment/decrement. Frame synchronization needs caller/trace evidence.");
         }
     }
     const contextNodes = new Map();
@@ -446,7 +446,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
                     role = "graphics.oam-transfer";
                 }
                 if (role) {
-                    emit(node, "observed-access", role, "high", [observedNode], `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction; the DMA engine performs the bus operation.`);
+                    emit(node, "observed-access", role, "high", [observedNode], `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction. The DMA engine performs the bus operation.`);
                 }
             }
             else {
@@ -499,7 +499,7 @@ export const analyzeSnesFunctionRoles = (shards, options = {}, runtime = shards.
         source: "detector",
         sourceId: "snes.function-roles.v1",
         confidence: role.confidence,
-        detail: `${role.rule}; configuration ${signature}; ${role.explanation}; instructions ${role.instructions.map((address) => `$${address.toString(16)}`).join(", ")}`,
+        detail: `${role.rule}. Configuration ${signature}. ${role.explanation}. Instructions ${role.instructions.map((address) => `$${address.toString(16)}`).join(", ")}`,
     }));
     return {
         roles,

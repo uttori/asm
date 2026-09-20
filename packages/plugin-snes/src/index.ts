@@ -101,7 +101,7 @@ export const SNES_TARGET_ID = "snes.sfc";
 
 /**
  * Target options accepted by `validateOptions` / `createOptions`.
- * Unknown keys are ignored; `checksumMode` is the only enum that throws.
+ * Unknown keys are ignored. `checksumMode` is the only enum that throws.
  */
 export interface SnesTargetOptions extends Record<string, unknown> {
   readonly checksumMode: "asar" | "simple";
@@ -231,7 +231,7 @@ const readExpressions: ExpressionSetContribution = {
 
 /**
  * Coerces plugin/target options. Missing object → defaults.
- * `checksumEnabled` defaults true; only an explicit `false` disables it.
+ * `checksumEnabled` defaults true. Only an explicit `false` disables it.
  * @param {unknown} configured The configured options.
  * @returns {SnesTargetOptions} The target options.
  */
@@ -303,7 +303,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
       create: createInitialState,
       clone: cloneSnesSessionState,
       resetForStage: (state) => {
-        // Mapper/checksum/optimize persist across stages; open blocks do not.
+        // Mapper/checksum/optimize persist across stages. Open blocks do not.
         state.activeFreespaceStartOffset = null;
         state.activeFreespaceContentStartOffset = null;
         state.activeFreespaceEndOffset = null;
@@ -381,7 +381,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
           validateWrite: (address, width) => {
             const targetState = state.get(snesSessionStateKey);
             const normalized = snesRomAddressSpace.normalizeForWrite(address, mappingContext());
-            // Unmapped writes are allowed (Asar); only mapped multi-byte stores check borders.
+            // Unmapped writes are allowed (Asar). Only mapped multi-byte stores check borders.
             if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) {
               return;
             }
@@ -390,7 +390,7 @@ const plugin: AssemblerPlugin<SnesTargetOptions> = definePlugin({
             }
             const start = address & 0xffffff;
             const end = (start + width - 1) & 0xffffff;
-            // `half` = 32 KiB ($8000) border; `full` = 64 KiB bank. Bit 23 is ignored
+            // `half` = 32 KiB ($8000) border. `full` = 64 KiB bank. Bit 23 is ignored
             // so $7Fxxxx and $FFxxxx are the same bank for this check.
             const bankMask = targetState.bankCrossMode === "half" ? 0x7fff8000 : 0x7fff0000;
             if (((start ^ end) & bankMask) !== 0) {

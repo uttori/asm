@@ -26,8 +26,8 @@ import {
   writeAnalysisProject,
 } from "../packages/disassembler/src/index.js";
 import { createRuntimeBusTraceImporter } from "../packages/disassembler/src/runtime-bus-trace.js";
-import { LiveBusAnalysis } from "../packages/vscode-extension/src/live-bus-analysis.js";
-import { createEditorRuntimeBusSource } from "../packages/vscode-extension/src/runtime-bus-source.js";
+import { createEditorRuntimeBusSource } from "../packages/vscode-extension/src/runtime/bus-source.js";
+import { LiveBusAnalysis } from "../packages/vscode-extension/src/runtime/live-bus-analysis.js";
 
 // Exercise the editor's DAP request and its actual bundled stdio sidecar, with
 // an isolated runtime copy so the user's settings and saves are never touched.
@@ -84,7 +84,7 @@ let dmaInstruction = 0;
 if (bus) {
   // Original synthetic program: fixed-source DMA channel 0 plus direct and
   // indirect HDMA on channels 1/2. Tables and payload live in this generated ROM.
-  const code = [0x78]; // SEI; stay in reset's 8-bit emulation mode.
+  const code = [0x78]; // SEI. Stay in reset's 8-bit emulation mode.
   const store = (address: number, value: number): void => {
     code.push(0xa9, value, 0x8d, address & 255, address >>> 8);
   };
@@ -117,7 +117,7 @@ if (bus) {
   store(0x4305, 0);
   store(0x4306, framePaced ? 1 : 0x80);
   code.push(0xa9, 1);
-  // The enable write schedules DMA; dmaEdge runs before the following opcode
+  // The enable write schedules DMA. DmaEdge runs before the following opcode
   // fetch. Break on that BRA so its single step actually includes the transfer.
   dmaInstruction = 0x8000 + code.length + 3;
   code.push(0x8d, 0x0b, 0x42, 0x80, (loop - (code.length + 5)) & 255);
@@ -192,7 +192,7 @@ const request = async (command: string, args: Record<string, unknown> = {}): Pro
   return response.body;
 };
 let recorder: LosslessCaptureFileRecorder | NativeCaptureFileRecorder | undefined;
-// This is the adapter's real DAP/stdio/RSP path; delay only the consumer to
+// This is the adapter's real DAP/stdio/RSP path. Delay only the consumer to
 // exercise backpressure without changing the synthetic program or native timing.
 const captureTransport: CaptureTransportV2 = async (r) => {
   if (slow && r.operation === "read") await delay(15);
@@ -452,7 +452,7 @@ try {
     observedEvents: summary.observedEvents,
     droppedEvents: summary.droppedEvents,
     throttleCount: summary.position.throttleCount,
-    // Include final drain in capture wall time; subsequent recovery/import is
+    // Include final drain in capture wall time. Subsequent recovery/import is
     // reported separately for both instruction and bus scopes.
     recordingMs: stopStarted - started,
     finalDrainMs: finalized - stopStarted,
@@ -483,7 +483,7 @@ try {
   await live?.completion.catch(() => undefined);
   await recorder?.finishIncomplete().catch(() => undefined);
   try {
-    // Failed launch has no connected backend; cleanup must preserve that error.
+    // Failed launch has no connected backend. Cleanup must preserve that error.
     await backend.disconnect().catch(() => undefined);
   } finally {
     await client?.close();

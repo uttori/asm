@@ -48,7 +48,7 @@ const stageArtifact = (file: string, content: Uint8Array): string => {
 
 /**
  * Commits the binary and its identity-bearing debug map only after both are fully staged.
- * Each rename is atomic; readers that race the two renames see either a valid pair or an
+ * Each rename is atomic. Readers that race the two renames see either a valid pair or an
  * identity mismatch that the debugger rejects. A failed second rename restores the prior pair.
  * @param {string} outputPath Destination binary.
  * @param {Uint8Array} output Exact binary bytes.
@@ -136,14 +136,14 @@ export function resolveBuildEntry(
     if (resolvedEntries.length > 0) {
       return {
         file: resolvedEntries[0],
-        reason: `active file ${path.basename(requested)} is not a project entry point; using ${path.basename(resolvedEntries[0])}`,
+        reason: `active file ${path.basename(requested)} is not a project entry point. Using ${path.basename(resolvedEntries[0])}`,
         usedEntryPoint: true,
         requestedFile: requested,
       };
     }
     return {
       file: requested,
-      reason: "no project entry points configured; using active file",
+      reason: "no project entry points configured. Using active file",
       usedEntryPoint: false,
       requestedFile: requested,
     };
@@ -151,7 +151,7 @@ export function resolveBuildEntry(
   if (resolvedEntries.length > 0) {
     return {
       file: resolvedEntries[0],
-      reason: `no active editor; using first project entry point ${path.basename(resolvedEntries[0])}`,
+      reason: `no active editor. Using first project entry point ${path.basename(resolvedEntries[0])}`,
       usedEntryPoint: true,
     };
   }
@@ -168,7 +168,7 @@ export function emptyOutputMessage(file: string, usedEntryPoint: boolean): strin
   const base = path.basename(file);
   if (usedEntryPoint) {
     return (
-      `Assembly produced 0 bytes for ${base}. Writes to unmapped addresses are skipped; ` +
+      `Assembly produced 0 bytes for ${base}. Writes to unmapped addresses are skipped. ` +
       "the root file likely never set a mapper/org, or every store landed outside ROM."
     );
   }

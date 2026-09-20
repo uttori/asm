@@ -7,12 +7,12 @@ files and parent patch. Four standalone copies match those sources exactly.
 
 The producer uses ARM CRC32C or x86-64 SSE4.2 intrinsics only when the compiler
 target promises those instructions. Other targets retain the portable
-Castagnoli implementation. Both paths emit the same ACT2 bytes; the independent
+Castagnoli implementation. Both paths emit the same ACT2 bytes. The independent
 bitwise test reader checks full chunks and all fetched-length tails.
 
 Native `start` accepts an optional final `:profile` field. File status then includes
 `fileProfile` with decimal nanosecond counters: `sealNs`, `copyNs`, `writeNs`, and
-`syncNs`. Sealing includes envelope generation and CRC; copying includes ACK2
+`syncNs`. Sealing includes envelope generation and CRC. Copying includes ACK2
 encoding and excludes nested sealing. Writer timings cover data batches, excluding
 header/footer setup. Writer spans overlap emulation and cannot be added as wall
 percentages. Profiling reads clocks per chunk/batch, never per bus access. Its
@@ -29,9 +29,9 @@ sh packages/debug-sidecar-ares/native/capture-realtime/benchmark.sh /path/to/are
 ```
 
 Tests and native benchmark runners use C++/CMake/shell. The shell wire check
-compiles target-native and forced-portable variants; CTest adds a portable case
+compiles target-native and forced-portable variants. CTest adds a portable case
 beside the existing ownership, failure, paused-state and both-PPU tests.
 
 See [validation evidence](native-evidence.json) and
 [live analysis and its limits](../../CAPTURE.md#live-bus-analysis).
-This is an opt-in development runtime; no default promotion or upstream PR is included.
+This is an opt-in development runtime. No default promotion or upstream PR is included.

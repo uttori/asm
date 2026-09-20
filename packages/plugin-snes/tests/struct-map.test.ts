@@ -207,6 +207,24 @@ test("struct maps reject overlapping layouts, bindings, invalid mapping, and inj
   });
 });
 
+test("entry comments use logical indexes and normalize prose without accepting ambiguous keys", (t) => {
+  const input = fixtureMap();
+  const withComments = (comments: unknown, firstIndex = 1) => ({
+    ...input,
+    bindings: [{ ...input.bindings[1], firstIndex, entryComments: comments }],
+  });
+  const normalized = validateSnesStructMap(withComments({ 1: "Candy\n  item", 2: "Cup of Wishes" }));
+  t.deepEqual(normalized.bindings[0].entryComments, { 1: "Candy item", 2: "Cup of Wishes" });
+  t.deepEqual(validateSnesStructMap(withComments({})).bindings[0].entryComments, {});
+  for (const comments of [{ 0: "Wrong base" }, { 3: "Outside" }, { "01": "Ambiguous" },
+    { "1.5": "Fraction" }, { "0x1": "Hex" }, { "-1": "Negative" }, { 1: 42 }, { 1: " \n " }, [], null]) {
+    t.throws(() => validateSnesStructMap(withComments(comments)));
+  }
+  t.throws(() => validateSnesStructMap({
+    ...input, bindings: [{ ...input.bindings[0], entryComments: { 0: "No ROM rows" } }],
+  }), { message: /ROM binding/ });
+});
+
 test("normal export includes structs, owns typed bytes, retains interior metadata, and detects drift", async (t) => {
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-struct-export-"));
   t.teardown(() => fs.rmSync(temporary, { recursive: true, force: true }));
@@ -240,7 +258,13 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
     },
   };
   const filename = path.join(outputDirectory, "struct-map.json");
-  fs.writeFileSync(filename, JSON.stringify(fixtureMap()));
+  const named = fixtureMap();
+  fs.writeFileSync(filename, JSON.stringify({
+    ...named,
+    bindings: named.bindings.map((binding) => binding.name === "Table"
+      ? { ...binding, entryComments: { 0: "Fragmented Candy", 1: "Cup of Wishes" } }
+      : binding),
+  }));
   const exportSource = () =>
     exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
       sourceProjectSha256: "0".repeat(64),
@@ -251,6 +275,9 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   t.regex(bank, /LDA\.l Table\.word,x/);
   t.regex(bank, /LDA\.l Players\[1]\.word/);
   t.regex(bank, /High byte remains annotated\.\n  assert pc\(\) == Table\.word \+ \$1/);
+  t.regex(bank, /; Fragmented Candy\n  assert pc\(\) == Table\.byte/);
+  t.is(bank.match(/Fragmented Candy/g)?.length, 1, "fragmentation must not duplicate the entry comment");
+  t.regex(bank, /dataStruct Table\[1], .* ; Cup of Wishes\n/);
   t.regex(
     bank,
     /dataStruct Table\[1], { byte = \$EA, word = \$EAEA, pointer = \$EAEAEA, __gap_6 = \[\$EA], dword = \$EAEAEAEA, __gap_b = \[\$EA] }/,
@@ -272,10 +299,15 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   t.notThrows(() => validateSourceExportInputs(outputDirectory));
 
   // Whole neighboring records form tables. A label/comment at a record start
-  // stays outside the block; an interior comment still forces raw fragments.
+  // stays outside the block. An interior comment still forces raw fragments.
   const expanded = fixtureMap();
   expanded.bindings[1].count = 5;
-  fs.writeFileSync(filename, JSON.stringify(expanded));
+  fs.writeFileSync(filename, JSON.stringify({
+    ...expanded,
+    bindings: expanded.bindings.map((binding) => binding.name === "Table"
+      ? { ...binding, entryComments: { 1: "Candy", 2: "Cup of Wishes", 4: "Named after a gap" } }
+      : binding),
+  }));
   const boundaryProject = {
     ...project,
     shards: {
@@ -300,6 +332,8 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
     groupedBank,
     /dataStructs Table\n    \[1] = .*\n    \[2] = .*\n  endDataStructs\n\n; Fourth record\.\n  dataStructs Table\n    \[3] = .*\n    \[4] = .*\n  endDataStructs/,
   );
+  t.regex(groupedBank, /\[1] = .* ; Candy\n    \[2] = .* ; Cup of Wishes\n  endDataStructs/);
+  t.regex(groupedBank, /\[3] = [^\n;]+\n {4}\[4] = .* ; Named after a gap\n/);
   t.is(
     grouped.spans
       .filter((span) => span.source === "struct-map.json")

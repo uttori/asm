@@ -28,8 +28,8 @@ export const NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 const INES_MAGIC = [0x4e, 0x45, 0x53, 0x1a];
 
 /**
- * NES target options. Plugin activation stays origin-only for the raw target;
- * these fields are per-session `targetOptions`.
+ * NES target options. Plugin activation stays origin-only for the raw target.
+ * These fields are per-session `targetOptions`.
  */
 export interface Nes65xxTargetOptions extends Readonly<Record<string, unknown>> {
   readonly header: readonly number[];
@@ -88,7 +88,7 @@ export function createInitialNesState(context: {
 
 /**
  * Maps CPU addresses through the current load MEMORY region into the iNES image.
- * Overlay run addresses are never written; `base` keeps the load cursor for stores.
+ * Overlay run addresses are never written. `base` keeps the load cursor for stores.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */

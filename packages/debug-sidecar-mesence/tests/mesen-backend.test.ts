@@ -648,7 +648,7 @@ test("Mesen translator handles SuperFX state and execution failure paths", async
   const pollingClient = new FakeMesenDebugClient(fakeState());
   const pollingRequest = pollingClient.request.bind(pollingClient);
   pollingClient.request = async (method, parameters) => {
-    // A third-party client can reject with a non-Error value; the backend must normalize it.
+    // A third-party client can reject with a non-Error value. The backend must normalize it.
     if (method === "status") {
       // oxlint-disable-next-line typescript/only-throw-error
       throw "poll failed";

@@ -604,7 +604,7 @@ export class WorkspaceIndex {
         `Analysis failed for ${path.basename(root)} after ${Date.now() - started}ms: ` +
           `${error instanceof Error ? error.message : String(error)}`,
       );
-      // analyzeSource recovers internally; guard against unexpected throws so
+      // analyzeSource recovers internally. Guard against unexpected throws so
       // one broken root never blanks out the whole workspace index.
       return undefined;
     } finally {
@@ -798,7 +798,7 @@ export class WorkspaceIndex {
     const fileHashes: Record<string, string> = {};
     const fileMtimes: Record<string, number> = {};
     for (const file of [...files].sort()) {
-      // For overlay (in-memory) files there is no mtime; record hash only.
+      // For overlay (in-memory) files there is no mtime. Record hash only.
       const overlayContent = this.overlay.get(file);
       if (overlayContent !== undefined) {
         fileHashes[file] = hashBytes(new Uint8Array(Buffer.from(overlayContent, "utf8")));

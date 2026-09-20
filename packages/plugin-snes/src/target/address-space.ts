@@ -2,7 +2,7 @@
 export interface AddressSpaceContext {
   /** Canonical mapper name (`lorom`, `hirom`, `sa1rom`, `norom`, ...). */
   mapper: string;
-  /** SA-1 LoROM bank bases in 1 MiB units; unused slots are `-1`. */
+  /** SA-1 LoROM bank bases in 1 MiB units. Unused slots are `-1`. */
   sa1banks: readonly number[];
   /** PC wrap policy from `check bankcross`. */
   bankCrossCheckMode?: "off" | "full" | "half";
@@ -128,14 +128,14 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
       if ((address & 0xfe0000) === 0x7e0000 || (address & 0x408000) === 0x000000) {
         return -1;
       }
-      // 64 KiB banks in $C0-$FF / mirrored $40-$7D; file offset is A21-0.
+      // 64 KiB banks in $C0-$FF / mirrored $40-$7D. File offset is A21-0.
       return address & 0x3fffff;
     }
     if (context.mapper === "exlorom") {
       if ((address & 0xf00000) === 0x700000 || (address & 0x408000) === 0x000000) {
         return -1;
       }
-      // LoROM packing; $00-$7F image sits at +$400000 so $80-$FF is the low 4 MiB.
+      // LoROM packing. $00-$7F image sits at +$400000 so $80-$FF is the low 4 MiB.
       const mapped = ((address & 0x7f0000) >> 1) | (address & 0x7fff);
       return address & 0x800000 ? mapped : mapped + 0x400000;
     }
@@ -143,7 +143,7 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
       if ((address & 0xfe0000) === 0x7e0000 || (address & 0x408000) === 0x000000) {
         return -1;
       }
-      // Fast HiROM ($80+) is the low 4 MiB; slow ($00-$7D) is the high 4 MiB.
+      // Fast HiROM ($80+) is the low 4 MiB. Slow ($00-$7D) is the high 4 MiB.
       return (address & 0x800000) === 0 ? (address & 0x3fffff) | 0x400000 : address & 0x3fffff;
     }
     if (context.mapper === "sfxrom") {
@@ -160,7 +160,7 @@ export const snesRomAddressSpace: SnesRomAddressSpace = {
         : ((address & 0x7f0000) >> 1) | (address & 0x7fff);
     }
     if (context.mapper === "sa1rom") {
-      // LoROM window $xx8000 uses sa1banks[A23-21]; HiROM $C0-$CF uses banks 0/1/4/5.
+      // LoROM window $xx8000 uses sa1banks[A23-21]. HiROM $C0-$CF uses banks 0/1/4/5.
       if ((address & 0x408000) === 0x008000) {
         return (
           context.sa1banks[(address & 0xe00000) >> 21] |

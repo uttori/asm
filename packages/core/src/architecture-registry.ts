@@ -32,20 +32,10 @@ export class ArchitectureRegistry {
     }
   }
 
-  /**
-   * Gets canonical name.
-   * @param {string} name The name.
-   * @returns {string | undefined} The result.
-   */
   getCanonicalName(name: string): string | undefined {
     return this.aliases.get(name.toLowerCase());
   }
 
-  /**
-   * Gets definition.
-   * @param {string} name The name.
-   * @returns {ArchitectureDefinition | undefined} The result.
-   */
   getDefinition(name: string): ArchitectureDefinition | undefined {
     const canonical = this.getCanonicalName(name);
     if (!canonical) {

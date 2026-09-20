@@ -12,8 +12,8 @@ Save this example as `analysis-workflow.mjs`. Run it with a ROM path and a **new
 node analysis-workflow.mjs game.sfc ./review
 ```
 
-The example explicitly selects LoROM; change `mapper` for another supported mapping. Copier headers
-are detected automatically. Analysis reports unresolved paths and resource limits; byte-identical
+The example explicitly selects LoROM. Change `mapper` for another supported mapping. Copier headers
+are detected automatically. Analysis reports unresolved paths and resource limits. Byte-identical
 reassembly proves byte preservation, not that every instruction or function was identified.
 
 ```js
@@ -71,7 +71,7 @@ commitAnalysisProjectAnnotationUpdate(projectDirectory, snapshot.revision, {
 });
 
 // These high-level calls close their connections. Offline copying also requires every other
-// process/editor using this project to be stopped; copy the whole directory, including any WAL.
+// process/editor using this project to be stopped. Copy the whole directory, including any WAL.
 cpSync(projectDirectory, backupDirectory, { recursive: true, errorOnExist: true, force: false });
 cpSync(backupDirectory, restoredDirectory, { recursive: true, errorOnExist: true, force: false });
 const restored = loadAnalysisProjectViewSnapshot(restoredDirectory);
@@ -95,7 +95,7 @@ console.log(`Byte-identical rebuild: ${verified.finalOutput}`);
 
 For another edit, load a fresh snapshot and use new evidence IDs. `AnalysisProjectStaleError` means
 another writer committed first: reload and reapply the intended edit. Never attach a new revision
-token to an old replacement. A view omits runtime history; annotation/view commits preserve it,
+token to an old replacement. A view omits runtime history. Annotation/view commits preserve it,
 whereas full-project writes replace it.
 
 The backup above protects the analysis directory and managed files inside it. Back up the external
@@ -104,9 +104,9 @@ the working disk for independent recovery. Restore into a new directory, validat
 then export and verify before resuming work. Do not replace an open database or delete its WAL.
 [SQLite explains why the WAL must stay with the database](https://www.sqlite.org/wal.html#the_wal_file).
 
-Cancellation is cooperative. SNES operations accept `signal`; analysis checks it before committing.
+Cancellation is cooperative. SNES operations accept `signal`. Analysis checks it before committing.
 Low-level SQLite callbacks must be synchronous: throw on cancellation to roll back database changes.
-Database rollback does not undo filesystem writes; an interrupted export may need regeneration.
+Database rollback does not undo filesystem writes. An interrupted export may need regeneration.
 
 See [API ownership, transactions, and recovery](https://github.com/uttori/asm/blob/master/packages/disassembler/API.md) for complete versus
 selected writes, store lifetime, pointer failures, and durability limits.

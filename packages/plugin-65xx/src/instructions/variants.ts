@@ -20,7 +20,7 @@ interface ModeDefinition {
 
 /**
  * Maps ca65 addressing-mode bit indices (0–31) onto our {@link AddressingMode}s.
- * Indices 21–23 are all immediate (8-bit variants in ca65's table); 27 is 16-bit
+ * Indices 21–23 are all immediate (8-bit variants in ca65's table). 27 is 16-bit
  * immediate. Mode 10 is zp-indirect on 65C02-class, (zp),z on CE02/4510.
  */
 const commonModes: Readonly<Partial<Record<number, ModeDefinition>>> = {
@@ -64,7 +64,7 @@ const featureByTable: Readonly<Record<keyof typeof ca65VariantTables, CpuFeature
 
 /**
  * Opcode for one (row, mode) cell: `base | eaTable[mode]`, then 4510/45GS02
- * remaps. Put4510 swaps several 65CE02 opcodes onto the 4510 encoding;
+ * remaps. Put4510 swaps several 65CE02 opcodes onto the 4510 encoding.
  * Put45GS02_Q rewrites INC/DEC accumulator to $1A/$3A under the Q prefix.
  * @param {Ca65InstructionRow} row The ca65 instruction row.
  * @param {number} modeIndex The mode index.
@@ -119,7 +119,7 @@ function opcodeFor(row: Ca65InstructionRow, modeIndex: number): number {
 
 /**
  * Resolves a ca65 mode bit. Mode 10 is the CMOS vs CE02 fork:
- * 65SC02/65C02/W65C02 → `(zp)`; 65CE02/4510/45GS02 → `(zp),z`.
+ * 65SC02/65C02/W65C02 → `(zp)`. 65CE02/4510/45GS02 → `(zp),z`.
  * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
  * @param {Ca65InstructionRow} row The ca65 instruction row.
  * @param {number} modeIndex The mode index.
@@ -170,7 +170,7 @@ function modeFor(
 }
 
 /**
- * Builds one {@link InstructionForm}. 45GS02 Q ops prefix `42 42`; `[zp],z`
+ * Builds one {@link InstructionForm}. 45GS02 Q ops prefix `42 42`. `[zp],z`
  * (modes 12 and 30) also needs a leading `EA` NOP prefix.
  * @param {keyof typeof ca65VariantTables} table The ca65 variant table.
  * @param {Ca65InstructionRow} row The ca65 instruction row.
@@ -265,7 +265,7 @@ function decodeTable(table: keyof typeof ca65VariantTables): readonly Instructio
       if ((row[1] & (2 ** modeIndex)) === 0) {
         continue;
       }
-      // ca65 sets both bits for accumulator instructions; the explicit accumulator
+      // ca65 sets both bits for accumulator instructions. The explicit accumulator
       // form also accepts an omitted A in our native syntax.
       if (modeIndex === 0 && (row[1] & 2) !== 0) {
         continue;

@@ -1,4 +1,4 @@
-/** Indexed source membership and paginated observations; runtime history stays in SQLite. */
+/** Indexed source membership and paginated observations. Runtime history stays in SQLite. */
 import type { DatabaseSync } from "node:sqlite";
 import type { AnalysisEvidenceSource, AnalysisSourceEntry, AnalysisSourceGroup, AnalysisSourceSummary } from "./analysis-sources.js";
 /** Whether source membership indexes exist and have no changed metadata to process.
@@ -8,7 +8,7 @@ import type { AnalysisEvidenceSource, AnalysisSourceEntry, AnalysisSourceGroup, 
 export declare const sourceQueriesReady: (db: DatabaseSync) => boolean;
 /**
  * Extract metadata evidence membership once, then process only changed rows under a writer transaction.
- * Runtime membership already lives in its evidence dictionary; the covering index avoids payload reads.
+ * Runtime membership already lives in its evidence dictionary. The covering index avoids payload reads.
  * @param {DatabaseSync} db Connection owned by the caller's write transaction.
  */
 export declare const prepareSourceQueries: (db: DatabaseSync) => void;
@@ -24,7 +24,7 @@ export declare const readSourceSummary: (db: DatabaseSync, source: AnalysisEvide
  * @param {DatabaseSync} db Read snapshot with prepared source and annotation indexes.
  * @param {AnalysisEvidenceSource} source Validated catalog entry.
  * @param {AnalysisSourceGroup} group Direct observations or attributed metadata.
- * @param {number} offset Nonnegative row offset; pages contain at most 200 entries.
+ * @param {number} offset Nonnegative row offset. Pages contain at most 200 entries.
  * @returns {AnalysisSourceEntry[]} Compact navigable entries, never the complete trace history.
  */
 export declare const readSourcePage: (db: DatabaseSync, source: AnalysisEvidenceSource, group: AnalysisSourceGroup, offset?: number) => AnalysisSourceEntry[];

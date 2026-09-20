@@ -19,7 +19,7 @@ export type BenchmarkStatistics = {
 /**
  * Timing and memory observed at the boundaries of one isolated synchronous operation.
  *
- * `boundaryMax*` is the larger of the before/after samples; it is not an in-operation peak. Signed
+ * `boundaryMax*` is the larger of the before/after samples. It is not an in-operation peak. Signed
  * deltas remain available so a benchmark can distinguish retained growth from a high prerequisite
  * baseline. Keep both absolute boundaries and deltas: using only deltas would hide regressions when
  * an operation legitimately starts with a large retained project.

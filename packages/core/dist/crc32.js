@@ -6,7 +6,7 @@ export class CRC32 {
     static table = CRC32.makeCRCTable();
     /**
      * Builds the lookup table used for CRC32 computation.
-     * @returns {Uint32Array} The result.
+     * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
      */
     static makeCRCTable() {
         const table = new Uint32Array(256);

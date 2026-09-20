@@ -61,7 +61,7 @@ var init_crc32 = __esm({
       static table = _CRC32.makeCRCTable();
       /**
        * Builds the lookup table used for CRC32 computation.
-       * @returns {Uint32Array} The result.
+       * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
        */
       static makeCRCTable() {
         const table = new Uint32Array(256);
@@ -379,20 +379,20 @@ var init_directive_catalog = __esm({
           },
           {
             keyword: "firstindex",
-            summary: "First valid logical index (default zero); requires count.",
+            summary: "First valid logical index (default zero). Requires count.",
             syntax: "endstruct count value firstindex value"
           }
         ]
       ),
       descriptor(
         "datastruct",
-        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "Emit one complete named record at its struct address. Checks fields, widths and pc().",
         "dataStruct Record[index], { field = value, bytes = [value, ...] }",
         "struct"
       ),
       descriptor(
         "datastructs",
-        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "Begin consecutive indexed named records. Preserves logical IDs and validates placement.",
         "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
         "struct"
       ),
@@ -4471,7 +4471,7 @@ var init__ = __esm({
       x16;
       /**
        * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
-       * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+       * Set to false by `.smart off`. Re-enabled by `.smart` or `.smart on`.
        */
       smartMode;
       /**
@@ -4875,7 +4875,7 @@ var init__ = __esm({
       }
       /**
        * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
-       * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+       * {@link handleLogicAndCompareOperations}. STA has no immediate form.
        *
        * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
        * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
@@ -5192,7 +5192,7 @@ var init__ = __esm({
        * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
        * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
        * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
-       * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+       * (`len === 2`). This family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
        * long / stack forms.
        *
        * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
@@ -5215,7 +5215,7 @@ var init__ = __esm({
             indirectY: 17,
             indirect: 18,
             // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
-            // `[...]` is remapped to directIndirectLong first; these keys are the
+            // `[...]` is remapped to directIndirectLong first. These keys are the
             // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
             indirectLong: 15,
             indirectLongY: 31,
@@ -5477,7 +5477,7 @@ var init__ = __esm({
       }
       /**
        * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
-       * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+       * `expandOperand` may turn `#10` into `#$A`. Strip `$` before parseInt.
        * Count `0` emits nothing (still "handled").
        * @param {string} opcode The opcode to handle.
        * @param {string} operand The operand to handle.
@@ -5953,7 +5953,7 @@ var init__ = __esm({
         return true;
       }
       /**
-       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y). STY indexes X only
        * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
        *
        * @param {string} opcode STX, STY, or STZ.
@@ -6074,7 +6074,7 @@ var init__ = __esm({
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
       /**
-       * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+       * MVN/MVP. WDC and the hover catalog spell `dest, src`. We still write bytes
        * in source order (first operand, then second) - Asar's wire format. Locals
        * are named src/dest after that write order, not WDC's dest-then-src names.
        *
@@ -6209,7 +6209,7 @@ var init__ = __esm({
       }
       /**
        * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
-       * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+       * always 16-bit. The rest are 8-bit. `.b/.w` on REP/SEP only validates range.
        * @param {string} opcode Candidate mnemonic.
        * @param {number} num Already-evaluated operand value.
        * @param {number} len Inferred width (REP/SEP range check).
@@ -6371,7 +6371,7 @@ var init__ = __esm({
       }
       /**
        * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
-       * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
+       * 65816 has no 32-bit immediate. Callers treat it as width 4 for PEA-like repeats.
        * @param {string} c The opcode suffix to resolve the length of.
        * @returns {number} The operand length.
        * @throws {Error} If the opcode length is invalid.
@@ -7174,7 +7174,7 @@ var init_spc700 = __esm({
       /**
        * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
        * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
-       * not stall; encode will still reject them.
+       * not stall. Encode will still reject them.
        *
        * @param {string} mnemonic The mnemonic.
        * @param {string} operandText The operand text.
@@ -7721,7 +7721,7 @@ var init_spc700 = __esm({
       /**
        * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
        * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
-       * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+       * indirectX (no extra byte). `($dp+X)` is indirectDpX.
        *
        * @param {string} operand Right-hand operand of an A-destination ALU op.
        * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
@@ -7819,7 +7819,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc. `DEC X`/`DEC Y` and
        * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
        * {@link getAddressSize} (spelling), not the numeric value.
        *
@@ -7910,7 +7910,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic. Asar also accepts
        * `SET1 $13.7` where `.n` overrides the mnemonic digit.
        *
        * @param {string} opcode SET/CLR mnemonic with bit digit.
@@ -8026,7 +8026,7 @@ var init_spc700 = __esm({
        * @param {string} left Register, `$dp`, or `$dp+X`.
        * @param {string} right Branch target.
        * @param {LoweredOperand} [leftLowered] Lowered left operand.
-       * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+       * @param {LoweredOperand} [_rightLowered] Unused. Kept for call-site symmetry.
        * @returns {boolean} True if encoded.
        */
       handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
@@ -8620,7 +8620,7 @@ var init_spc700 = __esm({
             opcodeDp: 203,
             opcodeAbs: 204
           },
-          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp; "X,$1234" => 0xe9 or 0xf8 for dp, etc.
+          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp. "X,$1234" => 0xe9 or 0xf8 for dp, etc.
           {
             regex: /^A\s*,\s*\$([\dA-F]+)$/,
             opcodeDp: 228,
@@ -9383,7 +9383,7 @@ var init_superfx = __esm({
       /**
        * @param {ArchitectureEncoderContext} context Encoder host.
        * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
-       *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+       *   Hardware stores a word index (`addr >> 1`). Asar stores `addr & 0xff`. Explicit
        *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
        */
       constructor(context, asarMoveShortAddress = () => false) {
@@ -9582,7 +9582,7 @@ var init_superfx = __esm({
       }
       /**
        * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
-       * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+       * operands. Unknown mnemonics return false (`unknownInstructionBehavior` is
        * `returnFalse` so 65816 can try next).
        *
        * @param {string} mnemonic The mnemonic.
@@ -9637,11 +9637,11 @@ var init_superfx = __esm({
         return false;
       }
       /**
-       * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+       * Single-operand Super FX: short branches (`$XX` is a raw offset, labels stay
        * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
        * @param {string} opcode Uppercased mnemonic.
        * @param {string} operand The operand.
-       * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+       * @param {number} operandLength Logged only. Encoded size is fixed per opcode family.
        * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
        * @returns {boolean} True if the instruction was handled, false otherwise.
        */
@@ -9957,7 +9957,7 @@ var init_superfx = __esm({
       }
       /**
        * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
-       * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+       * Encode then stores `addr >> 1`. This check is the byte-address constraint.
        * @param {number} num RAM byte address (not the word index).
        * @returns {boolean} Always `true` when the address is valid.
        * @throws {Error} If the address is odd or outside the short-RAM window.
@@ -9980,7 +9980,7 @@ var init_superfx = __esm({
         return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
       }
       /**
-       * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+       * Fallback width when lowering did not supply `length`. `$XX` is 1. Everything else is 2.
        * Super FX uses this for one-operand branches when `loweredOperand` is missing.
        * @param {string} operand Operand text.
        * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
@@ -10376,7 +10376,7 @@ var init_spc_runtime = __esm({
        * execute trailer, then restores namespace and the previous architecture.
        *
        * Size is `(pc - dest) & $FFFF` - 64 KiB wrap, matching Asar.
-       * Size is only patched when `canFinalize` (emit pass); collect/layout leave
+       * Size is only patched when `canFinalize` (emit pass). Collect/layout leave
        * the placeholder so later passes can rewrite it.
        *
        * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
@@ -11333,12 +11333,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "BG1HOFS",
         address: 8461,
-        description: "BG1 horizontal scroll, write twice; also Mode 7 horizontal offset."
+        description: "BG1 horizontal scroll, write twice. Also Mode 7 horizontal offset."
       },
       {
         symbol: "BG1VOFS",
         address: 8462,
-        description: "BG1 vertical scroll, write twice; also Mode 7 vertical offset."
+        description: "BG1 vertical scroll, write twice. Also Mode 7 vertical offset."
       },
       { symbol: "BG2HOFS", address: 8463, description: "BG2 horizontal scroll, write twice." },
       { symbol: "BG2VOFS", address: 8464, description: "BG2 vertical scroll, write twice." },
@@ -11359,12 +11359,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "M7A",
         address: 8475,
-        description: "Mode 7 matrix parameter A, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter A, write twice. Multiplication operand."
       },
       {
         symbol: "M7B",
         address: 8476,
-        description: "Mode 7 matrix parameter B, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter B, write twice. Multiplication operand."
       },
       { symbol: "M7C", address: 8477, description: "Mode 7 matrix parameter C, write twice." },
       { symbol: "M7D", address: 8478, description: "Mode 7 matrix parameter D, write twice." },
@@ -11404,17 +11404,17 @@ var init_hardware_registers = __esm({
       {
         symbol: "MPYL",
         address: 8500,
-        description: "PPU multiplication result, low byte; read only."
+        description: "PPU multiplication result, low byte. Read only."
       },
       {
         symbol: "MPYM",
         address: 8501,
-        description: "PPU multiplication result, middle byte; read only."
+        description: "PPU multiplication result, middle byte. Read only."
       },
       {
         symbol: "MPYH",
         address: 8502,
-        description: "PPU multiplication result, high byte; read only."
+        description: "PPU multiplication result, high byte. Read only."
       },
       {
         symbol: "SLHV",
@@ -11435,8 +11435,8 @@ var init_hardware_registers = __esm({
         address: 8509,
         description: "Latched vertical beam-counter value, read twice."
       },
-      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number; read only." },
-      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number; read only." },
+      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number. Read only." },
+      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number. Read only." },
       { symbol: "APUIO0", address: 8512, description: "Main CPU/APU communication port 0." },
       { symbol: "APUIO1", address: 8513, description: "Main CPU/APU communication port 1." },
       { symbol: "APUIO2", address: 8514, description: "Main CPU/APU communication port 2." },
@@ -11488,12 +11488,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDNMI",
         address: 16912,
-        description: "V-blank NMI flag and CPU version; read acknowledges the flag."
+        description: "V-blank NMI flag and CPU version. Read acknowledges the flag."
       },
       {
         symbol: "TIMEUP",
         address: 16913,
-        description: "H/V timer IRQ flag; read acknowledges the flag."
+        description: "H/V timer IRQ flag. Read acknowledges the flag."
       },
       {
         symbol: "HVBJOY",
@@ -11504,62 +11504,62 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDDIVL",
         address: 16916,
-        description: "Unsigned division quotient, low byte; read only."
+        description: "Unsigned division quotient, low byte. Read only."
       },
       {
         symbol: "RDDIVH",
         address: 16917,
-        description: "Unsigned division quotient, high byte; read only."
+        description: "Unsigned division quotient, high byte. Read only."
       },
       {
         symbol: "RDMPYL",
         address: 16918,
-        description: "Multiplication product or division remainder, low byte; read only."
+        description: "Multiplication product or division remainder, low byte. Read only."
       },
       {
         symbol: "RDMPYH",
         address: 16919,
-        description: "Multiplication product or division remainder, high byte; read only."
+        description: "Multiplication product or division remainder, high byte. Read only."
       },
       {
         symbol: "JOY1L",
         address: 16920,
-        description: "Automatic joypad result for controller 1, low byte; read only."
+        description: "Automatic joypad result for controller 1, low byte. Read only."
       },
       {
         symbol: "JOY1H",
         address: 16921,
-        description: "Automatic joypad result for controller 1, high byte; read only."
+        description: "Automatic joypad result for controller 1, high byte. Read only."
       },
       {
         symbol: "JOY2L",
         address: 16922,
-        description: "Automatic joypad result for controller 2, low byte; read only."
+        description: "Automatic joypad result for controller 2, low byte. Read only."
       },
       {
         symbol: "JOY2H",
         address: 16923,
-        description: "Automatic joypad result for controller 2, high byte; read only."
+        description: "Automatic joypad result for controller 2, high byte. Read only."
       },
       {
         symbol: "JOY3L",
         address: 16924,
-        description: "Automatic joypad result for controller 3, low byte; read only."
+        description: "Automatic joypad result for controller 3, low byte. Read only."
       },
       {
         symbol: "JOY3H",
         address: 16925,
-        description: "Automatic joypad result for controller 3, high byte; read only."
+        description: "Automatic joypad result for controller 3, high byte. Read only."
       },
       {
         symbol: "JOY4L",
         address: 16926,
-        description: "Automatic joypad result for controller 4, low byte; read only."
+        description: "Automatic joypad result for controller 4, low byte. Read only."
       },
       {
         symbol: "JOY4H",
         address: 16927,
-        description: "Automatic joypad result for controller 4, high byte; read only."
+        description: "Automatic joypad result for controller 4, high byte. Read only."
       }
     ];
     FIXED_REGISTERS = Object.freeze(
@@ -11633,7 +11633,7 @@ var init_hardware_registers = __esm({
       {
         offset: 11,
         symbol: (channel) => `UNUSED${channel}`,
-        description: "Unused DMA/HDMA data byte; shared with the $43nF mirror."
+        description: "Unused DMA/HDMA data byte. Shared with the $43nF mirror."
       },
       {
         offset: 15,
@@ -13284,7 +13284,7 @@ var validateCaptureRequest = (value) => {
   if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
   if (Object.keys(value).some((key) => !fields.includes(key)))
     throw new Error(
-      "Unsupported capture negotiation field; capture requires an explicit supported stream with durable ownership."
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
     );
   if (value.operation === "capabilities" || value.operation === "start") {
     if (value.scope !== void 0) captureScope(value.scope);

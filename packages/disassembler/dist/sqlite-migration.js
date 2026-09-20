@@ -38,7 +38,7 @@ const writeJournal = (stage, journal) => {
     syncSqlitePath(stage);
 };
 /**
- * Treat inaccessible processes as live; only ESRCH permits automatic crash recovery.
+ * Treat inaccessible processes as live. Only ESRCH permits automatic crash recovery.
  * @param {number} pid Recorded owner process.
  * @returns {boolean} Whether ownership may still be active.
  */
@@ -136,13 +136,13 @@ const recoverMigration = (directory) => {
         return { ...journal.result, recovered: true };
     }
     if (identity !== journal.sourceIdentity) {
-        throw new Error("Analysis database identity changed outside the recorded migration; preserving recovery files.");
+        throw new Error("Analysis database identity changed outside the recorded migration. Preserving recovery files.");
     }
     // A crash after linking the backup but before the atomic replacement leaves two names for the
     // unchanged source. Remove only that proven duplicate link, never an unrelated backup file.
     if (fs.existsSync(backup)) {
         if (sqliteFileIdentity(backup) !== identity) {
-            throw new Error("An unrelated migration backup already exists; preserving both databases.");
+            throw new Error("An unrelated migration backup already exists. Preserving both databases.");
         }
         fs.unlinkSync(backup);
     }
@@ -151,8 +151,8 @@ const recoverMigration = (directory) => {
     return undefined;
 };
 /**
- * Convert supported SQLite layouts with per-table content digests; optional runtime projection is explicit.
- * The process gate blocks new clients; switching WAL to DELETE under exclusive locking also requires
+ * Convert supported SQLite layouts with per-table content digests. Optional runtime projection is explicit.
+ * The process gate blocks new clients. Switching WAL to DELETE under exclusive locking also requires
  * existing SQLite readers to release the source. No source row or logical revision is changed.
  * @param {string} directory Existing project root, on a filesystem supporting same-directory hard links.
  * @param {SqliteMigrationOptions} [options] Cancellation and progress reporting.
@@ -173,7 +173,7 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
     if (fs.lstatSync(file).isSymbolicLink()) {
         throw new Error("Migrate a regular analysis database file, not a symbolic link.");
     }
-    // Checking the header is read-only; opening the normal store would correctly reject this old format.
+    // Checking the header is read-only. Opening the normal store would correctly reject this old format.
     const probe = new DatabaseSync(file, { readOnly: true });
     let version;
     let manifest;
@@ -231,7 +231,7 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
             source.exec("PRAGMA busy_timeout=1000; PRAGMA locking_mode=EXCLUSIVE; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; BEGIN EXCLUSIVE;");
         }
         catch (cause) {
-            throw new Error(`Cannot acquire exclusive migration access; close clients using this analysis database and retry. ${String(cause)}`, { cause });
+            throw new Error(`Cannot acquire exclusive migration access. Close clients using this analysis database and retry. ${String(cause)}`, { cause });
         }
         manifest = sourceManifest(source);
         beforeBytes = fs.statSync(file).size;
@@ -305,7 +305,7 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
         }
         destination.transaction(() => destination.initializeMigratedManifest(manifest));
         // Only provenance and region ancestry need cross-record context. Large CFG/annotation tables
-        // use the existing validator in bounded batches; runtime retains no complete record collection.
+        // use the existing validator in bounded batches. Runtime retains no complete record collection.
         const context = {
             evidence: destination.loadTable("evidence"),
             regions: destination.loadTable("regions"),
@@ -419,7 +419,7 @@ export const migrateAnalysisProjectStorage = async (directory, options = {}) => 
         options.signal?.throwIfAborted();
         options.onProgress?.({ phase: "publish" });
         options.signal?.throwIfAborted();
-        // COMMIT leaves the exclusive connection lock held. The old database is now journal-free;
+        // COMMIT leaves the exclusive connection lock held. The old database is now journal-free.
         // linking it retains a backup without copying 10 GiB or leaving a gap at the live pathname.
         source.exec("COMMIT");
         fs.linkSync(file, backup);

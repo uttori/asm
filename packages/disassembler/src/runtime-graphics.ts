@@ -4,7 +4,7 @@ import type { RuntimeBusAccess } from "./runtime-bus-types.js";
 export type RuntimeGraphicsTarget = "vram" | "cgram" | "oam";
 
 /** A byte destination selected by the captured registers, before rendering-time redirection.
- * VRAM uses a 17-bit byte address before the physical 64/128 KiB mask; CGRAM and OAM
+ * VRAM uses a 17-bit byte address before the physical 64/128 KiB mask. CGRAM and OAM
  * use byte offsets in their 512/544-byte arrays. Null data means an unobserved latch value.
  */
 export interface RuntimeGraphicsByte {
@@ -14,7 +14,7 @@ export interface RuntimeGraphicsByte {
   readonly sourceSequence: string | null;
 }
 
-/** One observed data-port write; addressed bytes are candidates, never proof of a memory update. */
+/** One observed data-port write. Addressed bytes are candidates, never proof of a memory update. */
 export interface RuntimeGraphicsWrite {
   readonly sequence: string;
   readonly actor: RuntimeBusAccess["actor"];
@@ -26,7 +26,7 @@ export interface RuntimeGraphicsWrite {
   readonly forcedBlank: boolean | null;
   readonly status: "addressed" | "latched" | "unknown";
   readonly reason?: "missing-vram-registers" | "missing-cgram-state" | "missing-oam-state";
-  /** At most two bytes; latch-only and unknown writes have no destinations. */
+  /** At most two bytes. Latch-only and unknown writes have no destinations. */
   readonly bytes: readonly RuntimeGraphicsByte[];
 }
 
@@ -45,12 +45,12 @@ export interface RuntimeGraphicsActivity {
   knownValueTargets: number;
 }
 
-/** Bounded, recomputable view; neither this summary nor its examples are persisted as bus facts. */
+/** Bounded, recomputable view. Neither this summary nor its examples are persisted as bus facts. */
 export interface RuntimeGraphicsSummary {
   readonly model: "snes-ppu-ports-v1";
   /** At most 51 groups: CPU plus eight DMA and eight HDMA channels, each with three targets. */
   readonly activity: readonly RuntimeGraphicsActivity[];
-  /** First 64 port writes in capture order; every write still contributes to activity totals. */
+  /** First 64 port writes in capture order. Every write still contributes to activity totals. */
   readonly writes: readonly RuntimeGraphicsWrite[];
   readonly omittedWrites: number;
 }
@@ -74,7 +74,7 @@ const mapVram = (address: number, mapping: number): number => {
  * Reads advance the relevant port pointers/flip-flops but are not reported as writes. OAM
  * tracking requires observed forced blank and a subsequent address reset: rendering can reset
  * its pointer internally, and the two ares PPUs redirect active-display OAM differently.
- * @returns {object} Session-local accumulator; the importer owns validation and publication.
+ * @returns {object} Session-local accumulator. The importer owns validation and publication.
  */
 export const createRuntimeGraphicsAccumulator = (): {
   push: (access: RuntimeBusAccess) => void;
@@ -90,7 +90,7 @@ export const createRuntimeGraphicsAccumulator = (): {
     value: null,
     sourceSequence: null,
   };
-  // Bit zero of OAM's base address is always zero; the remaining bits need both address registers.
+  // Bit zero of OAM's base address is always zero. The remaining bits need both address registers.
   let oamBase = 0;
   let oamKnown = 1;
   let oamAddress: number | null = null;
@@ -118,7 +118,7 @@ export const createRuntimeGraphicsAccumulator = (): {
     }
   };
 
-  /** CGRAM reads and writes share a flip-flop; only the high phase increments the color index.
+  /** CGRAM reads and writes share a flip-flop. Only the high phase increments the color index.
    * @returns {void} Preserves unknown phase/address instead of guessing alignment.
    */
   const advanceCgram = (): void => {

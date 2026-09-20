@@ -233,7 +233,7 @@ export const importMesenLabels = (
     { labels: labels.length, comments: comments.length, regions: regions.length },
     unsupported,
     [
-      "MesenCE label text has no embedded ROM identity; addresses were checked against the loaded project context.",
+      "MesenCE label text has no embedded ROM identity. Addresses were checked against the loaded project context.",
     ],
   );
   return {

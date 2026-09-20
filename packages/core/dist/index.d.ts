@@ -1,5 +1,5 @@
 /**
- * Host assembly/tooling entry point. Plugin author contracts live at ./plugin; ./debug-map
+ * Host assembly/tooling entry point. Plugin author contracts live at ./plugin. ./debug-map
  * also has a dedicated entry point. Exported front-end, lowering, and IR services are advanced
  * embedding APIs and retain their session/stage invariants.
  */

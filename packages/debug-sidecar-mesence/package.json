@@ -2,7 +2,22 @@
   "name": "@uttori/asm-debug-sidecar-mesence",
   "version": "1.0.0",
   "description": "MesenCE debugger protocol translator for Uttori ASM.",
+  "keywords": [
+    "debugger",
+    "mesence",
+    "sidecar",
+    "snes"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/debug-sidecar-mesence#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/debug-sidecar-mesence"
+  },
   "bin": {
     "uttori-asm-debug-sidecar-mesence": "out/sidecar.mjs"
   },
@@ -10,7 +25,8 @@
     "dist",
     "out",
     "src",
-    "README.md"
+    "README.md",
+    "*.md"
   ],
   "type": "module",
   "sideEffects": false,
@@ -33,6 +49,9 @@
       "types": "./dist/mesen-process-host.d.ts",
       "import": "./dist/mesen-process-host.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node esbuild.mjs",

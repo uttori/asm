@@ -20,7 +20,7 @@ export interface Raw65xxTargetOptions extends Readonly<Record<string, unknown>> 
     readonly origin: number;
 }
 /**
- * Validates target options. Unknown keys throw; omitted object → `{ origin: 0 }`.
+ * Validates target options. Unknown keys throw. Omitted object → `{ origin: 0 }`.
  *
  * @param {unknown} configured Plugin/target options object.
  * @returns {Raw65xxTargetOptions} Normalized options.

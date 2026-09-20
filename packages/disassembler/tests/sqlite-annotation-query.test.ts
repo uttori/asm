@@ -409,7 +409,7 @@ test("SQLite REPLACE without recursive delete triggers cannot strand pending off
       .run(JSON.stringify(replacement));
     store.prepareAnnotationQueries();
     t.notThrows(() => store.instructionAnnotationView(ranges));
-    // Explicit rowid reuse can leave an already-ready offset behind; output joins must check kind.
+    // Explicit rowid reuse can leave an already-ready offset behind. Output joins must check kind.
     sql
       .prepare(
         "INSERT OR REPLACE INTO analysis(rowid,id,kind,address_space,address,payload) SELECT rowid,'alias','function','cpu',512,? FROM analysis WHERE id='alias'",

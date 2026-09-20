@@ -66,7 +66,7 @@ export function handleFreespaceByte(session, state, words) {
  * no 16-bit count, so >85 labels wrap.
  *
  * @param {Assembler} session Host assembler.
- * @param {readonly string[]} words Tokenized line; labels after the keyword, comma-separated.
+ * @param {readonly string[]} words Tokenized line. Labels after the keyword, comma-separated.
  */
 export function handleProt(session, words) {
     const labels = words

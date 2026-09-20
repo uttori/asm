@@ -18,7 +18,7 @@ export function matchesFeatures(expression, features) {
     return true;
 }
 /**
- * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`;
+ * Default codec for a mode. Immediate/zp/stack-relative collapse to `unsigned8`.
  * 24-bit `absoluteLongIndexedX` is the MEGA65/4510 long-x form.
  *
  * @param {AddressingMode} mode Addressing mode.

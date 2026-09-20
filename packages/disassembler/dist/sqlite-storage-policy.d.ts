@@ -1,5 +1,5 @@
 import type { DatabaseSync } from "node:sqlite";
-/** Budgets use bytes. Zero disables the database ceiling; a zero cache budget evicts optional projections. */
+/** Budgets use bytes. Zero disables the database ceiling. A zero cache budget evicts optional projections. */
 export interface AnalysisStoragePolicy {
     readonly cacheMaxBytes: number;
     readonly databaseMaxBytes: number;
@@ -15,12 +15,12 @@ export declare const CAPTURE_CATALOG_SCHEMA = "CREATE TABLE capture_catalog (\n 
  * @returns {AnalysisStoragePolicy} Validated persisted limits merged with defaults.
  */
 export declare const readStoragePolicy: (db: DatabaseSync) => AnalysisStoragePolicy;
-/** Merge explicit overrides with defaults; all limits must be finite, nonnegative safe integers.
- * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields; unknown fields are rejected.
+/** Merge explicit overrides with defaults. All limits must be finite, nonnegative safe integers.
+ * @param {Partial<AnalysisStoragePolicy>} value Explicit policy fields. Unknown fields are rejected.
  * @returns {AnalysisStoragePolicy} Complete validated byte limits.
  */
 export declare const validateStoragePolicy: (value: Partial<AnalysisStoragePolicy>) => AnalysisStoragePolicy;
-/** Lightweight accounting for final reports; bytes allocated to freelist pages are separately visible. */
+/** Lightweight accounting for final reports. Bytes allocated to freelist pages are separately visible. */
 export interface AnalysisStorageSnapshot {
     readonly databaseBytes: number;
     readonly walBytes: number;
@@ -37,11 +37,11 @@ export interface AnalysisStorageSnapshot {
  * @returns {AnalysisStorageSnapshot} Physical allocation, deduplication and receipt totals.
  */
 export declare const storageSnapshot: (db: DatabaseSync, file: string) => AnalysisStorageSnapshot;
-/** Reject the owning publication before COMMIT; retained facts are never truncated to meet a quota.
+/** Reject the owning publication before COMMIT. Retained facts are never truncated to meet a quota.
  * @param {DatabaseSync} db Writer transaction whose publication has not committed.
  */
 export declare const enforceDatabaseBudget: (db: DatabaseSync) => void;
-/** Explicit accounting for optional caches; editor/export indexes are excluded from this budget.
+/** Explicit accounting for optional caches. Editor/export indexes are excluded from this budget.
  * @param {DatabaseSync} db Open project connection.
  * @returns {number} Allocated bytes including projection indexes and cache result payloads.
  */

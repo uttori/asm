@@ -158,7 +158,7 @@ function copyGitTrackedTree(repoDir: string, destDir: string): void {
   const listing = execFileSync("git", ["-C", repoDir, "ls-files", "-z"]);
   const files = listing.toString("utf8").split("\0").filter(Boolean);
   if (files.length === 0) {
-    throw new Error(`No tracked files in ${repoDir}; initialize the submodule first.`);
+    throw new Error(`No tracked files in ${repoDir}. Initialize the submodule first.`);
   }
   fs.mkdirSync(destDir, { recursive: true });
   for (const relative of files) {
@@ -260,7 +260,7 @@ export function getFixtureStatus(id: ExternalFixtureId): FixtureStatus {
       if (rom.length !== spec.localRom.bytes || sha256(rom) !== spec.localRom.sha256) {
         issues.push("wrong-rom-hash");
         details.push(
-          `ROM ${spec.localRom.filename} is ${rom.length} bytes / ${sha256(rom)}; expected ${spec.localRom.bytes} / ${spec.localRom.sha256}.`,
+          `ROM ${spec.localRom.filename} is ${rom.length} bytes / ${sha256(rom)}. Expected ${spec.localRom.bytes} / ${spec.localRom.sha256}.`,
         );
       }
     }

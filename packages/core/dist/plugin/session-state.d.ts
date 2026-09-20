@@ -2,7 +2,7 @@ import type { AssemblyStageName, SessionCreationContext, SessionStateContributio
 import type { OwnedContribution } from "./environment.js";
 /**
  * Per-slot plugin values for one assembler session (or a cloned stage snapshot).
- * Keys are contribution ids; values are whatever each plugin's `create`/`clone` returned.
+ * Keys are contribution ids. Values are whatever each plugin's `create`/`clone` returned.
  */
 export type PluginStateSnapshot = Map<string, unknown>;
 /**
@@ -37,7 +37,7 @@ export declare class PluginSessionStateStore implements SessionStateStore {
     cloneSnapshot(source?: ReadonlyMap<string, unknown>): PluginStateSnapshot;
     /**
      * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
-     * Subsequent writes mutate this map; the previous snapshot is not individually disposed.
+     * Subsequent writes mutate this map. The previous snapshot is not individually disposed.
      * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
      */
     restore(snapshot: PluginStateSnapshot): void;

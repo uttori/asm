@@ -50,7 +50,7 @@ export interface InstructionMemoryAccessAnnotation {
 }
 /** Target-neutral annotations for one qualified instruction location. */
 export interface InstructionAnalysisAnnotation {
-    /** The editor omitted some variants or runtime detail records; stored evidence is unchanged. */
+    /** The editor omitted some variants or runtime detail records. Stored evidence is unchanged. */
     readonly detailsLimited?: boolean;
     readonly comments?: readonly ProjectComment[];
     readonly id: string;
@@ -80,7 +80,7 @@ export interface InstructionAnalysisAnnotations {
 }
 /**
  * Builds a conservative, target-neutral instruction annotation projection.
- * Exact logical addresses and explicit output offsets are joined; no mapper translation is attempted.
+ * Exact logical addresses and explicit output offsets are joined. No mapper translation is attempted.
  *
  * Per-instruction evidence collections are allocated only on first use. Direct logical locations
  * and output offsets are indexed once, then interval evidence is attached with binary lower bounds

@@ -67,7 +67,7 @@ export interface InstructionMemoryAccessAnnotation {
 
 /** Target-neutral annotations for one qualified instruction location. */
 export interface InstructionAnalysisAnnotation {
-  /** The editor omitted some variants or runtime detail records; stored evidence is unchanged. */
+  /** The editor omitted some variants or runtime detail records. Stored evidence is unchanged. */
   readonly detailsLimited?: boolean;
   readonly comments?: readonly ProjectComment[];
   readonly id: string;
@@ -135,7 +135,7 @@ type InstructionMutable = {
   comments?: ProjectComment[];
   addressSpace: string;
   address: number;
-  // Evidence collections are deliberately lazy. Most instructions have none of these annotations;
+  // Evidence collections are deliberately lazy. Most instructions have none of these annotations.
   // eagerly allocating every Set/Map multiplied into hundreds of megabytes on production ROMs.
   outputOffsets?: Set<number>;
   architectures?: Set<string>;
@@ -237,7 +237,7 @@ const runtimeState = (record: RuntimeCpuStateRecord): Readonly<Record<string, Ru
 
 /**
  * Builds a conservative, target-neutral instruction annotation projection.
- * Exact logical addresses and explicit output offsets are joined; no mapper translation is attempted.
+ * Exact logical addresses and explicit output offsets are joined. No mapper translation is attempted.
  *
  * Per-instruction evidence collections are allocated only on first use. Direct logical locations
  * and output offsets are indexed once, then interval evidence is attached with binary lower bounds
@@ -320,7 +320,7 @@ export const buildInstructionAnalysisAnnotations = (
         diagnostics.push({
           recordId: node.id,
           message:
-            "Ignored malformed effective-address metadata; required operandIndex, volatile, and explanation fields were not valid.",
+            "Ignored malformed effective-address metadata. Required operandIndex, volatile, and explanation fields were not valid.",
         });
         continue;
       }
@@ -577,7 +577,7 @@ export const buildInstructionAnalysisAnnotations = (
         evidence: sortedStrings([...(previous?.evidence ?? []), ...record.evidence]),
       });
     }
-    // Every optional construction collection is normalized back to the original public shape here;
+    // Every optional construction collection is normalized back to the original public shape here.
     // consumers never observe missing arrays, maps, or nondeterministic insertion order.
     return {
       id: `instruction:${instruction.addressSpace}:${instruction.address}`,

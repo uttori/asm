@@ -77,7 +77,7 @@ export const parseSpc700UploadStream = (rom, startOffset, options = {}) => {
 const hex = (value, width) => value.toString(16).toUpperCase().padStart(width, "0");
 /**
  * Copies one upload block into one or two directly analyzable ARAM images.
- * A wrapping upload is split at `$10000`; source ROM provenance remains on each segment.
+ * A wrapping upload is split at `$10000`. Source ROM provenance remains on each segment.
  * @param {RomImage} rom ROM that was used to parse `block`.
  * @param {Spc700UploadBlock} block Parsed upload record.
  * @returns {readonly Spc700UploadAramSegment[]} Non-wrapping ARAM projections in load order.
@@ -116,7 +116,7 @@ export const materializeSpc700UploadBlock = (rom, block) => {
 };
 /**
  * Creates nested ROM stream/block/payload regions and cross-address-space ARAM projections.
- * Region attributes contain offsets, sizes, and load order only; ROM bytes are never serialized.
+ * Region attributes contain offsets, sizes, and load order only. ROM bytes are never serialized.
  * @param {RomImage} rom ROM that owns the stream, used only for stable evidence identity.
  * @param {Spc700UploadStream} stream Parsed upload stream.
  * @returns {Spc700UploadProjectRecords} Native project regions and detector evidence.

@@ -42,17 +42,17 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// packages/disassembler/src/asset-codec.ts
+// ../disassembler/src/asset-codec.ts
 var init_asset_codec = __esm({
-  "packages/disassembler/src/asset-codec.ts"() {
+  "../disassembler/src/asset-codec.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/asset-codecs/common.ts
+// ../disassembler/src/asset-codecs/common.ts
 var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
 var init_common = __esm({
-  "packages/disassembler/src/asset-codecs/common.ts"() {
+  "../disassembler/src/asset-codecs/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
@@ -191,10 +191,10 @@ var init_common = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/index-table.ts
+// ../disassembler/src/asset-codecs/index-table.ts
 var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor, indexTableAssetCodec;
 var init_index_table = __esm({
-  "packages/disassembler/src/asset-codecs/index-table.ts"() {
+  "../disassembler/src/asset-codecs/index-table.ts"() {
     "use strict";
     init_common();
     INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
@@ -316,10 +316,10 @@ var init_index_table = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/pointer-table.ts
+// ../disassembler/src/asset-codecs/pointer-table.ts
 var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor2, pointerTableAssetCodec;
 var init_pointer_table = __esm({
-  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
+  "../disassembler/src/asset-codecs/pointer-table.ts"() {
     "use strict";
     init_common();
     POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
@@ -464,10 +464,10 @@ var init_pointer_table = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/raw.ts
+// ../disassembler/src/asset-codecs/raw.ts
 var import_node_crypto, RAW_ASSET_CODEC_ID, rawAssetCodec;
 var init_raw = __esm({
-  "packages/disassembler/src/asset-codecs/raw.ts"() {
+  "../disassembler/src/asset-codecs/raw.ts"() {
     "use strict";
     import_node_crypto = require("node:crypto");
     init_common();
@@ -504,10 +504,10 @@ var init_raw = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/scalar-array.ts
+// ../disassembler/src/asset-codecs/scalar-array.ts
 var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
 var init_scalar_array = __esm({
-  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
+  "../disassembler/src/asset-codecs/scalar-array.ts"() {
     "use strict";
     init_common();
     SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
@@ -555,10 +555,10 @@ var init_scalar_array = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/struct-array.ts
+// ../disassembler/src/asset-codecs/struct-array.ts
 var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
 var init_struct_array = __esm({
-  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
+  "../disassembler/src/asset-codecs/struct-array.ts"() {
     "use strict";
     init_common();
     STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
@@ -736,10 +736,10 @@ var init_struct_array = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/text.ts
+// ../disassembler/src/asset-codecs/text.ts
 var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
 var init_text = __esm({
-  "packages/disassembler/src/asset-codecs/text.ts"() {
+  "../disassembler/src/asset-codecs/text.ts"() {
     "use strict";
     init_common();
     TEXT_ASSET_CODEC_ID = "uttori.asset.text";
@@ -908,10 +908,10 @@ var init_text = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codecs/index.ts
+// ../disassembler/src/asset-codecs/index.ts
 var builtinAssetCodecs;
 var init_asset_codecs = __esm({
-  "packages/disassembler/src/asset-codecs/index.ts"() {
+  "../disassembler/src/asset-codecs/index.ts"() {
     "use strict";
     init_index_table();
     init_pointer_table();
@@ -938,38 +938,38 @@ var init_asset_codecs = __esm({
   }
 });
 
-// packages/disassembler/src/asset-preview.ts
+// ../disassembler/src/asset-preview.ts
 var init_asset_preview = __esm({
-  "packages/disassembler/src/asset-preview.ts"() {
+  "../disassembler/src/asset-preview.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/analysis-graph.ts
+// ../disassembler/src/analysis-graph.ts
 var init_analysis_graph = __esm({
-  "packages/disassembler/src/analysis-graph.ts"() {
+  "../disassembler/src/analysis-graph.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/compression-codec.ts
+// ../disassembler/src/compression-codec.ts
 var init_compression_codec = __esm({
-  "packages/disassembler/src/compression-codec.ts"() {
+  "../disassembler/src/compression-codec.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/coverage-map.ts
+// ../disassembler/src/coverage-map.ts
 var init_coverage_map = __esm({
-  "packages/disassembler/src/coverage-map.ts"() {
+  "../disassembler/src/coverage-map.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/canonical-json.ts
+// ../disassembler/src/canonical-json.ts
 var canonicalValue, canonicalJson;
 var init_canonical_json = __esm({
-  "packages/disassembler/src/canonical-json.ts"() {
+  "../disassembler/src/canonical-json.ts"() {
     "use strict";
     canonicalValue = (value) => {
       if (Array.isArray(value)) {
@@ -1004,10 +1004,10 @@ var init_canonical_json = __esm({
   }
 });
 
-// packages/disassembler/src/instruction-annotations.ts
+// ../disassembler/src/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
-  "packages/disassembler/src/instruction-annotations.ts"() {
+  "../disassembler/src/instruction-annotations.ts"() {
     "use strict";
     init_canonical_json();
     sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
@@ -1110,7 +1110,7 @@ var init_instruction_annotations = __esm({
           if (!value) {
             diagnostics.push({
               recordId: node.id,
-              message: "Ignored malformed effective-address metadata; required operandIndex, volatile, and explanation fields were not valid."
+              message: "Ignored malformed effective-address metadata. Required operandIndex, volatile, and explanation fields were not valid."
             });
             continue;
           }
@@ -1380,10 +1380,10 @@ var init_instruction_annotations = __esm({
   }
 });
 
-// packages/disassembler/src/interval-index.ts
+// ../disassembler/src/interval-index.ts
 var HalfOpenIntervalIndex;
 var init_interval_index = __esm({
-  "packages/disassembler/src/interval-index.ts"() {
+  "../disassembler/src/interval-index.ts"() {
     "use strict";
     HalfOpenIntervalIndex = class {
       #entries;
@@ -1457,10 +1457,10 @@ var init_interval_index = __esm({
   }
 });
 
-// packages/disassembler/src/analysis-sources.ts
+// ../disassembler/src/analysis-sources.ts
 var sorted, key, buildAnalysisSourceCatalog;
 var init_analysis_sources = __esm({
-  "packages/disassembler/src/analysis-sources.ts"() {
+  "../disassembler/src/analysis-sources.ts"() {
     "use strict";
     sorted = (values) => [...new Set(values)].sort();
     key = (...values) => JSON.stringify(values);
@@ -1519,10 +1519,10 @@ var init_analysis_sources = __esm({
   }
 });
 
-// packages/disassembler/src/project-labels.ts
+// ../disassembler/src/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
-  "packages/disassembler/src/project-labels.ts"() {
+  "../disassembler/src/project-labels.ts"() {
     "use strict";
     validateSourceLabelName = (name) => {
       if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
@@ -1560,10 +1560,10 @@ var init_project_labels = __esm({
   }
 });
 
-// packages/disassembler/src/project-types.ts
+// ../disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
 var init_project_types = __esm({
-  "packages/disassembler/src/project-types.ts"() {
+  "../disassembler/src/project-types.ts"() {
     "use strict";
     ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
     ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
@@ -1571,10 +1571,10 @@ var init_project_types = __esm({
   }
 });
 
-// packages/disassembler/src/record-id-set.ts
+// ../disassembler/src/record-id-set.ts
 var import_node_fs, import_node_os, import_node_path, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
-  "packages/disassembler/src/record-id-set.ts"() {
+  "../disassembler/src/record-id-set.ts"() {
     "use strict";
     import_node_fs = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
@@ -1640,10 +1640,10 @@ var init_record_id_set = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-ppu.ts
+// ../disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect;
 var init_runtime_ppu = __esm({
-  "packages/disassembler/src/runtime-ppu.ts"() {
+  "../disassembler/src/runtime-ppu.ts"() {
     "use strict";
     normalizeRuntimePPUEffect = (effect, access) => {
       const port = access.address & 65535;
@@ -1687,10 +1687,10 @@ var init_runtime_ppu = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-bus-types.ts
+// ../disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact;
 var init_runtime_bus_types = __esm({
-  "packages/disassembler/src/runtime-bus-types.ts"() {
+  "../disassembler/src/runtime-bus-types.ts"() {
     "use strict";
     init_runtime_ppu();
     validateRuntimeBusFact = (fact) => {
@@ -1728,10 +1728,10 @@ var init_runtime_bus_types = __esm({
   }
 });
 
-// packages/disassembler/src/trace-detail.ts
+// ../disassembler/src/trace-detail.ts
 var isArray, validateRuntimeInstructionDetails;
 var init_trace_detail = __esm({
-  "packages/disassembler/src/trace-detail.ts"() {
+  "../disassembler/src/trace-detail.ts"() {
     "use strict";
     isArray = (value) => Array.isArray(value);
     validateRuntimeInstructionDetails = (value, count) => {
@@ -1770,10 +1770,10 @@ var init_trace_detail = __esm({
   }
 });
 
-// packages/disassembler/src/project-validation.ts
+// ../disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, validateLoadedShards;
 var init_project_validation = __esm({
-  "packages/disassembler/src/project-validation.ts"() {
+  "../disassembler/src/project-validation.ts"() {
     "use strict";
     init_project_types();
     init_record_id_set();
@@ -1814,7 +1814,7 @@ var init_project_validation = __esm({
         throw new Error("Invalid analysis sqlite revision.");
       }
       if (manifest.shards.length !== 0) {
-        throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+        throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
       }
     };
     FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
@@ -2207,10 +2207,10 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/project-transaction.ts
+// ../disassembler/src/project-transaction.ts
 var import_node_crypto2, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, committed, commitAnalysisProjectAnnotationUpdate;
 var init_project_transaction = __esm({
-  "packages/disassembler/src/project-transaction.ts"() {
+  "../disassembler/src/project-transaction.ts"() {
     "use strict";
     import_node_crypto2 = require("node:crypto");
     init_canonical_json();
@@ -2278,10 +2278,10 @@ var init_project_transaction = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-payload.ts
+// ../disassembler/src/sqlite-payload.ts
 var import_node_util, import_node_zlib, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES, utf8, encodeSqlitePayload, decodeSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
-  "packages/disassembler/src/sqlite-payload.ts"() {
+  "../disassembler/src/sqlite-payload.ts"() {
     "use strict";
     import_node_util = require("node:util");
     import_node_zlib = require("node:zlib");
@@ -2361,10 +2361,10 @@ var init_sqlite_payload = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-records.ts
+// ../disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
-  "packages/disassembler/src/sqlite-records.ts"() {
+  "../disassembler/src/sqlite-records.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -2648,10 +2648,10 @@ var init_sqlite_records = __esm({
   }
 });
 
-// packages/disassembler/src/project-store.ts
+// ../disassembler/src/project-store.ts
 var fs2, import_node_path2, parseAnalysisProjectManifest, openAnalysisProjectStore, validateProjectRom;
 var init_project_store = __esm({
-  "packages/disassembler/src/project-store.ts"() {
+  "../disassembler/src/project-store.ts"() {
     "use strict";
     fs2 = __toESM(require("node:fs"), 1);
     import_node_path2 = __toESM(require("node:path"), 1);
@@ -2666,12 +2666,12 @@ var init_project_store = __esm({
       const manifest = input;
       if (manifest.schemaVersion > 3) {
         throw new Error(
-          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3; refusing to downgrade.`
+          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
         );
       }
       validateAnalysisProjectManifest(manifest);
       if (manifest.db !== "analysis.sqlite") {
-        throw new Error("Legacy analysis storage is no longer supported; use a SQLite project.");
+        throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
       }
       return manifest;
     };
@@ -2691,10 +2691,10 @@ var init_project_store = __esm({
   }
 });
 
-// packages/disassembler/src/project-edit.ts
+// ../disassembler/src/project-edit.ts
 var isStableId2, manifestWithoutShards, assertStableId, recordMatches, sortedUnique, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, evidenceReferences, applyDisassemblyAnnotationEdit, explainProjectEvidence;
 var init_project_edit = __esm({
-  "packages/disassembler/src/project-edit.ts"() {
+  "../disassembler/src/project-edit.ts"() {
     "use strict";
     init_project_labels();
     init_project_store();
@@ -2910,10 +2910,10 @@ var init_project_edit = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-evidence.ts
+// ../disassembler/src/runtime-evidence.ts
 var emptyCounts, sortedUnique2, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
-  "packages/disassembler/src/runtime-evidence.ts"() {
+  "../disassembler/src/runtime-evidence.ts"() {
     "use strict";
     init_project_store();
     emptyCounts = () => ({
@@ -3076,7 +3076,7 @@ var init_runtime_evidence = __esm({
           }
         } else {
           throw new Error(
-            `Runtime evidence id '${record2.id}' in '${kind}' changed content; use a content-derived id.`
+            `Runtime evidence id '${record2.id}' in '${kind}' changed content. Use a content-derived id.`
           );
         }
       }
@@ -3090,7 +3090,7 @@ var init_runtime_evidence = __esm({
         }
         if (traceProfiles.has(report.sourceSha256) && traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
           throw new Error(
-            `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`
+            `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
           );
         }
         traceProfiles.set(report.sourceSha256, report.indexProfile);
@@ -3159,10 +3159,10 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-annotation-query.ts
+// ../disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView;
 var init_sqlite_annotation_query = __esm({
-  "packages/disassembler/src/sqlite-annotation-query.ts"() {
+  "../disassembler/src/sqlite-annotation-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -3291,7 +3291,7 @@ var init_sqlite_annotation_query = __esm({
     };
     readSqliteAnnotationView = (database2, manifest, ranges) => {
       if (!annotationQueryIndexesReady(database2)) {
-        throw new Error("Analysis query indexes changed; refresh the annotation view.");
+        throw new Error("Analysis query indexes changed. Refresh the annotation view.");
       }
       if (ranges.length > 2e3) {
         throw new Error("At most 2000 visible source ranges may be projected per request.");
@@ -3509,10 +3509,10 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-query-cache.ts
+// ../disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA, upgradeQueryCacheStorage, installQueryCache, readQueryCache, writeQueryCache;
 var init_sqlite_query_cache = __esm({
-  "packages/disassembler/src/sqlite-query-cache.ts"() {
+  "../disassembler/src/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
     upgradeQueryCacheStorage = (db) => {
@@ -3572,10 +3572,10 @@ var init_sqlite_query_cache = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-coverage-query.ts
+// ../disassembler/src/sqlite-coverage-query.ts
 var decode2, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage;
 var init_sqlite_coverage_query = __esm({
-  "packages/disassembler/src/sqlite-coverage-query.ts"() {
+  "../disassembler/src/sqlite-coverage-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_query_cache();
@@ -3916,10 +3916,10 @@ var init_sqlite_coverage_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-graph-query.ts
+// ../disassembler/src/sqlite-graph-query.ts
 var decode3, unique, numbers, prepareGraph, publishGraph;
 var init_sqlite_graph_query = __esm({
-  "packages/disassembler/src/sqlite-graph-query.ts"() {
+  "../disassembler/src/sqlite-graph-query.ts"() {
     "use strict";
     init_sqlite_payload();
     decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
@@ -4103,10 +4103,10 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-maintenance.ts
+// ../disassembler/src/sqlite-maintenance.ts
 var import_node_fs2, import_node_path3, SQLITE_MIGRATION_DIRECTORY, assertNoSqliteMigration, sqliteFileIdentity;
 var init_sqlite_maintenance = __esm({
-  "packages/disassembler/src/sqlite-maintenance.ts"() {
+  "../disassembler/src/sqlite-maintenance.ts"() {
     "use strict";
     import_node_fs2 = __toESM(require("node:fs"), 1);
     import_node_path3 = __toESM(require("node:path"), 1);
@@ -4125,10 +4125,10 @@ var init_sqlite_maintenance = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-runtime-storage.ts
+// ../disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto3, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
-  "packages/disassembler/src/sqlite-runtime-storage.ts"() {
+  "../disassembler/src/sqlite-runtime-storage.ts"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
     init_canonical_json();
@@ -4267,7 +4267,7 @@ END;
         const fingerprint = (0, import_node_crypto3.createHash)("sha256").update(
           // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
           // per row. Nulls, two-space indentation and the trailing newline preserve
-          // persisted v2 fingerprints; changing the layout would duplicate old facts.
+          // persisted v2 fingerprints. Changing the layout would duplicate old facts.
           // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
           JSON.stringify(
             {
@@ -4333,10 +4333,10 @@ END;
   }
 });
 
-// packages/disassembler/src/sqlite-source-query.ts
+// ../disassembler/src/sqlite-source-query.ts
 var collections, sourceEvidence, sourceRuntime, instructionKinds, hex, sourceQueriesReady, prepareSourceQueries, readSourceSummary, readSourcePage;
 var init_sqlite_source_query = __esm({
-  "packages/disassembler/src/sqlite-source-query.ts"() {
+  "../disassembler/src/sqlite-source-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -4426,7 +4426,7 @@ var init_sqlite_source_query = __esm({
           id: JSON.stringify([row.architecture, row.address_space, row.address]),
           label: hex(Number(row.address)),
           description: `${String(row.executions)} recorded executions`,
-          detail: "Directly observed instruction address. CPU-state variants do not inflate the address count; execution counts exclude duplicate fetched-instruction facts.",
+          detail: "Directly observed instruction address. CPU-state variants do not inflate the address count. Execution counts exclude duplicate fetched-instruction facts.",
           architecture: String(row.architecture),
           addressSpace: String(row.address_space),
           address: Number(row.address),
@@ -4483,10 +4483,10 @@ var init_sqlite_source_query = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-storage-policy.ts
+// ../disassembler/src/sqlite-storage-policy.ts
 var import_node_fs3, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
-  "packages/disassembler/src/sqlite-storage-policy.ts"() {
+  "../disassembler/src/sqlite-storage-policy.ts"() {
     "use strict";
     import_node_fs3 = __toESM(require("node:fs"), 1);
     DEFAULT_ANALYSIS_STORAGE_POLICY = {
@@ -4550,7 +4550,7 @@ var init_sqlite_storage_policy = __esm({
       const bytes = pages * Number(db.prepare("PRAGMA page_size").get().page_size);
       if (bytes > budget) {
         throw new Error(
-          `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back; increase the budget or run storage maintenance.`
+          `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back. Increase the budget or run storage maintenance.`
         );
       }
     };
@@ -4604,21 +4604,21 @@ var init_sqlite_storage_policy = __esm({
   }
 });
 
-// packages/disassembler/src/trace-cache.ts
+// ../disassembler/src/trace-cache.ts
 var TraceCache;
 var init_trace_cache = __esm({
-  "packages/disassembler/src/trace-cache.ts"() {
+  "../disassembler/src/trace-cache.ts"() {
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
-      /** Dense victim slots avoid scanning the Map; hits never reorder either structure. */
+      /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
       #keys = [];
       #metrics;
       #random = 2654435769;
       constructor(metrics) {
         this.#metrics = metrics;
       }
-      /** Look up a value; undefined is reserved for misses.
+      /** Look up a value. Undefined is reserved for misses.
        * @param {string} key Complete semantic key, never a lossy coordinate projection.
        * @returns {T | undefined} Retained value, or a cache miss.
        */
@@ -4665,12 +4665,12 @@ var init_trace_cache = __esm({
         return displaced;
       }
       /** Iterate the retained working set, for a final durable delta flush.
-       * @returns {MapIterator} Live entries; do not insert while iterating.
+       * @returns {MapIterator} Live entries. Do not insert while iterating.
        */
       entries() {
         return this.#entries.entries();
       }
-      /** Drop retained values after a flush or failed import; diagnostics remain cumulative. */
+      /** Drop retained values after a flush or failed import. Diagnostics remain cumulative. */
       clear() {
         this.#entries.clear();
         this.#keys.length = 0;
@@ -4680,10 +4680,10 @@ var init_trace_cache = __esm({
   }
 });
 
-// packages/disassembler/src/sqlite-store.ts
+// ../disassembler/src/sqlite-store.ts
 var import_node_crypto4, import_node_fs4, import_node_path4, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
-  "packages/disassembler/src/sqlite-store.ts"() {
+  "../disassembler/src/sqlite-store.ts"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     import_node_fs4 = __toESM(require("node:fs"), 1);
@@ -4796,7 +4796,7 @@ PRAGMA user_version=2;
     SqliteAnalysisStore = class {
       #database;
       #fileIdentity;
-      /** Database path as supplied at construction; resolves relative to cwd when not absolute. */
+      /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
       file;
       #insertEvidence;
       #insertLabel;
@@ -4814,10 +4814,10 @@ PRAGMA user_version=2;
       /**
        * Opens or creates a project database.
        * Opening validates physical format, not every semantic record, and may create SQLite journal files.
-       * Connections use a 5,000 ms busy timeout; lock contention can still throw a SQLite error.
-       * @param {string} file SQLite path; parent directory must already exist.
-       * @param {boolean} [createSchema] Defaults to true; permit initialization of an empty database, never upgrade an existing one.
-       * @param {boolean} [deferIndexes] Defaults to false; migration-only bulk load, completed by finishMigration.
+       * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
+       * @param {string} file SQLite path. Parent directory must already exist.
+       * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+       * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
        */
       constructor(file, createSchema = true, deferIndexes = false) {
         assertNoSqliteMigration(file);
@@ -4848,7 +4848,7 @@ PRAGMA user_version=2;
           const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
           if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
             throw new Error(
-              `Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+              `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
             );
           }
           this.#database.exec(
@@ -4909,7 +4909,7 @@ PRAGMA user_version=2;
         this.#dictionaryCacheBytes = 0;
       }
       /**
-       * Intern exact text with a bounded cache; callers hold the SQLite writer lock.
+       * Intern exact text with a bounded cache. Callers hold the SQLite writer lock.
        * @param {string} table One of the two prepared dictionary tables.
        * @param {string} value Exact prefix or serialized evidence list.
        * @returns {number} Transactionally created or existing dictionary rowid.
@@ -5007,18 +5007,18 @@ PRAGMA user_version=2;
       /**
        * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
        * the revision so a competing process cannot slip between the stale check and publication.
-       * Throwing rolls back records and manifest changes. Promise/thenable results are rejected; perform
+       * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
        * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
-       * the manifest themselves when changing semantic records; prefer the commitAnalysisProject APIs.
-       * @param {Function} action Synchronous work; cursors must be consumed before returning.
-       * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE); false uses deferred BEGIN for reads, not an enforced read-only connection.
+       * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
+       * @param {Function} action Synchronous work. Cursors must be consumed before returning.
+       * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
        * @returns {T} Callback result after a successful commit.
        */
       transaction(action, write = true) {
         assertNoSqliteMigration(this.file);
         if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
           throw new Error(
-            "Analysis database was replaced; close this connection and reload the project."
+            "Analysis database was replaced. Close this connection and reload the project."
           );
         }
         this.#clearDictionaryCache();
@@ -5049,7 +5049,7 @@ PRAGMA user_version=2;
        * main, allowing other project writers to proceed during asynchronous capture parsing.
        * @param {Function} action Async parser using only the supplied temporary counter index.
        * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-       * @returns {Promise} Parser result after temporary counters commit; the index lives until connection close.
+       * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
        */
       async indexTrace(action, metrics) {
         this.#database.exec(`CREATE TEMP TABLE trace_facts (
@@ -5137,7 +5137,7 @@ PRAGMA user_version=2;
           throw new Error("Analysis mutation requires a transaction.");
         }
       }
-      /** Apply a selected metadata edit by stable ID; omitted records are never deleted.
+      /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
        * Validation and optimistic revision checks belong to the publication API.
        * @param {AnalysisProjectShards} before Original selected view.
        * @param {AnalysisProjectShards} after Edited selected view.
@@ -5164,7 +5164,7 @@ PRAGMA user_version=2;
             }
             const stored = find.get(id);
             if (canonicalJson(stored ? parseRecord(stored.payload) : void 0) !== canonicalJson(prior)) {
-              throw new Error(`Selected ${kind} record '${id}' changed; reload before editing.`);
+              throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
             }
             remove.run(id);
             if (record2) {
@@ -5189,7 +5189,7 @@ PRAGMA user_version=2;
       /**
        * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
        * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
-       * Semantic validation belongs to the project publication API; this method must run in its transaction.
+       * Semantic validation belongs to the project publication API. This method must run in its transaction.
        * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
        */
       replaceTables(shards) {
@@ -5242,7 +5242,7 @@ PRAGMA user_version=2;
       }
       /**
        * Replace runtime by interned external identities, including virtual paired-state records.
-       * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
+       * @param {Array} records Complete semantic runtime replacement. Duplicate IDs remain errors.
        */
       #replaceRuntime(records) {
         this.#database.exec(
@@ -5274,7 +5274,7 @@ PRAGMA user_version=2;
        * Append validated migration rows without materializing a complete table. Runtime IDs are checked
        * through the logical view because paired states share physical storage with an instruction.
        * @param {ShardKind} kind Destination semantic table.
-       * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+       * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
        */
       appendRecords(kind, records) {
         this.#requireTransaction();
@@ -5289,10 +5289,10 @@ PRAGMA user_version=2;
         }
       }
       /**
-       * Insert a content-addressed runtime fact once; an ID collision with different content is an
+       * Insert a content-addressed runtime fact once. An ID collision with different content is an
        * error, never a silent no-op. Count values are already aggregated within the source capture.
        * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-       * @returns {boolean} True when inserted; identical facts return false and conflicting facts throw.
+       * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
        */
       insertRuntime(record2) {
         this.#requireTransaction();
@@ -5310,9 +5310,9 @@ PRAGMA user_version=2;
         return true;
       }
       /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
-       * New namespaces need no per-record existence query; SQL uniqueness still rejects repeated IDs.
+       * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
        * Existing/partially pruned sources use full idempotency and collision checks for every record.
-       * The callback must not escape its transaction; any insertion error must abort the whole batch.
+       * The callback must not escape its transaction. Any insertion error must abort the whole batch.
        * @param {string} prefix Exact ID prefix including its final colon.
        * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
        */
@@ -5377,7 +5377,7 @@ PRAGMA user_version=2;
       }
       /**
        * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
-       * Use a transaction when combining it with other reads; this does not validate the entire project.
+       * Use a transaction when combining it with other reads. This does not validate the entire project.
        * @returns {AnalysisProjectManifest} Pointer manifest.
        */
       manifest() {
@@ -5389,7 +5389,7 @@ PRAGMA user_version=2;
       }
       /**
        * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-       * @param {Array} kinds Runtime discriminators to include; empty selects nothing.
+       * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
        * @returns {IterableIterator} Cursor consumed within the owning read transaction.
        * @yields {RuntimeEvidenceRecord} One matching decoded fact.
        */
@@ -5406,7 +5406,7 @@ PRAGMA user_version=2;
       }
       /**
        * Stream runtime facts without retaining the complete table. Consume before the owning transaction
-       * returns or the connection closes; an escaped iterator does not preserve its original snapshot.
+       * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
        * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
        * @yields {RuntimeEvidenceRecord} One runtime fact.
        */
@@ -5416,7 +5416,7 @@ PRAGMA user_version=2;
         }
       }
       /**
-       * Read one metadata table directly; Sources must not load unrelated CFG or runtime tables.
+       * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
        * @param {string} kind Metadata table name from the semantic collection contract.
        * @returns {Array} Decoded metadata in deterministic display order.
        */
@@ -5481,7 +5481,7 @@ PRAGMA user_version=2;
         };
       }
       /** Produce an explicit complete evidence report one qualified PC at a time.
-       * Only report output accumulates; unused instruction/memory histories and CFG contexts are never loaded.
+       * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
        * @returns {object} Runtime record count, conflicts, and metadata explanations.
        */
       inspectEvidence() {
@@ -5518,8 +5518,8 @@ PRAGMA user_version=2;
           explanations: inspectRuntimeEvidence(shards).explanations
         };
       }
-      /** Select record choices before decoding; explicit IDs bypass unrelated history entirely.
-       * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs; omitted lists the first 200 records per collection.
+      /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+       * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
        * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
        */
       evidenceChoices(selected) {
@@ -5631,7 +5631,7 @@ PRAGMA user_version=2;
           return { ...base, referencedBy, referencedByTotal };
         }, false);
       }
-      /** Exact coverage totals; build only when classifications, code, or runtime facts changed.
+      /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
        * @returns {object} Persisted summary and detail count.
        */
       coverageSummary() {
@@ -5650,7 +5650,7 @@ PRAGMA user_version=2;
           );
           const published = cachedCoverage(this.#database, this.manifest());
           if (!published) {
-            throw new Error("Project changed while building coverage; refresh the view.");
+            throw new Error("Project changed while building coverage. Refresh the view.");
           }
           return published;
         } finally {
@@ -5683,7 +5683,7 @@ PRAGMA user_version=2;
           );
           const published = readQueryCache(this.#database, "graph", "2");
           if (!published) {
-            throw new Error("Analysis changed while building the graph; refresh the view.");
+            throw new Error("Analysis changed while building the graph. Refresh the view.");
           }
           graph = published;
         } finally {
@@ -5700,13 +5700,13 @@ PRAGMA user_version=2;
           }))
         };
       }
-      /** Cache a compact target-specific result; callers declare every persisted input it consumes.
+      /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
        * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
-       * Concurrent input changes discard cache publication; results still belong to one read snapshot.
+       * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
        * @param {string} key Internal stable query name.
        * @param {string} signature Layout/configuration fingerprint.
        * @param {readonly ShardKind[]} dependencies Source collections.
-       * @param {Function} compute Synchronous reader; must not open another transaction.
+       * @param {Function} compute Synchronous reader. Must not open another transaction.
        * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
        * @returns {T} Current projected value.
        */
@@ -5729,7 +5729,7 @@ PRAGMA user_version=2;
         });
         return result;
       }
-      /** CPU architectures at one PC from indexed scalar columns; register payloads are untouched.
+      /** CPU architectures at one PC from indexed scalar columns. Register payloads are untouched.
        * @param {string} space Exact logical address space.
        * @param {number} address Instruction address.
        * @returns {string[]} Distinct observed architecture IDs.
@@ -5758,7 +5758,7 @@ PRAGMA user_version=2;
             }
           );
           if (!readQueryCache(this.#database, "runtime_architectures", "2")) {
-            throw new Error("Runtime changed while building processor hints; refresh the view.");
+            throw new Error("Runtime changed while building processor hints. Refresh the view.");
           }
         } finally {
           this.#database.exec("DROP TABLE IF EXISTS temp.runtime_architectures_pending");
@@ -5796,7 +5796,7 @@ PRAGMA user_version=2;
        * @param {string} architecture Exact runtime architecture.
        * @param {string} space Instruction and accessed logical space.
        * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-       * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations; counts/provenance stay exact.
+       * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
        * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
        */
       *runtimeMemoryAtAddresses(architecture, space, addresses2) {
@@ -5810,7 +5810,7 @@ PRAGMA user_version=2;
           yield runtimeFromRow({ ...row, count: row.total });
         }
       }
-      /** Decode-state variants aggregated in SQL; raw register histories never become a JS array.
+      /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
        * The signature includes the ordered state fields and architecture. Aliases remain distinct so
        * the target decoder retains its original precedence and validation rules.
        * @param {string} architecture Exact instruction architecture.
@@ -5880,7 +5880,7 @@ PRAGMA user_version=2;
             }
           );
           if (!readQueryCache(this.#database, "instruction_variants", signature)) {
-            throw new Error("Runtime changed while building instruction variants; retry reanalysis.");
+            throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
           }
         } finally {
           this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
@@ -5945,7 +5945,7 @@ PRAGMA user_version=2;
         );
         return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
       }
-      /** Exact SQL counts for a catalog source; no baseline or inferred static execution.
+      /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
        * @param {string} sourceId Catalog source ID.
        * @returns {object} Manifest and source counts.
        */
@@ -5989,7 +5989,7 @@ PRAGMA user_version=2;
         validateLoadedShards(shards, manifest);
         return { manifest, shards };
       }
-      /** Small export metadata; instruction candidates are supplied separately by an ordered SQL cursor.
+      /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
        * @returns {object} Validated manifest, metadata, and an empty runtime collection.
        */
       sourceExportView() {
@@ -6008,7 +6008,7 @@ PRAGMA user_version=2;
         return { manifest, shards };
       }
       /**
-       * Stream one file-offset group at a time; do not retain the complete CFG to plan source.
+       * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
        * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
        * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
        * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
@@ -6042,7 +6042,7 @@ PRAGMA user_version=2;
       /**
        * Read and validate only the requested instruction metadata and bounded runtime details.
        * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-       * @returns {SqliteAnnotationView} Small view; consume inside the caller's read transaction.
+       * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
        */
       instructionAnnotationView(ranges) {
         const manifest = this.manifest();
@@ -6073,7 +6073,7 @@ PRAGMA user_version=2;
        * @param {string} addressSpace Exact debug-map/native address space.
        * @param {number} address Instruction start in that space.
        * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-       * @returns {AnalysisProjectShards["analysis"]} Location representatives; state variants need not be loaded to edit a comment.
+       * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
        */
       annotationNodesAt(addressSpace, address3, outputOffset) {
         const rows = this.#database.prepare(`SELECT payload FROM analysis WHERE rowid IN (
@@ -6117,7 +6117,7 @@ PRAGMA user_version=2;
       }
       /**
        * Build deferred indexes and check all physical structures before closing a staged migration file.
-       * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+       * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
        * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
        */
       finishMigration() {
@@ -6137,7 +6137,7 @@ PRAGMA user_version=2;
       }
       /**
        * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-       * @param {boolean} [runtime] Defaults to true; false omits runtime and must not be treated as a complete replacement.
+       * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
        * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
        */
       loadShards(runtime = true) {
@@ -6218,14 +6218,14 @@ PRAGMA user_version=2;
           }
         }
       }
-      /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
+      /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
       compact() {
         const disk = import_node_fs4.default.statfsSync(import_node_path4.default.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
           throw new Error(
-            "Insufficient free disk space for SQLite VACUUM; allow twice the database size."
+            "Insufficient free disk space for SQLite VACUUM. Allow twice the database size."
           );
         }
         this.transaction(() => {
@@ -6236,7 +6236,7 @@ PRAGMA user_version=2;
         });
         this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
       }
-      /** Current persisted policy; defaults do not write or change the semantic revision.
+      /** Current persisted policy. Defaults do not write or change the semantic revision.
        * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
        */
       storagePolicy() {
@@ -6258,7 +6258,7 @@ PRAGMA user_version=2;
       storageSnapshot() {
         return storageSnapshot(this.#database, this.file);
       }
-      /** Optional projection allocation, including secondary indexes; reserved for explicit accounting.
+      /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
        * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
        */
       storageCacheBytes() {
@@ -6277,7 +6277,7 @@ PRAGMA user_version=2;
       captureCatalog() {
         return this.#database.prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256").all();
       }
-      /** Record the first successful import atomically with its facts; reimports only refresh last-seen time.
+      /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
        * @param {ImportReport} report Successfully validated native trace import.
        */
       recordCaptureReceipt(report) {
@@ -6319,20 +6319,20 @@ PRAGMA user_version=2;
   }
 });
 
-// packages/disassembler/src/sqlite-migration.ts
+// ../disassembler/src/sqlite-migration.ts
 var import_node_sqlite3, RESERVE_BYTES;
 var init_sqlite_migration = __esm({
-  "packages/disassembler/src/sqlite-migration.ts"() {
+  "../disassembler/src/sqlite-migration.ts"() {
     "use strict";
     import_node_sqlite3 = require("node:sqlite");
     RESERVE_BYTES = 256 * 1024 * 1024;
   }
 });
 
-// packages/disassembler/src/rom-image.ts
+// ../disassembler/src/rom-image.ts
 var import_node_crypto5, fs6, sha256, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
-  "packages/disassembler/src/rom-image.ts"() {
+  "../disassembler/src/rom-image.ts"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     fs6 = __toESM(require("node:fs"), 1);
@@ -6349,7 +6349,7 @@ var init_rom_image = __esm({
         return 512;
       }
       throw new Error(
-        `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header; pass an explicit header override.`
+        `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header. Pass an explicit header override.`
       );
     };
     RomImage = class _RomImage {
@@ -6360,7 +6360,7 @@ var init_rom_image = __esm({
       #fileBytes;
       #contentBytes;
       /**
-       * @param {Uint8Array} bytes Complete file bytes; copied immediately.
+       * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
        * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
        */
       constructor(bytes, options = {}) {
@@ -6414,7 +6414,7 @@ var init_rom_image = __esm({
         return this.#contentBytes.slice(offset, offset + length);
       }
       /**
-       * Returns a defensive copy; callers cannot mutate the loaded image.
+       * Returns a defensive copy. Callers cannot mutate the loaded image.
        * @returns {Uint8Array} The headerless ROM content.
        */
       bytes() {
@@ -6438,27 +6438,27 @@ var init_rom_image = __esm({
   }
 });
 
-// packages/disassembler/src/runtime-trace.ts
+// ../disassembler/src/runtime-trace.ts
 var init_runtime_trace = __esm({
-  "packages/disassembler/src/runtime-trace.ts"() {
+  "../disassembler/src/runtime-trace.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/runtime-trace-file.ts
+// ../disassembler/src/runtime-trace-file.ts
 var DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS;
 var init_runtime_trace_file = __esm({
-  "packages/disassembler/src/runtime-trace-file.ts"() {
+  "../disassembler/src/runtime-trace-file.ts"() {
     "use strict";
     DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
     MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
   }
 });
 
-// packages/disassembler/src/source-export.ts
+// ../disassembler/src/source-export.ts
 var import_node_crypto6, fs7, import_node_path5, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs;
 var init_source_export = __esm({
-  "packages/disassembler/src/source-export.ts"() {
+  "../disassembler/src/source-export.ts"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     fs7 = __toESM(require("node:fs"), 1);
@@ -6556,51 +6556,51 @@ var init_source_export = __esm({
   }
 });
 
-// packages/disassembler/src/static-analysis.ts
+// ../disassembler/src/static-analysis.ts
 var init_static_analysis = __esm({
-  "packages/disassembler/src/static-analysis.ts"() {
+  "../disassembler/src/static-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/runtime-trace-project.ts
+// ../disassembler/src/runtime-trace-project.ts
 var init_runtime_trace_project = __esm({
-  "packages/disassembler/src/runtime-trace-project.ts"() {
+  "../disassembler/src/runtime-trace-project.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/runtime-graphics.ts
+// ../disassembler/src/runtime-graphics.ts
 var init_runtime_graphics = __esm({
-  "packages/disassembler/src/runtime-graphics.ts"() {
+  "../disassembler/src/runtime-graphics.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/runtime-transfer.ts
+// ../disassembler/src/runtime-transfer.ts
 var init_runtime_transfer = __esm({
-  "packages/disassembler/src/runtime-transfer.ts"() {
+  "../disassembler/src/runtime-transfer.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/runtime-bus-trace.ts
+// ../disassembler/src/runtime-bus-trace.ts
 var init_runtime_bus_trace = __esm({
-  "packages/disassembler/src/runtime-bus-trace.ts"() {
+  "../disassembler/src/runtime-bus-trace.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/runtime-bus-project.ts
+// ../disassembler/src/runtime-bus-project.ts
 var init_runtime_bus_project = __esm({
-  "packages/disassembler/src/runtime-bus-project.ts"() {
+  "../disassembler/src/runtime-bus-project.ts"() {
     "use strict";
   }
 });
 
-// packages/disassembler/src/index.ts
+// ../disassembler/src/index.ts
 var init_src = __esm({
-  "packages/disassembler/src/index.ts"() {
+  "../disassembler/src/index.ts"() {
     "use strict";
     init_asset_codec();
     init_asset_codecs();
@@ -6634,24 +6634,24 @@ var init_src = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+  "../core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
+  "../core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
       static table = _CRC32.makeCRCTable();
       /**
        * Builds the lookup table used for CRC32 computation.
-       * @returns {Uint32Array} The result.
+       * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
        */
       static makeCRCTable() {
         const table = new Uint32Array(256);
@@ -6680,21 +6680,21 @@ var init_crc32 = __esm({
   }
 });
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
+  "../core/src/addressToLine.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
+  "../core/src/architecture-registry.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -6705,22 +6705,22 @@ function createSourceSpan(start, end, line) {
   };
 }
 var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
+  "../core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "../core/src/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
+  "../core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -6737,7 +6737,7 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 function attachRootSpan(node, text2) {
   if (!node.span) {
     node.span = createSourceSpan(0, text2.length);
@@ -6980,7 +6980,7 @@ function isBinaryOperator(value) {
 }
 var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
 var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
+  "../core/src/ir/expression-node.ts"() {
     "use strict";
     init_source_location();
     binaryPrecedence = {
@@ -7034,11 +7034,6 @@ var init_expression_node = __esm({
       }
       tokens;
       index = 0;
-      /**
-       * Parses expression.
-       * @param {number} [minPrecedence] The minimum binary-operator precedence.
-       * @returns {ExpressionNode} The result.
-       */
       parseExpression(minPrecedence = 0) {
         let left = this.parsePrefix();
         while (true) {
@@ -7062,17 +7057,9 @@ var init_expression_node = __esm({
         }
         return left;
       }
-      /**
-       * Checks whether at end.
-       * @returns {boolean} The result.
-       */
       isAtEnd() {
         return this.index >= this.tokens.length;
       }
-      /**
-       * Parses prefix.
-       * @returns {ExpressionNode} The result.
-       */
       parsePrefix() {
         const token = this.peek();
         if (!token) {
@@ -7088,10 +7075,6 @@ var init_expression_node = __esm({
         }
         return this.parsePostfix(this.parsePrimary());
       }
-      /**
-       * Parses primary.
-       * @returns {ExpressionNode} The result.
-       */
       parsePrimary() {
         if (this.peek()?.type === "dot") {
           let name = "";
@@ -7129,11 +7112,6 @@ var init_expression_node = __esm({
             throw new Error(`Unexpected token ${token.type}`);
         }
       }
-      /**
-       * Parses postfix.
-       * @param {ExpressionNode} expression The expression.
-       * @returns {ExpressionNode} The result.
-       */
       parsePostfix(expression) {
         let current = expression;
         while (true) {
@@ -7179,10 +7157,6 @@ var init_expression_node = __esm({
           return current;
         }
       }
-      /**
-       * Parses call arguments.
-       * @returns {ExpressionNode[]} The result.
-       */
       parseCallArguments() {
         const args = [];
         if (this.match({ type: "rparen" })) {
@@ -7204,11 +7178,6 @@ var init_expression_node = __esm({
           throw new Error(`Expected token ${type}`);
         }
       }
-      /**
-       * Matches a value.
-       * @param {Pick<Token, "type">} expected The expected.
-       * @returns {boolean} The result.
-       */
       match(expected) {
         const token = this.peek();
         if (token && token.type === expected.type) {
@@ -7217,19 +7186,11 @@ var init_expression_node = __esm({
         }
         return false;
       }
-      /**
-       * Consumes a value.
-       * @returns {Token | undefined} The result.
-       */
       consume() {
         const token = this.tokens[this.index];
         this.index++;
         return token;
       }
-      /**
-       * Gets the next a value.
-       * @returns {Token | undefined} The result.
-       */
       peek() {
         return this.tokens[this.index];
       }
@@ -7237,10 +7198,10 @@ var init_expression_node = __esm({
   }
 });
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
+  "../core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -7275,24 +7236,24 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
+  "../core/src/file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
+  "../core/src/ir/normalized-command.ts"() {
     "use strict";
     EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
     EMPTY_TOKEN_SPANS = Object.freeze([]);
   }
 });
 
-// packages/core/src/operand-syntax.ts
+// ../core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -7314,34 +7275,34 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
+  "../core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
+  "../core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
+  "../core/src/plugin/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "packages/core/src/lsp/directive-catalog.ts"() {
+  "../core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group, operands) => ({
       keyword,
@@ -7471,20 +7432,20 @@ var init_directive_catalog = __esm({
           },
           {
             keyword: "firstindex",
-            summary: "First valid logical index (default zero); requires count.",
+            summary: "First valid logical index (default zero). Requires count.",
             syntax: "endstruct count value firstindex value"
           }
         ]
       ),
       descriptor(
         "datastruct",
-        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "Emit one complete named record at its struct address. Checks fields, widths and pc().",
         "dataStruct Record[index], { field = value, bytes = [value, ...] }",
         "struct"
       ),
       descriptor(
         "datastructs",
-        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "Begin consecutive indexed named records. Preserves logical IDs and validates placement.",
         "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
         "struct"
       ),
@@ -7521,16 +7482,16 @@ var init_directive_catalog = __esm({
   }
 });
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var init_environment = __esm({
-  "packages/core/src/plugin/environment.ts"() {
+  "../core/src/plugin/environment.ts"() {
     "use strict";
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports2, module2) {
+  "../../node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -7560,9 +7521,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports2, module2) {
+  "../../node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -7570,9 +7531,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports2, module2) {
+  "../../node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -7658,9 +7619,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports2, module2) {
+  "../../node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -7677,9 +7638,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports2, module2) {
+  "../../node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -7702,9 +7663,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports2, module2) {
+  "../../node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -7994,9 +7955,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports2, module2) {
+  "../../node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -8016,9 +7977,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports2, module2) {
+  "../../node_modules/semver/functions/valid.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -8029,9 +7990,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports2, module2) {
+  "../../node_modules/semver/functions/clean.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -8042,9 +8003,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports2, module2) {
+  "../../node_modules/semver/functions/inc.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier2, identifierBase) => {
@@ -8066,9 +8027,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports2, module2) {
+  "../../node_modules/semver/functions/diff.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -8110,9 +8071,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports2, module2) {
+  "../../node_modules/semver/functions/major.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -8120,9 +8081,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports2, module2) {
+  "../../node_modules/semver/functions/minor.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -8130,9 +8091,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports2, module2) {
+  "../../node_modules/semver/functions/patch.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -8140,9 +8101,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports2, module2) {
+  "../../node_modules/semver/functions/prerelease.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -8153,9 +8114,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -8163,9 +8124,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports2, module2) {
+  "../../node_modules/semver/functions/rcompare.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -8173,9 +8134,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -8183,9 +8144,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports2, module2) {
+  "../../node_modules/semver/functions/compare-build.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -8197,9 +8158,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports2, module2) {
+  "../../node_modules/semver/functions/sort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -8207,9 +8168,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports2, module2) {
+  "../../node_modules/semver/functions/rsort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -8217,9 +8178,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -8227,9 +8188,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -8237,9 +8198,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -8247,9 +8208,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports2, module2) {
+  "../../node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -8257,9 +8218,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -8267,9 +8228,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports2, module2) {
+  "../../node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -8277,9 +8238,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports2, module2) {
+  "../../node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -8327,9 +8288,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports2, module2) {
+  "../../node_modules/semver/functions/coerce.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -8373,9 +8334,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports2, module2) {
+  "../../node_modules/semver/functions/truncate.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -8414,9 +8375,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports2, module2) {
+  "../../node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -8452,9 +8413,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports2, module2) {
+  "../../node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -8837,9 +8798,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports2, module2) {
+  "../../node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -8950,9 +8911,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports2, module2) {
+  "../../node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -8967,9 +8928,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -8977,9 +8938,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -9006,9 +8967,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -9035,9 +8996,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/min-version.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -9094,9 +9055,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/valid.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -9110,9 +9071,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/outside.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -9179,9 +9140,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/gtr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -9189,9 +9150,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/ltr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -9199,9 +9160,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/intersects.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -9213,9 +9174,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/simplify.js"(exports2, module2) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -9263,9 +9224,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports2, module2) {
+  "../../node_modules/semver/ranges/subset.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -9425,9 +9386,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports2, module2) {
+  "../../node_modules/semver/index.js"(exports2, module2) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -9522,25 +9483,25 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver;
 var init_manager = __esm({
-  "packages/core/src/plugin/manager.ts"() {
+  "../core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
   }
 });
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var init_session_state = __esm({
-  "packages/core/src/plugin/session-state.ts"() {
+  "../core/src/plugin/session-state.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/plugin/index.ts
+// ../core/src/plugin/index.ts
 var init_plugin = __esm({
-  "packages/core/src/plugin/index.ts"() {
+  "../core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -9550,21 +9511,21 @@ var init_plugin = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
+  "../core/src/services/assembly-front-end-service.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
+  "../core/src/services/command-lowering-service.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/struct-metadata.ts
+// ../core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count = definition.indexRange?.count ?? 1;
   const bytes = definition.size * count;
@@ -9583,15 +9544,15 @@ function getStructMetadata(definition, property) {
   }
 }
 var init_struct_metadata = __esm({
-  "packages/core/src/services/struct-metadata.ts"() {
+  "../core/src/services/struct-metadata.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/architecture-types.ts
+// ../core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "packages/core/src/architecture-types.ts"() {
+  "../core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -9616,10 +9577,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "packages/core/src/decoder-types.ts"() {
+  "../core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -9664,10 +9625,10 @@ var init_decoder_types = __esm({
   }
 });
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var import_node_crypto7, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2562, validateDebugMap;
 var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+  "../core/src/debug-map.ts"() {
     "use strict";
     import_node_crypto7 = require("node:crypto");
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
@@ -9712,65 +9673,65 @@ var init_debug_map = __esm({
   }
 });
 
-// packages/core/src/ir/assembly-tree.ts
+// ../core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "packages/core/src/ir/assembly-tree.ts"() {
+  "../core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/overlay-file-provider.ts
+// ../core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "packages/core/src/lsp/overlay-file-provider.ts"() {
+  "../core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/root-analysis-cache.ts
+// ../core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "packages/core/src/lsp/root-analysis-cache.ts"() {
+  "../core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/workspace-index.ts
+// ../core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "packages/core/src/lsp/workspace-index.ts"() {
+  "../core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/position-lookup.ts
+// ../core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "packages/core/src/lsp/position-lookup.ts"() {
+  "../core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/instruction-catalog.ts
+// ../core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "packages/core/src/lsp/instruction-catalog.ts"() {
+  "../core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/catalog.ts
+// ../core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "packages/core/src/lsp/catalog.ts"() {
+  "../core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/project-outline.ts
+// ../core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "packages/core/src/lsp/project-outline.ts"() {
+  "../core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/index.ts
+// ../core/src/lsp/index.ts
 var init_lsp = __esm({
-  "packages/core/src/lsp/index.ts"() {
+  "../core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -9783,9 +9744,9 @@ var init_lsp = __esm({
   }
 });
 
-// packages/core/src/index.ts
+// ../core/src/index.ts
 var init_src2 = __esm({
-  "packages/core/src/index.ts"() {
+  "../core/src/index.ts"() {
     "use strict";
     init_struct_metadata();
     init_architecture_types();
@@ -9812,7 +9773,7 @@ var init_src2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -9837,7 +9798,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
+  "../plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -10119,7 +10080,7 @@ var init_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
@@ -10212,7 +10173,7 @@ function formatCpu65816Instruction(instruction) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor, buildInstruction, Cpu65816Decoder, hex2;
 var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+  "../plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -10517,7 +10478,7 @@ var init_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -10542,7 +10503,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
+  "../plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -10794,7 +10755,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -10862,7 +10823,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
+  "../plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -11378,10 +11339,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -11392,7 +11353,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/operand-classifiers.ts
+// ../plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -11592,16 +11553,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src2();
   }
 });
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "packages/plugin-snes/src/architectures/65816.ts"() {
+  "../plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src2();
     init_instruction_catalog2();
@@ -11636,7 +11597,7 @@ var init__ = __esm({
       x16;
       /**
        * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
-       * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+       * Set to false by `.smart off`. Re-enabled by `.smart` or `.smart on`.
        */
       smartMode;
       /**
@@ -12040,7 +12001,7 @@ var init__ = __esm({
       }
       /**
        * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
-       * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+       * {@link handleLogicAndCompareOperations}. STA has no immediate form.
        *
        * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
        * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
@@ -12357,7 +12318,7 @@ var init__ = __esm({
        * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
        * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
        * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
-       * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+       * (`len === 2`). This family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
        * long / stack forms.
        *
        * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
@@ -12380,7 +12341,7 @@ var init__ = __esm({
             indirectY: 17,
             indirect: 18,
             // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
-            // `[...]` is remapped to directIndirectLong first; these keys are the
+            // `[...]` is remapped to directIndirectLong first. These keys are the
             // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
             indirectLong: 15,
             indirectLongY: 31,
@@ -12642,7 +12603,7 @@ var init__ = __esm({
       }
       /**
        * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
-       * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+       * `expandOperand` may turn `#10` into `#$A`. Strip `$` before parseInt.
        * Count `0` emits nothing (still "handled").
        * @param {string} opcode The opcode to handle.
        * @param {string} operand The operand to handle.
@@ -13118,7 +13079,7 @@ var init__ = __esm({
         return true;
       }
       /**
-       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y). STY indexes X only
        * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
        *
        * @param {string} opcode STX, STY, or STZ.
@@ -13239,7 +13200,7 @@ var init__ = __esm({
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
       /**
-       * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+       * MVN/MVP. WDC and the hover catalog spell `dest, src`. We still write bytes
        * in source order (first operand, then second) - Asar's wire format. Locals
        * are named src/dest after that write order, not WDC's dest-then-src names.
        *
@@ -13374,7 +13335,7 @@ var init__ = __esm({
       }
       /**
        * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
-       * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+       * always 16-bit. The rest are 8-bit. `.b/.w` on REP/SEP only validates range.
        * @param {string} opcode Candidate mnemonic.
        * @param {number} num Already-evaluated operand value.
        * @param {number} len Inferred width (REP/SEP range check).
@@ -13536,7 +13497,7 @@ var init__ = __esm({
       }
       /**
        * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
-       * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
+       * 65816 has no 32-bit immediate. Callers treat it as width 4 for PEA-like repeats.
        * @param {string} c The opcode suffix to resolve the length of.
        * @returns {number} The operand length.
        * @throws {Error} If the opcode length is invalid.
@@ -13562,10 +13523,10 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder;
 var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width2) => {
@@ -13839,10 +13800,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/split-operands.ts
+// ../plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "packages/plugin-snes/src/architectures/split-operands.ts"() {
+  "../plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text2) => text2 ? [text2] : [];
     splitCommaOperands = (text2) => text2 ? text2.split(",").map((operand) => operand.trim()) : [];
@@ -13872,7 +13833,7 @@ var init_split_operands = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700.ts
+// ../plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -13969,7 +13930,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "packages/plugin-snes/src/architectures/spc700.ts"() {
+  "../plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src2();
     init_instruction_catalog2();
@@ -14207,7 +14168,7 @@ var init_spc700 = __esm({
       /**
        * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
        * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
-       * not stall; encode will still reject them.
+       * not stall. Encode will still reject them.
        *
        * @param {string} mnemonic The mnemonic.
        * @param {string} operandText The operand text.
@@ -14754,7 +14715,7 @@ var init_spc700 = __esm({
       /**
        * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
        * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
-       * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+       * indirectX (no extra byte). `($dp+X)` is indirectDpX.
        *
        * @param {string} operand Right-hand operand of an A-destination ALU op.
        * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
@@ -14852,7 +14813,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc. `DEC X`/`DEC Y` and
        * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
        * {@link getAddressSize} (spelling), not the numeric value.
        *
@@ -14943,7 +14904,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic. Asar also accepts
        * `SET1 $13.7` where `.n` overrides the mnemonic digit.
        *
        * @param {string} opcode SET/CLR mnemonic with bit digit.
@@ -15059,7 +15020,7 @@ var init_spc700 = __esm({
        * @param {string} left Register, `$dp`, or `$dp+X`.
        * @param {string} right Branch target.
        * @param {LoweredOperand} [leftLowered] Lowered left operand.
-       * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+       * @param {LoweredOperand} [_rightLowered] Unused. Kept for call-site symmetry.
        * @returns {boolean} True if encoded.
        */
       handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
@@ -15653,7 +15614,7 @@ var init_spc700 = __esm({
             opcodeDp: 203,
             opcodeAbs: 204
           },
-          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp; "X,$1234" => 0xe9 or 0xf8 for dp, etc.
+          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp. "X,$1234" => 0xe9 or 0xf8 for dp, etc.
           {
             regex: /^A\s*,\s*\$([\dA-F]+)$/,
             opcodeDp: 228,
@@ -15871,10 +15832,10 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
 var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -16171,10 +16132,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "packages/plugin-snes/src/asar/compatibility.ts"() {
+  "../plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -16250,10 +16211,10 @@ var init_compatibility = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx.ts
+// ../plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "packages/plugin-snes/src/architectures/superfx.ts"() {
+  "../plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src2();
     init_compatibility();
@@ -16369,7 +16330,7 @@ var init_superfx = __esm({
       /**
        * @param {ArchitectureEncoderContext} context Encoder host.
        * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
-       *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+       *   Hardware stores a word index (`addr >> 1`). Asar stores `addr & 0xff`. Explicit
        *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
        */
       constructor(context, asarMoveShortAddress = () => false) {
@@ -16568,7 +16529,7 @@ var init_superfx = __esm({
       }
       /**
        * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
-       * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+       * operands. Unknown mnemonics return false (`unknownInstructionBehavior` is
        * `returnFalse` so 65816 can try next).
        *
        * @param {string} mnemonic The mnemonic.
@@ -16623,11 +16584,11 @@ var init_superfx = __esm({
         return false;
       }
       /**
-       * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+       * Single-operand Super FX: short branches (`$XX` is a raw offset, labels stay
        * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
        * @param {string} opcode Uppercased mnemonic.
        * @param {string} operand The operand.
-       * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+       * @param {number} operandLength Logged only. Encoded size is fixed per opcode family.
        * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
        * @returns {boolean} True if the instruction was handled, false otherwise.
        */
@@ -16943,7 +16904,7 @@ var init_superfx = __esm({
       }
       /**
        * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
-       * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+       * Encode then stores `addr >> 1`. This check is the byte-address constraint.
        * @param {number} num RAM byte address (not the word index).
        * @returns {boolean} Always `true` when the address is valid.
        * @throws {Error} If the address is odd or outside the short-RAM window.
@@ -16966,7 +16927,7 @@ var init_superfx = __esm({
         return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
       }
       /**
-       * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+       * Fallback width when lowering did not supply `length`. `$XX` is 1. Everything else is 2.
        * Super FX uses this for one-operand branches when `loweredOperand` is missing.
        * @param {string} operand Operand text.
        * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
@@ -17038,7 +16999,7 @@ var init_superfx = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -17122,13 +17083,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
+  "../plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -17184,13 +17145,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "packages/plugin-snes/src/directives/freespace.ts"() {
+  "../plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -17258,7 +17219,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout = __esm({
-  "packages/plugin-snes/src/directives/layout.ts"() {
+  "../plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -17274,10 +17235,10 @@ var init_layout = __esm({
   }
 });
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "packages/plugin-snes/src/services/spc-runtime.ts"() {
+  "../plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -17362,7 +17323,7 @@ var init_spc_runtime = __esm({
        * execute trailer, then restores namespace and the previous architecture.
        *
        * Size is `(pc - dest) & $FFFF` - 64 KiB wrap, matching Asar.
-       * Size is only patched when `canFinalize` (emit pass); collect/layout leave
+       * Size is only patched when `canFinalize` (emit pass). Collect/layout leave
        * the placeholder so later passes can rewrite it.
        *
        * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
@@ -17413,17 +17374,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "packages/plugin-snes/src/directives/spc.ts"() {
+  "../plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -17434,7 +17395,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "packages/plugin-snes/src/session-state.ts"() {
+  "../plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -17443,10 +17404,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "packages/plugin-snes/src/target/address-space.ts"() {
+  "../plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -17631,10 +17592,10 @@ var init_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
+  "../plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -18256,17 +18217,17 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var init_state = __esm({
-  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
+  "../plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE, SNES_CPU_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, createSnesAddressContext;
 var init_address_identities = __esm({
-  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
+  "../plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     SNES_FILE_ADDRESS_SPACE = "rom.file";
     SNES_CPU_ADDRESS_SPACE = "snes.cpu";
@@ -18297,10 +18258,10 @@ var init_address_identities = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTER_ALIASES, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, identifySnesHardwareRegister, hex3, SNES_HARDWARE_DEFINES_SOURCE, snesHardwareDefineRecords, snesHardwareDefines, CONTROLLER_MASKS, INTERRUPT_STATUS_MASKS, renderConstants, renderSnesHardwareDefines;
 var init_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -18331,12 +18292,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "BG1HOFS",
         address: 8461,
-        description: "BG1 horizontal scroll, write twice; also Mode 7 horizontal offset."
+        description: "BG1 horizontal scroll, write twice. Also Mode 7 horizontal offset."
       },
       {
         symbol: "BG1VOFS",
         address: 8462,
-        description: "BG1 vertical scroll, write twice; also Mode 7 vertical offset."
+        description: "BG1 vertical scroll, write twice. Also Mode 7 vertical offset."
       },
       { symbol: "BG2HOFS", address: 8463, description: "BG2 horizontal scroll, write twice." },
       { symbol: "BG2VOFS", address: 8464, description: "BG2 vertical scroll, write twice." },
@@ -18357,12 +18318,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "M7A",
         address: 8475,
-        description: "Mode 7 matrix parameter A, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter A, write twice. Multiplication operand."
       },
       {
         symbol: "M7B",
         address: 8476,
-        description: "Mode 7 matrix parameter B, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter B, write twice. Multiplication operand."
       },
       { symbol: "M7C", address: 8477, description: "Mode 7 matrix parameter C, write twice." },
       { symbol: "M7D", address: 8478, description: "Mode 7 matrix parameter D, write twice." },
@@ -18402,17 +18363,17 @@ var init_hardware_registers = __esm({
       {
         symbol: "MPYL",
         address: 8500,
-        description: "PPU multiplication result, low byte; read only."
+        description: "PPU multiplication result, low byte. Read only."
       },
       {
         symbol: "MPYM",
         address: 8501,
-        description: "PPU multiplication result, middle byte; read only."
+        description: "PPU multiplication result, middle byte. Read only."
       },
       {
         symbol: "MPYH",
         address: 8502,
-        description: "PPU multiplication result, high byte; read only."
+        description: "PPU multiplication result, high byte. Read only."
       },
       {
         symbol: "SLHV",
@@ -18433,8 +18394,8 @@ var init_hardware_registers = __esm({
         address: 8509,
         description: "Latched vertical beam-counter value, read twice."
       },
-      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number; read only." },
-      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number; read only." },
+      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number. Read only." },
+      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number. Read only." },
       { symbol: "APUIO0", address: 8512, description: "Main CPU/APU communication port 0." },
       { symbol: "APUIO1", address: 8513, description: "Main CPU/APU communication port 1." },
       { symbol: "APUIO2", address: 8514, description: "Main CPU/APU communication port 2." },
@@ -18486,12 +18447,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDNMI",
         address: 16912,
-        description: "V-blank NMI flag and CPU version; read acknowledges the flag."
+        description: "V-blank NMI flag and CPU version. Read acknowledges the flag."
       },
       {
         symbol: "TIMEUP",
         address: 16913,
-        description: "H/V timer IRQ flag; read acknowledges the flag."
+        description: "H/V timer IRQ flag. Read acknowledges the flag."
       },
       {
         symbol: "HVBJOY",
@@ -18502,62 +18463,62 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDDIVL",
         address: 16916,
-        description: "Unsigned division quotient, low byte; read only."
+        description: "Unsigned division quotient, low byte. Read only."
       },
       {
         symbol: "RDDIVH",
         address: 16917,
-        description: "Unsigned division quotient, high byte; read only."
+        description: "Unsigned division quotient, high byte. Read only."
       },
       {
         symbol: "RDMPYL",
         address: 16918,
-        description: "Multiplication product or division remainder, low byte; read only."
+        description: "Multiplication product or division remainder, low byte. Read only."
       },
       {
         symbol: "RDMPYH",
         address: 16919,
-        description: "Multiplication product or division remainder, high byte; read only."
+        description: "Multiplication product or division remainder, high byte. Read only."
       },
       {
         symbol: "JOY1L",
         address: 16920,
-        description: "Automatic joypad result for controller 1, low byte; read only."
+        description: "Automatic joypad result for controller 1, low byte. Read only."
       },
       {
         symbol: "JOY1H",
         address: 16921,
-        description: "Automatic joypad result for controller 1, high byte; read only."
+        description: "Automatic joypad result for controller 1, high byte. Read only."
       },
       {
         symbol: "JOY2L",
         address: 16922,
-        description: "Automatic joypad result for controller 2, low byte; read only."
+        description: "Automatic joypad result for controller 2, low byte. Read only."
       },
       {
         symbol: "JOY2H",
         address: 16923,
-        description: "Automatic joypad result for controller 2, high byte; read only."
+        description: "Automatic joypad result for controller 2, high byte. Read only."
       },
       {
         symbol: "JOY3L",
         address: 16924,
-        description: "Automatic joypad result for controller 3, low byte; read only."
+        description: "Automatic joypad result for controller 3, low byte. Read only."
       },
       {
         symbol: "JOY3H",
         address: 16925,
-        description: "Automatic joypad result for controller 3, high byte; read only."
+        description: "Automatic joypad result for controller 3, high byte. Read only."
       },
       {
         symbol: "JOY4L",
         address: 16926,
-        description: "Automatic joypad result for controller 4, low byte; read only."
+        description: "Automatic joypad result for controller 4, low byte. Read only."
       },
       {
         symbol: "JOY4H",
         address: 16927,
-        description: "Automatic joypad result for controller 4, high byte; read only."
+        description: "Automatic joypad result for controller 4, high byte. Read only."
       }
     ];
     FIXED_REGISTER_ALIASES = [
@@ -18569,17 +18530,17 @@ var init_hardware_registers = __esm({
       {
         symbol: "M7HOFS",
         address: 8461,
-        description: "Mode 7 horizontal scroll, write twice; shares BG1HOFS."
+        description: "Mode 7 horizontal scroll, write twice. Shares BG1HOFS."
       },
       {
         symbol: "M7VOFS",
         address: 8462,
-        description: "Mode 7 vertical scroll, write twice; shares BG1VOFS."
+        description: "Mode 7 vertical scroll, write twice. Shares BG1VOFS."
       },
       {
         symbol: "JOYOUT",
         address: 16406,
-        description: "Joypad latch output; write view of the address shared with JOYSER0."
+        description: "Joypad latch output. Write view of the address shared with JOYSER0."
       }
     ];
     FIXED_REGISTERS = Object.freeze(
@@ -18653,7 +18614,7 @@ var init_hardware_registers = __esm({
       {
         offset: 11,
         symbol: (channel) => `UNUSED${channel}`,
-        description: "Unused DMA/HDMA data byte; shared with the $43nF mirror."
+        description: "Unused DMA/HDMA data byte. Shared with the $43nF mirror."
       },
       {
         offset: 15,
@@ -18779,10 +18740,10 @@ var init_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS, SNES_CPU_VECTOR_DEFINITIONS, HEADER_OFFSETS, snesInternalHeaderOffset, asciiField, sizeBytes, mapModeName, regionName, chipsetDescription, parseSnesInternalRomHeader;
 var init_rom_header = __esm({
-  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
+  "../plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
     SNES_MAPPERS = [
       "lorom",
@@ -19047,33 +19008,33 @@ var init_rom_header = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var init_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 var init_dizraw_import = __esm({
-  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+// ../plugin-snes/src/disassembler/mesen-runtime.ts
 var CDL_HEADER;
 var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     CDL_HEADER = new TextEncoder().encode("CDLv2");
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -19085,24 +19046,24 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
+// ../plugin-snes/src/disassembler/mesen-labels.ts
 var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
+// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
 var init_framework_asset_helpers = __esm({
-  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/code-preservation.ts
+// ../plugin-snes/src/disassembler/code-preservation.ts
 var union, lostCodeRanges;
 var init_code_preservation = __esm({
-  "packages/plugin-snes/src/disassembler/code-preservation.ts"() {
+  "../plugin-snes/src/disassembler/code-preservation.ts"() {
     "use strict";
     union = (ranges) => {
       const merged = [];
@@ -19150,10 +19111,10 @@ var init_code_preservation = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 var fs8, import_node_path6, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex4, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
-  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
+  "../plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
     fs8 = __toESM(require("node:fs"), 1);
     import_node_path6 = __toESM(require("node:path"), 1);
@@ -19249,7 +19210,7 @@ var init_ram_map = __esm({
         }
         const address3 = parseAddress(record2.address, memory);
         if (addresses2.has(address3)) {
-          throw new Error(`Duplicate RAM-map address '${hex4(address3)}'; combine aliases in one entry.`);
+          throw new Error(`Duplicate RAM-map address '${hex4(address3)}'. Combine aliases in one entry.`);
         }
         addresses2.add(address3);
         const size = record2.size ?? 1;
@@ -19395,7 +19356,7 @@ var init_ram_map = __esm({
               memory: {
                 enum: ["wram", "sram"],
                 default: "wram",
-                description: "SRAM requires a standard LoROM/HiROM cartridge window; confirm the actual cartridge mapping and size separately."
+                description: "SRAM requires a standard LoROM/HiROM cartridge window. Confirm the actual cartridge mapping and size separately."
               },
               size: { type: "integer", minimum: 1, maximum: 131072 },
               category: { type: "string", minLength: 1 },
@@ -19409,7 +19370,7 @@ var init_ram_map = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-expressions.ts
+// ../plugin-snes/src/disassembler/struct-expressions.ts
 function describeSnesStructAccess(binding, address3, width2) {
   const { structure } = binding;
   if (address3 < binding.address || address3 + width2 > binding.address + binding.count * structure.size) {
@@ -19457,7 +19418,7 @@ function describeSnesStructAccess(binding, address3, width2) {
 }
 var SnesStructExpressionResolver;
 var init_struct_expressions = __esm({
-  "packages/plugin-snes/src/disassembler/struct-expressions.ts"() {
+  "../plugin-snes/src/disassembler/struct-expressions.ts"() {
     "use strict";
     init_src2();
     SnesStructExpressionResolver = class {
@@ -19666,10 +19627,10 @@ var init_struct_expressions = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
+// ../plugin-snes/src/disassembler/struct-instruction-uses.ts
 var record, integer, text, hex5, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, renderSnesStructUseComments;
 var init_struct_instruction_uses = __esm({
-  "packages/plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
+  "../plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
     "use strict";
     init_struct_expressions();
     record = (value) => {
@@ -19855,18 +19816,18 @@ var init_struct_instruction_uses = __esm({
       ...use.observations.map((observation) => {
         let coverage = "";
         if (observation.parts.length > 1 || !observation.parts[0].field) {
-          coverage = `; covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+          coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
         }
-        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex5(observation.address)}, ${observation.width} byte(s))${coverage}; ${observation.source}: ${observation.detail}`;
+        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex5(observation.address)}, ${observation.width} byte(s))${coverage}. ${observation.source}: ${observation.detail}`;
       })
     ];
   }
 });
 
-// packages/plugin-snes/src/disassembler/struct-map.ts
+// ../plugin-snes/src/disassembler/struct-map.ts
 var fs9, import_node_path7, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex6, comment, object, integer2, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
-  "packages/plugin-snes/src/disassembler/struct-map.ts"() {
+  "../plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
     fs9 = __toESM(require("node:fs"), 1);
     import_node_path7 = __toESM(require("node:path"), 1);
@@ -20058,7 +20019,7 @@ var init_struct_map = __esm({
     renderSnesStructDefines = (map) => {
       const lines = [
         "; Generated from struct-map.json. Edit that input and export again.",
-        "; Layouts have base zero; bindings use CPU addresses. Indexed fields use sizeof(struct).",
+        "; Layouts have base zero. Bindings use CPU addresses. Indexed fields use sizeof(struct).",
         ""
       ];
       const render = (name, base, structure, detail, binding) => {
@@ -20206,10 +20167,10 @@ var init_struct_map = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 var fs10, import_node_path8, hex7, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rawClassifications, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
-  "packages/plugin-snes/src/disassembler/source-export.ts"() {
+  "../plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
     fs10 = __toESM(require("node:fs"), 1);
     import_node_path8 = __toESM(require("node:path"), 1);
@@ -20387,7 +20348,7 @@ var init_source_export2 = __esm({
         if (vector.state && vector.targetAddress === void 0) {
           comment2 = `${mode3} ${vector.name} vector is unpopulated.`;
         } else if (vector.state) {
-          comment2 = `${mode3} ${vector.name} handler; target bank is forced to $00 -> ${hex7(vector.targetAddress, 6)}.`;
+          comment2 = `${mode3} ${vector.name} handler. Target bank is forced to $00 -> ${hex7(vector.targetAddress, 6)}.`;
         }
         fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment2, "vectors"));
       }
@@ -20603,7 +20564,7 @@ var init_source_export2 = __esm({
           output.push(`${line.name}:${line.inlineComment ? ` ; ${line.inlineComment}` : ""}`);
         }
         if (line.instructionComment && !hasInstruction) {
-          output.push(`; [Instruction comment; instruction unavailable] ${line.instructionComment}`);
+          output.push(`; [Instruction comment. Instruction unavailable] ${line.instructionComment}`);
         }
       }
       return output;
@@ -20900,7 +20861,7 @@ var init_source_export2 = __esm({
         const unexpected = fs10.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
           throw new Error(
-            `Export directory '${directory}' is not empty; pass --force to write into it.`
+            `Export directory '${directory}' is not empty. Pass --force to write into it.`
           );
         }
         return void 0;
@@ -21235,7 +21196,7 @@ var init_source_export2 = __esm({
         } else if (structure && structure.start <= offset && offset < structure.end) {
           reason = "Annotation is inside a structured header/vector field. Annotation retained in the analysis project.";
         } else if ("placement" in record2 && record2.placement === "inline-instruction" && !instructions.has(offset)) {
-          reason = "No exportable instruction starts here. Rendered as a standalone comment; inline placement remains saved.";
+          reason = "No exportable instruction starts here. Rendered as a standalone comment. Inline placement remains saved.";
         }
         return reason ? [{ id: record2.id, addressSpace: record2.addressSpace, address: record2.address, reason }] : [];
       }).sort((left, right) => left.id.localeCompare(right.id));
@@ -21315,10 +21276,10 @@ var init_source_export2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress;
 var init_spc700_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -21350,45 +21311,45 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-state.ts
+// ../plugin-snes/src/disassembler/spc700-state.ts
 var init_spc700_state = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
+  "../plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-analysis.ts
+// ../plugin-snes/src/disassembler/spc700-analysis.ts
 var init_spc700_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-upload.ts
+// ../plugin-snes/src/disassembler/spc700-upload.ts
 var init_spc700_upload = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-state.ts
+// ../plugin-snes/src/disassembler/superfx-state.ts
 var init_superfx_state = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
+  "../plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/processor-source-export.ts
+// ../plugin-snes/src/disassembler/processor-source-export.ts
 var init_processor_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
+// ../plugin-snes/src/disassembler/function-heuristics.ts
 var import_node_crypto8, isArray2, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
     init_src();
@@ -21622,7 +21583,7 @@ var init_function_heuristics = __esm({
             "memory.block-copy",
             "high",
             [node],
-            "Block move instruction; payload purpose requires destination provenance."
+            "Block move instruction. Payload purpose requires destination provenance."
           );
         }
         const trail = window(node);
@@ -21715,7 +21676,7 @@ var init_function_heuristics = __esm({
             "graphics.mode7-setup",
             "medium",
             trail,
-            "Matrix/center writes and a nearby mode-7 constant; confirm the value reaching BGMODE."
+            "Matrix/center writes and a nearby mode-7 constant. Confirm the value reaching BGMODE."
           );
         }
       }
@@ -21764,7 +21725,7 @@ var init_function_heuristics = __esm({
             "graphics.brightness-ramp",
             "medium",
             loop,
-            "Repeated brightness writes with an increment/decrement; frame synchronization needs caller/trace evidence."
+            "Repeated brightness writes with an increment/decrement. Frame synchronization needs caller/trace evidence."
           );
         }
       }
@@ -21858,7 +21819,7 @@ var init_function_heuristics = __esm({
                 role,
                 "high",
                 [observedNode],
-                `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction; the DMA engine performs the bus operation.`
+                `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction. The DMA engine performs the bus operation.`
               );
             }
           } else {
@@ -21935,7 +21896,7 @@ var init_function_heuristics = __esm({
         source: "detector",
         sourceId: "snes.function-roles.v1",
         confidence: role.confidence,
-        detail: `${role.rule}; configuration ${signature}; ${role.explanation}; instructions ${role.instructions.map((address3) => `$${address3.toString(16)}`).join(", ")}`
+        detail: `${role.rule}. Configuration ${signature}. ${role.explanation}. Instructions ${role.instructions.map((address3) => `$${address3.toString(16)}`).join(", ")}`
       }));
       return {
         roles,
@@ -21952,17 +21913,17 @@ var init_function_heuristics = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+  "../plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR;
 var init_superfx_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -21974,24 +21935,24 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var init_project_initializer = __esm({
-  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
+  "../plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-analysis.ts
+// ../plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
+// ../plugin-snes/src/assets/common.ts
 var objectValue2, optionsFor2, integerOption2, stringOption2, readBytes, resolveCount, resolveGrid, decodedObject2, arrayValue, integerValue, defaultPath, jsonFile2;
 var init_common2 = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
+  "../plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue2 = (value, label) => {
       if (value === void 0) {
@@ -22097,10 +22058,10 @@ var init_common2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/brr.ts
+// ../plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
+  "../plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common2();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -22217,10 +22178,10 @@ var init_brr = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/palette.ts
+// ../plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
+  "../plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common2();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -22278,10 +22239,10 @@ var init_palette = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tilemap.ts
+// ../plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
+  "../plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common2();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -22413,10 +22374,10 @@ var init_tilemap = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tiles.ts
+// ../plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
+  "../plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common2();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -22587,10 +22548,10 @@ var init_tiles = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/previews.ts
+// ../plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue3, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer;
 var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
+  "../plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -22728,10 +22689,10 @@ var init_previews = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/index.ts
+// ../plugin-snes/src/assets/index.ts
 var snesAssetCodecs;
 var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
+  "../plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -22758,10 +22719,10 @@ var init_assets = __esm({
   }
 });
 
-// packages/plugin-snes/src/index.ts
+// ../plugin-snes/src/index.ts
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin;
 var init_src3 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+  "../plugin-snes/src/index.ts"() {
     "use strict";
     init_src2();
     init_decoder();
@@ -23266,271 +23227,19 @@ var init_src3 = __esm({
   }
 });
 
-// packages/vscode-extension/src/analysis-worker.ts
-var analysis_worker_exports = {};
-__export(analysis_worker_exports, {
+// src/analysis/worker.ts
+var worker_exports = {};
+__export(worker_exports, {
   runAnalysisWorkerRequest: () => runAnalysisWorkerRequest
 });
-module.exports = __toCommonJS(analysis_worker_exports);
+module.exports = __toCommonJS(worker_exports);
 var fs12 = __toESM(require("node:fs"));
 var path10 = __toESM(require("node:path"));
 var import_node_worker_threads = require("node:worker_threads");
 init_src();
 init_src3();
 
-// packages/vscode-extension/src/analysis-annotation-format.ts
-init_canonical_json();
-var hexadecimal = (value) => `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
-var valueText = (value, present = true) => {
-  if (!present) {
-    return "\u2205";
-  }
-  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
-    const record2 = value;
-    if (record2.kind === "known" && "value" in record2) {
-      return valueText(record2.value);
-    }
-    if (record2.kind === "unknown") {
-      return "?";
-    }
-  }
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number") {
-    return Number.isInteger(value) ? hexadecimal(value) : String(value);
-  }
-  if (typeof value === "boolean") {
-    return String(value);
-  }
-  const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
-  return serialized.length > 60 ? `${serialized.slice(0, 57)}\u2026` : serialized;
-};
-var effectiveAddressText = (address3) => {
-  const resolved = address3.address ?? address3.baseAddress;
-  const identity = [address3.symbol, resolved === void 0 ? void 0 : hexadecimal(resolved)].filter((value) => value !== void 0).join("@");
-  return `EA${address3.operandIndex} ${identity || "?"}${address3.address === void 0 && address3.baseAddress !== void 0 ? " base" : ""}${address3.volatile ? " volatile" : ""}`;
-};
-var transitionText = (transition) => `\u0394${transition.field} ${valueText(transition.before, "before" in transition)}\u2192${valueText(transition.after, "after" in transition)}`;
-var stateText = (observation) => {
-  const fields = Object.entries(observation.state).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${valueText(value)}`).join(",");
-  return `${observation.source} state ${fields || "\u2205"}${observation.count === void 0 ? "" : ` \xD7${observation.count}`}`;
-};
-var accessText = (access) => {
-  let mode3 = "?";
-  if (access.access === "read") {
-    mode3 = "R";
-  } else if (access.access === "write") {
-    mode3 = "W";
-  } else if (access.access === "read-write") {
-    mode3 = "RW";
-  }
-  return `${access.actor ? `${access.actor}${access.channel === void 0 ? "" : ` channel ${access.channel}`} ` : ""}${mode3} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === void 0 ? "" : `=${hexadecimal(access.value)}`} ${access.width}B \xD7${access.count}`;
-};
-var clipped = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
-var formatInstructionAnnotationSummary = (annotation, maximumLength = 220) => {
-  const parts = [];
-  parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text: text2 }) => text2));
-  if (annotation.executionCount > 0) {
-    parts.push(`\u25B6 ${annotation.executionCount}\xD7`);
-  }
-  if (annotation.detailsLimited) {
-    parts.push("details limited");
-  }
-  const coverage = annotation.runtimeCoverage.map(({ coverage: coverage2 }) => coverage2);
-  if (coverage.length > 0) {
-    parts.push(`coverage ${coverage.join("/")}`);
-  }
-  parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
-  parts.push(...annotation.memoryAccesses.slice(0, 2).map(accessText));
-  parts.push(...annotation.stateTransitions.slice(0, 3).map(transitionText));
-  if (annotation.stateTransitions.length === 0 && annotation.stateObservations.length > 0) {
-    parts.push(stateText(annotation.stateObservations[0]));
-  }
-  return clipped(parts.join(" \xB7 "), Math.max(24, maximumLength));
-};
-
-// packages/vscode-extension/src/analysis-annotation-index.ts
-var append = (map, key2, value) => {
-  const entries3 = map.get(key2);
-  if (entries3) {
-    entries3.push(value);
-  } else {
-    map.set(key2, [value]);
-  }
-};
-var lowerBound = (values, target, at) => {
-  let low = 0;
-  let high = values.length;
-  while (low < high) {
-    const middle = low + Math.floor((high - low) / 2);
-    if (at(values[middle]) < target) {
-      low = middle + 1;
-    } else {
-      high = middle;
-    }
-  }
-  return low;
-};
-var valuesInRange = (values, start, end, at) => {
-  const matches = [];
-  for (let index = lowerBound(values, start, at); index < values.length && at(values[index]) < end; index++) {
-    matches.push(values[index]);
-  }
-  return matches;
-};
-var createInstructionAnnotationIndex = (instructions) => {
-  const byAddressSpace = /* @__PURE__ */ new Map();
-  const byOutputOffset = [];
-  for (const annotation of instructions) {
-    append(byAddressSpace, annotation.addressSpace, annotation);
-    for (const offset of annotation.outputOffsets) {
-      byOutputOffset.push({ offset, annotation });
-    }
-  }
-  for (const annotations of byAddressSpace.values()) {
-    annotations.sort(
-      (left, right) => left.address - right.address || left.id.localeCompare(right.id)
-    );
-  }
-  byOutputOffset.sort(
-    (left, right) => left.offset - right.offset || left.annotation.id.localeCompare(right.annotation.id)
-  );
-  return { byAddressSpace, byOutputOffset };
-};
-var instructionAnnotationsForDebugRange = (index, range) => {
-  const matches = [
-    ...valuesInRange(
-      index.byAddressSpace.get(range.addressSpace) ?? [],
-      range.start,
-      range.end,
-      ({ address: address3 }) => address3
-    ),
-    ...range.outputStart === void 0 || range.outputEnd === void 0 ? [] : valuesInRange(
-      index.byOutputOffset,
-      range.outputStart,
-      range.outputEnd,
-      ({ offset }) => offset
-    ).map(({ annotation }) => annotation)
-  ];
-  const unique2 = new Map(
-    matches.filter(
-      (annotation) => annotation.architectures.length === 0 || annotation.architectures.includes(range.architecture)
-    ).map((annotation) => [annotation.id, annotation])
-  );
-  return [...unique2.values()].sort(
-    (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
-  );
-};
-
-// packages/vscode-extension/src/analysis-navigation-data.ts
-init_src();
-var projectAnalysisNavigation = (project, target, executionCounts) => {
-  if (project.manifest.target !== target.target || project.manifest.rom.contentSha256 !== target.romContentSha256 || project.manifest.rom.contentSize !== target.romContentSize) {
-    throw new Error("Navigation target no longer matches the current native analysis project.");
-  }
-  const matchesArchitecture = (specification2) => !target.architectureHints.length || target.architectureHints.some(
-    (architecture) => specification2 === architecture || specification2.startsWith(`${architecture}.`)
-  );
-  const nodes = project.shards.analysis.filter(
-    (record2) => record2.kind === "cfg-node" && record2.addressSpace === target.addressSpace && matchesArchitecture(record2.specificationId)
-  ).sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
-  let index = nodes.findIndex(({ address: address3 }) => address3 >= target.address);
-  if (index < 0) {
-    index = Math.max(0, nodes.length - 1);
-  }
-  const visible = nodes.slice(Math.max(0, index - 4), Math.max(0, index - 4) + 32);
-  const addresses2 = /* @__PURE__ */ new Set([...visible.map(({ address: address3 }) => address3), target.address]);
-  const offsets = new Set(
-    visible.flatMap((node) => node.fileOffset === void 0 ? [] : [node.fileOffset])
-  );
-  const fileSpaces = new Set(
-    project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
-  );
-  const addressList = [...addresses2];
-  const offsetList = [...offsets];
-  const locations = (space) => {
-    if (space === target.addressSpace) {
-      return addressList;
-    }
-    return fileSpaces.has(space) ? offsetList : [];
-  };
-  const runtime = project.shards.runtime.filter((record2) => {
-    if (!matchesArchitecture(record2.architecture)) {
-      return false;
-    }
-    if (record2.kind === "runtime-memory-access") {
-      return record2.instructionAddressSpace === target.addressSpace && addresses2.has(record2.instructionAddress);
-    }
-    if (record2.kind === "runtime-control-target") {
-      return record2.fromAddressSpace === target.addressSpace && addresses2.has(record2.fromAddress);
-    }
-    if (record2.kind === "runtime-coverage") {
-      return locations(record2.addressSpace).some(
-        (address3) => record2.start <= address3 && address3 < record2.end
-      );
-    }
-    return record2.addressSpace === target.addressSpace && addresses2.has(record2.address);
-  });
-  const projection = buildInstructionAnalysisAnnotations(project.manifest, {
-    ...project.shards,
-    analysis: visible,
-    runtime,
-    annotations: project.shards.annotations.filter(
-      (record2) => locations(record2.addressSpace).some(
-        (address3) => record2.start <= address3 && address3 < record2.end
-      )
-    )
-  });
-  const summaries3 = new Map(
-    projection.instructions.filter((record2) => record2.addressSpace === target.addressSpace).map((record2) => [
-      record2.address,
-      formatInstructionAnnotationSummary({
-        ...record2,
-        executionCount: executionCounts?.get(`${record2.addressSpace}:${record2.address}`) ?? record2.executionCount
-      })
-    ])
-  );
-  const lines = visible.map((node) => {
-    const bytes = (node.bytes ? node.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")) : [
-      node.opcode.toString(16).toUpperCase().padStart(2, "0"),
-      ...Array.from({ length: Math.max(0, node.size - 1) }, () => "??")
-    ]).join(" ");
-    const summary = summaries3.get(node.address);
-    const context = node.context.length ? ` context=${node.context.map((value) => `0x${value.toString(16)}`).join("/")}` : "";
-    return `${node.addressSpace}|0x${node.address.toString(16)}  ${bytes.padEnd(16)}  ${node.mnemonic} <${node.mode}> ; ${node.id}${context}${summary ? ` ; ${summary}` : ""}`;
-  });
-  const captured = runtime.filter(
-    (record2) => record2.kind === "runtime-instruction" && record2.address === target.address
-  ).slice(0, 32);
-  if (captured.length) {
-    lines.push(
-      "; Saved execution-time instruction variants at the selected address:",
-      ...captured.map(
-        (record2) => `${record2.addressSpace}|0x${record2.address.toString(16)}  ${record2.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")} ; ${record2.architecture} \xB7 recorded ${record2.count} time(s)`
-      )
-    );
-  }
-  return {
-    lines,
-    capturedRam: visible.some(
-      (node) => node.address === target.address && node.fileOffset === void 0 && !!node.bytes
-    ) || captured.length > 0 && !visible.some((node) => node.address === target.address && node.fileOffset !== void 0)
-  };
-};
-
-// packages/vscode-extension/src/analysis-sources-data.ts
-init_src();
-var readAnalysisSourceCatalog = (directory) => {
-  const store = openAnalysisProjectStore(directory);
-  try {
-    return store.transaction(() => store.sourceCatalog(), false);
-  } finally {
-    store.close();
-  }
-};
-
-// packages/vscode-extension/src/disassembly-annotation-data.ts
+// src/disassembly/annotation-data.ts
 var import_node_crypto9 = require("node:crypto");
 var fs11 = __toESM(require("node:fs"));
 var path9 = __toESM(require("node:path"));
@@ -23538,7 +23247,7 @@ init_debug_map();
 init_src();
 init_src3();
 
-// packages/vscode-extension/src/disassembly-annotation-location.ts
+// src/disassembly/annotation-location.ts
 init_src();
 var annotationReferenceAt = (text2, line, column) => {
   const code = (text2.split(/\r?\n/)[line - 1] ?? "").split(";")[0];
@@ -23651,7 +23360,7 @@ var annotationLocationsForSource = (map, sourceId, text2, line, column, shards, 
   return [...locations.values()];
 };
 
-// packages/vscode-extension/src/disassembly-annotation-data.ts
+// src/disassembly/annotation-data.ts
 var refreshDisassemblyAnnotation = (snapshot, input, instructionGroups) => {
   const { target, receipt } = input;
   if (snapshot.revision.manifestSha256 !== receipt.after) {
@@ -23885,7 +23594,259 @@ var saveDisassemblyAnnotation = (directory, snapshot, input) => {
   return { inverse: applied.inverse, snapshot: { ...committed2, shards: applied.project.shards } };
 };
 
-// packages/vscode-extension/src/analysis-worker.ts
+// src/analysis/annotation-format.ts
+init_canonical_json();
+var hexadecimal = (value) => `$${value.toString(16).toUpperCase().padStart(4, "0")}`;
+var valueText = (value, present = true) => {
+  if (!present) {
+    return "\u2205";
+  }
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    const record2 = value;
+    if (record2.kind === "known" && "value" in record2) {
+      return valueText(record2.value);
+    }
+    if (record2.kind === "unknown") {
+      return "?";
+    }
+  }
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value) ? hexadecimal(value) : String(value);
+  }
+  if (typeof value === "boolean") {
+    return String(value);
+  }
+  const serialized = JSON.stringify(canonicalValue(value)) ?? String(value);
+  return serialized.length > 60 ? `${serialized.slice(0, 57)}\u2026` : serialized;
+};
+var effectiveAddressText = (address3) => {
+  const resolved = address3.address ?? address3.baseAddress;
+  const identity = [address3.symbol, resolved === void 0 ? void 0 : hexadecimal(resolved)].filter((value) => value !== void 0).join("@");
+  return `EA${address3.operandIndex} ${identity || "?"}${address3.address === void 0 && address3.baseAddress !== void 0 ? " base" : ""}${address3.volatile ? " volatile" : ""}`;
+};
+var transitionText = (transition) => `\u0394${transition.field} ${valueText(transition.before, "before" in transition)}\u2192${valueText(transition.after, "after" in transition)}`;
+var stateText = (observation) => {
+  const fields = Object.entries(observation.state).sort(([left], [right]) => left.localeCompare(right)).map(([name, value]) => `${name}=${valueText(value)}`).join(",");
+  return `${observation.source} state ${fields || "\u2205"}${observation.count === void 0 ? "" : ` \xD7${observation.count}`}`;
+};
+var accessText = (access) => {
+  let mode3 = "?";
+  if (access.access === "read") {
+    mode3 = "R";
+  } else if (access.access === "write") {
+    mode3 = "W";
+  } else if (access.access === "read-write") {
+    mode3 = "RW";
+  }
+  return `${access.actor ? `${access.actor}${access.channel === void 0 ? "" : ` channel ${access.channel}`} ` : ""}${mode3} ${access.accessedAddressSpace}:${hexadecimal(access.accessedAddress)}${access.value === void 0 ? "" : `=${hexadecimal(access.value)}`} ${access.width}B \xD7${access.count}`;
+};
+var clipped = (value, maximum) => value.length <= maximum ? value : `${value.slice(0, maximum - 1)}\u2026`;
+var formatInstructionAnnotationSummary = (annotation, maximumLength = 220) => {
+  const parts = [];
+  parts.push(...(annotation.comments ?? []).slice(0, 2).map(({ text: text2 }) => text2));
+  if (annotation.executionCount > 0) {
+    parts.push(`\u25B6 ${annotation.executionCount}\xD7`);
+  }
+  if (annotation.detailsLimited) {
+    parts.push("details limited");
+  }
+  const coverage = annotation.runtimeCoverage.map(({ coverage: coverage2 }) => coverage2);
+  if (coverage.length > 0) {
+    parts.push(`coverage ${coverage.join("/")}`);
+  }
+  parts.push(...annotation.effectiveAddresses.slice(0, 2).map(effectiveAddressText));
+  parts.push(...annotation.memoryAccesses.slice(0, 2).map(accessText));
+  parts.push(...annotation.stateTransitions.slice(0, 3).map(transitionText));
+  if (annotation.stateTransitions.length === 0 && annotation.stateObservations.length > 0) {
+    parts.push(stateText(annotation.stateObservations[0]));
+  }
+  return clipped(parts.join(" \xB7 "), Math.max(24, maximumLength));
+};
+
+// src/analysis/annotation-index.ts
+var append = (map, key2, value) => {
+  const entries3 = map.get(key2);
+  if (entries3) {
+    entries3.push(value);
+  } else {
+    map.set(key2, [value]);
+  }
+};
+var lowerBound = (values, target, at) => {
+  let low = 0;
+  let high = values.length;
+  while (low < high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (at(values[middle]) < target) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  return low;
+};
+var valuesInRange = (values, start, end, at) => {
+  const matches = [];
+  for (let index = lowerBound(values, start, at); index < values.length && at(values[index]) < end; index++) {
+    matches.push(values[index]);
+  }
+  return matches;
+};
+var createInstructionAnnotationIndex = (instructions) => {
+  const byAddressSpace = /* @__PURE__ */ new Map();
+  const byOutputOffset = [];
+  for (const annotation of instructions) {
+    append(byAddressSpace, annotation.addressSpace, annotation);
+    for (const offset of annotation.outputOffsets) {
+      byOutputOffset.push({ offset, annotation });
+    }
+  }
+  for (const annotations of byAddressSpace.values()) {
+    annotations.sort(
+      (left, right) => left.address - right.address || left.id.localeCompare(right.id)
+    );
+  }
+  byOutputOffset.sort(
+    (left, right) => left.offset - right.offset || left.annotation.id.localeCompare(right.annotation.id)
+  );
+  return { byAddressSpace, byOutputOffset };
+};
+var instructionAnnotationsForDebugRange = (index, range) => {
+  const matches = [
+    ...valuesInRange(
+      index.byAddressSpace.get(range.addressSpace) ?? [],
+      range.start,
+      range.end,
+      ({ address: address3 }) => address3
+    ),
+    ...range.outputStart === void 0 || range.outputEnd === void 0 ? [] : valuesInRange(
+      index.byOutputOffset,
+      range.outputStart,
+      range.outputEnd,
+      ({ offset }) => offset
+    ).map(({ annotation }) => annotation)
+  ];
+  const unique2 = new Map(
+    matches.filter(
+      (annotation) => annotation.architectures.length === 0 || annotation.architectures.includes(range.architecture)
+    ).map((annotation) => [annotation.id, annotation])
+  );
+  return [...unique2.values()].sort(
+    (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.address - right.address || left.id.localeCompare(right.id)
+  );
+};
+
+// src/analysis/navigation-data.ts
+init_src();
+var projectAnalysisNavigation = (project, target, executionCounts) => {
+  if (project.manifest.target !== target.target || project.manifest.rom.contentSha256 !== target.romContentSha256 || project.manifest.rom.contentSize !== target.romContentSize) {
+    throw new Error("Navigation target no longer matches the current native analysis project.");
+  }
+  const matchesArchitecture = (specification2) => !target.architectureHints.length || target.architectureHints.some(
+    (architecture) => specification2 === architecture || specification2.startsWith(`${architecture}.`)
+  );
+  const nodes = project.shards.analysis.filter(
+    (record2) => record2.kind === "cfg-node" && record2.addressSpace === target.addressSpace && matchesArchitecture(record2.specificationId)
+  ).sort((a, b) => a.address - b.address || a.id.localeCompare(b.id));
+  let index = nodes.findIndex(({ address: address3 }) => address3 >= target.address);
+  if (index < 0) {
+    index = Math.max(0, nodes.length - 1);
+  }
+  const visible = nodes.slice(Math.max(0, index - 4), Math.max(0, index - 4) + 32);
+  const addresses2 = /* @__PURE__ */ new Set([...visible.map(({ address: address3 }) => address3), target.address]);
+  const offsets = new Set(
+    visible.flatMap((node) => node.fileOffset === void 0 ? [] : [node.fileOffset])
+  );
+  const fileSpaces = new Set(
+    project.manifest.addressSpaces.filter(({ kind }) => kind === "file").map(({ id }) => id)
+  );
+  const addressList = [...addresses2];
+  const offsetList = [...offsets];
+  const locations = (space) => {
+    if (space === target.addressSpace) {
+      return addressList;
+    }
+    return fileSpaces.has(space) ? offsetList : [];
+  };
+  const runtime = project.shards.runtime.filter((record2) => {
+    if (!matchesArchitecture(record2.architecture)) {
+      return false;
+    }
+    if (record2.kind === "runtime-memory-access") {
+      return record2.instructionAddressSpace === target.addressSpace && addresses2.has(record2.instructionAddress);
+    }
+    if (record2.kind === "runtime-control-target") {
+      return record2.fromAddressSpace === target.addressSpace && addresses2.has(record2.fromAddress);
+    }
+    if (record2.kind === "runtime-coverage") {
+      return locations(record2.addressSpace).some(
+        (address3) => record2.start <= address3 && address3 < record2.end
+      );
+    }
+    return record2.addressSpace === target.addressSpace && addresses2.has(record2.address);
+  });
+  const projection = buildInstructionAnalysisAnnotations(project.manifest, {
+    ...project.shards,
+    analysis: visible,
+    runtime,
+    annotations: project.shards.annotations.filter(
+      (record2) => locations(record2.addressSpace).some(
+        (address3) => record2.start <= address3 && address3 < record2.end
+      )
+    )
+  });
+  const summaries3 = new Map(
+    projection.instructions.filter((record2) => record2.addressSpace === target.addressSpace).map((record2) => [
+      record2.address,
+      formatInstructionAnnotationSummary({
+        ...record2,
+        executionCount: executionCounts?.get(`${record2.addressSpace}:${record2.address}`) ?? record2.executionCount
+      })
+    ])
+  );
+  const lines = visible.map((node) => {
+    const bytes = (node.bytes ? node.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")) : [
+      node.opcode.toString(16).toUpperCase().padStart(2, "0"),
+      ...Array.from({ length: Math.max(0, node.size - 1) }, () => "??")
+    ]).join(" ");
+    const summary = summaries3.get(node.address);
+    const context = node.context.length ? ` context=${node.context.map((value) => `0x${value.toString(16)}`).join("/")}` : "";
+    return `${node.addressSpace}|0x${node.address.toString(16)}  ${bytes.padEnd(16)}  ${node.mnemonic} <${node.mode}> ; ${node.id}${context}${summary ? ` ; ${summary}` : ""}`;
+  });
+  const captured = runtime.filter(
+    (record2) => record2.kind === "runtime-instruction" && record2.address === target.address
+  ).slice(0, 32);
+  if (captured.length) {
+    lines.push(
+      "; Saved execution-time instruction variants at the selected address:",
+      ...captured.map(
+        (record2) => `${record2.addressSpace}|0x${record2.address.toString(16)}  ${record2.bytes.map((byte) => byte.toString(16).toUpperCase().padStart(2, "0")).join(" ")} ; ${record2.architecture} \xB7 recorded ${record2.count} time(s)`
+      )
+    );
+  }
+  return {
+    lines,
+    capturedRam: visible.some(
+      (node) => node.address === target.address && node.fileOffset === void 0 && !!node.bytes
+    ) || captured.length > 0 && !visible.some((node) => node.address === target.address && node.fileOffset !== void 0)
+  };
+};
+
+// src/analysis/sources-data.ts
+init_src();
+var readAnalysisSourceCatalog = (directory) => {
+  const store = openAnalysisProjectStore(directory);
+  try {
+    return store.transaction(() => store.sourceCatalog(), false);
+  } finally {
+    store.close();
+  }
+};
+
+// src/analysis/worker.ts
 var database;
 var projectDatabase = (directory) => {
   const stat = fs12.statSync(path10.join(directory, ANALYSIS_PROJECT_SQLITE_FILE), { bigint: true });

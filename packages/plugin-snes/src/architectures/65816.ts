@@ -13,7 +13,7 @@ import { classifyExpanded65816Operand } from "./operand-classifiers.js";
 
 /**
  * Lowers a 65816 operand.
- * Core may already classify; unknown (math, labels) gets 65816 width policy.
+ * Core may already classify. Unknown (math, labels) gets 65816 width policy.
  * @param {ArchitectureEncoderContext["operands"]} resolver The operand resolver.
  * @param {string} operand The operand to lower.
  * @returns {LoweredOperand} The lowered operand.
@@ -57,7 +57,7 @@ const keepsFixedWidthAddressingMode = (
 
 /**
  * True for `,x` / `,y` memory indexing. Grouping `(bank&$FF0000)+$03,x` starts
- * with `(` so `syntax.indirect` is a false positive; classified mode decides.
+ * with `(` so `syntax.indirect` is a false positive, classified mode decides.
  * @param {LoweredOperand} operand The lowered operand to classify.
  * @param {"x" | "y"} register The index register to match.
  * @returns {boolean} Whether the operand uses the requested memory index register.
@@ -70,7 +70,7 @@ const isIndexedMemory = (operand: LoweredOperand, register: "x" | "y"): boolean 
  * track SEP/REP so immediates (`LDA #expr`) match the current register width.
  *
  * `optimizeDirectPage` is a session callback - `optimize dp ram|always` can
- * change mid-source; we must not snapshot it in the constructor.
+ * change mid-source. We must not snapshot it in the constructor.
  *
  * `smartMode` mirrors ca65's `.smart` directive. When `true` (the default),
  * `SEP`/`REP` instructions automatically update M/X width hints. When `false`,
@@ -85,7 +85,7 @@ export class Arch65816 implements ArchitectureEncoder {
   x16: boolean;
   /**
    * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
-   * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+   * Set to false by `.smart off`. Re-enabled by `.smart` or `.smart on`.
    */
   smartMode: boolean;
 
@@ -571,7 +571,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
   /**
    * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
-   * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+   * {@link handleLogicAndCompareOperations}. STA has no immediate form.
    *
    * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
    * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
@@ -938,7 +938,7 @@ export class Arch65816 implements ArchitectureEncoder {
    * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
    * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
    * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
-   * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+   * (`len === 2`). This family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
    * long / stack forms.
    *
    * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
@@ -1006,7 +1006,7 @@ export class Arch65816 implements ArchitectureEncoder {
         indirectY: 0x11,
         indirect: 0x12,
         // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
-        // `[...]` is remapped to directIndirectLong first; these keys are the
+        // `[...]` is remapped to directIndirectLong first. These keys are the
         // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
         indirectLong: 0x0f,
         indirectLongY: 0x1f,
@@ -1093,7 +1093,7 @@ export class Arch65816 implements ArchitectureEncoder {
       CPX: 0xec,
       CPY: 0xcc,
     };
-    // Forced `.l` non-indexed. Values are abs+2 (ORA `$0D` → `$0F`); CPX/CPY omitted.
+    // Forced `.l` non-indexed. Values are abs+2 (ORA `$0D` → `$0F`). CPX/CPY omitted.
     const absLongMap: Partial<Record<LogicOpcode, number>> = {
       AND: 0x2f,
       ORA: 0x0f,
@@ -1312,14 +1312,14 @@ export class Arch65816 implements ArchitectureEncoder {
 
     // **Write opcode & address**
     const opcodeByte = opcodes[logicOpcode][mode];
-    // `!opcodeByte` also treats `$00` as missing; none of these opcodes are BRK.
+    // `!opcodeByte` also treats `$00` as missing. None of these opcodes are BRK.
     if (!opcodeByte) {
       throw new Error(`Error: Invalid operand format for ${opcode}: ${operand} => ${opcodeByte}`);
     }
     this.assembler.write1(opcodeByte);
-    // [dp] is 1 byte. The 2-byte branch also lists `directIndirectLong`; unreachable
+    // [dp] is 1 byte. The 2-byte branch also lists `directIndirectLong`. Unreachable
     // for ALU because the first if already handled it. CPX/CPY never set that mode.
-    // abs / abs,x / abs,y → 2; long + leftover `indirectLong` keys → 3; else 1 (DP, (dp), stack).
+    // abs / abs,x / abs,y → 2. Long + leftover `indirectLong` keys → 3. Else 1 (DP, (dp), stack).
     if (
       (opcode === "AND" ||
         opcode === "ORA" ||
@@ -1343,7 +1343,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
   /**
    * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
-   * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+   * `expandOperand` may turn `#10` into `#$A`. Strip `$` before parseInt.
    * Count `0` emits nothing (still "handled").
    * @param {string} opcode The opcode to handle.
    * @param {string} operand The operand to handle.
@@ -1664,21 +1664,21 @@ export class Arch65816 implements ArchitectureEncoder {
     if (explicitlen) {
       if (isLDX) {
         if (!isIndexed) {
-          // Forced non-indexed LDX: .b → A6; .w → AE.
+          // Forced non-indexed LDX: .b → A6. .w → AE.
           const forcedLDX: { [L: number]: number } = { 1: 0xa6, 2: 0xae };
           opcodeByte = forcedLDX[len] ?? 0xae;
         } else {
-          // For LDX with ,Y: .b → B6; .w → BE.
+          // For LDX with ,Y: .b → B6. .w → BE.
           const forcedLDXY: { [L: number]: number } = { 1: 0xb6, 2: 0xbe };
           opcodeByte = forcedLDXY[len] ?? 0xbe;
         }
       } else if (isLDY) {
         if (!isIndexed) {
-          // Forced non-indexed LDY: .b → A4; .w → AC.
+          // Forced non-indexed LDY: .b → A4. .w → AC.
           const forcedLDY: { [L: number]: number } = { 1: 0xa4, 2: 0xac };
           opcodeByte = forcedLDY[len] ?? 0xac;
         } else {
-          // For LDY with ,X: .b → B4; .w → BC.
+          // For LDY with ,X: .b → B4. .w → BC.
           const forcedLDYX: { [L: number]: number } = { 1: 0xb4, 2: 0xbc };
           opcodeByte = forcedLDYX[len] ?? 0xbc;
         }
@@ -1697,7 +1697,7 @@ export class Arch65816 implements ArchitectureEncoder {
     }
 
     // Fallback: No explicit length.
-    // For non-indexed, if operand is 4 digits, use absolute; otherwise, use direct page.
+    // For non-indexed, if operand is 4 digits, use absolute. Otherwise, use direct page.
     if (isLDX) {
       if (!isIndexed) {
         address = this.assembler.operandResolver.getnum(operand);
@@ -1940,7 +1940,7 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+   * Encodes STX / STY / STZ. STX indexes Y only (no abs,y). STY indexes X only
    * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
    *
    * @param {string} opcode STX, STY, or STZ.
@@ -2104,7 +2104,7 @@ export class Arch65816 implements ArchitectureEncoder {
   }
 
   /**
-   * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+   * MVN/MVP. WDC and the hover catalog spell `dest, src`. We still write bytes
    * in source order (first operand, then second) - Asar's wire format. Locals
    * are named src/dest after that write order, not WDC's dest-then-src names.
    *
@@ -2283,7 +2283,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
   /**
    * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
-   * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+   * always 16-bit. The rest are 8-bit. `.b/.w` on REP/SEP only validates range.
    * @param {string} opcode Candidate mnemonic.
    * @param {number} num Already-evaluated operand value.
    * @param {number} len Inferred width (REP/SEP range check).
@@ -2468,7 +2468,7 @@ export class Arch65816 implements ArchitectureEncoder {
 
   /**
    * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
-   * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
+   * 65816 has no 32-bit immediate. Callers treat it as width 4 for PEA-like repeats.
    * @param {string} c The opcode suffix to resolve the length of.
    * @returns {number} The operand length.
    * @throws {Error} If the opcode length is invalid.

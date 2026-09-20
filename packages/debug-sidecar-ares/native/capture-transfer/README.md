@@ -7,7 +7,7 @@ scope. It preserves the instruction and bus-only protocols. Apply
 `be548251b537334f4f2054c7d86171da22fdc6ca`.
 
 `source.json` pins all three patches and the four modified source files. The
-maintained checkout is `Local Only/ares-rich-state-load-fix`; `GDB_SNES` is unchanged.
+maintained checkout is `Local Only/ares-rich-state-load-fix`. `GDB_SNES` is unchanged.
 `capture.hpp` and `bus-test.cpp` are exact reviewable copies of the patched sources.
 
 ```sh
@@ -33,7 +33,7 @@ and paused-state tests also pass with both PPU implementations.
 desktop runtime through the bundled sidecar, DAP recorder, archive decoder and
 neutral transfer importer. The delayed run adds 15 ms before each capture read.
 The original synthetic ROM uses DMA channel 0 and direct/indirect HDMA channels
-1/2; no user ROM or launch settings are changed.
+1/2. No user ROM or launch settings are changed.
 
 The separately staged development candidate is
 `Local Only/ares-capture-transfer-desktop-runtime`. Select

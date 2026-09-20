@@ -84,7 +84,7 @@ const validatePluginEntry = (value: unknown, index: number): PluginModuleRequest
 /**
  * Validate known JSON fields without reading files, resolving modules, or validating plugin options.
  * Throws PluginError with PLUGIN_CONFIGURATION_INVALID. The new top-level result retains nested
- * arrays/options from the input; callers must not assume a deep copy or runtime immutability.
+ * arrays/options from the input. Callers must not assume a deep copy or runtime immutability.
  * @param {unknown} value Parsed JSON to validate.
  * @returns {ProjectConfiguration} Known configuration fields, with nested input references retained.
  */
@@ -131,7 +131,7 @@ export interface LoadedConfigurationFile {
 
 /**
  * Return an explicit nonempty path resolved against cwd, without checking its existence.
- * Otherwise check only cwd/uttori-asm.config.json, returning undefined when absent; no ancestor search.
+ * Otherwise check only cwd/uttori-asm.config.json, returning undefined when absent. No ancestor search.
  * @param {string} cwd Discovery directory and explicit-path base.
  * @param {string} [configuredPath] Optional explicit configuration filename.
  * @returns {string | undefined} An absolute path, or undefined when optional discovery finds nothing.
@@ -149,7 +149,7 @@ export const discoverProjectConfigurationPath = (
 
 /**
  * Read UTF-8 JSON and validate its fields. Relative configuredPath is resolved against cwd.
- * A missing discovered file yields empty configuration; a missing explicit file, malformed JSON,
+ * A missing discovered file yields empty configuration. A missing explicit file, malformed JSON,
  * or read failure rejects with PLUGIN_CONFIGURATION_INVALID. Does not execute plugins.
  * @param {string} cwd Discovery directory and explicit-path base.
  * @param {string} [configuredPath] Optional explicit configuration filename.

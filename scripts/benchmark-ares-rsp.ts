@@ -30,7 +30,7 @@ class BenchmarkTransport implements GdbRspTransport {
 
 /** Deterministic, checked RSP payload equivalent in size to a full hex-encoded ACT2 chunk.
  * @param {number} bytes ASCII payload bytes, excluding the four framing bytes.
- * @returns {object} Reusable packet and exact expected response; construction is outside timing.
+ * @returns {object} Reusable packet and exact expected response. Construction is outside timing.
  */
 const fixture = (bytes: number) => {
   const payload = "0123456789abcdef".repeat(Math.ceil(bytes / 16)).slice(0, bytes);
@@ -109,7 +109,7 @@ const result = {
   node: process.version,
   clientSha256: createHash("sha256").update(source).digest("hex"),
   description:
-    "Five samples after three warmup requests each; payload generation excluded. In-memory RSP parsing only, not emulator or disk throughput.",
+    "Five samples after three warmup requests each. Payload generation excluded. In-memory RSP parsing only, not emulator or disk throughput.",
   results,
 };
 if (process.argv[2]) await writeFile(process.argv[2], JSON.stringify(result, null, 2) + "\n");

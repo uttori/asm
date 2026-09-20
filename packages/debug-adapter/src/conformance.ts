@@ -12,7 +12,7 @@ import {
 /** Frozen contract revision shared by replay and live-emulator backend tests. */
 export const DEBUG_BACKEND_CONFORMANCE_VERSION = 1 as const;
 
-/** Stable scenario identifiers; emulator integrations must not replace them with private suites. */
+/** Stable scenario identifiers. Emulator integrations must not replace them with private suites. */
 export const DEBUG_BACKEND_CONFORMANCE_SCENARIOS = Object.freeze([
   "protocol-and-capabilities",
   "connect-and-inspect",
@@ -259,7 +259,7 @@ const scenarios: Readonly<
         options.fixture.memoryBytes.length,
       );
       if (memory.unreadableBytes !== 0)
-        fail(`Expected complete memory read; ${memory.unreadableBytes} byte(s) were unreadable.`);
+        fail(`Expected complete memory read. ${memory.unreadableBytes} byte(s) were unreadable.`);
       if (JSON.stringify([...memory.bytes]) !== JSON.stringify(options.fixture.memoryBytes))
         fail("Memory bytes did not match the conformance fixture.");
       const instruction = requireValue(

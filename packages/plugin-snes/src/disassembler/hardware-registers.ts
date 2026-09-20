@@ -37,12 +37,12 @@ const FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "BG1HOFS",
     address: 0x210d,
-    description: "BG1 horizontal scroll, write twice; also Mode 7 horizontal offset.",
+    description: "BG1 horizontal scroll, write twice. Also Mode 7 horizontal offset.",
   },
   {
     symbol: "BG1VOFS",
     address: 0x210e,
-    description: "BG1 vertical scroll, write twice; also Mode 7 vertical offset.",
+    description: "BG1 vertical scroll, write twice. Also Mode 7 vertical offset.",
   },
   { symbol: "BG2HOFS", address: 0x210f, description: "BG2 horizontal scroll, write twice." },
   { symbol: "BG2VOFS", address: 0x2110, description: "BG2 vertical scroll, write twice." },
@@ -63,12 +63,12 @@ const FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "M7A",
     address: 0x211b,
-    description: "Mode 7 matrix parameter A, write twice; multiplication operand.",
+    description: "Mode 7 matrix parameter A, write twice. Multiplication operand.",
   },
   {
     symbol: "M7B",
     address: 0x211c,
-    description: "Mode 7 matrix parameter B, write twice; multiplication operand.",
+    description: "Mode 7 matrix parameter B, write twice. Multiplication operand.",
   },
   { symbol: "M7C", address: 0x211d, description: "Mode 7 matrix parameter C, write twice." },
   { symbol: "M7D", address: 0x211e, description: "Mode 7 matrix parameter D, write twice." },
@@ -108,17 +108,17 @@ const FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "MPYL",
     address: 0x2134,
-    description: "PPU multiplication result, low byte; read only.",
+    description: "PPU multiplication result, low byte. Read only.",
   },
   {
     symbol: "MPYM",
     address: 0x2135,
-    description: "PPU multiplication result, middle byte; read only.",
+    description: "PPU multiplication result, middle byte. Read only.",
   },
   {
     symbol: "MPYH",
     address: 0x2136,
-    description: "PPU multiplication result, high byte; read only.",
+    description: "PPU multiplication result, high byte. Read only.",
   },
   {
     symbol: "SLHV",
@@ -139,8 +139,8 @@ const FIXED_REGISTER_DEFINITIONS = [
     address: 0x213d,
     description: "Latched vertical beam-counter value, read twice.",
   },
-  { symbol: "STAT77", address: 0x213e, description: "PPU1 status and version number; read only." },
-  { symbol: "STAT78", address: 0x213f, description: "PPU2 status and version number; read only." },
+  { symbol: "STAT77", address: 0x213e, description: "PPU1 status and version number. Read only." },
+  { symbol: "STAT78", address: 0x213f, description: "PPU2 status and version number. Read only." },
   { symbol: "APUIO0", address: 0x2140, description: "Main CPU/APU communication port 0." },
   { symbol: "APUIO1", address: 0x2141, description: "Main CPU/APU communication port 1." },
   { symbol: "APUIO2", address: 0x2142, description: "Main CPU/APU communication port 2." },
@@ -192,12 +192,12 @@ const FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "RDNMI",
     address: 0x4210,
-    description: "V-blank NMI flag and CPU version; read acknowledges the flag.",
+    description: "V-blank NMI flag and CPU version. Read acknowledges the flag.",
   },
   {
     symbol: "TIMEUP",
     address: 0x4211,
-    description: "H/V timer IRQ flag; read acknowledges the flag.",
+    description: "H/V timer IRQ flag. Read acknowledges the flag.",
   },
   {
     symbol: "HVBJOY",
@@ -208,62 +208,62 @@ const FIXED_REGISTER_DEFINITIONS = [
   {
     symbol: "RDDIVL",
     address: 0x4214,
-    description: "Unsigned division quotient, low byte; read only.",
+    description: "Unsigned division quotient, low byte. Read only.",
   },
   {
     symbol: "RDDIVH",
     address: 0x4215,
-    description: "Unsigned division quotient, high byte; read only.",
+    description: "Unsigned division quotient, high byte. Read only.",
   },
   {
     symbol: "RDMPYL",
     address: 0x4216,
-    description: "Multiplication product or division remainder, low byte; read only.",
+    description: "Multiplication product or division remainder, low byte. Read only.",
   },
   {
     symbol: "RDMPYH",
     address: 0x4217,
-    description: "Multiplication product or division remainder, high byte; read only.",
+    description: "Multiplication product or division remainder, high byte. Read only.",
   },
   {
     symbol: "JOY1L",
     address: 0x4218,
-    description: "Automatic joypad result for controller 1, low byte; read only.",
+    description: "Automatic joypad result for controller 1, low byte. Read only.",
   },
   {
     symbol: "JOY1H",
     address: 0x4219,
-    description: "Automatic joypad result for controller 1, high byte; read only.",
+    description: "Automatic joypad result for controller 1, high byte. Read only.",
   },
   {
     symbol: "JOY2L",
     address: 0x421a,
-    description: "Automatic joypad result for controller 2, low byte; read only.",
+    description: "Automatic joypad result for controller 2, low byte. Read only.",
   },
   {
     symbol: "JOY2H",
     address: 0x421b,
-    description: "Automatic joypad result for controller 2, high byte; read only.",
+    description: "Automatic joypad result for controller 2, high byte. Read only.",
   },
   {
     symbol: "JOY3L",
     address: 0x421c,
-    description: "Automatic joypad result for controller 3, low byte; read only.",
+    description: "Automatic joypad result for controller 3, low byte. Read only.",
   },
   {
     symbol: "JOY3H",
     address: 0x421d,
-    description: "Automatic joypad result for controller 3, high byte; read only.",
+    description: "Automatic joypad result for controller 3, high byte. Read only.",
   },
   {
     symbol: "JOY4L",
     address: 0x421e,
-    description: "Automatic joypad result for controller 4, low byte; read only.",
+    description: "Automatic joypad result for controller 4, low byte. Read only.",
   },
   {
     symbol: "JOY4H",
     address: 0x421f,
-    description: "Automatic joypad result for controller 4, high byte; read only.",
+    description: "Automatic joypad result for controller 4, high byte. Read only.",
   },
 ] as const satisfies readonly SnesHardwareDefine[];
 
@@ -277,17 +277,17 @@ const FIXED_REGISTER_ALIASES = [
   {
     symbol: "M7HOFS",
     address: 0x210d,
-    description: "Mode 7 horizontal scroll, write twice; shares BG1HOFS.",
+    description: "Mode 7 horizontal scroll, write twice. Shares BG1HOFS.",
   },
   {
     symbol: "M7VOFS",
     address: 0x210e,
-    description: "Mode 7 vertical scroll, write twice; shares BG1VOFS.",
+    description: "Mode 7 vertical scroll, write twice. Shares BG1VOFS.",
   },
   {
     symbol: "JOYOUT",
     address: 0x4016,
-    description: "Joypad latch output; write view of the address shared with JOYSER0.",
+    description: "Joypad latch output. Write view of the address shared with JOYSER0.",
   },
 ] as const satisfies readonly SnesHardwareDefine[];
 
@@ -370,7 +370,7 @@ const DMA_REGISTER_DEFINITIONS: readonly DmaRegisterDefinition[] = [
   {
     offset: 0x0b,
     symbol: (channel) => `UNUSED${channel}`,
-    description: "Unused DMA/HDMA data byte; shared with the $43nF mirror.",
+    description: "Unused DMA/HDMA data byte. Shared with the $43nF mirror.",
   },
   {
     offset: 0x0f,
@@ -390,7 +390,7 @@ export interface SnesHardwareRegister {
   readonly symbol: string;
   /** Human-readable register purpose used by generated-source hover documentation. */
   readonly description: string;
-  /** Always true; MMIO is never treated as ROM or a static effective address. */
+  /** Always true. MMIO is never treated as ROM or a static effective address. */
   readonly volatile: true;
 }
 
@@ -436,7 +436,7 @@ export const identifySnesHardwareRegister = (address: number): SnesHardwareRegis
 const hex = (value: number, width: number): string =>
   `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 
-/** Architecture-neutral filename; the SNES exporter supplies the register definitions. */
+/** Architecture-neutral filename. The SNES exporter supplies the register definitions. */
 export const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
 
 /**

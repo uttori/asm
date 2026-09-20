@@ -82,7 +82,7 @@ const structuredRomLayout = (rom, mapper) => {
             comment = `${mode} ${vector.name} vector is unpopulated.`;
         }
         else if (vector.state) {
-            comment = `${mode} ${vector.name} handler; target bank is forced to $00 -> ${hex(vector.targetAddress, 6)}.`;
+            comment = `${mode} ${vector.name} handler. Target bank is forced to $00 -> ${hex(vector.targetAddress, 6)}.`;
         }
         fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment, "vectors"));
     }
@@ -164,7 +164,7 @@ export const formatSnes65816SourceInstruction = (instruction, ramVariables, sour
     const dataAddress = instruction.references.find((reference) => reference.kind === "data" && reference.operandIndex === 0)?.address;
     const canonicalRamAddress = dataAddress === undefined ? undefined : canonicalSnesWramAddress(dataAddress);
     const namedAddress = canonicalRamAddress ?? dataAddress;
-    // WRAM has fixed bus mirrors; SRAM names only match the CPU window declared in the map.
+    // WRAM has fixed bus mirrors. SRAM names only match the CPU window declared in the map.
     const ramVariable = namedAddress === undefined ? undefined : ramVariables?.get(namedAddress);
     const indexed = [
         "absoluteLongIndexedX",
@@ -277,7 +277,7 @@ const toFileOffset = (addressSpace, address, mapper, romSize) => {
 export const snesSourceLabelNames = (shards, mapper, romSize, ramNames = []) => {
     const offsets = new Set(shards.labels.map((label) => toFileOffset(label.addressSpace, label.address, mapper, romSize)));
     const reserved = [...renderSnesHardwareDefines().matchAll(/^([A-Z_a-z]\w*)\s*=/gm)].map((match) => match[1]);
-    // User RAM maps can reserve arbitrarily many names; none should be lost to a call-argument limit.
+    // User RAM maps can reserve arbitrarily many names. None should be lost to a call-argument limit.
     for (const name of ramNames) {
         reserved.push(name);
     }
@@ -348,7 +348,7 @@ const renderedMetadata = (lines, hasInstruction = false) => {
             output.push(`${line.name}:${line.inlineComment ? ` ; ${line.inlineComment}` : ""}`);
         }
         if (line.instructionComment && !hasInstruction) {
-            output.push(`; [Instruction comment; instruction unavailable] ${line.instructionComment}`);
+            output.push(`; [Instruction comment. Instruction unavailable] ${line.instructionComment}`);
         }
     }
     return output;
@@ -380,7 +380,7 @@ const rejectedByAnnotation = (node, annotations, runtimeEvidence) => {
     const capturedRomInstruction = node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
     return (node.fileOffset === undefined ||
         annotations
-            // Performance invariant: use one range query; do not scan every annotation for every CFG node.
+            // Performance invariant: use one range query. Do not scan every annotation for every CFG node.
             .overlapping(node.fileOffset, node.fileOffset + node.size)
             .some((entry) => rawClassifications.has(entry.classification) ||
             (entry.classification === "unreached" && !capturedRomInstruction)));
@@ -415,7 +415,7 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
         .flatMap((record) => record.nodes));
     const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
     const hasInteriorMetadata = (start, end) => {
-        // Binary search the first metadata offset after start; a linear scan here would multiply label,
+        // Binary search the first metadata offset after start. A linear scan here would multiply label,
         // comment, and region counts by every CFG candidate.
         let low = 0;
         let high = metadataOffsets.length;
@@ -445,7 +445,7 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
     const candidates = new Map();
     const context = createSnesAddressContext(mapper);
     let previousOffset = -1;
-    // SQL callers hold only the current offset's variants; in-memory callers retain the same semantic path.
+    // SQL callers hold only the current offset's variants. In-memory callers retain the same semantic path.
     for (const group of instructionGroups ?? fallbackGroups()) {
         if (!group.length) {
             continue;
@@ -495,7 +495,7 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
         }
         const resolved = variants;
         const first = resolved[0];
-        // Every variant reads the same ROM offset; matching size and specification establish one encoding.
+        // Every variant reads the same ROM offset. Matching size and specification establish one encoding.
         if (resolved.some((entry) => entry.record.size !== first.record.size ||
             entry.record.specificationId !== first.record.specificationId)) {
             continue;
@@ -504,7 +504,7 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
         if (resolved.some((entry) => entry.source !== renderedSource)) {
             // DBR/direct-page changes can give identical ROM instructions different RAM, struct, or
             // hardware names. Keep the instruction with a numeric operand instead of inventing a conflict.
-            // Removing data references also disables hardware naming; control-flow labels remain usable.
+            // Removing data references also disables hardware naming. Control-flow labels remain usable.
             const numericSources = resolved.map(({ instruction }) => formatSnes65816SourceInstruction({
                 ...instruction,
                 references: instruction.references.filter((reference) => reference.kind !== "data"),
@@ -713,7 +713,7 @@ const preflight = (directory, force) => {
             .readdirSync(directory)
             .filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
-            throw new Error(`Export directory '${directory}' is not empty; pass --force to write into it.`);
+            throw new Error(`Export directory '${directory}' is not empty. Pass --force to write into it.`);
         }
         return undefined;
     }
@@ -743,7 +743,7 @@ const regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions
     .sort();
 /**
  * Writes a deterministic 65816 source tree that can be reassembled with this plugin.
- * Confident CFG nodes become width-qualified instructions; unknown bytes remain
+ * Confident CFG nodes become width-qualified instructions. Unknown bytes remain
  * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
  * bound ROM struct fields become native data source. An optional 512-byte copier
  * header remains an asset. Optional struct bindings also name RAM/ROM operands.
@@ -925,15 +925,18 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                     lines.push(`  dataStructs ${record.binding.name}`);
                 }
                 const literal = renderSnesStructInitializer(record, rom.read(record.start, record.end - record.start));
+                // Row comments belong to the binding index, so they neither split arrays nor create labels.
+                const entryComment = record.binding.entryComments?.[record.index];
+                const suffix = entryComment ? ` ; ${entryComment}` : "";
                 if (table) {
-                    lines.push(`    [${record.index}] = ${literal}`);
+                    lines.push(`    [${record.index}] = ${literal}${suffix}`);
                     table.nextIndex = record.index + 1;
                 }
                 else {
                     const reference = record.binding.count === 1 && record.index === 0
                         ? record.binding.name
                         : `${record.binding.name}[${record.index}]`;
-                    lines.push(`  dataStruct ${reference}, ${literal}`);
+                    lines.push(`  dataStruct ${reference}, ${literal}${suffix}`);
                 }
                 spans.push({
                     id: `struct:${span.start.toString(16).padStart(6, "0")}`,
@@ -947,6 +950,13 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                 });
             }
             else if (span.structField) {
+                // Interior native metadata can force a record back to field directives. Keep its entry
+                // identity once at the record start, even when that first field is itself fragmented.
+                const record = span.structField.record;
+                const entryComment = record?.binding.entryComments?.[record.index];
+                if (record?.start === span.start && entryComment) {
+                    lines.push(`; ${entryComment}`);
+                }
                 // Each field always renders two lines: a placement assertion and one data directive.
                 lines.push(...renderSnesStructData(span.structField, span.start, rom.read(span.start, span.end - span.start)));
                 spans.push({
@@ -961,7 +971,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                 });
             }
             else {
-                // Filenames show the first and last included bytes; spans and reads stay half-open.
+                // Filenames show the first and last included bytes. Spans and reads stay half-open.
                 const lastByte = span.end - 1;
                 const assetPath = `assets/${span.role}-${span.start.toString(16).padStart(6, "0")}-${lastByte.toString(16).padStart(6, "0")}.bin`;
                 const bytes = rom.read(span.start, span.end - span.start);
@@ -1035,7 +1045,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
             record.placement === "inline-instruction" &&
             !instructions.has(offset)) {
             reason =
-                "No exportable instruction starts here. Rendered as a standalone comment; inline placement remains saved.";
+                "No exportable instruction starts here. Rendered as a standalone comment. Inline placement remains saved.";
         }
         return reason
             ? [{ id: record.id, addressSpace: record.addressSpace, address: record.address, reason }]

@@ -40,7 +40,7 @@ const invoke = (args: string[], expected = 0): ReturnType<typeof spawnSync> => {
   return result;
 };
 
-/** Three reset instructions; unused vectors are zero to avoid accidental unbounded fixture paths. */
+/** Three reset instructions. Unused vectors are zero to avoid accidental unbounded fixture paths. */
 const fixtureRom = (headerSize: number): Uint8Array => {
   const content = new Uint8Array(0x8000).fill(0xdb);
   content.set([0xea, 0xea, 0xdb]);
@@ -195,7 +195,7 @@ try {
     const rebuilt = path.join(exported, exportManifest.finalOutput);
     assert.deepEqual(fs.readFileSync(rebuilt), fs.readFileSync(rom));
 
-    // A self-consistent export can still assemble to incorrect bytes; exercise comparison itself.
+    // A self-consistent export can still assemble to incorrect bytes. Exercise comparison itself.
     const manifestFile = path.join(exported, "generated-files.json");
     const manifestText = fs.readFileSync(manifestFile, "utf8");
     const entryFile = path.join(exported, exportManifest.entrySource);
@@ -218,7 +218,7 @@ try {
       }),
     );
     const mismatch = invoke(["verify-roundtrip", exported, "--rom", rom], 1);
-    assert.match(String(mismatch.stderr), /Round-trip mismatch:.*first difference at file offset/);
+    assert.match(String(mismatch.stderr), /Round-trip mismatch:.*First difference at file offset/);
     assert.deepEqual(fs.readFileSync(rebuilt), fs.readFileSync(rom));
     fs.writeFileSync(entryFile, entryText);
     fs.writeFileSync(manifestFile, manifestText);

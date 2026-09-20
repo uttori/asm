@@ -56,9 +56,9 @@ export interface RuntimeEvidenceMergeResult {
   readonly added: Readonly<Record<keyof AnalysisProjectShards, number>>;
   readonly updated: Readonly<Record<keyof AnalysisProjectShards, number>>;
   readonly existing: Readonly<Record<keyof AnalysisProjectShards, number>>;
-  /** Computed and cached on first access; may expand millions of per-register observations. */
+  /** Computed and cached on first access. May expand millions of per-register observations. */
   readonly conflicts: readonly RuntimeEvidenceConflict[];
-  /** Computed and cached on first access; maintenance callers can merge without building this report. */
+  /** Computed and cached on first access. Maintenance callers can merge without building this report. */
   readonly explanations: readonly RuntimeEvidenceExplanation[];
 }
 
@@ -266,7 +266,7 @@ const mergeRecords = <T extends { readonly id: string }>(
       }
     } else {
       throw new Error(
-        `Runtime evidence id '${record.id}' in '${kind}' changed content; use a content-derived id.`,
+        `Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`,
       );
     }
   }
@@ -275,8 +275,8 @@ const mergeRecords = <T extends { readonly id: string }>(
 
 /**
  * Merges an offline evidence batch by stable id. Existing claims are never removed or rewritten.
- * Reimporting an identical batch returns `changed: false`; differing observations remain separate
- * and are surfaced through `conflicts`. Diagnostic getters are lazy; reading or serializing
+ * Reimporting an identical batch returns `changed: false`. Differing observations remain separate
+ * and are surfaced through `conflicts`. Diagnostic getters are lazy. Reading or serializing
  * them can require substantially more memory than merging the facts alone.
  * @param {AnalysisProjectShards} shards Existing native project shards.
  * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
@@ -298,7 +298,7 @@ export const mergeRuntimeEvidence = (
       traceProfiles.get(report.sourceSha256) !== report.indexProfile
     ) {
       throw new Error(
-        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`,
+        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`,
       );
     }
     traceProfiles.set(report.sourceSha256, report.indexProfile);

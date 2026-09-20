@@ -216,7 +216,7 @@ test("ca65 unnamed labels do not leak across included object files", (t) => {
       "b.asm": ["bne :+", "nop", "nop", ":", "rts"].join("\n"),
     },
   });
-  // a: bne :+ over nop (d0 01 ea) rts; b: bne :+ over two nops (d0 02 ea ea) rts
+  // a: bne :+ over nop (d0 01 ea) rts. B: bne :+ over two nops (d0 02 ea ea) rts
   t.deepEqual([...output.slice(16, 25)], [0xd0, 0x01, 0xea, 0x60, 0xd0, 0x02, 0xea, 0xea, 0x60]);
 });
 
@@ -227,7 +227,7 @@ test("file-local labels do not collide across included object files", (t) => {
       "b.asm": [".import Shared", "Exit:", "jmp Shared"].join("\n"),
     },
   });
-  // a.asm: nop at $8000, rts at $8001; b.asm: jmp Shared ($8001)
+  // a.asm: nop at $8000, rts at $8001. B.asm: jmp Shared ($8001)
   t.deepEqual([...output.slice(16, 21)], [0xea, 0x60, 0x4c, 0x01, 0x80]);
 });
 
@@ -245,7 +245,7 @@ test("overlay segment define symbols expose load/run/size", (t) => {
       "lda #>__OVERLAY_RUN__",
     ].join("\n"),
   );
-  // CODE nop at $8000; OVERLAY lda at load $8001 / run $0300; then CODE resumes at $8003
+  // CODE nop at $8000. OVERLAY lda at load $8001 / run $0300. Then CODE resumes at $8003
   t.is(output[16], 0xea);
   t.deepEqual([...output.slice(17, 19)], [0xa9, 0x01]);
   t.deepEqual([...output.slice(19, 27)], [0xa9, 0x01, 0xa9, 0x80, 0xa9, 0x00, 0xa9, 0x03]);

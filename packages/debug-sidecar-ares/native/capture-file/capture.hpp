@@ -1,7 +1,7 @@
 #pragma once
 
 // Downstream ACT2 producer with separately negotiated instruction and bus scopes.
-// No ares or transport dependencies; callers serialize access through the
+// No ares or transport dependencies. Callers serialize access through the
 // emulation thread or the frontend's guarded handoff.
 #include <array>
 #include <algorithm>
@@ -46,7 +46,7 @@ public:
   auto ppuActive() const -> bool { return ppuEffects && recording; }
 
   // Scratch belongs to exactly one CPU-bus operation. Reset after reservation
-  // waits, before the access; PPU hooks fill it after synchronization, without
+  // waits, before the access. PPU hooks fill it after synchronization, without
   // yielding or inspecting memory. Disabled capture never clears this scratch.
   auto ppuReset() -> void { if(ppuActive()) ppu = {}; }
   auto ppuBegin(uint8_t target, uint8_t flags, uint16_t h, uint16_t v) -> void {
@@ -158,7 +158,7 @@ public:
   }
 
   // Mark one whole DMA channel run or one HDMA payload burst. End markers carry
-  // attempted byte slots, including hardware-suppressed accesses; bus records
+  // attempted byte slots, including hardware-suppressed accesses. Bus records
   // remain the authority for which reads/writes actually occurred.
   auto transfer(uint8_t boundary, bool hdma, uint8_t channel, uint32_t transferred,
                 const std::array<uint8_t, 12>& configuration, TransferToken token,
@@ -230,7 +230,7 @@ public:
     if(fields[0] == "status" && fields.size() == 2) return status();
     if(fields[0] == "stop" && fields.size() == 2) {
       recording = false;
-      // Bus records commit independently; stopping fixes the last completed bus
+      // Bus records commit independently. Stopping fixes the last completed bus
       // event even if the containing instruction/DMA transfer has not finished.
       if(busOnly) pending = false;
       if(!failed && state != "complete") {
@@ -339,7 +339,7 @@ private:
   uint64_t produced{}, chunks{}, delivered{}, accepted{}, acceptedChunk{}, throttleCount{};
   uint64_t clockNumerator{236250000}, clockDenominator{11};
   bool recording{}, throttled{}, pending{}, failed{}, busOnly{}, transfers{}, ppuEffects{};
-  // Fixed 24-byte wire extension; never part of emulator save-state serialization.
+  // Fixed 24-byte wire extension. Never part of emulator save-state serialization.
   struct PPUEffect {
     uint8_t target{}, outcome{}, count{}, flags{};
     uint16_t h{}, v{};

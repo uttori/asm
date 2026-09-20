@@ -24,22 +24,22 @@ failures and no-clobber publication. Its fault-injection controls are compiled
 only for that test target. CMake adds the same writer test beside the existing
 capture tests. Real CPU/PPU tests compare full serialized states through native
 file backpressure for both PPU implementations. Tests and benchmark launchers
-use shell/CMake; they do not require Node.
+use shell/CMake. They do not require Node.
 
 The writer emits existing ACT2/ACK2 pairs and syncs at most four chunks in one
 batch before acknowledging their native queue slots. It reports completion only
 after syncing END2 and publishing via a no-clobber hard link. No event data is
 hex-encoded or sent through the debugger in native-file mode. Header validation,
 queue copying, durable acknowledgement and debugger state remain on the producer
-owner thread; all filesystem operations belong to the writer thread. The worker
+owner thread. All filesystem operations belong to the writer thread. The worker
 never owns pointers into the emulation queue.
 
 The negotiated capture allocation includes its fixed copied batch within the
-existing overhead reserve; it excludes OS stacks, transport/kernel buffers and
+existing overhead reserve. It excludes OS stacks, transport/kernel buffers and
 filesystem cache. The file sink's lifecycle and memory ownership are documented
 in the source. Filesystem calls can delay shutdown while the worker is joined.
-The focused capture-off benchmark shows about 3.8% overhead in the performance PPU; this remains
-a promotion gate. Add `cpu-only` as the fourth benchmark argument to omit disk-writing cases;
+The focused capture-off benchmark shows about 3.8% overhead in the performance PPU. This remains
+a promotion gate. Add `cpu-only` as the fourth benchmark argument to omit disk-writing cases.
 `PPU_BENCHMARK_EXECUTABLE` can select an identically sourced control executable.
 Power-loss directory durability, remote paths and session resumption are not
 claimed. Linux/Windows execution remains a validation gate.

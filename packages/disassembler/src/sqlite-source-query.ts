@@ -1,4 +1,4 @@
-/** Indexed source membership and paginated observations; runtime history stays in SQLite. */
+/** Indexed source membership and paginated observations. Runtime history stays in SQLite. */
 import type { DatabaseSync } from "node:sqlite";
 
 import type {
@@ -28,7 +28,7 @@ export const sourceQueriesReady = (db: DatabaseSync): boolean =>
 
 /**
  * Extract metadata evidence membership once, then process only changed rows under a writer transaction.
- * Runtime membership already lives in its evidence dictionary; the covering index avoids payload reads.
+ * Runtime membership already lives in its evidence dictionary. The covering index avoids payload reads.
  * @param {DatabaseSync} db Connection owned by the caller's write transaction.
  */
 export const prepareSourceQueries = (db: DatabaseSync): void => {
@@ -117,7 +117,7 @@ export const readSourceSummary = (
  * @param {DatabaseSync} db Read snapshot with prepared source and annotation indexes.
  * @param {AnalysisEvidenceSource} source Validated catalog entry.
  * @param {AnalysisSourceGroup} group Direct observations or attributed metadata.
- * @param {number} offset Nonnegative row offset; pages contain at most 200 entries.
+ * @param {number} offset Nonnegative row offset. Pages contain at most 200 entries.
  * @returns {AnalysisSourceEntry[]} Compact navigable entries, never the complete trace history.
  */
 export const readSourcePage = (
@@ -145,7 +145,7 @@ export const readSourcePage = (
       label: hex(Number(row.address)),
       description: `${String(row.executions)} recorded executions`,
       detail:
-        "Directly observed instruction address. CPU-state variants do not inflate the address count; execution counts exclude duplicate fetched-instruction facts.",
+        "Directly observed instruction address. CPU-state variants do not inflate the address count. Execution counts exclude duplicate fetched-instruction facts.",
       architecture: String(row.architecture),
       addressSpace: String(row.address_space),
       address: Number(row.address),

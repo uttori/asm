@@ -3,7 +3,7 @@ import { spc700Catalog } from "../tooling/instruction-catalog.js";
 import { classifyGenericOperand } from "./operand-classifiers.js";
 import { splitTopLevelCommaOperands } from "./split-operands.js";
 /**
- * Core may already classify; unknown forms go through {@link classifyGenericOperand}.
+ * Core may already classify. Unknown forms go through {@link classifyGenericOperand}.
  * @param {ArchitectureEncoderContext["operands"]} resolver The operand resolver.
  * @param {string} operand The operand to lower.
  * @returns {LoweredOperand} The lowered operand.
@@ -286,7 +286,7 @@ const singleWordOps = {
 const NUMBERED_BIT_OPCODE = /^(NOT|OR|AND|EOR|MOV)([0-7])$/;
 /**
  * Parses TASM/Asar numbered mem.bit mnemonics (`NOT2`, `OR1`, `MOV5`, ...).
- * Native hardware names are the `*1` forms; the digit is the default bit.
+ * Native hardware names are the `*1` forms. The digit is the default bit.
  * @param {string} opcode Instruction mnemonic.
  * @returns {NumberedBitOpcode | undefined} Family and mnemonic bit, if any.
  */
@@ -390,7 +390,7 @@ export class ArchSPC700 {
     /**
      * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
      * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
-     * not stall; encode will still reject them.
+     * not stall. Encode will still reject them.
      *
      * @param {string} mnemonic The mnemonic.
      * @param {string} operandText The operand text.
@@ -959,7 +959,7 @@ export class ArchSPC700 {
     /**
      * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
      * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
-     * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+     * indirectX (no extra byte). `($dp+X)` is indirectDpX.
      *
      * @param {string} operand Right-hand operand of an A-destination ALU op.
      * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
@@ -1081,7 +1081,7 @@ export class ArchSPC700 {
         return true;
     }
     /**
-     * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+     * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc. `DEC X`/`DEC Y` and
      * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
      * {@link getAddressSize} (spelling), not the numeric value.
      *
@@ -1194,7 +1194,7 @@ export class ArchSPC700 {
         return true;
     }
     /**
-     * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+     * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic. Asar also accepts
      * `SET1 $13.7` where `.n` overrides the mnemonic digit.
      *
      * @param {string} opcode SET/CLR mnemonic with bit digit.
@@ -1257,7 +1257,7 @@ export class ArchSPC700 {
         const offset = targetAddr - (currentAddr + 1);
         // Validate offset fits in signed byte
         // if (offset < -128 || offset > 127) {
-        //   throw new Error(`Branch offset ${offset} out of range (-128 to +127)`);
+        //   throw new Error(`Branch offset ${offset} out of range (-128 to +127)`).
         // }
         if (!this.assembler.enforceResolvedLabels) {
             this.assembler.write1(0xff);
@@ -1297,7 +1297,7 @@ export class ArchSPC700 {
         if (bit === undefined) {
             return false;
         }
-        // The bit index occupies the upper three bits; BBS/BBC differ in bit 4.
+        // The bit index occupies the upper three bits. BBS/BBC differ in bit 4.
         const opcodeByte = (bit << 5) | (parsed.family === "BBS" ? 0x03 : 0x13);
         // For the second operand (label/address), we need to:
         // 1. Get the target address
@@ -1336,7 +1336,7 @@ export class ArchSPC700 {
      * @param {string} left Register, `$dp`, or `$dp+X`.
      * @param {string} right Branch target.
      * @param {LoweredOperand} [leftLowered] Lowered left operand.
-     * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+     * @param {LoweredOperand} [_rightLowered] Unused. Kept for call-site symmetry.
      * @returns {boolean} True if encoded.
      */
     handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
@@ -2031,7 +2031,7 @@ export class ArchSPC700 {
                 opcodeDp: 0xcb,
                 opcodeAbs: 0xcc,
             },
-            // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp; "X,$1234" => 0xe9 or 0xf8 for dp, etc.
+            // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp. "X,$1234" => 0xe9 or 0xf8 for dp, etc.
             {
                 regex: /^A\s*,\s*\$([\dA-F]+)$/,
                 opcodeDp: 0xe4,

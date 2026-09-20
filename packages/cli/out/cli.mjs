@@ -67,7 +67,7 @@ var init_crc32 = __esm({
       static table = _CRC32.makeCRCTable();
       /**
        * Builds the lookup table used for CRC32 computation.
-       * @returns {Uint32Array} The result.
+       * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
        */
       static makeCRCTable() {
         const table = new Uint32Array(256);
@@ -240,19 +240,9 @@ var init_architecture_registry = __esm({
           this.aliases.set(alias.toLowerCase(), canonical2);
         }
       }
-      /**
-       * Gets canonical name.
-       * @param {string} name The name.
-       * @returns {string | undefined} The result.
-       */
       getCanonicalName(name) {
         return this.aliases.get(name.toLowerCase());
       }
-      /**
-       * Gets definition.
-       * @param {string} name The name.
-       * @returns {ArchitectureDefinition | undefined} The result.
-       */
       getDefinition(name) {
         const canonical2 = this.getCanonicalName(name);
         if (!canonical2) {
@@ -987,11 +977,6 @@ var init_expression_node = __esm({
       }
       tokens;
       index = 0;
-      /**
-       * Parses expression.
-       * @param {number} [minPrecedence] The minimum binary-operator precedence.
-       * @returns {ExpressionNode} The result.
-       */
       parseExpression(minPrecedence = 0) {
         let left = this.parsePrefix();
         while (true) {
@@ -1015,17 +1000,9 @@ var init_expression_node = __esm({
         }
         return left;
       }
-      /**
-       * Checks whether at end.
-       * @returns {boolean} The result.
-       */
       isAtEnd() {
         return this.index >= this.tokens.length;
       }
-      /**
-       * Parses prefix.
-       * @returns {ExpressionNode} The result.
-       */
       parsePrefix() {
         const token = this.peek();
         if (!token) {
@@ -1041,10 +1018,6 @@ var init_expression_node = __esm({
         }
         return this.parsePostfix(this.parsePrimary());
       }
-      /**
-       * Parses primary.
-       * @returns {ExpressionNode} The result.
-       */
       parsePrimary() {
         if (this.peek()?.type === "dot") {
           let name = "";
@@ -1082,11 +1055,6 @@ var init_expression_node = __esm({
             throw new Error(`Unexpected token ${token.type}`);
         }
       }
-      /**
-       * Parses postfix.
-       * @param {ExpressionNode} expression The expression.
-       * @returns {ExpressionNode} The result.
-       */
       parsePostfix(expression) {
         let current = expression;
         while (true) {
@@ -1132,10 +1100,6 @@ var init_expression_node = __esm({
           return current;
         }
       }
-      /**
-       * Parses call arguments.
-       * @returns {ExpressionNode[]} The result.
-       */
       parseCallArguments() {
         const args = [];
         if (this.match({ type: "rparen" })) {
@@ -1157,11 +1121,6 @@ var init_expression_node = __esm({
           throw new Error(`Expected token ${type}`);
         }
       }
-      /**
-       * Matches a value.
-       * @param {Pick<Token, "type">} expected The expected.
-       * @returns {boolean} The result.
-       */
       match(expected) {
         const token = this.peek();
         if (token && token.type === expected.type) {
@@ -1170,19 +1129,11 @@ var init_expression_node = __esm({
         }
         return false;
       }
-      /**
-       * Consumes a value.
-       * @returns {Token | undefined} The result.
-       */
       consume() {
         const token = this.tokens[this.index];
         this.index++;
         return token;
       }
-      /**
-       * Gets the next a value.
-       * @returns {Token | undefined} The result.
-       */
       peek() {
         return this.tokens[this.index];
       }
@@ -2278,22 +2229,9 @@ var init_registry = __esm({
       registerLowered(keyword, context, handler) {
         this.register(keyword, context, handler, "lowered");
       }
-      /**
-       * Checks whether it has the value.
-       * @param {string} keyword The keyword.
-       * @returns {boolean} The result.
-       */
       has(keyword) {
         return this.lookup(keyword) !== void 0;
       }
-      /**
-       * Dispatches the value.
-       * @param {string} keyword The keyword.
-       * @param {readonly string[]} words The words.
-       * @param {string} raw The raw.
-       * @param {NormalizedCommand} [command] The command.
-       * @returns {boolean} The result.
-       */
       dispatch(keyword, words, raw, command) {
         const handler = this.lookup(keyword);
         if (!handler) {
@@ -2392,9 +2330,9 @@ var init_file_provider = __esm({
     NodeAssemblyFileProvider = class {
       /**
        * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-       * @param {string} filename The filename.
-       * @param {AssemblyFileResolutionOptions} [options] The options.
-       * @returns {string | undefined} The result.
+       * @param {string} filename Include path token, optionally quoted.
+       * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
+       * @returns {string | undefined} First existing file identity, or undefined.
        */
       resolvePath(filename, options = {}) {
         if (!filename) {
@@ -2421,11 +2359,6 @@ var init_file_provider = __esm({
         }
         return void 0;
       }
-      /**
-       * Reads metadata for the value.
-       * @param {string} filePath The file path.
-       * @returns {AssemblyFileStat} The result.
-       */
       stat(filePath) {
         let st;
         try {
@@ -2440,20 +2373,9 @@ var init_file_provider = __esm({
           return { exists: true, readable: false, mtimeMs: st.mtimeMs };
         }
       }
-      /**
-       * Reads file.
-       * @param {string} filePath The file path.
-       * @returns {Uint8Array} The result.
-       */
       readFile(filePath) {
         return new Uint8Array(fs2.readFileSync(filePath));
       }
-      /**
-       * Reads text file.
-       * @param {string} filePath The file path.
-       * @param {BufferEncoding} [encoding] The encoding.
-       * @returns {string} The result.
-       */
       readTextFile(filePath, encoding = "utf8") {
         return fs2.readFileSync(filePath, encoding);
       }
@@ -2918,7 +2840,7 @@ var init_mathcore = __esm({
       operators = OPERATORS;
       /** Full expression currently being scanned. */
       scanSource = "";
-      /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+      /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
       scanIndex = 0;
       /**
        * Remaining unconsumed expression text.
@@ -3168,13 +3090,6 @@ var init_mathcore = __esm({
             return this.evaluateStringExpression(expression.value);
         }
       }
-      /**
-       * Evaluates call argument.
-       * @param {string} functionName The function name.
-       * @param {number} argumentIndex The argument index.
-       * @param {ExpressionNode} argument The argument.
-       * @returns {number | string} The result.
-       */
       evaluateCallArgument(functionName, argumentIndex, argument) {
         if (this.isStringArgument(functionName, argumentIndex)) {
           switch (argument.type) {
@@ -3206,12 +3121,6 @@ var init_mathcore = __esm({
             return this.evaluateExpressionNode(argument);
         }
       }
-      /**
-       * Evaluates unary expression node.
-       * @param {UnaryOperator} operator The operator.
-       * @param {ExpressionNode} argument The argument.
-       * @returns {number} The result.
-       */
       evaluateUnaryExpressionNode(operator, argument) {
         const value = this.evaluateExpressionNode(argument);
         switch (operator) {
@@ -3232,22 +3141,10 @@ var init_mathcore = __esm({
             return value;
         }
       }
-      /**
-       * Evaluates binary expression node.
-       * @param {BinaryOperator} operator The operator.
-       * @param {ExpressionNode} left The left.
-       * @param {ExpressionNode} right The right.
-       * @returns {number} The result.
-       */
       evaluateBinaryExpressionNode(operator, left, right) {
         const spec = this.operators[operator];
         return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
       }
-      /**
-       * Resolves numeric identifier argument.
-       * @param {string} identifier The identifier.
-       * @returns {number | string} The result.
-       */
       resolveNumericIdentifierArgument(identifier2) {
         try {
           const resolved = this.getHost().resolveLabel(identifier2);
@@ -3256,11 +3153,6 @@ var init_mathcore = __esm({
           return identifier2;
         }
       }
-      /**
-       * Evaluates reference expression node.
-       * @param {ReferenceExpressionNode} expression The expression.
-       * @returns {number} The result.
-       */
       evaluateReferenceExpressionNode(expression) {
         if (expression.type === "defineReference") {
           throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
@@ -3274,11 +3166,6 @@ var init_mathcore = __esm({
         }
         throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
       }
-      /**
-       * Resolves leading local label reference.
-       * @param {string} input The input.
-       * @returns {{ label: string; length: number } | undefined} The result.
-       */
       resolveLeadingLocalLabelReference(input) {
         const match = input.match(/^(\.+\w+)/);
         if (!match) {
@@ -3286,12 +3173,6 @@ var init_mathcore = __esm({
         }
         return { label: match[1], length: match[1].length };
       }
-      /**
-       * Checks whether string argument.
-       * @param {string} functionName The function name.
-       * @param {number} argumentIndex The argument index.
-       * @returns {boolean} The result.
-       */
       isStringArgument(functionName, argumentIndex) {
         if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
           return argumentIndex === 0;
@@ -3304,11 +3185,6 @@ var init_mathcore = __esm({
         }
         return false;
       }
-      /**
-       * Parses literal node.
-       * @param {string} value The value.
-       * @returns {number} The result.
-       */
       parseLiteralNode(value) {
         if (/^-?\d+$/.test(value)) {
           return Number.parseInt(value, 10);
@@ -4060,10 +3936,6 @@ var init_mathcore = __esm({
         this.str = this.str.substring(match[0].length).trim();
         this.userFunctions.set(name, { args: params, content });
       };
-      /**
-       * Gets host.
-       * @returns {ExpressionHost} The result.
-       */
       getHost() {
         if (!this.host) {
           throw new Error("ExpressionHost not set.");
@@ -4113,11 +3985,6 @@ var init_operand_resolver = __esm({
         this.deps = deps;
       }
       deps;
-      /**
-       * Normalizes numeric base member.
-       * @param {string} operand The operand.
-       * @returns {string} The result.
-       */
       normalizeNumericBaseMember(operand) {
         const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
         if (!match) {
@@ -4126,11 +3993,6 @@ var init_operand_resolver = __esm({
         const [, immediatePrefix, literal, indexSuffix = ""] = match;
         return `${immediatePrefix}${literal}${indexSuffix}`;
       }
-      /**
-       * Splits math operand suffix.
-       * @param {string} operand The operand.
-       * @returns {{ expression: string; suffix: string }} The result.
-       */
       splitMathOperandSuffix(operand) {
         const trimmed = operand.trim();
         const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
@@ -4142,19 +4004,9 @@ var init_operand_resolver = __esm({
           suffix: indexedMatch[2]
         };
       }
-      /**
-       * Checks whether numeric token.
-       * @param {string} token The token.
-       * @returns {boolean} The result.
-       */
       isNumericToken(token) {
         return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
       }
-      /**
-       * Resolves arithmetic token.
-       * @param {string} token The token.
-       * @returns {number} The result.
-       */
       resolveArithmeticToken(token) {
         if (this.isNumericToken(token)) {
           return this.getnum(token);
@@ -4164,11 +4016,6 @@ var init_operand_resolver = __esm({
         }
         return this.deps.resolveLabel(token, false);
       }
-      /**
-       * Attempts to resolve simple arithmetic.
-       * @param {string} operand The operand.
-       * @returns {number | null} The result.
-       */
       tryResolveSimpleArithmetic(operand) {
         const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
         const match = operand.match(
@@ -4196,11 +4043,6 @@ var init_operand_resolver = __esm({
             return null;
         }
       }
-      /**
-       * Determines value length.
-       * @param {string | number} value The value.
-       * @returns {number} The result.
-       */
       determineValueLength(value) {
         if (typeof value !== "string" && typeof value !== "number") {
           throw new Error(`Invalid value type for length determination: ${typeof value}`);
@@ -4221,11 +4063,6 @@ var init_operand_resolver = __esm({
         }
         return Math.max(1, Math.ceil(hexString.length / 2));
       }
-      /**
-       * Checks whether math expression.
-       * @param {string} expression The expression.
-       * @returns {boolean} The result.
-       */
       isMathExpression(expression) {
         if (!expression || typeof expression !== "string") {
           return false;
@@ -4235,11 +4072,6 @@ var init_operand_resolver = __esm({
         }
         return expression.includes("+") || expression.includes("-") || expression.includes("*") || expression.includes("/") || expression.includes("&") || expression.includes("|") || expression.includes("^") || expression.includes("<<") || expression.includes(">>");
       }
-      /**
-       * Attempts to resolve label in operand.
-       * @param {string} operand The operand.
-       * @returns {string} The result.
-       */
       tryResolveLabelInOperand(operand) {
         if (operand.startsWith("#")) {
           const inner = operand.substring(1).trim();
@@ -4282,9 +4114,10 @@ var init_operand_resolver = __esm({
         return operand;
       }
       /**
-       * Gets num.
-       * @param {string | ExpressionNode} operand The operand.
-       * @returns {number} The result.
+       * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.
+       * Deferred expression failures yield zero during sizing passes and throw during final emission.
+       * @param {string | ExpressionNode} operand Source operand or parsed expression, including an optional immediate prefix.
+       * @returns {number} Resolved value, or the deferred sizing placeholder.
        */
       getnum(operand) {
         if (typeof operand !== "string") {
@@ -4346,9 +4179,9 @@ var init_operand_resolver = __esm({
         }
       }
       /**
-       * Gets num from node.
-       * @param {ExpressionNode} operand The operand.
-       * @returns {number} The result.
+       * Evaluate an already parsed operand with the same deferred-expression policy as getnum.
+       * @param {ExpressionNode} operand Numeric expression. Range nodes are rejected.
+       * @returns {number} Resolved value, or zero for a deferred expression failure.
        */
       getnumFromNode(operand) {
         if (isReferenceExpressionNode(operand)) {
@@ -4376,11 +4209,6 @@ var init_operand_resolver = __esm({
             }
         }
       }
-      /**
-       * Resolves reference value.
-       * @param {string} reference The reference.
-       * @returns {number} The result.
-       */
       resolveReferenceValue(reference) {
         if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
           if (this.deps.isStructReference(reference)) {
@@ -4395,11 +4223,6 @@ var init_operand_resolver = __esm({
         }
         return this.getnum(reference);
       }
-      /**
-       * Expands operand.
-       * @param {string} operand The operand.
-       * @returns {ExpandedOperand} The result.
-       */
       expandOperand(operand) {
         const raw = operand.trim();
         const syntax = parseOperandSyntax(raw);
@@ -4466,11 +4289,6 @@ var init_operand_resolver = __esm({
         }
         return { raw, expanded, length: expectedLength, syntax };
       }
-      /**
-       * Lowers operand.
-       * @param {string} operand The operand.
-       * @returns {LoweredOperand} The result.
-       */
       lowerOperand(operand) {
         const raw = operand.trim();
         const expandedOperand = this.expandOperand(raw);
@@ -4669,20 +4487,20 @@ var init_directive_catalog = __esm({
           },
           {
             keyword: "firstindex",
-            summary: "First valid logical index (default zero); requires count.",
+            summary: "First valid logical index (default zero). Requires count.",
             syntax: "endstruct count value firstindex value"
           }
         ]
       ),
       descriptor(
         "datastruct",
-        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "Emit one complete named record at its struct address. Checks fields, widths and pc().",
         "dataStruct Record[index], { field = value, bytes = [value, ...] }",
         "struct"
       ),
       descriptor(
         "datastructs",
-        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "Begin consecutive indexed named records. Preserves logical IDs and validates placement.",
         "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
         "struct"
       ),
@@ -7220,7 +7038,7 @@ var init_manager = __esm({
       }
       if (manifest.apiVersion !== PLUGIN_API_VERSION) {
         throw new PluginError(
-          `Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}; this host supports ${PLUGIN_API_VERSION}.`,
+          `Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}. This host supports ${PLUGIN_API_VERSION}.`,
           { code: "PLUGIN_API_INCOMPATIBLE", pluginId: id, pluginModule }
         );
       }
@@ -7366,7 +7184,7 @@ var init_manager = __esm({
        * Activate dependencies first, preserving input order among ready plugins.
        * Each plugin commits independently: earlier successes remain active if a later one fails.
        * Throws PluginError for invalid input, dependency conflicts, or activation failure.
-       * Activation is unavailable after freeze or disposal; dispose the manager after a failed batch.
+       * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
        * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
        */
       async activatePlugins(requests) {
@@ -7718,7 +7536,7 @@ var init_manager = __esm({
       /**
        * Validate target references and aliases, then seal registration. Repeated calls return the
        * same environment. Throws PluginError for invalid graphs or a disposed manager.
-       * @returns {AssemblerEnvironment} The validated, shared contribution graph; resources remain owned by this manager.
+       * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
        */
       freeze() {
         if (this.#disposed) {
@@ -7745,7 +7563,7 @@ var init_manager = __esm({
       }
       /**
        * Release plugin resources in reverse activation order, attempting every disposable.
-       * Idempotent and terminal; rejects with AggregateError after cleanup failures.
+       * Idempotent and terminal. Rejects with AggregateError after cleanup failures.
        * Does not dispose assembler sessions or make their continued use safe.
        */
       async dispose() {
@@ -7852,7 +7670,7 @@ var init_session_state = __esm({
       }
       /**
        * Adopts a snapshot from {@link cloneSnapshot} as the live map without copying or validation.
-       * Subsequent writes mutate this map; the previous snapshot is not individually disposed.
+       * Subsequent writes mutate this map. The previous snapshot is not individually disposed.
        * @param {PluginStateSnapshot} snapshot Previously cloned slot values.
        */
       restore(snapshot) {
@@ -8207,22 +8025,12 @@ var init_program_model_builder = __esm({
         }
         this.pushToCurrent(state, command);
       }
-      /**
-       * Checks whether node complete.
-       * @param {ExecutableNode} node The node.
-       * @returns {boolean} The result.
-       */
       isNodeComplete(node) {
         if ("source" in node) {
           return true;
         }
         return node.endLine !== void 0;
       }
-      /**
-       * Drains completed roots.
-       * @param {IncrementalProgramParseState} state The state.
-       * @returns {ExecutableNode[]} The result.
-       */
       drainCompletedRoots(state) {
         let completedCount = 0;
         while (completedCount < state.roots.length && this.isNodeComplete(state.roots[completedCount])) {
@@ -8557,11 +8365,6 @@ var init_define_engine = __esm({
         this.host = host;
       }
       host;
-      /**
-       * Checks whether pure math expression.
-       * @param {string} value The value.
-       * @returns {boolean} The result.
-       */
       isPureMathExpression(value) {
         return /^\s*(?:\$[\dA-Fa-f]+|%[01]+|\d+|[&()*+/<>^|-]|\s)+$/.test(value);
       }
@@ -9086,7 +8889,7 @@ var init_directive_runtime_service = __esm({
       }
       /**
        * Estimates data size with the same expansion order as emission, without resolving final values.
-       * @param {number} len Bytes per numeric item (1–4); string characters each occupy one item.
+       * @param {number} len Bytes per numeric item (1–4). String characters each occupy one item.
        * @param {string[]} params Source operands, including defines that may expand to data lists.
        */
       estimateDataDirectiveSize(len, params) {
@@ -10476,7 +10279,7 @@ var init_data_struct_engine = __esm({
       fieldsFor(definition) {
         if (definition.parent || definition.extensionSize > 0) {
           throw new Error(
-            `dataStruct does not initialize extended layouts ('${definition.name}'); use raw data directives.`
+            `dataStruct does not initialize extended layouts ('${definition.name}'). Use raw data directives.`
           );
         }
         const fields = [...definition.fields?.values() ?? []].sort((a, b) => a.offset - b.offset);
@@ -10484,7 +10287,7 @@ var init_data_struct_engine = __esm({
         for (const field of fields) {
           if (field.offset !== end) {
             throw new Error(
-              `Layout '${definition.name}' has overlapping or unnamed bytes; name every byte before initialization.`
+              `Layout '${definition.name}' has overlapping or unnamed bytes. Name every byte before initialization.`
             );
           }
           end += field.width * field.count;
@@ -11019,11 +10822,6 @@ var init_symbol_scope_service = __esm({
         }
         return name;
       }
-      /**
-       * Finds nearest hierarchy ancestor.
-       * @param {string} label The label.
-       * @returns {string | null} The result.
-       */
       findNearestHierarchyAncestor(label) {
         for (let i = label.length - 1; i >= 0; i--) {
           if (label[i] !== "_") {
@@ -11040,11 +10838,6 @@ var init_symbol_scope_service = __esm({
         }
         return null;
       }
-      /**
-       * Gets hierarchy chain.
-       * @param {string} label The label.
-       * @returns {string[]} The result.
-       */
       getHierarchyChain(label) {
         const rootLabel = this.host.currentGlobalParentLabel;
         const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
@@ -11064,11 +10857,6 @@ var init_symbol_scope_service = __esm({
         }
         return chain;
       }
-      /**
-       * Gets ancestor prefixes.
-       * @param {string} label The label.
-       * @returns {string[]} The result.
-       */
       getAncestorPrefixes(label) {
         const prefixes = [];
         for (let i = label.length - 1; i >= 0; i--) {
@@ -11082,11 +10870,6 @@ var init_symbol_scope_service = __esm({
         }
         return prefixes;
       }
-      /**
-       * Gets scoped parent label.
-       * @param {number} dotCount The dot count.
-       * @returns {string} The result.
-       */
       getScopedParentLabel(dotCount) {
         const current = this.host.currentParentLabel;
         if (dotCount === 1) {
@@ -11735,7 +11518,7 @@ var init_symbol_scope_service = __esm({
       }
       /**
        * Returns the outline container for a stored label name.
-       * Sublabels nest under their parent; namespaced labels nest under the namespace.
+       * Sublabels nest under their parent. Namespaced labels nest under the namespace.
        * @param {string} fullLabel The stored label name.
        * @param {boolean} isGlobal Whether the label is global.
        * @returns {string | undefined} The container name, if any.
@@ -12649,11 +12432,6 @@ var init_assembler = __esm({
         }
         return registry;
       }
-      /**
-       * Analyzes program.
-       * @param {ProgramModel} program The program.
-       * @returns {AssemblyAnalysisResult} The result.
-       */
       analyzeProgram(program) {
         const session = this.createToolingSession();
         try {
@@ -12685,12 +12463,6 @@ var init_assembler = __esm({
           session.dispose();
         }
       }
-      /**
-       * Analyzes workspace.
-       * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
-       * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-       * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
-       */
       analyzeWorkspace(documents, options = {}) {
         const results = [];
         for (const document of documents) {
@@ -12725,10 +12497,6 @@ var init_assembler = __esm({
           this.outputBytes[i] = this.baseImage[i];
         }
       }
-      /**
-       * Creates services.
-       * @returns {AssemblerServiceBag} The result.
-       */
       createServices() {
         const defineEngine = new DefineEngine(this);
         const directiveRuntime = new DirectiveRuntimeService(this);
@@ -13116,7 +12884,7 @@ var init_assembler = __esm({
       }
       /**
        * Run lifecycle disposal in reverse registration order, then dispose live state slots.
-       * Idempotent; attempts all cleanup and throws AggregateError for failures. The environment
+       * Idempotent. Attempts all cleanup and throws AggregateError for failures. The environment
        * and file provider remain owned by the host. Do not use this session afterward.
        */
       dispose() {
@@ -13152,13 +12920,6 @@ var init_assembler = __esm({
           );
         }
       }
-      /**
-       * Reads little endian.
-       * @param {Uint8Array} bytes The bytes.
-       * @param {number} pos The pos.
-       * @param {number} width The width.
-       * @returns {number | undefined} The result.
-       */
       readLittleEndian(bytes, pos, width2) {
         if (!Number.isInteger(pos) || pos < 0 || pos + width2 > bytes.length) {
           return void 0;
@@ -13170,11 +12931,11 @@ var init_assembler = __esm({
         return out >>> 0;
       }
       /**
-       * Checks whether it can read byte range.
-       * @param {number} sourceLength The source length.
-       * @param {number} position The position.
-       * @param {number} size The size.
-       * @returns {number} The result.
+       * Check a byte interval after truncating its position and size to integers.
+       * @param {number} sourceLength Available source bytes.
+       * @param {number} position Zero-based byte offset.
+       * @param {number} size Requested byte count, which may be zero.
+       * @returns {number} Numeric 1 or 0 for use by assembly expressions.
        */
       canReadByteRange(sourceLength, position, size) {
         const pos = Math.trunc(position);
@@ -13182,13 +12943,13 @@ var init_assembler = __esm({
         return Number.isInteger(pos) && Number.isInteger(num) && pos >= 0 && num >= 0 && pos + num <= sourceLength ? 1 : 0;
       }
       /**
-       * Reads byte range.
-       * @param {Uint8Array} source The source.
-       * @param {number} position The position.
-       * @param {number} size The size.
-       * @param {number | undefined} defaultValue The default value.
-       * @param {string} errorMessage The error message.
-       * @returns {number} The result.
+       * Read an unsigned little-endian value after truncating offset and width.
+       * @param {Uint8Array} source Borrowed input bytes, never modified.
+       * @param {number} position Zero-based byte offset.
+       * @param {number} size Width in bytes, used by the 1–4-byte expression readers.
+       * @param {number | undefined} defaultValue Returned for an out-of-bounds read when supplied.
+       * @param {string} errorMessage Error thrown for an out-of-bounds read without a default.
+       * @returns {number} Unsigned value or the supplied default.
        */
       readByteRange(source, position, size, defaultValue, errorMessage) {
         const pos = Math.trunc(position);
@@ -13202,11 +12963,6 @@ var init_assembler = __esm({
         }
         return value;
       }
-      /**
-       * Resolves readable path.
-       * @param {string} filename The filename.
-       * @returns {string | undefined} The result.
-       */
       resolveReadablePath(filename) {
         return this.fileProvider.resolvePath(filename, {
           currentFile: this.currentFile,
@@ -13214,11 +12970,6 @@ var init_assembler = __esm({
           macroSourceFile: this.currentMacroSourceFile
         });
       }
-      /**
-       * Resolves expression host label.
-       * @param {string} identifier The identifier.
-       * @returns {number | string} The result.
-       */
       resolveExpressionHostLabel(identifier2) {
         const trimmed = identifier2.trim();
         const loopValue = this.activeLoopVariables.get(trimmed);
@@ -13234,12 +12985,6 @@ var init_assembler = __esm({
         }
         return this.symbolScope.getLabelValue(identifier2, this.requireStaticLabelLookup);
       }
-      /**
-       * Gets expression object size.
-       * @param {string} identifier The identifier.
-       * @param {boolean} [baseOnly] Whether to return only the base object size.
-       * @returns {number} The result.
-       */
       getExpressionObjectSize(identifier2, baseOnly = false) {
         if (baseOnly && (identifier2 === "..." || identifier2 === "\u2026")) {
           if (this.inMacroExpansion && this.currentVariadicCount !== void 0) {
@@ -13252,11 +12997,6 @@ var init_assembler = __esm({
         }
         return this.symbolScope.getObjectSize(identifier2, baseOnly);
       }
-      /**
-       * Looks up define value.
-       * @param {string} varName The var name.
-       * @returns {string | undefined} The result.
-       */
       lookupDefineValue(varName) {
         const defineValue = this.defines.get(varName);
         if (defineValue !== void 0) {
@@ -13276,23 +13016,10 @@ var init_assembler = __esm({
         }
         return this.macros.get(this.currentMacroName)?.sourceFile;
       }
-      /**
-       * Checks whether it can read the base image.
-       * @param {number} position The position.
-       * @param {number} size The size.
-       * @returns {number} The result.
-       */
       canReadBaseImage(position, size) {
         const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
         return this.canReadByteRange(sourceLength, position, size);
       }
-      /**
-       * Reads the base image.
-       * @param {number} position The position.
-       * @param {number} size The size.
-       * @param {number} [defaultValue] The default value.
-       * @returns {number} The result.
-       */
       readBaseImage(position, size, defaultValue) {
         const pos = Math.trunc(position);
         const pcPos = this.outputWriter.toOutputOffset(pos);
@@ -13312,13 +13039,6 @@ var init_assembler = __esm({
           `read${Math.trunc(size)} out of bounds at ${pos}`
         );
       }
-      /**
-       * Checks whether it can read expression file.
-       * @param {string} filename The filename.
-       * @param {number} position The position.
-       * @param {number} size The size.
-       * @returns {number} The result.
-       */
       canReadExpressionFile(filename, position, size) {
         const resolvedPath = this.resolveReadablePath(filename);
         if (!resolvedPath) {
@@ -13330,14 +13050,6 @@ var init_assembler = __esm({
         }
         return this.canReadByteRange(fileSize, position, size);
       }
-      /**
-       * Reads expression file.
-       * @param {string} filename The filename.
-       * @param {number} position The position.
-       * @param {number} size The size.
-       * @param {number} [defaultValue] The default value.
-       * @returns {number} The result.
-       */
       readExpressionFile(filename, position, size, defaultValue) {
         const pos = Math.trunc(position);
         const resolvedPath = this.resolveReadablePath(filename);
@@ -13477,11 +13189,6 @@ var init_assembler = __esm({
           this.outputBytes[start + i] = value & 255;
         }
       }
-      /**
-       * Creates ephemeral stage execution state.
-       * @param {AssemblyStageName} stage The stage.
-       * @returns {StageExecutionState} The result.
-       */
       createEphemeralStageExecutionState(stage) {
         const descriptor2 = this.getStageDescriptor(stage);
         return {
@@ -13527,10 +13234,6 @@ var init_assembler = __esm({
         this.activeStageExecutionState.stage = descriptor2.stage;
         this.activeStageExecutionState.capabilities = descriptor2.capabilities;
       }
-      /**
-       * Gets active stage capabilities.
-       * @returns {StageExecutionCapabilities} The result.
-       */
       getActiveStageCapabilities() {
         if (!this.activeStageExecutionState) {
           this.activeStageExecutionState = this.createEphemeralStageExecutionState("collectDefinitions");
@@ -13540,11 +13243,6 @@ var init_assembler = __esm({
       get traceStage() {
         return this.activeStageExecutionState?.stage ?? "collectDefinitions";
       }
-      /**
-       * Lays out instruction.
-       * @param {string[] | LoweredInstruction} input The input.
-       * @returns {boolean} The result.
-       */
       layoutInstruction(input) {
         const words = Array.isArray(input) ? input : input.words;
         if (words.length === 0) {
@@ -13558,11 +13256,6 @@ var init_assembler = __esm({
         this.step(size);
         return true;
       }
-      /**
-       * Emits instruction.
-       * @param {string[] | LoweredInstruction} input The input.
-       * @returns {boolean} The result.
-       */
       emitInstruction(input) {
         const words = Array.isArray(input) ? input : input.words;
         if (words.length === 0) {
@@ -13602,10 +13295,6 @@ var init_assembler = __esm({
         }
         return this.emitInstruction(input);
       }
-      /**
-       * Resolves active architecture.
-       * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
-       */
       resolveActiveArchitecture() {
         const normalized = this.arch.toLowerCase();
         const canonical2 = this.architectureRegistry.getCanonicalName(normalized);
@@ -13692,11 +13381,6 @@ var init_assembler = __esm({
         }
         return this.outputBytes[addr];
       }
-      /**
-       * Reads 2.
-       * @param {number} logicalPosition The logical address.
-       * @returns {number} The result.
-       */
       read2(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
         if (addr < 0 || addr + 2 > this.outputBytes.length) {
@@ -13704,11 +13388,6 @@ var init_assembler = __esm({
         }
         return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8;
       }
-      /**
-       * Reads 3.
-       * @param {number} logicalPosition The logical address.
-       * @returns {number} The result.
-       */
       read3(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
         if (addr < 0 || addr + 3 > this.outputBytes.length) {
@@ -13716,22 +13395,9 @@ var init_assembler = __esm({
         }
         return this.outputBytes[addr] | this.outputBytes[addr + 1] << 8 | this.outputBytes[addr + 2] << 16;
       }
-      /**
-       * Rewrites raw command.
-       * @param {string} command The command.
-       * @returns {string} The result.
-       */
       rewriteRawCommand(command) {
         return this.macroEngine.rewriteMacroLabelReferences(command);
       }
-      /**
-       * Creates normalized command from raw.
-       * @param {string} command The command.
-       * @param {string} sourceFile The source file.
-       * @param {number} sourceLine The source line.
-       * @param {boolean} [allowEmpty] The allow empty.
-       * @returns {NormalizedCommand | null} The result.
-       */
       createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
         return this.frontEndService.createNormalizedCommandFromRaw(
           command,
@@ -13778,11 +13444,6 @@ var init_assembler = __esm({
         ]);
         return true;
       }
-      /**
-       * Preprocesses normalized command.
-       * @param {NormalizedCommand} state The state.
-       * @returns {CommandPreprocessResult} The result.
-       */
       preprocessNormalizedCommand(state) {
         if (this.structEngine.data.inTable && !this.inMacroDefinition) {
           this.structEngine.data.prepareRow(state);
@@ -13829,11 +13490,6 @@ var init_assembler = __esm({
         }
         return "continue";
       }
-      /**
-       * Prepares normalized command for dispatch.
-       * @param {NormalizedCommand} state The state.
-       * @returns {boolean} The result.
-       */
       prepareNormalizedCommandForDispatch(state) {
         if (state.kind === "unknown") {
           setCommandWords(state, state.words, state.command);
@@ -13989,12 +13645,6 @@ var init_assembler = __esm({
           );
         }
       }
-      /**
-       * Gets or create lowered program.
-       * @param {StageExecutionState} stageState The stage state.
-       * @param {ProgramModel} program The program.
-       * @returns {LoweredProgram} The result.
-       */
       getOrCreateLoweredProgram(stageState, program) {
         if (!stageState.loweredProgram) {
           stageState.loweredProgram = measureInternalPhase(
@@ -14074,7 +13724,7 @@ var init_assembler = __esm({
       }
       /**
        * Replace include search paths before assembly. Retains the array without copying.
-       * @param {string[]} paths Provider-specific search paths; Node resolves relative paths from cwd.
+       * @param {string[]} paths Provider-specific search paths. Node resolves relative paths from cwd.
        */
       setIncludePaths(paths) {
         this.includePaths = paths;
@@ -14520,11 +14170,6 @@ var init_assembler = __esm({
       setCurrentLine(line) {
         this.currentLine = line;
       }
-      /**
-       * Gets stage descriptor.
-       * @param {AssemblyStageName} stage The stage.
-       * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
-       */
       getStageDescriptor(stage) {
         if (stage === "collectDefinitions") {
           return {
@@ -14561,11 +14206,6 @@ var init_assembler = __esm({
           }
         };
       }
-      /**
-       * Clones relative labels.
-       * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
-       * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
-       */
       cloneRelativeLabels(source) {
         const clone = {};
         for (const [depth, entries3] of Object.entries(source)) {
@@ -14573,11 +14213,6 @@ var init_assembler = __esm({
         }
         return clone;
       }
-      /**
-       * Creates stage execution state.
-       * @param {AssemblyStageName} stage The stage.
-       * @returns {StageExecutionState} The result.
-       */
       createStageExecutionState(stage) {
         const descriptor2 = this.getStageDescriptor(stage);
         let previousStage;
@@ -14693,11 +14328,6 @@ var init_assembler = __esm({
           macroLabelInstance: this.macroLabelInstance
         };
       }
-      /**
-       * Gets or create stage execution state.
-       * @param {AssemblyStageName} stage The stage.
-       * @returns {StageExecutionState} The result.
-       */
       getOrCreateStageExecutionState(stage) {
         const existing = this.stageExecutionStates.get(stage);
         if (existing) {
@@ -14707,13 +14337,6 @@ var init_assembler = __esm({
         this.stageExecutionStates.set(stage, created);
         return created;
       }
-      /**
-       * Builds program model.
-       * @param {string} source The source.
-       * @param {string} [sourceFile] The source file.
-       * @param {number} [startLine] The start line.
-       * @returns {ProgramModel} The result.
-       */
       buildProgramModel(source, sourceFile = this.currentFile, startLine = 0) {
         return measureInternalPhase("buildProgramModel", () => {
           const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
@@ -14724,12 +14347,6 @@ var init_assembler = __esm({
           };
         });
       }
-      /**
-       * Runs stage.
-       * @param {AssemblyStageName} stage The stage.
-       * @param {ProgramModel} program The program.
-       * @returns {StageExecutionState} The result.
-       */
       runStage(stage, program) {
         return measureInternalPhase(stage, () => {
           if (stage === "collectDefinitions") {
@@ -14755,7 +14372,7 @@ var init_assembler = __esm({
       }
       /**
        * Run definition collection, layout resolution, and byte emission synchronously in that order.
-       * Throws at the first unrecovered failure; partial state/output is not a successful binary.
+       * Throws at the first unrecovered failure. Partial state/output is not a successful binary.
        * @param {ProgramModel} program Parsed source model produced for this target's syntax.
        */
       assembleProgram(program) {
@@ -14764,11 +14381,11 @@ var init_assembler = __esm({
         this.runStage("emitProgram", program);
       }
       /**
-       * Parse and run all three assembly stages; includes are read through the configured provider.
+       * Parse and run all three assembly stages. Includes are read through the configured provider.
        * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
        * @param {string} source Assembly source text, not a filename.
-       * @param {string} [sourceFile] Source identity and include-resolution base; defaults to currentFile.
-       * @param {number} [startLine] Zero-based line offset; defaults to zero.
+       * @param {string} [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
+       * @param {number} [startLine] Zero-based line offset. Defaults to zero.
        * @returns {ProgramModel} Parsed model used for this build.
        */
       assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
@@ -14812,7 +14429,7 @@ var init_assembler = __esm({
       }
       /**
        * Materialize the target format's current bytes without assembling or finalizing again.
-       * @returns {Uint8Array} Output whose ownership depends on the formatter; copy before retaining or mutating independently.
+       * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
        */
       getBinaryOutput = () => {
         return this.pluginOutputFormat.getOutput({
@@ -14842,11 +14459,6 @@ var init_assembler = __esm({
           this.runtimePassthroughRewriteEnabled = previousRewrite;
         }
       }
-      /**
-       * Resolves for loop bounds.
-       * @param {LoweredLoopNode} forBlock The for block.
-       * @returns {{ variable?: string; start?: number; end?: number; }} The result.
-       */
       resolveForLoopBounds(forBlock) {
         const parsedForLoop = forBlock.header?.parsed.forLoop;
         const variable = forBlock.variable ?? parsedForLoop?.variable;
@@ -14959,11 +14571,6 @@ var init_assembler = __esm({
           (cmd) => this.executeLoweredNodeWithRecovery(cmd)
         );
       }
-      /**
-       * Gets lowered node span.
-       * @param {LoweredExecutableNode} node The node.
-       * @returns {SourceSpan | undefined} The result.
-       */
       getLoweredNodeSpan(node) {
         if (node.kind === "command") {
           return node.command.source.normalizedSpan;
@@ -16723,7 +16330,7 @@ var init_project_validation = __esm({
         throw new Error("Invalid analysis sqlite revision.");
       }
       if (manifest.shards.length !== 0) {
-        throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+        throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
       }
     };
     FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
@@ -17174,7 +16781,7 @@ var init_project_transaction = __esm({
           if (expected) {
             assertAnalysisProjectRevision(store, expected);
           } else if (store.revision() !== 0) {
-            throw new Error("Analysis project already exists; reload before publishing.");
+            throw new Error("Analysis project already exists. Reload before publishing.");
           }
           const evidenceIds = new Set(project.shards.evidence.map(({ id }) => id));
           const removedEvidence = updates.runtime === void 0 && updates.evidence !== void 0 && store.loadTable("evidence").some(({ id }) => !evidenceIds.has(id));
@@ -17621,12 +17228,12 @@ var init_project_store = __esm({
       const manifest = input;
       if (manifest.schemaVersion > 3) {
         throw new Error(
-          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3; refusing to downgrade.`
+          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
         );
       }
       validateAnalysisProjectManifest(manifest);
       if (manifest.db !== "analysis.sqlite") {
-        throw new Error("Legacy analysis storage is no longer supported; use a SQLite project.");
+        throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
       }
       return manifest;
     };
@@ -17905,7 +17512,7 @@ var init_runtime_evidence = __esm({
           }
         } else {
           throw new Error(
-            `Runtime evidence id '${record3.id}' in '${kind}' changed content; use a content-derived id.`
+            `Runtime evidence id '${record3.id}' in '${kind}' changed content. Use a content-derived id.`
           );
         }
       }
@@ -17919,7 +17526,7 @@ var init_runtime_evidence = __esm({
         }
         if (traceProfiles.has(report2.sourceSha256) && traceProfiles.get(report2.sourceSha256) !== report2.indexProfile) {
           throw new Error(
-            `Trace '${report2.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`
+            `Trace '${report2.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
           );
         }
         traceProfiles.set(report2.sourceSha256, report2.indexProfile);
@@ -18120,7 +17727,7 @@ var init_sqlite_annotation_query = __esm({
     };
     readSqliteAnnotationView = (database, manifest, ranges) => {
       if (!annotationQueryIndexesReady(database)) {
-        throw new Error("Analysis query indexes changed; refresh the annotation view.");
+        throw new Error("Analysis query indexes changed. Refresh the annotation view.");
       }
       if (ranges.length > 2e3) {
         throw new Error("At most 2000 visible source ranges may be projected per request.");
@@ -19105,7 +18712,7 @@ END;
         const fingerprint = createHash5("sha256").update(
           // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
           // per row. Nulls, two-space indentation and the trailing newline preserve
-          // persisted v2 fingerprints; changing the layout would duplicate old facts.
+          // persisted v2 fingerprints. Changing the layout would duplicate old facts.
           // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
           JSON.stringify(
             {
@@ -19264,7 +18871,7 @@ var init_sqlite_source_query = __esm({
           id: JSON.stringify([row.architecture, row.address_space, row.address]),
           label: hex(Number(row.address)),
           description: `${String(row.executions)} recorded executions`,
-          detail: "Directly observed instruction address. CPU-state variants do not inflate the address count; execution counts exclude duplicate fetched-instruction facts.",
+          detail: "Directly observed instruction address. CPU-state variants do not inflate the address count. Execution counts exclude duplicate fetched-instruction facts.",
           architecture: String(row.architecture),
           addressSpace: String(row.address_space),
           address: Number(row.address),
@@ -19397,7 +19004,7 @@ var init_sqlite_storage_policy = __esm({
       const bytes = pages * Number(db.prepare("PRAGMA page_size").get().page_size);
       if (bytes > budget) {
         throw new Error(
-          `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back; increase the budget or run storage maintenance.`
+          `Analysis database exceeds its ${Math.ceil(budget / 1024 ** 2)} MiB storage budget. Publication rolled back. Increase the budget or run storage maintenance.`
         );
       }
     };
@@ -19458,14 +19065,14 @@ var init_trace_cache = __esm({
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
-      /** Dense victim slots avoid scanning the Map; hits never reorder either structure. */
+      /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
       #keys = [];
       #metrics;
       #random = 2654435769;
       constructor(metrics) {
         this.#metrics = metrics;
       }
-      /** Look up a value; undefined is reserved for misses.
+      /** Look up a value. Undefined is reserved for misses.
        * @param {string} key Complete semantic key, never a lossy coordinate projection.
        * @returns {T | undefined} Retained value, or a cache miss.
        */
@@ -19512,12 +19119,12 @@ var init_trace_cache = __esm({
         return displaced;
       }
       /** Iterate the retained working set, for a final durable delta flush.
-       * @returns {MapIterator} Live entries; do not insert while iterating.
+       * @returns {MapIterator} Live entries. Do not insert while iterating.
        */
       entries() {
         return this.#entries.entries();
       }
-      /** Drop retained values after a flush or failed import; diagnostics remain cumulative. */
+      /** Drop retained values after a flush or failed import. Diagnostics remain cumulative. */
       clear() {
         this.#entries.clear();
         this.#keys.length = 0;
@@ -19643,7 +19250,7 @@ PRAGMA user_version=2;
     SqliteAnalysisStore = class {
       #database;
       #fileIdentity;
-      /** Database path as supplied at construction; resolves relative to cwd when not absolute. */
+      /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
       file;
       #insertEvidence;
       #insertLabel;
@@ -19661,10 +19268,10 @@ PRAGMA user_version=2;
       /**
        * Opens or creates a project database.
        * Opening validates physical format, not every semantic record, and may create SQLite journal files.
-       * Connections use a 5,000 ms busy timeout; lock contention can still throw a SQLite error.
-       * @param {string} file SQLite path; parent directory must already exist.
-       * @param {boolean} [createSchema] Defaults to true; permit initialization of an empty database, never upgrade an existing one.
-       * @param {boolean} [deferIndexes] Defaults to false; migration-only bulk load, completed by finishMigration.
+       * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
+       * @param {string} file SQLite path. Parent directory must already exist.
+       * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+       * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
        */
       constructor(file, createSchema = true, deferIndexes = false) {
         assertNoSqliteMigration(file);
@@ -19695,7 +19302,7 @@ PRAGMA user_version=2;
           const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
           if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
             throw new Error(
-              `Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+              `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
             );
           }
           this.#database.exec(
@@ -19756,7 +19363,7 @@ PRAGMA user_version=2;
         this.#dictionaryCacheBytes = 0;
       }
       /**
-       * Intern exact text with a bounded cache; callers hold the SQLite writer lock.
+       * Intern exact text with a bounded cache. Callers hold the SQLite writer lock.
        * @param {string} table One of the two prepared dictionary tables.
        * @param {string} value Exact prefix or serialized evidence list.
        * @returns {number} Transactionally created or existing dictionary rowid.
@@ -19854,18 +19461,18 @@ PRAGMA user_version=2;
       /**
        * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
        * the revision so a competing process cannot slip between the stale check and publication.
-       * Throwing rolls back records and manifest changes. Promise/thenable results are rejected; perform
+       * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
        * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
-       * the manifest themselves when changing semantic records; prefer the commitAnalysisProject APIs.
-       * @param {Function} action Synchronous work; cursors must be consumed before returning.
-       * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE); false uses deferred BEGIN for reads, not an enforced read-only connection.
+       * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
+       * @param {Function} action Synchronous work. Cursors must be consumed before returning.
+       * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
        * @returns {T} Callback result after a successful commit.
        */
       transaction(action, write = true) {
         assertNoSqliteMigration(this.file);
         if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
           throw new Error(
-            "Analysis database was replaced; close this connection and reload the project."
+            "Analysis database was replaced. Close this connection and reload the project."
           );
         }
         this.#clearDictionaryCache();
@@ -19896,7 +19503,7 @@ PRAGMA user_version=2;
        * main, allowing other project writers to proceed during asynchronous capture parsing.
        * @param {Function} action Async parser using only the supplied temporary counter index.
        * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-       * @returns {Promise} Parser result after temporary counters commit; the index lives until connection close.
+       * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
        */
       async indexTrace(action, metrics) {
         this.#database.exec(`CREATE TEMP TABLE trace_facts (
@@ -19984,7 +19591,7 @@ PRAGMA user_version=2;
           throw new Error("Analysis mutation requires a transaction.");
         }
       }
-      /** Apply a selected metadata edit by stable ID; omitted records are never deleted.
+      /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
        * Validation and optimistic revision checks belong to the publication API.
        * @param {AnalysisProjectShards} before Original selected view.
        * @param {AnalysisProjectShards} after Edited selected view.
@@ -20011,7 +19618,7 @@ PRAGMA user_version=2;
             }
             const stored = find.get(id);
             if (canonicalJson(stored ? parseRecord(stored.payload) : void 0) !== canonicalJson(prior)) {
-              throw new Error(`Selected ${kind} record '${id}' changed; reload before editing.`);
+              throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
             }
             remove.run(id);
             if (record3) {
@@ -20036,7 +19643,7 @@ PRAGMA user_version=2;
       /**
        * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
        * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
-       * Semantic validation belongs to the project publication API; this method must run in its transaction.
+       * Semantic validation belongs to the project publication API. This method must run in its transaction.
        * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
        */
       replaceTables(shards) {
@@ -20089,7 +19696,7 @@ PRAGMA user_version=2;
       }
       /**
        * Replace runtime by interned external identities, including virtual paired-state records.
-       * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
+       * @param {Array} records Complete semantic runtime replacement. Duplicate IDs remain errors.
        */
       #replaceRuntime(records) {
         this.#database.exec(
@@ -20121,7 +19728,7 @@ PRAGMA user_version=2;
        * Append validated migration rows without materializing a complete table. Runtime IDs are checked
        * through the logical view because paired states share physical storage with an instruction.
        * @param {ShardKind} kind Destination semantic table.
-       * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+       * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
        */
       appendRecords(kind, records) {
         this.#requireTransaction();
@@ -20136,10 +19743,10 @@ PRAGMA user_version=2;
         }
       }
       /**
-       * Insert a content-addressed runtime fact once; an ID collision with different content is an
+       * Insert a content-addressed runtime fact once. An ID collision with different content is an
        * error, never a silent no-op. Count values are already aggregated within the source capture.
        * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-       * @returns {boolean} True when inserted; identical facts return false and conflicting facts throw.
+       * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
        */
       insertRuntime(record3) {
         this.#requireTransaction();
@@ -20157,9 +19764,9 @@ PRAGMA user_version=2;
         return true;
       }
       /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
-       * New namespaces need no per-record existence query; SQL uniqueness still rejects repeated IDs.
+       * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
        * Existing/partially pruned sources use full idempotency and collision checks for every record.
-       * The callback must not escape its transaction; any insertion error must abort the whole batch.
+       * The callback must not escape its transaction. Any insertion error must abort the whole batch.
        * @param {string} prefix Exact ID prefix including its final colon.
        * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
        */
@@ -20224,7 +19831,7 @@ PRAGMA user_version=2;
       }
       /**
        * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
-       * Use a transaction when combining it with other reads; this does not validate the entire project.
+       * Use a transaction when combining it with other reads. This does not validate the entire project.
        * @returns {AnalysisProjectManifest} Pointer manifest.
        */
       manifest() {
@@ -20236,7 +19843,7 @@ PRAGMA user_version=2;
       }
       /**
        * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-       * @param {Array} kinds Runtime discriminators to include; empty selects nothing.
+       * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
        * @returns {IterableIterator} Cursor consumed within the owning read transaction.
        * @yields {RuntimeEvidenceRecord} One matching decoded fact.
        */
@@ -20253,7 +19860,7 @@ PRAGMA user_version=2;
       }
       /**
        * Stream runtime facts without retaining the complete table. Consume before the owning transaction
-       * returns or the connection closes; an escaped iterator does not preserve its original snapshot.
+       * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
        * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
        * @yields {RuntimeEvidenceRecord} One runtime fact.
        */
@@ -20263,7 +19870,7 @@ PRAGMA user_version=2;
         }
       }
       /**
-       * Read one metadata table directly; Sources must not load unrelated CFG or runtime tables.
+       * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
        * @param {string} kind Metadata table name from the semantic collection contract.
        * @returns {Array} Decoded metadata in deterministic display order.
        */
@@ -20328,7 +19935,7 @@ PRAGMA user_version=2;
         };
       }
       /** Produce an explicit complete evidence report one qualified PC at a time.
-       * Only report output accumulates; unused instruction/memory histories and CFG contexts are never loaded.
+       * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
        * @returns {object} Runtime record count, conflicts, and metadata explanations.
        */
       inspectEvidence() {
@@ -20365,8 +19972,8 @@ PRAGMA user_version=2;
           explanations: inspectRuntimeEvidence(shards).explanations
         };
       }
-      /** Select record choices before decoding; explicit IDs bypass unrelated history entirely.
-       * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs; omitted lists the first 200 records per collection.
+      /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+       * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
        * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
        */
       evidenceChoices(selected) {
@@ -20478,7 +20085,7 @@ PRAGMA user_version=2;
           return { ...base, referencedBy, referencedByTotal };
         }, false);
       }
-      /** Exact coverage totals; build only when classifications, code, or runtime facts changed.
+      /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
        * @returns {object} Persisted summary and detail count.
        */
       coverageSummary() {
@@ -20497,7 +20104,7 @@ PRAGMA user_version=2;
           );
           const published = cachedCoverage(this.#database, this.manifest());
           if (!published) {
-            throw new Error("Project changed while building coverage; refresh the view.");
+            throw new Error("Project changed while building coverage. Refresh the view.");
           }
           return published;
         } finally {
@@ -20530,7 +20137,7 @@ PRAGMA user_version=2;
           );
           const published = readQueryCache(this.#database, "graph", "2");
           if (!published) {
-            throw new Error("Analysis changed while building the graph; refresh the view.");
+            throw new Error("Analysis changed while building the graph. Refresh the view.");
           }
           graph = published;
         } finally {
@@ -20547,13 +20154,13 @@ PRAGMA user_version=2;
           }))
         };
       }
-      /** Cache a compact target-specific result; callers declare every persisted input it consumes.
+      /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
        * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
-       * Concurrent input changes discard cache publication; results still belong to one read snapshot.
+       * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
        * @param {string} key Internal stable query name.
        * @param {string} signature Layout/configuration fingerprint.
        * @param {readonly ShardKind[]} dependencies Source collections.
-       * @param {Function} compute Synchronous reader; must not open another transaction.
+       * @param {Function} compute Synchronous reader. Must not open another transaction.
        * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
        * @returns {T} Current projected value.
        */
@@ -20576,7 +20183,7 @@ PRAGMA user_version=2;
         });
         return result;
       }
-      /** CPU architectures at one PC from indexed scalar columns; register payloads are untouched.
+      /** CPU architectures at one PC from indexed scalar columns. Register payloads are untouched.
        * @param {string} space Exact logical address space.
        * @param {number} address Instruction address.
        * @returns {string[]} Distinct observed architecture IDs.
@@ -20605,7 +20212,7 @@ PRAGMA user_version=2;
             }
           );
           if (!readQueryCache(this.#database, "runtime_architectures", "2")) {
-            throw new Error("Runtime changed while building processor hints; refresh the view.");
+            throw new Error("Runtime changed while building processor hints. Refresh the view.");
           }
         } finally {
           this.#database.exec("DROP TABLE IF EXISTS temp.runtime_architectures_pending");
@@ -20643,7 +20250,7 @@ PRAGMA user_version=2;
        * @param {string} architecture Exact runtime architecture.
        * @param {string} space Instruction and accessed logical space.
        * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-       * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations; counts/provenance stay exact.
+       * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
        * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
        */
       *runtimeMemoryAtAddresses(architecture, space, addresses2) {
@@ -20657,7 +20264,7 @@ PRAGMA user_version=2;
           yield runtimeFromRow({ ...row, count: row.total });
         }
       }
-      /** Decode-state variants aggregated in SQL; raw register histories never become a JS array.
+      /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
        * The signature includes the ordered state fields and architecture. Aliases remain distinct so
        * the target decoder retains its original precedence and validation rules.
        * @param {string} architecture Exact instruction architecture.
@@ -20727,7 +20334,7 @@ PRAGMA user_version=2;
             }
           );
           if (!readQueryCache(this.#database, "instruction_variants", signature)) {
-            throw new Error("Runtime changed while building instruction variants; retry reanalysis.");
+            throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
           }
         } finally {
           this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
@@ -20792,7 +20399,7 @@ PRAGMA user_version=2;
         );
         return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
       }
-      /** Exact SQL counts for a catalog source; no baseline or inferred static execution.
+      /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
        * @param {string} sourceId Catalog source ID.
        * @returns {object} Manifest and source counts.
        */
@@ -20836,7 +20443,7 @@ PRAGMA user_version=2;
         validateLoadedShards(shards, manifest);
         return { manifest, shards };
       }
-      /** Small export metadata; instruction candidates are supplied separately by an ordered SQL cursor.
+      /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
        * @returns {object} Validated manifest, metadata, and an empty runtime collection.
        */
       sourceExportView() {
@@ -20855,7 +20462,7 @@ PRAGMA user_version=2;
         return { manifest, shards };
       }
       /**
-       * Stream one file-offset group at a time; do not retain the complete CFG to plan source.
+       * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
        * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
        * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
        * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
@@ -20889,7 +20496,7 @@ PRAGMA user_version=2;
       /**
        * Read and validate only the requested instruction metadata and bounded runtime details.
        * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-       * @returns {SqliteAnnotationView} Small view; consume inside the caller's read transaction.
+       * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
        */
       instructionAnnotationView(ranges) {
         const manifest = this.manifest();
@@ -20920,7 +20527,7 @@ PRAGMA user_version=2;
        * @param {string} addressSpace Exact debug-map/native address space.
        * @param {number} address Instruction start in that space.
        * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-       * @returns {AnalysisProjectShards["analysis"]} Location representatives; state variants need not be loaded to edit a comment.
+       * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
        */
       annotationNodesAt(addressSpace, address3, outputOffset) {
         const rows = this.#database.prepare(`SELECT payload FROM analysis WHERE rowid IN (
@@ -20964,7 +20571,7 @@ PRAGMA user_version=2;
       }
       /**
        * Build deferred indexes and check all physical structures before closing a staged migration file.
-       * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+       * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
        * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
        */
       finishMigration() {
@@ -20984,7 +20591,7 @@ PRAGMA user_version=2;
       }
       /**
        * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-       * @param {boolean} [runtime] Defaults to true; false omits runtime and must not be treated as a complete replacement.
+       * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
        * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
        */
       loadShards(runtime = true) {
@@ -21065,14 +20672,14 @@ PRAGMA user_version=2;
           }
         }
       }
-      /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
+      /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
       compact() {
         const disk = fs8.statfsSync(path7.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
           throw new Error(
-            "Insufficient free disk space for SQLite VACUUM; allow twice the database size."
+            "Insufficient free disk space for SQLite VACUUM. Allow twice the database size."
           );
         }
         this.transaction(() => {
@@ -21083,7 +20690,7 @@ PRAGMA user_version=2;
         });
         this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
       }
-      /** Current persisted policy; defaults do not write or change the semantic revision.
+      /** Current persisted policy. Defaults do not write or change the semantic revision.
        * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
        */
       storagePolicy() {
@@ -21105,7 +20712,7 @@ PRAGMA user_version=2;
       storageSnapshot() {
         return storageSnapshot(this.#database, this.file);
       }
-      /** Optional projection allocation, including secondary indexes; reserved for explicit accounting.
+      /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
        * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
        */
       storageCacheBytes() {
@@ -21124,7 +20731,7 @@ PRAGMA user_version=2;
       captureCatalog() {
         return this.#database.prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256").all();
       }
-      /** Record the first successful import atomically with its facts; reimports only refresh last-seen time.
+      /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
        * @param {ImportReport} report Successfully validated native trace import.
        */
       recordCaptureReceipt(report2) {
@@ -21397,12 +21004,12 @@ var init_sqlite_migration = __esm({
       }
       if (identity !== journal.sourceIdentity) {
         throw new Error(
-          "Analysis database identity changed outside the recorded migration; preserving recovery files."
+          "Analysis database identity changed outside the recorded migration. Preserving recovery files."
         );
       }
       if (fs9.existsSync(backup)) {
         if (sqliteFileIdentity(backup) !== identity) {
-          throw new Error("An unrelated migration backup already exists; preserving both databases.");
+          throw new Error("An unrelated migration backup already exists. Preserving both databases.");
         }
         fs9.unlinkSync(backup);
       }
@@ -21483,7 +21090,7 @@ var init_sqlite_migration = __esm({
           );
         } catch (cause) {
           throw new Error(
-            `Cannot acquire exclusive migration access; close clients using this analysis database and retry. ${String(cause)}`,
+            `Cannot acquire exclusive migration access. Close clients using this analysis database and retry. ${String(cause)}`,
             { cause }
           );
         }
@@ -21731,7 +21338,7 @@ var init_rom_image = __esm({
         return 512;
       }
       throw new Error(
-        `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header; pass an explicit header override.`
+        `ROM size ${fileSize} is not aligned to a 32 KiB image with either a 0-byte or 512-byte copier header. Pass an explicit header override.`
       );
     };
     RomImage = class _RomImage {
@@ -21742,7 +21349,7 @@ var init_rom_image = __esm({
       #fileBytes;
       #contentBytes;
       /**
-       * @param {Uint8Array} bytes Complete file bytes; copied immediately.
+       * @param {Uint8Array} bytes Complete file bytes. Copied immediately.
        * @param {RomLoadOptions & { readonly sourcePath?: string }} [options] Header override and optional origin path.
        */
       constructor(bytes, options = {}) {
@@ -21796,7 +21403,7 @@ var init_rom_image = __esm({
         return this.#contentBytes.slice(offset, offset + length);
       }
       /**
-       * Returns a defensive copy; callers cannot mutate the loaded image.
+       * Returns a defensive copy. Callers cannot mutate the loaded image.
        * @returns {Uint8Array} The headerless ROM content.
        */
       bytes() {
@@ -22010,7 +21617,7 @@ var init_runtime_trace = __esm({
             hint = "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
           }
           throw new Error(
-            `Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged; no partial import was committed.`
+            `Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged. No partial import was committed.`
           );
         }
         indexRecords += count;
@@ -22193,7 +21800,7 @@ var init_runtime_trace = __esm({
           source: "runtime",
           sourceId: `${artifact.producer.id}:${artifact.producer.revision}`,
           confidence: droppedEvents === 0 && memoryLoss === 0 && unattributed === 0 && complete ? "certain" : "high",
-          detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
+          detail: `${observedEvents} instruction event(s) observed. ${droppedEvents} producer event(s) dropped.`,
           artifact: {
             format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
             formatVersion: String(RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION),
@@ -22227,11 +21834,11 @@ var init_runtime_trace = __esm({
             ],
             ...!complete ? ["Trace artifact ended while capture was still active."] : [],
             ...detailedEvents < observedEvents ? [
-              `${observedEvents - detailedEvents} instruction observations have no captured bytes/state; RAM code cannot be recovered from PCs alone.`
+              `${observedEvents - detailedEvents} instruction observations have no captured bytes/state. RAM code cannot be recovered from PCs alone.`
             ] : [],
             ...memoryLoss ? [`${memoryLoss} memory operations were omitted by the producer detail limit.`] : [],
             ...unattributed ? [
-              `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods); they have no saved address/value detail.`
+              `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods). They have no saved address/value detail.`
             ] : []
           ]
         };
@@ -22262,7 +21869,7 @@ async function* traceEntries(file, options) {
   const checkSize = (size) => {
     if (size > maxBytes) {
       throw new Error(
-        `Instruction trace is ${(size / 1024 / 1024).toFixed(1)} MiB; import limit is ${(maxBytes / 1024 / 1024).toFixed(1)} MiB. Increase asm.trace.maxImportSizeMiB in the project settings to import this capture.`
+        `Instruction trace is ${(size / 1024 / 1024).toFixed(1)} MiB. Import limit is ${(maxBytes / 1024 / 1024).toFixed(1)} MiB. Increase asm.trace.maxImportSizeMiB in the project settings to import this capture.`
       );
     }
   };
@@ -22430,7 +22037,7 @@ async function* traceEntries(file, options) {
     const after = await stat(file);
     if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs) {
       throw new Error(
-        "Instruction trace changed while it was being read; stop recording before importing."
+        "Instruction trace changed while it was being read. Stop recording before importing."
       );
     }
   } finally {
@@ -23195,12 +22802,12 @@ var init_runtime_trace_project = __esm({
         let checkpointBusy = false;
         const maintenanceWarnings = [];
         try {
-          options.onStage?.("Runtime import committed; project pointer updated.");
+          options.onStage?.("Runtime import committed. Project pointer updated.");
           options.onStage?.("Recycling SQLite caches and WAL\u2026");
           checkpointBusy = store.maintainStorage().checkpointBusy;
         } catch (error) {
           maintenanceWarnings.push(
-            `Trace import committed; storage maintenance deferred: ${String(error)}`
+            `Trace import committed. Storage maintenance deferred: ${String(error)}`
           );
         }
         const afterStorage = store.storageSnapshot();
@@ -23217,7 +22824,7 @@ var init_runtime_trace_project = __esm({
           warnings: [
             ...maintenanceWarnings,
             ...retainedReport ? [
-              "This capture was already imported with a different profile; its retained facts and counts were reused."
+              "This capture was already imported with a different profile. Its retained facts and counts were reused."
             ] : []
           ]
         };
@@ -25135,7 +24742,7 @@ var init__ = __esm({
       x16;
       /**
        * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
-       * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+       * Set to false by `.smart off`. Re-enabled by `.smart` or `.smart on`.
        */
       smartMode;
       /**
@@ -25539,7 +25146,7 @@ var init__ = __esm({
       }
       /**
        * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
-       * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+       * {@link handleLogicAndCompareOperations}. STA has no immediate form.
        *
        * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
        * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
@@ -25856,7 +25463,7 @@ var init__ = __esm({
        * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
        * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
        * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
-       * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+       * (`len === 2`). This family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
        * long / stack forms.
        *
        * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
@@ -25879,7 +25486,7 @@ var init__ = __esm({
             indirectY: 17,
             indirect: 18,
             // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
-            // `[...]` is remapped to directIndirectLong first; these keys are the
+            // `[...]` is remapped to directIndirectLong first. These keys are the
             // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
             indirectLong: 15,
             indirectLongY: 31,
@@ -26141,7 +25748,7 @@ var init__ = __esm({
       }
       /**
        * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
-       * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+       * `expandOperand` may turn `#10` into `#$A`. Strip `$` before parseInt.
        * Count `0` emits nothing (still "handled").
        * @param {string} opcode The opcode to handle.
        * @param {string} operand The operand to handle.
@@ -26617,7 +26224,7 @@ var init__ = __esm({
         return true;
       }
       /**
-       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y). STY indexes X only
        * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
        *
        * @param {string} opcode STX, STY, or STZ.
@@ -26738,7 +26345,7 @@ var init__ = __esm({
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
       /**
-       * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+       * MVN/MVP. WDC and the hover catalog spell `dest, src`. We still write bytes
        * in source order (first operand, then second) - Asar's wire format. Locals
        * are named src/dest after that write order, not WDC's dest-then-src names.
        *
@@ -26873,7 +26480,7 @@ var init__ = __esm({
       }
       /**
        * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
-       * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+       * always 16-bit. The rest are 8-bit. `.b/.w` on REP/SEP only validates range.
        * @param {string} opcode Candidate mnemonic.
        * @param {number} num Already-evaluated operand value.
        * @param {number} len Inferred width (REP/SEP range check).
@@ -27035,7 +26642,7 @@ var init__ = __esm({
       }
       /**
        * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
-       * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
+       * 65816 has no 32-bit immediate. Callers treat it as width 4 for PEA-like repeats.
        * @param {string} c The opcode suffix to resolve the length of.
        * @returns {number} The operand length.
        * @throws {Error} If the opcode length is invalid.
@@ -27706,7 +27313,7 @@ var init_spc700 = __esm({
       /**
        * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
        * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
-       * not stall; encode will still reject them.
+       * not stall. Encode will still reject them.
        *
        * @param {string} mnemonic The mnemonic.
        * @param {string} operandText The operand text.
@@ -28253,7 +27860,7 @@ var init_spc700 = __esm({
       /**
        * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
        * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
-       * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+       * indirectX (no extra byte). `($dp+X)` is indirectDpX.
        *
        * @param {string} operand Right-hand operand of an A-destination ALU op.
        * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
@@ -28351,7 +27958,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc. `DEC X`/`DEC Y` and
        * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
        * {@link getAddressSize} (spelling), not the numeric value.
        *
@@ -28442,7 +28049,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic. Asar also accepts
        * `SET1 $13.7` where `.n` overrides the mnemonic digit.
        *
        * @param {string} opcode SET/CLR mnemonic with bit digit.
@@ -28558,7 +28165,7 @@ var init_spc700 = __esm({
        * @param {string} left Register, `$dp`, or `$dp+X`.
        * @param {string} right Branch target.
        * @param {LoweredOperand} [leftLowered] Lowered left operand.
-       * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+       * @param {LoweredOperand} [_rightLowered] Unused. Kept for call-site symmetry.
        * @returns {boolean} True if encoded.
        */
       handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
@@ -29152,7 +28759,7 @@ var init_spc700 = __esm({
             opcodeDp: 203,
             opcodeAbs: 204
           },
-          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp; "X,$1234" => 0xe9 or 0xf8 for dp, etc.
+          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp. "X,$1234" => 0xe9 or 0xf8 for dp, etc.
           {
             regex: /^A\s*,\s*\$([\dA-F]+)$/,
             opcodeDp: 228,
@@ -29868,7 +29475,7 @@ var init_superfx = __esm({
       /**
        * @param {ArchitectureEncoderContext} context Encoder host.
        * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
-       *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+       *   Hardware stores a word index (`addr >> 1`). Asar stores `addr & 0xff`. Explicit
        *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
        */
       constructor(context, asarMoveShortAddress = () => false) {
@@ -30067,7 +29674,7 @@ var init_superfx = __esm({
       }
       /**
        * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
-       * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+       * operands. Unknown mnemonics return false (`unknownInstructionBehavior` is
        * `returnFalse` so 65816 can try next).
        *
        * @param {string} mnemonic The mnemonic.
@@ -30122,11 +29729,11 @@ var init_superfx = __esm({
         return false;
       }
       /**
-       * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+       * Single-operand Super FX: short branches (`$XX` is a raw offset, labels stay
        * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
        * @param {string} opcode Uppercased mnemonic.
        * @param {string} operand The operand.
-       * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+       * @param {number} operandLength Logged only. Encoded size is fixed per opcode family.
        * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
        * @returns {boolean} True if the instruction was handled, false otherwise.
        */
@@ -30442,7 +30049,7 @@ var init_superfx = __esm({
       }
       /**
        * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
-       * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+       * Encode then stores `addr >> 1`. This check is the byte-address constraint.
        * @param {number} num RAM byte address (not the word index).
        * @returns {boolean} Always `true` when the address is valid.
        * @throws {Error} If the address is odd or outside the short-RAM window.
@@ -30465,7 +30072,7 @@ var init_superfx = __esm({
         return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
       }
       /**
-       * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+       * Fallback width when lowering did not supply `length`. `$XX` is 1. Everything else is 2.
        * Super FX uses this for one-operand branches when `loweredOperand` is missing.
        * @param {string} operand Operand text.
        * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
@@ -30861,7 +30468,7 @@ var init_spc_runtime = __esm({
        * execute trailer, then restores namespace and the previous architecture.
        *
        * Size is `(pc - dest) & $FFFF` - 64 KiB wrap, matching Asar.
-       * Size is only patched when `canFinalize` (emit pass); collect/layout leave
+       * Size is only patched when `canFinalize` (emit pass). Collect/layout leave
        * the placeholder so later passes can rewrite it.
        *
        * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
@@ -32154,12 +31761,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "BG1HOFS",
         address: 8461,
-        description: "BG1 horizontal scroll, write twice; also Mode 7 horizontal offset."
+        description: "BG1 horizontal scroll, write twice. Also Mode 7 horizontal offset."
       },
       {
         symbol: "BG1VOFS",
         address: 8462,
-        description: "BG1 vertical scroll, write twice; also Mode 7 vertical offset."
+        description: "BG1 vertical scroll, write twice. Also Mode 7 vertical offset."
       },
       { symbol: "BG2HOFS", address: 8463, description: "BG2 horizontal scroll, write twice." },
       { symbol: "BG2VOFS", address: 8464, description: "BG2 vertical scroll, write twice." },
@@ -32180,12 +31787,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "M7A",
         address: 8475,
-        description: "Mode 7 matrix parameter A, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter A, write twice. Multiplication operand."
       },
       {
         symbol: "M7B",
         address: 8476,
-        description: "Mode 7 matrix parameter B, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter B, write twice. Multiplication operand."
       },
       { symbol: "M7C", address: 8477, description: "Mode 7 matrix parameter C, write twice." },
       { symbol: "M7D", address: 8478, description: "Mode 7 matrix parameter D, write twice." },
@@ -32225,17 +31832,17 @@ var init_hardware_registers = __esm({
       {
         symbol: "MPYL",
         address: 8500,
-        description: "PPU multiplication result, low byte; read only."
+        description: "PPU multiplication result, low byte. Read only."
       },
       {
         symbol: "MPYM",
         address: 8501,
-        description: "PPU multiplication result, middle byte; read only."
+        description: "PPU multiplication result, middle byte. Read only."
       },
       {
         symbol: "MPYH",
         address: 8502,
-        description: "PPU multiplication result, high byte; read only."
+        description: "PPU multiplication result, high byte. Read only."
       },
       {
         symbol: "SLHV",
@@ -32256,8 +31863,8 @@ var init_hardware_registers = __esm({
         address: 8509,
         description: "Latched vertical beam-counter value, read twice."
       },
-      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number; read only." },
-      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number; read only." },
+      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number. Read only." },
+      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number. Read only." },
       { symbol: "APUIO0", address: 8512, description: "Main CPU/APU communication port 0." },
       { symbol: "APUIO1", address: 8513, description: "Main CPU/APU communication port 1." },
       { symbol: "APUIO2", address: 8514, description: "Main CPU/APU communication port 2." },
@@ -32309,12 +31916,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDNMI",
         address: 16912,
-        description: "V-blank NMI flag and CPU version; read acknowledges the flag."
+        description: "V-blank NMI flag and CPU version. Read acknowledges the flag."
       },
       {
         symbol: "TIMEUP",
         address: 16913,
-        description: "H/V timer IRQ flag; read acknowledges the flag."
+        description: "H/V timer IRQ flag. Read acknowledges the flag."
       },
       {
         symbol: "HVBJOY",
@@ -32325,62 +31932,62 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDDIVL",
         address: 16916,
-        description: "Unsigned division quotient, low byte; read only."
+        description: "Unsigned division quotient, low byte. Read only."
       },
       {
         symbol: "RDDIVH",
         address: 16917,
-        description: "Unsigned division quotient, high byte; read only."
+        description: "Unsigned division quotient, high byte. Read only."
       },
       {
         symbol: "RDMPYL",
         address: 16918,
-        description: "Multiplication product or division remainder, low byte; read only."
+        description: "Multiplication product or division remainder, low byte. Read only."
       },
       {
         symbol: "RDMPYH",
         address: 16919,
-        description: "Multiplication product or division remainder, high byte; read only."
+        description: "Multiplication product or division remainder, high byte. Read only."
       },
       {
         symbol: "JOY1L",
         address: 16920,
-        description: "Automatic joypad result for controller 1, low byte; read only."
+        description: "Automatic joypad result for controller 1, low byte. Read only."
       },
       {
         symbol: "JOY1H",
         address: 16921,
-        description: "Automatic joypad result for controller 1, high byte; read only."
+        description: "Automatic joypad result for controller 1, high byte. Read only."
       },
       {
         symbol: "JOY2L",
         address: 16922,
-        description: "Automatic joypad result for controller 2, low byte; read only."
+        description: "Automatic joypad result for controller 2, low byte. Read only."
       },
       {
         symbol: "JOY2H",
         address: 16923,
-        description: "Automatic joypad result for controller 2, high byte; read only."
+        description: "Automatic joypad result for controller 2, high byte. Read only."
       },
       {
         symbol: "JOY3L",
         address: 16924,
-        description: "Automatic joypad result for controller 3, low byte; read only."
+        description: "Automatic joypad result for controller 3, low byte. Read only."
       },
       {
         symbol: "JOY3H",
         address: 16925,
-        description: "Automatic joypad result for controller 3, high byte; read only."
+        description: "Automatic joypad result for controller 3, high byte. Read only."
       },
       {
         symbol: "JOY4L",
         address: 16926,
-        description: "Automatic joypad result for controller 4, low byte; read only."
+        description: "Automatic joypad result for controller 4, low byte. Read only."
       },
       {
         symbol: "JOY4H",
         address: 16927,
-        description: "Automatic joypad result for controller 4, high byte; read only."
+        description: "Automatic joypad result for controller 4, high byte. Read only."
       }
     ];
     FIXED_REGISTER_ALIASES = [
@@ -32392,17 +31999,17 @@ var init_hardware_registers = __esm({
       {
         symbol: "M7HOFS",
         address: 8461,
-        description: "Mode 7 horizontal scroll, write twice; shares BG1HOFS."
+        description: "Mode 7 horizontal scroll, write twice. Shares BG1HOFS."
       },
       {
         symbol: "M7VOFS",
         address: 8462,
-        description: "Mode 7 vertical scroll, write twice; shares BG1VOFS."
+        description: "Mode 7 vertical scroll, write twice. Shares BG1VOFS."
       },
       {
         symbol: "JOYOUT",
         address: 16406,
-        description: "Joypad latch output; write view of the address shared with JOYSER0."
+        description: "Joypad latch output. Write view of the address shared with JOYSER0."
       }
     ];
     FIXED_REGISTERS = Object.freeze(
@@ -32476,7 +32083,7 @@ var init_hardware_registers = __esm({
       {
         offset: 11,
         symbol: (channel) => `UNUSED${channel}`,
-        description: "Unused DMA/HDMA data byte; shared with the $43nF mirror."
+        description: "Unused DMA/HDMA data byte. Shared with the $43nF mirror."
       },
       {
         offset: 15,
@@ -32925,7 +32532,7 @@ var init_rom_header = __esm({
       add(
         "declared-size",
         sizePlausible ? 3 : -1,
-        `declared ${declaredSize || "invalid"} bytes; loaded ${rom.length} bytes`
+        `declared ${declaredSize || "invalid"} bytes. Loaded ${rom.length} bytes`
       );
       const title = header.slice(0, 21);
       const printable = [...title].filter(
@@ -32996,7 +32603,7 @@ var init_rom_header = __esm({
       return {
         status: "ambiguous",
         candidates,
-        message: "SNES mapper/header detection is ambiguous; provide an explicit --mapper override before creating the project."
+        message: "SNES mapper/header detection is ambiguous. Provide an explicit --mapper override before creating the project."
       };
     };
   }
@@ -33110,7 +32717,7 @@ var init_analysis = __esm({
     };
     mappedAddressExplanation = (indexed, identity) => {
       if (indexed) {
-        return "The encoded address is only a base; an index register or indirection prevents a static effective address.";
+        return "The encoded address is only a base. An index register or indirection prevents a static effective address.";
       }
       if (identity) {
         return `CPU address maps to ROM file offset $${identity.fileOffset.toString(16).padStart(6, "0")}.`;
@@ -33141,7 +32748,7 @@ var init_analysis = __esm({
           ...indexed ? { baseAddress: reference.address } : { address: reference.address },
           symbol: hardware.symbol,
           volatile: true,
-          explanation: indexed ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access; the final address is unresolved.` : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`
+          explanation: indexed ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access. The final address is unresolved.` : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`
         };
       }
       const identity = indexed ? void 0 : mappedRomOffset(reference.address, context, romSize);
@@ -33349,7 +32956,7 @@ var init_analysis = __esm({
         }
         const matching = annotationIndex.at(identity.fileOffset).filter((annotation) => annotation.state).map((annotation) => ({
           annotation,
-          // One location can accumulate many captures; rank them without variadic arguments.
+          // One location can accumulate many captures. Rank them without variadic arguments.
           rank: annotation.evidence.reduce(
             (rank2, id) => Math.max(rank2, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]),
             0
@@ -33777,7 +33384,7 @@ var init_dizraw_import = __esm({
     importDizRaw = (xml, options = {}) => {
       if (!xml.trimStart().startsWith("<?xml") && !xml.trimStart().startsWith("<ProjectXmlSerializer-Root")) {
         throw new Error(
-          "Only uncompressed XML .dizraw input is supported; compressed .diz input is not supported."
+          "Only uncompressed XML .dizraw input is supported. Compressed .diz input is not supported."
         );
       }
       const rootMatch = /<ProjectXmlSerializer-Root\b([^>]*)>/.exec(xml);
@@ -34102,7 +33709,7 @@ var init_mesen_runtime = __esm({
     importMesenSnesCdl = (bytes, rom, mapper, context) => {
       assertContext(rom, mapper, context);
       if (bytes.length < CDL_HEADER_SIZE || !CDL_HEADER.every((value, index) => bytes[index] === value)) {
-        throw new Error("MesenCE CDL import requires a CDLv2 header; CRC-less legacy CDL is unsafe.");
+        throw new Error("MesenCE CDL import requires a CDLv2 header. CRC-less legacy CDL is unsafe.");
       }
       if (bytes.length !== CDL_HEADER_SIZE + rom.length) {
         throw new Error(
@@ -34603,9 +34210,9 @@ var init_mesen_runtime = __esm({
           ] : []
         ],
         [
-          "Raw trace text has no embedded ROM identity; required capture metadata supplied the checked ROM and mapper.",
+          "Raw trace text has no embedded ROM identity. Required capture metadata supplied the checked ROM and mapper.",
           ...metadata.mesenRevision && metadata.mesenRevision !== MESEN_CE_EVIDENCE_REVISION ? [
-            `Trace reports MesenCE revision ${metadata.mesenRevision}; importer was checked against ${MESEN_CE_EVIDENCE_REVISION}.`
+            `Trace reports MesenCE revision ${metadata.mesenRevision}. Importer was checked against ${MESEN_CE_EVIDENCE_REVISION}.`
           ] : []
         ]
       );
@@ -34614,7 +34221,7 @@ var init_mesen_runtime = __esm({
         sourceSha256,
         rom,
         mapper,
-        `MesenCE trace with ${parsed.length} decoded 65816 line(s); capture identity metadata schema 1.`
+        `MesenCE trace with ${parsed.length} decoded 65816 line(s). Capture identity metadata schema 1.`
       );
       return {
         report: report2,
@@ -34814,7 +34421,7 @@ var init_mesen_labels = __esm({
         { labels: labels.length, comments: comments.length, regions: regions.length },
         unsupported,
         [
-          "MesenCE label text has no embedded ROM identity; addresses were checked against the loaded project context."
+          "MesenCE label text has no embedded ROM identity. Addresses were checked against the loaded project context."
         ]
       );
       return {
@@ -35108,7 +34715,7 @@ var init_ram_map = __esm({
         }
         const address3 = parseAddress(record3.address, memory);
         if (addresses2.has(address3)) {
-          throw new Error(`Duplicate RAM-map address '${hex7(address3)}'; combine aliases in one entry.`);
+          throw new Error(`Duplicate RAM-map address '${hex7(address3)}'. Combine aliases in one entry.`);
         }
         addresses2.add(address3);
         const size = record3.size ?? 1;
@@ -35254,7 +34861,7 @@ var init_ram_map = __esm({
               memory: {
                 enum: ["wram", "sram"],
                 default: "wram",
-                description: "SRAM requires a standard LoROM/HiROM cartridge window; confirm the actual cartridge mapping and size separately."
+                description: "SRAM requires a standard LoROM/HiROM cartridge window. Confirm the actual cartridge mapping and size separately."
               },
               size: { type: "integer", minimum: 1, maximum: 131072 },
               category: { type: "string", minLength: 1 },
@@ -35714,9 +35321,9 @@ var init_struct_instruction_uses = __esm({
       ...use.observations.map((observation) => {
         let coverage = "";
         if (observation.parts.length > 1 || !observation.parts[0].field) {
-          coverage = `; covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+          coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
         }
-        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex8(observation.address)}, ${observation.width} byte(s))${coverage}; ${observation.source}: ${observation.detail}`;
+        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex8(observation.address)}, ${observation.width} byte(s))${coverage}. ${observation.source}: ${observation.detail}`;
       })
     ];
   }
@@ -35725,7 +35332,7 @@ var init_struct_instruction_uses = __esm({
 // packages/plugin-snes/src/disassembler/struct-map.ts
 import * as fs14 from "node:fs";
 import path13 from "node:path";
-var SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex9, comment, object, integer3, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+var SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex9, comment, object, integer3, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
   "packages/plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
@@ -35763,6 +35370,22 @@ var init_struct_map = __esm({
         throw new Error("Struct-map notes must be an array of strings.");
       }
       return value.map(comment);
+    };
+    entryComments = (value, firstIndex, count) => {
+      const result = {};
+      for (const [key2, text2] of Object.entries(object(value))) {
+        const index = Number(key2);
+        if (!/^(0|[1-9]\d*)$/.test(key2) || !Number.isSafeInteger(index) || index < firstIndex || index >= firstIndex + count) {
+          throw new Error(
+            `Struct entry comment index '${key2}' is outside the binding's logical indexes.`
+          );
+        }
+        if (typeof text2 !== "string" || !comment(text2)) {
+          throw new Error(`Struct entry comment '${key2}' must be a non-empty string.`);
+        }
+        result[index] = comment(text2);
+      }
+      return result;
     };
     validateSnesStructMap = (value) => {
       const file = object(value);
@@ -35853,6 +35476,9 @@ var init_struct_map = __esm({
         if (fileOffset === void 0 && (address3 < 8257536 || address3 + length > 8388608)) {
           throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
         }
+        if (entry.entryComments !== void 0 && fileOffset === void 0) {
+          throw new Error(`Struct entry comments require a ROM binding ('${name}').`);
+        }
         return {
           name,
           structure,
@@ -35860,7 +35486,10 @@ var init_struct_map = __esm({
           count,
           firstIndex,
           ...fileOffset === void 0 ? {} : { fileOffset },
-          notes: notes(entry.notes)
+          notes: notes(entry.notes),
+          ...entry.entryComments === void 0 ? {} : {
+            entryComments: entryComments(entry.entryComments, firstIndex, count)
+          }
         };
       }).sort((a, b) => a.address - b.address);
       for (let index = 1; index < bindings.length; index++) {
@@ -35917,7 +35546,7 @@ var init_struct_map = __esm({
     renderSnesStructDefines = (map) => {
       const lines = [
         "; Generated from struct-map.json. Edit that input and export again.",
-        "; Layouts have base zero; bindings use CPU addresses. Indexed fields use sizeof(struct).",
+        "; Layouts have base zero. Bindings use CPU addresses. Indexed fields use sizeof(struct).",
         ""
       ];
       const render = (name, base, structure, detail, binding) => {
@@ -36246,7 +35875,7 @@ var init_source_export2 = __esm({
         if (vector.state && vector.targetAddress === void 0) {
           comment2 = `${mode3} ${vector.name} vector is unpopulated.`;
         } else if (vector.state) {
-          comment2 = `${mode3} ${vector.name} handler; target bank is forced to $00 -> ${hex10(vector.targetAddress, 6)}.`;
+          comment2 = `${mode3} ${vector.name} handler. Target bank is forced to $00 -> ${hex10(vector.targetAddress, 6)}.`;
         }
         fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment2, "vectors"));
       }
@@ -36462,7 +36091,7 @@ var init_source_export2 = __esm({
           output.push(`${line.name}:${line.inlineComment ? ` ; ${line.inlineComment}` : ""}`);
         }
         if (line.instructionComment && !hasInstruction) {
-          output.push(`; [Instruction comment; instruction unavailable] ${line.instructionComment}`);
+          output.push(`; [Instruction comment. Instruction unavailable] ${line.instructionComment}`);
         }
       }
       return output;
@@ -36759,7 +36388,7 @@ var init_source_export2 = __esm({
         const unexpected = fs15.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
           throw new Error(
-            `Export directory '${directory}' is not empty; pass --force to write into it.`
+            `Export directory '${directory}' is not empty. Pass --force to write into it.`
           );
         }
         return void 0;
@@ -36974,12 +36603,14 @@ var init_source_export2 = __esm({
               record3,
               rom.read(record3.start, record3.end - record3.start)
             );
+            const entryComment = record3.binding.entryComments?.[record3.index];
+            const suffix = entryComment ? ` ; ${entryComment}` : "";
             if (table) {
-              lines.push(`    [${record3.index}] = ${literal}`);
+              lines.push(`    [${record3.index}] = ${literal}${suffix}`);
               table.nextIndex = record3.index + 1;
             } else {
               const reference = record3.binding.count === 1 && record3.index === 0 ? record3.binding.name : `${record3.binding.name}[${record3.index}]`;
-              lines.push(`  dataStruct ${reference}, ${literal}`);
+              lines.push(`  dataStruct ${reference}, ${literal}${suffix}`);
             }
             spans.push({
               id: `struct:${span.start.toString(16).padStart(6, "0")}`,
@@ -36992,6 +36623,11 @@ var init_source_export2 = __esm({
               regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
             });
           } else if (span.structField) {
+            const record3 = span.structField.record;
+            const entryComment = record3?.binding.entryComments?.[record3.index];
+            if (record3?.start === span.start && entryComment) {
+              lines.push(`; ${entryComment}`);
+            }
             lines.push(
               ...renderSnesStructData(
                 span.structField,
@@ -37094,7 +36730,7 @@ var init_source_export2 = __esm({
         } else if (structure && structure.start <= offset && offset < structure.end) {
           reason = "Annotation is inside a structured header/vector field. Annotation retained in the analysis project.";
         } else if ("placement" in record3 && record3.placement === "inline-instruction" && !instructions.has(offset)) {
-          reason = "No exportable instruction starts here. Rendered as a standalone comment; inline placement remains saved.";
+          reason = "No exportable instruction starts here. Rendered as a standalone comment. Inline placement remains saved.";
         }
         return reason ? [{ id: record3.id, addressSpace: record3.addressSpace, address: record3.address, reason }] : [];
       }).sort((left, right) => left.id.localeCompare(right.id));
@@ -37481,7 +37117,7 @@ var init_function_heuristics = __esm({
             "memory.block-copy",
             "high",
             [node],
-            "Block move instruction; payload purpose requires destination provenance."
+            "Block move instruction. Payload purpose requires destination provenance."
           );
         }
         const trail = window(node);
@@ -37574,7 +37210,7 @@ var init_function_heuristics = __esm({
             "graphics.mode7-setup",
             "medium",
             trail,
-            "Matrix/center writes and a nearby mode-7 constant; confirm the value reaching BGMODE."
+            "Matrix/center writes and a nearby mode-7 constant. Confirm the value reaching BGMODE."
           );
         }
       }
@@ -37623,7 +37259,7 @@ var init_function_heuristics = __esm({
             "graphics.brightness-ramp",
             "medium",
             loop,
-            "Repeated brightness writes with an increment/decrement; frame synchronization needs caller/trace evidence."
+            "Repeated brightness writes with an increment/decrement. Frame synchronization needs caller/trace evidence."
           );
         }
       }
@@ -37717,7 +37353,7 @@ var init_function_heuristics = __esm({
                 role,
                 "high",
                 [observedNode],
-                `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction; the DMA engine performs the bus operation.`
+                `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction. The DMA engine performs the bus operation.`
               );
             }
           } else {
@@ -37794,7 +37430,7 @@ var init_function_heuristics = __esm({
         source: "detector",
         sourceId: "snes.function-roles.v1",
         confidence: role.confidence,
-        detail: `${role.rule}; configuration ${signature}; ${role.explanation}; instructions ${role.instructions.map((address3) => `$${address3.toString(16)}`).join(", ")}`
+        detail: `${role.rule}. Configuration ${signature}. ${role.explanation}. Instructions ${role.instructions.map((address3) => `$${address3.toString(16)}`).join(", ")}`
       }));
       return {
         roles,
@@ -37931,7 +37567,7 @@ var init_runtime_code = __esm({
               ...resolved,
               volatile: !!hardware,
               ...hardware ? { symbol: hardware.symbol } : {},
-              explanation: indexed ? "Captured instruction has an unresolved indexed/indirect operand; consult observed bus accesses." : "Decoded from execution-time bytes and processor state."
+              explanation: indexed ? "Captured instruction has an unresolved indexed/indirect operand. Consult observed bus accesses." : "Decoded from execution-time bytes and processor state."
             };
           })
         });
@@ -37971,7 +37607,7 @@ var init_runtime_code = __esm({
             ...target.address === void 0 ? {} : { toAddress: target.address },
             edgeKind: target.kind,
             indirect: target.indirect ?? false,
-            explanation: "Possible edge decoded from captured bytes; does not assert that this branch was taken.",
+            explanation: "Possible edge decoded from captured bytes. Does not assert that this branch was taken.",
             evidence: node.evidence
           });
         }
@@ -38032,7 +37668,7 @@ var init_runtime_code = __esm({
             addressSpace: "snes.cpu",
             address: address3,
             conflictKind: "runtime-code-variants",
-            message: "Captured executions disagree on instruction bytes or decoding; all variants and their trace evidence are retained.",
+            message: "Captured executions disagree on instruction bytes or decoding. All variants and their trace evidence are retained.",
             nodes: variants.map((node) => node.id),
             evidence: [...new Set(variants.flatMap((node) => node.evidence))].sort()
           });
@@ -38106,7 +37742,7 @@ var init_project_initializer = __esm({
     assertDizRawFile = (file) => {
       if (path15.extname(file).toLowerCase() !== ".dizraw") {
         throw new Error(
-          "Only uncompressed .dizraw imports are supported; compressed .diz input is not supported."
+          "Only uncompressed .dizraw imports are supported. Compressed .diz input is not supported."
         );
       }
     };
@@ -40078,7 +39714,7 @@ var NodePluginLoader = class {
   /**
    * Read, resolve, import, and activate plugins, then select a target and architecture.
    * An unchanged normalized configuration reuses the current handle. Changed configuration
-   * disposes the old environment before activation; activation failure leaves no replacement.
+   * disposes the old environment before activation. Activation failure leaves no replacement.
    * Module contents, logger identity, and bundled plugin object identity are not cache keys.
    * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
    * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
@@ -40186,7 +39822,7 @@ var NodePluginLoader = class {
       const targetCandidate = targetInput ?? (targets.length === 1 ? targets[0]?.id : void 0);
       if (!targetCandidate) {
         throw new PluginError(
-          targets.length === 0 ? "No target is configured and the active plugins provide no targets." : `No target is configured; choose one of: ${targets.map((target2) => target2.id).join(", ")}.`,
+          targets.length === 0 ? "No target is configured and the active plugins provide no targets." : `No target is configured. Choose one of: ${targets.map((target2) => target2.id).join(", ")}.`,
           { code: "PLUGIN_TARGET_INVALID" }
         );
       }
@@ -40489,10 +40125,10 @@ Creation options (disassemble):
   --mapper <${SNES_MAPPERS.join("|")}>
   --header-size <0|512>
   --dizraw <path>              Import uncompressed DiztinGUIsh XML
-  Defaults: <rom stem>.analysis; copier header and mapper detected unless overridden.
+  Defaults: <rom stem>.analysis. Copier header and mapper detected unless overridden.
 
 ROM identity (analyze, export, verify-roundtrip, evidence-import, mesen-labels-export):
-  --rom <path>                Required original ROM; optional with project-validate
+  --rom <path>                Required original ROM. Optional with project-validate
 
 Evidence options (evidence-import):
   --mesen-cdl <path>           Import verified MesenCE CDLv2 coverage
@@ -40504,7 +40140,7 @@ Evidence options (evidence-import):
   --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
 
 Analysis options (analyze):
-  --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal; quote $hex in shells)
+  --entry <address>            Repeatable 24-bit CPU address ($hex/0xhex/decimal, quote $hex in shells)
   --max-work-items <count>     Positive work limit (default 100000)
   --max-call-depth <count>     Nonnegative call-context depth (default 8)
 
@@ -40513,14 +40149,14 @@ Export options (export):
   --allow-code-regression      Allow previously exported code to become raw bytes
   Default destination: <project stem>.source
 
-Storage options (project-storage; budget options also accepted by evidence-import):
-  --convert-runtime           project-migrate only: convert trace detail; retain backup
+Storage options (project-storage, budget options also accepted by evidence-import):
+  --convert-runtime           project-migrate only: convert trace detail. Retain backup
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
 
 Assemble options:
   --config <uttori-asm.config.json>
-  --plugin <module>            Repeatable; appended after configured plugins
+  --plugin <module>            Repeatable. Appended after configured plugins
   --target <target-id>
   --architecture <architecture-id>
   --base-image <path>          Patch a copy, preserving unwritten bytes
@@ -40534,7 +40170,7 @@ Assemble options:
 Use --flag=value or --flag value for valued options. Boolean flags take no value.
 Use -- before positional paths beginning with --. Quote paths containing spaces.
 Exit status: 0 success/help (including explicitly incomplete analysis), 1 failure.
-Terminal signals retain Node's default termination behavior; no graceful cancellation is installed.`;
+Terminal signals retain Node's default termination behavior. No graceful cancellation is installed.`;
 var parseCliArguments = (argv) => {
   const positional = [];
   const plugins = [];
@@ -40597,7 +40233,7 @@ var parseCliArguments = (argv) => {
       throw new Error(`Unknown option '${flag}'.`);
     }
     if (booleanOptions.has(flag) && inlineValue !== void 0) {
-      throw new Error(`${flag} takes no value; omit it to disable it.`);
+      throw new Error(`${flag} takes no value. Omit it to disable it.`);
     }
     suppliedOptions.add(flag);
     if (flag === "--convert-runtime") {
@@ -40837,7 +40473,7 @@ var createAnalysisProject = (parsed, cwd) => {
     console.log(`Success: Analysis project written to '${outputDirectory}'.`);
     if (result.importReport) {
       console.log(
-        `Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes; ${result.importReport.unsupported.length} unsupported field group(s).`
+        `Import: ${result.importReport.imported.metadataBytes ?? 0} metadata bytes. ${result.importReport.unsupported.length} unsupported field group(s).`
       );
     }
     return 0;
@@ -40920,7 +40556,7 @@ var importProjectEvidence = async (parsed, cwd) => {
       }
       const action = result.changed ? "updated" : "no-op reimport for";
       console.log(
-        `Success: ${action} '${directory}'; ${result.added.runtime} new runtime record(s).`
+        `Success: ${action} '${directory}'. ${result.added.runtime} new runtime record(s).`
       );
       console.log(
         `Import: ${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported.`
@@ -41033,7 +40669,7 @@ var importProjectEvidence = async (parsed, cwd) => {
     if (includeDiagnostics) {
       diagnosticSummary = `incoming batch: ${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
     }
-    console.log(`Success: ${importAction} '${directory}'; ${diagnosticSummary}`);
+    console.log(`Success: ${importAction} '${directory}'. ${diagnosticSummary}`);
     for (const report2 of reports) {
       console.log(`Import: ${report2}.`);
     }
@@ -41110,7 +40746,7 @@ var exportProjectMesenLabels = (parsed, cwd) => {
     fs18.mkdirSync(path17.dirname(output), { recursive: true });
     fs18.writeFileSync(output, result.text);
     console.log(
-      `Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'; ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`
+      `Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'. ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`
     );
     return 0;
   } catch (error) {
@@ -41139,7 +40775,7 @@ var analyzeProject = (parsed, cwd) => {
       `Success: ${result.status} 65816 analysis wrote ${result.instructions} instruction(s), ${result.functions} function candidate(s), ${result.conflicts} conflict(s), and ${result.unresolved} unresolved flow(s).`
     );
     console.log(
-      `Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code; ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}; observed PCs without code: ${result.runtimePcsWithoutCode}; heuristic findings: ${result.heuristicRoles}.`
+      `Runtime evidence: ${result.runtimeSeeds} observed PC(s) seeded as code. ${result.omittedRuntimeSeeds} omitted by the safety bound. Captured instruction variants: ${result.capturedInstructions}. Observed PCs without code: ${result.runtimePcsWithoutCode}. Heuristic findings: ${result.heuristicRoles}.`
     );
     if (result.status === "incomplete") {
       console.log(
@@ -41168,7 +40804,7 @@ var exportProjectSource = (parsed, cwd) => {
       allowCodeRegression: parsed.allowCodeRegression
     });
     console.log(
-      `Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s); ${result.codeBytes} byte(s) emitted as native 65816 source.`
+      `Success: Exported ${result.manifest.files.length} generated file(s) covering ${result.manifest.rom.contentSize} content byte(s). ${result.codeBytes} byte(s) emitted as native 65816 source.`
     );
     console.log(
       `RAM map: ${result.manifest.inputs?.find((input) => input.path === "ram-map.json")?.records ?? 0} variable(s) applied from '${path17.join(outputDirectory, "ram-map.json")}'.`
@@ -41331,7 +40967,7 @@ var verifyRoundTrip = async (parsed, cwd) => {
         }
       }
       console.error(
-        `Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}; first difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`
+        `Round-trip mismatch: expected ${comparison.expectedLength} byte(s) / ${comparison.expectedSha256}, received ${comparison.actualLength} byte(s) / ${comparison.actualSha256}. First difference at file offset $${difference.toString(16).toUpperCase().padStart(6, "0")} (${addressDetail}).`
       );
       return 1;
     }
@@ -41405,7 +41041,7 @@ var runCommand = async (parsed, cwd) => {
         }
       });
       console.log(
-        `Success: storage format ${result.storageVersion}; ${(result.beforeBytes / 1024 / 1024).toFixed(1)} \u2192 ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`
+        `Success: storage format ${result.storageVersion}. ${(result.beforeBytes / 1024 / 1024).toFixed(1)} \u2192 ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`
       );
       for (const step of result.timings ?? []) {
         console.log(`${step.step}: ${(step.durationMs / 1e3).toFixed(3)} s`);
@@ -41460,7 +41096,7 @@ var runCommand = async (parsed, cwd) => {
     try {
       const result = compactAnalysisProject(path17.resolve(cwd, parsed.input));
       console.log(
-        `Success: compacted analysis storage; freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`
+        `Success: compacted analysis storage. Freed ${(result.maintenance.removedBytes / 1024 / 1024).toFixed(1)} MiB.`
       );
       return result.maintenance.warnings.length ? 1 : 0;
     } catch (error) {

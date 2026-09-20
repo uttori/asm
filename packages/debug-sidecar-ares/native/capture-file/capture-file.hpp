@@ -128,7 +128,7 @@ private:
             return;
           }
           // ACT2/ACK2 pairs keep the existing bounded recovery format. One fsync
-          // covers all preceding bytes; only its success permits batch release.
+          // covers all preceding bytes. Only its success permits batch release.
           // Recovery still validates every CRC and contiguous checkpoint, so a
           // torn/reordered unsynced tail never skips a missing earlier chunk.
           if(!writeAll(fd, bytes.data(), bytes.size()) || !sync(fd)) throw 0;
@@ -215,7 +215,7 @@ public:
     if(fields[0] == "release") {
       service(capture);
       // A cancelled in-flight batch still owns storage. Do not report release
-      // until the worker has stopped; callers can retry while control stays live.
+      // until the worker has stopped. Callers can retry while control stays live.
       if(writer->phase.load(std::memory_order_acquire) != Phase::Incomplete) return "E09";
       writer.reset();
       return capture.command("release:" + fields[1]);

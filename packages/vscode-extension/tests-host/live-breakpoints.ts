@@ -6,7 +6,7 @@ import type { DebugMap } from "@uttori/asm-core/debug-map";
 import { parseDebugAddress, type DapProtocolMessage } from "@uttori/asm-debug-adapter";
 import * as vscode from "vscode";
 
-import { resolveDebugSourceRoot } from "../src/debug-source-root.js";
+import { resolveDebugSourceRoot } from "../src/debug/source-root.js";
 
 /** One actual generated line and the runtime PC expected when it stops. */
 interface SourceTarget {
@@ -15,7 +15,7 @@ interface SourceTarget {
   readonly pc: number;
 }
 
-/** Poll editor events with a bounded deadline; no assumptions about transport timing. */
+/** Poll editor events with a bounded deadline. No assumptions about transport timing. */
 const waitFor = async (condition: () => boolean, description: string): Promise<void> => {
   const deadline = Date.now() + 25_000;
   while (!condition()) {
@@ -61,7 +61,7 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
     assert.ok(source);
     return { uri: vscode.Uri.file(path.resolve(sourceRoot, source.path)), line: range.line, pc };
   };
-  // Reset executes through bank $00; the generated HiROM source names bank $C0.
+  // Reset executes through bank $00. The generated HiROM source names bank $C0.
   const reset = target(0xc08005, 0x008005);
   const upload = target(0xc300c6);
   const messages: DapProtocolMessage[] = [];
@@ -74,7 +74,7 @@ export async function runLiveBreakpointSmoke(folder: vscode.WorkspaceFolder): Pr
   const toggle = async (location: SourceTarget, enabled: boolean): Promise<number> => {
     const document = await vscode.workspace.openTextDocument(location.uri);
     assert.equal(document.languageId, "uttori-snes");
-    // Pass selection with the show request so the workbench applies it before F9;
+    // Pass selection with the show request so the workbench applies it before F9.
     // assigning editor.selection separately can race its batched IPC notification.
     await vscode.window.showTextDocument(document, {
       selection: new vscode.Range(location.line - 1, 0, location.line - 1, 0),

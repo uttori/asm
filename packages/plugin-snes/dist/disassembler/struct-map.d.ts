@@ -3,32 +3,40 @@ import { type SnesStructInstructionUse } from "./struct-instruction-uses.js";
 export declare const SNES_STRUCT_MAP_SOURCE = "struct-map.json";
 /** Generated native structs included by the exported assembler entry point. */
 export declare const SNES_STRUCT_DEFINES_SOURCE = "structs.asm";
-/** A byte field; gaps remain opaque and are never inferred to be zero. */
+/** A byte field. Gaps remain opaque and are never inferred to be zero. */
 export interface SnesStructField {
     readonly name: string;
+    /** Byte offset within the layout, not a CPU address. Fields cannot overlap. */
     readonly offset: number;
+    /** Positive byte width. Must fit the layout and agree with type when type is supplied. */
     readonly size: number;
-    /** Explicit assembly encoding, e.g. dw or db[2]; size-only v1 inputs still work. */
+    /** Explicit assembly encoding, such as dw or db[2]. Omission selects an encoding from size. */
     readonly type?: string;
     readonly description?: string;
 }
 /** Reusable layout whose native struct has a zero base. */
 export interface SnesStructLayout {
     readonly id: string;
+    /** Record stride in bytes, from 1 through 65536. Opaque gaps count toward the stride. */
     readonly size: number;
     readonly fields: readonly SnesStructField[];
     readonly notes: readonly string[];
 }
-/** A named array at a canonical CPU address; ROM arrays also own a file interval. */
+/** A named array at a canonical CPU address. ROM arrays also own a file interval. */
 export interface SnesStructBinding {
     readonly name: string;
     readonly structure: SnesStructLayout;
+    /** Canonical CPU address of the first physical record. WRAM aliases are normalized. */
     readonly address: number;
+    /** Positive number of consecutive records. Their byte ranges must not overlap another binding. */
     readonly count: number;
     /** Logical index of the first physical record (for example, one-based map IDs). */
     readonly firstIndex: number;
+    /** Headerless ROM offset. Omit for RAM bindings, which generate names but no ROM data. */
     readonly fileOffset?: number;
     readonly notes: readonly string[];
+    /** Sparse ROM-row comments keyed by logical index, including firstIndex; omitted rows stay unnamed. */
+    readonly entryComments?: Readonly<Record<number, string>>;
 }
 /** Validated source metadata, retaining exact input bytes for drift detection. */
 export interface LoadedSnesStructMap {
@@ -60,7 +68,7 @@ export interface SnesStructRomRecord {
  */
 export declare const validateSnesStructMap: (value: unknown) => Omit<LoadedSnesStructMap, "sourceBytes">;
 /**
- * Load optional layout metadata; existing projects without a struct map export as before.
+ * Load optional layout metadata. Existing projects without a struct map export as before.
  * @param {string} directory Source-export root.
  * @returns {LoadedSnesStructMap | undefined} Validated metadata when present.
  */
@@ -68,7 +76,7 @@ export declare const loadSnesStructMap: (directory: string) => LoadedSnesStructM
 /**
  * Render both reusable offsets and addressed native structs from the same field definitions.
  * @param {LoadedSnesStructMap} map Validated layouts and bindings.
- * @returns {string} Native assembler source; structs reserve offsets without emitting bytes.
+ * @returns {string} Native assembler source. Structs reserve offsets without emitting bytes.
  */
 export declare const renderSnesStructDefines: (map: LoadedSnesStructMap) => string;
 /**

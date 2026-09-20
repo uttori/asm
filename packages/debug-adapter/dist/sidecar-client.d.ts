@@ -9,9 +9,13 @@ export interface DebugSidecarTransport {
 }
 /** Construction options for one authenticated sidecar connection. */
 export interface DebugSidecarClientOptions {
+    /** Owned connection. close(), protocol failures, and request timeouts close this transport. */
     readonly transport: DebugSidecarTransport;
+    /** Exactly 64 lowercase hexadecimal characters from createDebugSidecarSessionToken(). */
     readonly session: string;
+    /** Positive safe integer milliseconds, default 5000. Starts when queued, including write wait. */
     readonly requestTimeoutMs?: number;
+    /** Complete limits object, not a partial override. Defaults to DEFAULT_DEBUG_SIDECAR_LIMITS. */
     readonly limits?: DebugSidecarProtocolLimits;
 }
 /** Ordered request/response client shared by native emulator sidecar implementations. */
@@ -37,7 +41,9 @@ export declare class DebugSidecarClient {
      */
     onClose(listener: (error: Error) => void): DebugSubscription;
     /**
-     * Sends one bounded command and resolves its paired response.
+   * Sends one bounded command and resolves its paired response. A command error rejects only this
+   * request. Timeout, malformed input, or transport failure closes the connection and rejects all
+   * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
      * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
      * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
      * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.

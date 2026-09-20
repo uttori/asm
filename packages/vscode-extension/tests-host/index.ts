@@ -4,10 +4,10 @@ import { DatabaseSync } from "node:sqlite";
 
 import * as vscode from "vscode";
 
-import { AnalysisGraphProvider } from "../src/analysis-graph-tree.js";
-import { AnalysisSourcesProvider } from "../src/analysis-sources-tree.js";
-import { initializeAnalysisWorker } from "../src/analysis-worker-client.js";
-import { AnalysisCoverageProvider } from "../src/coverage-tree.js";
+import { AnalysisGraphProvider } from "../src/analysis/graph-tree.js";
+import { AnalysisSourcesProvider } from "../src/analysis/sources-tree.js";
+import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
+import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
 
@@ -370,9 +370,10 @@ export async function run(): Promise<void> {
   await vscode.window.showTextDocument(document);
   assert.equal(document.languageId, "uttori-snes", "Assembly language association is missing.");
   await waitForLanguageServer(sourceUri);
+  await vscode.commands.executeCommand("uttori-asm.disassemblyPanel.focus");
 
   // Exercise packaged external HTML/CSS/JS under a real webview CSP, not a DOM mock.
-  for (const name of ["annotation", "panel"] as const) {
+  for (const name of ["annotation", "panel", "disassembly"] as const) {
     const view = vscode.window.createWebviewPanel(
       "uttori.webviewSmoke",
       "Webview smoke",
@@ -439,7 +440,7 @@ export async function run(): Promise<void> {
       const chest = sourceRoots.find(({ label }) => label === "chest.json");
       assert.ok(chest);
       const groups = await sources.getChildren(chest);
-      // Sources show directly observed addresses; overlap with another capture is retained.
+      // Sources show directly observed addresses. Overlap with another capture is retained.
       const observed = groups.find(({ label }) => label === "Observed instructions");
       assert.ok(observed);
       assert.equal(sources.getTreeItem(observed).description, "500");

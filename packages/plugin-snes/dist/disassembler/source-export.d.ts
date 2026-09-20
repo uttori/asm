@@ -13,7 +13,7 @@ export interface SnesSourceExportOptions {
     readonly allowCodeRegression?: boolean;
     /** SHA-256 of the analysis project that produced this export (provenance). */
     readonly sourceProjectSha256: string;
-    /** Complete variants grouped in ascending explicit file-offset order; consumed inside the caller's SQL read snapshot. */
+    /** Complete variants grouped in ascending explicit file-offset order. Consumed inside the caller's SQL read snapshot. */
     readonly instructionGroups?: Iterable<readonly InstructionExportRecord[]>;
 }
 /**
@@ -38,7 +38,7 @@ export declare const formatSnes65816SourceInstruction: (instruction: DecodedInst
 export declare const snesSourceLabelNames: (shards: AnalysisProjectShards, mapper: SnesMapper, romSize: number, ramNames?: readonly string[]) => ReadonlyMap<string, string>;
 /**
  * Writes a deterministic 65816 source tree that can be reassembled with this plugin.
- * Confident CFG nodes become width-qualified instructions; unknown bytes remain
+ * Confident CFG nodes become width-qualified instructions. Unknown bytes remain
  * `incbin` assets. The internal/expanded SNES headers, vector words, and explicitly
  * bound ROM struct fields become native data source. An optional 512-byte copier
  * header remains an asset. Optional struct bindings also name RAM/ROM operands.

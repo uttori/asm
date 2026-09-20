@@ -33,7 +33,7 @@ const capture = (
   evidence: [id],
 });
 
-/** Minimal ROM-backed project; every code node comes from the supplied captures. */
+/** Minimal ROM-backed project. Every code node comes from the supplied captures. */
 const projectFor = (
   rom: RomImage,
   runtime: readonly RuntimeInstructionRecord[],

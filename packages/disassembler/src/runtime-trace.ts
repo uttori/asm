@@ -17,24 +17,26 @@ import {
 /** Native, emulator-neutral on-disk identity for an explicitly recorded instruction trace. */
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace" as const;
 
-/** Initial trace-artifact schema. The project is unreleased, so this remains version 1. */
+/** Supported trace-artifact schema. Readers reject other revisions. */
 export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1 as const;
 
 /** One bounded producer pull stored in a native instruction-trace artifact. */
 export interface RuntimeInstructionTraceChunk {
+  /** Nonnegative producer sequence of the first address, including positions lost before delivery. */
   readonly sequenceStart: number;
   readonly addresses: readonly number[];
-  /** Optional execution-time detail; legacy PC-only chunks remain valid. */
+  /** Optional execution-time detail. Legacy PC-only chunks remain valid. */
   readonly details?: readonly RuntimeInstructionDetail[];
   /** Cumulative bus operations outside a captured CPU instruction (interrupt/wait periods). */
   readonly unattributedMemoryAccesses?: number;
+  /** Cumulative producer loss, not the loss in this chunk. Counts must never decrease. */
   readonly droppedEvents: number;
   readonly active: boolean;
 }
 
 /**
  * Immutable recording artifact created only by an explicit recorder.
- * Chunks preserve observed order and producer loss; project facts are aggregated during import.
+ * Chunks preserve observed order and producer loss. Project facts are aggregated during import.
  */
 export interface RuntimeInstructionTraceArtifact {
   readonly format: typeof RUNTIME_INSTRUCTION_TRACE_FORMAT;
@@ -51,26 +53,27 @@ export interface RuntimeInstructionTraceArtifact {
 
 /** Project identity and user-visible source name required for an explicit trace import. */
 export interface RuntimeInstructionTraceImportContext {
+  /** Lowercase SHA-256 of headerless ROM content. A mismatch rejects the import. */
   readonly projectRomContentSha256: string;
   readonly sourceName: string;
-  /** Defaults to 65816-analysis for native SNES CPU captures, full for other CPUs; capture identity is unchanged. */
+  /** Defaults to 65816-analysis for native SNES CPU captures, full for other CPUs. Capture identity is unchanged. */
   readonly indexMode?: RuntimeTraceIndexMode;
   /**
    * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
-   * Defaults to 2M in compact mode or 8M in full mode; accepts 1 through 8,000,000. Not a byte/heap limit.
+   * Defaults to 2M in compact mode or 8M in full mode. Accepts 1 through 8,000,000. Not a byte/heap limit.
    */
   readonly maxIndexRecords?: number;
 }
 
 /**
  * Full keeps all supplied registers. Compact preserves the joint 65816 decoding state and
- * execution counts; A/X/Y/S history remains in the capture and is unavailable from this index.
+ * execution counts. A/X/Y/S history remains in the capture and is unavailable from this index.
  */
 export type RuntimeTraceIndexMode = "full" | "65816-disassembly" | "65816-analysis";
-/** Compact-index default; full snapshots retain a larger compatibility budget. */
+/** Default distinct-fact budget for compact indexes. Full indexes default to 8,000,000. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
-// P/E control instruction widths; D/DB resolve direct-page and data-bank operands.
+// P/E control instruction widths. D/DB resolve direct-page and data-bank operands.
 // Preserve PB/PC observations with them so projection does not invent state combinations.
 const DISASSEMBLY_STATE_FIELDS = new Set(["p", "e", "d", "db", "pb", "pc"]);
 
@@ -124,7 +127,7 @@ export type RuntimeInstructionTraceMetadata = Omit<RuntimeInstructionTraceArtifa
 
 /**
  * Ordered chunks supplied directly by a producer or a bounded file reader. The reader must finish
- * each synchronous consumer call and reject on incomplete envelopes or integrity failures; chunks are
+ * each synchronous consumer call and reject on incomplete envelopes or integrity failures. Chunks are
  * provisional until read() resolves. Consumers validate chunk contents and must not retain them.
  */
 export interface RuntimeTraceSource {
@@ -273,7 +276,7 @@ export const importRuntimeInstructionTrace = (
   return importer.finish();
 };
 
-/** One distinct indexed fact; byte/state pairs expand into two persisted records at finalization. */
+/** One distinct indexed fact. Byte/state pairs expand into two persisted records at finalization. */
 export type RuntimeTraceIndexedFact =
   | { readonly kind: "execution"; readonly address: number }
   | {
@@ -285,9 +288,9 @@ export type RuntimeTraceIndexedFact =
     }
   | { readonly kind: "memory"; readonly record: RuntimeEvidenceRecord };
 
-/** Counter storage owned by the caller; disk implementations keep distinct facts off the JS heap. */
+/** Counter storage owned by the caller. Disk implementations keep distinct facts off the JS heap. */
 export interface RuntimeTraceFactIndex {
-  /** Increment a fact, constructing its payload only on first insertion; return whether it was new. */
+  /** Increment a fact, constructing its payload only on first insertion. Return whether it was new. */
   add(key: string, create: () => RuntimeTraceIndexedFact): boolean;
   /** Yield each distinct fact once, with its exact aggregate observation count. */
   values(): Iterable<{ readonly fact: RuntimeTraceIndexedFact; readonly count: number }>;
@@ -295,14 +298,14 @@ export interface RuntimeTraceFactIndex {
   clear(): void;
 }
 
-/** Optional external storage and record sink; sink output is provisional until finish returns. */
+/** Optional external storage and record sink. Sink output is provisional until finish returns. */
 export interface RuntimeTraceImporterStorage {
   readonly index: RuntimeTraceFactIndex;
   /** Called after complete source validation, before emitting any provisional records. */
   readonly onSource?: (sha256: string, profile: string) => void;
-  /** Final records are emitted individually; batch.runtime is omitted when this sink is supplied. */
+  /** Final records are emitted individually. Batch.runtime is omitted when this sink is supplied. */
   readonly onRecord?: (record: RuntimeEvidenceRecord) => void;
-  /** Throttled provisional merge counts; reaching the total does not mean the transaction committed. */
+  /** Throttled provisional merge counts. Reaching the total does not mean the transaction committed. */
   readonly onMergeProgress?: (processedRecords: number, totalRecords: number) => void;
 }
 
@@ -327,9 +330,9 @@ const createMemoryFactIndex = (): RuntimeTraceFactIndex => {
   };
 };
 
-/** Incremental aggregation; any failed push permanently invalidates the pending import. */
+/** Incremental aggregation. Any failed push permanently invalidates the pending import. */
 export interface RuntimeInstructionTraceImporter {
-  /** Accept the next ordered chunk; invalid data or an exceeded record budget prevents finalization. */
+  /** Accept the next ordered chunk. Invalid data or an exceeded record budget prevents finalization. */
   push(this: void, value: unknown): void;
   /** Consume the importer once, only after the caller has validated the entire file and its tail. */
   finish(): RuntimeInstructionTraceImportResult;
@@ -337,12 +340,12 @@ export interface RuntimeInstructionTraceImporter {
 
 /**
  * Aggregate a trace one validated chunk at a time, preserving canonical import identities.
- * The default memory index grows with distinct facts; callers can supply a disk index and sink.
- * Paired code/state facts share one accumulator until finalization; record budgets do not bound bytes.
+ * The default memory index grows with distinct facts. Callers can supply a disk index and sink.
+ * Paired code/state facts share one accumulator until finalization. Record budgets do not bound bytes.
  * @param {RuntimeInstructionTraceMetadata} value Trace identity.
  * @param {RuntimeInstructionTraceImportContext} context Destination identity.
  * @param {RuntimeTraceImporterStorage} [storage] Caller-owned counter index and optional bounded record sink.
- * @returns {RuntimeInstructionTraceImporter} Incremental importer; finish only after the file validates.
+ * @returns {RuntimeInstructionTraceImporter} Incremental importer. Finish only after the file validates.
  */
 export const createRuntimeInstructionTraceImporter = (
   value: RuntimeInstructionTraceMetadata,
@@ -373,7 +376,7 @@ export const createRuntimeInstructionTraceImporter = (
   if (!["full", "65816-disassembly", "65816-analysis"].includes(indexMode)) {
     throw new Error("Unsupported runtime trace index mode.");
   }
-  // This projection follows the 65816 decoder's inputs; another CPU may need the omitted registers.
+  // This projection follows the 65816 decoder's inputs. Another CPU may need the omitted registers.
   if (
     indexMode !== "full" &&
     (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")
@@ -412,7 +415,7 @@ export const createRuntimeInstructionTraceImporter = (
           "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
       }
       throw new Error(
-        `Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged; no partial import was committed.`,
+        `Trace index exceeds ${maxIndexRecords} records. ${hint}The original capture is unchanged. No partial import was committed.`,
       );
     }
     indexRecords += count;
@@ -465,7 +468,7 @@ export const createRuntimeInstructionTraceImporter = (
       }
       const content = canonicalJson({ address, bytes: detail.bytes, state });
       // Full snapshots may contain large or mostly unique register objects.
-      // Keep their map keys fixed-size; compact states benefit from reusing the
+      // Keep their map keys fixed-size. Compact states benefit from reusing the
       // content key without hashing every repetition of a hot instruction.
       const key = indexMode === "full" ? sha256(content) : content;
       if (
@@ -623,7 +626,7 @@ export const createRuntimeInstructionTraceImporter = (
         droppedEvents === 0 && memoryLoss === 0 && unattributed === 0 && complete
           ? "certain"
           : "high",
-      detail: `${observedEvents} instruction event(s) observed; ${droppedEvents} producer event(s) dropped.`,
+      detail: `${observedEvents} instruction event(s) observed. ${droppedEvents} producer event(s) dropped.`,
       artifact: {
         format: RUNTIME_INSTRUCTION_TRACE_FORMAT,
         formatVersion: String(RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION),
@@ -665,7 +668,7 @@ export const createRuntimeInstructionTraceImporter = (
         ...(!complete ? ["Trace artifact ended while capture was still active."] : []),
         ...(detailedEvents < observedEvents
           ? [
-              `${observedEvents - detailedEvents} instruction observations have no captured bytes/state; RAM code cannot be recovered from PCs alone.`,
+              `${observedEvents - detailedEvents} instruction observations have no captured bytes/state. RAM code cannot be recovered from PCs alone.`,
             ]
           : []),
         ...(memoryLoss
@@ -673,7 +676,7 @@ export const createRuntimeInstructionTraceImporter = (
           : []),
         ...(unattributed
           ? [
-              `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods); they have no saved address/value detail.`,
+              `${unattributed} bus operations occurred outside captured CPU instructions (such as interrupt/wait periods). They have no saved address/value detail.`,
             ]
           : []),
       ],

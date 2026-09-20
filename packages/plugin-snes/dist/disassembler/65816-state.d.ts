@@ -26,7 +26,7 @@ export interface Cpu65816StatusStackEntry {
     readonly m: Cpu65816AbstractValue;
     /** Index-width flag at the matching `PHP` (1 = 8-bit). */
     readonly x: Cpu65816AbstractValue;
-    /** Carry flag at the matching `PHP`; needed for `XCE`. */
+    /** Carry flag at the matching `PHP`. Needed for `XCE`. */
     readonly carry: Cpu65816AbstractValue;
 }
 /** Register or immediate bytes pushed by `PHA`/`PHX`/`PHY`/`PHB`/`PHD`/`PEA`/`PEI`/`PER`. */
@@ -34,9 +34,9 @@ export interface Cpu65816ValueStackEntry {
     readonly kind: "value";
     /** Effect source id (`a`, `x`, `y`, `dbr`, `d`, `pbr`, or an immediate). */
     readonly source: string;
-    /** Encoded width at the push; pull must use the same width. */
+    /** Encoded width at the push. Pull must use the same width. */
     readonly bytes: 1 | 2;
-    /** Abstract payload; `unknown` when the source register is not tracked. */
+    /** Abstract payload. `unknown` when the source register is not tracked. */
     readonly value: Cpu65816AbstractValue;
 }
 /**
@@ -49,7 +49,7 @@ export type Cpu65816StackEntry = Cpu65816StatusStackEntry | Cpu65816ValueStackEn
 };
 /**
  * Conservative stack prefix used by PHP/PLP and bank/page restores.
- * Only the top 16 entries are kept; anything deeper is dropped.
+ * Only the top 16 entries are kept. Anything deeper is dropped.
  */
 export type Cpu65816AbstractStack = {
     readonly kind: "known";
@@ -71,7 +71,7 @@ export interface Cpu65816AbstractState {
     readonly m: Cpu65816AbstractValue;
     /** Index width (X). */
     readonly x: Cpu65816AbstractValue;
-    /** Carry; tracked because `XCE` swaps it with E. */
+    /** Carry. Tracked because `XCE` swaps it with E. */
     readonly carry: Cpu65816AbstractValue;
     /** Program bank (K / PBR). */
     readonly pbr: Cpu65816AbstractValue;
@@ -91,11 +91,11 @@ export interface Cpu65816AbstractState {
 export interface Cpu65816StateOverride {
     /** Emulation flag. */
     readonly e?: 0 | 1 | boolean;
-    /** Accumulator/memory width (M); 1 = 8-bit. */
+    /** Accumulator/memory width (M). 1 = 8-bit. */
     readonly m?: 0 | 1 | boolean;
-    /** Index width (X); 1 = 8-bit. */
+    /** Index width (X). 1 = 8-bit. */
     readonly x?: 0 | 1 | boolean;
-    /** Carry; used with `XCE`. */
+    /** Carry. Used with `XCE`. */
     readonly carry?: 0 | 1 | boolean;
     /** Program bank (PBR), masked to 8 bits. */
     readonly programBank?: number;
@@ -118,17 +118,17 @@ export declare const unknownCpu65816State: () => Cpu65816AbstractState;
  */
 export declare const resetCpu65816State: () => Cpu65816AbstractState;
 /**
- * Native-mode interrupt entry: E=0 and PBR=0; M/X/C/DBR/D/S/stack stay unknown.
+ * Native-mode interrupt entry: E=0 and PBR=0. M/X/C/DBR/D/S/stack stay unknown.
  * @returns {Cpu65816AbstractState} State for native COP/BRK/ABORT/NMI/IRQ.
  */
 export declare const nativeVectorCpu65816State: () => Cpu65816AbstractState;
 /**
- * Emulation-mode interrupt entry: E=M=X=1 and PBR=0; C/DBR/D/S/stack stay unknown.
+ * Emulation-mode interrupt entry: E=M=X=1 and PBR=0. C/DBR/D/S/stack stay unknown.
  * @returns {Cpu65816AbstractState} State for emulation COP/ABORT/NMI/IRQ/BRK.
  */
 export declare const emulationVectorCpu65816State: () => Cpu65816AbstractState;
 /**
- * Lattice join at a CFG merge. `unknown` absorbs; two distinct known values
+ * Lattice join at a CFG merge. `unknown` absorbs. Two distinct known values
  * become `conflicting`. E=1 still forces M=X=1 after the join.
  * @param {Cpu65816AbstractState} left Incoming state from one predecessor.
  * @param {Cpu65816AbstractState} right Incoming state from another predecessor.
@@ -137,7 +137,7 @@ export declare const emulationVectorCpu65816State: () => Cpu65816AbstractState;
 export declare const joinCpu65816States: (left: Cpu65816AbstractState, right: Cpu65816AbstractState) => Cpu65816AbstractState;
 /**
  * Overlays known fields from a project annotation or configured entry point.
- * Banks are masked to 8 bits; D and S are masked to 16 bits.
+ * Banks are masked to 8 bits. D and S are masked to 16 bits.
  * @param {Cpu65816AbstractState} state State to update.
  * @param {Cpu65816StateOverride} override Partial known values to apply.
  * @returns {Cpu65816AbstractState} Normalized state with the overlay applied.
@@ -151,15 +151,15 @@ export declare const applyCpu65816StateOverride: (state: Cpu65816AbstractState, 
  */
 export declare const enterCpu65816Address: (state: Cpu65816AbstractState, address: number) => Cpu65816AbstractState;
 /**
- * Projects the analysis lattice onto decoder flags. Known E/M/X become 0/1;
- * anything else is `"unknown"`. Known PBR/DBR/D are copied when present.
+ * Projects the analysis lattice onto decoder flags. Known E/M/X become 0/1.
+ * Anything else is `"unknown"`. Known PBR/DBR/D are copied when present.
  * @param {Cpu65816AbstractState} state Analysis state at the instruction.
- * @returns {Cpu65816DecodeState} Decoder input; omitted banks/page stay unset.
+ * @returns {Cpu65816DecodeState} Decoder input. Omitted banks/page stay unset.
  */
 export declare const cpu65816DecodeState: (state: Cpu65816AbstractState) => Cpu65816DecodeState;
 /**
  * Applies one instruction's decoded effects conservatively.
- * Tracks SEP/REP, PHP/PLP, PHB/PLB, PHD/PLD, XCE, and TCD/TCS; loses stack
+ * Tracks SEP/REP, PHP/PLP, PHB/PLB, PHD/PLD, XCE, and TCD/TCS. Loses stack
  * precision on `BRK`/`COP`/`JSR`/`JSL` and when M/X width is unknown at a push/pull.
  * @param {StaticInstruction} instruction Normalized instruction from the worklist.
  * @param {Cpu65816AbstractState} input State immediately before the instruction.

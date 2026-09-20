@@ -100,7 +100,7 @@ if (!executableAvailable) {
       ? "is unavailable"
       : `is not the SNES Asar executable${versionText ? ` (${versionText})` : ""}`;
   console.log(
-    `SNES-ROM-Framework source agrees on all ${observed.size} SPC700 opcode mnemonics and the native parser accepted the bounded synthetic NSPC stream; executable oracle skipped because '${executable}' ${reason}.`,
+    `SNES-ROM-Framework source agrees on all ${observed.size} SPC700 opcode mnemonics and the native parser accepted the bounded synthetic NSPC stream. Executable oracle skipped because '${executable}' ${reason}.`,
   );
   process.exit(0);
 }
@@ -132,7 +132,7 @@ try {
   const expected = spc700Specifications.map((specification) => specification.mnemonic);
   if (executed.length !== expected.length) {
     throw new Error(
-      `SNES-ROM-Framework SPC700 executable oracle emitted ${executed.length} instructions; expected ${expected.length}.\n${result.stdout}`,
+      `SNES-ROM-Framework SPC700 executable oracle emitted ${executed.length} instructions. Expected ${expected.length}.\n${result.stdout}`,
     );
   }
   const executionMismatches = executed.flatMap((mnemonic, opcode) =>

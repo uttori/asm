@@ -20,7 +20,7 @@ export interface AresRspBackendOptions {
     readonly createClient: (options: DebugBackendConnectOptions) => AresGdbRspClient | GdbRspClient | Promise<AresGdbRspClient | GdbRspClient>;
     readonly terminate?: () => Promise<void>;
     readonly stopTimeoutMs?: number;
-    /** Set only by the manifest-verified local process host; binds file provenance
+    /** Set only by the manifest-verified local process host. Binds file provenance
      * and prevents native paths from being sent to an arbitrary remote RSP server. */
     readonly nativeFileIdentity?: {
         readonly romSha256: string;

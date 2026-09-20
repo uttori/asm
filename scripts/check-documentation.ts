@@ -9,7 +9,7 @@ const ROOT_DOCUMENTS = [
   "fixtures/external/README.md",
 ] as const;
 
-/** Package docs are public; the root docs/ tree is internal research and bookkeeping. */
+/** Package docs are public. The root docs/ tree is internal research and bookkeeping. */
 const DOCUMENT_DIRECTORIES = ["packages"] as const;
 
 const SKIPPED_DIRECTORIES = new Set(["dist", "node_modules", "out", "server", "sidecars"]);
@@ -154,7 +154,7 @@ const schemeCharacter = (character: string): boolean => {
 
 /**
  * Converts a Markdown link target into a local file and optional heading fragment.
- * Published READMEs use absolute GitHub links so npm and Marketplace can render them; links back
+ * Published READMEs use absolute GitHub links so npm and Marketplace can render them. Links back
  * into this repository still need validation against the candidate checkout before publication.
  * @param {string} document Absolute document path containing the link.
  * @param {string} rawTarget Raw first token inside the Markdown link destination.

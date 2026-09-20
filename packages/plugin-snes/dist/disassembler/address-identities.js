@@ -25,7 +25,7 @@ export const SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
  * Builds the mapper context used by `snesRomAddressSpace`.
  * Default `sa1banks` are 1 MiB slots `$000000`–`$700000` for SA-1 / Super FX.
  * @param {SnesMapper} mapper Detected or user-selected cartridge mapper.
- * @param {readonly number[]} [sa1banks] Optional SA-1 bank bases; ignored by LoROM/HiROM.
+ * @param {readonly number[]} [sa1banks] Optional SA-1 bank bases. Ignored by LoROM/HiROM.
  * @returns {AddressSpaceContext} Context consumed by file↔CPU translation.
  */
 export const createSnesAddressContext = (mapper, sa1banks = [
@@ -53,7 +53,7 @@ const mirrorsForOffset = (fileOffset, context, canonical) => {
  * Maps a headerless ROM file offset to its CPU identity.
  * @param {number} fileOffset Byte offset into `RomImage` content (no copier header).
  * @param {AddressSpaceContext} context Mapper context from `createSnesAddressContext`.
- * @param {number} romSize Headerless ROM length; offsets outside it return `undefined`.
+ * @param {number} romSize Headerless ROM length. Offsets outside it return `undefined`.
  * @returns {SnesAddressIdentity | undefined} Identity, or `undefined` if unmapped.
  */
 export const identifySnesFileOffset = (fileOffset, context, romSize) => {

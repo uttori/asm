@@ -15,7 +15,7 @@ export const sourceQueriesReady = (db) => Boolean(db.prepare("SELECT 1 FROM sqli
     !db.prepare("SELECT 1 FROM query_source_rows WHERE ready=0 LIMIT 1").get();
 /**
  * Extract metadata evidence membership once, then process only changed rows under a writer transaction.
- * Runtime membership already lives in its evidence dictionary; the covering index avoids payload reads.
+ * Runtime membership already lives in its evidence dictionary. The covering index avoids payload reads.
  * @param {DatabaseSync} db Connection owned by the caller's write transaction.
  */
 export const prepareSourceQueries = (db) => {
@@ -87,7 +87,7 @@ export const readSourceSummary = (db, source) => {
  * @param {DatabaseSync} db Read snapshot with prepared source and annotation indexes.
  * @param {AnalysisEvidenceSource} source Validated catalog entry.
  * @param {AnalysisSourceGroup} group Direct observations or attributed metadata.
- * @param {number} offset Nonnegative row offset; pages contain at most 200 entries.
+ * @param {number} offset Nonnegative row offset. Pages contain at most 200 entries.
  * @returns {AnalysisSourceEntry[]} Compact navigable entries, never the complete trace history.
  */
 export const readSourcePage = (db, source, group, offset = 0) => {
@@ -109,7 +109,7 @@ export const readSourcePage = (db, source, group, offset = 0) => {
             id: JSON.stringify([row.architecture, row.address_space, row.address]),
             label: hex(Number(row.address)),
             description: `${String(row.executions)} recorded executions`,
-            detail: "Directly observed instruction address. CPU-state variants do not inflate the address count; execution counts exclude duplicate fetched-instruction facts.",
+            detail: "Directly observed instruction address. CPU-state variants do not inflate the address count. Execution counts exclude duplicate fetched-instruction facts.",
             architecture: String(row.architecture),
             addressSpace: String(row.address_space),
             address: Number(row.address),

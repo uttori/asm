@@ -6,7 +6,7 @@ const decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
  * CROSS JOIN keeps the selective fact lookup ahead of capture relationships. The compatibility
  * UNION view cannot push a state-kind constraint into its paired branch and scans the history.
  * @param {boolean} pairedState Select the paired state's identity and virtual row order instead of its instruction.
- * @returns {string} Internal SELECT prefix; callers supply indexed coordinate predicates and a limit.
+ * @returns {string} Internal SELECT prefix. Callers supply indexed coordinate predicates and a limit.
  */
 const runtimeSelect = (pairedState = false) => {
     const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
@@ -101,7 +101,7 @@ export const ensureAnnotationQueryIndexes = (database) => {
         const exportData = table === "analysis"
             ? database.prepare("UPDATE analysis SET query_data=? WHERE rowid=?")
             : undefined;
-        // Fetch bounded batches before updating the pending index; never mutate a live scan cursor.
+        // Fetch bounded batches before updating the pending index. Never mutate a live scan cursor.
         for (let rows = pending.all(); rows.length; rows = pending.all()) {
             for (const row of rows) {
                 const record = row.payload === null ? {} : decode(row.payload);
@@ -132,7 +132,7 @@ export const ensureAnnotationQueryIndexes = (database) => {
     }
     if (database.prepare("SELECT v FROM meta WHERE k='annotation-query-layout'").get()?.v !==
         QUERY_LAYOUT) {
-        // Keep only the ordering key in the index; compressed export records already live in analysis.
+        // Keep only the ordering key in the index. Compressed export records already live in analysis.
         // Duplicating the full projection here previously cost hundreds of MiB per project.
         database.exec("DROP INDEX IF EXISTS query_instruction_output; CREATE INDEX query_instruction_output ON analysis(query_file_offset,id) WHERE kind='cfg-node'");
     }
@@ -142,7 +142,7 @@ export const ensureAnnotationQueryIndexes = (database) => {
 };
 /**
  * Read requested instructions and their evidence, never a whole-project annotation projection.
- * Hot PCs have a bounded preview of variants/state/memory facts; execution totals remain exact.
+ * Hot PCs have a bounded preview of variants/state/memory facts. Execution totals remain exact.
  * @param {DatabaseSync} database Connection with initialized indexes, inside a read transaction.
  * @param {AnalysisProjectManifest} manifest Authoritative manifest for this read snapshot.
  * @param {readonly AnnotationQueryRange[]} ranges At most 2000 validated source/debugger ranges.
@@ -150,7 +150,7 @@ export const ensureAnnotationQueryIndexes = (database) => {
  */
 export const readSqliteAnnotationView = (database, manifest, ranges) => {
     if (!annotationQueryIndexesReady(database)) {
-        throw new Error("Analysis query indexes changed; refresh the annotation view.");
+        throw new Error("Analysis query indexes changed. Refresh the annotation view.");
     }
     if (ranges.length > 2000) {
         throw new Error("At most 2000 visible source ranges may be projected per request.");
@@ -296,7 +296,7 @@ export const readSqliteAnnotationView = (database, manifest, ranges) => {
         executionCounts.set(key, Number(executionCount.get(space, address)?.n ?? 0));
         for (const kind of ["runtime-execution", "runtime-cpu-state"]) {
             // Reserve an execution fact even after the detail budget is exhausted so runtime-only
-            // locations remain visible. Counts come from SQL; sampled fact counts are never substituted.
+            // locations remain visible. Counts come from SQL. Sampled fact counts are never substituted.
             const minimum = kind === "runtime-execution" ? 1 : 0;
             const budget = Math.min(64, Math.max(minimum, 8192 - runtime.size));
             const rows = kind === "runtime-cpu-state"

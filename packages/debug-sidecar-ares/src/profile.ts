@@ -12,7 +12,7 @@ export const ARES_TRACE_BATCH_EVENTS = 240;
 const ARES_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>(["instruction", "in"]);
 const NO_STEP_KINDS = Object.freeze<readonly DebugStepKind[]>([]);
 
-/** Immutable editor/sidecar negotiation profile for the maintained ares RSP seam. */
+/** Immutable editor/sidecar negotiation profile for the patched ares RSP interface. */
 export const ARES_RSP_CAPABILITIES = Object.freeze<DebugBackendCapabilities>({
   pause: true,
   step: true,

@@ -654,7 +654,7 @@ const prepareOperation = (
   }
   if (operation === "transaction-commit") {
     // Commit needs one caller snapshot and a validated in-memory edit. Write the fixture,
-    // then load exactly that single snapshot; writeAndLoad() plus another snapshot would retain two
+    // then load exactly that single snapshot. WriteAndLoad() plus another snapshot would retain two
     // equivalent projects before the measured commit begins.
     writeAnalysisProject(projectDirectory, project);
     const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
@@ -720,7 +720,7 @@ const prepareOperation = (
  * Executes one prepared operation and samples memory immediately before and after it.
  *
  * The operation is synchronous, so these values are operation-boundary observations rather than an
- * in-operation peak. A fresh child process and requested pre-run GC make repetitions comparable;
+ * in-operation peak. A fresh child process and requested pre-run GC make repetitions comparable.
  * `value.retained` prevents the optimizer/collector from discarding the result before the end sample.
  * @param {Fixture} fixture Fixture executed by this worker.
  * @param {OperationId} operation Single measured operation.
@@ -738,7 +738,7 @@ const runWorker = (fixture: Fixture, operation: OperationId): WorkerResult => {
     value = execute();
     const wallMs = performance.now() - started;
     const after = process.memoryUsage();
-    // Performance invariant: keep the result live until after `after`; otherwise memory regressions
+    // Performance invariant: keep the result live until after `after`. Otherwise memory regressions
     // can disappear from the boundary measurement through early collection.
     void value.retained;
     return {

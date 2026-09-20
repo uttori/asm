@@ -7,7 +7,7 @@ export interface DebugTraceBufferOptions {
 }
 /**
  * Bounded oldest-first-loss ring used by deterministic backends and as the reference semantics
- * for native trace producers. Pulling removes events; stopping never discards unread entries.
+ * for native trace producers. Pulling removes events. Stopping never discards unread entries.
  */
 export declare class DebugTraceBuffer {
     #private;

@@ -42,7 +42,7 @@ class StaticWorkQueue {
     push(item) {
         const queued = { item, sequence: this.#nextSequence++ };
         this.#values.push(queued);
-        // Performance invariant: sift up only the appended item; sorting #values here reintroduces
+        // Performance invariant: sift up only the appended item. Sorting #values here reintroduces
         // the full-queue O(n log n) cost that dominated large ROM analysis.
         let index = this.#values.length - 1;
         while (index > 0) {

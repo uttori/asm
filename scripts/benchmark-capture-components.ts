@@ -33,7 +33,7 @@ const graphicsCases: GraphicsCase[] = [
   { name: "oam-low-high-mirrors", target: "oam", known: true },
   { name: "oam-unknown", target: "oam", known: false },
 ];
-/** Construct validated primitive coordinates before timing; generation/allocation
+/** Construct validated primitive coordinates before timing. Generation/allocation
  * of the input events must not be confused with accumulator allocations.
  * @param {number} i Zero-based monotonic event ordinal.
  * @param {number} address CPU-visible PPU register.
@@ -183,7 +183,7 @@ await writeFile(
       schemaVersion: 1,
       platform: `${process.platform}-${process.arch}`,
       runtime: process.version,
-      note: "One in-process warmup and five measured samples. Component kernels only, inputs generated before timing. Graphics examples stay bounded; these are candidate destinations, not native PPU write verification. Component costs are not additive with end-to-end timings.",
+      note: "One in-process warmup and five measured samples. Component kernels only, inputs generated before timing. Graphics examples stay bounded. These are candidate destinations, not native PPU write verification. Component costs are not additive with end-to-end timings.",
       sources,
       results,
     },

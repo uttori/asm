@@ -28,7 +28,7 @@ export interface AssemblyFileProvider {
   stat(filePath: string): AssemblyFileStat;
   /** Read synchronously, throwing on failure. Callers must treat returned bytes as read-only. */
   readFile(filePath: string): Uint8Array;
-  /** Read synchronously; built-in providers default to UTF-8 and throw on missing files. */
+  /** Read synchronously. Built-in providers default to UTF-8 and throw on missing files. */
   readTextFile(filePath: string, encoding?: BufferEncoding): string;
 }
 
@@ -38,9 +38,9 @@ export interface AssemblyFileProvider {
 export class NodeAssemblyFileProvider implements AssemblyFileProvider {
   /**
    * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-   * @param {string} filename The filename.
-   * @param {AssemblyFileResolutionOptions} [options] The options.
-   * @returns {string | undefined} The result.
+   * @param {string} filename Include path token, optionally quoted.
+   * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
+   * @returns {string | undefined} First existing file identity, or undefined.
    */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
     if (!filename) {
@@ -73,11 +73,6 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     return undefined;
   }
 
-  /**
-   * Reads metadata for the value.
-   * @param {string} filePath The file path.
-   * @returns {AssemblyFileStat} The result.
-   */
   stat(filePath: string): AssemblyFileStat {
     let st: fs.Stats;
     try {
@@ -93,27 +88,16 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
     }
   }
 
-  /**
-   * Reads file.
-   * @param {string} filePath The file path.
-   * @returns {Uint8Array} The result.
-   */
   readFile(filePath: string): Uint8Array {
     return new Uint8Array(fs.readFileSync(filePath));
   }
 
-  /**
-   * Reads text file.
-   * @param {string} filePath The file path.
-   * @param {BufferEncoding} [encoding] The encoding.
-   * @returns {string} The result.
-   */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
     return fs.readFileSync(filePath, encoding);
   }
 }
 
-/** Virtual lookup base; no host cwd fallback or filesystem access is used. */
+/** Virtual lookup base. No host cwd fallback or filesystem access is used. */
 export type MemoryAssemblyFileProviderOptions = {
   workingDirectory?: string;
 };
@@ -122,7 +106,7 @@ export type MemoryAssemblyFileProviderOptions = {
  * In-memory file provider intended for editor workflows and virtual documents.
  */
 export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
-  /** Mutable document map; construction copies keys/entries but retains supplied byte-array values. */
+  /** Mutable document map. Construction copies keys/entries but retains supplied byte-array values. */
   readonly files: Map<string, string | Uint8Array>;
 
   constructor(
@@ -134,9 +118,9 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
 
   /**
    * Match an exact virtual key, then search macro/source/include directories and workingDirectory.
-   * @param {string} filename The filename.
-   * @param {AssemblyFileResolutionOptions} [options] The options.
-   * @returns {string | undefined} The result.
+   * @param {string} filename Include path token, optionally quoted.
+   * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
+   * @returns {string | undefined} First existing file identity, or undefined.
    */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
     if (!filename) {
@@ -169,11 +153,6 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     return undefined;
   }
 
-  /**
-   * Reads metadata for the value.
-   * @param {string} filePath The file path.
-   * @returns {AssemblyFileStat} The result.
-   */
   stat(filePath: string): AssemblyFileStat {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -190,11 +169,6 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     };
   }
 
-  /**
-   * Reads file.
-   * @param {string} filePath The file path.
-   * @returns {Uint8Array} The result.
-   */
   readFile(filePath: string): Uint8Array {
     const entry = this.files.get(filePath);
     if (entry === undefined) {
@@ -205,12 +179,6 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
       : new Uint8Array(entry);
   }
 
-  /**
-   * Reads text file.
-   * @param {string} filePath The file path.
-   * @param {BufferEncoding} [encoding] The encoding.
-   * @returns {string} The result.
-   */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
     const entry = this.files.get(filePath);
     if (entry === undefined) {

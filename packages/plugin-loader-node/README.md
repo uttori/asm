@@ -29,14 +29,14 @@ try {
 }
 ```
 
-Discovery checks the supplied `cwd`; it does not search parent directories. `configFile` selects
+Discovery checks the supplied `cwd`. It does not search parent directories. `configFile` selects
 an explicit file. Module and include paths in configuration resolve from that file's directory.
-Overrides take precedence over configuration, then host defaults; explicit plugin modules append
+Overrides take precedence over configuration, then host defaults. Explicit plugin modules append
 in order. The loader has no built-in target default.
 
 Plugins execute trusted JavaScript with the host's permissions. Validate workspace trust before
-loading them. Invalid configuration, plugin options, or registration conflicts reject loading;
-dispose a successful environment after its sessions finish.
+loading them. Invalid configuration, plugin options, or registration conflicts reject loading.
+Dispose a successful environment after its sessions finish.
 
 The JSON Schema is exported at
 `@uttori/asm-plugin-loader-node/asm-config.schema.json`.

@@ -10,7 +10,7 @@ export { validateAnalysisProjectManifest, } from "./project-validation.js";
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
  * @param {unknown} input Parsed watcher or database manifest.
- * @returns {AnalysisProjectManifest} Validated current manifest; obsolete containers throw.
+ * @returns {AnalysisProjectManifest} Validated current manifest. Obsolete containers throw.
  */
 export const parseAnalysisProjectManifest = (input) => {
     if (!input || typeof input !== "object") {
@@ -18,27 +18,27 @@ export const parseAnalysisProjectManifest = (input) => {
     }
     const manifest = input;
     if (manifest.schemaVersion > 3) {
-        throw new Error(`Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3; refusing to downgrade.`);
+        throw new Error(`Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`);
     }
     validateAnalysisProjectManifest(manifest);
     if (manifest.db !== "analysis.sqlite") {
-        throw new Error("Legacy analysis storage is no longer supported; use a SQLite project.");
+        throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
     }
     return manifest;
 };
 /**
  * Open the existing database selected by a validated pointer, without creating missing files.
  * Requires a readable, valid analysis.json even when the database exists. Opening checks the
- * physical format, not every record; snapshot loaders perform semantic validation.
+ * physical format, not every record. Snapshot loaders perform semantic validation.
  * @param {string} directory Project root containing analysis.json.
- * @returns {SqliteAnalysisStore} Owned connection; close exactly once in a finally block.
+ * @returns {SqliteAnalysisStore} Owned connection. Close exactly once in a finally block.
  */
 export const openAnalysisProjectStore = (directory) => {
     const manifest = parseAnalysisProjectManifest(JSON.parse(fs.readFileSync(path.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8")));
     return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 /**
- * Load one SQLite read snapshot. Ordinary views skip runtime entirely; explicit reducers stream
+ * Load one SQLite read snapshot. Ordinary views skip runtime entirely. Explicit reducers stream
  * and validate each stored fact without a duplicate-ID scratch index or intermediate row array.
  * @param {string} directory Existing project root.
  * @param {boolean} runtime Whether to retain complete runtime history.
@@ -89,15 +89,15 @@ const loadProject = (directory, runtime, createProjection) => {
 };
 /**
  * Load and validate the complete project, including all runtime facts.
- * Closes its connection before returning; editing the result alone changes nothing on disk.
+ * Closes its connection before returning. Editing the result alone changes nothing on disk.
  * @param {string} directory Existing project root.
- * @returns {LoadedAnalysisProject} Complete validated project; large runtime histories are materialized.
+ * @returns {LoadedAnalysisProject} Complete validated project. Large runtime histories are materialized.
  */
 export const loadAnalysisProject = (directory) => loadProject(directory, true);
 /**
  * Load metadata only, or stream runtime through an explicit reducer in the same read snapshot.
  * @param {string} directory Existing project root.
- * @param {Function} [createProjection] Reducer for a validated runtime stream; omitted to skip runtime.
+ * @param {Function} [createProjection] Reducer for a validated runtime stream. Omitted to skip runtime.
  * @returns {LoadedAnalysisProjectView} Metadata and optional projection from one revision.
  */
 export const loadAnalysisProjectView = (directory, createProjection) => {

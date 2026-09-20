@@ -65,7 +65,7 @@ export interface CaptureFileTimings {
   >;
 }
 export interface CaptureFileSummary {
-  /** Diagnostic wall-clock spans; excluded from archive identity and durable accounting. */
+  /** Diagnostic wall-clock spans. Excluded from archive identity and durable accounting. */
   readonly timings?: CaptureFileTimings;
   /** Selected output: ACT2 directly, or legacy JSON when explicitly requested. */
   readonly file: string;
@@ -99,7 +99,7 @@ const jsonFrame = (magic: string, value: unknown): Buffer => {
   return Buffer.concat([header, body]);
 };
 
-/** One bounded chunk at a time; acceptance follows data sync AND checkpoint sync. */
+/** One bounded chunk at a time. Acceptance follows data sync AND checkpoint sync. */
 export class LosslessCaptureFileRecorder {
   readonly completion: Promise<CaptureFileSummary>;
   readonly #file: string;
@@ -171,21 +171,21 @@ export class LosslessCaptureFileRecorder {
   }
 
   /**
-   * Reserve a new output and start lossless recording. ACT2 output publishes only the archive;
-   * legacy JSON output additionally exports a compatible trace after draining the producer.
+   * Reserve a new output and start lossless recording. ACT2 output publishes only the archive.
+   * Legacy JSON output additionally exports a compatible trace after draining the producer.
    * @param {object} options Output format, identity and serialized producer transport.
-   * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder; stop() drains and syncs it.
+   * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder. Stop() drains and syncs it.
    */
   static async create(
     options: CaptureFileMetadata & {
       readonly file: string;
       readonly transport: CaptureTransportV2;
       readonly bufferBytes?: number;
-      /** Opt-in stage profiling; no clock reads or diagnostic allocations when omitted. */
+      /** Opt-in stage profiling. No clock reads or diagnostic allocations when omitted. */
       readonly measureStages?: boolean;
       /** Defaults to instructions. CPU/DMA/HDMA bus capture requires ACT2 output. */
       readonly scope?: CaptureScopeV2;
-      /** Defaults to legacy JSON plus ACT2; act2 skips all post-capture JSON conversion. */
+      /** Defaults to legacy JSON plus ACT2. Act2 skips all post-capture JSON conversion. */
       readonly format?: "json" | "act2";
     },
   ): Promise<LosslessCaptureFileRecorder> {
@@ -197,7 +197,7 @@ export class LosslessCaptureFileRecorder {
     // Reject before reserving files or arming the producer: legacy instruction JSON
     // cannot represent bus-only records without discarding their evidence.
     if (scope !== "snes.65816.instructions" && format !== "act2")
-      throw new Error("Bus capture requires ACT2 output; instruction JSON cannot represent it.");
+      throw new Error("Bus capture requires ACT2 output. Instruction JSON cannot represent it.");
     validateCaptureCapabilities(
       await options.transport({ operation: "capabilities", scope }),
       scope,
@@ -205,7 +205,7 @@ export class LosslessCaptureFileRecorder {
     const archive = format === "act2" ? options.file : `${options.file}.act2`;
     if (format === "json") {
       // Legacy callers own a reserved JSON destination. ACT2 callers reserve only the partial
-      // archive; the final no-clobber link also guards against another writer publishing first.
+      // archive. The final no-clobber link also guards against another writer publishing first.
       const destination = await open(options.file, "wx");
       await destination.close();
     } else {
@@ -302,7 +302,7 @@ export class LosslessCaptureFileRecorder {
   /** Account one completed stage without retaining per-chunk samples.
    * @param {CaptureFileTimingStage} stage Work completed since the previous boundary.
    * @param {number} start Monotonic start in milliseconds, or zero with profiling disabled.
-   * @returns {number} Next boundary; disabled profiling never reads the clock.
+   * @returns {number} Next boundary. Disabled profiling never reads the clock.
    */
   #mark(stage: CaptureFileTimingStage, start: number): number {
     if (!this.#timings) return 0;
@@ -395,7 +395,7 @@ export class LosslessCaptureFileRecorder {
       }
       if (this.#cancelled)
         throw new Error(
-          "Capture session ended before finalization; the partial archive retains its committed prefix.",
+          "Capture session ended before finalization. The partial archive retains its committed prefix.",
         );
       const p = this.#position;
       if (
@@ -409,7 +409,7 @@ export class LosslessCaptureFileRecorder {
       await this.#handle.writeFile(jsonFrame("END2", p));
       await this.#handle.sync();
       await this.#handle.close();
-      // A no-clobber link publishes the fully synced inode; power-loss durability
+      // A no-clobber link publishes the fully synced inode. Power-loss durability
       // of directory entries is deliberately not claimed by this prototype.
       const archive = this.#archive;
       await link(this.#partial, archive);
@@ -456,12 +456,12 @@ export interface CaptureFileReadOptions {
   readonly maxBytes?: number;
   readonly signal?: AbortSignal;
   readonly onProgress?: (readBytes: number, totalBytes: number) => void;
-  /** Opt-in chunk/frame timings in milliseconds; no clock reads when omitted. */
+  /** Opt-in chunk/frame timings in milliseconds. No clock reads when omitted. */
   readonly onTiming?: (stage: "read" | "decode" | "consume", milliseconds: number) => void;
 }
 
 /**
- * Reject oversized input before reading; recovery tools remain unlimited unless given a budget.
+ * Reject oversized input before reading. Recovery tools remain unlimited unless given a budget.
  * @param {number} size File size or proposed read end, in bytes.
  * @param {CaptureFileReadOptions} options Optional positive safe-integer byte limit.
  */
@@ -471,7 +471,7 @@ const checkCaptureSize = (size: number, options: CaptureFileReadOptions): void =
     throw new Error("Capture maximum bytes must be a positive safe integer.");
   if (size > limit)
     throw new Error(
-      "Capture exceeds the import byte limit; increase asm.trace.maxImportSizeMiB to import it.",
+      "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it.",
     );
 };
 
@@ -508,11 +508,11 @@ const validateCaptureFileHeader = (value: unknown): CaptureFileHeader => {
 };
 
 /**
- * Read exactly one bounded frame component; short reads must never become zero-filled valid data.
+ * Read exactly one bounded frame component. Short reads must never become zero-filled valid data.
  * @param {FileHandle} handle Caller-owned open archive handle.
  * @param {number} length Validated frame component length, in bytes.
  * @param {number} offset Absolute file byte offset.
- * @returns {Promise<Buffer>} Fully initialized bytes; premature EOF rejects the read.
+ * @returns {Promise<Buffer>} Fully initialized bytes. Premature EOF rejects the read.
  */
 const readCaptureBytes = async (
   handle: FileHandle,
@@ -533,7 +533,7 @@ const readCaptureBytes = async (
  * Read only the checksummed session header, without scanning the archive's event chunks.
  * @param {string} file ACT2 archive path.
  * @param {CaptureFileReadOptions} options Byte budget and cancellation.
- * @returns {Promise<CaptureFileHeader>} Validated identity; completion is checked during consumption.
+ * @returns {Promise<CaptureFileHeader>} Validated identity. Completion is checked during consumption.
  */
 export const readCaptureFileHeader = async (
   file: string,
@@ -584,7 +584,7 @@ export const recoverCaptureFile = async (
   }
   let offset = 0;
   // Coalesce sequential component reads within the initial snapshot. A growing
-  // file cannot extend this offline scan; final metadata checks still detect changes.
+  // file cannot extend this offline scan. Final metadata checks still detect changes.
   const reader = new CaptureFrameReader((buffer, start, length, position) => {
     options.signal?.throwIfAborted();
     return handle.read(buffer, start, length, position);
@@ -667,7 +667,7 @@ export const recoverCaptureFile = async (
         pending = undefined;
         options.onProgress?.(offset, before.size);
         // Read-ahead removes the I/O waits between many checkpoints. Retain a
-        // full turn for cancellation and async cleanup; Promise.resolve() would
+        // full turn for cancellation and async cleanup. Promise.resolve() would
         // only enqueue another microtask. Omitting this yield raised cancellation
         // latency and peak RSS in dense runs, despite faster small-chunk recovery.
         await yieldToMessages(undefined, { signal: options.signal });
@@ -722,16 +722,16 @@ export const exportCaptureJson = async (
   reserved = false,
 ): Promise<void> => {
   // Validate before creating a complete-looking legacy artifact. Recovery callers
-  // inspect the committed prefix separately; incomplete archives cannot be promoted.
+  // inspect the committed prefix separately. Incomplete archives cannot be promoted.
   const verified = await recoverCaptureFile(archive);
   if (!verified.complete) throw new Error(`Capture archive is incomplete: ${verified.reason}`);
   if (verified.header.scope !== "snes.65816.instructions")
     throw new Error(
-      "Bus capture cannot be exported as an instruction trace; retain the ACT2 archive.",
+      "Bus capture cannot be exported as an instruction trace. Retain the ACT2 archive.",
     );
   if (BigInt(verified.eventThrough) >= BigInt(Number.MAX_SAFE_INTEGER))
     throw new Error(
-      "Legacy JSON sequence numbers cannot represent this capture; retain the exact ACT2 archive.",
+      "Legacy JSON sequence numbers cannot represent this capture. Retain the exact ACT2 archive.",
     );
   const h = await open(destination, reserved ? "r+" : "wx");
   try {
@@ -781,7 +781,7 @@ export interface NativeCaptureFilePosition extends CapturePositionV2 {
   readonly fileState: "preparing" | "writing" | "complete" | "incomplete";
   readonly fileBytes: string;
   readonly fileBatches: string;
-  /** Nanosecond spans; writer times overlap emulation and cannot be summed as wall shares. */
+  /** Nanosecond spans. Writer times overlap emulation and cannot be summed as wall shares. */
   readonly fileProfile?: Readonly<Record<"sealNs" | "copyNs" | "writeNs" | "syncNs", string>>;
 }
 
@@ -859,9 +859,9 @@ export class NativeCaptureFileCursor {
   }
   /** Read at most maxChunks (default 16) from a validated native status. Growth beyond
    * that durable watermark is ignored even if an unsynced ACK2 is already visible.
-   * A failure permanently poisons the cursor; callers must discard staged facts.
+   * A failure permanently poisons the cursor. Callers must discard staged facts.
    * @param {NativeCaptureFilePosition} value Native producer's latest durable watermark.
-   * @param {Function} accept Provisional synchronous chunk consumer; exceptions poison this cursor.
+   * @param {Function} accept Provisional synchronous chunk consumer. Exceptions poison this cursor.
    * @param {number} maxChunks Maximum chunks per slice, in [1, 256].
    * @param {string} publishedFile Final path whose inode must agree before completion.
    * @returns {Promise<void>} Settlement of one bounded read slice.
@@ -899,7 +899,7 @@ export class NativeCaptureFileCursor {
         throw new Error("Native capture is shorter than its durable watermark.");
       // Scope read-ahead to this slice's snapshot. Reusing an unread tail across
       // calls could hide a changed frame before the next status arrives.
-      // Cap speculative buffering by both the slice's chunk budget and 1 MiB;
+      // Cap speculative buffering by both the slice's chunk budget and 1 MiB.
       // the read limit below remains the synced watermark, never visible file size.
       const reader = new CaptureFrameReader(
         (buffer, start, length, offset) => {
@@ -1006,7 +1006,7 @@ export class NativeCaptureFileCursor {
       throw error;
     }
   }
-  /** Close the pinned inode; pending analysis remains caller-owned and provisional. */
+  /** Close the pinned inode. Pending analysis remains caller-owned and provisional. */
   async close(): Promise<void> {
     await this.#handle.close();
   }
@@ -1031,7 +1031,7 @@ const nativePosition = (
 };
 
 /** Controls a local native ACT2 writer. No event bytes cross RSP/DAP and no live
- * decoding occurs here; the existing bounded archive reader validates on import.
+ * decoding occurs here. The existing bounded archive reader validates on import.
  */
 export class NativeCaptureFileRecorder {
   readonly completion: Promise<CaptureFileSummary>;
@@ -1042,7 +1042,7 @@ export class NativeCaptureFileRecorder {
   #stopRequested = false;
   #cancelled = false;
 
-  /** Latest validated durable position; observing it never reads or drains event bytes.
+  /** Latest validated durable position. Observing it never reads or drains event bytes.
    * @returns {NativeCaptureFilePosition} Read-only status snapshot from the control pump.
    */
   get position(): NativeCaptureFilePosition {
@@ -1148,8 +1148,8 @@ export class NativeCaptureFileRecorder {
     }
     return this.completion;
   }
-  /** Leave a recoverable partial artifact; never publish an interrupted session.
-   * @returns {Promise<CaptureFileSummary>} Existing completion; rejects on cancellation.
+  /** Leave a recoverable partial artifact. Never publish an interrupted session.
+   * @returns {Promise<CaptureFileSummary>} Existing completion. Rejects on cancellation.
    */
   finishIncomplete(): Promise<CaptureFileSummary> {
     this.#cancelled = true;
@@ -1182,11 +1182,11 @@ export class NativeCaptureFileRecorder {
             position: p,
           };
         }
-        // Capture drains at native scheduler exits; polling frequency affects
+        // Capture drains at native scheduler exits. Polling frequency affects
         // status latency only and never limits writer throughput.
         await new Promise<void>((resolve) => setTimeout(resolve, 50));
       }
-      throw new Error("Native capture cancelled; the partial archive remains incomplete.");
+      throw new Error("Native capture cancelled. The partial archive remains incomplete.");
     } catch (error) {
       await this.#transport({ operation: "file-abort", session: this.#position.session }).catch(
         () => undefined,

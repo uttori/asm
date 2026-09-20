@@ -9,7 +9,7 @@ interface OutputFile {
 }
 
 /**
- * Check for aliases before writing; a debug map must not overwrite its binary or source.
+ * Check for aliases before writing. A debug map must not overwrite its binary or source.
  * @param {string} left Existing or resolved destination path.
  * @param {string} right Existing or resolved destination path.
  * @returns {boolean} Whether paths name the same file, including symlinks and existing hard links.
@@ -28,9 +28,9 @@ const sameFile = (left: string, right: string): boolean => {
 
 /**
  * Stage all artifacts before replacing destinations, then rename each file atomically. Parent
- * directories are created. Preparation failures leave existing artifacts intact; publication is
+ * directories are created. Preparation failures leave existing artifacts intact. Publication is
  * atomic per file, not across multiple files or sudden termination between renames. Temporary
- * siblings are removed on ordinary failures; forced process termination can leave them behind.
+ * siblings are removed on ordinary failures. Forced process termination can leave them behind.
  * @param {readonly OutputFile[]} outputs Fully computed artifacts in publication order.
  * @param {readonly string[]} protectedFiles Existing inputs that must not become output destinations.
  */
@@ -70,7 +70,7 @@ export const publishOutputFiles = (
       );
       const mode = fs.existsSync(file) ? fs.statSync(file).mode & 0o777 : undefined;
       const descriptor = fs.openSync(temporary, "wx", mode);
-      // Track ownership only after exclusive creation succeeds; never clean up another writer's file.
+      // Track ownership only after exclusive creation succeeds. Never clean up another writer's file.
       staged.push({ file, temporary });
       try {
         fs.writeFileSync(descriptor, output.contents);

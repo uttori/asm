@@ -48,9 +48,9 @@ export class SnesStructExpressionResolver {
             return { value, expression };
         };
         /**
-         * Resolve only named layouts/bindings; inherited and arbitrary symbol paths are outside this map.
+         * Resolve only named layouts/bindings. Inherited and arbitrary symbol paths are outside this map.
          * @param {ExpressionNode} node Optional record index and field under one declared root.
-         * @returns {object} Address or offset and native reference; records its binding owner.
+         * @returns {object} Address or offset and native reference. Records its binding owner.
          */
         const reference = (node) => {
             let root = node;
@@ -233,7 +233,7 @@ export class SnesStructExpressionResolver {
 /**
  * Split a CPU access across fields, opaque gaps and adjacent records of one physical binding.
  * @param {SnesStructBinding} binding Sole owner referenced by the target expression.
- * @param {number} address Resolved CPU start address; biased index-zero bases are not physical data.
+ * @param {number} address Resolved CPU start address. Biased index-zero bases are not physical data.
  * @param {number} width CPU access width in bytes (one or two).
  * @returns {readonly SnesStructAccessPart[]} Ordered parts covering every byte exactly once.
  */

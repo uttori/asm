@@ -12,7 +12,7 @@ struct Host : ares::Platform {
   auto pak(Node::Object) -> std::shared_ptr<vfs::directory> override { return std::make_shared<vfs::directory>(); }
 };
 
-// Script actual CPU port accesses; expected destinations come only from PPU memory readback.
+// Script actual CPU port accesses. Expected destinations come only from PPU memory readback.
 struct Operation { uint32_t address; uint8_t value; bool read = false; };
 struct Scenario {
   const char* name;
@@ -73,7 +73,7 @@ auto nall::main(Arguments args) -> void {
   std::cout << "{\"vramBytes\":65536,\"scenarios\":[\n";
   bool firstScenario = true;
   for(const auto& scenario : scenarios) {
-    // Only the test baseline uses debugger writes; they happen before arming capture and
+    // Only the test baseline uses debugger writes. They happen before arming capture and
     // are not presented as CPU activity. Each scenario explicitly establishes its port state.
     for(auto memory : memories) for(uint32_t address = 0; address < memory->size(); ++address) memory->write(address, 0);
     server.capture = {};

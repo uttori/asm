@@ -24,12 +24,12 @@ import {
   type RuntimeBusTraceMetadata,
   type RuntimeTransferBoundary,
 } from "../packages/disassembler/src/index.js";
-import { LiveBusAnalysis } from "../packages/vscode-extension/src/live-bus-analysis.js";
+import { LiveBusAnalysis } from "../packages/vscode-extension/src/runtime/live-bus-analysis.js";
 import { captureFixtureHeader, writeCaptureFixture } from "../tests/helpers/capture-archive.js";
 import { busChunk, busJsonFrame, busPosition } from "../tests/helpers/capture-bus.js";
 
-/** Fixed work is generated before timing. Each sample has a fresh process/project;
- * sample zero is a visible warmup, never part of the measured median.
+/** Fixed work is generated before timing. Each sample has a fresh process/project.
+ * Sample zero is a visible warmup, never part of the measured median.
  */
 interface Scenario {
   readonly name: string;
@@ -48,7 +48,7 @@ interface Scenario {
   readonly lagFailure?: boolean;
   readonly unowned?: boolean;
   readonly interrupted?: boolean;
-  /** Deterministic cache stress; generation stays outside the measured region. */
+  /** Deterministic cache stress. Generation stays outside the measured region. */
   readonly distribution?: "scan" | "shuffled" | "skewed";
 }
 
@@ -112,7 +112,7 @@ const metadata: RuntimeBusTraceMetadata = {
 
 /** Build one deterministic event outside the measured region. PPU decisions are
  * synthetic contract fixtures, not evidence of hardware rendering behavior.
- * @param {number} i Zero-based event index; sequence and cycle remain contiguous.
+ * @param {number} i Zero-based event index. Sequence and cycle remain contiguous.
  * @param {Scenario} scenario Branch family and distinct-fact working set.
  * @returns {RuntimeBusAccess | RuntimeTransferBoundary} Valid transport-neutral event.
  */
@@ -120,7 +120,7 @@ function eventAt(i: number, scenario: Scenario): RuntimeBusAccess | RuntimeTrans
   let variant = i % (scenario.facts ?? 256);
   // Each pattern visits every declared fact at least once, so correctness still
   // compares a known distinct count rather than the implementation's own index.
-  // Scan/skewed cases measure hot-set survival; the shuffled capacity-plus-one
+  // Scan/skewed cases measure hot-set survival. The shuffled capacity-plus-one
   // case prevents tuning only for the simple rotating-order cache reproducer.
   if (scenario.distribution === "scan") {
     const slot = i % 32768;
@@ -228,7 +228,7 @@ function eventAt(i: number, scenario: Scenario): RuntimeBusAccess | RuntimeTrans
   return access;
 }
 
-/** A disposable production SQLite project; no existing analysis is opened or modified.
+/** A disposable production SQLite project. No existing analysis is opened or modified.
  * @param {string} directory New project location beneath the benchmark's temporary directory.
  */
 function projectAt(directory: string): void {
@@ -256,7 +256,7 @@ function projectAt(directory: string): void {
 }
 
 /** Produce a complete bounded bus archive before the read/worker timer starts.
- * @param {string} file New archive path; existing files are never overwritten.
+ * @param {string} file New archive path. Existing files are never overwritten.
  * @param {number} chunkSize Events per frame, within the production wire limit.
  * @returns {Promise<NativeCaptureFilePosition>} Terminal status matching the synced file.
  */
@@ -302,7 +302,7 @@ async function archiveAt(file: string, chunkSize: number): Promise<NativeCapture
 /** Measure a phase with coarse boundaries only. CPU and heap figures accompany
  * wall time so I/O waiting is not mistaken for synchronous processing cost.
  * @param {Function} action Work whose startup and settlement belong to the measured phase.
- * @returns {Promise<object>} Result and wall/process CPU milliseconds; child CPU is excluded.
+ * @returns {Promise<object>} Result and wall/process CPU milliseconds. Child CPU is excluded.
  */
 async function timed<T>(
   action: () => Promise<T>,
@@ -317,7 +317,7 @@ async function timed<T>(
 
 /** Execute one isolated sample and validate counts outside its timer.
  * @param {Scenario} scenario Selected branch, resource limit or archive reader workload.
- * @returns {Promise<object>} Measurements; process peak RSS includes fixture construction and validation.
+ * @returns {Promise<object>} Measurements. Process peak RSS includes fixture construction and validation.
  */
 async function run(scenario: Scenario) {
   const directory = await mkdtemp(path.join(os.tmpdir(), "capture-path-audit-"));
@@ -540,7 +540,7 @@ async function run(scenario: Scenario) {
               sourceSha256: result.sourceSha256,
               previews,
             });
-            // Separate offline validation follows the timer; matching counts
+            // Separate offline validation follows the timer. Matching counts
             // alone would miss normalization differences between the two readers.
             const offline = createRuntimeBusTraceImporter(
               {
@@ -616,7 +616,7 @@ if (caseIndex >= 0) {
       .digest("hex");
   const results = [];
   // Sequential child processes avoid cross-case heap/JIT and CPU contention.
-  // Every child does identical unmeasured fixture creation; OS caches are warm.
+  // Every child does identical unmeasured fixture creation. OS caches are warm.
   for (const scenario of selected) {
     const runs = [];
     for (let sample = 0; sample <= samples; sample++) {
@@ -673,7 +673,7 @@ if (caseIndex >= 0) {
           events,
           measuredSamples: samples,
           methodology:
-            "Fixture creation excluded; sequential fresh processes, first sample warms OS caches only. Process RSS includes retained fixtures and untimed validation; worker RSS is reported separately. Inclusive CPU samples overlap.",
+            "Fixture creation excluded. Sequential fresh processes, first sample warms OS caches only. Process RSS includes retained fixtures and untimed validation. Worker RSS is reported separately. Inclusive CPU samples overlap.",
           sources,
           results,
         },

@@ -91,7 +91,7 @@ export class SnesSpcRuntimeService {
      * execute trailer, then restores namespace and the previous architecture.
      *
      * Size is `(pc - dest) & $FFFF` - 64 KiB wrap, matching Asar.
-     * Size is only patched when `canFinalize` (emit pass); collect/layout leave
+     * Size is only patched when `canFinalize` (emit pass). Collect/layout leave
      * the placeholder so later passes can rewrite it.
      *
      * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.

@@ -97,7 +97,7 @@ test("shared initializer commits a verified workspace with analysis and editor f
     t.regex(bank, /SNES_HEADER_MAP_MODE:\n  db \$20 ; SlowROM, LoROM map mode\./);
     t.regex(bank, /SNES_HEADER_CHECKSUM:\n  dw \$1234 ; ROM checksum \(valid pair\)\./);
     t.regex(bank, /SNES_VECTOR_NATIVE_NMI:\n  dw /);
-    t.regex(bank, /SNES_VECTOR_EMULATION_RESET:\n  dw \$8000 ; Emulation-mode RESET handler;/);
+    t.regex(bank, /SNES_VECTOR_EMULATION_RESET:\n  dw \$8000 ; Emulation-mode RESET handler\./);
     t.notRegex(bank, /incbin "\.\.\/assets\/(?:snes-header|vectors)-/);
     await fs.stat(path.join(outputDirectory, "analysis", "analysis.json"));
     await fs.stat(path.join(outputDirectory, "generated-files.json"));

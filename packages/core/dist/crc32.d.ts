@@ -6,7 +6,7 @@ export declare class CRC32 {
     static table: Uint32Array;
     /**
      * Builds the lookup table used for CRC32 computation.
-     * @returns {Uint32Array} The result.
+     * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
      */
     static makeCRCTable(): Uint32Array;
     /**

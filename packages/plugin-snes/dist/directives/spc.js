@@ -1,7 +1,7 @@
 import { SnesSpcRuntimeService } from "../services/spc-runtime.js";
 /**
  * Builds a session-bound SPC-block runtime.
- * A new instance per directive invocation is cheap; it holds no extra state.
+ * A new instance per directive invocation is cheap. It holds no extra state.
  *
  * @param {Assembler} session Host assembler.
  * @param {SnesSessionState} state Mutable SNES session.

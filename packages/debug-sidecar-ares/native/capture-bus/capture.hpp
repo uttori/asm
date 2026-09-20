@@ -1,7 +1,7 @@
 #pragma once
 
 // Downstream ACT2 producer with separately negotiated instruction and bus scopes.
-// No ares or transport dependencies; callers serialize access through the
+// No ares or transport dependencies. Callers serialize access through the
 // emulation thread or the frontend's guarded handoff.
 #include <array>
 #include <charconv>
@@ -155,7 +155,7 @@ public:
     if(fields[0] == "status" && fields.size() == 2) return status();
     if(fields[0] == "stop" && fields.size() == 2) {
       recording = false;
-      // Bus records commit independently; stopping fixes the last completed bus
+      // Bus records commit independently. Stopping fixes the last completed bus
       // event even if the containing instruction/DMA transfer has not finished.
       if(busOnly) pending = false;
       if(!failed && state != "complete") {

@@ -9,7 +9,7 @@ Apply `capture-bus.patch` after `../capture-v2/capture-v2.patch` on rich mainten
 revision `be548251b537334f4f2054c7d86171da22fdc6ca`. `source.json` pins both input
 patches and every changed source file. The maintained checkout is
 `Local Only/ares-rich-state-load-fix`. The current checkout additionally contains
-the separately pinned [transfer-boundary supplement](../capture-transfer/README.md);
+the separately pinned [transfer-boundary supplement](../capture-transfer/README.md).
 this bus-only package and its original wire fixture remain reproducible with the
 two patches above.
 The original instruction-only source package and staged runtime remain pinned to
@@ -45,12 +45,12 @@ The scoped archive reader/writer, sidecar and editor mode are now implemented.
 `sidecar-evidence.json` records the synthetic desktop integration check through
 the actual bundled sidecar and DAP recorder, including a long DMA instruction step
 and direct/indirect HDMA. `sidecar-slow-evidence.json` adds a deliberately delayed
-consumer; `instruction-compatibility-evidence.json` verifies the existing instruction
+consumer. `instruction-compatibility-evidence.json` verifies the existing instruction
 archive and JSON workflow on the same executable. A separately staged development runtime lives at
-`Local Only/ares-capture-bus-desktop-runtime`; it carries both capture patches and
+`Local Only/ares-capture-bus-desktop-runtime`. It carries both capture patches and
 verified binary/resource hashes. Existing launch defaults are unchanged.
 
 The private bus wire dictionary, reserve argument, save/stop semantics and
 remaining import/performance work are documented in the linked design note. These
-changes are distributed with the ares/nall source and notices; this supplement
+changes are distributed with the ares/nall source and notices. This supplement
 does not relicense emulator code.

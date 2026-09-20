@@ -65,11 +65,6 @@ export class SymbolScopeService {
         }
         return name;
     }
-    /**
-     * Finds nearest hierarchy ancestor.
-     * @param {string} label The label.
-     * @returns {string | null} The result.
-     */
     findNearestHierarchyAncestor(label) {
         for (let i = label.length - 1; i >= 0; i--) {
             if (label[i] !== "_") {
@@ -86,11 +81,6 @@ export class SymbolScopeService {
         }
         return null;
     }
-    /**
-     * Gets hierarchy chain.
-     * @param {string} label The label.
-     * @returns {string[]} The result.
-     */
     getHierarchyChain(label) {
         const rootLabel = this.host.currentGlobalParentLabel;
         const rootApplies = Boolean(rootLabel) && (label === rootLabel || label.startsWith(`${rootLabel}_`));
@@ -113,11 +103,6 @@ export class SymbolScopeService {
         }
         return chain;
     }
-    /**
-     * Gets ancestor prefixes.
-     * @param {string} label The label.
-     * @returns {string[]} The result.
-     */
     getAncestorPrefixes(label) {
         const prefixes = [];
         for (let i = label.length - 1; i >= 0; i--) {
@@ -131,11 +116,6 @@ export class SymbolScopeService {
         }
         return prefixes;
     }
-    /**
-     * Gets scoped parent label.
-     * @param {number} dotCount The dot count.
-     * @returns {string} The result.
-     */
     getScopedParentLabel(dotCount) {
         const current = this.host.currentParentLabel;
         if (dotCount === 1) {
@@ -823,7 +803,7 @@ export class SymbolScopeService {
     }
     /**
      * Returns the outline container for a stored label name.
-     * Sublabels nest under their parent; namespaced labels nest under the namespace.
+     * Sublabels nest under their parent. Namespaced labels nest under the namespace.
      * @param {string} fullLabel The stored label name.
      * @param {boolean} isGlobal Whether the label is global.
      * @returns {string | undefined} The container name, if any.

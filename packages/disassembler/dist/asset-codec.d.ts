@@ -41,7 +41,7 @@ export interface AssetExtractedFile {
 }
 /** Nested codec request relative to the containing asset's source range. */
 export interface NestedAssetRequest {
-    /** Stable local id; the planner qualifies it with the parent asset id. */
+    /** Stable local id. The planner qualifies it with the parent asset id. */
     readonly id: string;
     readonly codecId: string;
     readonly relativeOffset: number;

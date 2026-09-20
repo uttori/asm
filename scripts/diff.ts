@@ -133,7 +133,7 @@ Options:
   --fixture <id>             Named fixture: yoshi (default), chou, slideshow
   --source <path>            Assembly entry (implies assemble)
   --golden <path>            Official/expected ROM
-  --actual <path>            Skip assemble; diff this file against golden
+  --actual <path>            Skip assemble. Diff this file against golden
   --write <path>             Write assembled bytes to disk
   --checksum-mode asar|simple
   --mapper lorom|hirom       Address mapping for reports (default lorom)

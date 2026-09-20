@@ -8,7 +8,7 @@ export interface StructField {
   offset: number;
   width: number;
   count: number;
-  /** Even db[1] is an array; skip members are opaque byte arrays. */
+  /** Even db[1] is an array. Skip members are opaque byte arrays. */
   array: boolean;
 }
 
@@ -28,7 +28,7 @@ export interface StructDefinition {
   parent?: string;
   /** Cached maximum child extension size, or zero when there are no extensions. */
   extensionSize: number;
-  /** Absent on legacy API-created definitions; never infer types from label distances. */
+  /** Absent on legacy API-created definitions. Never infer types from label distances. */
   fields?: Map<string, StructField>;
   /** Optional valid logical array indexes, independent of the biased base address. */
   indexRange?: { first: number; count: number };
@@ -317,7 +317,7 @@ export class StructEngine {
     let candidate = labelRef;
     let extraMember = "";
     // First `[...]` is the array index. Hardware-register structs use hex
-    // (`DMA[$00].Parameters`); decimal `obj[2]` still works via getnum.
+    // (`DMA[$00].Parameters`). Decimal `obj[2]` still works via getnum.
     const arrayMatch = candidate.match(/^(.*?)\[([^\]]+)](.*)$/);
     if (arrayMatch) {
       candidate = arrayMatch[1];

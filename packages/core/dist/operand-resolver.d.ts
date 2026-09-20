@@ -14,86 +14,32 @@ export type OperandResolverDependencies = {
 export declare class OperandResolver {
     readonly deps: OperandResolverDependencies;
     constructor(deps: OperandResolverDependencies);
-    /**
-     * Normalizes numeric base member.
-     * @param {string} operand The operand.
-     * @returns {string} The result.
-     */
     normalizeNumericBaseMember(operand: string): string;
-    /**
-     * Splits math operand suffix.
-     * @param {string} operand The operand.
-     * @returns {{ expression: string; suffix: string }} The result.
-     */
     splitMathOperandSuffix(operand: string): {
         expression: string;
         suffix: string;
     };
-    /**
-     * Checks whether numeric token.
-     * @param {string} token The token.
-     * @returns {boolean} The result.
-     */
     isNumericToken(token: string): boolean;
-    /**
-     * Resolves arithmetic token.
-     * @param {string} token The token.
-     * @returns {number} The result.
-     */
     resolveArithmeticToken(token: string): number;
-    /**
-     * Attempts to resolve simple arithmetic.
-     * @param {string} operand The operand.
-     * @returns {number | null} The result.
-     */
     tryResolveSimpleArithmetic(operand: string): number | null;
-    /**
-     * Determines value length.
-     * @param {string | number} value The value.
-     * @returns {number} The result.
-     */
     determineValueLength(value: string | number): number;
-    /**
-     * Checks whether math expression.
-     * @param {string} expression The expression.
-     * @returns {boolean} The result.
-     */
     isMathExpression(expression: string): boolean;
-    /**
-     * Attempts to resolve label in operand.
-     * @param {string} operand The operand.
-     * @returns {string} The result.
-     */
     tryResolveLabelInOperand(operand: string): string;
     /**
-     * Gets num.
-     * @param {string | ExpressionNode} operand The operand.
-     * @returns {number} The result.
+     * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.
+     * Deferred expression failures yield zero during sizing passes and throw during final emission.
+     * @param {string | ExpressionNode} operand Source operand or parsed expression, including an optional immediate prefix.
+     * @returns {number} Resolved value, or the deferred sizing placeholder.
      */
     getnum(operand: string | ExpressionNode): number;
     /**
-     * Gets num from node.
-     * @param {ExpressionNode} operand The operand.
-     * @returns {number} The result.
+     * Evaluate an already parsed operand with the same deferred-expression policy as getnum.
+     * @param {ExpressionNode} operand Numeric expression. Range nodes are rejected.
+     * @returns {number} Resolved value, or zero for a deferred expression failure.
      */
     getnumFromNode(operand: ExpressionNode): number;
-    /**
-     * Resolves reference value.
-     * @param {string} reference The reference.
-     * @returns {number} The result.
-     */
     resolveReferenceValue(reference: string): number;
-    /**
-     * Expands operand.
-     * @param {string} operand The operand.
-     * @returns {ExpandedOperand} The result.
-     */
     expandOperand(operand: string): ExpandedOperand;
-    /**
-     * Lowers operand.
-     * @param {string} operand The operand.
-     * @returns {LoweredOperand} The result.
-     */
     lowerOperand(operand: string): LoweredOperand;
     /**
      * Returns the current logical address without applying architecture policy.

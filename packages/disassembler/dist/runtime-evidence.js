@@ -174,15 +174,15 @@ const mergeRecords = (kind, prior, incoming, added, updated, existing) => {
             }
         }
         else {
-            throw new Error(`Runtime evidence id '${record.id}' in '${kind}' changed content; use a content-derived id.`);
+            throw new Error(`Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`);
         }
     }
     return [...records.values()];
 };
 /**
  * Merges an offline evidence batch by stable id. Existing claims are never removed or rewritten.
- * Reimporting an identical batch returns `changed: false`; differing observations remain separate
- * and are surfaced through `conflicts`. Diagnostic getters are lazy; reading or serializing
+ * Reimporting an identical batch returns `changed: false`. Differing observations remain separate
+ * and are surfaced through `conflicts`. Diagnostic getters are lazy. Reading or serializing
  * them can require substantially more memory than merging the facts alone.
  * @param {AnalysisProjectShards} shards Existing native project shards.
  * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
@@ -198,7 +198,7 @@ export const mergeRuntimeEvidence = (shards, batch) => {
         }
         if (traceProfiles.has(report.sourceSha256) &&
             traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
-            throw new Error(`Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project; mixing projections would double-count observations.`);
+            throw new Error(`Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`);
         }
         traceProfiles.set(report.sourceSha256, report.indexProfile);
     }

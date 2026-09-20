@@ -196,7 +196,7 @@ export const evaluateDisassemblerBenchmarkBudgets = (
       const limit = limits.get(`${benchmark.fixture.id}\0${operation.id}`);
       if (!limit) {
         // Fail closed: a newly added measurement must receive a reviewed derived budget before the
-        // gate can pass; silently skipping it would leave the new hot path unprotected.
+        // gate can pass. Silently skipping it would leave the new hot path unprotected.
         violations.push({
           fixtureId: benchmark.fixture.id,
           operationId: operation.id,

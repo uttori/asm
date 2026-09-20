@@ -86,7 +86,7 @@ const validateManifest = (manifest, pluginModule) => {
         });
     }
     if (manifest.apiVersion !== PLUGIN_API_VERSION) {
-        throw new PluginError(`Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}; this host supports ${PLUGIN_API_VERSION}.`, { code: "PLUGIN_API_INCOMPATIBLE", pluginId: id, pluginModule });
+        throw new PluginError(`Plugin '${id}' requires plugin API ${String(manifest.apiVersion)}. This host supports ${PLUGIN_API_VERSION}.`, { code: "PLUGIN_API_INCOMPATIBLE", pluginId: id, pluginModule });
     }
     if (manifest.description !== undefined && typeof manifest.description !== "string") {
         throw new PluginError(`Plugin '${id}' description must be a string.`, {
@@ -229,7 +229,7 @@ export class PluginManager {
      * Activate dependencies first, preserving input order among ready plugins.
      * Each plugin commits independently: earlier successes remain active if a later one fails.
      * Throws PluginError for invalid input, dependency conflicts, or activation failure.
-     * Activation is unavailable after freeze or disposal; dispose the manager after a failed batch.
+     * Activation is unavailable after freeze or disposal. Dispose the manager after a failed batch.
      * @param {readonly PluginActivationRequest[]} requests Plugins/options to activate, reordered only as dependencies require.
      */
     async activatePlugins(requests) {
@@ -438,7 +438,7 @@ export class PluginManager {
         }
         for (const record of transaction.architectures) {
             validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
-            // Analysis-only contributions omit an encoder; Assembler rejects those when
+            // Analysis-only contributions omit an encoder. Assembler rejects those when
             // constructing a build session. Optional factories must still be callable.
             if (typeof record.value.displayName !== "string" ||
                 (record.value.createEncoder !== undefined &&
@@ -577,7 +577,7 @@ export class PluginManager {
             }
         }
         // Plugin contributions are input-sized. A spread could fail after earlier lists were committed,
-        // leaving a partially registered plugin; iterative appends preserve each list's order.
+        // leaving a partially registered plugin. Iterative appends preserve each list's order.
         for (const record of transaction.sessionStates) {
             this.#sessionStates.push(record);
         }
@@ -606,7 +606,7 @@ export class PluginManager {
     /**
      * Validate target references and aliases, then seal registration. Repeated calls return the
      * same environment. Throws PluginError for invalid graphs or a disposed manager.
-     * @returns {AssemblerEnvironment} The validated, shared contribution graph; resources remain owned by this manager.
+     * @returns {AssemblerEnvironment} The validated, shared contribution graph. Resources remain owned by this manager.
      */
     freeze() {
         if (this.#disposed) {
@@ -633,7 +633,7 @@ export class PluginManager {
     }
     /**
      * Release plugin resources in reverse activation order, attempting every disposable.
-     * Idempotent and terminal; rejects with AggregateError after cleanup failures.
+     * Idempotent and terminal. Rejects with AggregateError after cleanup failures.
      * Does not dispose assembler sessions or make their continued use safe.
      */
     async dispose() {

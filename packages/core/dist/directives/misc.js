@@ -56,7 +56,7 @@ const unwrapQuoted = (fragment) => {
     return text;
 };
 /**
- * Concatenates asar `print` arguments. Quoted strings are dequoted; math/print
+ * Concatenates asar `print` arguments. Quoted strings are dequoted. Math/print
  * functions are left literal until those helpers are wired for diagnostics.
  * @param {readonly string[]} parts Top-level comma-split print arguments.
  * @returns {string} Concatenated message text.
@@ -74,7 +74,7 @@ const formatPrintArgs = (parts) => {
  * Failed asserts match asar's `Eassertion_failed`: `"Assertion failed."` or
  * `"Assertion failed: " + message`.
  * @param {DiagnosticDirectiveContext} ctx Session with `evaluateExpression`.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the condition is missing or evaluates to zero.
  */
@@ -97,7 +97,7 @@ export const handleAssert = ({ session }, _words, raw) => {
 /**
  * Asar `error [print-args...]`. Always fails the assemble.
  * @param {DiagnosticDirectiveContext} _ctx Unused session.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} Always. Message matches asar's `Eerror_command`.
  */
@@ -123,7 +123,7 @@ const invalidTableLine = (lineNumber) => new Error(`Invalid table file: line ${l
 /**
  * Parses one asar `table` file line. LTR is `char=hex` with the mapped character
  * at index 0 - leading space is significant (` =20`). Hex is a single integer,
- * not a byte list; `db` later truncates it to 8 bits.
+ * not a byte list. `db` later truncates it to 8 bits.
  * @param {string} line One table line, with trailing CR already stripped.
  * @param {boolean} rtl When true, the line is `hex=char` instead of `char=hex`.
  * @param {number} lineNumber 1-based source line, used in asar-style errors.
@@ -176,7 +176,7 @@ export const handleClearTable = ({ session }) => {
  * of filling a garbage sentinel - SMRPG dialogue only uses listed glyphs, and
  * remaining bank data is raw `db $xx` after `cleartable`.
  * @param {TableDirectiveContext} ctx Session with `includeSource.readFile`.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the filename is missing or a table line is invalid.
  */
@@ -203,7 +203,7 @@ export const handleTable = ({ session }, _words, raw) => {
     const lines = contents.split("\n");
     for (let index = 0; index < lines.length; index++) {
         let line = lines[index];
-        // Split was on `\n` only; strip the CR from CRLF without trimming the
+        // Split was on `\n` only. Strip the CR from CRLF without trimming the
         // mapped character, which may itself be a leading space.
         if (line.endsWith("\r")) {
             line = line.slice(0, -1);
@@ -219,7 +219,7 @@ export const handleTable = ({ session }, _words, raw) => {
  * Deprecated asar `warnpc addr`, equivalent to `assert pc() <= addr`.
  * Fails only when the logical program counter is strictly past the bound.
  * @param {DiagnosticDirectiveContext} ctx Session with PC and numeric evaluation.
- * @param {readonly string[]} _words Tokenized command. Unused; parse from `raw`.
+ * @param {readonly string[]} _words Tokenized command. Unused. Parse from `raw`.
  * @param {string} raw Full command text.
  * @throws {Error} If the address is missing or `pc > addr`.
  */

@@ -1,7 +1,7 @@
 # Disassembler performance checks
 
 Run benchmark commands from the repository root. The default suite creates deterministic
-512 KiB, 2 MiB, and 4 MiB LoROM fixtures in memory; no game data is required.
+512 KiB, 2 MiB, and 4 MiB LoROM fixtures in memory. No game data is required.
 
 ```sh
 npm run benchmark:disassembler:fast
@@ -9,7 +9,7 @@ npm run benchmark:disassembler -- --json /tmp/disassembler-local.json
 ```
 
 The full suite defaults to one warmup and five measured repetitions. Use `--warmups`,
-`--repetitions`, `--fixture`, and `--operation` to isolate a comparison; fixture and operation
+`--repetitions`, `--fixture`, and `--operation` to isolate a comparison. Fixture and operation
 lists are comma-separated.
 
 ## Measured operations
@@ -44,13 +44,13 @@ npm run benchmark:disassembler:derive-budgets
 
 Wall-time budgets use the greater of baseline p95 plus 50% or p95 plus 20 ms, rounded up to a
 millisecond. RSS budgets use the greater of baseline maximum plus 15% or plus 64 MiB, rounded up
-to 16 MiB. The policy records the report path and SHA-256; measured reports record the policy and
+to 16 MiB. The policy records the report path and SHA-256. Measured reports record the policy and
 source-report hashes. Ad hoc command-line thresholds cannot silently redefine the gate.
 
 Compare like with like: Node version, OS, architecture, CPU, fixture, operation, warmup count,
 repetition count, and memory-sampling mode. Retained benchmark observations are internal research,
-not universal latency promises. Preserve canonical bytes and analysis meaning when optimizing;
-use isolated comparisons and the [testing guide](https://github.com/uttori/asm/blob/master/TESTING.md#performance-gates)
+not universal latency promises. Preserve canonical bytes and analysis meaning when optimizing.
+Use isolated comparisons and the [testing guide](https://github.com/uttori/asm/blob/master/TESTING.md#performance-gates)
 for correctness and release expectations.
 
 ## Optional local ROM probe

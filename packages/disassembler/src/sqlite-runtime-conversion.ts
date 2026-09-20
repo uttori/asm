@@ -35,9 +35,9 @@ export class RuntimeDigest {
 
 /**
  * Build a bounded-on-heap projection in a temporary SQLite table. Only native trace code and its
- * matching state are narrowed; standalone states, bus facts, other CPUs and execution totals survive.
+ * matching state are narrowed. Standalone states, bus facts, other CPUs and execution totals survive.
  * The durable source is untouched, and the original database remains the forensic migration backup.
- * @param {DatabaseSync} db Exclusively held source snapshot; only connection-local temporary tables are written.
+ * @param {DatabaseSync} db Exclusively held source snapshot. Only connection-local temporary tables are written.
  * @param {number} version Source physical layout.
  * @param {object} options Cancellation and bounded progress callbacks.
  */
@@ -131,7 +131,7 @@ export const prepareRuntimeConversion = async (
   }
 };
 
-/** Read the finished projection once; no collection of full runtime history reaches the JS heap.
+/** Read the finished projection once. No collection of full runtime history reaches the JS heap.
  * @param {DatabaseSync} db Connection containing the finished temporary projection.
  * @yields {RuntimeEvidenceRecord} One canonical variant with its exact aggregate count.
  */

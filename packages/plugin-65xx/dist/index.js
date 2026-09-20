@@ -22,7 +22,7 @@ export const CA65_65XX_DIRECTIVE_SET_ID = "65xx.ca65-directives";
 export const CA65_65XX_EXPRESSION_SET_ID = "65xx.ca65-expressions";
 export const CA65_65XX_LIFECYCLE_ID = "65xx.ca65-lifecycle";
 /**
- * Validates target options. Unknown keys throw; omitted object → `{ origin: 0 }`.
+ * Validates target options. Unknown keys throw. Omitted object → `{ origin: 0 }`.
  *
  * @param {unknown} configured Plugin/target options object.
  * @returns {Raw65xxTargetOptions} Normalized options.
@@ -99,7 +99,7 @@ const directive = (id, keywords, handler) => {
     };
 };
 /**
- * 16-bit address space with no bank wrap; writes below `origin` are rejected.
+ * 16-bit address space with no bank wrap. Writes below `origin` are rejected.
  * @param {TargetFactoryContext} options The target factory context.
  * @returns {TargetAddressSpace} The address space.
  */

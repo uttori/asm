@@ -43,7 +43,7 @@ For CLI use, also install `@uttori/asm-cli` and configure the plugin and target 
 
 Save this as `uttori-asm.config.json`, then run `npx uttori-asm main.asm main.bin`.
 The raw `origin` maps to output offset zero. Use `65xx.nes` for iNES output or `65xx.ca65-raw`
-for ca65-style directives. This is a direct binary assembler; ca65 object files and general ld65
+for ca65-style directives. This is a direct binary assembler. Ca65 object files and general ld65
 linking are unsupported. The manual lists exact CPU and syntax limits.
 
 ## Documentation and support

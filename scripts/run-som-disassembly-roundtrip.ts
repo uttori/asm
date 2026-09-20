@@ -25,7 +25,7 @@ if (
   digest !== SECRET_OF_MANA_ANALYSIS_FIXTURE.sha256
 ) {
   throw new Error(
-    `Wrong ROM identity: received ${bytes.length} byte(s) / ${digest}; expected ${SECRET_OF_MANA_ANALYSIS_FIXTURE.bytes} / ${SECRET_OF_MANA_ANALYSIS_FIXTURE.sha256}.`,
+    `Wrong ROM identity: received ${bytes.length} byte(s) / ${digest}. Expected ${SECRET_OF_MANA_ANALYSIS_FIXTURE.bytes} / ${SECRET_OF_MANA_ANALYSIS_FIXTURE.sha256}.`,
   );
 }
 

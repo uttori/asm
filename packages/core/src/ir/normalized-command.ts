@@ -441,7 +441,7 @@ function deriveCommandSemantics(command: string, words: readonly string[]): Comm
     }
   }
 
-  // void command;
+  // void command.
   return semantics;
 }
 

@@ -25,7 +25,7 @@ export interface Spc700AnalysisResult extends StaticAnalysisResult<Spc700Abstrac
 }
 /**
  * Runs conservative SPC700 CFG analysis over one contiguous ARAM image.
- * Entry points are explicit or project-derived; the analyzer does not assume
+ * Entry points are explicit or project-derived. The analyzer does not assume
  * that a standalone payload represents reset-time memory.
  * @param {Spc700AramImage} image Immutable contiguous ARAM bytes and load address.
  * @param {Spc700AnalysisOptions} [options] Project inputs, entry points, overrides, and limits.

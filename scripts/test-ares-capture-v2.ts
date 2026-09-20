@@ -27,7 +27,7 @@ const executable = path.resolve(
 const evidence = process.argv[3];
 const normal = process.argv.includes("--normal");
 const temporary = await mkdtemp(path.join(os.tmpdir(), "ares-capture-desktop-"));
-// Original LoROM fixture: SEI; INX; STX $0000; BRA $8001.
+// Original LoROM fixture: SEI. INX. STX $0000. BRA $8001.
 const rom = Buffer.alloc(32768, 0xea);
 rom.set([0x78, 0xe8, 0x86, 0, 0x80, 0xfb]);
 rom.fill(0, 0x7fc0);

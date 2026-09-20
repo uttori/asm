@@ -3,7 +3,7 @@ type ReadCaptureRange = (buffer: Buffer, offset: number, length: number, positio
     bytesRead: number;
 }>;
 /** Bounded read-ahead for sequential ACT2 frame components. Returned copies remain
- * valid across refills; a small retained prefix cannot pin an entire read window.
+ * valid across refills. A small retained prefix cannot pin an entire read window.
  * Live callers create a fresh reader per slice so unconsumed bytes cannot outlive
  * that slice's file snapshot. Only bytes below the supplied watermark are read.
  * Calls must be serialized because refills reuse mutable storage. The window
@@ -11,12 +11,12 @@ type ReadCaptureRange = (buffer: Buffer, offset: number, length: number, positio
  */
 export declare class CaptureFrameReader {
     #private;
-    /** Window bytes are in [1, 1048576], default 1 MiB; every component must fit.
+    /** Window bytes are in [1, 1048576], default 1 MiB. Every component must fit.
      * The cap amortizes small metadata reads without loading an entire archive.
      */
     constructor(read: ReadCaptureRange, windowBytes?: number);
     /** Read one validated component (at most 256 KiB), bounded by a snapshot or
-     * durable watermark. Short I/O is retried; premature EOF is always an error.
+     * durable watermark. Short I/O is retried. Premature EOF is always an error.
      * @param {number} length Component bytes, no larger than the read window.
      * @param {number} offset Absolute nonnegative file position.
      * @param {number} limit Exclusive snapshot/durable byte boundary.

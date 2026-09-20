@@ -22,7 +22,7 @@ const mismatches: string[] = [];
 for (const specification of cpu65816Specifications) {
   const opcode = specification.opcode[0];
   const mnemonic = observed.get(opcode);
-  // The Framework prints WDC's `JMP [abs]`; this project canonically retains
+  // The Framework prints WDC's `JMP [abs]`. This project canonically retains
   // its established `JML [abs]` alias for opcode $DC.
   const acceptedAlias = opcode === 0xdc && mnemonic === "JMP" && specification.mnemonic === "JML";
   if (mnemonic !== specification.mnemonic && !acceptedAlias) {

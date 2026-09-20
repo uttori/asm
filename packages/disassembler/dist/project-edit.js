@@ -274,7 +274,7 @@ const stateConflictFields = (manual, existing) => Object.keys(manual)
     .sort();
 /**
  * Adds a manual state/entry-point overlay by copying an existing classified interval. The base
- * record remains untouched; incompatible overlapping state becomes an explicit conflict.
+ * record remains untouched. Incompatible overlapping state becomes an explicit conflict.
  * @param {LoadedAnalysisProject} project Validated project snapshot to edit.
  * @param {StateEntryPointEditRequest} request State, entry-point, and stable evidence identity.
  * @returns {AppliedStateEntryPointEdit} Replacement project and exact inverse records.

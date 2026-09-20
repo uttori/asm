@@ -11,7 +11,7 @@
     "./project/**/*.ts",
     "./helpers/**/*.ts",
     "../packages/disassembler/tests/runtime-graphics.test.ts",
-    "../packages/vscode-extension/tests/runtime-bus-source.test.ts",
+    "../packages/vscode-extension/tests/runtime/bus-source.test.ts",
     "../packages/core/tests/debug-tracing.test.ts",
     "../packages/core/tests/source-location.test.ts",
     "../packages/core/tests/lsp/instruction-catalog.test.ts",

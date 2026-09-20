@@ -98,7 +98,7 @@ test("in-memory chunks publish the same facts and roll back on a late producer f
   t.deepEqual(progress.at(-1), [totalRecords, totalRecords]);
   t.true(
     stages.indexOf("Committing runtime import transaction…") <
-      stages.indexOf("Runtime import committed; project pointer updated."),
+      stages.indexOf("Runtime import committed. Project pointer updated."),
   );
   t.deepEqual(actual.report, expected.report);
   const merged = mergeRuntimeEvidence(project.shards, expected.batch);

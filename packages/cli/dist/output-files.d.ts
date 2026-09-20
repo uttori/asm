@@ -5,9 +5,9 @@ interface OutputFile {
 }
 /**
  * Stage all artifacts before replacing destinations, then rename each file atomically. Parent
- * directories are created. Preparation failures leave existing artifacts intact; publication is
+ * directories are created. Preparation failures leave existing artifacts intact. Publication is
  * atomic per file, not across multiple files or sudden termination between renames. Temporary
- * siblings are removed on ordinary failures; forced process termination can leave them behind.
+ * siblings are removed on ordinary failures. Forced process termination can leave them behind.
  * @param {readonly OutputFile[]} outputs Fully computed artifacts in publication order.
  * @param {readonly string[]} protectedFiles Existing inputs that must not become output destinations.
  */

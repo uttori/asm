@@ -7,18 +7,18 @@ export { validateAnalysisProjectManifest, type RuntimeRecordProjection, } from "
 /**
  * Validate the current semantic schema and SQLite pointer, returning the same object without copying.
  * @param {unknown} input Parsed watcher or database manifest.
- * @returns {AnalysisProjectManifest} Validated current manifest; obsolete containers throw.
+ * @returns {AnalysisProjectManifest} Validated current manifest. Obsolete containers throw.
  */
 export declare const parseAnalysisProjectManifest: (input: unknown) => AnalysisProjectManifest;
 /**
  * Open the existing database selected by a validated pointer, without creating missing files.
  * Requires a readable, valid analysis.json even when the database exists. Opening checks the
- * physical format, not every record; snapshot loaders perform semantic validation.
+ * physical format, not every record. Snapshot loaders perform semantic validation.
  * @param {string} directory Project root containing analysis.json.
- * @returns {SqliteAnalysisStore} Owned connection; close exactly once in a finally block.
+ * @returns {SqliteAnalysisStore} Owned connection. Close exactly once in a finally block.
  */
 export declare const openAnalysisProjectStore: (directory: string) => SqliteAnalysisStore;
-/** One consistent revision, detached from storage; readonly types do not freeze records at runtime. */
+/** One consistent revision, detached from storage. Readonly types do not freeze records at runtime. */
 export interface LoadedAnalysisProject {
     readonly manifest: AnalysisProjectManifest;
     readonly shards: AnalysisProjectShards;
@@ -30,15 +30,15 @@ export interface LoadedAnalysisProjectView {
 }
 /**
  * Load and validate the complete project, including all runtime facts.
- * Closes its connection before returning; editing the result alone changes nothing on disk.
+ * Closes its connection before returning. Editing the result alone changes nothing on disk.
  * @param {string} directory Existing project root.
- * @returns {LoadedAnalysisProject} Complete validated project; large runtime histories are materialized.
+ * @returns {LoadedAnalysisProject} Complete validated project. Large runtime histories are materialized.
  */
 export declare const loadAnalysisProject: (directory: string) => LoadedAnalysisProject;
 /**
  * Load metadata only, or stream runtime through an explicit reducer in the same read snapshot.
  * @param {string} directory Existing project root.
- * @param {Function} [createProjection] Reducer for a validated runtime stream; omitted to skip runtime.
+ * @param {Function} [createProjection] Reducer for a validated runtime stream. Omitted to skip runtime.
  * @returns {LoadedAnalysisProjectView} Metadata and optional projection from one revision.
  */
 export declare const loadAnalysisProjectView: (directory: string, createProjection?: () => RuntimeRecordProjection) => LoadedAnalysisProjectView;

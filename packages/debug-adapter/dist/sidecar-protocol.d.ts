@@ -1,6 +1,6 @@
 /** Stable identity of the emulator-neutral sidecar wire protocol. */
 export declare const DEBUG_SIDECAR_PROTOCOL: "uttori-asm-debug-sidecar";
-/** Initial sidecar wire revision. This project is unreleased, so the revision remains version 1. */
+/** Supported wire revision. Peers reject messages with any other version. */
 export declare const DEBUG_SIDECAR_PROTOCOL_VERSION: 1;
 /** Commands available across the sidecar boundary. */
 export declare const DEBUG_SIDECAR_COMMANDS: readonly ["initialize", "connect", "disconnect", "pause", "continue", "step", "threads", "stackFrames", "registers", "readMemory", "setBreakpoints", "disassemble", "startTrace", "readTrace", "stopTrace", "capture", "ping", "shutdown"];
@@ -8,13 +8,21 @@ export declare const DEBUG_SIDECAR_COMMANDS: readonly ["initialize", "connect", 
 export declare const DEBUG_SIDECAR_EVENTS: readonly ["stopped", "continued", "terminated", "breakpoint", "output"];
 /** Protocol limits enforced before emulator-specific code sees a request. */
 export interface DebugSidecarProtocolLimits {
+    /** JSON payload bytes per frame, excluding its four-byte length prefix. Default 1 MiB. */
     readonly maxFrameBytes: number;
+    /** Bytes retained by the incremental parser. Default 2 MiB. */
     readonly maxBufferedBytes: number;
+    /** Requested bytes per readMemory command. Default 1 MiB, subject to backend limits. */
     readonly maxMemoryReadBytes: number;
+    /** Instructions per disassemble command. Default 4096. */
     readonly maxDisassemblyInstructions: number;
+    /** Addresses in one complete breakpoint replacement set. Default 4096. */
     readonly maxBreakpoints: number;
+    /** Events per destructive trace pull. Default 4096, subject to negotiated producer limits. */
     readonly maxTraceBatchEvents: number;
+    /** Pending requests or outgoing queued messages per connection. Default 1024. */
     readonly maxQueuedMessages: number;
+    /** Framed bytes awaiting transport writes. Default 8 MiB. */
     readonly maxQueuedBytes: number;
 }
 /** Conservative defaults suitable for a local stdio or loopback connection. */
@@ -88,7 +96,7 @@ export declare class DebugSidecarMessageParser {
      */
     push(chunk: Uint8Array): DebugSidecarMessage[];
 }
-/** Bounded FIFO for encoded messages; overflow is explicit rather than silently dropping events. */
+/** Bounded FIFO for encoded messages. Overflow is explicit rather than silently dropping events. */
 export declare class DebugSidecarMessageQueue {
     #private;
     /**

@@ -3,7 +3,7 @@ import type { AnalysisRecord, RuntimeEvidenceRecord } from "./project-types.js";
  * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.
  * @param {RuntimeEvidenceRecord} left First semantic record.
  * @param {RuntimeEvidenceRecord} right Second semantic record.
- * @returns {number} Lexical ID comparison; streaming consumers deliberately do not use this sort.
+ * @returns {number} Lexical ID comparison. Streaming consumers deliberately do not use this sort.
  */
 export declare const compareRuntimeRecordIds: (left: RuntimeEvidenceRecord, right: RuntimeEvidenceRecord) => number;
 /**
@@ -12,7 +12,7 @@ export declare const compareRuntimeRecordIds: (left: RuntimeEvidenceRecord, righ
  * Canonicalize payloads here once: the writer reuses this exact text for hashing
  * and encoding, avoiding a JSON stringify/parse/canonicalize round trip per fact.
  * @param {RuntimeEvidenceRecord} record Validated semantic runtime fact.
- * @returns {object} Column bindings with canonical payload text; absent variant fields remain omitted.
+ * @returns {object} Column bindings with canonical payload text. Absent variant fields remain omitted.
  */
 export declare const runtimeColumns: (record: RuntimeEvidenceRecord) => {
     addressSpace: string | null;
@@ -31,14 +31,14 @@ export declare const runtimeColumns: (record: RuntimeEvidenceRecord) => {
     payload: string | null;
 };
 /**
- * Reconstruct a semantic fact without inventing absent optional fields; stable-ID comparisons
+ * Reconstruct a semantic fact without inventing absent optional fields. Stable-ID comparisons
  * depend on preserving the same payload across inserts and subsequent reads.
  * @param {object} row SQLite runtime row selected with all columns.
  * @returns {RuntimeEvidenceRecord} Decoded fact in its original discriminated shape.
  */
 export declare const runtimeFromRow: (row: object) => RuntimeEvidenceRecord;
 /**
- * Extract a point coordinate for persisted analysis metadata; interval-only records have none.
+ * Extract a point coordinate for persisted analysis metadata. Interval-only records have none.
  * @param {AnalysisRecord} record Semantic analysis variant.
  * @returns {object} Point or source coordinate, with null columns when no point is represented.
  */

@@ -109,7 +109,7 @@ const unresolvedAddressExplanation = (mode) => {
 };
 const mappedAddressExplanation = (indexed, identity) => {
     if (indexed) {
-        return "The encoded address is only a base; an index register or indirection prevents a static effective address.";
+        return "The encoded address is only a base. An index register or indirection prevents a static effective address.";
     }
     if (identity) {
         return `CPU address maps to ROM file offset $${identity.fileOffset.toString(16).padStart(6, "0")}.`;
@@ -129,7 +129,7 @@ const mappedAddressExplanation = (indexed, identity) => {
  * @returns {{ readonly fileOffset: number } | undefined} Canonical in-ROM file identity, if mapped.
  */
 const mappedRomOffset = (address, context, romSize) => {
-    // Performance invariant: do not replace this with identifySnesCpuAddress() in the decode loop;
+    // Performance invariant: do not replace this with identifySnesCpuAddress() in the decode loop.
     // that API intentionally enumerates mirrors for UI/evidence use and is much more expensive.
     const fileOffset = snesRomAddressSpace.toOutputOffset(address, context);
     if (fileOffset < 0 || fileOffset >= romSize) {
@@ -157,7 +157,7 @@ const effectiveAddressesFor = (instruction, context, romSize) => instruction.ref
             symbol: hardware.symbol,
             volatile: true,
             explanation: indexed
-                ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access; the final address is unresolved.`
+                ? `${hardware.symbol} is the base of an indexed/indirect volatile hardware access. The final address is unresolved.`
                 : `${hardware.symbol} is volatile SNES hardware memory and is never treated as ROM.`,
         };
     }
@@ -300,7 +300,7 @@ const annotationsFor = (result, runEvidence) => {
  * Runs conservative 65816 CFG analysis over a headerless immutable ROM view.
  * Seeds from RESET/interrupt vectors, labels, `points: ["in"]` annotations,
  * configured entry points, and target sets. Data-classified intervals block
- * decode; hardware I/O is never treated as ROM.
+ * decode. Hardware I/O is never treated as ROM.
  * @param {RomImage} rom Immutable ROM content and identity.
  * @param {SnesMapper} mapper Explicitly detected or user-selected SNES mapper.
  * @param {Snes65816AnalysisOptions} [options] Project annotations, seeds, overrides, and deterministic limits.
@@ -375,7 +375,7 @@ export const analyzeSnes65816 = (rom, mapper, options = {}) => {
             .filter((annotation) => annotation.state)
             .map((annotation) => ({
             annotation,
-            // One location can accumulate many captures; rank them without variadic arguments.
+            // One location can accumulate many captures. Rank them without variadic arguments.
             rank: annotation.evidence.reduce((rank, id) => Math.max(rank, EVIDENCE_RANK[evidenceById.get(id)?.source ?? "detector"]), 0),
         }))
             .sort((left, right) => left.rank - right.rank || left.annotation.id.localeCompare(right.annotation.id));

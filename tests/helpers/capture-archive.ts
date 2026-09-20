@@ -3,7 +3,7 @@ import { open } from "node:fs/promises";
 import type { CaptureFileHeader } from "../../packages/debug-adapter/src/capture-file.js";
 import { captureCrc32c } from "../../packages/debug-adapter/src/capture-v2.js";
 
-/** Fixed synthetic identity shared by generated ACT2 frames; no game assets are needed. */
+/** Fixed synthetic identity shared by generated ACT2 frames. No game assets are needed. */
 const session = "0123456789abcdef0123456789abcdef";
 export const captureFixtureHeader: CaptureFileHeader = {
   format: "uttori-ares-capture",

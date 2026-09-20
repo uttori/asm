@@ -2,7 +2,7 @@ import type { RuntimeBusAccess } from "./runtime-bus-types.js";
 
 /** Native channel snapshot, without inferring the CPU writes that configured it. */
 export interface RuntimeTransferConfiguration {
-  /** Mode bits 0–2; fixed/decrement bits 3/4; indirect bit 6; B-to-A direction bit 7. */
+  /** Mode bits 0–2. Fixed/decrement bits 3/4. Indirect bit 6. B-to-A direction bit 7. */
   readonly dmap: number;
   /** B-bus base port offset in [0, 255], before transfer-mode offsets. */
   readonly bbad: number;
@@ -32,7 +32,7 @@ export interface RuntimeTransferBoundary extends Pick<
   readonly boundary: "begin" | "complete" | "interrupted";
   readonly actor: "dma" | "hdma";
   readonly channel: number;
-  /** Attempted byte slots, including suppressed bus operations; zero on begin markers. */
+  /** Attempted byte slots, including suppressed bus operations. Zero on begin markers. */
   readonly transferred: number;
   readonly configuration: RuntimeTransferConfiguration;
 }
@@ -43,7 +43,7 @@ export type RuntimeTransferStatus =
   | "trailing-partial"
   | "both-partial";
 
-/** One observed window; a missing marker remains explicit rather than implying a full transfer. */
+/** One observed window. A missing marker remains explicit rather than implying a full transfer. */
 export interface RuntimeTransferWindow {
   readonly actor: "dma" | "hdma";
   readonly channel: number;
@@ -66,16 +66,16 @@ export interface RuntimeTransferActivity {
   reads: number;
   writes: number;
 }
-/** All windows contribute to totals; only the first 64 finished windows are materialized for display. */
+/** All windows contribute to totals. Only the first 64 finished windows are materialized for display. */
 export interface RuntimeTransferSummary {
   readonly activity: readonly RuntimeTransferActivity[];
   readonly windows: readonly RuntimeTransferWindow[];
   readonly omittedWindows: number;
 }
 
-/** Normalize boundary fields for deterministic hashing; common event ordering is validated by the importer.
+/** Normalize boundary fields for deterministic hashing. Common event ordering is validated by the importer.
  * @param {RuntimeTransferBoundary} marker Untrusted marker from a transport-neutral source.
- * @returns {RuntimeTransferBoundary} Canonical marker; inconsistent counts/configuration throw.
+ * @returns {RuntimeTransferBoundary} Canonical marker. Inconsistent counts/configuration throw.
  */
 export const validateRuntimeTransferBoundary = (
   marker: RuntimeTransferBoundary,
@@ -153,7 +153,7 @@ export const validateRuntimeTransferBoundary = (
 };
 
 /** Correlate explicit boundaries with payload accesses using at most sixteen open windows.
- * @returns {object} Streaming accumulator; finish preserves partial windows at capture edges.
+ * @returns {object} Streaming accumulator. Finish preserves partial windows at capture edges.
  */
 export const createRuntimeTransferAccumulator = () => {
   const open = new Map<
@@ -213,7 +213,7 @@ export const createRuntimeTransferAccumulator = () => {
     }
   };
   return {
-    /** Attach only DMA/HDMA payload events; table/pointer fetches remain separate bus evidence.
+    /** Attach only DMA/HDMA payload events. Table/pointer fetches remain separate bus evidence.
      * @param {RuntimeBusAccess | RuntimeTransferBoundary} event Already validated ordered event.
      */
     push: (event: RuntimeBusAccess | RuntimeTransferBoundary): void => {

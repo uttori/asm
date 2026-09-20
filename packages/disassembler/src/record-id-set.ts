@@ -39,7 +39,7 @@ export class RecordIdSet {
     try {
       this.#database = new DatabaseSync(path.join(this.#directory, "ids.sqlite"));
       // The index is disposable validation state, never project storage. Bound the page cache and
-      // omit journaling; any error or interrupted scan cannot authorize project publication.
+      // omit journaling. Any error or interrupted scan cannot authorize project publication.
       this.#database.exec(
         "PRAGMA journal_mode=OFF; PRAGMA synchronous=OFF; PRAGMA cache_size=-4096; CREATE TABLE ids (id TEXT PRIMARY KEY) WITHOUT ROWID; BEGIN;",
       );

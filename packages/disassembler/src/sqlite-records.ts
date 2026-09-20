@@ -7,7 +7,7 @@ import { decodeSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-paylo
  * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.
  * @param {RuntimeEvidenceRecord} left First semantic record.
  * @param {RuntimeEvidenceRecord} right Second semantic record.
- * @returns {number} Lexical ID comparison; streaming consumers deliberately do not use this sort.
+ * @returns {number} Lexical ID comparison. Streaming consumers deliberately do not use this sort.
  */
 export const compareRuntimeRecordIds = (
   left: RuntimeEvidenceRecord,
@@ -28,7 +28,7 @@ export const compareRuntimeRecordIds = (
  * Canonicalize payloads here once: the writer reuses this exact text for hashing
  * and encoding, avoiding a JSON stringify/parse/canonicalize round trip per fact.
  * @param {RuntimeEvidenceRecord} record Validated semantic runtime fact.
- * @returns {object} Column bindings with canonical payload text; absent variant fields remain omitted.
+ * @returns {object} Column bindings with canonical payload text. Absent variant fields remain omitted.
  */
 export const runtimeColumns = (
   record: RuntimeEvidenceRecord,
@@ -193,7 +193,7 @@ export const runtimeColumns = (
 };
 
 /**
- * Reconstruct a semantic fact without inventing absent optional fields; stable-ID comparisons
+ * Reconstruct a semantic fact without inventing absent optional fields. Stable-ID comparisons
  * depend on preserving the same payload across inserts and subsequent reads.
  * @param {object} row SQLite runtime row selected with all columns.
  * @returns {RuntimeEvidenceRecord} Decoded fact in its original discriminated shape.
@@ -204,7 +204,7 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
     fields.payload === null || fields.payload === undefined
       ? {}
       : (JSON.parse(decodeSqlitePayload(fields.payload)) as Record<string, unknown>);
-  // LEFT JOIN keeps a corrupt dictionary reference visible; silently omitting the row would lose history.
+  // LEFT JOIN keeps a corrupt dictionary reference visible. Silently omitting the row would lose history.
   if (typeof fields.evidence !== "string") {
     throw new Error("Missing SQLite runtime evidence dictionary entry.");
   }
@@ -212,7 +212,7 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
   const kind = fields.kind as RuntimeEvidenceRecord["kind"];
   const architecture = fields.architecture as string;
   const count = Number(fields.count);
-  // Legacy migration rows already have a complete text ID; current rows join the prefix dictionary.
+  // Legacy migration rows already have a complete text ID. Current rows join the prefix dictionary.
   const id =
     fields.id_prefix === undefined
       ? (fields.id as string)
@@ -327,7 +327,7 @@ export const runtimeFromRow = (row: object): RuntimeEvidenceRecord => {
 };
 
 /**
- * Extract a point coordinate for persisted analysis metadata; interval-only records have none.
+ * Extract a point coordinate for persisted analysis metadata. Interval-only records have none.
  * @param {AnalysisRecord} record Semantic analysis variant.
  * @returns {object} Point or source coordinate, with null columns when no point is represented.
  */

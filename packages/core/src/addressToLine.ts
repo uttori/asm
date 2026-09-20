@@ -27,7 +27,7 @@ export interface AddressToLineRange {
   readonly addressSpace: string;
   readonly start: number;
   readonly end: number;
-  /** Half-open output range; absent when the logical address is not file-backed. */
+  /** Half-open output range. Absent when the logical address is not file-backed. */
   readonly outputStart?: number;
   readonly outputEnd?: number;
 }

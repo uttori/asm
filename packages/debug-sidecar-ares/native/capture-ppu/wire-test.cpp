@@ -4,7 +4,7 @@
 #include <iostream>
 using ares_capture::Capture;
 
-// Standalone framing fixture. Real PPU behavior is tested by ares CTest; this
+// Standalone framing fixture. Real PPU behavior is tested by ares CTest. This
 // transcript exercises mixed lengths, repeated byte destinations and queue reuse.
 auto main() -> int {
   Capture capture;

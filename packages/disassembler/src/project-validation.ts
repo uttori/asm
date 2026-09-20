@@ -55,7 +55,7 @@ export const validateAnalysisProjectManifest = (manifest: AnalysisProjectManifes
     throw new Error("Invalid analysis sqlite revision.");
   }
   if (manifest.shards.length !== 0) {
-    throw new Error("Legacy analysis shards are no longer supported; use a SQLite project.");
+    throw new Error("Legacy analysis shards are no longer supported. Use a SQLite project.");
   }
 };
 
@@ -153,7 +153,7 @@ const assertCodecReference = (
   }
 };
 
-/** A fresh reducer per read attempt; it must not publish facts before the load succeeds. */
+/** A fresh reducer per read attempt. It must not publish facts before the load succeeds. */
 export interface RuntimeRecordProjection {
   readonly push: (record: RuntimeEvidenceRecord) => void;
   readonly finish: () => readonly RuntimeEvidenceRecord[];
@@ -165,7 +165,7 @@ export interface RuntimeRecordProjection {
  * @param {object} project ROM bounds and named address spaces.
  * @param {Array} evidence Evidence available to every retained runtime fact.
  * @param {boolean} [checkDuplicateIds] False only for rows from a primary-key constrained table.
- * @returns {Function} Stateful validator; close it after success or failure to release its temporary index.
+ * @returns {Function} Stateful validator. Close it after success or failure to release its temporary index.
  */
 export const createRuntimeRecordValidator = (
   project: Pick<AnalysisProjectManifest, "addressSpaces" | "mapping" | "rom">,
@@ -574,7 +574,7 @@ export const validateLoadedShards = (
       if ("toAddress" in record && record.toAddress !== undefined) {
         addresses.push(record.toAddress);
       }
-      // Imported target lists can outgrow the engine's call-argument limit; validate every target.
+      // Imported target lists can outgrow the engine's call-argument limit. Validate every target.
       if ("targets" in record) {
         for (const target of record.targets) {
           addresses.push(target);

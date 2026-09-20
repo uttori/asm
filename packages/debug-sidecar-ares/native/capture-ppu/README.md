@@ -22,7 +22,7 @@ sh /absolute/path/to/capture-ppu/benchmark.sh /absolute/path/to/ares/build /tmp/
 
 The tests use the existing CMake/CTest bus-capture target and real CPU/PPU
 coroutines. The shell framing check needs only C++17. Native tooling adds no
-Node dependency. The benchmark requires the configured ares build; an optional
+Node dependency. The benchmark requires the configured ares build. An optional
 `PPU_BENCHMARK_EXECUTABLE` overrides the executable path for multi-configuration
 builds. Baseline means the same benchmark linked against the parent patches.
 It omits the unavailable new scope. Alternating before/after run order provides
@@ -38,4 +38,4 @@ The fixed-table CRC is checked against the independent bitwise reader.
 
 `native-evidence.json` records the tested files and executables. The separate
 `Local Only/ares-capture-ppu-desktop-runtime` candidate is signed and manifest
-verified; upstream `fixtures/external/ares` and runtime defaults are unchanged.
+verified. Upstream `fixtures/external/ares` and runtime defaults are unchanged.

@@ -1,6 +1,6 @@
 /**
  * Benchmark annotation save and source refresh on an isolated SQLite backup and copied source.
- * The selected project and ROM are read-only inputs; temporary edits are removed on completion.
+ * The selected project and ROM are read-only inputs. Temporary edits are removed on completion.
  */
 import fs from "node:fs";
 import { createRequire } from "node:module";
@@ -27,8 +27,8 @@ import {
 } from "@uttori/asm-plugin-snes";
 import { build } from "esbuild";
 
-import { AnalysisWorkerClient } from "../packages/vscode-extension/src/analysis-worker-client.js";
-import { DisassemblyMaintenanceClient } from "../packages/vscode-extension/src/disassembly-maintenance-client.js";
+import { AnalysisWorkerClient } from "../packages/vscode-extension/src/analysis/worker-client.js";
+import { DisassemblyMaintenanceClient } from "../packages/vscode-extension/src/disassembly/maintenance-client.js";
 
 const { values } = parseArgs({
   options: {
@@ -131,7 +131,7 @@ try {
     store.close();
   }
   await build({
-    entryPoints: [path.resolve("packages/vscode-extension/src/disassembly-maintenance-process.ts")],
+    entryPoints: [path.resolve("packages/vscode-extension/src/disassembly/maintenance-process.ts")],
     outfile: processFile,
     bundle: true,
     platform: "node",
@@ -140,7 +140,7 @@ try {
   });
   // Match the extension's bundled package conditions instead of importing its CJS sources directly.
   await build({
-    entryPoints: [path.resolve("packages/vscode-extension/src/disassembly-annotation-data.ts")],
+    entryPoints: [path.resolve("packages/vscode-extension/src/disassembly/annotation-data.ts")],
     outfile: annotationFile,
     bundle: true,
     platform: "node",
@@ -149,9 +149,9 @@ try {
   });
   const { saveDisassemblyAnnotation } = createRequire(import.meta.url)(
     annotationFile,
-  ) as typeof import("../packages/vscode-extension/src/disassembly-annotation-data.js");
+  ) as typeof import("../packages/vscode-extension/src/disassembly/annotation-data.js");
   await build({
-    entryPoints: [path.resolve("packages/vscode-extension/src/analysis-worker.ts")],
+    entryPoints: [path.resolve("packages/vscode-extension/src/analysis/worker.ts")],
     outfile: workerFile,
     bundle: true,
     platform: "node",
@@ -213,7 +213,7 @@ try {
     return { after: saved.snapshot.revision.manifestSha256 };
   })();
   global.gc?.();
-  // Form lookup now uses a small SQL view. It no longer warms the full export metadata;
+  // Form lookup now uses a small SQL view. It no longer warms the full export metadata.
   // the following first refresh includes that cold load in its elapsed time.
   await measure("annotationLookup", () =>
     annotationClient.request(projectDirectory, "annotationLookup", {
@@ -228,7 +228,7 @@ try {
     ),
   );
   if (!exported)
-    throw new Error("Source inputs changed; annotation refresh requires stable inputs.");
+    throw new Error("Source inputs changed. Annotation refresh requires stable inputs.");
   const verification = await measure("verify", () => client.run("verify", target, budget));
   const after = await measure("coverage", () =>
     client.run("coverage", { ...target, sourceManifest: exported.manifest }, budget),
@@ -257,7 +257,7 @@ try {
     codeBytes: exported.codeBytes,
     roundTripSha256: verification.comparison.actualSha256,
     notes:
-      "One local run. The first annotation refresh includes cold export metadata loading; setup and the separate legacy comparison load are excluded. Legacy save retains full validation; no legacy reanalysis is timed by this script. Background annotation queries are measured separately by benchmark-annotation-queries.ts.",
+      "One local run. The first annotation refresh includes cold export metadata loading. Setup and the separate legacy comparison load are excluded. Legacy save retains full validation. No legacy reanalysis is timed by this script. Background annotation queries are measured separately by benchmark-annotation-queries.ts.",
   };
   console.log(JSON.stringify(report, null, 2));
   if (values.output)

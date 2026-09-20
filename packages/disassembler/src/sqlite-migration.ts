@@ -43,7 +43,7 @@ const TABLES: readonly ShardKind[] = [
 ];
 const RESERVE_BYTES = 256 * 1024 * 1024;
 
-/** Migration stages are cancellable until publication; reported record counts are per table. */
+/** Migration stages are cancellable until publication. Reported record counts are per table. */
 export interface SqliteMigrationProgress {
   readonly phase: "project" | "copy" | "verify" | "indexes" | "publish";
   readonly table?: ShardKind;
@@ -60,13 +60,13 @@ export interface SqliteMigrationResult {
   readonly backupFile?: string;
   readonly tables: Readonly<Record<string, { readonly records: number; readonly sha256: string }>>;
   readonly warnings: readonly string[];
-  /** Expected conversion notices; these do not indicate a failed migration. */
+  /** Expected conversion notices. These do not indicate a failed migration. */
   readonly notes?: readonly string[];
   /** Non-overlapping copy, projection, validation and index costs in wall-clock milliseconds. */
   readonly timings?: readonly { readonly step: string; readonly durationMs: number }[];
 }
 
-/** Callbacks report progress only; cancellation is observed between bounded copy/verification batches. */
+/** Callbacks report progress only. Cancellation is observed between bounded copy/verification batches. */
 export interface SqliteMigrationOptions {
   /** Explicitly discard full register-index detail after retaining the original database as backup. */
   readonly convertRuntime?: boolean;
@@ -100,7 +100,7 @@ const writeJournal = (stage: string, journal: MigrationJournal): void => {
 };
 
 /**
- * Treat inaccessible processes as live; only ESRCH permits automatic crash recovery.
+ * Treat inaccessible processes as live. Only ESRCH permits automatic crash recovery.
  * @param {number} pid Recorded owner process.
  * @returns {boolean} Whether ownership may still be active.
  */
@@ -212,14 +212,14 @@ const recoverMigration = (directory: string): SqliteMigrationResult | undefined 
   }
   if (identity !== journal.sourceIdentity) {
     throw new Error(
-      "Analysis database identity changed outside the recorded migration; preserving recovery files.",
+      "Analysis database identity changed outside the recorded migration. Preserving recovery files.",
     );
   }
   // A crash after linking the backup but before the atomic replacement leaves two names for the
   // unchanged source. Remove only that proven duplicate link, never an unrelated backup file.
   if (fs.existsSync(backup)) {
     if (sqliteFileIdentity(backup) !== identity) {
-      throw new Error("An unrelated migration backup already exists; preserving both databases.");
+      throw new Error("An unrelated migration backup already exists. Preserving both databases.");
     }
     fs.unlinkSync(backup);
   }
@@ -229,8 +229,8 @@ const recoverMigration = (directory: string): SqliteMigrationResult | undefined 
 };
 
 /**
- * Convert supported SQLite layouts with per-table content digests; optional runtime projection is explicit.
- * The process gate blocks new clients; switching WAL to DELETE under exclusive locking also requires
+ * Convert supported SQLite layouts with per-table content digests. Optional runtime projection is explicit.
+ * The process gate blocks new clients. Switching WAL to DELETE under exclusive locking also requires
  * existing SQLite readers to release the source. No source row or logical revision is changed.
  * @param {string} directory Existing project root, on a filesystem supporting same-directory hard links.
  * @param {SqliteMigrationOptions} [options] Cancellation and progress reporting.
@@ -254,7 +254,7 @@ export const migrateAnalysisProjectStorage = async (
   if (fs.lstatSync(file).isSymbolicLink()) {
     throw new Error("Migrate a regular analysis database file, not a symbolic link.");
   }
-  // Checking the header is read-only; opening the normal store would correctly reject this old format.
+  // Checking the header is read-only. Opening the normal store would correctly reject this old format.
   const probe = new DatabaseSync(file, { readOnly: true });
   let version: number;
   let manifest: AnalysisProjectManifest;
@@ -315,7 +315,7 @@ export const migrateAnalysisProjectStorage = async (
       );
     } catch (cause) {
       throw new Error(
-        `Cannot acquire exclusive migration access; close clients using this analysis database and retry. ${String(cause)}`,
+        `Cannot acquire exclusive migration access. Close clients using this analysis database and retry. ${String(cause)}`,
         { cause },
       );
     }
@@ -397,7 +397,7 @@ export const migrateAnalysisProjectStorage = async (
     }
     destination.transaction(() => destination!.initializeMigratedManifest(manifest));
     // Only provenance and region ancestry need cross-record context. Large CFG/annotation tables
-    // use the existing validator in bounded batches; runtime retains no complete record collection.
+    // use the existing validator in bounded batches. Runtime retains no complete record collection.
     const context: AnalysisProjectShards = {
       evidence: destination.loadTable("evidence"),
       regions: destination.loadTable("regions"),
@@ -515,7 +515,7 @@ export const migrateAnalysisProjectStorage = async (
     options.signal?.throwIfAborted();
     options.onProgress?.({ phase: "publish" });
     options.signal?.throwIfAborted();
-    // COMMIT leaves the exclusive connection lock held. The old database is now journal-free;
+    // COMMIT leaves the exclusive connection lock held. The old database is now journal-free.
     // linking it retains a backup without copying 10 GiB or leaving a gap at the live pathname.
     source.exec("COMMIT");
     fs.linkSync(file, backup);

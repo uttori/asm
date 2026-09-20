@@ -8,7 +8,7 @@ export interface AnalysisEvidenceSource {
   readonly kinds: readonly EvidenceRecord["source"][];
   readonly format?: string;
   readonly sha256?: string;
-  /** Latest successful import time in Unix milliseconds; absent for legacy or non-capture sources. */
+  /** Latest successful import time in Unix milliseconds. Absent for legacy or non-capture sources. */
   readonly lastImportedAt?: number;
   readonly evidenceIds: readonly string[];
   readonly reports: readonly ImportReport[];
@@ -22,7 +22,7 @@ const key = (...values: (string | number | undefined)[]): string => JSON.stringi
  * Legacy imports can also link evidence through an exact report ID or full content hash.
  * @param {Pick<AnalysisProjectShards, "imports" | "evidence">} shards Source metadata.
  * @param {ReadonlyMap<string, number>} [importTimes] Durable capture receipt times by content hash.
- * @returns {readonly AnalysisEvidenceSource[]} Newest imports first; undated sources and ties use name/identity order.
+ * @returns {readonly AnalysisEvidenceSource[]} Newest imports first. Undated sources and ties use name/identity order.
  */
 export const buildAnalysisSourceCatalog = (
   shards: Pick<AnalysisProjectShards, "imports" | "evidence">,
@@ -104,7 +104,7 @@ export const buildAnalysisSourceCatalog = (
   );
 };
 
-/** Compact, navigable contribution; full trace records never need to cross into an editor UI. */
+/** Compact, navigable contribution. Full trace records never need to cross into an editor UI. */
 export interface AnalysisSourceEntry {
   readonly id: string;
   readonly label: string;
@@ -116,7 +116,7 @@ export interface AnalysisSourceEntry {
   readonly outputOffsets: readonly number[];
   readonly recordIds: readonly string[];
 }
-/** Direct source attribution only; capture subtraction is intentionally absent. */
+/** Direct source attribution only. Capture subtraction is intentionally absent. */
 export type AnalysisSourceGroup = "instructions" | "memory" | "contributions";
 
 /** Exact SQL counts. Memory counts refer to persisted observations, not inferred access sites. */

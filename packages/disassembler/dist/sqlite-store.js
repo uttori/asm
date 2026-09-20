@@ -87,7 +87,7 @@ ${RUNTIME_STORAGE_SCHEMA}
 ${CAPTURE_CATALOG_SCHEMA}
 PRAGMA user_version=2;
 `;
-// Metadata queries only order records by location. Analysis records are loaded by stable ID;
+// Metadata queries only order records by location. Analysis records are loaded by stable ID.
 // retaining unused kind/address indexes there would duplicate every metadata ID on disk.
 const SCHEMA_INDEX_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
@@ -99,7 +99,7 @@ const SCHEMA_INDEX_STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
     "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'",
 ];
-/** Joins retain bounded SQLite cursors; no project-sized dictionary is loaded on the JS heap. */
+/** Joins retain bounded SQLite cursors. No project-sized dictionary is loaded on the JS heap. */
 const RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
   LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
@@ -107,7 +107,7 @@ const RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_pref
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
  * @param {Pick<AnalysisProjectManifest, "db">} manifest Validated pointer.
- * @returns {string} Joined sqlite path; relative directories remain relative to process cwd.
+ * @returns {string} Joined sqlite path. Relative directories remain relative to process cwd.
  */
 export const analysisProjectSqlitePath = (directory, manifest) => {
     const relative = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
@@ -117,13 +117,13 @@ export const analysisProjectSqlitePath = (directory, manifest) => {
     return path.join(directory, relative);
 };
 /**
- * Decode physical storage and parse JSON; the project API owns semantic record validation.
+ * Decode physical storage and parse JSON. The project API owns semantic record validation.
  * @param {unknown} payload SQLite TEXT or a versioned compressed BLOB.
  * @returns {T} Parsed record, without asserting semantic validity.
  */
 const parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
 /**
- * Owned synchronous SQLite connection for one project. Close it once in finally; do not share a
+ * Owned synchronous SQLite connection for one project. Close it once in finally. Do not share a
  * connection across overlapping operations. Queries decode records but do not all validate them.
  * Use project snapshot/publication helpers for semantic validation and revision-checked edits.
  * Low-level mutations require a transaction and do not publish a revision or refresh the pointer
@@ -132,7 +132,7 @@ const parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
 export class SqliteAnalysisStore {
     #database;
     #fileIdentity;
-    /** Database path as supplied at construction; resolves relative to cwd when not absolute. */
+    /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
     file;
     #insertEvidence;
     #insertLabel;
@@ -150,10 +150,10 @@ export class SqliteAnalysisStore {
     /**
      * Opens or creates a project database.
      * Opening validates physical format, not every semantic record, and may create SQLite journal files.
-     * Connections use a 5,000 ms busy timeout; lock contention can still throw a SQLite error.
-     * @param {string} file SQLite path; parent directory must already exist.
-     * @param {boolean} [createSchema] Defaults to true; permit initialization of an empty database, never upgrade an existing one.
-     * @param {boolean} [deferIndexes] Defaults to false; migration-only bulk load, completed by finishMigration.
+     * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
+     * @param {string} file SQLite path. Parent directory must already exist.
+     * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
+     * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
      */
     constructor(file, createSchema = true, deferIndexes = false) {
         assertNoSqliteMigration(file);
@@ -178,7 +178,7 @@ export class SqliteAnalysisStore {
             }
             const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
             if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
-                throw new Error(`Unsupported analysis storage format ${version}; expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`);
+                throw new Error(`Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`);
             }
             this.#database.exec("PRAGMA foreign_keys=ON; PRAGMA synchronous=NORMAL; PRAGMA cache_size=-8192; PRAGMA busy_timeout=5000; PRAGMA temp_store=FILE; PRAGMA journal_size_limit=67108864;");
             this.#insertEvidence = this.#database.prepare("INSERT INTO evidence (id, payload) VALUES (?, ?)");
@@ -225,7 +225,7 @@ export class SqliteAnalysisStore {
         this.#dictionaryCacheBytes = 0;
     }
     /**
-     * Intern exact text with a bounded cache; callers hold the SQLite writer lock.
+     * Intern exact text with a bounded cache. Callers hold the SQLite writer lock.
      * @param {string} table One of the two prepared dictionary tables.
      * @param {string} value Exact prefix or serialized evidence list.
      * @returns {number} Transactionally created or existing dictionary rowid.
@@ -294,17 +294,17 @@ export class SqliteAnalysisStore {
     /**
      * Run a synchronous unit against one SQLite snapshot. Writers acquire their lock before reading
      * the revision so a competing process cannot slip between the stale check and publication.
-     * Throwing rolls back records and manifest changes. Promise/thenable results are rejected; perform
+     * Throwing rolls back records and manifest changes. Promise/thenable results are rejected. Perform
      * async preparation before entering. Transactions cannot nest. Low-level callbacks must publish
-     * the manifest themselves when changing semantic records; prefer the commitAnalysisProject APIs.
-     * @param {Function} action Synchronous work; cursors must be consumed before returning.
-     * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE); false uses deferred BEGIN for reads, not an enforced read-only connection.
+     * the manifest themselves when changing semantic records. Prefer the commitAnalysisProject APIs.
+     * @param {Function} action Synchronous work. Cursors must be consumed before returning.
+     * @param {boolean} [write] Defaults to true (BEGIN IMMEDIATE). False uses deferred BEGIN for reads, not an enforced read-only connection.
      * @returns {T} Callback result after a successful commit.
      */
     transaction(action, write = true) {
         assertNoSqliteMigration(this.file);
         if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
-            throw new Error("Analysis database was replaced; close this connection and reload the project.");
+            throw new Error("Analysis database was replaced. Close this connection and reload the project.");
         }
         this.#clearDictionaryCache();
         this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
@@ -342,7 +342,7 @@ export class SqliteAnalysisStore {
      * main, allowing other project writers to proceed during asynchronous capture parsing.
      * @param {Function} action Async parser using only the supplied temporary counter index.
      * @param {TraceIndexMetrics} metrics Optional caller-owned diagnostic counters.
-     * @returns {Promise} Parser result after temporary counters commit; the index lives until connection close.
+     * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
      */
     async indexTrace(action, metrics) {
         this.#database.exec(`CREATE TEMP TABLE trace_facts (
@@ -353,7 +353,7 @@ export class SqliteAnalysisStore {
         const values = this.#database.prepare("SELECT payload, count FROM temp.trace_facts");
         const incrementMany = this.#database.prepare("UPDATE temp.trace_facts SET count=count+? WHERE id=?");
         // Hot traces revisit a small working set millions of times. Keep at most
-        // 4096 counter deltas; payloads and the full distinct index remain on disk.
+        // 4096 counter deltas. Payloads and the full distinct index remain on disk.
         const pending = new TraceCache(metrics);
         const flushEntry = (key, count) => {
             if (!count) {
@@ -394,7 +394,7 @@ export class SqliteAnalysisStore {
                     metrics.sqlStatements++;
                 }
                 // A cache miss may still be a disk-index hit. UPDATE first keeps create()
-                // lazy; an eager UPSERT payload would serialize repeats unnecessarily.
+                // lazy. An eager UPSERT payload would serialize repeats unnecessarily.
                 // A speculative membership filter was benchmarked without a useful gain.
                 if (increment.run(key).changes !== 0) {
                     return false;
@@ -407,7 +407,7 @@ export class SqliteAnalysisStore {
                 return true;
             },
             values: function* () {
-                // Reconcile deferred counts before streaming rows; the complete distinct
+                // Reconcile deferred counts before streaming rows. The complete distinct
                 // set stays on disk instead of being materialized just to finalize it.
                 flush();
                 for (const row of values.iterate()) {
@@ -440,7 +440,7 @@ export class SqliteAnalysisStore {
             throw new Error("Analysis mutation requires a transaction.");
         }
     }
-    /** Apply a selected metadata edit by stable ID; omitted records are never deleted.
+    /** Apply a selected metadata edit by stable ID. Omitted records are never deleted.
      * Validation and optimistic revision checks belong to the publication API.
      * @param {AnalysisProjectShards} before Original selected view.
      * @param {AnalysisProjectShards} after Edited selected view.
@@ -467,7 +467,7 @@ export class SqliteAnalysisStore {
                 }
                 const stored = find.get(id);
                 if (canonicalJson(stored ? parseRecord(stored.payload) : undefined) !== canonicalJson(prior)) {
-                    throw new Error(`Selected ${kind} record '${id}' changed; reload before editing.`);
+                    throw new Error(`Selected ${kind} record '${id}' changed. Reload before editing.`);
                 }
                 remove.run(id);
                 if (record) {
@@ -475,7 +475,7 @@ export class SqliteAnalysisStore {
                 }
             }
         }
-        // Undo can remove newly-created provenance. Check retained references in SQL before committing;
+        // Undo can remove newly-created provenance. Check retained references in SQL before committing.
         // ordinary edits append evidence and never scan the retained analysis/runtime history.
         const retained = new Set(after.evidence.map((record) => record.id));
         const removed = before.evidence
@@ -496,7 +496,7 @@ export class SqliteAnalysisStore {
     /**
      * Replace only supplied tables, retaining byte-identical rows. The temporary ID set bounds
      * memory and deletes removed rows without rewriting unchanged metadata or runtime history.
-     * Semantic validation belongs to the project publication API; this method must run in its transaction.
+     * Semantic validation belongs to the project publication API. This method must run in its transaction.
      * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
      */
     replaceTables(shards) {
@@ -522,7 +522,7 @@ export class SqliteAnalysisStore {
                 continue;
             }
             this.#database.exec("DELETE FROM temp.replacement_ids");
-            // Derived export columns can be large; comparison needs only the authoritative payload.
+            // Derived export columns can be large. Comparison needs only the authoritative payload.
             const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
             const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
             for (const record of shards[kind] ?? []) {
@@ -530,7 +530,7 @@ export class SqliteAnalysisStore {
                 const prior = find.get(record.id);
                 if (prior) {
                     // Reanalysis usually reproduces the same serialized record. Compare its decoded JSON
-                    // before parsing/sorting both objects; retain canonical comparison for reordered keys.
+                    // before parsing/sorting both objects. Retain canonical comparison for reordered keys.
                     const json = decodeSqlitePayload(prior.payload);
                     if (json === JSON.stringify(record)) {
                         continue;
@@ -550,7 +550,7 @@ export class SqliteAnalysisStore {
     }
     /**
      * Replace runtime by interned external identities, including virtual paired-state records.
-     * @param {Array} records Complete semantic runtime replacement; duplicate IDs remain errors.
+     * @param {Array} records Complete semantic runtime replacement. Duplicate IDs remain errors.
      */
     #replaceRuntime(records) {
         this.#database.exec("CREATE TEMP TABLE IF NOT EXISTS replacement_runtime_ids (prefix TEXT, id BLOB, PRIMARY KEY(prefix,id)) WITHOUT ROWID; DELETE FROM replacement_runtime_ids");
@@ -558,7 +558,7 @@ export class SqliteAnalysisStore {
         const remove = this.#database.prepare("DELETE FROM runtime WHERE rowid=?");
         for (const record of records) {
             const identity = sqliteRuntimeIdentity(record.id);
-            // Pairing may replace a standalone state's rowid; external IDs remain stable throughout.
+            // Pairing may replace a standalone state's rowid. External IDs remain stable throughout.
             if (!remember.run(identity.prefix, identity.suffix).changes) {
                 throw new Error(`Duplicate runtime record ID '${record.id}'.`);
             }
@@ -579,7 +579,7 @@ export class SqliteAnalysisStore {
      * Append validated migration rows without materializing a complete table. Runtime IDs are checked
      * through the logical view because paired states share physical storage with an instruction.
      * @param {ShardKind} kind Destination semantic table.
-     * @param {Iterable} records Bounded batch or lazy cursor; uniqueness is enforced by SQLite.
+     * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
      */
     appendRecords(kind, records) {
         this.#requireTransaction();
@@ -595,10 +595,10 @@ export class SqliteAnalysisStore {
         }
     }
     /**
-     * Insert a content-addressed runtime fact once; an ID collision with different content is an
+     * Insert a content-addressed runtime fact once. An ID collision with different content is an
      * error, never a silent no-op. Count values are already aggregated within the source capture.
      * @param {RuntimeEvidenceRecord} record Fully aggregated fact with a source-derived stable ID.
-     * @returns {boolean} True when inserted; identical facts return false and conflicting facts throw.
+     * @returns {boolean} True when inserted. Identical facts return false and conflicting facts throw.
      */
     insertRuntime(record) {
         this.#requireTransaction();
@@ -614,9 +614,9 @@ export class SqliteAnalysisStore {
         return true;
     }
     /** Prepare a unique-record batch in one source namespace, inside the publication transaction.
-     * New namespaces need no per-record existence query; SQL uniqueness still rejects repeated IDs.
+     * New namespaces need no per-record existence query. SQL uniqueness still rejects repeated IDs.
      * Existing/partially pruned sources use full idempotency and collision checks for every record.
-     * The callback must not escape its transaction; any insertion error must abort the whole batch.
+     * The callback must not escape its transaction. Any insertion error must abort the whole batch.
      * @param {string} prefix Exact ID prefix including its final colon.
      * @returns {Function} Transaction-scoped inserter for validated records with unique suffixes.
      */
@@ -636,7 +636,7 @@ export class SqliteAnalysisStore {
             if (!record.id.startsWith(prefix) || record.id.lastIndexOf(":") !== prefix.length - 1) {
                 throw new Error("Runtime record escaped its batch prefix.");
             }
-            // Retained rows require exact comparison; missing rows in a partial import
+            // Retained rows require exact comparison. Missing rows in a partial import
             // must be repaired. A matching source hash is not permission to skip either.
             if (existing) {
                 return this.insertRuntime(record);
@@ -690,7 +690,7 @@ export class SqliteAnalysisStore {
     }
     /**
      * Authoritative manifest stored in SQLite, including pointer fields. Throws before initial publication.
-     * Use a transaction when combining it with other reads; this does not validate the entire project.
+     * Use a transaction when combining it with other reads. This does not validate the entire project.
      * @returns {AnalysisProjectManifest} Pointer manifest.
      */
     manifest() {
@@ -702,7 +702,7 @@ export class SqliteAnalysisStore {
     }
     /**
      * Stream only requested runtime kinds, avoiding raw-row and decoded-row arrays on the JS heap.
-     * @param {Array} kinds Runtime discriminators to include; empty selects nothing.
+     * @param {Array} kinds Runtime discriminators to include. Empty selects nothing.
      * @returns {IterableIterator} Cursor consumed within the owning read transaction.
      * @yields {RuntimeEvidenceRecord} One matching decoded fact.
      */
@@ -717,7 +717,7 @@ export class SqliteAnalysisStore {
     }
     /**
      * Stream runtime facts without retaining the complete table. Consume before the owning transaction
-     * returns or the connection closes; an escaped iterator does not preserve its original snapshot.
+     * returns or the connection closes. An escaped iterator does not preserve its original snapshot.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} One reconstructed runtime row at a time.
      * @yields {RuntimeEvidenceRecord} One runtime fact.
      */
@@ -727,7 +727,7 @@ export class SqliteAnalysisStore {
         }
     }
     /**
-     * Read one metadata table directly; Sources must not load unrelated CFG or runtime tables.
+     * Read one metadata table directly. Sources must not load unrelated CFG or runtime tables.
      * @param {string} kind Metadata table name from the semantic collection contract.
      * @returns {Array} Decoded metadata in deterministic display order.
      */
@@ -797,7 +797,7 @@ export class SqliteAnalysisStore {
         };
     }
     /** Produce an explicit complete evidence report one qualified PC at a time.
-     * Only report output accumulates; unused instruction/memory histories and CFG contexts are never loaded.
+     * Only report output accumulates. Unused instruction/memory histories and CFG contexts are never loaded.
      * @returns {object} Runtime record count, conflicts, and metadata explanations.
      */
     inspectEvidence() {
@@ -830,8 +830,8 @@ export class SqliteAnalysisStore {
             explanations: inspectRuntimeEvidence(shards).explanations,
         };
     }
-    /** Select record choices before decoding; explicit IDs bypass unrelated history entirely.
-     * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs; omitted lists the first 200 records per collection.
+    /** Select record choices before decoding. Explicit IDs bypass unrelated history entirely.
+     * @param {Partial<Record<ShardKind, readonly string[]>>} [selected] Exact context record IDs. Omitted lists the first 200 records per collection.
      * @returns {AnalysisProjectShards} Bounded choice view and complete small provenance catalog.
      */
     evidenceChoices(selected) {
@@ -946,7 +946,7 @@ export class SqliteAnalysisStore {
             return { ...base, referencedBy, referencedByTotal };
         }, false);
     }
-    /** Exact coverage totals; build only when classifications, code, or runtime facts changed.
+    /** Exact coverage totals. Build only when classifications, code, or runtime facts changed.
      * @returns {object} Persisted summary and detail count.
      */
     coverageSummary() {
@@ -959,7 +959,7 @@ export class SqliteAnalysisStore {
             this.cachedProjection("coverage", coverageSignature(this.manifest()), ["analysis", "annotations", "regions", "runtime"], () => prepareCoverage(this.#database, this.manifest()), () => publishCoverage(this.#database));
             const published = cachedCoverage(this.#database, this.manifest());
             if (!published) {
-                throw new Error("Project changed while building coverage; refresh the view.");
+                throw new Error("Project changed while building coverage. Refresh the view.");
             }
             return published;
         }
@@ -985,7 +985,7 @@ export class SqliteAnalysisStore {
             graph = this.cachedProjection("graph", "2", ["analysis"], () => prepareGraph(this.#database), () => publishGraph(this.#database));
             const published = readQueryCache(this.#database, "graph", "2");
             if (!published) {
-                throw new Error("Analysis changed while building the graph; refresh the view.");
+                throw new Error("Analysis changed while building the graph. Refresh the view.");
             }
             graph = published;
         }
@@ -1004,13 +1004,13 @@ export class SqliteAnalysisStore {
             })),
         };
     }
-    /** Cache a compact target-specific result; callers declare every persisted input it consumes.
+    /** Cache a compact target-specific result. Callers declare every persisted input it consumes.
      * Computation uses a deferred transaction so expensive analysis does not hold the writer lock.
-     * Concurrent input changes discard cache publication; results still belong to one read snapshot.
+     * Concurrent input changes discard cache publication. Results still belong to one read snapshot.
      * @param {string} key Internal stable query name.
      * @param {string} signature Layout/configuration fingerprint.
      * @param {readonly ShardKind[]} dependencies Source collections.
-     * @param {Function} compute Synchronous reader; must not open another transaction.
+     * @param {Function} compute Synchronous reader. Must not open another transaction.
      * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
      * @returns {T} Current projected value.
      */
@@ -1027,7 +1027,7 @@ export class SqliteAnalysisStore {
         const result = this.transaction(compute, false);
         // Releasing the read snapshot before the short publication avoids SQLITE_BUSY_SNAPSHOT when
         // unrelated editor writes occur during a long computation. Dependency triggers erase the token
-        // if an input changes; another reader's newer result also wins over this publication.
+        // if an input changes. Another reader's newer result also wins over this publication.
         this.transaction(() => {
             if (this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key)
                 ?.signature === pending) {
@@ -1037,7 +1037,7 @@ export class SqliteAnalysisStore {
         });
         return result;
     }
-    /** CPU architectures at one PC from indexed scalar columns; register payloads are untouched.
+    /** CPU architectures at one PC from indexed scalar columns. Register payloads are untouched.
      * @param {string} space Exact logical address space.
      * @param {number} address Instruction address.
      * @returns {string[]} Distinct observed architecture IDs.
@@ -1063,7 +1063,7 @@ export class SqliteAnalysisStore {
           INSERT INTO query_runtime_architectures SELECT * FROM temp.runtime_architectures_pending;`);
             });
             if (!readQueryCache(this.#database, "runtime_architectures", "2")) {
-                throw new Error("Runtime changed while building processor hints; refresh the view.");
+                throw new Error("Runtime changed while building processor hints. Refresh the view.");
             }
         }
         finally {
@@ -1106,7 +1106,7 @@ export class SqliteAnalysisStore {
      * @param {string} architecture Exact runtime architecture.
      * @param {string} space Instruction and accessed logical space.
      * @param {readonly number[]} addresses Exact hardware addresses, including target-approved mirrors.
-     * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations; counts/provenance stay exact.
+     * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL-grouped observations. Counts/provenance stay exact.
      * @yields {RuntimeEvidenceRecord} One role-relevant access variant.
      */
     *runtimeMemoryAtAddresses(architecture, space, addresses) {
@@ -1123,7 +1123,7 @@ export class SqliteAnalysisStore {
             yield runtimeFromRow({ ...row, count: row.total });
         }
     }
-    /** Decode-state variants aggregated in SQL; raw register histories never become a JS array.
+    /** Decode-state variants aggregated in SQL. Raw register histories never become a JS array.
      * The signature includes the ordered state fields and architecture. Aliases remain distinct so
      * the target decoder retains its original precedence and validation rules.
      * @param {string} architecture Exact instruction architecture.
@@ -1183,7 +1183,7 @@ export class SqliteAnalysisStore {
           INSERT INTO query_runtime_variants SELECT payload FROM temp.instruction_variants_pending;`);
             });
             if (!readQueryCache(this.#database, "instruction_variants", signature)) {
-                throw new Error("Runtime changed while building instruction variants; retry reanalysis.");
+                throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
             }
         }
         finally {
@@ -1191,7 +1191,7 @@ export class SqliteAnalysisStore {
         }
         const statement = this.#database.prepare("SELECT payload FROM query_runtime_variants ORDER BY rowid");
         // Call preparation before opening the consuming read transaction. Each decoded record is
-        // owned by that iteration; the complete variant set never passes through a JSON string/array.
+        // owned by that iteration. The complete variant set never passes through a JSON string/array.
         return (function* () {
             for (const row of statement.iterate()) {
                 yield JSON.parse(String(row.payload));
@@ -1253,7 +1253,7 @@ export class SqliteAnalysisStore {
             .map((row) => [String(row.sha256), Number(row.last_seen_at)]));
         return { manifest, sources: buildAnalysisSourceCatalog(shards, importTimes) };
     }
-    /** Exact SQL counts for a catalog source; no baseline or inferred static execution.
+    /** Exact SQL counts for a catalog source. No baseline or inferred static execution.
      * @param {string} sourceId Catalog source ID.
      * @returns {object} Manifest and source counts.
      */
@@ -1297,7 +1297,7 @@ export class SqliteAnalysisStore {
         validateLoadedShards(shards, manifest);
         return { manifest, shards };
     }
-    /** Small export metadata; instruction candidates are supplied separately by an ordered SQL cursor.
+    /** Small export metadata. Instruction candidates are supplied separately by an ordered SQL cursor.
      * @returns {object} Validated manifest, metadata, and an empty runtime collection.
      */
     sourceExportView() {
@@ -1316,7 +1316,7 @@ export class SqliteAnalysisStore {
         return { manifest, shards };
     }
     /**
-     * Stream one file-offset group at a time; do not retain the complete CFG to plan source.
+     * Stream one file-offset group at a time. Do not retain the complete CFG to plan source.
      * The caller prepares annotation indexes first and owns a read transaction until iteration ends.
      * @returns {IterableIterator<readonly InstructionExportRecord[]>} All variants at each explicit output offset.
      * @yields {readonly InstructionExportRecord[]} One complete group, without clipping variants.
@@ -1360,7 +1360,7 @@ export class SqliteAnalysisStore {
     /**
      * Read and validate only the requested instruction metadata and bounded runtime details.
      * @param {readonly AnnotationQueryRange[]} ranges Exact visible source/debugger coordinates.
-     * @returns {SqliteAnnotationView} Small view; consume inside the caller's read transaction.
+     * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
      */
     instructionAnnotationView(ranges) {
         const manifest = this.manifest();
@@ -1391,10 +1391,10 @@ export class SqliteAnalysisStore {
      * @param {string} addressSpace Exact debug-map/native address space.
      * @param {number} address Instruction start in that space.
      * @param {number} [outputOffset] Optional explicit file offset, never an inferred mapper alias.
-     * @returns {AnalysisProjectShards["analysis"]} Location representatives; state variants need not be loaded to edit a comment.
+     * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
      */
     annotationNodesAt(addressSpace, address, outputOffset) {
-        // File coordinates must use the compact output index; a kind-only plan scans every node
+        // File coordinates must use the compact output index. A kind-only plan scans every node
         // before the annotation form can resolve even one instruction boundary.
         const rows = this.#database
             .prepare(`SELECT payload FROM analysis WHERE rowid IN (
@@ -1439,7 +1439,7 @@ export class SqliteAnalysisStore {
     }
     /**
      * Build deferred indexes and check all physical structures before closing a staged migration file.
-     * Switching through DELETE verifies that no staging reader retains a WAL dependency; the closed
+     * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
      * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
      */
     finishMigration() {
@@ -1457,7 +1457,7 @@ export class SqliteAnalysisStore {
     }
     /**
      * Materialize complete record arrays without semantic validation. Run inside a read transaction.
-     * @param {boolean} [runtime] Defaults to true; false omits runtime and must not be treated as a complete replacement.
+     * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
      * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
      */
     loadShards(runtime = true) {
@@ -1543,13 +1543,13 @@ export class SqliteAnalysisStore {
             }
         }
     }
-    /** Checkpoint and reclaim unused SQLite pages; run only during explicit storage maintenance. */
+    /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
     compact() {
         const disk = fs.statfsSync(path.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
-            throw new Error("Insufficient free disk space for SQLite VACUUM; allow twice the database size.");
+            throw new Error("Insufficient free disk space for SQLite VACUUM. Allow twice the database size.");
         }
         this.transaction(() => {
             // Retired provenance/prefix sets may remain after complete runtime replacements. Prune with
@@ -1561,7 +1561,7 @@ export class SqliteAnalysisStore {
         });
         this.#database.exec("PRAGMA wal_checkpoint(TRUNCATE); VACUUM;");
     }
-    /** Current persisted policy; defaults do not write or change the semantic revision.
+    /** Current persisted policy. Defaults do not write or change the semantic revision.
      * @returns {AnalysisStoragePolicy} Validated defaults and persisted overrides.
      */
     storagePolicy() {
@@ -1585,7 +1585,7 @@ export class SqliteAnalysisStore {
     storageSnapshot() {
         return storageSnapshot(this.#database, this.file);
     }
-    /** Optional projection allocation, including secondary indexes; reserved for explicit accounting.
+    /** Optional projection allocation, including secondary indexes. Reserved for explicit accounting.
      * @returns {number} Allocated cache bytes, excluding permanent editor/export indexes.
      */
     storageCacheBytes() {
@@ -1606,7 +1606,7 @@ export class SqliteAnalysisStore {
             .prepare("SELECT * FROM capture_catalog ORDER BY imported_at,sha256")
             .all();
     }
-    /** Record the first successful import atomically with its facts; reimports only refresh last-seen time.
+    /** Record the first successful import atomically with its facts. Reimports only refresh last-seen time.
      * @param {ImportReport} report Successfully validated native trace import.
      */
     recordCaptureReceipt(report) {

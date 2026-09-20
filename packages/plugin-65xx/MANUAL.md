@@ -1,13 +1,13 @@
 # The Uttori ASM 65xx Manual
 
-`@uttori/asm-plugin-65xx` is the first-party 6502-family target for Uttori ASM. It encodes NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 processors from one declarative instruction model; writes headerless raw binaries or iNES images; and understands a practical, deliberately documented subset of ca65 syntax.
+`@uttori/asm-plugin-65xx` assembles NMOS, CMOS, Commodore, Hudson, Mitsubishi, and MEGA65 programs. It writes headerless raw binaries or iNES images and supports a subset of ca65 syntax.
 
 This manual starts with a tiny raw program and a complete NES Hello World, then opens the hood one system at a time. You can read it front to back, magazine-style, or jump straight to the command and instruction appendices when the addressing-mode gremlins are already circling.
 
 > [!IMPORTANT]
 > This plugin aims for useful ca65 source compatibility, not drop-in equivalence with cc65 object files or ld65. Each feature below is marked by what the current code actually does. Relocatable objects, linker-time imports, and known unsupported families are listed explicitly near the end.
 
-The CPU tables are pinned to ca65 commit [`e11fb5c39371046ebe25485f984f644c5a0d65d3`](https://github.com/cc65/cc65/commit/e11fb5c39371046ebe25485f984f644c5a0d65d3). Hardware companions worth keeping open: [masswerk 6502](https://www.masswerk.at/6502/6502_instruction_set.html), the [NESDev wiki](https://www.nesdev.org/wiki/Nesdev_Wiki), and the [ca65 Users Guide](https://cc65.github.io/doc/ca65.html). Explanations, examples, support notes, and opinions here are grounded in this codebase.
+The CPU tables are pinned to ca65 commit [`e11fb5c39371046ebe25485f984f644c5a0d65d3`](https://github.com/cc65/cc65/commit/e11fb5c39371046ebe25485f984f644c5a0d65d3). Hardware companions worth keeping open: [masswerk 6502](https://www.masswerk.at/6502/6502_instruction_set.html), the [NESDev wiki](https://www.nesdev.org/wiki/Nesdev_Wiki), and the [ca65 Users Guide](https://cc65.github.io/doc/ca65.html).
 
 ## Contents
 
@@ -222,7 +222,7 @@ That is enough to prove the encoder, origin math, and `.b`/`.w` width forcing. A
 
 This self-contained iNES NROM displays `HELLO WORLD` using eight embedded tiles uploaded to CHR-RAM and direct PPU setup.
 
-Save the complete code block below as `hello-world.asm`. The default NES layout is a 32 KiB PRG window at `$8000` with CHR-RAM (header byte 5 = 0). `.segment "CODE"` is required; without it the assembler has no load region and writes nowhere.
+Save the complete code block below as `hello-world.asm`. The default NES layout is a 32 KiB PRG window at `$8000` with CHR-RAM (header byte 5 = 0). `.segment "CODE"` is required. Without it the assembler has no load region and writes nowhere.
 
 ```asm
 ; hello-world.asm
@@ -311,7 +311,7 @@ CopyMessage:
   sta $2005
   sta $2005                   ; Scroll 0,0.
   lda #$00
-  sta $2000                   ; Keep NMI off; we never need it.
+  sta $2000                   ; Keep NMI off. We never need it.
   lda #$0E
   sta $2001                   ; Show background, clip the left 8 pixels.
 
@@ -382,7 +382,7 @@ The result is a 32,784-byte `.nes` file: 16-byte iNES header (`NES\x1A`, 2 PRG b
 
 Once this clicks, loading a larger font with `.incbin` or a CHR ROM bank feels like an upgrade rather than sorcery.
 
-For the hardware side, check NESDev's [PPU registers](https://www.nesdev.org/wiki/PPU_registers), [PPU palettes](https://www.nesdev.org/wiki/PPU_palettes), [PPU pattern tables](https://www.nesdev.org/wiki/PPU_pattern_tables), [init code](https://www.nesdev.org/wiki/Init_code), and [iNES header](https://www.nesdev.org/wiki/INES) notes. Vectors must land at `$FFFA`–`$FFFF` inside the `$8000` window; a three-byte experiment assembles, but it gives the CPU nowhere to find `RESET`.
+For the hardware side, check NESDev's [PPU registers](https://www.nesdev.org/wiki/PPU_registers), [PPU palettes](https://www.nesdev.org/wiki/PPU_palettes), [PPU pattern tables](https://www.nesdev.org/wiki/PPU_pattern_tables), [init code](https://www.nesdev.org/wiki/Init_code), and [iNES header](https://www.nesdev.org/wiki/INES) notes. Vectors must land at `$FFFA`–`$FFFF` inside the `$8000` window. A three-byte experiment assembles, but it gives the CPU nowhere to find `RESET`.
 
 ## How an Assembly Session Works
 
@@ -402,7 +402,7 @@ The plugin owns two dialects. `65xx.raw` uses the core native profile. `65xx.ca6
 
 | Behavior            | Native (`65xx.raw`)         | ca65 (`65xx.ca65-raw`, `65xx.nes`)       |
 | ------------------- | --------------------------- | ---------------------------------------- |
-| Directive prefix    | none; `org $8000`           | `.` ; `.org $8000`                       |
+| Directive prefix    | none. `org $8000`           | `.` . `.org $8000`                       |
 | Cheap locals        | no                          | `@name` attached to the current global   |
 | File-local symbols  | no                          | non-exported labels are per include file |
 | Macro call          | `%Name(args)`               | bare `Name args` after `.macro`          |
@@ -415,7 +415,7 @@ The plugin owns two dialects. `65xx.raw` uses the core native profile. `65xx.ca6
 
 ### Encoding & Case
 
-Source files are read as UTF-8. Mnemonics and directive keywords are case-insensitive. Symbol spelling is preserved and should be treated as intentional. The fixtures favor lowercase directives and lowercase or mixed-case mnemonics; either works.
+Source files are read as UTF-8. Mnemonics and directive keywords are case-insensitive. Symbol spelling is preserved and should be treated as intentional. The fixtures favor lowercase directives and lowercase or mixed-case mnemonics. Either works.
 
 ### Numbers
 
@@ -423,11 +423,11 @@ Source files are read as UTF-8. Mnemonics and directive keywords are case-insens
 | ----------- | ----------------- | ------------------------------------------------------------- |
 | Hexadecimal | `$80FF`, `0x80FF` | Base 16                                                       |
 | Binary      | `%10110000`       | Base 2                                                        |
-| Decimal     | `33023`, `10.5`   | Base 10; expressions may be fractional                        |
-| Octal       | `@17`             | ca65 only; rewritten to decimal `15`                          |
-| Immediate   | `#$20`            | Architecture syntax; `#` is removed before numeric evaluation |
+| Decimal     | `33023`, `10.5`   | Base 10. Expressions may be fractional                        |
+| Octal       | `@17`             | ca65 only. Rewritten to decimal `15`                          |
+| Immediate   | `#$20`            | Architecture syntax. `#` is removed before numeric evaluation |
 
-Negative and unary-plus values are accepted. Immediate `#-1` is legal for an 8-bit immediate (signed); addresses stay unsigned.
+Negative and unary-plus values are accepted. Immediate `#-1` is legal for an 8-bit immediate (signed). Addresses stay unsigned.
 
 ca65 unary byte extracts are `<value`, `>value`, and `^value` for low, high, and bank bytes. Native sources that want the same thing use `lobyte()` / `hibyte()` on a ca65 target, or `& $FF` / `>> 8` anywhere.
 
@@ -448,7 +448,7 @@ Switch architecture with `arch name` on the native target, or `.setcpu "NAME"` /
 
 | Source name                                    | Canonical contribution | Purpose                                     |
 | ---------------------------------------------- | ---------------------- | ------------------------------------------- |
-| `6502`, `6510`, `8502`, `2a03`, `2a07`, `6507` | `65xx.6502`            | Documented NMOS 6502; default               |
+| `6502`, `6510`, `8502`, `2a03`, `2a07`, `6507` | `65xx.6502`            | Documented NMOS 6502. Default               |
 | `6502x`                                        | `65xx.6502x`           | NMOS plus unofficial opcodes                |
 | `6502dtv`, `dtv`                               | `65xx.6502dtv`         | C64DTV                                      |
 | `65sc02`                                       | `65xx.65sc02`          | 65SC02 CMOS                                 |
@@ -464,11 +464,11 @@ Encoding-equivalent chip names `6510`, `8502`, `2A03`, `2A07`, and `6507` are al
 
 A mnemonic that exists only on another CPU gets a targeted diagnostic (`Instruction 'RMB0' is available on 65xx.65c02, ... not 65xx.6502`) rather than a generic unknown-instruction miss. Unofficial NMOS ops on `65xx.6502` ask you to switch to `65xx.6502x`.
 
-The live editor-facing catalogs are built by [`src/instructions/catalog.ts`](https://github.com/uttori/asm/blob/master/packages/plugin-65xx/src/instructions/catalog.ts); the complete mnemonic tables appear in [Instruction catalogs](#instruction-catalogs).
+The live editor-facing catalogs are built by [`src/instructions/catalog.ts`](https://github.com/uttori/asm/blob/master/packages/plugin-65xx/src/instructions/catalog.ts). The complete mnemonic tables appear in [Instruction catalogs](#instruction-catalogs).
 
 ### NMOS 6502
 
-The default encoder accepts the 151 documented NMOS opcodes plus the current-ca65-guide `BRK` signature extension (`BRK`, `BRK #$nn`, `BRK $nn`). Pinned ca65 V2.19 rejects the signature forms; this encoder keeps them for guide compatibility.
+The default encoder accepts the 151 documented NMOS opcodes plus the current-ca65-guide `BRK` signature extension (`BRK`, `BRK #$nn`, `BRK $nn`). Pinned ca65 V2.19 rejects the signature forms. This encoder keeps them for guide compatibility.
 
 ```asm
 arch 6502
@@ -484,9 +484,9 @@ bne Reset
 
 Append `.b` or `.w` to force zero-page or absolute selection where the instruction has both. An explicit suffix cannot invent an addressing mode the processor does not possess: `lda.w #$12` is an error, and `stx.w $12,y` cannot become `STX abs,y` because that form does not exist. Parentheses still decide indirect forms, and branches still enforce their signed displacement range.
 
-Zero-page versus absolute is otherwise inferred from the operand's resolved width. A symbol equated to `$00`–`$FF` encodes as zero page; `$100` and up encode as absolute. That is deterministic across passes only when the equate is static.
+Zero-page versus absolute is otherwise inferred from the operand's resolved width. A symbol equated to `$00`–`$FF` encodes as zero page. `$100` and up encode as absolute. That is deterministic across passes only when the equate is static.
 
-`JMP ($xxFF)` is encoded as the documented `$6C` form. NMOS hardware wraps the high-byte fetch within the same page; CMOS and later chips do not. The encoder emits the byte; it does not rewrite the addressing mode.
+`JMP ($xxFF)` is encoded as the documented `$6C` form. NMOS hardware wraps the high-byte fetch within the same page. CMOS and later chips do not. The encoder emits the byte. It does not rewrite the addressing mode.
 
 ### NMOS 6502X
 
@@ -599,7 +599,7 @@ A 65xx CPU address is 16-bit. How that address becomes a file offset depends on 
 
 ### Raw origin (`65xx.raw`, `65xx.ca65-raw`)
 
-The flat address space is an identity map: `offset = address − origin`. Addresses below `origin` or above `$FFFF` are rejected. `org` moves the write position; writing at `$8000` with origin `0` really does emit 32,768 prefix bytes. Set `origin` to the load address you actually want at file offset 0.
+The flat address space is an identity map: `offset = address − origin`. Addresses below `origin` or above `$FFFF` are rejected. `org` moves the write position. Writing at `$8000` with origin `0` really does emit 32,768 prefix bytes. Set `origin` to the load address you actually want at file offset 0.
 
 ```asm
 org $8000
@@ -672,7 +672,7 @@ DriveAudio:
   bne @Play
 ```
 
-A plain assignment creates a static numeric label rather than a PC label. Native uses `=`; ca65 also accepts `:=`:
+A plain assignment creates a static numeric label rather than a PC label. Native uses `=`. Ca65 also accepts `:=`:
 
 ```asm
 ScreenWidth = 256
@@ -787,7 +787,7 @@ Higher rows bind more tightly:
 | 5          | `*`, `/`, `%`                               | multiply, divide, modulo                                   |
 | 4          | `+`, `-`                                    | add, subtract                                              |
 | 3          | `<<`, `>>`, `&`, `                          | `, `^`                                                     | shifts and bitwise operations |
-| 2          | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=`, `<>` | comparisons, returning `0` or `1`; `<>` is ca65 inequality |
+| 2          | `<`, `>`, `<=`, `>=`, `==`, `=`, `!=`, `<>` | comparisons, returning `0` or `1`. `<>` is ca65 inequality |
 | 1          | `&&`                                        | logical AND                                                |
 | 0          | `                                           |                                                            | `                             | logical OR |
 
@@ -945,7 +945,7 @@ ca65 `.incbin` uses filename, optional offset, optional size:
 .incbin "data.bin", 2, 3     ; three bytes starting at offset 2
 ```
 
-Do not mix the two grammars. `incbin "file":$100..$180` is native; `.incbin "file", 2, 3` is ca65.
+Do not mix the two grammars. `incbin "file":$100..$180` is native. `.incbin "file", 2, 3` is ca65.
 
 ## Fill, Pad, Reserve, & Alignment
 
@@ -960,7 +960,7 @@ pad $9000
 
 Native syntax does not split `fillbyte $12 : fill 4` into two statements. Put them on separate lines.
 
-`fill count` emits `count` bytes from the current fill pattern. `pad` with a target fills until that address; with no address it fills to the next 64 KiB boundary (which, on a 16-bit target, is usually not what you wanted — prefer an explicit address or `.res`).
+`fill count` emits `count` bytes from the current fill pattern. `pad` with a target fills until that address. With no address it fills to the next 64 KiB boundary (which, on a 16-bit target, is usually not what you wanted — prefer an explicit address or `.res`).
 
 ### ca65 `.res` and `.align`
 
@@ -969,13 +969,13 @@ Native syntax does not split `fillbyte $12 : fill 4` into two statements. Put th
 .align 8, $FF                 ; pad to the next multiple of 8
 ```
 
-`.res count[, fill]` emits `count` bytes of `fill` (default 0). `.align boundary[, fill]` pads with `fill` (default 0) until `PC % boundary == 0`. These write into the current image; they are not BSS in a RAM-only MEMORY region unless that region is the active load window.
+`.res count[, fill]` emits `count` bytes of `fill` (default 0). `.align boundary[, fill]` pads with `fill` (default 0) until `PC % boundary == 0`. These write into the current image. They are not BSS in a RAM-only MEMORY region unless that region is the active load window.
 
 ### NES Prefill
 
 The NES lifecycle fills the entire PRG with `fillByte` (default `$FF`) before source runs. Unused PRG therefore reads as `$FF` without an explicit pad. `fillByte` also becomes `session.outputFillByte`.
 
-On `65xx.ca65-raw`, `.segment "NAME"` records the name and `.pushseg` / `.popseg` stack it, but bytes remain in source order in one flat image. Segment names are accepted so sources can keep their `.segment` lines; they do not create separate output regions.
+On `65xx.ca65-raw`, `.segment "NAME"` records the name and `.pushseg` / `.popseg` stack it, but bytes remain in source order in one flat image. Segment names are accepted so sources can keep their `.segment` lines. They do not create separate output regions.
 
 ## Diagnostics & Checks
 
@@ -1024,7 +1024,7 @@ npx uttori-asm patch.asm patched.nes \
   --base-image clean.nes
 ```
 
-The CLI writes a new output path; it does not overwrite the base path unless you explicitly choose the same path.
+The CLI writes a new output path. It does not overwrite the base path unless you explicitly choose the same path.
 
 ## ca65 Compatibility Ledger
 
@@ -1059,7 +1059,7 @@ Status meanings:
 | Pseudo-functions                                                     | Supported   | `.defined`, `.lobyte`, `.hibyte`, `.bankbyte`, `.loword`, and `.hiword`.                                                                  |
 | Inequality and symbol assignment                                     | Supported   | `<>`, `=`, and `:=` source forms.                                                                                                         |
 | Address-size forcing                                                 | Supported   | `z:`, `a:`, and `f:` are carried into architecture-owned operand classification.                                                          |
-| Global, cheap-local, and unnamed labels                              | Supported   | Includes `@name`, `:`, `:+`, `:++`, `:-`, and `:--`; file-local symbols remain isolated across included assembly units.                   |
+| Global, cheap-local, and unnamed labels                              | Supported   | Includes `@name`, `:`, `:+`, `:++`, `:-`, and `:--`. File-local symbols remain isolated across included assembly units.                   |
 | `.scope` / `.endscope`, `.proc` / `.endproc`, `Scope::Name`          | Partial     | Flattened into file-local symbol keys. Scope type declarations, address-size annotations, and object visibility metadata are not modeled. |
 | `.export` / `.import`                                                | Partial     | Resolves symbols across source files assembled in one session. No relocatable external symbol records are emitted.                        |
 | `.exportzp`, `.importzp`, `.globalzp`, `.forceimport`, `.autoimport` | Unsupported | These require relocatable object/linker semantics and produce an explicit diagnostic.                                                     |
@@ -1076,7 +1076,7 @@ Status meanings:
 | `.assert`                                                             | Partial     | A false assertion stops assembly with its message. ca65 warning/link-time assertion actions are not reproduced.                   |
 | `.undefine`                                                           | Supported   | Removes a symbol definition through the shared symbol engine.                                                                     |
 | `.segment`, `.pushseg`, `.popseg` on `65xx.ca65-raw`                  | Partial     | Segment names and stack intent are accepted while bytes remain in source order in one flat image.                                 |
-| `.segment` on `65xx.nes`                                              | Partial     | Implements the selected MEMORY/SEGMENTS load/run/fill model used by the NES integration fixture; it is not a general ld65 linker. |
+| `.segment` on `65xx.nes`                                              | Partial     | Implements the selected MEMORY/SEGMENTS load/run/fill model used by the NES integration fixture. It is not a general ld65 linker. |
 | `.constructor`, `.destructor`, `.interruptor`, `.reloc`, `.debuginfo` | Unsupported | Object/linker/debug directives produce an explicit diagnostic.                                                                    |
 
 ### Macros & Repetition
@@ -1092,7 +1092,7 @@ The real-world integration gate assembles the selected Zelda 1 ca65 disassembly 
 
 ## Command Index
 
-The active 65xx target combines core directives with plugin directives. Native keywords apply to `65xx.raw`. Dotted forms below are the ca65-profile spelling; the leading `.` is the directive prefix.
+The active 65xx target combines core directives with plugin directives. Native keywords apply to `65xx.raw`. Dotted forms below are the ca65-profile spelling. The leading `.` is the directive prefix.
 
 | Command                                                               | Syntax                             | Status & Effect                               |
 | --------------------------------------------------------------------- | ---------------------------------- | --------------------------------------------- |
@@ -1187,7 +1187,7 @@ If you think it should be working here, and it is not in the compatibility ledge
 
 ### “My HuC6280 `TMA` failed with power-of-two”
 
-`TMA #imm` encodes a bitmask. `# $03` is illegal; `# $01`, `# $02`, `# $04`, … `# $80` are the legal set. Numbered `TMA3` is the same idea with the bit already chosen.
+`TMA #imm` encodes a bitmask. `# $03` is illegal. `# $01`, `# $02`, `# $04`, … `# $80` are the legal set. Numbered `TMA3` is the same idea with the bit already chosen.
 
 ## Code and Fixture Layout
 
@@ -1208,7 +1208,7 @@ If you think it should be working here, and it is not in the compatibility ledge
 
 ## Instruction Catalogs
 
-These tables come from the same descriptors used by hover and completion. They list canonical accepted operand spellings; the encoders also recognize fixture-backed aliases and size-forced variants described above. For opcode bytes, processor flags, timing, and silicon behavior, use the linked hardware references.
+These tables come from the same descriptors used by hover and completion. They list canonical accepted operand spellings. The encoders also recognize fixture-backed aliases and size-forced variants described above. For opcode bytes, processor flags, timing, and silicon behavior, use the linked hardware references.
 
 Operand-form abbreviations match the editor catalog: `#value`, `zp`, `zp,x`, `zp,y`, `addr`, `addr,x`, `addr,y`, `(zp)`, `(zp,x)`, `(zp),y`, `(addr)`, `(addr,x)`, `A`, implied.
 
@@ -1282,7 +1282,7 @@ Operand-form abbreviations match the editor catalog: `#value`, `zp`, `zp,x`, `zp
 | Mnemonic             | What it does                              | Accepted operand forms                                       |
 | -------------------- | ----------------------------------------- | ------------------------------------------------------------ |
 | `ALR` (`ASR`)        | AND then LSR.                             | `#value`                                                     |
-| `ANC` (`AAC`)        | AND; copy N into C.                       | `#value`                                                     |
+| `ANC` (`AAC`)        | AND. Copy N into C.                       | `#value`                                                     |
 | `ANE` (`XAA`)        | Unstable A AND X AND immediate.           | `#value`                                                     |
 | `ARR`                | AND then ROR.                             | `#value`                                                     |
 | `AXS` (`SBX`)        | X = (A AND X) − immediate.                | `#value`                                                     |
@@ -1299,7 +1299,7 @@ Operand-form abbreviations match the editor catalog: `#value`, `zp`, `zp,x`, `zp
 | `SHY` (`SYA`)        | Unstable store of Y AND (H+1).            | `addr,x`                                                     |
 | `SLO`                | ASL then ORA.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
 | `SRE` (`LSE`)        | LSR then EOR.                             | `zp`, `zp,x`, `addr`, `addr,x`, `addr,y`, `(zp,x)`, `(zp),y` |
-| `TAS` (`SHS`)        | Unstable S = A AND X; store S AND (H+1).  | `addr,y`                                                     |
+| `TAS` (`SHS`)        | Unstable S = A AND X. Store S AND (H+1).  | `addr,y`                                                     |
 
 Unstable forms emit a ca65-compatible byte and make no silicon-stability promise.
 
@@ -1312,7 +1312,7 @@ On top of NMOS, 65SC02 (66 mnemonics) adds:
 | Control    | `BRA target`                                                                            |
 | Implied    | `INA`, `DEA`, `PHX`, `PHY`, `PLX`, `PLY`                                                |
 | Memory     | `STZ zp\|addr\|zp,x\|addr,x`, `TRB zp\|addr`, `TSB zp\|addr`                            |
-| Addressing | `(zp)` on ALU/load/store; `BIT` `#value\|zp,x\|addr,x`; `INC`/`DEC` `A`; `JMP (addr,x)` |
+| Addressing | `(zp)` on ALU/load/store. `BIT` `#value\|zp,x\|addr,x`. `INC`/`DEC` `A`. `JMP (addr,x)` |
 
 65C02 (98 mnemonics) adds Rockwell bit ops: `RMB0`–`RMB7 zp`, `SMB0`–`SMB7 zp`, `BBR0`–`BBR7 zp,target`, `BBS0`–`BBS7 zp,target`.
 
@@ -1338,7 +1338,7 @@ W65C02 (100 mnemonics) adds `WAI` and `STP`.
 
 ### 45GS02 Additions
 
-149 mnemonics, 350 forms. Q operations prefix `42 42`; `[zp],z` also prefixes `EA`:
+149 mnemonics, 350 forms. Q operations prefix `42 42`. `[zp],z` also prefixes `EA`:
 
 ```text
 ADCQ ANDQ ASLQ ASRQ BITQ CMPQ DEQ EORQ INQ LDQ LSRQ ORQ ROLQ RORQ SBCQ STQ

@@ -2,7 +2,22 @@
   "name": "@uttori/asm-core",
   "version": "1.0.0",
   "description": "Architecture-neutral assembler core and plugin API.",
+  "keywords": [
+    "assembler",
+    "assembly",
+    "plugin",
+    "typescript"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/core#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/core"
+  },
   "files": [
     "dist",
     "src",
@@ -29,6 +44,9 @@
       "types": "./dist/plugin/index.d.ts",
       "import": "./dist/plugin/index.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "make-types": "tsc --project tsconfig.json",

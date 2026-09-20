@@ -2,7 +2,22 @@
   "name": "@uttori/asm-disassembler",
   "version": "1.0.0",
   "description": "ROM identity and persistent analysis-project primitives for Uttori ASM.",
+  "keywords": [
+    "analysis",
+    "disassembler",
+    "rom",
+    "sqlite"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/disassembler#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/disassembler"
+  },
   "files": [
     "dist",
     "src",
@@ -25,6 +40,9 @@
       "import": "./dist/canonical-json.js",
       "require": "./dist/canonical-json.js"
     }
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "make-types": "tsc --project tsconfig.json",

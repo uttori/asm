@@ -1,6 +1,6 @@
 import type { RuntimeBusAccess, RuntimeBusFact } from "./runtime-bus-types.js";
 /** Native PPU decision at one completing port write. Physical byte writes retain
- * order, including repeated destinations; no source instruction or A-bus read is inferred.
+ * order, including repeated destinations. No source instruction or A-bus read is inferred.
  * Raster positions stay in the ordered archive instead of multiplying SQL variants.
  */
 export interface RuntimePPUEffect {
@@ -9,7 +9,7 @@ export interface RuntimePPUEffect {
     readonly forcedBlank: boolean;
     readonly renderingRestricted: boolean;
     readonly implementation: "accurate" | "performance";
-    /** Physical capacity for VRAM; null for CGRAM/OAM. */
+    /** Physical capacity for VRAM. Null for CGRAM/OAM. */
     readonly vramBytes: 65536 | 131072 | null;
     readonly bytes: readonly {
         readonly address: number;
@@ -22,7 +22,7 @@ export interface RuntimePPUEffect {
  * @returns {RuntimePPUEffect} Fresh semantic value with canonical property order, excluding raster.
  */
 export declare const normalizeRuntimePPUEffect: (effect: RuntimePPUEffect, access: Pick<RuntimeBusFact, "address" | "direction" | "value">) => RuntimePPUEffect;
-/** Bounded examples supplement exact effect and byte-write counts; repeated offsets count twice. */
+/** Bounded examples supplement exact effect and byte-write counts. Repeated offsets count twice. */
 export interface RuntimePPUSummary {
     readonly portWrites: number;
     readonly written: number;
@@ -43,7 +43,7 @@ export interface RuntimePPUSummary {
     }[];
 }
 /** Count already validated effects with a fixed 64-example limit, regardless of archive length.
- * @returns {object} Single-pass accumulator; all effects contribute to the exact totals.
+ * @returns {object} Single-pass accumulator. All effects contribute to the exact totals.
  */
 export declare const createRuntimePPUAccumulator: () => {
     push: (access: RuntimeBusAccess) => void;

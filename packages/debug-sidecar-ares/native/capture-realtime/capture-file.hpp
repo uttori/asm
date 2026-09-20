@@ -142,7 +142,7 @@ private:
             return;
           }
           // ACT2/ACK2 pairs keep the existing bounded recovery format. One fsync
-          // covers all preceding bytes; only its success permits batch release.
+          // covers all preceding bytes. Only its success permits batch release.
           // Recovery still validates every CRC and contiguous checkpoint, so a
           // torn/reordered unsynced tail never skips a missing earlier chunk.
           if(!writeBatch(fd)) throw 0;
@@ -236,7 +236,7 @@ public:
     if(fields[0] == "release") {
       service(capture);
       // A cancelled in-flight batch still owns storage. Do not report release
-      // until the worker has stopped; callers can retry while control stays live.
+      // until the worker has stopped. Callers can retry while control stays live.
       if(writer->phase.load(std::memory_order_acquire) != Phase::Incomplete) return "E09";
       writer.reset();
       return capture.command("release:" + fields[1]);
@@ -273,7 +273,7 @@ private:
     if(phase == Phase::Incomplete || capture.incomplete()) state = "incomplete";
     result.pop_back();
     if(writer->profile) {
-      // Parallel writer spans overlap emulation; they are not additive wall shares.
+      // Parallel writer spans overlap emulation. They are not additive wall shares.
       result += ",\"fileProfile\":{\"sealNs\":" + quote(std::to_string(capture.sealNanoseconds)) +
         ",\"copyNs\":" + quote(std::to_string(copyNs)) + ",\"writeNs\":" + quote(std::to_string(committedWriteNs)) +
         ",\"syncNs\":" + quote(std::to_string(committedSyncNs)) + "}";

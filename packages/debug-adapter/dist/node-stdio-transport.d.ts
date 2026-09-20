@@ -4,16 +4,21 @@ import type { DebugSidecarTransport } from "./sidecar-client.js";
 export declare const DEBUG_SIDECAR_SESSION_ENV: "UTTORI_ASM_DEBUG_SESSION";
 /** Process-launch settings for one local, inherited-stdio sidecar. */
 export interface NodeStdioSidecarTransportOptions {
+    /** Executable path or name resolved by spawn. Arguments are never interpreted by a shell. */
     readonly command: string;
     readonly args?: readonly string[];
     readonly cwd?: string;
+    /** Overrides inherited process.env. The session token below always takes precedence. */
     readonly env?: Readonly<Record<string, string | undefined>>;
     readonly session: string;
+    /** Positive milliseconds per graceful-close and SIGTERM wait, default 1000. */
     readonly shutdownTimeoutMs?: number;
+    /** Positive byte limit for the retained stderr tail, default 65536. */
     readonly maxStderrBytes?: number;
+    /** Receives token-redacted chunks synchronously. The callback must not throw. */
     readonly onStderr?: (text: string) => void;
 }
-/** Restartable Node transport that isolates native emulator failures from the extension host. */
+/** Owns one child process. Create a new instance to restart after close or process failure. */
 export declare class NodeStdioSidecarTransport implements DebugSidecarTransport {
     #private;
     /**

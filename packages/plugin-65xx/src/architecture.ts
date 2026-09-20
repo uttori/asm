@@ -7,7 +7,7 @@ import type {
 } from "@uttori/asm-core";
 /**
  * Table-driven 65xx encoder. Forms come from the NMOS grid or ca65-derived
- * variant tables; `.b`/`.w` force zp vs abs; branches use `+`/`-` unnamed labels.
+ * variant tables. `.b`/`.w` force zp vs abs. Branches use `+`/`-` unnamed labels.
  */
 
 import { buildInstructionCatalog } from "./instructions/catalog.js";
@@ -86,7 +86,7 @@ function modeSize(form: InstructionForm): number {
 
 /**
  * Concatenates opcode/prefix bytes with already-encoded operand bytes.
- * Used by tests and tooling; the live encoder writes through `emission` instead.
+ * Used by tests and tooling. The live encoder writes through `emission` instead.
  * @param {InstructionForm} form The instruction form.
  * @param {readonly number[]} operandBytes The operand bytes.
  * @returns {Uint8Array} The materialized opcode form.
@@ -136,7 +136,7 @@ function splitTopLevelOperands(value: string): string[] {
 
 /**
  * Table-driven encoder for one {@link CpuDefinition}. Unknown mnemonics that
- * exist only on another CPU get a targeted diagnostic; truly unknown ops
+ * exist only on another CPU get a targeted diagnostic. Truly unknown ops
  * return false so the assembler can try the next architecture.
  */
 export class Arch65xx implements ArchitectureEncoder {
@@ -465,7 +465,7 @@ export class Arch65xx implements ArchitectureEncoder {
     ) {
       mode = "specialPage";
     }
-    // Branches: any operand is a target; don't treat `$12` as zp.
+    // Branches: any operand is a target. Don't treat `$12` as zp.
     if (hasOperand && forms.some((entry) => entry.mode === "relative16")) {
       mode = "relative16";
     } else if (hasOperand && forms.some((entry) => entry.mode === "relative")) {
@@ -502,7 +502,7 @@ export class Arch65xx implements ArchitectureEncoder {
     if (!form) {
       const accepted = forms.map((entry) => entry.mode).join(", ");
       throw this.context.diagnostics.error(
-        `${mnemonic} does not support addressing mode '${mode ?? "unknown"}' on ${this.cpu.id}; expected ${accepted}.`,
+        `${mnemonic} does not support addressing mode '${mode ?? "unknown"}' on ${this.cpu.id}. Expected ${accepted}.`,
       );
     }
     return form;
@@ -522,7 +522,7 @@ export class Arch65xx implements ArchitectureEncoder {
     } else if (width === 3) {
       maximum = 0xffffff;
     }
-    // Immediate `#-1` is allowed for 8-bit (signed); addresses stay unsigned.
+    // Immediate `#-1` is allowed for 8-bit (signed). Addresses stay unsigned.
     if (!Number.isInteger(value) || value < minimum || value > maximum) {
       throw this.context.diagnostics.error(
         `${description} ${value} is outside the ${width * 8}-bit range.`,
@@ -553,7 +553,7 @@ export class Arch65xx implements ArchitectureEncoder {
     }
     const reference = (this.context.sizing.getCurrentAddress() + relativeBaseOffset) & 0xffff;
     let target: number;
-    // Unnamed labels: Asar `+`/`++` forward, `-`/`--` backward; ca65 `:+` / `:-`.
+    // Unnamed labels: Asar `+`/`++` forward, `-`/`--` backward. Ca65 `:+` / `:-`.
     if (/^\++$/.test(expression)) {
       target = this.context.branches.findNextLabel(expression, reference);
     } else if (/^-+$/.test(expression)) {

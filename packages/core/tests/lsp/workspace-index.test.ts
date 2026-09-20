@@ -272,7 +272,7 @@ test("covered file opened directly does not produce false diagnostics", (t) => {
     index.openDocument(child, "if !config == 1\n  nop\nendif\n");
     index.reindex();
 
-    // child.asm is covered by parent's full-pass analysis; its standalone
+    // child.asm is covered by parent's full-pass analysis. Its standalone
     // analysis (which would produce "Define 'config' not found") must be
     // superseded so no false errors appear.
     const childDiagnostics = index.getDiagnostics(child);

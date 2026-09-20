@@ -181,7 +181,7 @@ export class MathCore {
 
   /** Full expression currently being scanned. */
   scanSource = "";
-  /** Byte offset into `scanSource`; `str` is the slice from here to the end. */
+  /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
   scanIndex = 0;
 
   /**
@@ -276,7 +276,7 @@ export class MathCore {
     this.pureStringClassification.clear();
     this.instrumentedExpressionStrings.clear();
     this.instrumentedPureExpressionStrings.clear();
-    // WeakSet has no clear(); drop the previous generation by replacing the set.
+    // WeakSet has no clear(). Drop the previous generation by replacing the set.
     this.instrumentedExpressionNodes = new WeakSet<object>();
     this.instrumentedPureExpressionNodes = new WeakSet<object>();
   }
@@ -467,13 +467,6 @@ export class MathCore {
     }
   }
 
-  /**
-   * Evaluates call argument.
-   * @param {string} functionName The function name.
-   * @param {number} argumentIndex The argument index.
-   * @param {ExpressionNode} argument The argument.
-   * @returns {number | string} The result.
-   */
   evaluateCallArgument(
     functionName: string,
     argumentIndex: number,
@@ -514,12 +507,6 @@ export class MathCore {
     }
   }
 
-  /**
-   * Evaluates unary expression node.
-   * @param {UnaryOperator} operator The operator.
-   * @param {ExpressionNode} argument The argument.
-   * @returns {number} The result.
-   */
   evaluateUnaryExpressionNode(operator: UnaryOperator, argument: ExpressionNode): number {
     const value = this.evaluateExpressionNode(argument);
     switch (operator) {
@@ -541,13 +528,6 @@ export class MathCore {
     }
   }
 
-  /**
-   * Evaluates binary expression node.
-   * @param {BinaryOperator} operator The operator.
-   * @param {ExpressionNode} left The left.
-   * @param {ExpressionNode} right The right.
-   * @returns {number} The result.
-   */
   evaluateBinaryExpressionNode(
     operator: BinaryOperator,
     left: ExpressionNode,
@@ -557,11 +537,6 @@ export class MathCore {
     return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
   }
 
-  /**
-   * Resolves numeric identifier argument.
-   * @param {string} identifier The identifier.
-   * @returns {number | string} The result.
-   */
   resolveNumericIdentifierArgument(identifier: string): number | string {
     try {
       const resolved = this.getHost().resolveLabel(identifier);
@@ -571,11 +546,6 @@ export class MathCore {
     }
   }
 
-  /**
-   * Evaluates reference expression node.
-   * @param {ReferenceExpressionNode} expression The expression.
-   * @returns {number} The result.
-   */
   evaluateReferenceExpressionNode(expression: ReferenceExpressionNode): number {
     if (expression.type === "defineReference") {
       throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
@@ -591,11 +561,6 @@ export class MathCore {
     throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
   }
 
-  /**
-   * Resolves leading local label reference.
-   * @param {string} input The input.
-   * @returns {{ label: string; length: number } | undefined} The result.
-   */
   resolveLeadingLocalLabelReference(input: string): { label: string; length: number } | undefined {
     const match = input.match(/^(\.+\w+)/);
     if (!match) {
@@ -604,12 +569,6 @@ export class MathCore {
     return { label: match[1], length: match[1].length };
   }
 
-  /**
-   * Checks whether string argument.
-   * @param {string} functionName The function name.
-   * @param {number} argumentIndex The argument index.
-   * @returns {boolean} The result.
-   */
   isStringArgument(functionName: string, argumentIndex: number): boolean {
     if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
       return argumentIndex === 0;
@@ -623,11 +582,6 @@ export class MathCore {
     return false;
   }
 
-  /**
-   * Parses literal node.
-   * @param {string} value The value.
-   * @returns {number} The result.
-   */
   parseLiteralNode(value: string): number {
     if (/^-?\d+$/.test(value)) {
       return Number.parseInt(value, 10);
@@ -1042,7 +996,7 @@ export class MathCore {
    * @returns {string} The parsed string literal.
    */
   parseStringLiteral = (): string => {
-    // We know the cursor is on a double-quote; no escape sequences.
+    // We know the cursor is on a double-quote. No escape sequences.
     const source = this.scanSource;
     const start = this.scanIndex + 1; // skip leading "
     let index = start;
@@ -1517,10 +1471,6 @@ export class MathCore {
     this.userFunctions.set(name, { args: params, content });
   };
 
-  /**
-   * Gets host.
-   * @returns {ExpressionHost} The result.
-   */
   getHost(): ExpressionHost {
     if (!this.host) {
       throw new Error("ExpressionHost not set.");

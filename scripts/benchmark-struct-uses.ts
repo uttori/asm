@@ -127,7 +127,7 @@ const instructionUses = sites.map(({ role, ...site }) => {
         access: "read",
         provenance: "trace-derived",
         source: "synthetic-fixture",
-        detail: "Synthetic benchmark relationship; no game capture is claimed.",
+        detail: "Synthetic benchmark relationship. No game capture is claimed.",
         romSha256: rom.identity.contentSha256,
       },
     ],
@@ -140,7 +140,7 @@ const manifests = new Map<string, ReturnType<typeof exportSnes65816Source>>();
 try {
   fs.writeFileSync(path.join(root, "rom.sfc"), bytes);
   for (let iteration = -1; iteration < repetitions; iteration++) {
-    // Alternate execution order to reduce systematic cache/thermal bias; one warmup per mode.
+    // Alternate execution order to reduce systematic cache/thermal bias. One warmup per mode.
     const order = iteration % 2 === 0 ? [...modes].reverse() : modes;
     for (const mode of order) {
       const directory = path.join(root, mode);
@@ -200,7 +200,7 @@ try {
     roundTripSha256: hashes[0],
     identicalCodeSpans: true,
     notes:
-      "Complete export including metadata validation, indexing, decoding, formatting and file writes. Setup/analysis and verification excluded from timing. One warmup per mode; alternating order; heap deltas are boundary measurements, not peak RSS. Baseline uses the same exporter and struct bindings with instructionUses omitted.",
+      "Complete export including metadata validation, indexing, decoding, formatting and file writes. Setup/analysis and verification excluded from timing. One warmup per mode. Alternating order. Heap deltas are boundary measurements, not peak RSS. Baseline uses the same exporter and struct bindings with instructionUses omitted.",
   };
   console.log(JSON.stringify(report, null, 2));
   if (values.output)

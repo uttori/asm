@@ -16,7 +16,7 @@ const mapVram = (address, mapping) => {
  * Reads advance the relevant port pointers/flip-flops but are not reported as writes. OAM
  * tracking requires observed forced blank and a subsequent address reset: rendering can reset
  * its pointer internally, and the two ares PPUs redirect active-display OAM differently.
- * @returns {object} Session-local accumulator; the importer owns validation and publication.
+ * @returns {object} Session-local accumulator. The importer owns validation and publication.
  */
 export const createRuntimeGraphicsAccumulator = () => {
     let forcedBlank = null;
@@ -29,7 +29,7 @@ export const createRuntimeGraphicsAccumulator = () => {
         value: null,
         sourceSequence: null,
     };
-    // Bit zero of OAM's base address is always zero; the remaining bits need both address registers.
+    // Bit zero of OAM's base address is always zero. The remaining bits need both address registers.
     let oamBase = 0;
     let oamKnown = 1;
     let oamAddress = null;
@@ -57,7 +57,7 @@ export const createRuntimeGraphicsAccumulator = () => {
             }
         }
     };
-    /** CGRAM reads and writes share a flip-flop; only the high phase increments the color index.
+    /** CGRAM reads and writes share a flip-flop. Only the high phase increments the color index.
      * @returns {void} Preserves unknown phase/address instead of guessing alignment.
      */
     const advanceCgram = () => {

@@ -13,7 +13,7 @@ export interface SnesHardwareRegister {
     readonly symbol: string;
     /** Human-readable register purpose used by generated-source hover documentation. */
     readonly description: string;
-    /** Always true; MMIO is never treated as ROM or a static effective address. */
+    /** Always true. MMIO is never treated as ROM or a static effective address. */
     readonly volatile: true;
 }
 /**
@@ -25,7 +25,7 @@ export interface SnesHardwareRegister {
  * @returns {SnesHardwareRegister | undefined} Volatile register identity, or `undefined` if not MMIO.
  */
 export declare const identifySnesHardwareRegister: (address: number) => SnesHardwareRegister | undefined;
-/** Architecture-neutral filename; the SNES exporter supplies the register definitions. */
+/** Architecture-neutral filename. The SNES exporter supplies the register definitions. */
 export declare const SNES_HARDWARE_DEFINES_SOURCE = "defines.asm";
 /**
  * Returns the complete documented set of CPU-visible register constants used by generated source.

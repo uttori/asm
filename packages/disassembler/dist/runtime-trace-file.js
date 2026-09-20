@@ -22,7 +22,7 @@ async function* traceEntries(file, options) {
     const before = await stat(file);
     const checkSize = (size) => {
         if (size > maxBytes) {
-            throw new Error(`Instruction trace is ${(size / 1024 / 1024).toFixed(1)} MiB; import limit is ${(maxBytes / 1024 / 1024).toFixed(1)} MiB. Increase asm.trace.maxImportSizeMiB in the project settings to import this capture.`);
+            throw new Error(`Instruction trace is ${(size / 1024 / 1024).toFixed(1)} MiB. Import limit is ${(maxBytes / 1024 / 1024).toFixed(1)} MiB. Increase asm.trace.maxImportSizeMiB in the project settings to import this capture.`);
         }
     };
     checkSize(before.size);
@@ -195,7 +195,7 @@ async function* traceEntries(file, options) {
             }
             options.onProgress?.(bytesRead, before.size);
         }
-        // The final progress callback can cancel too; no next read exists to check that signal.
+        // The final progress callback can cancel too. No next read exists to check that signal.
         options.signal?.throwIfAborted();
         if (decoder.end() || String(mode) !== "end" || !keys.has("chunks")) {
             fail();
@@ -204,7 +204,7 @@ async function* traceEntries(file, options) {
         if (bytesRead !== before.size ||
             after.size !== before.size ||
             after.mtimeMs !== before.mtimeMs) {
-            throw new Error("Instruction trace changed while it was being read; stop recording before importing.");
+            throw new Error("Instruction trace changed while it was being read. Stop recording before importing.");
         }
     }
     finally {
@@ -212,7 +212,7 @@ async function* traceEntries(file, options) {
     }
 }
 /**
- * Read identity before selecting a matching project; normal recorder headers require one block.
+ * Read identity before selecting a matching project. Normal recorder headers require one block.
  * @param {string} file Trace path.
  * @param {RuntimeTraceFileOptions} options Read budget and cancellation.
  * @returns {Promise<RuntimeInstructionTraceMetadata>} Validated envelope (body checked on import).
@@ -243,7 +243,7 @@ export const readRuntimeTraceFileMetadata = async (file, options = {}) => {
 };
 /**
  * Yield parsed chunks and check the complete JSON envelope before successful completion.
- * Consumers validate chunk contents once; this reader owns JSON syntax and envelope integrity.
+ * Consumers validate chunk contents once. This reader owns JSON syntax and envelope integrity.
  * @param {string} file Trace path.
  * @param {RuntimeInstructionTraceMetadata} metadata Expected recording identity.
  * @param {RuntimeTraceFileOptions} options Read limits and cancellation.
@@ -273,7 +273,7 @@ async function* traceFileChunks(file, metadata, options = {}) {
  * @param {string} file Trace JSON path.
  * @param {RuntimeInstructionTraceMetadata} metadata Expected envelope identity.
  * @param {RuntimeTraceFileOptions} options Input limits, cancellation and progress.
- * @yields {RuntimeInstructionTraceChunk} One normalized chunk; the tail is checked on exhaustion.
+ * @yields {RuntimeInstructionTraceChunk} One normalized chunk. The tail is checked on exhaustion.
  */
 export async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
     const validateChunk = createRuntimeTraceChunkValidator();

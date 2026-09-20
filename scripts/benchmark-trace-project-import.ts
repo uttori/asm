@@ -4,11 +4,11 @@ import path from "node:path";
 import { DatabaseSync, backup } from "node:sqlite";
 
 import { importRuntimeTraceSourceIntoProject } from "../packages/disassembler/src/runtime-trace-project.js";
-import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src/runtime-trace-source.js";
+import { createEditorRuntimeTraceSource } from "../packages/vscode-extension/src/runtime/trace-source.js";
 
 /** Required path arguments are resolved before creating any temporary project data.
  * @param {string} name Required command-line option.
- * @returns {string} Absolute path; malformed or absent arguments throw before copying anything.
+ * @returns {string} Absolute path. Malformed or absent arguments throw before copying anything.
  */
 const argument = (name: string): string => {
   const index = process.argv.indexOf(name);
@@ -73,7 +73,7 @@ try {
     traceBytes: (await fs.stat(trace)).size,
     durationMs: performance.now() - started,
     // Analysis/export/verification are separate commands and excluded from these timings.
-    scope: "Isolated SQLite import; excludes backup and regeneration",
+    scope: "Isolated SQLite import. Excludes backup and regeneration",
     timings,
     result: {
       sourceSha256: result.sourceSha256,

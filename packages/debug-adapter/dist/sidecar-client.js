@@ -60,7 +60,9 @@ export class DebugSidecarClient {
         return { dispose: () => this.#closeListeners.delete(listener) };
     }
     /**
-     * Sends one bounded command and resolves its paired response.
+   * Sends one bounded command and resolves its paired response. A command error rejects only this
+   * request. Timeout, malformed input, or transport failure closes the connection and rejects all
+   * pending requests. Queue-limit rejection happens before sending and leaves the connection usable.
      * @param {DebugSidecarRequest["command"]} command Neutral sidecar command.
      * @param {Readonly<Record<string, unknown>>} arguments_ Validated command arguments.
      * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.

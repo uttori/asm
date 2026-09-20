@@ -1,7 +1,7 @@
 /**
  * Operand-list splitters used by architecture registration and encoders.
- * 65816 keeps the rest of the line as one operand; Super FX splits on every
- * comma; SPC700 splits on commas outside `()`.
+ * 65816 keeps the rest of the line as one operand. Super FX splits on every
+ * comma. SPC700 splits on commas outside `()`.
  */
 
 /**
@@ -15,14 +15,14 @@ export const splitSingleOperand = (text: string): string[] => (text ? [text] : [
 /**
  * Super FX `MOVE Rn, Rm` style: commas are always operand separators.
  * @param {string} text Rest-of-line operand text.
- * @returns {string[]} Trimmed operands; empty input yields `[]`.
+ * @returns {string[]} Trimmed operands. Empty input yields `[]`.
  */
 export const splitCommaOperands = (text: string): string[] =>
   text ? text.split(",").map((operand) => operand.trim()) : [];
 
 /**
  * SPC700 `MOV A,($12+X)` - commas inside parentheses are addressing syntax,
- * not argument splits. Bracket forms are rare here; only `()` depth is tracked.
+ * not argument splits. Bracket forms are rare here. Only `()` depth is tracked.
  * @param {string} text Rest-of-line operand text.
  * @returns {string[]} Top-level comma-separated operands.
  */

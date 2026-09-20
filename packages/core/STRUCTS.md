@@ -1,7 +1,7 @@
 # Typed structs and named ROM data
 
 Typed fields let one struct definition describe both member addresses and how to encode
-record values. `dataStruct` emits one complete named record; `dataStructs` emits a sequence
+record values. `dataStruct` emits one complete named record. `dataStructs` emits a sequence
 of explicitly indexed records. These are Uttori extensions. Existing Asar `struct`,
 `skip`, `extends`, `endstruct align`, member expressions, `sizeof()` and `objectsize()`
 remain available and keep their existing address/stride behavior.
@@ -29,10 +29,10 @@ MapOffsetData:
 The example emits eight bytes: `04 08 0B 08 5C 08 64 08`. `[1]` is a logical map ID,
 not the zero-based position of a row in the source. Its address is `$CD0004 + 1 * 2`,
 or `$CD0006`. Each initializer checks its expected address before writing. Do not change
-the biased struct base to the physical first entry; that would move every indexed reference.
+the biased struct base to the physical first entry. That would move every indexed reference.
 
 The example initializes a subset of the declared 1023 records. Bounds describe which IDs
-are valid; they do not require a block to initialize the entire binding. A block may start
+are valid. They do not require a block to initialize the entire binding. A block may start
 at any valid index, but subsequent rows must increase by exactly one.
 
 ## Declare fields
@@ -49,7 +49,7 @@ at any valid index, but subsequent rows must increase by exactly one.
 
 All scalar encodings are little-endian. Arrays are contiguous and use their element width.
 `db[1]` is still an array and requires `[value]`, not a scalar. Field names retain their
-case-sensitive struct spelling; directive and type keywords are case-insensitive.
+case-sensitive struct spelling. Directive and type keywords are case-insensitive.
 
 Array lengths must be positive integers known when the definition is processed. A typed
 field and an initialized record are limited to 65536 bytes. Initializers accept unsigned
@@ -78,14 +78,14 @@ dataStruct Stats, {
 }
 ```
 
-This emits `32 00 08 AB CD`. Values can appear in any order; the assembler writes fields
+This emits `32 00 08 AB CD`. Values can appear in any order. The assembler writes fields
 in layout order. A trailing comma is allowed. Multiline brace literals do not need `\`
 continuations. Semicolon comments work normally. Braces only gain automatic continuation
-in `dataStruct` statements and indexed table rows; the legacy continuation rules remain.
+in `dataStruct` statements and indexed table rows. The legacy continuation rules remain.
 
 Values are normal assembler expressions, including defines, function calls and forward
 label references. Array elements may also contain expressions and function calls with commas.
-The target struct must already be defined; record indexes and layout sizes must be resolvable
+The target struct must already be defined. Record indexes and layout sizes must be resolvable
 during layout. The emitter supports addressed records: even a zero-base struct is interpreted
 as an address, not as a request to instantiate a new object at the current cursor.
 
@@ -104,7 +104,7 @@ endstruct [align N] [count N] [firstindex N]
 ```
 
 `align` retains Asar's size/stride rounding. `count` adds optional bounds for named
-initializers. `firstindex` defaults to zero and requires `count`; it does not adjust the
+initializers. `firstindex` defaults to zero and requires `count`. It does not adjust the
 struct base. Bounds do not restrict existing address expressions, so existing assembler
 operands can still use biased bases or compute an address beyond the initialized range.
 
@@ -130,7 +130,7 @@ alignment actually adds bytes. It is not an additional address symbol. For ordin
 regions, use named `db[N]` fields. The emitter rejects overlapping or incomplete storage
 layouts rather than inventing bytes.
 
-This first version initializes flat records and scalar arrays. It does not initialize
+Named initialization supports flat records and scalar arrays. It does not initialize
 Asar extension/overlay layouts, nested record values, bitfields, strings, or signed types.
 Asar extensions remain usable for address calculations and ordinary raw data emission.
 Named initialization reports an explicit error for a layout with a parent or extensions.

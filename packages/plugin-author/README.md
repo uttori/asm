@@ -23,7 +23,7 @@ path with `./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json`
 
 The included configuration references TypeScript for repository development. It requires the
 repository's source loader and is not the configuration to publish. The included `tsconfig.json`
-also extends the repository configuration; replace it when copying the example out.
+also extends the repository configuration. Replace it when copying the example out.
 
 Validate plugin options before activation, keep mutable state per assembly session, and release
 host resources through plugin disposal. A decoder-only architecture can support analysis, but an

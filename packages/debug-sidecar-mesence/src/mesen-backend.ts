@@ -52,7 +52,7 @@ export * from "./profile.js";
 
 type MesenProcessor = "65816" | "spc700" | "superfx";
 
-/** Small client seam implemented by the framed loopback transport and deterministic tests. */
+/** Client interface implemented by the framed loopback transport and deterministic tests. */
 export interface MesenDebugClient {
   readonly closed: boolean;
   request(method: string, parameters?: Readonly<Record<string, unknown>>): Promise<unknown>;

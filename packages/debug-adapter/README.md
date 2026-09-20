@@ -42,10 +42,10 @@ try {
 ```
 
 Hosts connect `DebugAdapterSession` to a backend. `SidecarDebugBackend` and
-`NodeStdioSidecarTransport` support external emulator translators; `runDebugBackendConformance()`
+`NodeStdioSidecarTransport` support external emulator translators. `runDebugBackendConformance()`
 checks an implementation's declared behavior.
 
-Replay advances recorded snapshots; it does not emulate a CPU. Live operations depend on negotiated
+Replay advances recorded snapshots. It does not emulate a CPU. Live operations depend on negotiated
 capabilities. Addresses require architecture and address-space identities. Session tokens travel
 through the child environment, and request/frame/trace queues are bounded. Disconnect backends and
 dispose host-owned sessions and transports when finished. No emulator executable is included.

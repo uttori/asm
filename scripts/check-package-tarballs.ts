@@ -16,6 +16,13 @@ interface PackedArchive {
 interface PackageManifest {
   readonly name: string;
   readonly private?: boolean;
+  readonly repository?: { readonly type: string; readonly url: string; readonly directory: string };
+  readonly homepage?: string;
+  readonly bugs?: { readonly url: string };
+  readonly keywords?: readonly string[];
+  readonly license?: string;
+  readonly engines?: { readonly node?: string };
+  readonly publishConfig?: { readonly access?: string };
   readonly dependencies?: Readonly<Record<string, string>>;
   readonly exports: Readonly<Record<string, string | Readonly<Record<string, string>>>>;
   readonly bin?: Readonly<Record<string, string>>;
@@ -26,7 +33,7 @@ const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-package-check-"));
 const require = createRequire(import.meta.url);
 
 // Development conditions/loaders can hide a broken package. Consumers use ordinary Node
-// resolution; a private empty npm cache makes installation independent of registry state.
+// resolution. A private empty npm cache makes installation independent of registry state.
 const consumerEnvironment = { ...process.env };
 delete consumerEnvironment.NODE_OPTIONS;
 delete consumerEnvironment.NODE_PATH;
@@ -144,6 +151,7 @@ try {
     }
     for (const binary of Object.values(manifest.bin ?? {})) {
       assert.ok(files.has(binary), `${manifest.name}: missing executable ${binary}`);
+      assert.ok(files.has(`${binary}.licenses.txt`), `${manifest.name}: missing bundle notices`);
     }
     for (const file of files) {
       assert.ok(
@@ -152,6 +160,21 @@ try {
       );
     }
     assert.ok(files.has("README.md"), `${manifest.name}: missing published README`);
+    assert.ok(files.has("LICENSE"), `${manifest.name}: missing published license`);
+    assert.equal(manifest.license, "MIT");
+    assert.equal(manifest.engines?.node, ">=26");
+    assert.deepEqual(manifest.repository, {
+      type: "git",
+      url: "https://github.com/uttori/asm.git",
+      directory: `packages/${path.basename(directory)}`,
+    });
+    assert.equal(manifest.bugs?.url, "https://github.com/uttori/asm/issues");
+    assert.equal(
+      manifest.homepage,
+      `https://github.com/uttori/asm/tree/master/packages/${path.basename(directory)}#readme`,
+    );
+    assert.ok(manifest.keywords?.length);
+    assert.equal(manifest.publishConfig?.access, "public");
     // Package-root guides are part of the installed documentation, not just repository links.
     for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
       if (entry.isFile() && entry.name.endsWith(".md")) {
@@ -204,8 +227,23 @@ try {
     ],
     consumer,
   );
-  for (const name of names) {
+  for (const { directory, manifest } of workspaces) {
+    const name = manifest.name;
     assert.equal(fs.lstatSync(path.join(consumer, "node_modules", name)).isSymbolicLink(), false);
+    assert.equal(
+      fs.readFileSync(path.join(consumer, "node_modules", name, "LICENSE"), "utf8"),
+      fs.readFileSync(path.join(root, "LICENSE"), "utf8"),
+    );
+    // Verify the archive preserves the reviewed guides and exact legal notices, not just filenames.
+    const documents = fs.readdirSync(directory).filter((file) => file.endsWith(".md"));
+    const notices = Object.values(manifest.bin ?? {}).map((binary) => `${binary}.licenses.txt`);
+    for (const file of [...documents, ...notices]) {
+      assert.equal(
+        fs.readFileSync(path.join(consumer, "node_modules", name, file), "utf8"),
+        fs.readFileSync(path.join(directory, file), "utf8"),
+        `${name}: altered published document ${file}`,
+      );
+    }
   }
   fs.writeFileSync(
     path.join(consumer, "exports.json"),
@@ -217,9 +255,23 @@ try {
   const examples = [...guide.matchAll(/```js\n([\S\s]*?)\n```/g)];
   assert.equal(examples.length, 1, "Expected one complete analysis workflow example.");
   fs.writeFileSync(path.join(consumer, "analysis-workflow.mjs"), examples[0][1]);
+  const traceGuide = fs.readFileSync(path.join(root, "packages/disassembler/TRACES.md"), "utf8");
+  const traceExamples = [...traceGuide.matchAll(/```js\n([\S\s]*?)\n```/g)];
+  assert.equal(traceExamples.length, 1, "Expected one complete trace import example.");
+  fs.writeFileSync(path.join(consumer, "import-trace.mjs"), traceExamples[0][1]);
+  for (const fixture of [
+    "ca65-v2.19-nmos-differential.json",
+    "ca65-e11fb5c-cmos-vendor-differential.json",
+    "ca65-e11fb5c-huc6280-m740-differential.json",
+  ]) {
+    fs.copyFileSync(
+      path.join(root, "packages/plugin-65xx/tests/fixtures", fixture),
+      path.join(consumer, fixture),
+    );
+  }
   console.log(run(process.execPath, ["consumer.mjs"], consumer).trim());
 
-  // Compiler/Node types are test tooling; package declarations resolve only from installed archives,
+  // Compiler/Node types are test tooling. Package declarations resolve only from installed archives,
   // without our source conditions or tsconfig paths. Check every advertised typed subpath.
   fs.writeFileSync(
     path.join(consumer, "public-api.mts"),
@@ -242,7 +294,15 @@ try {
         types: ["node"],
         typeRoots: [path.join(root, "node_modules", "@types")],
       },
-      include: ["public-api.mts", "contract-plugin.mts", "contracts.mts", "storage.mts", "cli.mts"],
+      include: [
+        "public-api.mts",
+        "contract-plugin.mts",
+        "contracts.mts",
+        "storage.mts",
+        "cli.mts",
+        "processors.mts",
+        "traces.mts",
+      ],
     }),
   );
   run(
@@ -253,6 +313,8 @@ try {
   console.log(run(process.execPath, ["compiled/contracts.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/storage.mjs"], consumer).trim());
   console.log(run(process.execPath, ["compiled/cli.mjs"], consumer).trim());
+  console.log(run(process.execPath, ["compiled/processors.mjs"], consumer).trim());
+  console.log(run(process.execPath, ["compiled/traces.mjs"], consumer).trim());
   // Declaration comments are part of the installed editor experience, not just source docs.
   for (const [file, contract] of [
     ["@uttori/asm-core/dist/plugin/contracts.d.ts", "Copy all mutable descendants"],
@@ -263,6 +325,10 @@ try {
     ["@uttori/asm-disassembler/dist/project-types.d.ts", "Never publish"],
     ["@uttori/asm-disassembler/dist/project-transaction.d.ts", "Each supplied array"],
     ["@uttori/asm-cli/dist/index.d.ts", "No AbortSignal or signal handlers"],
+    ["@uttori/asm-disassembler/dist/runtime-trace-project.d.ts", "A pointer-file error"],
+    ["@uttori/asm-disassembler/dist/runtime-trace-file.d.ts", "2 GiB"],
+    ["@uttori/asm-debug-adapter/dist/sidecar-client.d.ts", "Starts when queued"],
+    ["@uttori/asm-debug-sidecar-mesence/dist/mesen-process-host.d.ts", "86,400"],
   ]) {
     assert.ok(
       fs.readFileSync(path.join(consumer, "node_modules", file), "utf8").includes(contract),

@@ -7,8 +7,8 @@ export declare const NES_65XX_ADDRESS_SPACE_ID = "65xx.ines-address-space";
 export declare const NES_65XX_OUTPUT_FORMAT_ID = "65xx.ines-output";
 export declare const NES_65XX_LIFECYCLE_ID = "65xx.nes-lifecycle";
 /**
- * NES target options. Plugin activation stays origin-only for the raw target;
- * these fields are per-session `targetOptions`.
+ * NES target options. Plugin activation stays origin-only for the raw target.
+ * These fields are per-session `targetOptions`.
  */
 export interface Nes65xxTargetOptions extends Readonly<Record<string, unknown>> {
     readonly header: readonly number[];
@@ -34,7 +34,7 @@ export declare function createInitialNesState(context: {
 }): Nes65xxSessionState;
 /**
  * Maps CPU addresses through the current load MEMORY region into the iNES image.
- * Overlay run addresses are never written; `base` keeps the load cursor for stores.
+ * Overlay run addresses are never written. `base` keeps the load cursor for stores.
  * @param {TargetFactoryContext} context Target factory context.
  * @returns {TargetAddressSpace} The NES address space.
  */

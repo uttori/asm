@@ -2,19 +2,19 @@
 
 This document explains how the assembler, native analysis project, SNES processors, source export,
 runtime evidence, debugger, and VS Code presentation fit together. It is the design reference for
-contributors; public commands remain documented in the package READMEs.
+contributors. Public commands remain documented in the package READMEs.
 
 ## Design goals
 
 The disassembler is designed to be:
 
-- conservative: insufficient evidence produces ambiguity, unresolved flow, or raw bytes;
-- reversible: accepted code and assets can be emitted in native Uttori ASM syntax and rebuilt;
-- explainable: every imported, inferred, observed, or manual fact retains provenance;
-- deterministic logical records: canonical JSON values, stable IDs, and transactional SQLite storage;
-- target-extensible: generic analysis never imports SNES or emulator implementation types;
+- conservative: insufficient evidence produces ambiguity, unresolved flow, or raw bytes.
+- reversible: accepted code and assets can be emitted in native Uttori ASM syntax and rebuilt.
+- explainable: every imported, inferred, observed, or manual fact retains provenance.
+- deterministic logical records: canonical JSON values, stable IDs, and transactional SQLite storage.
+- target-extensible: generic analysis never imports SNES or emulator implementation types.
 - safe on untrusted input: schemas, identities, paths, frames, counts, and work are validated and
-  bounded; and
+  bounded. And
 - editor-friendly: the same qualified identities connect projects, source maps, DAP, and runtime
   traces without guessing.
 
@@ -68,7 +68,7 @@ Core builds source in three explicit stages:
 3. `emitProgram` writes bytes and source metadata.
 
 Each architecture has a declarative specification, encoder, decoder, formatter, and state model.
-For 65816, decode width depends on E/M/X state. Unknown width returns explicit alternatives; static
+For 65816, decode width depends on E/M/X state. Unknown width returns explicit alternatives. Static
 analysis does not select one based on the bytes that happen to follow. SPC700 and SuperFX follow the
 same decode-format-encode contract, including truncated-input and out-of-bounds results.
 
@@ -80,8 +80,8 @@ data/incbin forms so readability work cannot compromise byte identity.
 
 `RomImage` distinguishes the complete file from its headerless content:
 
-- `sha256` and `fileSize` identify the exact user file;
-- `contentSha256` and `contentSize` identify the cartridge content; and
+- `sha256` and `fileSize` identify the exact user file.
+- `contentSha256` and `contentSize` identify the cartridge content. And
 - `headerSize` records `0` or a 512-byte copier header.
 
 The project never serializes either byte array. Commands that read or export a project can require
@@ -94,19 +94,19 @@ explicit persisted projection.
 
 The selected SNES header is also parsed as a cartridge structure: title, map/speed mode, chipset,
 ROM/RAM sizes, region, developer/version fields, checksum pair, optional expanded header, and all
-16 native/emulation vector words. Reserved vector slots remain data; only architecturally meaningful
+16 native/emulation vector words. Reserved vector slots remain data. Only architecturally meaningful
 handler vectors seed control-flow analysis.
 
 ## Native project format
 
 An analysis project contains `analysis.sqlite` and an `analysis.json` watcher pointer. The database
 stores the semantic manifest, monotonic revision, seven metadata collections, and columnar runtime
-facts. SchemaVersion remains 3; legacy JSON/shard containers and manifest migrations are removed.
+facts. SchemaVersion remains 3. Legacy JSON/shard containers and manifest migrations are removed.
 Small user configuration, debug maps and capture interchange formats keep their JSON contracts.
 SQLite's separate physical format version is 2. Globally shared runtime facts hold coordinates and
-payloads; compact observations retain source IDs, exact counts and provenance. Exact instruction/state
+payloads. Compact observations retain source IDs, exact counts and provenance. Exact instruction/state
 pairs share physical storage and expose virtual CPU-state records through a SQL view. Canonical hash
-suffixes use binary keys. Larger payloads use the bounded, checksummed compression codec; small
+suffixes use binary keys. Larger payloads use the bounded, checksummed compression codec. Small
 runtime payloads use JSONB. Capture receipts survive optional detail expiry. Metadata uses rowid tables to avoid excessive overflow
 pages, while runtime indexes serve point, coverage, and memory-instruction queries.
 
@@ -119,13 +119,13 @@ stream. SQLite unique constraints enforce stored ID uniqueness without a separat
 Readers capture rows and revision in one SQLite snapshot. Edit functions return changed records and
 inverse operations. Publication validates the proposed records, acquires `BEGIN IMMEDIATE`, rejects
 an obsolete revision, and commits rows, provenance and the next revision together. View updates
-preserve omitted runtime history; complete replacements replace it. Unchanged rows are retained.
+preserve omitted runtime history. Complete replacements replace it. Unchanged rows are retained.
 
-SQLite WAL handles interrupted writers and concurrent readers. The database is authoritative;
+SQLite WAL handles interrupted writers and concurrent readers. The database is authoritative.
 `analysis.json` is atomically refreshed after commit for watchers. A failed pointer refresh is a
 warning about an already committed operation, not a failed edit. Explicit compaction checkpoints and
 VACUUMs the database and prunes unused dictionaries. Normal edits create no filesystem generations.
-Current projects use schema 3 and SQLite storage format 2; earlier development layouts are outside
+Current projects use schema 3 and SQLite storage format 2. Earlier development layouts are outside
 the support baseline. Imports retain facts and capture receipts without copying source files.
 Disposable caches and WAL have separate maintenance controls. See the
 [storage contract](https://github.com/uttori/asm/blob/master/packages/disassembler/API.md#working-index-and-storage).
@@ -135,10 +135,10 @@ Disposable caches and WAL have separate maintenance controls. See the
 The generic engine in `@uttori/asm-disassembler` owns a deterministic bounded worklist. A target
 adapter supplies:
 
-- decode at a qualified address;
-- abstract state transfer and state joins;
-- entry and fallthrough/branch/call/return behavior;
-- explicit target overrides; and
+- decode at a qualified address.
+- abstract state transfer and state joins.
+- entry and fallthrough/branch/call/return behavior.
+- explicit target overrides. And
 - target-owned logical/file projection.
 
 The result contains CFG nodes/edges, function candidates, coverage, conflicts, unresolved flow,
@@ -153,8 +153,8 @@ Changes must preserve deterministic output and run the benchmark gate.
 ## Evidence and import
 
 Evidence has a source (`manual`, `import`, `detector`, `static`, or `runtime`), producer id,
-confidence, optional detail, and optional immutable artifact identity. Facts refer to evidence ids;
-evidence remains independently inspectable and reusable.
+confidence, optional detail, and optional immutable artifact identity. Facts refer to evidence ids.
+Evidence remains independently inspectable and reusable.
 
 An importer should be pure until an explicit merge. It validates the selected project/ROM/mapper,
 normalizes qualified addresses, produces stable records, and returns a loss report. Identical import
@@ -162,7 +162,7 @@ is a no-op. The one compositional exception is observed indirect targets: repeat
 union destinations and provenance rather than discarding an earlier legitimate target.
 
 The `.dizraw` importer lives in the SNES plugin because Diz classifications and SNES mapping are
-target-specific. It imports what can be represented and records unsupported fields; there is no
+target-specific. It imports what can be represented and records unsupported fields. There is no
 `.dizraw` export. MesenCE CDL, trace text, labels, and native instruction traces follow the same
 identity/provenance rule.
 
@@ -173,7 +173,7 @@ These are deterministic read-only projections over validated project records:
 - `buildRomCoverageMap()` coalesces code, operand, data, asset, unknown, conflict, execution, and
   memory overlays. Overlapping classification totals intentionally overlap.
 - `SqliteAnalysisStore.callGraph()` assigns ownership only through persisted function entries and evidence
-  paths; missing callers/callees stay orphaned.
+  paths. Missing callers/callees stay orphaned.
 - `buildInstructionAnalysisAnnotations()` combines CFG identity, static effective addresses,
   context-specific state transitions, manual/runtime state, execution/coverage, memory access, record
   ids, and provenance.
@@ -189,7 +189,7 @@ after deterministic no-op encode reproduces the source bytes. Preview renderers 
 only and cannot weaken that gate.
 
 Compression is separate because decoded semantic equality does not guarantee identical encoded
-bytes. Re-encoding enforces original capacity and optional bank/fill bounds; it cannot move later ROM
+bytes. Re-encoding enforces original capacity and optional bank/fill bounds. It cannot move later ROM
 data. Game-specific codecs belong in plugins, not generic analysis.
 
 ## Native source export and round trip
@@ -198,19 +198,19 @@ Export plans give every content byte exactly one owner: native code, raw asset, 
 vector data. The versioned `generated-files.json` records source-project/ROM identities, generated
 file hashes, user-owned metadata-input hashes, byte spans, build entries, outputs, and checksum
 policy. The SNES exporter creates `ram-map.json` as the persistent editable input and regenerates
-`ram-defines.asm` plus exact-address WRAM operand names from it; `$00`–`$3F` and `$80`–`$BF`
+`ram-defines.asm` plus exact-address WRAM operand names from it. `$00`–`$3F` and `$80`–`$BF`
 low-WRAM mirrors resolve to their canonical `$7E` addresses.
 
 Internal and expanded cartridge-header fields and every vector word are emitted as named `db`/`dw`
 source with decoded comments, rather than opaque assets. `defines.asm` covers the SNESdev PPU,
 MMIO, and DMA/HDMA register tables, including documented shared-address aliases and compatibility
-aliases for older generated names; every symbol carries hover documentation.
+aliases for older generated names. Every symbol carries hover documentation.
 
 Round-trip verification:
 
-1. rejects a changed/missing generated file or a user input changed since the last export;
-2. assembles the generated native project through the normal CLI/plugin environment;
-3. restores a copier header when present; and
+1. rejects a changed/missing generated file or a user input changed since the last export.
+2. assembles the generated native project through the normal CLI/plugin environment.
+3. Restores a copier header when present. And
 4. compares complete length and SHA-256, reporting the first differing offset.
 
 A byte-identical result proves preservation, not that every raw span has been semantically decoded.
@@ -229,15 +229,15 @@ the same contract and runs without an emulator.
 
 The neutral sidecar wire format is four-byte big-endian length plus UTF-8 JSON. Each message has a
 256-bit inherited session token and increasing sequence. Frame/buffer/queue, memory, disassembly,
-breakpoint, trace, pending-request, and deadline limits fail closed. Child stdout is protocol-only;
-stderr is separately bounded and token-redacted.
+breakpoint, trace, pending-request, and deadline limits fail closed. Child stdout is protocol-only.
+Stderr is separately bounded and token-redacted.
 
 The ares sidecar translates a narrow maintained-fork RSP surface. The MesenCE sidecar translates a
 separate experimental service. They are MIT clean-room code and distribute no emulator. Runtime
 manifests pin executable, patch, ROM, resource, and build identities. See the [ares distribution inventory](https://github.com/uttori/asm/blob/master/packages/debug-sidecar-ares/RUNTIME.md).
 
 macOS arm64 is the first live-native validated host. Hosted portable workflows validate the
-TypeScript protocol and editor architecture; they do not prove an emulator runtime until a separate
+TypeScript protocol and editor architecture. They do not prove an emulator runtime until a separate
 native artifact/conformance result exists for that host.
 
 ## Language and editor path
@@ -253,7 +253,7 @@ in restricted workspaces.
 
 Source annotations/navigation require a debug map whose target and ROM identity match the project
 and whose source hash matches the current file. If exact source is unavailable, a live DAP virtual
-disassembly may be used; otherwise persisted CFG records are rendered without re-decoding missing
+disassembly may be used. Otherwise persisted CFG records are rendered without re-decoding missing
 bytes.
 
 ## Trust, copyright, and failure boundaries

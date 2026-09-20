@@ -209,10 +209,14 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
   t.is(manifest.contributes.views["uttori-asm"]?.[0]?.type, "webview");
   t.is(manifest.contributes.views["uttori-asm"]?.[1]?.id, "uttori-asm.projectOutline");
   t.is(manifest.contributes.views["uttori-asm"]?.[1]?.type, "tree");
-  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.id, "uttori-asm.analysisCoverage");
-  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.type, "tree");
-  t.is(manifest.contributes.views["uttori-asm"]?.[3]?.id, "uttori-asm.analysisGraph");
+  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.id, "uttori-asm.disassemblyPanel");
+  t.is(manifest.contributes.views["uttori-asm"]?.[2]?.type, "webview");
+  t.is(manifest.contributes.views["uttori-asm"]?.[3]?.id, "uttori-asm.sources");
   t.is(manifest.contributes.views["uttori-asm"]?.[3]?.type, "tree");
+  t.is(manifest.contributes.views["uttori-asm"]?.[4]?.id, "uttori-asm.analysisCoverage");
+  t.is(manifest.contributes.views["uttori-asm"]?.[4]?.type, "tree");
+  t.is(manifest.contributes.views["uttori-asm"]?.[5]?.id, "uttori-asm.analysisGraph");
+  t.is(manifest.contributes.views["uttori-asm"]?.[5]?.type, "tree");
   t.is(manifest.contributes.viewsWelcome?.[0]?.view, "uttori-asm.projectOutline");
   t.is(manifest.contributes.viewsWelcome?.[1]?.view, "uttori-asm.analysisCoverage");
   t.is(manifest.contributes.viewsWelcome?.[2]?.view, "uttori-asm.analysisGraph");
@@ -349,11 +353,11 @@ test("VS Code disassembly wizard probes, initializes, verifies, and opens an iso
     "utf8",
   );
   const wizard = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/project-wizard.ts"),
+    path.join(root, "packages/vscode-extension/src/project/wizard.ts"),
     "utf8",
   );
   const bindings = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/snes-rom-bindings.ts"),
+    path.join(root, "packages/vscode-extension/src/project/snes-rom-bindings.ts"),
     "utf8",
   );
   t.true(extension.includes("registerProjectWizards"));
@@ -373,15 +377,15 @@ test("VS Code disassembly wizard probes, initializes, verifies, and opens an iso
 
 test("VS Code disassembly maintenance makes trace-to-source changes explicit and measurable", (t) => {
   const source = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/disassembly-maintenance.ts"),
+    path.join(root, "packages/vscode-extension/src/disassembly/maintenance.ts"),
     "utf8",
   );
   const jobs = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/disassembly-maintenance-jobs.ts"),
+    path.join(root, "packages/vscode-extension/src/disassembly/maintenance-jobs.ts"),
     "utf8",
   );
   const panel = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/media/panel.html"),
+    path.join(root, "packages/vscode-extension/media/disassembly.html"),
     "utf8",
   );
   t.true(jobs.includes("importRuntimeTraceSourceIntoProject"));
@@ -406,15 +410,15 @@ test("VS Code disassembly maintenance makes trace-to-source changes explicit and
 
 test("analysis graph preserves identity and navigates source-first", (t) => {
   const tree = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-graph-tree.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/graph-tree.ts"),
     "utf8",
   );
   const navigation = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-navigation.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/navigation.ts"),
     "utf8",
   );
   const maps = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-debug-maps.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/debug-maps.ts"),
     "utf8",
   );
   t.true(tree.includes('analysisWorker().request<GraphProjection>(directory, "graph")'));
@@ -429,7 +433,7 @@ test("analysis graph preserves identity and navigates source-first", (t) => {
   t.true(maps.includes("analysisSourceSha256(file) === source.sha256"));
   t.true(navigation.includes('customRequest("disassemble"'));
   t.true(navigation.includes("Persisted analysis disassembly (read-only)"));
-  t.true(navigation.includes("unknown operand bytes remain ??"));
+  t.true(navigation.includes("Unknown operand bytes remain ??"));
 });
 
 test("analysis annotations remain hash-gated and presentation-only", (t) => {
@@ -438,19 +442,19 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
     "utf8",
   );
   const controller = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-annotation-controller.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/annotation-controller.ts"),
     "utf8",
   );
   const debugAnnotations = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/debug-analysis-annotations.ts"),
+    path.join(root, "packages/vscode-extension/src/debug/analysis-annotations.ts"),
     "utf8",
   );
   const debugging = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/debug.ts"),
+    path.join(root, "packages/vscode-extension/src/debug/session.ts"),
     "utf8",
   );
   const navigation = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-navigation.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/navigation.ts"),
     "utf8",
   );
 
@@ -471,7 +475,7 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
   t.true(debugging.includes("must never prevent debugger startup"));
   t.true(navigation.includes("analysisWorker()"));
   const navigationData = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-navigation-data.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/navigation-data.ts"),
     "utf8",
   );
   t.true(navigationData.includes("buildInstructionAnalysisAnnotations"));
@@ -480,7 +484,7 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
 
 test("analysis coverage editing is trusted, transactional, and reversible", (t) => {
   const source = fs.readFileSync(
-    path.join(root, "packages/vscode-extension/src/analysis-project-editor.ts"),
+    path.join(root, "packages/vscode-extension/src/analysis/project-editor.ts"),
     "utf8",
   );
   t.true(source.includes("workspace.isTrusted"));
@@ -502,7 +506,10 @@ test("analysis coverage editing is trusted, transactional, and reversible", (t) 
 
 test("project panel CSS uses VS Code workbench tokens", (t) => {
   const css = fs.readFileSync(path.join(root, "packages/vscode-extension/media/panel.css"), "utf8");
-  const panel = fs.readFileSync(path.join(root, "packages/vscode-extension/src/panel.ts"), "utf8");
+  const panel = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/project/panel.ts"),
+    "utf8",
+  );
   t.true(css.includes("@media (max-width: 250px)"));
   t.true(css.includes("--vscode-dropdown-background"));
   t.true(css.includes("--vscode-focusBorder"));

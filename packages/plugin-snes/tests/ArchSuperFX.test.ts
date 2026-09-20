@@ -82,7 +82,7 @@ test("ArchSuperFX.estimateSize MOVE RAM: short=3, long=4, unresolved=4", (t) => 
   // Non-short RAM: LM/SM-shaped, 4 bytes.
   t.is(arch.estimateSize(["MOVE", "R0, ($300)"]), 4);
   t.is(arch.estimateSize(["MOVE", "($300), R1"]), 4);
-  // Unresolved label: pessimistic estimate of 4; may shrink to 3 after layout resolves.
+  // Unresolved label: pessimistic estimate of 4. May shrink to 3 after layout resolves.
   t.is(arch.estimateSize(["MOVE", "R0, (unknownLabel)"]), 4);
   t.is(arch.estimateSize(["MOVE", "(unknownLabel), R1"]), 4);
   // LEA is IWT-shaped (no ALT1): 3 bytes regardless.

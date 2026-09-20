@@ -1,7 +1,7 @@
 /**
  * Target-neutral contracts for analysis projects, ROM images, static CFG
  * traversal, and deterministic source export. Architecture plugins implement
- * the adapters; this package does not know 65816 or SNES.
+ * the adapters. This package does not know 65816 or SNES.
  * @module @uttori/asm-disassembler
  */
 export * from "./asset-codec.js";

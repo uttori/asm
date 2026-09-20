@@ -27,7 +27,17 @@ test("language server bundling rejects undefined imports and preserves the previ
     "junction",
   );
   const buildScript = path.join(directory, "esbuild.mjs");
-  fs.copyFileSync(path.resolve("packages/language-server/esbuild.mjs"), buildScript);
+  // The fixture has a flat directory layout. Copy the real shared notice builder beside it.
+  fs.writeFileSync(
+    buildScript,
+    fs
+      .readFileSync(path.resolve("packages/language-server/esbuild.mjs"), "utf8")
+      .replace("../../scripts/bundle-notices.mjs", "./bundle-notices.mjs"),
+  );
+  fs.copyFileSync(
+    path.resolve("scripts/bundle-notices.mjs"),
+    path.join(directory, "bundle-notices.mjs"),
+  );
   fs.writeFileSync(
     path.join(directory, "src/server.ts"),
     'import { defaultLd65ConfigText } from "./linker-config.js";\nconsole.log(defaultLd65ConfigText());\n',
@@ -56,6 +66,32 @@ test("language server bundling rejects undefined imports and preserves the previ
   const run = spawnSync(process.execPath, [output], { encoding: "utf8", timeout: 10_000 });
   t.is(run.status, 0, run.stderr);
   t.is(run.stdout.trim(), "valid linker config");
+
+  const dependency = path.join(directory, "node_modules", "fixture-dependency");
+  fs.mkdirSync(path.join(dependency, "lib"), { recursive: true });
+  fs.writeFileSync(
+    path.join(dependency, "package.json"),
+    JSON.stringify({ name: "fixture-dependency", version: "1.0.0", main: "lib/index.js" }),
+  );
+  fs.writeFileSync(path.join(dependency, "lib/package.json"), '{"type":"module"}');
+  fs.writeFileSync(
+    path.join(dependency, "lib/index.js"),
+    'export const message = "licensed dependency";',
+  );
+  const notice = "Copyright fixture author\nPermission text stays unchanged.\n";
+  fs.writeFileSync(path.join(dependency, "LICENSE"), notice);
+  fs.appendFileSync(
+    path.join(directory, "src/server.ts"),
+    'import { message } from "fixture-dependency";\nconsole.log(message);\n',
+  );
+  const licensed = spawnSync(process.execPath, [buildScript], {
+    encoding: "utf8",
+    timeout: 10_000,
+  });
+  t.is(licensed.status, 0, licensed.stderr);
+  const bundledNotice = fs.readFileSync(`${output}.licenses.txt`, "utf8");
+  t.true(bundledNotice.includes("fixture-dependency@1.0.0"));
+  t.true(bundledNotice.includes(notice));
 });
 
 test("resolveBuildEntry prefers the project entry point over an include", (t) => {

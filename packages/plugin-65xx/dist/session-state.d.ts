@@ -3,7 +3,7 @@ import type { Ld65Config } from "./linker-config.js";
 /** Plugin-owned session slot id. Keep in sync with the contribution in `index.ts`. */
 export declare const NES_65XX_SESSION_STATE_ID = "65xx.nes-session-state";
 /**
- * Per-session NES iNES / ld65 layout state. Cloned per pass; the current
+ * Per-session NES iNES / ld65 layout state. Cloned per pass. The current
  * segment and memory cursors are cleared in `resetForStage` so a later stage
  * cannot inherit an open overlay.
  */

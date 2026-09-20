@@ -141,7 +141,7 @@ export interface AppliedLabelRenameEdit {
 
 /**
  * One address-based label/comment edit. Addresses are bytes in the named space, never source lines.
- * Omitted text fields remain unchanged; empty comment strings clear only the selected fields.
+ * Omitted text fields remain unchanged. Empty comment strings clear only the selected fields.
  * New records and manual evidence need stable IDs unique within their respective collections.
  */
 export interface DisassemblyAnnotationEditRequest {
@@ -168,7 +168,7 @@ export interface DisassemblyAnnotationInverse {
 }
 
 /**
- * Pure edit result; nothing is persisted until a revision-checked commit. Unchanged records can be
+ * Pure edit result. Nothing is persisted until a revision-checked commit. Unchanged records can be
  * shared with the input. Retain the inverse in caller-owned undo state and commit undo separately.
  */
 export interface AppliedDisassemblyAnnotationEdit {
@@ -513,7 +513,7 @@ const stateConflictFields = (
 
 /**
  * Adds a manual state/entry-point overlay by copying an existing classified interval. The base
- * record remains untouched; incompatible overlapping state becomes an explicit conflict.
+ * record remains untouched. Incompatible overlapping state becomes an explicit conflict.
  * @param {LoadedAnalysisProject} project Validated project snapshot to edit.
  * @param {StateEntryPointEditRequest} request State, entry-point, and stable evidence identity.
  * @returns {AppliedStateEntryPointEdit} Replacement project and exact inverse records.

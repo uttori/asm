@@ -219,7 +219,7 @@ const immediate = (node: Node): number | undefined =>
     : undefined;
 
 /**
- * Bounded structural matching; never renames symbols or changes code/data classifications.
+ * Bounded structural matching. Never renames symbols or changes code/data classifications.
  * @param {AnalysisProjectShards} shards Persisted analysis and observations.
  * @param {SnesHeuristicConfiguration} options Declarative rule configuration.
  * @param {Iterable} [runtime] Optional streamed runtime observations.
@@ -340,7 +340,7 @@ export const analyzeSnesFunctionRoles = (
         "memory.block-copy",
         "high",
         [node],
-        "Block move instruction; payload purpose requires destination provenance.",
+        "Block move instruction. Payload purpose requires destination provenance.",
       );
     }
     const trail = window(node);
@@ -443,7 +443,7 @@ export const analyzeSnesFunctionRoles = (
         "graphics.mode7-setup",
         "medium",
         trail,
-        "Matrix/center writes and a nearby mode-7 constant; confirm the value reaching BGMODE.",
+        "Matrix/center writes and a nearby mode-7 constant. Confirm the value reaching BGMODE.",
       );
     }
   }
@@ -507,7 +507,7 @@ export const analyzeSnesFunctionRoles = (
         "graphics.brightness-ramp",
         "medium",
         loop,
-        "Repeated brightness writes with an increment/decrement; frame synchronization needs caller/trace evidence.",
+        "Repeated brightness writes with an increment/decrement. Frame synchronization needs caller/trace evidence.",
       );
     }
   }
@@ -618,7 +618,7 @@ export const analyzeSnesFunctionRoles = (
             role,
             "high",
             [observedNode],
-            `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction; the DMA engine performs the bus operation.`,
+            `Observed ${access.actor.toUpperCase()} channel ${access.channel ?? "unknown"} write to $${port.toString(16)} during this instruction. The DMA engine performs the bus operation.`,
           );
         }
       } else {
@@ -706,7 +706,7 @@ export const analyzeSnesFunctionRoles = (
     source: "detector",
     sourceId: "snes.function-roles.v1",
     confidence: role.confidence,
-    detail: `${role.rule}; configuration ${signature}; ${role.explanation}; instructions ${role.instructions.map((address) => `$${address.toString(16)}`).join(", ")}`,
+    detail: `${role.rule}. Configuration ${signature}. ${role.explanation}. Instructions ${role.instructions.map((address) => `$${address.toString(16)}`).join(", ")}`,
   }));
   return {
     roles,

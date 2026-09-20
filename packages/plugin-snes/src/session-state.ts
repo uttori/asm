@@ -5,7 +5,7 @@ export const SNES_SESSION_STATE_ID = "snes.session-state";
 
 /**
  * Payload kind for an open `spcblock`.
- * `nspc` is the Nintendo-format size+dest header; `custom` is accepted by Asar
+ * `nspc` is the Nintendo-format size+dest header. `custom` is accepted by Asar
  * but not implemented here.
  */
 export type SnesSpcBlockType = "nspc" | "custom";
@@ -28,7 +28,7 @@ export type SnesSpcBlockData = {
 };
 
 /**
- * Per-session SNES target state. Cloned per pass; freespace/SPC fields are
+ * Per-session SNES target state. Cloned per pass. Freespace/SPC fields are
  * also cleared in `resetForStage` so a later stage cannot inherit an open block.
  */
 export interface SnesSessionState {
@@ -36,14 +36,14 @@ export interface SnesSessionState {
   mapper: string;
   /**
    * SA-1 LoROM bank bases in 1 MiB units (`index << 20`).
-   * Only slots 0, 1, 4, and 5 are used; the rest stay `-1` (unmapped).
+   * Only slots 0, 1, 4, and 5 are used. The rest stay `-1` (unmapped).
    */
   sa1Banks: number[];
   checksumEnabled: boolean;
   checksumMode: "asar" | "simple";
   /**
    * `full`/`on` = linear PC across `$xxFFFF` → `$xy0000`.
-   * `half` = wrap at 32 KiB; `off` = wrap at bank (LoROM `$xx8000`).
+   * `half` = wrap at 32 KiB. `off` = wrap at bank (LoROM `$xx8000`).
    */
   bankCrossMode: "off" | "full" | "half";
   /**
@@ -53,7 +53,7 @@ export interface SnesSessionState {
   readFunctionsEnabled: boolean;
   /** `optimize dp ram|always` - allow inferred DP width for same-bank labels. */
   optimizeDirectPage: boolean;
-  /** Super FX auto-MOVE: Asar stores the raw byte; hardware LMS/SMS store `addr >> 1`. */
+  /** Super FX auto-MOVE: Asar stores the raw byte. Hardware LMS/SMS store `addr >> 1`. */
   asarSuperFxMoveShortAddress: boolean;
   outputFillByte: number;
   /** File offset of the `STAR` marker, or `null` if no freespace is open. */

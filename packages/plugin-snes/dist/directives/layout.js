@@ -14,7 +14,7 @@ export const MAPPER_KEYWORDS = [
     "sa1rom",
 ];
 /**
- * Applies a mapper directive. Most keywords are 1:1; `sa1rom` optionally takes
+ * Applies a mapper directive. Most keywords are 1:1. `sa1rom` optionally takes
  * four comma-separated 1 MiB bank indices written into slots 0, 1, 4, 5
  * (Asar's SA-1 LoROM map - not consecutive 0–3).
  *
@@ -80,7 +80,7 @@ export function handleCheck(state, words) {
 }
 /**
  * `optimize dp none|ram|always`. Unknown subcommands are ignored (Asar no-op).
- * Only DP-width inference is implemented; other `optimize` families are not.
+ * Only DP-width inference is implemented. Other `optimize` families are not.
  *
  * @param {SnesSessionState} state Mutable SNES session.
  * @param {readonly string[]} words Tokenized line.

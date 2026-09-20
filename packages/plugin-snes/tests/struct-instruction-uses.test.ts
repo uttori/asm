@@ -719,7 +719,7 @@ test("observations cover adjacent fields, records and opaque gaps without invent
       { field: "scope", width: 1 },
     ],
   );
-  t.regex(renderSnesStructUseComments(use)[1], /covers: Commands.opcode.*Commands.scope/);
+  t.regex(renderSnesStructUseComments(use)[1], /Covers: Commands.opcode.*Commands.scope/);
   observed.target = "Commands.target + 1";
   use = validateSnesStructMap(input).instructionUses![1];
   t.deepEqual(
@@ -797,7 +797,7 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
     store.close();
   }
   const generated = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
-  t.regex(generated, /covers: Commands.opcode.*Commands.scope/);
+  t.regex(generated, /Covers: Commands.opcode.*Commands.scope/);
   t.regex(generated, /ADC.w #\(bytesof\(Commands\) - sizeof\(Tint\)\)/);
   input.instructionUses[2].operand = "sizeof(Tint) - 1";
   fs.writeFileSync(mapPath, JSON.stringify(input));

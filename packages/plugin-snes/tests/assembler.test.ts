@@ -2865,8 +2865,8 @@ test("evaluateExpression - error handling", (t) => {
 
   // TODO: This is a bug in mathcore.ts
   // t.throws(() => {
-  //   assembler.evaluateExpression("1 + + 1");
-  // }, { message: /Error evaluating expression/ });
+  //   assembler.evaluateExpression("1 + + 1").
+  // }, { message: /Error evaluating expression/ }).
 });
 
 test("evaluateExpression - complex scenarios", (t) => {
@@ -3263,8 +3263,8 @@ test("evaluateRangeExpression", (t) => {
   // TODO: This is a maybe bug in evaluateRangeExpression, we expect this to throw an error, but dynamic labels seem fine.
   // Test error cases
   // t.throws(() => {
-  //   assembler.evaluateRangeExpression("DYNAMIC_LABEL");
-  // }, { message: /Label is not static/ }, "Should require static labels");
+  //   assembler.evaluateRangeExpression("DYNAMIC_LABEL").
+  // }, { message: /Label is not static/ }, "Should require static labels").
 });
 
 test("resolveStructLabel", (t) => {
@@ -4037,7 +4037,7 @@ test("handleStruct - extension struct", (t) => {
 test("handleStruct - error cases", (t) => {
   const assembler = new Assembler();
 
-  // struct Name (no base) is valid per Asar; only single-word "struct" is insufficient
+  // struct Name (no base) is valid per Asar. Only single-word "struct" is insufficient
   t.throws(
     () => {
       assembler.structEngine.handleStruct(["struct"]);
@@ -4713,7 +4713,7 @@ test("handleDataDirective - deprecated # syntax", (t) => {
   // t.true(
   //   consoleWarnStub.firstCall.args[0].includes("# before numbers in db/dw/... is deprecated"),
   //   "Warning should mention deprecation"
-  // );
+  // ).
 });
 
 test("handleDataDirective - math expressions", (t) => {
@@ -6095,9 +6095,9 @@ test("handleDefineCommand - edge cases", (t) => {
 
   // TODO: Validate this
   // Test nested defines with := operator
-  // assembler.defines.set("inner", "value");
-  // assembler.defines.set("wrapper", "!inner");
-  // assembler.defineEngine.handleDefineCommand("!resolved := !wrapper");
+  // assembler.defines.set("inner", "value").
+  // assembler.defines.set("wrapper", "!inner").
+  // assembler.defineEngine.handleDefineCommand("!resolved := !wrapper").
   // t.is(assembler.defines.get("resolved"), "value", "Nested defines should be resolved with :=");
 
   // Test math with hex values
@@ -6106,7 +6106,7 @@ test("handleDefineCommand - edge cases", (t) => {
 
   // TODO: Validate this
   // Test != operator in math expressions
-  // assembler.defineEngine.handleDefineCommand("!comparison #= 5 != 3 ? 1 : 0");
+  // assembler.defineEngine.handleDefineCommand("!comparison #= 5 != 3 ? 1 : 0").
   // t.is(assembler.defines.get("comparison"), "1", "Should handle != operator in math expressions");
 
   // Test empty string assignment

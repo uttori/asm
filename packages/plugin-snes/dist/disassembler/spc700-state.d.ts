@@ -17,7 +17,7 @@ export type Spc700StackEntry = {
 } | {
     readonly kind: "unknown";
 };
-/** Conservative known stack prefix; deeper pre-analysis bytes remain unknown. */
+/** Conservative known stack prefix. Deeper pre-analysis bytes remain unknown. */
 export interface Spc700AbstractStack {
     readonly entries: readonly Spc700StackEntry[];
 }

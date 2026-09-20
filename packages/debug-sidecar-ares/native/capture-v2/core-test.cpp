@@ -39,7 +39,7 @@ auto nall::main(Arguments args) -> void {
   Node::System root;
   assert(load(root, "[Nintendo] Super Famicom (NTSC)"));
   u8 rom[0x8000]{};
-  // INX; STX $0000; BRA back. Actual reads/fetches, no trace peeks.
+  // INX. STX $0000. BRA back. Actual reads/fetches, no trace peeks.
   rom[0] = 0xe8; rom[1] = 0x86; rom[2] = 0; rom[3] = 0x80; rom[4] = 0xfb; rom[0x7ffd] = 0x80;
   bus.map([&](n24 address, n8) -> n8 { return rom[address & 0x7fff]; }, [](n24, n8) {}, "00:8000-ffff");
   auto boot = [&] {

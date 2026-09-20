@@ -170,7 +170,7 @@ export function resolveSnesCpuName(name: string): string | undefined {
 /**
  * Handles the `.setcpu "name"` directive for SNES architectures.
  * The CPU name is stripped of surrounding quotes (single or double).
- * Throws for names that are not available on the SNES target; for names that
+ * Throws for names that are not available on the SNES target. For names that
  * are unrecognised SNES CPUs but are valid 65xx names the caller should
  * propagate an "unknown architecture" diagnostic rather than silently no-op.
  * @param {Assembler} session The host assembler session.

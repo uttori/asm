@@ -54,7 +54,7 @@ const canonical = (value: string): string => value.toLowerCase();
 
 /**
  * Indexes owned contributions by canonical contribution id.
- * Duplicate ids last-write-win; the manager already rejects duplicates before freeze.
+ * Duplicate ids last-write-win. The manager already rejects duplicates before freeze.
  * @param {readonly OwnedContribution<T>[]} records Contribution records to index.
  * @returns {Map<string, OwnedContribution<T>>} Canonical id → record.
  */

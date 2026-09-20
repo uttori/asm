@@ -323,7 +323,7 @@ const scoreCandidate = (rom, spec) => {
     const sizePlausible = declaredSize > 0 &&
         rom.length <= declaredSize &&
         declaredSize <= Math.max(rom.length * 2, rom.length);
-    add("declared-size", sizePlausible ? 3 : -1, `declared ${declaredSize || "invalid"} bytes; loaded ${rom.length} bytes`);
+    add("declared-size", sizePlausible ? 3 : -1, `declared ${declaredSize || "invalid"} bytes. Loaded ${rom.length} bytes`);
     const title = header.slice(0, 21);
     const printable = [...title].filter((byte) => byte === 0 || byte === 0x20 || (byte >= 0x21 && byte <= 0x7e)).length;
     add("title", printable >= 18 ? 1 : -1, `${printable}/21 title bytes are printable`);
@@ -395,7 +395,7 @@ export const detectSnesRom = (rom, options = {}) => {
     return {
         status: "ambiguous",
         candidates,
-        message: "SNES mapper/header detection is ambiguous; provide an explicit --mapper override before creating the project.",
+        message: "SNES mapper/header detection is ambiguous. Provide an explicit --mapper override before creating the project.",
     };
 };
 //# sourceMappingURL=rom-header.js.map

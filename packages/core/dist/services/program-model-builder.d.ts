@@ -102,17 +102,7 @@ export declare class ProgramModelBuilder {
      * @param {number} sourceLine The source line.
      */
     consumeCommandIntoState(state: IncrementalProgramParseState, rawCommand: string, sourceFile: string, sourceLine: number): void;
-    /**
-     * Checks whether node complete.
-     * @param {ExecutableNode} node The node.
-     * @returns {boolean} The result.
-     */
     isNodeComplete(node: ExecutableNode): boolean;
-    /**
-     * Drains completed roots.
-     * @param {IncrementalProgramParseState} state The state.
-     * @returns {ExecutableNode[]} The result.
-     */
     drainCompletedRoots(state: IncrementalProgramParseState): ExecutableNode[];
 }
 //# sourceMappingURL=program-model-builder.d.ts.map

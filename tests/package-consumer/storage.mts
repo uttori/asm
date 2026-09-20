@@ -19,6 +19,8 @@ import {
 } from "@uttori/asm-disassembler";
 import {
   analyzeSnesProject,
+  exportSnesProject,
+  verifySnesProjectRoundTrip,
   SnesProjectInitializationCancelledError,
 } from "@uttori/asm-plugin-snes";
 
@@ -33,7 +35,7 @@ void checkCallbackTypes;
 
 /** Synthetic LoROM with a reset vector into NOP/NOP/STP and an explicit cartridge header. */
 const fixtureRom = (headerSize: number): Uint8Array => {
-  // Unused vectors must not seed long accidental NOP paths; this fixture exercises storage.
+  // Unused vectors must not seed long accidental NOP paths. This fixture exercises storage.
   const content = new Uint8Array(0x8000).fill(0xdb);
   content.set([0xea, 0xea, 0xdb]);
   content.fill(0x20, 0x7fc0, 0x7fc0 + 0x15);
@@ -76,6 +78,59 @@ try {
     assert.deepEqual(
       loadAnalysisProjectSnapshot(path.join(workspace, "restored")),
       loadAnalysisProjectSnapshot(path.join(workspace, "analysis")),
+    );
+  }
+
+  const sourceDirectory = path.join(scratch, "workflow-0", "source");
+  const ramFile = path.join(sourceDirectory, "ram-map.json");
+  const structFile = path.join(sourceDirectory, "struct-map.json");
+  const ramInput = JSON.stringify({
+    format: "uttori-asm-snes-ram-map",
+    schemaVersion: 1,
+    variables: [
+      { name: "PlayerHealth", address: "$7E0100", size: 2, description: "Current health." },
+    ],
+  });
+  const structInput = JSON.stringify({
+    format: "uttori-asm-snes-struct-map",
+    schemaVersion: 1,
+    structures: [
+      {
+        id: "Stats",
+        size: 3,
+        fields: [
+          { name: "hp", offset: 0, size: 2, type: "dw" },
+          { name: "flags", offset: 2, size: 1, type: "db[1]" },
+        ],
+      },
+    ],
+    bindings: [
+      { name: "Levels", structure: "Stats", address: 0x808100, fileOffset: 0x100, count: 2 },
+    ],
+  });
+  fs.writeFileSync(ramFile, ramInput);
+  fs.writeFileSync(structFile, structInput);
+  for (let pass = 0; pass < 2; pass++) {
+    exportSnesProject({
+      romFile: path.join(scratch, "fixture-0.sfc"),
+      projectDirectory: path.join(scratch, "workflow-0", "analysis"),
+      sourceDirectory,
+    });
+    assert.equal(fs.readFileSync(ramFile, "utf8"), ramInput);
+    assert.equal(fs.readFileSync(structFile, "utf8"), structInput);
+    assert.match(
+      fs.readFileSync(path.join(sourceDirectory, "ram-defines.asm"), "utf8"),
+      /PlayerHealth/,
+    );
+    assert.match(fs.readFileSync(path.join(sourceDirectory, "structs.asm"), "utf8"), /Levels/);
+    assert.equal(
+      (
+        await verifySnesProjectRoundTrip({
+          romFile: path.join(scratch, "fixture-0.sfc"),
+          sourceDirectory,
+        })
+      ).comparison.equal,
+      true,
     );
   }
 

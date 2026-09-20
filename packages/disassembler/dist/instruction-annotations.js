@@ -59,7 +59,7 @@ const annotationState = (annotation) => annotation.state;
 const runtimeState = (record) => record.state;
 /**
  * Builds a conservative, target-neutral instruction annotation projection.
- * Exact logical addresses and explicit output offsets are joined; no mapper translation is attempted.
+ * Exact logical addresses and explicit output offsets are joined. No mapper translation is attempted.
  *
  * Per-instruction evidence collections are allocated only on first use. Direct logical locations
  * and output offsets are indexed once, then interval evidence is attached with binary lower bounds
@@ -125,7 +125,7 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
             if (!value) {
                 diagnostics.push({
                     recordId: node.id,
-                    message: "Ignored malformed effective-address metadata; required operandIndex, volatile, and explanation fields were not valid.",
+                    message: "Ignored malformed effective-address metadata. Required operandIndex, volatile, and explanation fields were not valid.",
                 });
                 continue;
             }
@@ -338,7 +338,7 @@ export const buildInstructionAnalysisAnnotations = (manifest, shards, runtime = 
                 evidence: sortedStrings([...(previous?.evidence ?? []), ...record.evidence]),
             });
         }
-        // Every optional construction collection is normalized back to the original public shape here;
+        // Every optional construction collection is normalized back to the original public shape here.
         // consumers never observe missing arrays, maps, or nondeterministic insertion order.
         return {
             id: `instruction:${instruction.addressSpace}:${instruction.address}`,

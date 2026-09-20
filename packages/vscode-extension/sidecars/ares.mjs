@@ -37,31 +37,31 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// packages/core/src/debug-map.ts
+// ../core/src/debug-map.ts
 var init_debug_map = __esm({
-  "packages/core/src/debug-map.ts"() {
+  "../core/src/debug-map.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/address-width.ts
+// ../core/src/address-width.ts
 var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+  "../core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/crc32.ts
+// ../core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
+  "../core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
       static table = _CRC32.makeCRCTable();
       /**
        * Builds the lookup table used for CRC32 computation.
-       * @returns {Uint32Array} The result.
+       * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
        */
       static makeCRCTable() {
         const table = new Uint32Array(256);
@@ -90,38 +90,38 @@ var init_crc32 = __esm({
   }
 });
 
-// packages/core/src/addressToLine.ts
+// ../core/src/addressToLine.ts
 var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
+  "../core/src/addressToLine.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/architecture-registry.ts
+// ../core/src/architecture-registry.ts
 var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
+  "../core/src/architecture-registry.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/source-location.ts
+// ../core/src/source-location.ts
 var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
+  "../core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/diagnostics.ts
+// ../core/src/diagnostics.ts
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "../core/src/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/directive-groups.ts
+// ../core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "packages/core/src/directive-groups.ts"() {
+  "../core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -138,17 +138,17 @@ var init_directive_groups = __esm({
   }
 });
 
-// packages/core/src/ir/expression-node.ts
+// ../core/src/ir/expression-node.ts
 var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
+  "../core/src/ir/expression-node.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/syntax-profile.ts
+// ../core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
+  "../core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -183,24 +183,24 @@ var init_syntax_profile = __esm({
   }
 });
 
-// packages/core/src/file-provider.ts
+// ../core/src/file-provider.ts
 var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
+  "../core/src/file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/ir/normalized-command.ts
+// ../core/src/ir/normalized-command.ts
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
+  "../core/src/ir/normalized-command.ts"() {
     "use strict";
     EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
     EMPTY_TOKEN_SPANS = Object.freeze([]);
   }
 });
 
-// packages/core/src/operand-syntax.ts
+// ../core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -222,34 +222,34 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
+  "../core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/plugin/contracts.ts
+// ../core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
+  "../core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/plugin/diagnostics.ts
+// ../core/src/plugin/diagnostics.ts
 var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
+  "../core/src/plugin/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/directive-catalog.ts
+// ../core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "packages/core/src/lsp/directive-catalog.ts"() {
+  "../core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group, operands) => ({
       keyword,
@@ -379,20 +379,20 @@ var init_directive_catalog = __esm({
           },
           {
             keyword: "firstindex",
-            summary: "First valid logical index (default zero); requires count.",
+            summary: "First valid logical index (default zero). Requires count.",
             syntax: "endstruct count value firstindex value"
           }
         ]
       ),
       descriptor(
         "datastruct",
-        "Emit one complete named record at its struct address; checks fields, widths and pc().",
+        "Emit one complete named record at its struct address. Checks fields, widths and pc().",
         "dataStruct Record[index], { field = value, bytes = [value, ...] }",
         "struct"
       ),
       descriptor(
         "datastructs",
-        "Begin consecutive indexed named records; preserves logical IDs and validates placement.",
+        "Begin consecutive indexed named records. Preserves logical IDs and validates placement.",
         "dataStructs Record\n  [index] = { field = value }\nendDataStructs",
         "struct"
       ),
@@ -429,16 +429,16 @@ var init_directive_catalog = __esm({
   }
 });
 
-// packages/core/src/plugin/environment.ts
+// ../core/src/plugin/environment.ts
 var init_environment = __esm({
-  "packages/core/src/plugin/environment.ts"() {
+  "../core/src/plugin/environment.ts"() {
     "use strict";
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports, module) {
+  "../../node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -468,9 +468,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports, module) {
+  "../../node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -478,9 +478,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports, module) {
+  "../../node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -566,9 +566,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports, module) {
+  "../../node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -585,9 +585,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports, module) {
+  "../../node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -610,9 +610,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports, module) {
+  "../../node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -902,9 +902,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports, module) {
+  "../../node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -924,9 +924,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports, module) {
+  "../../node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -937,9 +937,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports, module) {
+  "../../node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -950,9 +950,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports, module) {
+  "../../node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier, identifierBase) => {
@@ -974,9 +974,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports, module) {
+  "../../node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -1018,9 +1018,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports, module) {
+  "../../node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -1028,9 +1028,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports, module) {
+  "../../node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -1038,9 +1038,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports, module) {
+  "../../node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -1048,9 +1048,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports, module) {
+  "../../node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -1061,9 +1061,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports, module) {
+  "../../node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -1071,9 +1071,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports, module) {
+  "../../node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -1081,9 +1081,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -1091,9 +1091,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports, module) {
+  "../../node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -1105,9 +1105,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports, module) {
+  "../../node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -1115,9 +1115,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports, module) {
+  "../../node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -1125,9 +1125,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports, module) {
+  "../../node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -1135,9 +1135,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports, module) {
+  "../../node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -1145,9 +1145,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports, module) {
+  "../../node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -1155,9 +1155,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports, module) {
+  "../../node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -1165,9 +1165,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports, module) {
+  "../../node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -1175,9 +1175,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports, module) {
+  "../../node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -1185,9 +1185,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports, module) {
+  "../../node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -1235,9 +1235,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports, module) {
+  "../../node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -1281,9 +1281,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports, module) {
+  "../../node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -1322,9 +1322,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports, module) {
+  "../../node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1360,9 +1360,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports, module) {
+  "../../node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1745,9 +1745,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports, module) {
+  "../../node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1858,9 +1858,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports, module) {
+  "../../node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -1875,9 +1875,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -1885,9 +1885,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1914,9 +1914,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1943,9 +1943,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports, module) {
+  "../../node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -2002,9 +2002,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports, module) {
+  "../../node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -2018,9 +2018,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports, module) {
+  "../../node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -2087,9 +2087,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports, module) {
+  "../../node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -2097,9 +2097,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports, module) {
+  "../../node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -2107,9 +2107,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports, module) {
+  "../../node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -2121,9 +2121,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports, module) {
+  "../../node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -2171,9 +2171,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports, module) {
+  "../../node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -2333,9 +2333,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports, module) {
+  "../../node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -2430,25 +2430,25 @@ var require_semver2 = __commonJS({
   }
 });
 
-// packages/core/src/plugin/manager.ts
+// ../core/src/plugin/manager.ts
 var import_semver;
 var init_manager = __esm({
-  "packages/core/src/plugin/manager.ts"() {
+  "../core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
   }
 });
 
-// packages/core/src/plugin/session-state.ts
+// ../core/src/plugin/session-state.ts
 var init_session_state = __esm({
-  "packages/core/src/plugin/session-state.ts"() {
+  "../core/src/plugin/session-state.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/plugin/index.ts
+// ../core/src/plugin/index.ts
 var init_plugin = __esm({
-  "packages/core/src/plugin/index.ts"() {
+  "../core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -2458,24 +2458,24 @@ var init_plugin = __esm({
   }
 });
 
-// packages/core/src/services/assembly-front-end-service.ts
+// ../core/src/services/assembly-front-end-service.ts
 var init_assembly_front_end_service = __esm({
-  "packages/core/src/services/assembly-front-end-service.ts"() {
+  "../core/src/services/assembly-front-end-service.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/services/command-lowering-service.ts
+// ../core/src/services/command-lowering-service.ts
 var init_command_lowering_service = __esm({
-  "packages/core/src/services/command-lowering-service.ts"() {
+  "../core/src/services/command-lowering-service.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/architecture-types.ts
+// ../core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "packages/core/src/architecture-types.ts"() {
+  "../core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -2500,10 +2500,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// packages/core/src/decoder-types.ts
+// ../core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "packages/core/src/decoder-types.ts"() {
+  "../core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -2548,65 +2548,65 @@ var init_decoder_types = __esm({
   }
 });
 
-// packages/core/src/ir/assembly-tree.ts
+// ../core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "packages/core/src/ir/assembly-tree.ts"() {
+  "../core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/overlay-file-provider.ts
+// ../core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "packages/core/src/lsp/overlay-file-provider.ts"() {
+  "../core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/root-analysis-cache.ts
+// ../core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "packages/core/src/lsp/root-analysis-cache.ts"() {
+  "../core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/workspace-index.ts
+// ../core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "packages/core/src/lsp/workspace-index.ts"() {
+  "../core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/position-lookup.ts
+// ../core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "packages/core/src/lsp/position-lookup.ts"() {
+  "../core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/instruction-catalog.ts
+// ../core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "packages/core/src/lsp/instruction-catalog.ts"() {
+  "../core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/catalog.ts
+// ../core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "packages/core/src/lsp/catalog.ts"() {
+  "../core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/project-outline.ts
+// ../core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "packages/core/src/lsp/project-outline.ts"() {
+  "../core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// packages/core/src/lsp/index.ts
+// ../core/src/lsp/index.ts
 var init_lsp = __esm({
-  "packages/core/src/lsp/index.ts"() {
+  "../core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -2619,9 +2619,9 @@ var init_lsp = __esm({
   }
 });
 
-// packages/core/src/index.ts
+// ../core/src/index.ts
 var init_src = __esm({
-  "packages/core/src/index.ts"() {
+  "../core/src/index.ts"() {
     "use strict";
     init_architecture_types();
     init_decoder_types();
@@ -2647,7 +2647,7 @@ var init_src = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-spec.ts
+// ../plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -2672,7 +2672,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
+  "../plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -2954,7 +2954,7 @@ var init_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/65816-decoder.ts
+// ../plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
@@ -3047,7 +3047,7 @@ function formatCpu65816Instruction(instruction) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder, hex;
 var init_decoder = __esm({
-  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
+  "../plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -3352,7 +3352,7 @@ var init_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-spec.ts
+// ../plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -3377,7 +3377,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
+  "../plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -3629,7 +3629,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-spec.ts
+// ../plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -3697,7 +3697,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
+  "../plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -4213,10 +4213,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/instruction-catalog.ts
+// ../plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -4227,7 +4227,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/operand-classifiers.ts
+// ../plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -4427,16 +4427,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src();
   }
 });
 
-// packages/plugin-snes/src/architectures/65816.ts
+// ../plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "packages/plugin-snes/src/architectures/65816.ts"() {
+  "../plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -4471,7 +4471,7 @@ var init__ = __esm({
       x16;
       /**
        * When true, `SEP`/`REP` auto-update M/X hints (Asar-compatible default).
-       * Set to false by `.smart off`; re-enabled by `.smart` or `.smart on`.
+       * Set to false by `.smart off`. Re-enabled by `.smart` or `.smart on`.
        */
       smartMode;
       /**
@@ -4875,7 +4875,7 @@ var init__ = __esm({
       }
       /**
        * Encodes ADC / LDA / SBC / STA. Logic/compare ops are
-       * {@link handleLogicAndCompareOperations}; STA has no immediate form.
+       * {@link handleLogicAndCompareOperations}. STA has no immediate form.
        *
        * DP (`$xx` / `$xx,x`) is used only when `optimize dp ram|always` is on or
        * the source spelling is explicit 1–2 digit hex. Otherwise a DP-sized value
@@ -5192,7 +5192,7 @@ var init__ = __esm({
        * Classifier `[$nn]` is `indirectLong` and remaps to `directIndirectLong` (1-byte
        * DP, ORA `$07`) when the table has that key. CPX/CPY omit it and throw.
        * Forced `.l,x` is abs,x + 2 (ORA `$1D` + 2 = `$1F`). Forced `,y` is abs only
-       * (`len === 2`); this family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
+       * (`len === 2`). This family has no dp,y / long,y. CPX/CPY have no `(dp,x)` /
        * long / stack forms.
        *
        * @param {string} opcode AND, EOR, ORA, CMP, CPX, or CPY.
@@ -5215,7 +5215,7 @@ var init__ = __esm({
             indirectY: 17,
             indirect: 18,
             // Same bytes as absoluteLong / absoluteLongX (ORA al / al,x). Classifier
-            // `[...]` is remapped to directIndirectLong first; these keys are the
+            // `[...]` is remapped to directIndirectLong first. These keys are the
             // leftover path for opcodes that lack [dp] (CPX/CPY → throw).
             indirectLong: 15,
             indirectLongY: 31,
@@ -5477,7 +5477,7 @@ var init__ = __esm({
       }
       /**
        * Implied ops. `OPCODE #$n` is Asar's repeat: write the opcode `n` times.
-       * `expandOperand` may turn `#10` into `#$A`; strip `$` before parseInt.
+       * `expandOperand` may turn `#10` into `#$A`. Strip `$` before parseInt.
        * Count `0` emits nothing (still "handled").
        * @param {string} opcode The opcode to handle.
        * @param {string} operand The operand to handle.
@@ -5953,7 +5953,7 @@ var init__ = __esm({
         return true;
       }
       /**
-       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y); STY indexes X only
+       * Encodes STX / STY / STZ. STX indexes Y only (no abs,y). STY indexes X only
        * (no abs,x). Forced `.w` on those indexed forms still emits the DP opcode.
        *
        * @param {string} opcode STX, STY, or STZ.
@@ -6074,7 +6074,7 @@ var init__ = __esm({
         throw new Error(`Error: Invalid operand format for ${opcode}: ${operand}`);
       }
       /**
-       * MVN/MVP. WDC and the hover catalog spell `dest, src`; we still write bytes
+       * MVN/MVP. WDC and the hover catalog spell `dest, src`. We still write bytes
        * in source order (first operand, then second) - Asar's wire format. Locals
        * are named src/dest after that write order, not WDC's dest-then-src names.
        *
@@ -6209,7 +6209,7 @@ var init__ = __esm({
       }
       /**
        * Encodes BRK / COP / PEA / PEI / REP / SEP / WDM. Width is fixed: PEA is
-       * always 16-bit; the rest are 8-bit. `.b/.w` on REP/SEP only validates range.
+       * always 16-bit. The rest are 8-bit. `.b/.w` on REP/SEP only validates range.
        * @param {string} opcode Candidate mnemonic.
        * @param {number} num Already-evaluated operand value.
        * @param {number} len Inferred width (REP/SEP range check).
@@ -6371,7 +6371,7 @@ var init__ = __esm({
       }
       /**
        * `.b` = 1, `.w` = 2, `.l` = 3. `.d` (32-bit) is accepted but deprecated -
-       * 65816 has no 32-bit immediate; callers treat it as width 4 for PEA-like repeats.
+       * 65816 has no 32-bit immediate. Callers treat it as width 4 for PEA-like repeats.
        * @param {string} c The opcode suffix to resolve the length of.
        * @returns {number} The operand length.
        * @throws {Error} If the opcode length is invalid.
@@ -6397,10 +6397,10 @@ var init__ = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700-decoder.ts
+// ../plugin-snes/src/architectures/spc700-decoder.ts
 var readLittleEndian2, signedByte, register2, address2, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
 var init_spc700_decoder = __esm({
-  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width) => {
@@ -6674,10 +6674,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/split-operands.ts
+// ../plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "packages/plugin-snes/src/architectures/split-operands.ts"() {
+  "../plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text) => text ? [text] : [];
     splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
@@ -6707,7 +6707,7 @@ var init_split_operands = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/spc700.ts
+// ../plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -6804,7 +6804,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "packages/plugin-snes/src/architectures/spc700.ts"() {
+  "../plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -7042,7 +7042,7 @@ var init_spc700 = __esm({
       /**
        * Size for a resolved mnemonic. `.b/.w` suffixes are stripped (SPC700 width
        * is spelling-based, not 65816 `.l`). Unknown ops return 1 so layout does
-       * not stall; encode will still reject them.
+       * not stall. Encode will still reject them.
        *
        * @param {string} mnemonic The mnemonic.
        * @param {string} operandText The operand text.
@@ -7589,7 +7589,7 @@ var init_spc700 = __esm({
       /**
        * Maps an `A,<addr>` operand onto {@link memOpTables} keys.
        * Labels keep original case so `spc_07C2+Y` still looks up. `(X)` is
-       * indirectX (no extra byte); `($dp+X)` is indirectDpX.
+       * indirectX (no extra byte). `($dp+X)` is indirectDpX.
        *
        * @param {string} operand Right-hand operand of an A-destination ALU op.
        * @param {LoweredOperand} [loweredOperand] Lowered metadata when available.
@@ -7687,7 +7687,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc; `DEC X`/`DEC Y` and
+       * ASL / LSR / ROL / ROR / INC / DEC. `A` is implied-acc. `DEC X`/`DEC Y` and
        * `INC X`/`INC Y` are 1-byte register forms. `$dp+X` vs `$abs+X` follows
        * {@link getAddressSize} (spelling), not the numeric value.
        *
@@ -7778,7 +7778,7 @@ var init_spc700 = __esm({
         return true;
       }
       /**
-       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic; Asar also accepts
+       * SET0–SET7 / CLR0–CLR7 `$dp`. Bit is in the mnemonic. Asar also accepts
        * `SET1 $13.7` where `.n` overrides the mnemonic digit.
        *
        * @param {string} opcode SET/CLR mnemonic with bit digit.
@@ -7894,7 +7894,7 @@ var init_spc700 = __esm({
        * @param {string} left Register, `$dp`, or `$dp+X`.
        * @param {string} right Branch target.
        * @param {LoweredOperand} [leftLowered] Lowered left operand.
-       * @param {LoweredOperand} [_rightLowered] Unused; kept for call-site symmetry.
+       * @param {LoweredOperand} [_rightLowered] Unused. Kept for call-site symmetry.
        * @returns {boolean} True if encoded.
        */
       handleDbnzCbne(opcode, left, right, leftLowered, _rightLowered) {
@@ -8488,7 +8488,7 @@ var init_spc700 = __esm({
             opcodeDp: 203,
             opcodeAbs: 204
           },
-          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp; "X,$1234" => 0xe9 or 0xf8 for dp, etc.
+          // The reverse: "A,$1234" => 0xe5 or 0xe4 for dp. "X,$1234" => 0xe9 or 0xf8 for dp, etc.
           {
             regex: /^A\s*,\s*\$([\dA-F]+)$/,
             opcodeDp: 228,
@@ -8706,10 +8706,10 @@ var init_spc700 = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx-decoder.ts
+// ../plugin-snes/src/architectures/superfx-decoder.ts
 var word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
 var init_superfx_decoder = __esm({
-  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -9006,10 +9006,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// packages/plugin-snes/src/asar/compatibility.ts
+// ../plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "packages/plugin-snes/src/asar/compatibility.ts"() {
+  "../plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -9085,10 +9085,10 @@ var init_compatibility = __esm({
   }
 });
 
-// packages/plugin-snes/src/architectures/superfx.ts
+// ../plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "packages/plugin-snes/src/architectures/superfx.ts"() {
+  "../plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src();
     init_compatibility();
@@ -9204,7 +9204,7 @@ var init_superfx = __esm({
       /**
        * @param {ArchitectureEncoderContext} context Encoder host.
        * @param {() => boolean} asarMoveShortAddress Session flag for **auto-MOVE** short RAM only.
-       *   Hardware stores a word index (`addr >> 1`); Asar stores `addr & 0xff`. Explicit
+       *   Hardware stores a word index (`addr >> 1`). Asar stores `addr & 0xff`. Explicit
        *   `LMS`/`SMS` always encode `addr >> 1` and ignore this flag. Default is hardware.
        */
       constructor(context, asarMoveShortAddress = () => false) {
@@ -9403,7 +9403,7 @@ var init_superfx = __esm({
       }
       /**
        * Encodes a resolved Super FX mnemonic. Implied/prefixed ops reject extra
-       * operands; unknown mnemonics return false (`unknownInstructionBehavior` is
+       * operands. Unknown mnemonics return false (`unknownInstructionBehavior` is
        * `returnFalse` so 65816 can try next).
        *
        * @param {string} mnemonic The mnemonic.
@@ -9458,11 +9458,11 @@ var init_superfx = __esm({
         return false;
       }
       /**
-       * Single-operand Super FX: short branches (`$XX` is a raw offset; labels stay
+       * Single-operand Super FX: short branches (`$XX` is a raw offset, labels stay
        * PC-relative), then register / `#0`–`#15` / `(Rn)` ops.
        * @param {string} opcode Uppercased mnemonic.
        * @param {string} operand The operand.
-       * @param {number} operandLength Logged only; encoded size is fixed per opcode family.
+       * @param {number} operandLength Logged only. Encoded size is fixed per opcode family.
        * @param {LoweredOperand} [loweredOperand] Lowered operand metadata.
        * @returns {boolean} True if the instruction was handled, false otherwise.
        */
@@ -9778,7 +9778,7 @@ var init_superfx = __esm({
       }
       /**
        * LMS/SMS require an even RAM byte address in `[0x000..0x1FE]`. Throws otherwise.
-       * Encode then stores `addr >> 1`; this check is the byte-address constraint.
+       * Encode then stores `addr >> 1`. This check is the byte-address constraint.
        * @param {number} num RAM byte address (not the word index).
        * @returns {boolean} Always `true` when the address is valid.
        * @throws {Error} If the address is odd or outside the short-RAM window.
@@ -9801,7 +9801,7 @@ var init_superfx = __esm({
         return /^\$[\dA-Fa-f]{2}$/.test(operand.trim());
       }
       /**
-       * Fallback width when lowering did not supply `length`. `$XX` is 1; everything else is 2.
+       * Fallback width when lowering did not supply `length`. `$XX` is 1. Everything else is 2.
        * Super FX uses this for one-operand branches when `loweredOperand` is missing.
        * @param {string} operand Operand text.
        * @returns {number} 1 for an explicit `$XX` spelling, otherwise 2.
@@ -9873,7 +9873,7 @@ var init_superfx = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/ca65-compat.ts
+// ../plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -9957,13 +9957,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
+  "../plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// packages/plugin-snes/src/directives/freespace.ts
+// ../plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -10019,13 +10019,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "packages/plugin-snes/src/directives/freespace.ts"() {
+  "../plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// packages/plugin-snes/src/directives/layout.ts
+// ../plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -10093,7 +10093,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout = __esm({
-  "packages/plugin-snes/src/directives/layout.ts"() {
+  "../plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -10109,10 +10109,10 @@ var init_layout = __esm({
   }
 });
 
-// packages/plugin-snes/src/services/spc-runtime.ts
+// ../plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "packages/plugin-snes/src/services/spc-runtime.ts"() {
+  "../plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -10197,7 +10197,7 @@ var init_spc_runtime = __esm({
        * execute trailer, then restores namespace and the previous architecture.
        *
        * Size is `(pc - dest) & $FFFF` - 64 KiB wrap, matching Asar.
-       * Size is only patched when `canFinalize` (emit pass); collect/layout leave
+       * Size is only patched when `canFinalize` (emit pass). Collect/layout leave
        * the placeholder so later passes can rewrite it.
        *
        * Trailer priority: `endspcblock execute <addr>` > `startpos` > none.
@@ -10248,17 +10248,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// packages/plugin-snes/src/directives/spc.ts
+// ../plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "packages/plugin-snes/src/directives/spc.ts"() {
+  "../plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// packages/plugin-snes/src/session-state.ts
+// ../plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -10269,7 +10269,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "packages/plugin-snes/src/session-state.ts"() {
+  "../plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -10278,10 +10278,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/target/address-space.ts
+// ../plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "packages/plugin-snes/src/target/address-space.ts"() {
+  "../plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -10466,10 +10466,10 @@ var init_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/tooling/directive-catalog.ts
+// ../plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
+  "../plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -11091,17 +11091,17 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-state.ts
+// ../plugin-snes/src/disassembler/65816-state.ts
 var init_state = __esm({
-  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
+  "../plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/address-identities.ts
+// ../plugin-snes/src/disassembler/address-identities.ts
 var SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_address_identities = __esm({
-  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
+  "../plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     SNES_WRAM_ADDRESS_SPACE = "snes.wram";
     SNES_SRAM_ADDRESS_SPACE = "snes.sram";
@@ -11120,10 +11120,10 @@ var init_address_identities = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/hardware-registers.ts
+// ../plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -11154,12 +11154,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "BG1HOFS",
         address: 8461,
-        description: "BG1 horizontal scroll, write twice; also Mode 7 horizontal offset."
+        description: "BG1 horizontal scroll, write twice. Also Mode 7 horizontal offset."
       },
       {
         symbol: "BG1VOFS",
         address: 8462,
-        description: "BG1 vertical scroll, write twice; also Mode 7 vertical offset."
+        description: "BG1 vertical scroll, write twice. Also Mode 7 vertical offset."
       },
       { symbol: "BG2HOFS", address: 8463, description: "BG2 horizontal scroll, write twice." },
       { symbol: "BG2VOFS", address: 8464, description: "BG2 vertical scroll, write twice." },
@@ -11180,12 +11180,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "M7A",
         address: 8475,
-        description: "Mode 7 matrix parameter A, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter A, write twice. Multiplication operand."
       },
       {
         symbol: "M7B",
         address: 8476,
-        description: "Mode 7 matrix parameter B, write twice; multiplication operand."
+        description: "Mode 7 matrix parameter B, write twice. Multiplication operand."
       },
       { symbol: "M7C", address: 8477, description: "Mode 7 matrix parameter C, write twice." },
       { symbol: "M7D", address: 8478, description: "Mode 7 matrix parameter D, write twice." },
@@ -11225,17 +11225,17 @@ var init_hardware_registers = __esm({
       {
         symbol: "MPYL",
         address: 8500,
-        description: "PPU multiplication result, low byte; read only."
+        description: "PPU multiplication result, low byte. Read only."
       },
       {
         symbol: "MPYM",
         address: 8501,
-        description: "PPU multiplication result, middle byte; read only."
+        description: "PPU multiplication result, middle byte. Read only."
       },
       {
         symbol: "MPYH",
         address: 8502,
-        description: "PPU multiplication result, high byte; read only."
+        description: "PPU multiplication result, high byte. Read only."
       },
       {
         symbol: "SLHV",
@@ -11256,8 +11256,8 @@ var init_hardware_registers = __esm({
         address: 8509,
         description: "Latched vertical beam-counter value, read twice."
       },
-      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number; read only." },
-      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number; read only." },
+      { symbol: "STAT77", address: 8510, description: "PPU1 status and version number. Read only." },
+      { symbol: "STAT78", address: 8511, description: "PPU2 status and version number. Read only." },
       { symbol: "APUIO0", address: 8512, description: "Main CPU/APU communication port 0." },
       { symbol: "APUIO1", address: 8513, description: "Main CPU/APU communication port 1." },
       { symbol: "APUIO2", address: 8514, description: "Main CPU/APU communication port 2." },
@@ -11309,12 +11309,12 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDNMI",
         address: 16912,
-        description: "V-blank NMI flag and CPU version; read acknowledges the flag."
+        description: "V-blank NMI flag and CPU version. Read acknowledges the flag."
       },
       {
         symbol: "TIMEUP",
         address: 16913,
-        description: "H/V timer IRQ flag; read acknowledges the flag."
+        description: "H/V timer IRQ flag. Read acknowledges the flag."
       },
       {
         symbol: "HVBJOY",
@@ -11325,62 +11325,62 @@ var init_hardware_registers = __esm({
       {
         symbol: "RDDIVL",
         address: 16916,
-        description: "Unsigned division quotient, low byte; read only."
+        description: "Unsigned division quotient, low byte. Read only."
       },
       {
         symbol: "RDDIVH",
         address: 16917,
-        description: "Unsigned division quotient, high byte; read only."
+        description: "Unsigned division quotient, high byte. Read only."
       },
       {
         symbol: "RDMPYL",
         address: 16918,
-        description: "Multiplication product or division remainder, low byte; read only."
+        description: "Multiplication product or division remainder, low byte. Read only."
       },
       {
         symbol: "RDMPYH",
         address: 16919,
-        description: "Multiplication product or division remainder, high byte; read only."
+        description: "Multiplication product or division remainder, high byte. Read only."
       },
       {
         symbol: "JOY1L",
         address: 16920,
-        description: "Automatic joypad result for controller 1, low byte; read only."
+        description: "Automatic joypad result for controller 1, low byte. Read only."
       },
       {
         symbol: "JOY1H",
         address: 16921,
-        description: "Automatic joypad result for controller 1, high byte; read only."
+        description: "Automatic joypad result for controller 1, high byte. Read only."
       },
       {
         symbol: "JOY2L",
         address: 16922,
-        description: "Automatic joypad result for controller 2, low byte; read only."
+        description: "Automatic joypad result for controller 2, low byte. Read only."
       },
       {
         symbol: "JOY2H",
         address: 16923,
-        description: "Automatic joypad result for controller 2, high byte; read only."
+        description: "Automatic joypad result for controller 2, high byte. Read only."
       },
       {
         symbol: "JOY3L",
         address: 16924,
-        description: "Automatic joypad result for controller 3, low byte; read only."
+        description: "Automatic joypad result for controller 3, low byte. Read only."
       },
       {
         symbol: "JOY3H",
         address: 16925,
-        description: "Automatic joypad result for controller 3, high byte; read only."
+        description: "Automatic joypad result for controller 3, high byte. Read only."
       },
       {
         symbol: "JOY4L",
         address: 16926,
-        description: "Automatic joypad result for controller 4, low byte; read only."
+        description: "Automatic joypad result for controller 4, low byte. Read only."
       },
       {
         symbol: "JOY4H",
         address: 16927,
-        description: "Automatic joypad result for controller 4, high byte; read only."
+        description: "Automatic joypad result for controller 4, high byte. Read only."
       }
     ];
     FIXED_REGISTERS = Object.freeze(
@@ -11454,7 +11454,7 @@ var init_hardware_registers = __esm({
       {
         offset: 11,
         symbol: (channel) => `UNUSED${channel}`,
-        description: "Unused DMA/HDMA data byte; shared with the $43nF mirror."
+        description: "Unused DMA/HDMA data byte. Shared with the $43nF mirror."
       },
       {
         offset: 15,
@@ -11468,40 +11468,40 @@ var init_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/rom-header.ts
+// ../plugin-snes/src/disassembler/rom-header.ts
 var init_rom_header = __esm({
-  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
+  "../plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/65816-analysis.ts
+// ../plugin-snes/src/disassembler/65816-analysis.ts
 var init_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/dizraw-import.ts
+// ../plugin-snes/src/disassembler/dizraw-import.ts
 var init_dizraw_import = __esm({
-  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+// ../plugin-snes/src/disassembler/mesen-runtime.ts
 var CDL_HEADER;
 var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     CDL_HEADER = new TextEncoder().encode("CDLv2");
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+// ../plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -11513,38 +11513,38 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
+// ../plugin-snes/src/disassembler/mesen-labels.ts
 var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
+// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
 var init_framework_asset_helpers = __esm({
-  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/ram-map.ts
+// ../plugin-snes/src/disassembler/ram-map.ts
 var init_ram_map = __esm({
-  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
+  "../plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/source-export.ts
+// ../plugin-snes/src/disassembler/source-export.ts
 var init_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/source-export.ts"() {
+  "../plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress;
 var init_spc700_hardware_registers = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -11576,45 +11576,45 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-state.ts
+// ../plugin-snes/src/disassembler/spc700-state.ts
 var init_spc700_state = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
+  "../plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-analysis.ts
+// ../plugin-snes/src/disassembler/spc700-analysis.ts
 var init_spc700_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/spc700-upload.ts
+// ../plugin-snes/src/disassembler/spc700-upload.ts
 var init_spc700_upload = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-state.ts
+// ../plugin-snes/src/disassembler/superfx-state.ts
 var init_superfx_state = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
+  "../plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/processor-source-export.ts
+// ../plugin-snes/src/disassembler/processor-source-export.ts
 var init_processor_source_export = __esm({
-  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/function-heuristics.ts
+// ../plugin-snes/src/disassembler/function-heuristics.ts
 var builtins, SNES_HEURISTIC_RULE_IDS;
 var init_function_heuristics = __esm({
-  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     builtins = [
       {
@@ -11675,17 +11675,17 @@ var init_function_heuristics = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/runtime-code.ts
+// ../plugin-snes/src/disassembler/runtime-code.ts
 var init_runtime_code = __esm({
-  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
+  "../plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+// ../plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR;
 var init_superfx_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -11697,24 +11697,24 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/project-initializer.ts
+// ../plugin-snes/src/disassembler/project-initializer.ts
 var init_project_initializer = __esm({
-  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
+  "../plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/disassembler/superfx-analysis.ts
+// ../plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
-  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
+// ../plugin-snes/src/assets/common.ts
 var objectValue, optionsFor, integerOption, stringOption, readBytes, resolveCount, resolveGrid, decodedObject, arrayValue, integerValue, defaultPath, jsonFile;
 var init_common = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
+  "../plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0) {
@@ -11820,10 +11820,10 @@ var init_common = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/brr.ts
+// ../plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
+  "../plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -11940,10 +11940,10 @@ var init_brr = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/palette.ts
+// ../plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
+  "../plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -12001,10 +12001,10 @@ var init_palette = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tilemap.ts
+// ../plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
+  "../plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -12136,10 +12136,10 @@ var init_tilemap = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/tiles.ts
+// ../plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
+  "../plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -12310,10 +12310,10 @@ var init_tiles = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/previews.ts
+// ../plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue2, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer;
 var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
+  "../plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -12451,10 +12451,10 @@ var init_previews = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/index.ts
+// ../plugin-snes/src/assets/index.ts
 var snesAssetCodecs;
 var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
+  "../plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -12481,10 +12481,10 @@ var init_assets = __esm({
   }
 });
 
-// packages/plugin-snes/src/index.ts
+// ../plugin-snes/src/index.ts
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin;
 var init_src2 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+  "../plugin-snes/src/index.ts"() {
     "use strict";
     init_src();
     init_decoder();
@@ -12989,14 +12989,14 @@ var init_src2 = __esm({
   }
 });
 
-// packages/debug-sidecar-ares/src/sidecar.ts
+// ../debug-sidecar-ares/src/sidecar.ts
 import { readFile } from "node:fs/promises";
 import path2 from "node:path";
 
-// packages/debug-adapter/src/contracts.ts
+// ../debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
-// packages/debug-adapter/src/capture-v2.ts
+// ../debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
   if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
@@ -13055,7 +13055,7 @@ var validateCaptureRequest = (value) => {
   if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
   if (Object.keys(value).some((key) => !fields.includes(key)))
     throw new Error(
-      "Unsupported capture negotiation field; capture requires an explicit supported stream with durable ownership."
+      "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
     );
   if (value.operation === "capabilities" || value.operation === "start") {
     if (value.scope !== void 0) captureScope(value.scope);
@@ -13155,7 +13155,7 @@ for (let slice = 1; slice < 8; slice++)
     Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
   );
 
-// packages/debug-adapter/src/sidecar-protocol.ts
+// ../debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -13369,10 +13369,10 @@ var DebugSidecarMessageQueue = class {
   }
 };
 
-// packages/debug-adapter/src/node-stdio-transport.ts
+// ../debug-adapter/src/node-stdio-transport.ts
 var DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
 
-// packages/debug-adapter/src/sidecar-server.ts
+// ../debug-adapter/src/sidecar-server.ts
 var stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
 var record = (value, context) => {
   if (typeof value !== "object" || value === null || Array.isArray(value))
@@ -13673,7 +13673,7 @@ var DebugSidecarServer = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
@@ -13681,7 +13681,7 @@ import { mkdir, stat } from "node:fs/promises";
 import net2 from "node:net";
 import path from "node:path";
 
-// packages/debug-sidecar-ares/src/gdb-rsp-client.ts
+// ../debug-sidecar-ares/src/gdb-rsp-client.ts
 var asError2 = (error) => error instanceof Error ? error : new Error(String(error));
 var checksum = (payload) => {
   let value = 0;
@@ -13741,7 +13741,7 @@ var GdbRspClient = class {
   #dataSubscription;
   #closeSubscription;
   #buffer = Buffer.alloc(0);
-  /** Unconsumed bytes occupy [start, end); capacity grows geometrically within the receive bound. */
+  /** Unconsumed bytes occupy [start, end). Capacity grows geometrically within the receive bound. */
   #start = 0;
   #end = 0;
   /** First unchecked position for '#', or the delimiter while awaiting checksum bytes. */
@@ -13922,8 +13922,8 @@ var GdbRspClient = class {
     }
   }
   /** Append one owned transport fragment without repeatedly copying its accumulated prefix.
-   * @param {Uint8Array} data Incoming bytes; the transport may reuse them after this call returns.
-   * @returns {void} Grows/compacts only when tail capacity is exhausted; exceeding the bound throws.
+   * @param {Uint8Array} data Incoming bytes. The transport may reuse them after this call returns.
+   * @returns {void} Grows/compacts only when tail capacity is exhausted. Exceeding the bound throws.
    */
   #append(data) {
     const used = this.#end - this.#start;
@@ -13992,7 +13992,7 @@ var GdbRspClient = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 import net from "node:net";
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -14116,7 +14116,7 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-process-host.ts
+// ../debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
@@ -14529,11 +14529,11 @@ var AresProcessHost = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
+// ../debug-sidecar-ares/src/ares-rsp-backend.ts
 init_src();
 init_src2();
 
-// packages/debug-sidecar-ares/src/profile.ts
+// ../debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -14618,7 +14618,7 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
   ])
 });
 
-// packages/debug-sidecar-ares/src/trace-details.ts
+// ../debug-sidecar-ares/src/trace-details.ts
 var integer2 = (value, maximum = Number.MAX_SAFE_INTEGER) => {
   if (!/^[\da-f]+$/i.test(value)) throw new Error("Malformed rich trace integer.");
   const result = Number.parseInt(value, 16);
@@ -14687,7 +14687,7 @@ var parseAresTraceDetails = (response, maximum) => {
   };
 };
 
-// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
+// ../debug-sidecar-ares/src/ares-rsp-backend.ts
 var ARES_NAMED_MEMORY_READ_CHUNK_BYTES = 4096;
 var asError3 = (error) => error instanceof Error ? error : new Error(String(error));
 var checkedInteger = (value, context, maximum = Number.MAX_SAFE_INTEGER) => {
@@ -15226,7 +15226,7 @@ var AresRspDebugBackend = class {
     const client = this.#requireStopped();
     if (options.detail === "full" && !this.#richTrace)
       throw new Error(
-        "This runtime supports PC-only traces; rebuild the maintained runtime for captured bytes/state and bus accesses."
+        "This runtime supports PC-only traces. Rebuild the maintained runtime for captured bytes/state and bus accesses."
       );
     expectOkay(
       await client.request(options.detail === "full" ? "QUttoriTrace:2" : "QUttoriTrace:1"),
@@ -15402,7 +15402,7 @@ var AresRspDebugBackend = class {
   }
 };
 
-// packages/debug-sidecar-ares/src/sidecar.ts
+// ../debug-sidecar-ares/src/sidecar.ts
 var usage = `Usage: uttori-asm-debug-sidecar-ares [options]
 
 Required:

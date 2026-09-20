@@ -2,8 +2,11 @@ import { type DebugAddress, type DebugBackend, type DebugBackendCapabilities, ty
 import { DebugSidecarClient } from "./sidecar-client.js";
 /** Construction settings for one typed sidecar-backed debugger. */
 export interface SidecarDebugBackendOptions {
+    /** Expected backend ID returned by initialize. Other backend identities are rejected. */
     readonly backend: string;
+    /** Exact expected capability profile, checked before any execution requests are accepted. */
     readonly capabilities: DebugBackendCapabilities;
+    /** Creates a fresh owned client initially and after a crash or terminating disconnect. */
     readonly createClient: () => DebugSidecarClient | Promise<DebugSidecarClient>;
 }
 /** Typed `DebugBackend` implementation over the authenticated sidecar client. */

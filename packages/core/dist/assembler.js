@@ -29,7 +29,7 @@ const TOOLING_ANALYSIS_STAGES = ["collectDefinitions"];
 /**
  * Mutable, synchronous build session. Share its frozen environment with other sessions, not its state.
  * Use assembleSource/assembleProgram for builds and analyzeSource for recovering diagnostics.
- * Dispose the session before its plugin manager or loader; use a fresh session after a failed build.
+ * Dispose the session before its plugin manager or loader. Use a fresh session after a failed build.
  * Public runtime fields and service methods support directives and tooling and require stage invariants.
  */
 export class Assembler {
@@ -799,11 +799,6 @@ export class Assembler {
         }
         return registry;
     }
-    /**
-     * Analyzes program.
-     * @param {ProgramModel} program The program.
-     * @returns {AssemblyAnalysisResult} The result.
-     */
     analyzeProgram(program) {
         const session = this.createToolingSession();
         try {
@@ -837,12 +832,6 @@ export class Assembler {
             session.dispose();
         }
     }
-    /**
-     * Analyzes workspace.
-     * @param {Array<{ source: string; sourceFile: string; startLine?: number }>} documents The documents.
-     * @param {ProgramAnalysisOptions} [options] Optional analysis options.
-     * @returns {Array<AssemblyAnalysisResult & { program: ProgramModel; sourceFile: string }>} The result.
-     */
     analyzeWorkspace(documents, options = {}) {
         const results = [];
         for (const document of documents) {
@@ -874,10 +863,6 @@ export class Assembler {
             this.outputBytes[i] = this.baseImage[i];
         }
     }
-    /**
-     * Creates services.
-     * @returns {AssemblerServiceBag} The result.
-     */
     createServices() {
         const defineEngine = new DefineEngine(this);
         const directiveRuntime = new DirectiveRuntimeService(this);
@@ -1234,7 +1219,7 @@ export class Assembler {
     }
     /**
      * Run lifecycle disposal in reverse registration order, then dispose live state slots.
-     * Idempotent; attempts all cleanup and throws AggregateError for failures. The environment
+     * Idempotent. Attempts all cleanup and throws AggregateError for failures. The environment
      * and file provider remain owned by the host. Do not use this session afterward.
      */
     dispose() {
@@ -1267,13 +1252,6 @@ export class Assembler {
             throw new AggregateError(errors, "One or more assembler session resources failed to dispose.");
         }
     }
-    /**
-     * Reads little endian.
-     * @param {Uint8Array} bytes The bytes.
-     * @param {number} pos The pos.
-     * @param {number} width The width.
-     * @returns {number | undefined} The result.
-     */
     readLittleEndian(bytes, pos, width) {
         if (!Number.isInteger(pos) || pos < 0 || pos + width > bytes.length) {
             return undefined;
@@ -1285,11 +1263,11 @@ export class Assembler {
         return out >>> 0;
     }
     /**
-     * Checks whether it can read byte range.
-     * @param {number} sourceLength The source length.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @returns {number} The result.
+     * Check a byte interval after truncating its position and size to integers.
+     * @param {number} sourceLength Available source bytes.
+     * @param {number} position Zero-based byte offset.
+     * @param {number} size Requested byte count, which may be zero.
+     * @returns {number} Numeric 1 or 0 for use by assembly expressions.
      */
     canReadByteRange(sourceLength, position, size) {
         const pos = Math.trunc(position);
@@ -1303,13 +1281,13 @@ export class Assembler {
             : 0;
     }
     /**
-     * Reads byte range.
-     * @param {Uint8Array} source The source.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @param {number | undefined} defaultValue The default value.
-     * @param {string} errorMessage The error message.
-     * @returns {number} The result.
+     * Read an unsigned little-endian value after truncating offset and width.
+     * @param {Uint8Array} source Borrowed input bytes, never modified.
+     * @param {number} position Zero-based byte offset.
+     * @param {number} size Width in bytes, used by the 1–4-byte expression readers.
+     * @param {number | undefined} defaultValue Returned for an out-of-bounds read when supplied.
+     * @param {string} errorMessage Error thrown for an out-of-bounds read without a default.
+     * @returns {number} Unsigned value or the supplied default.
      */
     readByteRange(source, position, size, defaultValue, errorMessage) {
         const pos = Math.trunc(position);
@@ -1323,11 +1301,6 @@ export class Assembler {
         }
         return value;
     }
-    /**
-     * Resolves readable path.
-     * @param {string} filename The filename.
-     * @returns {string | undefined} The result.
-     */
     resolveReadablePath(filename) {
         return this.fileProvider.resolvePath(filename, {
             currentFile: this.currentFile,
@@ -1335,11 +1308,6 @@ export class Assembler {
             macroSourceFile: this.currentMacroSourceFile,
         });
     }
-    /**
-     * Resolves expression host label.
-     * @param {string} identifier The identifier.
-     * @returns {number | string} The result.
-     */
     resolveExpressionHostLabel(identifier) {
         const trimmed = identifier.trim();
         const loopValue = this.activeLoopVariables.get(trimmed);
@@ -1355,12 +1323,6 @@ export class Assembler {
         }
         return this.symbolScope.getLabelValue(identifier, this.requireStaticLabelLookup);
     }
-    /**
-     * Gets expression object size.
-     * @param {string} identifier The identifier.
-     * @param {boolean} [baseOnly] Whether to return only the base object size.
-     * @returns {number} The result.
-     */
     getExpressionObjectSize(identifier, baseOnly = false) {
         if (baseOnly && (identifier === "..." || identifier === "…")) {
             if (this.inMacroExpansion && this.currentVariadicCount !== undefined) {
@@ -1373,11 +1335,6 @@ export class Assembler {
         }
         return this.symbolScope.getObjectSize(identifier, baseOnly);
     }
-    /**
-     * Looks up define value.
-     * @param {string} varName The var name.
-     * @returns {string | undefined} The result.
-     */
     lookupDefineValue(varName) {
         const defineValue = this.defines.get(varName);
         if (defineValue !== undefined) {
@@ -1397,23 +1354,10 @@ export class Assembler {
         }
         return this.macros.get(this.currentMacroName)?.sourceFile;
     }
-    /**
-     * Checks whether it can read the base image.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @returns {number} The result.
-     */
     canReadBaseImage(position, size) {
         const sourceLength = this.baseImage && this.baseImage.length > 0 ? this.baseImage.length : this.outputBytes.length;
         return this.canReadByteRange(sourceLength, position, size);
     }
-    /**
-     * Reads the base image.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @param {number} [defaultValue] The default value.
-     * @returns {number} The result.
-     */
     readBaseImage(position, size, defaultValue) {
         const pos = Math.trunc(position);
         const pcPos = this.outputWriter.toOutputOffset(pos);
@@ -1427,13 +1371,6 @@ export class Assembler {
         const sourceBytes = Uint8Array.from(source);
         return this.readByteRange(sourceBytes, pcPos, size, defaultValue, `read${Math.trunc(size)} out of bounds at ${pos}`);
     }
-    /**
-     * Checks whether it can read expression file.
-     * @param {string} filename The filename.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @returns {number} The result.
-     */
     canReadExpressionFile(filename, position, size) {
         const resolvedPath = this.resolveReadablePath(filename);
         if (!resolvedPath) {
@@ -1445,14 +1382,6 @@ export class Assembler {
         }
         return this.canReadByteRange(fileSize, position, size);
     }
-    /**
-     * Reads expression file.
-     * @param {string} filename The filename.
-     * @param {number} position The position.
-     * @param {number} size The size.
-     * @param {number} [defaultValue] The default value.
-     * @returns {number} The result.
-     */
     readExpressionFile(filename, position, size, defaultValue) {
         const pos = Math.trunc(position);
         const resolvedPath = this.resolveReadablePath(filename);
@@ -1585,11 +1514,6 @@ export class Assembler {
             this.outputBytes[start + i] = value & 0xff;
         }
     }
-    /**
-     * Creates ephemeral stage execution state.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {StageExecutionState} The result.
-     */
     createEphemeralStageExecutionState(stage) {
         const descriptor = this.getStageDescriptor(stage);
         return {
@@ -1635,10 +1559,6 @@ export class Assembler {
         this.activeStageExecutionState.stage = descriptor.stage;
         this.activeStageExecutionState.capabilities = descriptor.capabilities;
     }
-    /**
-     * Gets active stage capabilities.
-     * @returns {StageExecutionCapabilities} The result.
-     */
     getActiveStageCapabilities() {
         if (!this.activeStageExecutionState) {
             this.activeStageExecutionState =
@@ -1649,11 +1569,6 @@ export class Assembler {
     get traceStage() {
         return this.activeStageExecutionState?.stage ?? "collectDefinitions";
     }
-    /**
-     * Lays out instruction.
-     * @param {string[] | LoweredInstruction} input The input.
-     * @returns {boolean} The result.
-     */
     layoutInstruction(input) {
         const words = Array.isArray(input) ? input : input.words;
         if (words.length === 0) {
@@ -1670,11 +1585,6 @@ export class Assembler {
         this.step(size);
         return true;
     }
-    /**
-     * Emits instruction.
-     * @param {string[] | LoweredInstruction} input The input.
-     * @returns {boolean} The result.
-     */
     emitInstruction(input) {
         const words = Array.isArray(input) ? input : input.words;
         if (words.length === 0) {
@@ -1717,10 +1627,6 @@ export class Assembler {
         }
         return this.emitInstruction(input);
     }
-    /**
-     * Resolves active architecture.
-     * @returns {{ name: string; definition?: ArchitectureDefinition }} The result.
-     */
     resolveActiveArchitecture() {
         const normalized = this.arch.toLowerCase();
         const canonical = this.architectureRegistry.getCanonicalName(normalized);
@@ -1808,11 +1714,6 @@ export class Assembler {
         }
         return this.outputBytes[addr];
     }
-    /**
-     * Reads 2.
-     * @param {number} logicalPosition The logical address.
-     * @returns {number} The result.
-     */
     read2(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
         if (addr < 0 || addr + 2 > this.outputBytes.length) {
@@ -1820,11 +1721,6 @@ export class Assembler {
         }
         return this.outputBytes[addr] | (this.outputBytes[addr + 1] << 8);
     }
-    /**
-     * Reads 3.
-     * @param {number} logicalPosition The logical address.
-     * @returns {number} The result.
-     */
     read3(logicalPosition) {
         const addr = this.outputWriter.toOutputOffset(logicalPosition);
         if (addr < 0 || addr + 3 > this.outputBytes.length) {
@@ -1834,22 +1730,9 @@ export class Assembler {
             (this.outputBytes[addr + 1] << 8) |
             (this.outputBytes[addr + 2] << 16));
     }
-    /**
-     * Rewrites raw command.
-     * @param {string} command The command.
-     * @returns {string} The result.
-     */
     rewriteRawCommand(command) {
         return this.macroEngine.rewriteMacroLabelReferences(command);
     }
-    /**
-     * Creates normalized command from raw.
-     * @param {string} command The command.
-     * @param {string} sourceFile The source file.
-     * @param {number} sourceLine The source line.
-     * @param {boolean} [allowEmpty] The allow empty.
-     * @returns {NormalizedCommand | null} The result.
-     */
     createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty = false) {
         return this.frontEndService.createNormalizedCommandFromRaw(command, sourceFile, sourceLine, allowEmpty);
     }
@@ -1886,11 +1769,6 @@ export class Assembler {
         ]);
         return true;
     }
-    /**
-     * Preprocesses normalized command.
-     * @param {NormalizedCommand} state The state.
-     * @returns {CommandPreprocessResult} The result.
-     */
     preprocessNormalizedCommand(state) {
         // Table rows are data, not static label assignments or macro definitions.
         // Rewriting before dispatch keeps normal diagnostics, references and traces.
@@ -1946,11 +1824,6 @@ export class Assembler {
         }
         return "continue";
     }
-    /**
-     * Prepares normalized command for dispatch.
-     * @param {NormalizedCommand} state The state.
-     * @returns {boolean} The result.
-     */
     prepareNormalizedCommandForDispatch(state) {
         if (state.kind === "unknown") {
             setCommandWords(state, state.words, state.command);
@@ -2103,12 +1976,6 @@ export class Assembler {
             this.addAddressToLine(normalizeAddressForWidth(this.currentTargetBaseAddress, this.addressWidth));
         }
     }
-    /**
-     * Gets or create lowered program.
-     * @param {StageExecutionState} stageState The stage state.
-     * @param {ProgramModel} program The program.
-     * @returns {LoweredProgram} The result.
-     */
     getOrCreateLoweredProgram(stageState, program) {
         if (!stageState.loweredProgram) {
             stageState.loweredProgram = measureInternalPhase("lowerProgram", () => this.commandLoweringService.lowerProgram(program));
@@ -2188,7 +2055,7 @@ export class Assembler {
     }
     /**
      * Replace include search paths before assembly. Retains the array without copying.
-     * @param {string[]} paths Provider-specific search paths; Node resolves relative paths from cwd.
+     * @param {string[]} paths Provider-specific search paths. Node resolves relative paths from cwd.
      */
     setIncludePaths(paths) {
         this.includePaths = paths;
@@ -2655,11 +2522,6 @@ export class Assembler {
     setCurrentLine(line) {
         this.currentLine = line;
     }
-    /**
-     * Gets stage descriptor.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {Pick<StageExecutionState, "stage" | "capabilities">} The result.
-     */
     getStageDescriptor(stage) {
         if (stage === "collectDefinitions") {
             return {
@@ -2696,11 +2558,6 @@ export class Assembler {
             },
         };
     }
-    /**
-     * Clones relative labels.
-     * @param {{ [depth: number]: { addr: number; macroInstance?: number }[] }} source The source.
-     * @returns {{ [depth: number]: { addr: number; macroInstance?: number }[]; }} The result.
-     */
     cloneRelativeLabels(source) {
         const clone = {};
         for (const [depth, entries] of Object.entries(source)) {
@@ -2708,11 +2565,6 @@ export class Assembler {
         }
         return clone;
     }
-    /**
-     * Creates stage execution state.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {StageExecutionState} The result.
-     */
     createStageExecutionState(stage) {
         const descriptor = this.getStageDescriptor(stage);
         let previousStage;
@@ -2827,11 +2679,6 @@ export class Assembler {
             macroLabelInstance: this.macroLabelInstance,
         };
     }
-    /**
-     * Gets or create stage execution state.
-     * @param {AssemblyStageName} stage The stage.
-     * @returns {StageExecutionState} The result.
-     */
     getOrCreateStageExecutionState(stage) {
         const existing = this.stageExecutionStates.get(stage);
         if (existing) {
@@ -2841,13 +2688,6 @@ export class Assembler {
         this.stageExecutionStates.set(stage, created);
         return created;
     }
-    /**
-     * Builds program model.
-     * @param {string} source The source.
-     * @param {string} [sourceFile] The source file.
-     * @param {number} [startLine] The start line.
-     * @returns {ProgramModel} The result.
-     */
     buildProgramModel(source, sourceFile = this.currentFile, startLine = 0) {
         return measureInternalPhase("buildProgramModel", () => {
             const program = this.programModelBuilder.buildProgramModel(source, sourceFile, startLine);
@@ -2858,12 +2698,6 @@ export class Assembler {
             };
         });
     }
-    /**
-     * Runs stage.
-     * @param {AssemblyStageName} stage The stage.
-     * @param {ProgramModel} program The program.
-     * @returns {StageExecutionState} The result.
-     */
     runStage(stage, program) {
         return measureInternalPhase(stage, () => {
             if (stage === "collectDefinitions") {
@@ -2886,7 +2720,7 @@ export class Assembler {
     }
     /**
      * Run definition collection, layout resolution, and byte emission synchronously in that order.
-     * Throws at the first unrecovered failure; partial state/output is not a successful binary.
+     * Throws at the first unrecovered failure. Partial state/output is not a successful binary.
      * @param {ProgramModel} program Parsed source model produced for this target's syntax.
      */
     assembleProgram(program) {
@@ -2895,11 +2729,11 @@ export class Assembler {
         this.runStage("emitProgram", program);
     }
     /**
-     * Parse and run all three assembly stages; includes are read through the configured provider.
+     * Parse and run all three assembly stages. Includes are read through the configured provider.
      * Throws on failure. Read the finalized bytes with getBinaryOutput after success.
      * @param {string} source Assembly source text, not a filename.
-     * @param {string} [sourceFile] Source identity and include-resolution base; defaults to currentFile.
-     * @param {number} [startLine] Zero-based line offset; defaults to zero.
+     * @param {string} [sourceFile] Source identity and include-resolution base. Defaults to currentFile.
+     * @param {number} [startLine] Zero-based line offset. Defaults to zero.
      * @returns {ProgramModel} Parsed model used for this build.
      */
     assembleSource(source, sourceFile = this.currentFile, startLine = 0) {
@@ -2943,7 +2777,7 @@ export class Assembler {
     }
     /**
      * Materialize the target format's current bytes without assembling or finalizing again.
-     * @returns {Uint8Array} Output whose ownership depends on the formatter; copy before retaining or mutating independently.
+     * @returns {Uint8Array} Output whose ownership depends on the formatter. Copy before retaining or mutating independently.
      */
     getBinaryOutput = () => {
         return this.pluginOutputFormat.getOutput({
@@ -2968,11 +2802,6 @@ export class Assembler {
             this.runtimePassthroughRewriteEnabled = previousRewrite;
         }
     }
-    /**
-     * Resolves for loop bounds.
-     * @param {LoweredLoopNode} forBlock The for block.
-     * @returns {{ variable?: string; start?: number; end?: number; }} The result.
-     */
     resolveForLoopBounds(forBlock) {
         const parsedForLoop = forBlock.header?.parsed.forLoop;
         const variable = forBlock.variable ?? parsedForLoop?.variable;
@@ -3095,11 +2924,6 @@ export class Assembler {
             ? (getDefineVariable(cmd.command.command) ?? null)
             : null, (cmd) => this.executeLoweredNodeWithRecovery(cmd));
     }
-    /**
-     * Gets lowered node span.
-     * @param {LoweredExecutableNode} node The node.
-     * @returns {SourceSpan | undefined} The result.
-     */
     getLoweredNodeSpan(node) {
         if (node.kind === "command") {
             return node.command.source.normalizedSpan;

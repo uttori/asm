@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /** V8 sampling durations are microseconds. Inclusive samples overlap across
- * callers; only exclusive samples partition the observed profile duration.
+ * callers. Only exclusive samples partition the observed profile duration.
  */
 interface ProfileNode {
   readonly id: number;
@@ -98,7 +98,7 @@ await writeFile(
       sourceMapSha256: mapBytes ? createHash("sha256").update(mapBytes).digest("hex") : undefined,
       samples: profile.samples.length,
       sampledWallMs: totalUs / 1000,
-      note: "Statistical samples include startup, GC and idle time. Inclusive rows overlap; native work can be charged to its JS caller. No per-event timers or production changes.",
+      note: "Statistical samples include startup, GC and idle time. Inclusive rows overlap. Native work can be charged to its JS caller. No per-event timers or production changes.",
       exclusive: rows(exclusive),
       inclusive: rows(inclusive),
     },

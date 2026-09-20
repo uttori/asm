@@ -7,7 +7,7 @@ using ares_capture::Capture;
 using Clock = std::chrono::steady_clock;
 
 // Isolate the pinned producer's encoding/CRC/hex costs. No emulator, filesystem,
-// TCP, or consumer is present; the existing PPU harness measures those hooks.
+// TCP, or consumer is present. The existing PPU harness measures those hooks.
 struct Workload {
   const char* name;
   unsigned kind;  // 0: fetched instruction; 1: bus; 2: boundary; 3: PPU effect.

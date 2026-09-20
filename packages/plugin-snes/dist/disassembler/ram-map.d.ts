@@ -11,7 +11,7 @@ export declare const SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
 /** One editable RAM variable as represented in `ram-map.json`. */
 export interface SnesRamMapVariableInput {
     readonly name: string;
-    /** CPU bus address as `$7EA171`, `0x7EA171`, or an integer; never a physical SRAM offset. */
+    /** CPU bus address as `$7EA171`, `0x7EA171`, or an integer. Never a physical SRAM offset. */
     readonly address: string | number;
     /** Defaults to WRAM. SRAM is an explicit cartridge-window declaration with exact-address lookup. */
     readonly memory?: "wram" | "sram";
@@ -33,7 +33,7 @@ export interface SnesRamMapFile {
 export interface SnesRamMapVariable {
     readonly name: string;
     readonly address: number;
-    /** Omitted means WRAM; SRAM addresses are not normalized across cartridge-dependent mirrors. */
+    /** Omitted means WRAM. SRAM addresses are not normalized across cartridge-dependent mirrors. */
     readonly memory?: "wram" | "sram";
     readonly size: number;
     readonly category?: string;

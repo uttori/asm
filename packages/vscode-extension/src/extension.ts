@@ -32,24 +32,25 @@ import {
 import {
   AnalysisAnnotationController,
   TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND,
-} from "./analysis-annotation-controller.js";
-import { AnalysisGraphProvider } from "./analysis-graph-tree.js";
-import { navigateToAnalysisLocation } from "./analysis-navigation.js";
-import { AnalysisProjectEditor } from "./analysis-project-editor.js";
-import { AnalysisSourcesProvider } from "./analysis-sources-tree.js";
-import { initializeAnalysisWorker } from "./analysis-worker-client.js";
-import { AnalysisCoverageProvider } from "./coverage-tree.js";
+} from "./analysis/annotation-controller.js";
+import { AnalysisCoverageProvider } from "./analysis/coverage-tree.js";
+import { AnalysisGraphProvider } from "./analysis/graph-tree.js";
+import { navigateToAnalysisLocation } from "./analysis/navigation.js";
+import { AnalysisProjectEditor } from "./analysis/project-editor.js";
+import { AnalysisSourcesProvider } from "./analysis/sources-tree.js";
+import { initializeAnalysisWorker } from "./analysis/worker-client.js";
 import {
   configureEmulatorRuntime,
   configuredEmulatorRuntime,
   liveDebugConfiguration,
   registerDebugging,
   type BuiltDebugArtifacts,
-} from "./debug.js";
-import { registerDisassemblyMaintenance } from "./disassembly-maintenance.js";
-import { ProjectOutlineProvider } from "./outline-tree.js";
-import { ProjectPanelProvider } from "./panel.js";
-import { registerProjectWizards } from "./project-wizard.js";
+} from "./debug/session.js";
+import { registerDisassemblyMaintenance } from "./disassembly/maintenance.js";
+import { DisassemblyPanelProvider } from "./disassembly/panel.js";
+import { ProjectOutlineProvider } from "./project/outline-tree.js";
+import { ProjectPanelProvider } from "./project/panel.js";
+import { registerProjectWizards } from "./project/wizard.js";
 
 /**
  * The result of a build request returned by the language server.
@@ -79,16 +80,26 @@ const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  */
 let client: LanguageClient | undefined;
-/** Shared log/output channel for language-server traffic and Build Binary. */
+/**
+ * Shared log/output channel for language-server traffic and Build Binary.
+ * @see https://code.visualstudio.com/api/references/vscode-api#LogOutputChannel
+ */
 let outputChannel: LogOutputChannel | undefined;
-/** Active host context used by debounced Run and Watch rebuilds. */
+/**
+ * Active host context used by debounced Run and Watch rebuilds.
+ * @see https://code.visualstudio.com/api/references/vscode-api#ExtensionContext
+ */
 let extensionContext: ExtensionContext | undefined;
 
 /** Whether build-on-save watch mode is currently enabled. */
 let watchEnabled = false;
 /** Whether watch mode only builds or also performs a deterministic emulator reload. */
 let watchMode: "build" | "emulator" = "build";
-/** Live session owned by Run and Watch, if it has started. */
+/**
+ * Live session owned by Run and Watch, if it has started.
+ * @see https://code.visualstudio.com/api/references/vscode-api#debug.startDebugging
+ * @see https://code.visualstudio.com/api/references/vscode-api#debug.stopDebugging
+ */
 let watchedDebugSession: import("vscode").DebugSession | undefined;
 /**
  * The entry document URI rebuilt on save while watching.
@@ -100,7 +111,10 @@ let watchEntryUri: string | undefined;
  * @see https://code.visualstudio.com/api/references/vscode-api#Disposable
  */
 let saveListener: Disposable | undefined;
-/** Debounce timer for watch rebuilds. */
+/**
+ * Pending 250 ms build-on-save debounce; replaced on each relevant save and cleared when watch
+ * stops or the callback begins.
+ */
 let watchTimer: ReturnType<typeof setTimeout> | undefined;
 /**
  * Status bar toggle for watch mode.
@@ -202,6 +216,7 @@ export function activate(context: ExtensionContext): void {
     () => client,
     () => initConfig(),
   );
+  const disassemblyPanelProvider = new DisassemblyPanelProvider(context.extensionUri);
   const outlineProvider = new ProjectOutlineProvider(() => client);
   const coverageProvider = new AnalysisCoverageProvider();
   const analysisGraphProvider = new AnalysisGraphProvider();
@@ -238,6 +253,9 @@ export function activate(context: ExtensionContext): void {
     analysisAnnotationController,
     sourcesProvider,
     window.registerWebviewViewProvider(ProjectPanelProvider.viewId, panelProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    window.registerWebviewViewProvider(DisassemblyPanelProvider.viewId, disassemblyPanelProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
     window.createTreeView(ProjectOutlineProvider.viewId, {
@@ -337,6 +355,8 @@ export function activate(context: ExtensionContext): void {
     commands.registerCommand("asm.coverage.undo", () => analysisProjectEditor.undo()),
     commands.registerCommand("asm.coverage.redo", () => analysisProjectEditor.redo()),
     workspace.onDidGrantWorkspaceTrust(() => {
+      void panelProvider.refresh();
+      disassemblyPanelProvider.refresh();
       void client?.sendNotification("workspace/didChangeConfiguration", {
         settings: {
           asm: serverInitializationOptions(),
@@ -407,7 +427,7 @@ function toggleWatch(): void {
   } else {
     watchEnabled = true;
     watchMode = "build";
-    watchEntryUri = resolveWatchEntry();
+    watchEntryUri = resolveBuildEntryUri();
     if (!watchEntryUri) {
       stopWatch();
       void window.showErrorMessage(
@@ -423,6 +443,10 @@ function toggleWatch(): void {
   updateStatusItem();
 }
 
+/**
+ * Disable build-on-save, dispose the save listener, cancel any pending debounce, and reset the
+ * status bar without stopping an already running emulator.
+ */
 function stopWatch(): void {
   watchEnabled = false;
   watchMode = "build";
@@ -436,6 +460,12 @@ function stopWatch(): void {
   updateStatusItem();
 }
 
+/**
+ * Return the ROM/debug-map pair only for a successful build that supplied both paths; otherwise
+ * return undefined.
+ * @param {BuildResult} result Language-server build response.
+ * @returns {BuiltDebugArtifacts | undefined} Artifact pair only when the build succeeded and both paths are present.
+ */
 const completeArtifacts = (result: BuildResult): BuiltDebugArtifacts | undefined =>
   result.ok && result.outputPath && result.debugMapPath
     ? {
@@ -446,6 +476,19 @@ const completeArtifacts = (result: BuildResult): BuiltDebugArtifacts | undefined
       }
     : undefined;
 
+/**
+ * Launch the successful build with the saved or newly selected runtime; watched launches first
+ * stop the previous watched session.
+ * Returns false when artifacts are missing, runtime selection is cancelled, or VS Code declines
+ * startup. noDebug selects run-only mode.
+ * @param {ExtensionContext} context Active extension storage/lifecycle context.
+ * @param {BuildResult} result Successful build response containing exact artifact paths.
+ * @param {boolean} noDebug Whether to run without debugger features.
+ * @param {boolean} watched Whether to replace and tag the Run and Watch session.
+ * @returns {Promise<boolean>} Whether VS Code started the session; false for incomplete/cancelled setup.
+ * @see https://code.visualstudio.com/api/references/vscode-api#debug.startDebugging
+ * @see https://code.visualstudio.com/api/references/vscode-api#debug.stopDebugging
+ */
 async function launchLiveBuild(
   context: ExtensionContext,
   result: BuildResult,
@@ -477,6 +520,13 @@ async function launchLiveBuild(
   return vscodeDebug.startDebugging(folder, configuration, { noDebug });
 }
 
+/**
+ * Build the resolved entry and launch its exact artifacts only after success; noDebug selects
+ * running without debugger features.
+ * @param {ExtensionContext} context Active extension storage/lifecycle context.
+ * @param {boolean} noDebug Whether to run without debugger features.
+ * @returns {Promise<void>} Completion after the build and any successful-build launch attempt.
+ */
 async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Promise<void> {
   const result = await runBuild(resolveBuildEntryUri());
   if (!result?.ok) {
@@ -485,11 +535,19 @@ async function buildAndLaunch(context: ExtensionContext, noDebug: boolean): Prom
   await launchLiveBuild(context, result, noDebug, false);
 }
 
+/**
+ * Enable emulator rebuild-on-save and attempt the first build/launch.
+ * Build failure leaves watch active for recovery on save; cancelled or unsuccessful runtime
+ * startup disables it.
+ * @param {ExtensionContext} context Active extension storage/lifecycle context.
+ * @returns {Promise<void>} Completion after watch setup and the initial build/launch attempt.
+ * @see https://code.visualstudio.com/api/references/vscode-api#workspace.onDidSaveTextDocument
+ */
 async function runAndWatch(context: ExtensionContext): Promise<void> {
   if (watchEnabled) {
     stopWatch();
   }
-  const entry = resolveWatchEntry();
+  const entry = resolveBuildEntryUri();
   if (!entry) {
     void window.showErrorMessage(
       "Assembly: open a source file (or set asm.entryPoints) before running and watching.",
@@ -504,7 +562,7 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
   const result = await runBuild(entry);
   if (!result?.ok) {
     void window.showWarningMessage(
-      "Assembly: Run and Watch is active; fix the build error and save to launch the emulator.",
+      "Assembly: Run and Watch is active. Fix the build error and save to launch the emulator.",
     );
     return;
   }
@@ -514,24 +572,15 @@ async function runAndWatch(context: ExtensionContext): Promise<void> {
 }
 
 /**
- * Resolves the entry document to rebuild while watching. Prefers the first
- * configured entry point, falling back to the active editor.
+ * Resolves the document to assemble. Prefers the first configured entry point
+ * so Build Binary / watch rebuild the project root instead of the include
+ * currently in the editor.
  * @returns {string | undefined} The entry document URI string.
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getWorkspaceFolder
  * @see https://code.visualstudio.com/api/references/vscode-api#workspace.workspaceFolders
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.file
  * @see https://code.visualstudio.com/api/references/vscode-api#Uri.joinPath
- */
-function resolveWatchEntry(): string | undefined {
-  return resolveBuildEntryUri();
-}
-
-/**
- * Resolves the document to assemble. Prefers the first configured entry point
- * so Build Binary / watch rebuild the project root instead of the include
- * currently in the editor.
- * @returns {string | undefined} The entry document URI string.
  */
 function resolveBuildEntryUri(): string | undefined {
   const activeUri = window.activeTextEditor?.document.uri;
@@ -601,7 +650,11 @@ function isAssemblyDocument(document: TextDocument): boolean {
 }
 
 /**
- * Writes `uttori-asm.config.json` from the current workspace settings and opens it.
+ * Open the first workspace folder's configuration, creating it from settings and language-server
+ * metadata only when absent. Existing configuration is preserved; no workspace reports an error.
+ * @returns {Promise<void>} Completion after revealing the configuration or reporting that no workspace exists.
+ * @see https://code.visualstudio.com/api/references/vscode-api#workspace.fs
+ * @see https://code.visualstudio.com/api/references/vscode-api#workspace.getConfiguration
  */
 async function initConfig(): Promise<void> {
   const folder = workspace.workspaceFolders?.[0];
@@ -633,7 +686,7 @@ async function initConfig(): Promise<void> {
       metadata = (await client.sendRequest<ProjectMetadata>("asm/projectMetadata")) ?? {};
     }
   } catch {
-    // Server may not be ready; proceed with defaults.
+    // Server may not be ready. Proceed with defaults.
   }
 
   const configuredTarget = config.get<string>("target", "");

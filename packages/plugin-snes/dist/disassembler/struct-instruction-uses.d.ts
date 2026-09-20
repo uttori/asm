@@ -5,35 +5,35 @@ import type { SnesStructBinding, SnesStructLayout } from "./struct-map.js";
 /** A curated capture reference, separate from static operand identity and CPU control flow. */
 export interface SnesStructAccessObservation {
     readonly expression: string;
-    /** Resolved CPU address; the complete access must remain inside one physical binding. */
+    /** Resolved CPU address. The complete access must remain inside one physical binding. */
     readonly address: number;
     /** Physical owner and exact field/gap coverage of the complete access. */
     readonly binding: string;
     readonly parts: readonly SnesStructAccessPart[];
-    /** Number of bytes in this CPU access, one or two; independent of the field's declared size. */
+    /** Number of bytes in this CPU access, one or two. Independent of the field's declared size. */
     readonly width: number;
     readonly access: "read" | "write" | "read-write";
     /** A bus observation and an inference from instruction/register traces are different evidence. */
     readonly provenance: "observed" | "trace-derived";
-    /** Capture path or stable identifier; export renders it as provenance and never opens it. */
+    /** Capture path or stable identifier. Export renders it as provenance and never opens it. */
     readonly source: string;
     /** Capture location and reasoning, such as instruction sequence and pointer reconstruction. */
     readonly detail: string;
     /** SHA-256 of the capture's headerless ROM, checked against the export ROM. */
     readonly romSha256: string;
 }
-/** Validated instruction-specific metadata; expressions resolve only against this map's declarations. */
+/** Validated instruction-specific metadata. Expressions resolve only against this map's declarations. */
 export interface SnesStructInstructionUse {
     readonly address: number;
-    /** Complete instruction encoding, including opcode; stale metadata aborts export before writes. */
+    /** Complete instruction encoding, including opcode. Stale metadata aborts export before writes. */
     readonly expectedBytes: readonly number[];
     readonly reason: string;
-    /** Immediate value expression; mutually exclusive with memoryOperand and access observations. */
+    /** Immediate value expression. Mutually exclusive with memoryOperand and access observations. */
     readonly operand?: {
         readonly expression: string;
         readonly value: number;
     };
-    /** Encoded direct memory address, before indexing/DB/D; never a resolved runtime effective address. */
+    /** Encoded direct memory address, before indexing/DB/D. Never a resolved runtime effective address. */
     readonly memoryOperand?: {
         readonly expression: string;
         readonly value: number;
@@ -42,7 +42,7 @@ export interface SnesStructInstructionUse {
 }
 /**
  * Resolve optional instructionUses against already validated layouts and bindings.
- * Native expressions name exact operands; observations describe complete spans within a binding.
+ * Native expressions name exact operands. Observations describe complete spans within a binding.
  * @param {unknown} value Optional instructionUses array from JSON.
  * @param {readonly SnesStructLayout[]} structures Validated zero-based layouts.
  * @param {readonly SnesStructBinding[]} bindings Validated physical record bindings.
@@ -52,7 +52,7 @@ export declare const validateSnesStructInstructionUses: (value: unknown, structu
 /**
  * Index only annotated instructions, O(uses), rather than scanning uses for every CFG variant.
  * Mapper aliases, complete byte encodings and capture ROM identities are checked before export.
- * The callback returns undefined for unmapped addresses; instruction bytes must map contiguously.
+ * The callback returns undefined for unmapped addresses. Instruction bytes must map contiguously.
  * @param {readonly SnesStructInstructionUse[] | undefined} uses Validated instruction uses.
  * @param {RomImage} rom Immutable ROM supplying instruction bytes and capture identity.
  * @param {Function} toFileOffset Mapper-specific CPU-to-ROM translation.
@@ -69,7 +69,7 @@ export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructI
  */
 export declare const applySnesStructInstructionOperand: (instruction: DecodedInstruction, source: string, use: SnesStructInstructionUse) => string;
 /**
- * Render all capture alternatives as comments; they never become fixed-address CPU operands.
+ * Render all capture alternatives as comments. They never become fixed-address CPU operands.
  * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
  * @returns {readonly string[]} Individual comment bodies without the leading semicolon.
  */
