@@ -231,6 +231,7 @@ const fixture = async (
     );
   };
   const recorder = await LosslessCaptureFileRecorder.create({
+    context: false,
     ...metadata,
     file,
     transport,
@@ -371,6 +372,7 @@ test("native recorder waits for publication and sends control only", async (t) =
     };
   };
   const recorder = await NativeCaptureFileRecorder.create({
+    context: false,
     ...metadata,
     file: "/native-only/trace.act2",
     transport,
@@ -385,6 +387,7 @@ test("native recorder waits for publication and sends control only", async (t) =
 test("native recorder fails closed on writer error and rejects silent sink fallback", async (t) => {
   await t.throwsAsync(
     NativeCaptureFileRecorder.create({
+      context: false,
       ...metadata,
       file: "/capture.act2",
       transport: async () => capabilities,
@@ -406,6 +409,7 @@ test("native recorder fails closed on writer error and rejects silent sink fallb
     };
   };
   const recorder = await NativeCaptureFileRecorder.create({
+    context: false,
     ...metadata,
     file: "/capture.act2",
     transport,

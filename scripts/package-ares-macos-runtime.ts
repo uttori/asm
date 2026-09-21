@@ -46,11 +46,16 @@ const parseArguments = (arguments_: readonly string[]): Options => {
       process.exit(0);
     }
     const name = names.get(argument ?? "");
-    if (!name) throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
-    if (seen.has(name)) throw new Error(`Duplicate argument '${String(argument)}'.`);
+    if (!name) {
+      throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
+    }
+    if (seen.has(name)) {
+      throw new Error(`Duplicate argument '${String(argument)}'.`);
+    }
     const value = arguments_[++index];
-    if (!value || value.startsWith("--"))
+    if (!value || value.startsWith("--")) {
       throw new Error(`Argument '${String(argument)}' requires a path.`);
+    }
     parsed[name] = path.resolve(value);
     seen.add(name);
   }
@@ -61,7 +66,9 @@ const sha256 = (bytes: Uint8Array): string => createHash("sha256").update(bytes)
 
 const octal = (value: number, width: number): Buffer => {
   const encoded = `${value.toString(8).padStart(width - 1, "0")}\0`;
-  if (encoded.length !== width) throw new Error(`Tar value ${value} exceeds field width ${width}.`);
+  if (encoded.length !== width) {
+    throw new Error(`Tar value ${value} exceeds field width ${width}.`);
+  }
   return Buffer.from(encoded, "ascii");
 };
 
@@ -76,7 +83,9 @@ const tarHeader = (entry: ArchiveEntry): Buffer => {
       const candidateName = Buffer.byteLength(entry.path.slice(offset + 1), "utf8");
       return candidatePrefix <= 155 && candidateName <= 100;
     });
-    if (split === undefined) throw new Error(`Tar entry path exceeds ustar limits: ${entry.path}`);
+    if (split === undefined) {
+      throw new Error(`Tar entry path exceeds ustar limits: ${entry.path}`);
+    }
     prefix = Buffer.from(entry.path.slice(0, split), "utf8");
     name = Buffer.from(entry.path.slice(split + 1), "utf8");
   }
@@ -104,23 +113,27 @@ const createTar = (entries: readonly ArchiveEntry[]): Buffer => {
   for (const entry of entries) {
     chunks.push(tarHeader(entry), entry.bytes);
     const padding = (512 - (entry.bytes.length % 512)) % 512;
-    if (padding > 0) chunks.push(Buffer.alloc(padding));
+    if (padding > 0) {
+      chunks.push(Buffer.alloc(padding));
+    }
   }
   chunks.push(Buffer.alloc(1024));
   return Buffer.concat(chunks);
 };
 
 const options = parseArguments(process.argv.slice(2));
-if (!statSync(options.runtime).isDirectory())
+if (!statSync(options.runtime).isDirectory()) {
   throw new Error(`Ares runtime root is not a directory: ${options.runtime}`);
+}
 const runtime = realpathSync(options.runtime);
 const manifestPath = path.join(runtime, "ares-runtime-manifest.json");
 const manifestBytes = readFileSync(manifestPath);
 const manifest = parseAresRuntimeManifest(JSON.parse(manifestBytes.toString("utf8")));
-if (manifest.platform !== "darwin" || manifest.architecture !== "arm64")
+if (manifest.platform !== "darwin" || manifest.architecture !== "arm64") {
   throw new Error(
     `This packager requires a darwin/arm64 manifest, got ${manifest.platform}/${manifest.architecture}.`,
   );
+}
 
 const relativeFiles = [
   "ares-runtime-manifest.json",
@@ -130,17 +143,20 @@ const relativeFiles = [
   ...manifest.resources.map(({ path: resourcePath }) => resourcePath),
 ];
 const uniqueFiles = [...new Set(relativeFiles)].sort();
-if (uniqueFiles.length !== relativeFiles.length)
+if (uniqueFiles.length !== relativeFiles.length) {
   throw new Error("Runtime archive allowlist contains duplicate paths.");
+}
 if (
   !manifest.resources.some(({ path: resourcePath }) => resourcePath === "LICENSES/ares-LICENSE.txt")
-)
+) {
   throw new Error("Runtime manifest does not contain the aggregate ares license.");
+}
 if (
   manifest.resources.filter(({ path: resourcePath }) => resourcePath.startsWith("LICENSES/"))
     .length < 7
-)
+) {
   throw new Error("Runtime manifest does not contain the complete macOS notice set.");
+}
 
 const hashExpectations = new Map<string, string>([
   ["bin/ares-headless", manifest.executableSha256],
@@ -152,18 +168,22 @@ const hashExpectations = new Map<string, string>([
 ]);
 const prefix = `uttori-ares-runtime-${manifest.platform}-${manifest.architecture}`;
 const entries = uniqueFiles.map((relativePath): ArchiveEntry => {
-  if (path.isAbsolute(relativePath) || relativePath.split("/").includes(".."))
+  if (path.isAbsolute(relativePath) || relativePath.split("/").includes("..")) {
     throw new Error(`Unsafe archive path: ${relativePath}`);
+  }
   const file = path.resolve(runtime, relativePath);
-  if (!file.startsWith(`${runtime}${path.sep}`))
+  if (!file.startsWith(`${runtime}${path.sep}`)) {
     throw new Error(`Archive path escapes runtime root: ${relativePath}`);
+  }
   const metadata = lstatSync(file);
-  if (!metadata.isFile() || metadata.isSymbolicLink())
+  if (!metadata.isFile() || metadata.isSymbolicLink()) {
     throw new Error(`Archive input must be a regular non-symlink file: ${relativePath}`);
+  }
   const bytes = readFileSync(file);
   const expectedHash = hashExpectations.get(relativePath);
-  if (expectedHash && sha256(bytes) !== expectedHash)
+  if (expectedHash && sha256(bytes) !== expectedHash) {
     throw new Error(`Archive input hash mismatch: ${relativePath}`);
+  }
   return {
     path: `${prefix}/${relativePath}`,
     bytes,

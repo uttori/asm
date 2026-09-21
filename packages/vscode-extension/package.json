@@ -30,10 +30,10 @@
   "main": "out/extension.js",
   "scripts": {
     "build": "node esbuild.mjs",
-    "fmt": "oxfmt --config ../../.oxfmtrc.json src media tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
-    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src media tests-host/index.ts esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
-    "lint": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts",
-    "lint:fix": "oxlint --config ../../.oxlintrc.json src tests-host/index.ts --fix",
+    "fmt": "oxfmt --config ../../.oxfmtrc.json src media tests-host esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "fmt:check": "oxfmt --config ../../.oxfmtrc.json --check src media tests-host esbuild.mjs package.json tsconfig.json language-configuration.json syntaxes snippets/uttori-asm.json",
+    "lint": "oxlint --config ../../.oxlintrc.json src tests-host",
+    "lint:fix": "oxlint --config ../../.oxlintrc.json src tests-host --fix",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run build"
@@ -266,6 +266,21 @@
       {
         "command": "asm.trace.cancelLiveAnalysis",
         "title": "Stop Live Bus Analysis",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.trace.mark",
+        "title": "Add Capture Milestone",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.trace.replay",
+        "title": "Replay Capture Inputs",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.trace.restore",
+        "title": "Restore Capture Pre-action State",
         "category": "Assembly"
       }
     ],
@@ -918,7 +933,7 @@
             "lossless-bus-transfers",
             "lossless-bus-ppu"
           ],
-          "default": "live",
+          "default": "lossless-instructions",
           "enumDescriptions": [
             "Live instruction trace with bounded buffering. Dropped events are reported.",
             "Lossless fetched instruction bytes and CPU state, saved to ACT2 for disassembly import. Requires the capture-v2 ares runtime.",
@@ -963,6 +978,11 @@
           "minimum": 16,
           "maximum": 4096,
           "description": "Maximum unread durable capture backlog for live bus analysis, in MiB. Exceeding it stops analysis while native recording continues. Import the final archive offline."
+        },
+        "asm.debug.captureContext": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include paused start/end WRAM, a pre-action state, controller replay data, visual milestones, and a separate two-frame PPU/bus capture. Requires a matching local ares runtime. Disable only for bare trace capture."
         }
       }
     },

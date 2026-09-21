@@ -21,8 +21,7 @@ import {
 } from "../packages/disassembler/src/runtime-trace-file.js";
 
 const executable = path.resolve(
-  process.argv[2] ??
-    "Local Only/ares-rich-state-load-fix/build/desktop-ui/ares.app/Contents/MacOS/ares",
+  process.argv[2] ?? "fixtures/external/ares/runtime/ares.app/Contents/MacOS/ares",
 );
 const evidence = process.argv[3];
 const normal = process.argv.includes("--normal");
@@ -137,6 +136,7 @@ try {
     producer: { id: "ares", revision: digest(await readFile(executable)) },
   };
   const empty = await LosslessCaptureFileRecorder.create({
+    context: false,
     ...metadata,
     file: path.join(temporary, "empty.json"),
     transport: (request) => dispatch(() => backend.capture(request)),
@@ -165,6 +165,7 @@ try {
 
   const file = path.join(temporary, "capture.json");
   const recorder = await LosslessCaptureFileRecorder.create({
+    context: false,
     ...metadata,
     file,
     bufferBytes: normal ? 8 * 1024 * 1024 : 4718656,

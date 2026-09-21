@@ -22,8 +22,9 @@ import {
   commitAnalysisProjectTransaction,
   buildRomCoverageMap,
 } from "../src/index.js";
-import { installQueryCache } from "../src/sqlite-query-cache.js";
-import { runtimeColumns } from "../src/sqlite-records.js";
+import { compareRuntimeRecordIds, runtimeColumns } from "../src/sqlite-records.js";
+import { RUNTIME_RECORD_STREAM_SQL } from "../src/sqlite-runtime-storage.js";
+import { runtimeSummaryGroupSql } from "../src/sqlite-runtime-summary.js";
 
 test("synchronous transactions reject promises and roll back their writes and revision", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-async-transaction-"));
@@ -48,61 +49,6 @@ test("synchronous transactions reject promises and roll back their writes and re
   } finally {
     store.close();
   }
-});
-
-test("writer upgrades legacy cache keys atomically and keeps unrelated large cached payloads", (t) => {
-  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-cache-layout-"));
-  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(32768))));
-  const db = new DatabaseSync(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
-  t.teardown(() => db.close());
-  db.exec(
-    "CREATE TABLE query_cache(name TEXT PRIMARY KEY,signature TEXT NOT NULL,payload TEXT NOT NULL) WITHOUT ROWID",
-  );
-  const graph = JSON.stringify({ nodes: "x".repeat(12 * 1024 * 1024) });
-  db.prepare("INSERT INTO query_cache VALUES(?,?,?)").run("graph", "v1", graph);
-  db.prepare("INSERT INTO query_cache VALUES(?,?,?)").run("coverage", "v1", "{}");
-  installQueryCache(db, "coverage", ["runtime"]);
-  const store = openAnalysisProjectStore(directory);
-  t.teardown(() => store.close());
-  const withoutRowid = () =>
-    String(
-      db.prepare("SELECT sql FROM sqlite_schema WHERE name='query_cache'").get()!.sql,
-    ).includes("WITHOUT ROWID");
-  store.transaction(() => store.manifest(), false);
-  t.true(withoutRowid(), "readers leave legacy layout untouched");
-  t.throws(
-    () =>
-      store.transaction(() => {
-        throw new Error("rollback");
-      }),
-    { message: "rollback" },
-  );
-  t.true(withoutRowid(), "failed publication rolls the schema upgrade back too");
-  store.transaction(() =>
-    store.insertRuntime({
-      id: "new-execution",
-      kind: "runtime-execution",
-      architecture: "65816",
-      addressSpace: "rom.file",
-      address: 4,
-      count: 1,
-      evidence: ["manual-1"],
-    }),
-  );
-  t.false(withoutRowid());
-  t.is(db.prepare("SELECT payload FROM query_cache WHERE name='graph'").get()!.payload, graph);
-  t.falsy(
-    db.prepare("SELECT 1 FROM query_cache WHERE name='coverage'").get(),
-    "existing invalidation triggers still work after the table replacement",
-  );
-  const plan = db
-    .prepare("EXPLAIN QUERY PLAN DELETE FROM query_cache WHERE name=?")
-    .all("coverage");
-  t.true(
-    plan.some((row) => String(row.detail).includes("USING INDEX")),
-    "invalidation uses the payload-free name index",
-  );
 });
 
 const projectFor = (rom: RomImage): AnalysisProject => ({
@@ -258,6 +204,151 @@ test("runtime batch insertion keeps namespace, uniqueness and existing-record co
 });
 
 const temporary = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sqlite-store-"));
+
+test("instruction variants avoid materializing the complete runtime history", (t) => {
+  const directory = temporary();
+  const store = new SqliteAnalysisStore(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+  const db = new DatabaseSync(store.file);
+  t.teardown(() => {
+    db.close();
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  // Planning needs the scalar function's arity, but must never evaluate any payload.
+  db.function("analysis_instruction_variant", (payload) => {
+    t.fail("EXPLAIN QUERY PLAN must not decode runtime payloads");
+    return String(payload);
+  });
+  const plan = db
+    .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryGroupSql(false)}`)
+    .all("snes.65816", "snes.cpu")
+    .map((row) => String(row.detail));
+  // Copying the UNION ALL view and its automatic index can exceed free disk space even
+  // when the grouped result is small. Representatives must use physical primary keys.
+  t.false(
+    plan.some((detail) => /MATERIALIZE runtime|AUTOMATIC.*INDEX/.test(detail)),
+    plan.join("\n"),
+  );
+  t.true(plan.some((detail) => /SEARCH o USING INDEX runtime_observation_fact/.test(detail)));
+});
+
+test("instruction variants preserve shared facts, paired states, payload codecs and exact source counts", (t) => {
+  const directory = temporary();
+  const store = new SqliteAnalysisStore(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+  const db = new DatabaseSync(store.file);
+  t.teardown(() => {
+    db.close();
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const trace = `runtime:instruction-trace:${"a".repeat(64)}`;
+  const instruction: Extract<RuntimeEvidenceRecord, { kind: "runtime-instruction" }> = {
+    id: `${trace}:code:${"b".repeat(64)}`,
+    kind: "runtime-instruction",
+    architecture: "snes.65816",
+    addressSpace: "snes.cpu",
+    address: 0x7e1000,
+    bytes: [0xa9, 1],
+    state: { p: 0x20, e: false, a: 1 },
+    count: 2,
+    evidence: ["capture:one"],
+  };
+  store.transaction(() => {
+    store.insertRuntime(instruction);
+    store.insertRuntime({
+      ...instruction,
+      kind: "runtime-cpu-state",
+      id: `${trace}:state:${"b".repeat(64)}`,
+    });
+    store.insertRuntime({ ...instruction, id: "shared", count: 7 });
+    store.insertRuntime({
+      ...instruction,
+      id: "masked",
+      state: { p: 0x21, e: false, a: 2 },
+      count: 3,
+    });
+    store.insertRuntime({ ...instruction, id: "source", evidence: ["capture:two"], count: 11 });
+    store.insertRuntime({ ...instruction, id: "address", address: 0x7e1001, count: 13 });
+    store.insertRuntime({ ...instruction, id: "bytes", bytes: [0xa9, 2], count: 17 });
+    store.insertRuntime({ ...instruction, id: "alias", state: { P: 0x20, e: false }, count: 19 });
+    store.insertRuntime({
+      ...instruction,
+      id: "compressed",
+      state: { ...instruction.state, unused: "x".repeat(4096) },
+      count: 23,
+    });
+    store.insertRuntime({ ...instruction, id: "number", state: { p: 0x20, e: 0 }, count: 29 });
+    store.insertRuntime({ ...instruction, id: "missing", state: { p: 0x20 }, count: 31 });
+    store.insertRuntime({ ...instruction, id: "other-cpu", architecture: "other", count: 37 });
+    store.insertRuntime({ ...instruction, id: "other-space", addressSpace: "other", count: 41 });
+  });
+  // Direct SQL inserts can use TEXT; the reader also supports JSONB and packed payloads.
+  db.prepare("UPDATE runtime_facts SET payload=? WHERE fid=1").run(
+    JSON.stringify({ bytes: instruction.bytes, state: instruction.state }),
+  );
+  t.is(
+    db
+      .prepare("SELECT count(*) AS n FROM runtime_observations WHERE state_prefix_id IS NOT NULL")
+      .get()!.n,
+    1,
+  );
+  const fields = ["p", "P", "e"];
+  const masks = { p: { max: 255, mask: 0x30 } };
+  const variants = () => [
+    ...store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks),
+  ];
+  const expected: RuntimeEvidenceRecord[] = [
+    { ...instruction, state: { p: 0x20, e: false }, count: 35 },
+    {
+      ...instruction,
+      id: "source",
+      state: { p: 0x20, e: false },
+      evidence: ["capture:two"],
+      count: 11,
+    },
+    { ...instruction, id: "address", state: { p: 0x20, e: false }, address: 0x7e1001, count: 13 },
+    { ...instruction, id: "bytes", state: { p: 0x20, e: false }, bytes: [0xa9, 2], count: 17 },
+    { ...instruction, id: "alias", state: { P: 0x20, e: false }, count: 19 },
+    { ...instruction, id: "number", state: { p: 0x20, e: 0 }, count: 29 },
+    { ...instruction, id: "missing", state: { p: 0x20 }, count: 31 },
+  ];
+  const projected = variants();
+  t.deepEqual(
+    projected.toSorted(compareRuntimeRecordIds),
+    expected.toSorted(compareRuntimeRecordIds),
+  );
+  t.deepEqual(variants(), projected, "cached results retain their order and contents");
+  store.transaction(() => store.insertRuntime({ ...instruction, id: "later", count: 5 }));
+  expected[0] = { ...expected[0], count: 40 };
+  t.deepEqual(
+    variants().toSorted(compareRuntimeRecordIds),
+    expected.toSorted(compareRuntimeRecordIds),
+    "new observations invalidate the projection",
+  );
+});
+
+test("initial metadata insertion rejects duplicate IDs atomically and remains retryable", (t) => {
+  const directory = temporary();
+  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  const store = openAnalysisProjectStore(directory);
+  t.teardown(() => {
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const comment = {
+    id: "first",
+    addressSpace: "rom.file",
+    address: 0,
+    text: "Initial comment",
+    evidence: ["manual-1"],
+  };
+  const revision = store.revision();
+  t.throws(() => store.transaction(() => store.replaceTables({ comments: [comment, comment] })));
+  t.deepEqual(store.loadTable("comments"), []);
+  t.is(store.revision(), revision);
+  store.transaction(() => store.replaceTables({ comments: [comment] }));
+  t.deepEqual(store.loadTable("comments"), [comment]);
+});
 
 test("metadata replacement preserves identical and reordered records without invalidating stored rows", (t) => {
   const directory = temporary();
@@ -500,11 +591,18 @@ test("SQLite round trips every runtime variant including optional and zero-value
   t.deepEqual(loadAnalysisProject(directory).shards.runtime, []);
 });
 
-test("missing and corrupt SQLite files are rejected without silently creating a database", (t) => {
+test("missing, unsupported and corrupt SQLite files are rejected without silently creating a database", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const file = path.join(directory, "analysis.sqlite");
+  const database = new DatabaseSync(file);
+  database.exec("PRAGMA user_version=99");
+  t.throws(() => new SqliteAnalysisStore(file), {
+    message: /Unsupported analysis storage format 99/,
+  });
+  t.is(database.prepare("PRAGMA user_version").get()!.user_version, 99);
+  database.close();
   fs.unlinkSync(file);
   t.throws(() => loadAnalysisProject(directory), { message: /does not exist/ });
   t.false(fs.existsSync(file));
@@ -555,6 +653,85 @@ test("missing normalized dictionaries cannot silently hide retained runtime reco
   database.exec("PRAGMA foreign_keys=OFF; DELETE FROM runtime_evidence");
   database.close();
   t.throws(() => loadAnalysisProject(directory), { message: /dictionary entry/ });
+});
+
+test("missing identity dictionary entries fail reads instead of hiding observations", (t) => {
+  const directory = temporary();
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  const database = new DatabaseSync(path.join(directory, "analysis.sqlite"));
+  database.exec("PRAGMA foreign_keys=OFF; DELETE FROM runtime_identities");
+  database.close();
+  t.throws(() => loadAnalysisProject(directory), { message: /runtime ID suffix/ });
+});
+
+test("runtime streaming stays ordered without sorting expanded payloads during full-history reads", (t) => {
+  const directory = temporary();
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const file = path.join(directory, "analysis.sqlite");
+  const store = new SqliteAnalysisStore(file);
+  const db = new DatabaseSync(file);
+  try {
+    for (const sql of RUNTIME_RECORD_STREAM_SQL) {
+      const plan = db
+        .prepare(`EXPLAIN QUERY PLAN ${sql}`)
+        .all()
+        .map((row) => String(row.detail));
+      t.false(
+        plan.some((detail) => /TEMP B-TREE|MATERIALIZE|AUTOMATIC.*INDEX/.test(detail)),
+        plan.join("\n"),
+      );
+    }
+  } finally {
+    db.close();
+    store.close();
+  }
+});
+
+test("state-first pairing survives identity collection and preserves full register values", (t) => {
+  const directory = temporary();
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const project = projectFor(new RomImage(new Uint8Array(0x8000)));
+  writeAnalysisProject(directory, { ...project, shards: { ...project.shards, runtime: [] } });
+  const store = openAnalysisProjectStore(directory);
+  const code: Extract<RuntimeEvidenceRecord, { kind: "runtime-instruction" }> = {
+    id: `runtime:instruction-trace:${"a".repeat(64)}:code:${"b".repeat(64)}`,
+    kind: "runtime-instruction",
+    architecture: "snes.65816",
+    addressSpace: "rom.file",
+    address: 0,
+    bytes: [0xea],
+    state: { a: 65535, x: 32768, y: 0, s: 511, p: 255, e: 1 },
+    count: 7,
+    evidence: ["manual-1"],
+  };
+  const state: RuntimeEvidenceRecord = {
+    id: code.id.replace(":code:", ":state:"),
+    kind: "runtime-cpu-state",
+    architecture: code.architecture,
+    addressSpace: code.addressSpace,
+    address: code.address,
+    state: code.state,
+    count: code.count,
+    evidence: code.evidence,
+  };
+  const db = new DatabaseSync(store.file);
+  try {
+    store.transaction(() => {
+      store.insertRuntime(state);
+      store.insertRuntime(code);
+    });
+    t.deepEqual([...store.runtimeRecords()], [state, code]);
+    t.is(store.storageSnapshot().pairedStates, 1);
+    t.is(db.prepare("SELECT COUNT(*) AS n FROM runtime_identities").get()!.n, 1);
+    // Removing the instruction detaches a standalone state without losing its shared identity.
+    db.exec("DELETE FROM runtime WHERE kind='runtime-instruction'");
+    t.deepEqual([...store.runtimeRecords()], [state]);
+    t.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
+  } finally {
+    db.close();
+    store.close();
+  }
 });
 
 test("runtime replacement rejects repeated IDs even when changed content would get a new rowid", (t) => {

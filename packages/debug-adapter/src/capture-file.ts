@@ -1,6 +1,7 @@
 import { open, link, unlink, lstat, type FileHandle } from "node:fs/promises";
 import { setImmediate as yieldToMessages } from "node:timers/promises";
 
+import { CaptureContextRecorder, type CaptureContextOptions } from "./capture-context.js";
 import { CaptureFrameReader } from "./capture-file-reader.js";
 import {
   captureCrc32c,
@@ -70,6 +71,8 @@ export interface CaptureFileSummary {
   /** Selected output: ACT2 directly, or legacy JSON when explicitly requested. */
   readonly file: string;
   readonly archive: string;
+  /** Sibling directory with a verified context manifest, when context is enabled. */
+  readonly contextDirectory?: string;
   readonly scope: CaptureScopeV2;
   readonly observedEvents: number;
   readonly droppedEvents: 0;
@@ -86,12 +89,15 @@ const metadataValid = (m: CaptureFileMetadata): void => {
     !/^[\da-f]{64}$/.test(m.romContentSha256) ||
     !m.producer?.id ||
     !m.producer.revision
-  )
+  ) {
     throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
 };
 const jsonFrame = (magic: string, value: unknown): Buffer => {
   const body = Buffer.from(JSON.stringify(value));
-  if (body.length > 65536) throw new Error("Capture metadata exceeds its bound.");
+  if (body.length > 65536) {
+    throw new Error("Capture metadata exceeds its bound.");
+  }
   const header = Buffer.alloc(12);
   header.write(magic, "ascii");
   header.writeUInt32LE(body.length, 4);
@@ -108,6 +114,7 @@ export class LosslessCaptureFileRecorder {
   readonly #format: "json" | "act2";
   readonly #scope: CaptureScopeV2;
   readonly #transport: CaptureTransportV2;
+  readonly #context?: CaptureContextRecorder;
   readonly #handle: FileHandle;
   #position: CapturePositionV2;
   #stopRequested = false;
@@ -129,8 +136,10 @@ export class LosslessCaptureFileRecorder {
     format: "json" | "act2",
     scope: CaptureScopeV2,
     measureStages: boolean,
+    context?: CaptureContextRecorder,
   ) {
     this.#file = file;
+    this.#context = context;
     this.#format = format;
     this.#scope = scope;
     this.#archive = format === "act2" ? file : `${file}.act2`;
@@ -177,32 +186,40 @@ export class LosslessCaptureFileRecorder {
    * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder. Stop() drains and syncs it.
    */
   static async create(
-    options: CaptureFileMetadata & {
-      readonly file: string;
-      readonly transport: CaptureTransportV2;
-      readonly bufferBytes?: number;
-      /** Opt-in stage profiling. No clock reads or diagnostic allocations when omitted. */
-      readonly measureStages?: boolean;
-      /** Defaults to instructions. CPU/DMA/HDMA bus capture requires ACT2 output. */
-      readonly scope?: CaptureScopeV2;
-      /** Defaults to legacy JSON plus ACT2. Act2 skips all post-capture JSON conversion. */
-      readonly format?: "json" | "act2";
-    },
+    options: CaptureFileMetadata &
+      CaptureContextOptions & {
+        readonly file: string;
+        readonly transport: CaptureTransportV2;
+        readonly bufferBytes?: number;
+        /** Opt-in stage profiling. No clock reads or diagnostic allocations when omitted. */
+        readonly measureStages?: boolean;
+        /** Defaults to instructions. CPU/DMA/HDMA bus capture requires ACT2 output. */
+        readonly scope?: CaptureScopeV2;
+        /** Defaults to legacy JSON plus ACT2. Act2 skips all post-capture JSON conversion. */
+        readonly format?: "json" | "act2";
+      },
   ): Promise<LosslessCaptureFileRecorder> {
     metadataValid(options);
     const scope = captureScope(options.scope ?? "snes.65816.instructions");
     const format = options.format ?? "json";
-    if (format !== "json" && format !== "act2")
+    if (format !== "json" && format !== "act2") {
       throw new Error("Unsupported capture output format.");
+    }
     // Reject before reserving files or arming the producer: legacy instruction JSON
     // cannot represent bus-only records without discarding their evidence.
-    if (scope !== "snes.65816.instructions" && format !== "act2")
+    if (scope !== "snes.65816.instructions" && format !== "act2") {
       throw new Error("Bus capture requires ACT2 output. Instruction JSON cannot represent it.");
+    }
     validateCaptureCapabilities(
       await options.transport({ operation: "capabilities", scope }),
       scope,
     );
     const archive = format === "act2" ? options.file : `${options.file}.act2`;
+    const context =
+      options.context === false
+        ? undefined
+        : new CaptureContextRecorder(archive, options, options.transport);
+    const transport = context?.transport ?? options.transport;
     if (format === "json") {
       // Legacy callers own a reserved JSON destination. ACT2 callers reserve only the partial
       // archive. The final no-clobber link also guards against another writer publishing first.
@@ -210,17 +227,21 @@ export class LosslessCaptureFileRecorder {
       await destination.close();
     } else {
       const existing = await lstat(archive).catch((error: NodeJS.ErrnoException) => {
-        if (error.code !== "ENOENT") throw error;
+        if (error.code !== "ENOENT") {
+          throw error;
+        }
         return undefined;
       });
-      if (existing) throw new Error("Capture destination already exists.");
+      if (existing) {
+        throw new Error("Capture destination already exists.");
+      }
     }
     let handle: FileHandle | undefined;
     let position: CapturePositionV2 | undefined;
     try {
       handle = await open(`${archive}.partial`, "wx");
       position = validateCapturePosition(
-        await options.transport({
+        await transport({
           operation: "start",
           bufferBytes: options.bufferBytes ?? 8 * 1024 * 1024,
           scope,
@@ -233,8 +254,9 @@ export class LosslessCaptureFileRecorder {
         position.producedThrough !== "0" ||
         position.chunkThrough !== "0" ||
         position.state !== "armed"
-      )
+      ) {
         throw new Error("Capture did not start at an empty armed boundary.");
+      }
       const header: CaptureFileHeader = {
         format: "uttori-ares-capture",
         version: 2,
@@ -260,21 +282,30 @@ export class LosslessCaptureFileRecorder {
       return new LosslessCaptureFileRecorder(
         options.file,
         handle,
-        options.transport,
+        transport,
         position,
         format,
         scope,
         options.measureStages === true,
+        context,
       );
     } catch (error) {
-      if (position)
-        await options
-          .transport({ operation: "abort", session: position.session })
-          .catch(() => undefined);
+      if (position) {
+        await transport({ operation: "abort", session: position.session }).catch(() => undefined);
+      }
       await handle?.close().catch(() => undefined);
-      if (format === "json") await unlink(options.file).catch(() => undefined);
+      if (format === "json") {
+        await unlink(options.file).catch(() => undefined);
+      }
       throw error;
     }
+  }
+
+  /** Current producer session, for a paused user milestone.
+   * @returns {CapturePositionV2} Latest verified position; querying does not drain the archive.
+   */
+  get position(): CapturePositionV2 {
+    return this.#position;
   }
 
   async stop(): Promise<CaptureFileSummary> {
@@ -305,7 +336,9 @@ export class LosslessCaptureFileRecorder {
    * @returns {number} Next boundary. Disabled profiling never reads the clock.
    */
   #mark(stage: CaptureFileTimingStage, start: number): number {
-    if (!this.#timings) return 0;
+    if (!this.#timings) {
+      return 0;
+    }
     const now = performance.now(),
       elapsed = now - start,
       entry = this.#timings.stages[stage];
@@ -332,8 +365,9 @@ export class LosslessCaptureFileRecorder {
           result.hex.length > 524288 ||
           result.hex.length % 2 ||
           !/^[\da-f]*$/.test(result.hex)
-        )
+        ) {
           throw new Error("Invalid capture read response.");
+        }
         if (result.hex) {
           const bytes = Buffer.from(result.hex, "hex"),
             chunk = decodeCaptureChunk(bytes, session, this.#scope);
@@ -342,10 +376,13 @@ export class LosslessCaptureFileRecorder {
             BigInt(chunk.sequence) !== this.#chunk + 1n ||
             BigInt(chunk.first) !== this.#through + 1n ||
             BigInt(records[0].cycle) < this.#cycle
-          )
+          ) {
             throw new Error("Capture chunk is not contiguous.");
+          }
           boundary = this.#mark("decode", boundary);
-          if (this.#timings) this.#timings.bytes += bytes.length;
+          if (this.#timings) {
+            this.#timings.bytes += bytes.length;
+          }
           await this.#handle.writeFile(bytes);
           boundary = this.#mark("dataWrite", boundary);
           await this.#handle.sync();
@@ -372,8 +409,9 @@ export class LosslessCaptureFileRecorder {
             this.#scope,
           );
           this.#mark("ack", boundary);
-          if (p.durableThrough !== chunk.through || p.chunkThrough !== chunk.sequence)
+          if (p.durableThrough !== chunk.through || p.chunkThrough !== chunk.sequence) {
             throw new Error("Producer acknowledgement did not match the durable checkpoint.");
+          }
           this.#position = p;
           this.#chunk = BigInt(chunk.sequence);
           this.#through = BigInt(chunk.through);
@@ -386,25 +424,30 @@ export class LosslessCaptureFileRecorder {
             this.#scope,
           );
           boundary = this.#mark("status", boundary);
-          if (this.#position.state === "incomplete")
+          if (this.#position.state === "incomplete") {
             throw new Error(`Native capture incomplete: ${this.#position.error}`);
-          if (this.#position.state === "complete") break;
+          }
+          if (this.#position.state === "complete") {
+            break;
+          }
           await pause();
           this.#mark("idle", boundary);
         }
       }
-      if (this.#cancelled)
+      if (this.#cancelled) {
         throw new Error(
           "Capture session ended before finalization. The partial archive retains its committed prefix.",
         );
+      }
       const p = this.#position;
       if (
         !this.#stopRequested ||
         p.state !== "complete" ||
         p.producedThrough !== String(this.#through) ||
         p.producedChunks !== String(this.#chunk)
-      )
+      ) {
         throw new Error("Capture terminal accounting did not reconcile.");
+      }
       const finalStart = this.#timings ? performance.now() : 0;
       await this.#handle.writeFile(jsonFrame("END2", p));
       await this.#handle.sync();
@@ -414,9 +457,11 @@ export class LosslessCaptureFileRecorder {
       const archive = this.#archive;
       await link(this.#partial, archive);
       await unlink(this.#partial);
-      if (this.#format === "json") await exportCaptureJson(archive, this.#file, true);
+      if (this.#format === "json") {
+        await exportCaptureJson(archive, this.#file, true);
+      }
       this.#mark("finalize", finalStart);
-      return {
+      const summary: CaptureFileSummary = {
         ...(this.#timings
           ? {
               timings: {
@@ -434,7 +479,10 @@ export class LosslessCaptureFileRecorder {
         chunks: Number(this.#chunk),
         complete: true,
         position: p,
+        ...(this.#context ? { contextDirectory: this.#context.directory } : {}),
       };
+      await this.#context?.finish(summary);
+      return summary;
     } catch (error) {
       await this.#transport({ operation: "abort", session }).catch(() => undefined);
       await this.#handle.close().catch(() => undefined);
@@ -467,12 +515,14 @@ export interface CaptureFileReadOptions {
  */
 const checkCaptureSize = (size: number, options: CaptureFileReadOptions): void => {
   const limit = options.maxBytes ?? Number.MAX_SAFE_INTEGER;
-  if (!Number.isSafeInteger(limit) || limit < 1)
+  if (!Number.isSafeInteger(limit) || limit < 1) {
     throw new Error("Capture maximum bytes must be a positive safe integer.");
-  if (size > limit)
+  }
+  if (size > limit) {
     throw new Error(
       "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it.",
     );
+  }
 };
 
 /**
@@ -481,7 +531,9 @@ const checkCaptureSize = (size: number, options: CaptureFileReadOptions): void =
  * @returns {CaptureFileHeader} Supported archive identity and ownership contract.
  */
 const validateCaptureFileHeader = (value: unknown): CaptureFileHeader => {
-  if (!value || typeof value !== "object") throw new Error("Missing capture session header.");
+  if (!value || typeof value !== "object") {
+    throw new Error("Missing capture session header.");
+  }
   const header = value as CaptureFileHeader;
   metadataValid(header);
   captureSession(header.session);
@@ -490,8 +542,9 @@ const validateCaptureFileHeader = (value: unknown): CaptureFileHeader => {
     header.clock?.id !== "snes.master" ||
     !captureU64(header.clock.numerator) ||
     !captureU64(header.clock.denominator)
-  )
+  ) {
     throw new Error("Invalid session clock domain.");
+  }
   if (
     header.format !== "uttori-ares-capture" ||
     header.version !== 2 ||
@@ -502,8 +555,9 @@ const validateCaptureFileHeader = (value: unknown): CaptureFileHeader => {
     !Number.isSafeInteger(header.allocatedBytes) ||
     header.allocatedBytes < 4718656 ||
     header.allocatedBytes > 64 * 1024 * 1024
-  )
+  ) {
     throw new Error("Unsupported capture session contract.");
+  }
   return header;
 };
 
@@ -523,7 +577,9 @@ const readCaptureBytes = async (
   let got = 0;
   while (got < length) {
     const result = await handle.read(bytes, got, length - got, offset + got);
-    if (!result.bytesRead) throw new Error("Torn capture frame.");
+    if (!result.bytesRead) {
+      throw new Error("Torn capture frame.");
+    }
     got += result.bytesRead;
   }
   return bytes;
@@ -544,13 +600,17 @@ export const readCaptureFileHeader = async (
   try {
     checkCaptureSize((await handle.stat()).size, options);
     const prefix = await readCaptureBytes(handle, 12, 0);
-    if (prefix.toString("ascii", 0, 4) !== "ACS2")
+    if (prefix.toString("ascii", 0, 4) !== "ACS2") {
       throw new Error("Missing capture session header.");
+    }
     const length = prefix.readUInt32LE(4);
-    if (length > 65536) throw new Error("Capture metadata length exceeds bounds.");
+    if (length > 65536) {
+      throw new Error("Capture metadata length exceeds bounds.");
+    }
     const body = await readCaptureBytes(handle, length, 12);
-    if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+    if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
       throw new Error("Capture metadata checksum mismatch.");
+    }
     options.signal?.throwIfAborted();
     return validateCaptureFileHeader(
       JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)),
@@ -600,17 +660,21 @@ export const recoverCaptureFile = async (
   };
   const json = async (prefix: Buffer): Promise<unknown> => {
     const length = prefix.readUInt32LE(4);
-    if (length > 65536) throw new Error("Capture metadata length exceeds bounds.");
+    if (length > 65536) {
+      throw new Error("Capture metadata length exceeds bounds.");
+    }
     const body = await read(length);
-    if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+    if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
       throw new Error("Capture metadata checksum mismatch.");
+    }
     return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
   };
   let header: CaptureFileHeader;
   try {
     const prefix = await read(12);
-    if (prefix.toString("ascii", 0, 4) !== "ACS2")
+    if (prefix.toString("ascii", 0, 4) !== "ACS2") {
       throw new Error("Missing capture session header.");
+    }
     header = validateCaptureFileHeader(await json(prefix));
   } catch (error) {
     await handle.close();
@@ -626,10 +690,14 @@ export const recoverCaptureFile = async (
       const prefix = await read(12),
         magic = prefix.toString("ascii", 0, 4);
       if (magic === "ACT2") {
-        if (pending) throw new Error("Uncommitted capture chunk before another chunk.");
+        if (pending) {
+          throw new Error("Uncommitted capture chunk before another chunk.");
+        }
         const envelope = Buffer.concat([prefix, await read(52)]);
         const length = envelope.readUInt32LE(48);
-        if (length > 262144 - 64) throw new Error("Capture chunk exceeds negotiated bound.");
+        if (length > 262144 - 64) {
+          throw new Error("Capture chunk exceeds negotiated bound.");
+        }
         const bytes = Buffer.concat([envelope, await read(length)]);
         const started = options.onTiming ? performance.now() : 0;
         pending = decodeCaptureChunk(bytes, header.session, header.scope);
@@ -638,8 +706,9 @@ export const recoverCaptureFile = async (
           BigInt(pending.sequence) !== chunkThrough + 1n ||
           BigInt(pending.first) !== eventThrough + 1n ||
           BigInt(captureChunkRecords(pending)[0].cycle) < lastCycle
-        )
+        ) {
           throw new Error("Noncontiguous capture history.");
+        }
       } else if (magic === "ACK2") {
         const checkpoint = (await json(prefix)) as Record<string, unknown>;
         if (
@@ -647,8 +716,9 @@ export const recoverCaptureFile = async (
           checkpoint.session !== header.session ||
           checkpoint.chunkThrough !== pending.sequence ||
           checkpoint.eventThrough !== pending.through
-        )
+        ) {
           throw new Error("Checkpoint does not match the pending chunk.");
+        }
         if (accept) {
           try {
             const started = options.onTiming ? performance.now() : 0;
@@ -678,12 +748,16 @@ export const recoverCaptureFile = async (
           terminal.state !== "complete" ||
           captureU64(terminal.producedThrough) !== eventThrough ||
           captureU64(terminal.producedChunks) !== chunkThrough
-        )
+        ) {
           throw new Error("Terminal capture totals disagree with the committed prefix.");
+        }
         const after = await handle.stat();
-        if (after.size !== offset) throw new Error("Unexpected bytes after capture terminal.");
-        if (after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+        if (after.size !== offset) {
+          throw new Error("Unexpected bytes after capture terminal.");
+        }
+        if (after.size !== before.size || after.mtimeMs !== before.mtimeMs) {
           throw new Error("Capture archive changed while being read.");
+        }
         options.onProgress?.(offset, before.size);
         options.signal?.throwIfAborted();
         return {
@@ -692,11 +766,15 @@ export const recoverCaptureFile = async (
           chunkThrough: String(chunkThrough),
           eventThrough: String(eventThrough),
         };
-      } else throw new Error("Unknown required capture frame.");
+      } else {
+        throw new Error("Unknown required capture frame.");
+      }
     }
   } catch (error) {
     options.signal?.throwIfAborted();
-    if (consumerFailed) throw error;
+    if (consumerFailed) {
+      throw error;
+    }
     return {
       header,
       complete: false,
@@ -724,19 +802,24 @@ export const exportCaptureJson = async (
   // Validate before creating a complete-looking legacy artifact. Recovery callers
   // inspect the committed prefix separately. Incomplete archives cannot be promoted.
   const verified = await recoverCaptureFile(archive);
-  if (!verified.complete) throw new Error(`Capture archive is incomplete: ${verified.reason}`);
-  if (verified.header.scope !== "snes.65816.instructions")
+  if (!verified.complete) {
+    throw new Error(`Capture archive is incomplete: ${verified.reason}`);
+  }
+  if (verified.header.scope !== "snes.65816.instructions") {
     throw new Error(
       "Bus capture cannot be exported as an instruction trace. Retain the ACT2 archive.",
     );
-  if (BigInt(verified.eventThrough) >= BigInt(Number.MAX_SAFE_INTEGER))
+  }
+  if (BigInt(verified.eventThrough) >= BigInt(Number.MAX_SAFE_INTEGER)) {
     throw new Error(
       "Legacy JSON sequence numbers cannot represent this capture. Retain the exact ACT2 archive.",
     );
+  }
   const h = await open(destination, reserved ? "r+" : "wx");
   try {
-    if (reserved && (await h.stat()).size !== 0)
+    if (reserved && (await h.stat()).size !== 0) {
       throw new Error("Reserved trace destination changed during capture.");
+    }
     const m = verified.header;
     await h.writeFile(
       JSON.stringify({
@@ -751,8 +834,9 @@ export const exportCaptureJson = async (
     let first = true;
     const result = await recoverCaptureFile(archive, async (chunk) => {
       // A replaced archive must not change scope between the verification and export scans.
-      if (chunk.scope !== "snes.65816.instructions")
+      if (chunk.scope !== "snes.65816.instructions") {
         throw new Error("Capture scope changed during instruction export.");
+      }
       await h.writeFile(
         (first ? "" : ",") +
           JSON.stringify({
@@ -765,8 +849,9 @@ export const exportCaptureJson = async (
       );
       first = false;
     });
-    if (!result.complete || result.eventThrough !== verified.eventThrough)
+    if (!result.complete || result.eventThrough !== verified.eventThrough) {
       throw new Error("Capture archive changed during export.");
+    }
     await h.writeFile("]}\n");
     await h.sync();
   } finally {
@@ -830,12 +915,14 @@ export class NativeCaptureFileCursor {
       const identity = await handle.stat();
       const prefix = await readCaptureBytes(handle, 12, 0);
       const length = prefix.readUInt32LE(4);
-      if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536)
+      if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536) {
         throw new Error("Invalid native capture header.");
+      }
       checkCaptureSize(12 + length, options);
       const body = await readCaptureBytes(handle, length, 12);
-      if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+      if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
         throw new Error("Capture metadata checksum mismatch.");
+      }
       const header = validateCaptureFileHeader(
         JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body)),
       );
@@ -872,7 +959,9 @@ export class NativeCaptureFileCursor {
     maxChunks = 16,
     publishedFile?: string,
   ): Promise<void> {
-    if (this.#failed) throw new Error("Native capture cursor failed previously.");
+    if (this.#failed) {
+      throw new Error("Native capture cursor failed previously.");
+    }
     try {
       this.#options.signal?.throwIfAborted();
       const position = nativePosition(value, this.header.session, this.header.scope);
@@ -884,19 +973,24 @@ export class NativeCaptureFileCursor {
         !Number.isSafeInteger(maxChunks) ||
         maxChunks < 1 ||
         maxChunks > 256
-      )
+      ) {
         throw new Error("Native capture watermark or chunk budget is invalid.");
+      }
       checkCaptureSize(bytes, this.#options);
-      if (position.fileState === "incomplete") throw new Error("Native capture was interrupted.");
+      if (position.fileState === "incomplete") {
+        throw new Error("Native capture was interrupted.");
+      }
       if (this.#complete) {
-        if (bytes !== this.#watermark || position.fileState !== "complete")
+        if (bytes !== this.#watermark || position.fileState !== "complete") {
           throw new Error("Completed native capture changed.");
+        }
         return;
       }
       this.#watermark = bytes;
       const before = await this.#handle.stat();
-      if (before.size < bytes)
+      if (before.size < bytes) {
         throw new Error("Native capture is shorter than its durable watermark.");
+      }
       // Scope read-ahead to this slice's snapshot. Reusing an unread tail across
       // calls could hide a changed frame before the next status arrives.
       // Cap speculative buffering by both the slice's chunk budget and 1 MiB.
@@ -910,18 +1004,22 @@ export class NativeCaptureFileCursor {
       );
       const read = async (length: number): Promise<Buffer> => {
         this.#options.signal?.throwIfAborted();
-        if (this.#offset + length > bytes)
+        if (this.#offset + length > bytes) {
           throw new Error("Native durable watermark splits a frame.");
+        }
         const result = await reader.read(length, this.#offset, bytes);
         this.#offset += length;
         return result;
       };
       const json = async (prefix: Buffer): Promise<unknown> => {
         const length = prefix.readUInt32LE(4);
-        if (length > 65536) throw new Error("Capture metadata exceeds bounds.");
+        if (length > 65536) {
+          throw new Error("Capture metadata exceeds bounds.");
+        }
         const body = await read(length);
-        if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+        if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
           throw new Error("Capture metadata checksum mismatch.");
+        }
         return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
       };
       for (let count = 0; this.#offset < bytes && count < maxChunks; count++) {
@@ -941,31 +1039,38 @@ export class NativeCaptureFileCursor {
             position.producedThrough !== terminal.producedThrough ||
             position.producedChunks !== terminal.producedChunks ||
             this.#offset !== bytes
-          )
+          ) {
             throw new Error("Native capture terminal disagrees with the consumed prefix.");
+          }
           const after = await this.#handle.stat();
           if (
             after.size !== bytes ||
             before.size !== after.size ||
             before.mtimeMs !== after.mtimeMs
-          )
+          ) {
             throw new Error("Native capture changed during final validation.");
+          }
           if (publishedFile) {
             const published = await lstat(publishedFile);
             if (
               !published.isFile() ||
               published.dev !== this.#identity.dev ||
               published.ino !== this.#identity.ino
-            )
+            ) {
               throw new Error("Native capture publication replaced the opened file.");
+            }
           }
           this.#complete = true;
           break;
         }
-        if (magic !== "ACT2") throw new Error("Native capture expected an ACT2 chunk.");
+        if (magic !== "ACT2") {
+          throw new Error("Native capture expected an ACT2 chunk.");
+        }
         const envelope = Buffer.concat([prefix, await read(52)]);
         const length = envelope.readUInt32LE(48);
-        if (length > 262144 - 64) throw new Error("Capture chunk exceeds its bound.");
+        if (length > 262144 - 64) {
+          throw new Error("Capture chunk exceeds its bound.");
+        }
         const chunk = decodeCaptureChunk(
           Buffer.concat([envelope, await read(length)]),
           this.header.session,
@@ -977,18 +1082,21 @@ export class NativeCaptureFileCursor {
           captureU64(chunk.first) !== this.#event + 1n ||
           captureU64(records[0].cycle) < this.#cycle ||
           captureU64(chunk.through) > captureU64(position.durableThrough)
-        )
+        ) {
           throw new Error("Noncontiguous native capture history.");
+        }
         const ackPrefix = await read(12);
-        if (ackPrefix.toString("ascii", 0, 4) !== "ACK2")
+        if (ackPrefix.toString("ascii", 0, 4) !== "ACK2") {
           throw new Error("Native capture chunk has no checkpoint.");
+        }
         const ack = (await json(ackPrefix)) as Record<string, unknown>;
         if (
           ack.session !== this.header.session ||
           ack.chunkThrough !== chunk.sequence ||
           ack.eventThrough !== chunk.through
-        )
+        ) {
           throw new Error("Native checkpoint disagrees with its chunk.");
+        }
         accept(chunk);
         this.#chunk = captureU64(chunk.sequence);
         this.#event = captureU64(chunk.through);
@@ -998,8 +1106,9 @@ export class NativeCaptureFileCursor {
         // finishes. The worker's outer scheduling yield cannot replace this one.
         await yieldToMessages(undefined, { signal: this.#options.signal });
       }
-      if (this.#offset === bytes && !this.#complete && position.fileState === "complete")
+      if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
         throw new Error("Completed native capture has no terminal frame.");
+      }
       this.#options.onProgress?.(this.#offset, bytes);
     } catch (error) {
       this.#failed = true;
@@ -1017,16 +1126,19 @@ const nativePosition = (
   scope?: CaptureScopeV2,
 ): NativeCaptureFilePosition => {
   const position = validateCapturePosition(value, session, scope) as NativeCaptureFilePosition;
-  if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState))
+  if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
     throw new Error("Invalid native file state.");
+  }
   captureU64(position.fileBytes);
   captureU64(position.fileBatches);
   if (position.fileProfile) {
-    for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"] as const)
+    for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"] as const) {
       captureU64(position.fileProfile[field]);
+    }
   }
-  if ((position.state === "complete") !== (position.fileState === "complete"))
+  if ((position.state === "complete") !== (position.fileState === "complete")) {
     throw new Error("Native file publication and producer completion disagree.");
+  }
   return position;
 };
 
@@ -1038,6 +1150,7 @@ export class NativeCaptureFileRecorder {
   readonly #file: string;
   readonly #scope: CaptureScopeV2;
   readonly #transport: CaptureTransportV2;
+  readonly #context?: CaptureContextRecorder;
   #position: NativeCaptureFilePosition;
   #stopRequested = false;
   #cancelled = false;
@@ -1054,8 +1167,10 @@ export class NativeCaptureFileRecorder {
     scope: CaptureScopeV2,
     transport: CaptureTransportV2,
     position: NativeCaptureFilePosition,
+    context?: CaptureContextRecorder,
   ) {
     this.#file = file;
+    this.#context = context;
     this.#scope = scope;
     this.#position = position;
     let tail = Promise.resolve();
@@ -1077,13 +1192,14 @@ export class NativeCaptureFileRecorder {
    * @returns {Promise<NativeCaptureFileRecorder>} Armed recorder with a durable session header.
    */
   static async create(
-    options: CaptureFileMetadata & {
-      readonly file: string;
-      readonly transport: CaptureTransportV2;
-      readonly scope?: CaptureScopeV2;
-      readonly bufferBytes?: number;
-      readonly measureStages?: boolean;
-    },
+    options: CaptureFileMetadata &
+      CaptureContextOptions & {
+        readonly file: string;
+        readonly transport: CaptureTransportV2;
+        readonly scope?: CaptureScopeV2;
+        readonly bufferBytes?: number;
+        readonly measureStages?: boolean;
+      },
   ): Promise<NativeCaptureFileRecorder> {
     metadataValid(options);
     const scope = captureScope(options.scope ?? "snes.65816.instructions");
@@ -1091,11 +1207,18 @@ export class NativeCaptureFileRecorder {
       await options.transport({ operation: "file-capabilities", scope }),
       scope,
     );
-    if (!cap.nativeFile) throw new Error("Runtime does not support native file capture.");
+    if (!cap.nativeFile) {
+      throw new Error("Runtime does not support native file capture.");
+    }
+    const context =
+      options.context === false
+        ? undefined
+        : new CaptureContextRecorder(options.file, options, options.transport);
+    const transport = context?.transport ?? options.transport;
     let position: NativeCaptureFilePosition | undefined;
     let session: string | undefined;
     try {
-      const initial = await options.transport({
+      const initial = await transport({
         operation: "file-start",
         ...(options.measureStages ? { measureStages: true } : {}),
         file: options.file,
@@ -1111,19 +1234,21 @@ export class NativeCaptureFileRecorder {
       while (position.fileState === "preparing") {
         await pause();
         position = nativePosition(
-          await options.transport({ operation: "file-status", session: position.session }),
+          await transport({ operation: "file-status", session: position.session }),
           position.session,
           scope,
         );
       }
-      if (position.fileState !== "writing" || position.state !== "armed")
+      if (position.fileState !== "writing" || position.state !== "armed") {
         throw new Error(
           `Native file capture could not prepare its output: ${position.error || position.fileState}.`,
         );
-      return new NativeCaptureFileRecorder(options.file, scope, options.transport, position);
+      }
+      return new NativeCaptureFileRecorder(options.file, scope, transport, position, context);
     } catch (error) {
-      if (session)
-        await options.transport({ operation: "file-abort", session }).catch(() => undefined);
+      if (session) {
+        await transport({ operation: "file-abort", session }).catch(() => undefined);
+      }
       throw error;
     }
   }
@@ -1164,14 +1289,19 @@ export class NativeCaptureFileRecorder {
           this.#scope,
         );
         this.#position = p;
-        if (p.fileState === "incomplete" || p.state === "incomplete")
+        if (p.fileState === "incomplete" || p.state === "incomplete") {
           throw new Error(`Native capture incomplete: ${p.error}.`);
+        }
         if (p.fileState === "complete") {
           const events = captureU64(p.producedThrough),
             chunks = captureU64(p.producedChunks);
-          if (events > BigInt(Number.MAX_SAFE_INTEGER) || chunks > BigInt(Number.MAX_SAFE_INTEGER))
+          if (
+            events > BigInt(Number.MAX_SAFE_INTEGER) ||
+            chunks > BigInt(Number.MAX_SAFE_INTEGER)
+          ) {
             throw new Error("Native capture totals exceed the consumer's exact integer range.");
-          return {
+          }
+          const summary: CaptureFileSummary = {
             file: this.#file,
             archive: this.#file,
             scope: this.#scope,
@@ -1180,7 +1310,10 @@ export class NativeCaptureFileRecorder {
             chunks: Number(chunks),
             complete: true,
             position: p,
+            ...(this.#context ? { contextDirectory: this.#context.directory } : {}),
           };
+          await this.#context?.finish(summary);
+          return summary;
         }
         // Capture drains at native scheduler exits. Polling frequency affects
         // status latency only and never limits writer throughput.

@@ -1,5 +1,9 @@
 # Desktop contribution series through U6
 
+> Historical checkpoint. The maintained source is now `codex/ares-integration`;
+> see the local `docs/ares-fork-consolidation.md` record. U1 #2624 and U2 #2625
+> merged on 2026-09-13. Original hashes and evidence below describe the earlier snapshot.
+
 The canonical prepared source is `fixtures/external/ares` on
 `codex/ares-desktop-u6`. `series.json` fixes the upstream base, ordered commits,
 authors, patch hashes, and exact changed-file hashes. U3/U4/U5 include native

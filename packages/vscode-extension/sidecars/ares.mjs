@@ -37,24 +37,24 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../core/src/debug-map.ts
+// packages/core/src/debug-map.ts
 var init_debug_map = __esm({
-  "../core/src/debug-map.ts"() {
+  "packages/core/src/debug-map.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/address-width.ts
+// packages/core/src/address-width.ts
 var init_address_width = __esm({
-  "../core/src/address-width.ts"() {
+  "packages/core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/crc32.ts
+// packages/core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "../core/src/crc32.ts"() {
+  "packages/core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
@@ -90,38 +90,38 @@ var init_crc32 = __esm({
   }
 });
 
-// ../core/src/addressToLine.ts
+// packages/core/src/addressToLine.ts
 var init_addressToLine = __esm({
-  "../core/src/addressToLine.ts"() {
+  "packages/core/src/addressToLine.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/architecture-registry.ts
+// packages/core/src/architecture-registry.ts
 var init_architecture_registry = __esm({
-  "../core/src/architecture-registry.ts"() {
+  "packages/core/src/architecture-registry.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/source-location.ts
+// packages/core/src/source-location.ts
 var init_source_location = __esm({
-  "../core/src/source-location.ts"() {
+  "packages/core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/diagnostics.ts
+// packages/core/src/diagnostics.ts
 var init_diagnostics = __esm({
-  "../core/src/diagnostics.ts"() {
+  "packages/core/src/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/directive-groups.ts
+// packages/core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "../core/src/directive-groups.ts"() {
+  "packages/core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -138,17 +138,17 @@ var init_directive_groups = __esm({
   }
 });
 
-// ../core/src/ir/expression-node.ts
+// packages/core/src/ir/expression-node.ts
 var init_expression_node = __esm({
-  "../core/src/ir/expression-node.ts"() {
+  "packages/core/src/ir/expression-node.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/syntax-profile.ts
+// packages/core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "../core/src/syntax-profile.ts"() {
+  "packages/core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -183,24 +183,24 @@ var init_syntax_profile = __esm({
   }
 });
 
-// ../core/src/file-provider.ts
+// packages/core/src/file-provider.ts
 var init_file_provider = __esm({
-  "../core/src/file-provider.ts"() {
+  "packages/core/src/file-provider.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/ir/normalized-command.ts
+// packages/core/src/ir/normalized-command.ts
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "../core/src/ir/normalized-command.ts"() {
+  "packages/core/src/ir/normalized-command.ts"() {
     "use strict";
     EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
     EMPTY_TOKEN_SPANS = Object.freeze([]);
   }
 });
 
-// ../core/src/operand-syntax.ts
+// packages/core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -222,34 +222,34 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "../core/src/operand-syntax.ts"() {
+  "packages/core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/plugin/contracts.ts
+// packages/core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "../core/src/plugin/contracts.ts"() {
+  "packages/core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// ../core/src/plugin/diagnostics.ts
+// packages/core/src/plugin/diagnostics.ts
 var init_diagnostics2 = __esm({
-  "../core/src/plugin/diagnostics.ts"() {
+  "packages/core/src/plugin/diagnostics.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/directive-catalog.ts
+// packages/core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "../core/src/lsp/directive-catalog.ts"() {
+  "packages/core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group, operands) => ({
       keyword,
@@ -429,16 +429,16 @@ var init_directive_catalog = __esm({
   }
 });
 
-// ../core/src/plugin/environment.ts
+// packages/core/src/plugin/environment.ts
 var init_environment = __esm({
-  "../core/src/plugin/environment.ts"() {
+  "packages/core/src/plugin/environment.ts"() {
     "use strict";
   }
 });
 
-// ../../node_modules/semver/internal/constants.js
+// node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "../../node_modules/semver/internal/constants.js"(exports, module) {
+  "node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -468,9 +468,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/debug.js
+// node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "../../node_modules/semver/internal/debug.js"(exports, module) {
+  "node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -478,9 +478,9 @@ var require_debug = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/re.js
+// node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "../../node_modules/semver/internal/re.js"(exports, module) {
+  "node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -566,9 +566,9 @@ var require_re = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/parse-options.js
+// node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "../../node_modules/semver/internal/parse-options.js"(exports, module) {
+  "node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -585,9 +585,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/identifiers.js
+// node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "../../node_modules/semver/internal/identifiers.js"(exports, module) {
+  "node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -610,9 +610,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/semver.js
+// node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "../../node_modules/semver/classes/semver.js"(exports, module) {
+  "node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -902,9 +902,9 @@ var require_semver = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/parse.js
+// node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "../../node_modules/semver/functions/parse.js"(exports, module) {
+  "node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -924,9 +924,9 @@ var require_parse = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/valid.js
+// node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "../../node_modules/semver/functions/valid.js"(exports, module) {
+  "node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -937,9 +937,9 @@ var require_valid = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/clean.js
+// node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "../../node_modules/semver/functions/clean.js"(exports, module) {
+  "node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -950,9 +950,9 @@ var require_clean = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/inc.js
+// node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "../../node_modules/semver/functions/inc.js"(exports, module) {
+  "node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier, identifierBase) => {
@@ -974,9 +974,9 @@ var require_inc = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/diff.js
+// node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "../../node_modules/semver/functions/diff.js"(exports, module) {
+  "node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -1018,9 +1018,9 @@ var require_diff = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/major.js
+// node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "../../node_modules/semver/functions/major.js"(exports, module) {
+  "node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -1028,9 +1028,9 @@ var require_major = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/minor.js
+// node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "../../node_modules/semver/functions/minor.js"(exports, module) {
+  "node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -1038,9 +1038,9 @@ var require_minor = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/patch.js
+// node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "../../node_modules/semver/functions/patch.js"(exports, module) {
+  "node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -1048,9 +1048,9 @@ var require_patch = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/prerelease.js
+// node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "../../node_modules/semver/functions/prerelease.js"(exports, module) {
+  "node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -1061,9 +1061,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare.js
+// node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "../../node_modules/semver/functions/compare.js"(exports, module) {
+  "node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -1071,9 +1071,9 @@ var require_compare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/rcompare.js
+// node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "../../node_modules/semver/functions/rcompare.js"(exports, module) {
+  "node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -1081,9 +1081,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare-loose.js
+// node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "../../node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -1091,9 +1091,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare-build.js
+// node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "../../node_modules/semver/functions/compare-build.js"(exports, module) {
+  "node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -1105,9 +1105,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/sort.js
+// node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "../../node_modules/semver/functions/sort.js"(exports, module) {
+  "node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -1115,9 +1115,9 @@ var require_sort = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/rsort.js
+// node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "../../node_modules/semver/functions/rsort.js"(exports, module) {
+  "node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -1125,9 +1125,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gt.js
+// node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "../../node_modules/semver/functions/gt.js"(exports, module) {
+  "node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -1135,9 +1135,9 @@ var require_gt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lt.js
+// node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "../../node_modules/semver/functions/lt.js"(exports, module) {
+  "node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -1145,9 +1145,9 @@ var require_lt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/eq.js
+// node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "../../node_modules/semver/functions/eq.js"(exports, module) {
+  "node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -1155,9 +1155,9 @@ var require_eq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/neq.js
+// node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "../../node_modules/semver/functions/neq.js"(exports, module) {
+  "node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -1165,9 +1165,9 @@ var require_neq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gte.js
+// node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "../../node_modules/semver/functions/gte.js"(exports, module) {
+  "node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -1175,9 +1175,9 @@ var require_gte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lte.js
+// node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "../../node_modules/semver/functions/lte.js"(exports, module) {
+  "node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -1185,9 +1185,9 @@ var require_lte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/cmp.js
+// node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "../../node_modules/semver/functions/cmp.js"(exports, module) {
+  "node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -1235,9 +1235,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/coerce.js
+// node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "../../node_modules/semver/functions/coerce.js"(exports, module) {
+  "node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -1281,9 +1281,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/truncate.js
+// node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "../../node_modules/semver/functions/truncate.js"(exports, module) {
+  "node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -1322,9 +1322,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/lrucache.js
+// node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "../../node_modules/semver/internal/lrucache.js"(exports, module) {
+  "node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1360,9 +1360,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/range.js
+// node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "../../node_modules/semver/classes/range.js"(exports, module) {
+  "node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1745,9 +1745,9 @@ var require_range = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/comparator.js
+// node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "../../node_modules/semver/classes/comparator.js"(exports, module) {
+  "node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1858,9 +1858,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/satisfies.js
+// node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "../../node_modules/semver/functions/satisfies.js"(exports, module) {
+  "node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -1875,9 +1875,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/to-comparators.js
+// node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -1885,9 +1885,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/max-satisfying.js
+// node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1914,9 +1914,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/min-satisfying.js
+// node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1943,9 +1943,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/min-version.js
+// node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "../../node_modules/semver/ranges/min-version.js"(exports, module) {
+  "node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -2002,9 +2002,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/valid.js
+// node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "../../node_modules/semver/ranges/valid.js"(exports, module) {
+  "node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -2018,9 +2018,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/outside.js
+// node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "../../node_modules/semver/ranges/outside.js"(exports, module) {
+  "node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -2087,9 +2087,9 @@ var require_outside = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/gtr.js
+// node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "../../node_modules/semver/ranges/gtr.js"(exports, module) {
+  "node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -2097,9 +2097,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/ltr.js
+// node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "../../node_modules/semver/ranges/ltr.js"(exports, module) {
+  "node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -2107,9 +2107,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/intersects.js
+// node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "../../node_modules/semver/ranges/intersects.js"(exports, module) {
+  "node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -2121,9 +2121,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/simplify.js
+// node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "../../node_modules/semver/ranges/simplify.js"(exports, module) {
+  "node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -2171,9 +2171,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/subset.js
+// node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "../../node_modules/semver/ranges/subset.js"(exports, module) {
+  "node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -2333,9 +2333,9 @@ var require_subset = __commonJS({
   }
 });
 
-// ../../node_modules/semver/index.js
+// node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "../../node_modules/semver/index.js"(exports, module) {
+  "node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -2430,25 +2430,25 @@ var require_semver2 = __commonJS({
   }
 });
 
-// ../core/src/plugin/manager.ts
+// packages/core/src/plugin/manager.ts
 var import_semver;
 var init_manager = __esm({
-  "../core/src/plugin/manager.ts"() {
+  "packages/core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
   }
 });
 
-// ../core/src/plugin/session-state.ts
+// packages/core/src/plugin/session-state.ts
 var init_session_state = __esm({
-  "../core/src/plugin/session-state.ts"() {
+  "packages/core/src/plugin/session-state.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/plugin/index.ts
+// packages/core/src/plugin/index.ts
 var init_plugin = __esm({
-  "../core/src/plugin/index.ts"() {
+  "packages/core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -2458,24 +2458,24 @@ var init_plugin = __esm({
   }
 });
 
-// ../core/src/services/assembly-front-end-service.ts
+// packages/core/src/services/assembly-front-end-service.ts
 var init_assembly_front_end_service = __esm({
-  "../core/src/services/assembly-front-end-service.ts"() {
+  "packages/core/src/services/assembly-front-end-service.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/services/command-lowering-service.ts
+// packages/core/src/services/command-lowering-service.ts
 var init_command_lowering_service = __esm({
-  "../core/src/services/command-lowering-service.ts"() {
+  "packages/core/src/services/command-lowering-service.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/architecture-types.ts
+// packages/core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "../core/src/architecture-types.ts"() {
+  "packages/core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -2500,10 +2500,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// ../core/src/decoder-types.ts
+// packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "../core/src/decoder-types.ts"() {
+  "packages/core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -2548,65 +2548,65 @@ var init_decoder_types = __esm({
   }
 });
 
-// ../core/src/ir/assembly-tree.ts
+// packages/core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "../core/src/ir/assembly-tree.ts"() {
+  "packages/core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/overlay-file-provider.ts
+// packages/core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "../core/src/lsp/overlay-file-provider.ts"() {
+  "packages/core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/root-analysis-cache.ts
+// packages/core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "../core/src/lsp/root-analysis-cache.ts"() {
+  "packages/core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/workspace-index.ts
+// packages/core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "../core/src/lsp/workspace-index.ts"() {
+  "packages/core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/position-lookup.ts
+// packages/core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "../core/src/lsp/position-lookup.ts"() {
+  "packages/core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/instruction-catalog.ts
+// packages/core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "../core/src/lsp/instruction-catalog.ts"() {
+  "packages/core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/catalog.ts
+// packages/core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "../core/src/lsp/catalog.ts"() {
+  "packages/core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/project-outline.ts
+// packages/core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "../core/src/lsp/project-outline.ts"() {
+  "packages/core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/index.ts
+// packages/core/src/lsp/index.ts
 var init_lsp = __esm({
-  "../core/src/lsp/index.ts"() {
+  "packages/core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -2619,9 +2619,9 @@ var init_lsp = __esm({
   }
 });
 
-// ../core/src/index.ts
+// packages/core/src/index.ts
 var init_src = __esm({
-  "../core/src/index.ts"() {
+  "packages/core/src/index.ts"() {
     "use strict";
     init_architecture_types();
     init_decoder_types();
@@ -2647,7 +2647,7 @@ var init_src = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/65816-spec.ts
+// packages/plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -2672,7 +2672,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "../plugin-snes/src/architectures/65816-spec.ts"() {
+  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -2954,7 +2954,7 @@ var init_spec = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/65816-decoder.ts
+// packages/plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction) {
   if (instruction.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction.architecture}' as 65816.`);
@@ -3047,7 +3047,7 @@ function formatCpu65816Instruction(instruction) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder, hex;
 var init_decoder = __esm({
-  "../plugin-snes/src/architectures/65816-decoder.ts"() {
+  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -3352,7 +3352,7 @@ var init_decoder = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/spc700-spec.ts
+// packages/plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -3377,7 +3377,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "../plugin-snes/src/architectures/spc700-spec.ts"() {
+  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -3629,7 +3629,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/superfx-spec.ts
+// packages/plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -3697,7 +3697,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "../plugin-snes/src/architectures/superfx-spec.ts"() {
+  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -4213,10 +4213,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// ../plugin-snes/src/tooling/instruction-catalog.ts
+// packages/plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -4227,7 +4227,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/operand-classifiers.ts
+// packages/plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -4427,16 +4427,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src();
   }
 });
 
-// ../plugin-snes/src/architectures/65816.ts
+// packages/plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "../plugin-snes/src/architectures/65816.ts"() {
+  "packages/plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -6397,10 +6397,10 @@ var init__ = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/spc700-decoder.ts
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
 var readLittleEndian2, signedByte, register2, address2, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
 var init_spc700_decoder = __esm({
-  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width) => {
@@ -6674,10 +6674,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/split-operands.ts
+// packages/plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "../plugin-snes/src/architectures/split-operands.ts"() {
+  "packages/plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text) => text ? [text] : [];
     splitCommaOperands = (text) => text ? text.split(",").map((operand) => operand.trim()) : [];
@@ -6707,7 +6707,7 @@ var init_split_operands = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/spc700.ts
+// packages/plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -6804,7 +6804,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "../plugin-snes/src/architectures/spc700.ts"() {
+  "packages/plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src();
     init_instruction_catalog2();
@@ -8706,10 +8706,10 @@ var init_spc700 = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/superfx-decoder.ts
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
 var word, register3, immediate2, address3, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder;
 var init_superfx_decoder = __esm({
-  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -9006,10 +9006,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// ../plugin-snes/src/asar/compatibility.ts
+// packages/plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "../plugin-snes/src/asar/compatibility.ts"() {
+  "packages/plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -9085,10 +9085,10 @@ var init_compatibility = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/superfx.ts
+// packages/plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "../plugin-snes/src/architectures/superfx.ts"() {
+  "packages/plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src();
     init_compatibility();
@@ -9873,7 +9873,7 @@ var init_superfx = __esm({
   }
 });
 
-// ../plugin-snes/src/directives/ca65-compat.ts
+// packages/plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -9957,13 +9957,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "../plugin-snes/src/directives/ca65-compat.ts"() {
+  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// ../plugin-snes/src/directives/freespace.ts
+// packages/plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -10019,13 +10019,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "../plugin-snes/src/directives/freespace.ts"() {
+  "packages/plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// ../plugin-snes/src/directives/layout.ts
+// packages/plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -10093,7 +10093,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout = __esm({
-  "../plugin-snes/src/directives/layout.ts"() {
+  "packages/plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -10109,10 +10109,10 @@ var init_layout = __esm({
   }
 });
 
-// ../plugin-snes/src/services/spc-runtime.ts
+// packages/plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "../plugin-snes/src/services/spc-runtime.ts"() {
+  "packages/plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -10248,17 +10248,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// ../plugin-snes/src/directives/spc.ts
+// packages/plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "../plugin-snes/src/directives/spc.ts"() {
+  "packages/plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// ../plugin-snes/src/session-state.ts
+// packages/plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -10269,7 +10269,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "../plugin-snes/src/session-state.ts"() {
+  "packages/plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -10278,10 +10278,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// ../plugin-snes/src/target/address-space.ts
+// packages/plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "../plugin-snes/src/target/address-space.ts"() {
+  "packages/plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -10466,10 +10466,10 @@ var init_address_space = __esm({
   }
 });
 
-// ../plugin-snes/src/tooling/directive-catalog.ts
+// packages/plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "../plugin-snes/src/tooling/directive-catalog.ts"() {
+  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -11091,17 +11091,17 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/65816-state.ts
+// packages/plugin-snes/src/disassembler/65816-state.ts
 var init_state = __esm({
-  "../plugin-snes/src/disassembler/65816-state.ts"() {
+  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/address-identities.ts
+// packages/plugin-snes/src/disassembler/address-identities.ts
 var SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_address_identities = __esm({
-  "../plugin-snes/src/disassembler/address-identities.ts"() {
+  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     SNES_WRAM_ADDRESS_SPACE = "snes.wram";
     SNES_SRAM_ADDRESS_SPACE = "snes.sram";
@@ -11120,10 +11120,10 @@ var init_address_identities = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/hardware-registers.ts
+// packages/plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET;
 var init_hardware_registers = __esm({
-  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -11468,40 +11468,40 @@ var init_hardware_registers = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/rom-header.ts
+// packages/plugin-snes/src/disassembler/rom-header.ts
 var init_rom_header = __esm({
-  "../plugin-snes/src/disassembler/rom-header.ts"() {
+  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/65816-analysis.ts
+// packages/plugin-snes/src/disassembler/65816-analysis.ts
 var init_analysis = __esm({
-  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/dizraw-import.ts
+// packages/plugin-snes/src/disassembler/dizraw-import.ts
 var init_dizraw_import = __esm({
-  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/mesen-runtime.ts
+// packages/plugin-snes/src/disassembler/mesen-runtime.ts
 var CDL_HEADER;
 var init_mesen_runtime = __esm({
-  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
     CDL_HEADER = new TextEncoder().encode("CDLv2");
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-address-space.ts
+// packages/plugin-snes/src/disassembler/spc700-address-space.ts
 var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
 var init_spc700_address_space = __esm({
-  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -11513,38 +11513,38 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/mesen-labels.ts
+// packages/plugin-snes/src/disassembler/mesen-labels.ts
 var init_mesen_labels = __esm({
-  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
+// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
 var init_framework_asset_helpers = __esm({
-  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/ram-map.ts
+// packages/plugin-snes/src/disassembler/ram-map.ts
 var init_ram_map = __esm({
-  "../plugin-snes/src/disassembler/ram-map.ts"() {
+  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/source-export.ts
+// packages/plugin-snes/src/disassembler/source-export.ts
 var init_source_export = __esm({
-  "../plugin-snes/src/disassembler/source-export.ts"() {
+  "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress;
 var init_spc700_hardware_registers = __esm({
-  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -11576,45 +11576,45 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-state.ts
+// packages/plugin-snes/src/disassembler/spc700-state.ts
 var init_spc700_state = __esm({
-  "../plugin-snes/src/disassembler/spc700-state.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-analysis.ts
+// packages/plugin-snes/src/disassembler/spc700-analysis.ts
 var init_spc700_analysis = __esm({
-  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-upload.ts
+// packages/plugin-snes/src/disassembler/spc700-upload.ts
 var init_spc700_upload = __esm({
-  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/superfx-state.ts
+// packages/plugin-snes/src/disassembler/superfx-state.ts
 var init_superfx_state = __esm({
-  "../plugin-snes/src/disassembler/superfx-state.ts"() {
+  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/processor-source-export.ts
+// packages/plugin-snes/src/disassembler/processor-source-export.ts
 var init_processor_source_export = __esm({
-  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/function-heuristics.ts
+// packages/plugin-snes/src/disassembler/function-heuristics.ts
 var builtins, SNES_HEURISTIC_RULE_IDS;
 var init_function_heuristics = __esm({
-  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
     builtins = [
       {
@@ -11675,17 +11675,17 @@ var init_function_heuristics = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/runtime-code.ts
+// packages/plugin-snes/src/disassembler/runtime-code.ts
 var init_runtime_code = __esm({
-  "../plugin-snes/src/disassembler/runtime-code.ts"() {
+  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/superfx-address-space.ts
+// packages/plugin-snes/src/disassembler/superfx-address-space.ts
 var SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR;
 var init_superfx_address_space = __esm({
-  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
@@ -11697,24 +11697,24 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/project-initializer.ts
+// packages/plugin-snes/src/disassembler/project-initializer.ts
 var init_project_initializer = __esm({
-  "../plugin-snes/src/disassembler/project-initializer.ts"() {
+  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/disassembler/superfx-analysis.ts
+// packages/plugin-snes/src/disassembler/superfx-analysis.ts
 var init_superfx_analysis = __esm({
-  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
   }
 });
 
-// ../plugin-snes/src/assets/common.ts
+// packages/plugin-snes/src/assets/common.ts
 var objectValue, optionsFor, integerOption, stringOption, readBytes, resolveCount, resolveGrid, decodedObject, arrayValue, integerValue, defaultPath, jsonFile;
 var init_common = __esm({
-  "../plugin-snes/src/assets/common.ts"() {
+  "packages/plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0) {
@@ -11811,8 +11811,8 @@ var init_common = __esm({
       return value;
     };
     defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile = (path3, value) => ({
-      path: path3,
+    jsonFile = (path4, value) => ({
+      path: path4,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -11820,10 +11820,10 @@ var init_common = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/brr.ts
+// packages/plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "../plugin-snes/src/assets/brr.ts"() {
+  "packages/plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -11887,7 +11887,7 @@ var init_brr = __esm({
           };
         });
         const value = { kind: "snes-brr", blocks };
-        const path3 = stringOption(options, "path", defaultPath(context.request.id, "brr"));
+        const path4 = stringOption(options, "path", defaultPath(context.request.id, "brr"));
         const metadataPath = stringOption(
           options,
           "metadataPath",
@@ -11895,7 +11895,7 @@ var init_brr = __esm({
         );
         return {
           value,
-          files: [{ path: path3, mediaType: "audio/x-snes-brr", bytes }, jsonFile(metadataPath, value)]
+          files: [{ path: path4, mediaType: "audio/x-snes-brr", bytes }, jsonFile(metadataPath, value)]
         };
       },
       encode: (context) => {
@@ -11940,10 +11940,10 @@ var init_brr = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/palette.ts
+// packages/plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "../plugin-snes/src/assets/palette.ts"() {
+  "packages/plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -11969,8 +11969,8 @@ var init_palette = __esm({
           };
         });
         const value = { kind: "snes-palette-bgr555", colors };
-        const path3 = stringOption(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile(path3, value)] };
+        const path4 = stringOption(options, "path", defaultPath(context.request.id, "palette.json"));
+        return { value, files: [jsonFile(path4, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 2);
@@ -12001,10 +12001,10 @@ var init_palette = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/tilemap.ts
+// packages/plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "../plugin-snes/src/assets/tilemap.ts"() {
+  "packages/plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -12047,8 +12047,8 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           entries: entries3
         };
-        const path3 = stringOption(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile(path3, value)] };
+        const path4 = stringOption(options, "path", defaultPath(context.request.id, "tilemap.json"));
+        return { value, files: [jsonFile(path4, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 2);
@@ -12107,12 +12107,12 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           indexes: [...bytes]
         };
-        const path3 = stringOption(
+        const path4 = stringOption(
           options,
           "path",
           defaultPath(context.request.id, "mode7-tilemap.json")
         );
-        return { value, files: [jsonFile(path3, value)] };
+        return { value, files: [jsonFile(path4, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 1);
@@ -12136,10 +12136,10 @@ var init_tilemap = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/tiles.ts
+// packages/plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "../plugin-snes/src/assets/tiles.ts"() {
+  "packages/plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -12212,12 +12212,12 @@ var init_tiles = __esm({
             tileHeight: 8,
             tiles
           };
-          const path3 = stringOption(
+          const path4 = stringOption(
             options,
             "path",
             defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
           );
-          return { value, files: [jsonFile(path3, value)] };
+          return { value, files: [jsonFile(path4, value)] };
         },
         encode: (context) => {
           const { count, size } = resolveCount(context, bytesPerTile);
@@ -12280,8 +12280,8 @@ var init_tiles = __esm({
           tileHeight: 8,
           tiles
         };
-        const path3 = stringOption(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile(path3, value)] };
+        const path4 = stringOption(options, "path", defaultPath(context.request.id, "mode7.json"));
+        return { value, files: [jsonFile(path4, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 64);
@@ -12310,10 +12310,10 @@ var init_tiles = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/previews.ts
+// packages/plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue2, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer;
 var init_previews = __esm({
-  "../plugin-snes/src/assets/previews.ts"() {
+  "packages/plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -12451,10 +12451,10 @@ var init_previews = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/index.ts
+// packages/plugin-snes/src/assets/index.ts
 var snesAssetCodecs;
 var init_assets = __esm({
-  "../plugin-snes/src/assets/index.ts"() {
+  "packages/plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -12481,10 +12481,10 @@ var init_assets = __esm({
   }
 });
 
-// ../plugin-snes/src/index.ts
+// packages/plugin-snes/src/index.ts
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin;
 var init_src2 = __esm({
-  "../plugin-snes/src/index.ts"() {
+  "packages/plugin-snes/src/index.ts"() {
     "use strict";
     init_src();
     init_decoder();
@@ -12989,36 +12989,73 @@ var init_src2 = __esm({
   }
 });
 
-// ../debug-sidecar-ares/src/sidecar.ts
-import { readFile } from "node:fs/promises";
-import path2 from "node:path";
+// packages/debug-sidecar-ares/src/sidecar.ts
+import { readFile as readFile2 } from "node:fs/promises";
+import path3 from "node:path";
 
-// ../debug-adapter/src/contracts.ts
+// packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION = 1;
 
-// ../debug-adapter/src/capture-v2.ts
+// packages/debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
-  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
+  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
     throw new Error("Unsupported capture scope.");
+  }
   return value;
 };
 var captureU64 = (value) => {
-  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64)
+  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
     throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
+  }
   return BigInt(value);
 };
 var captureSession = (value) => {
-  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value))
+  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
     throw new Error("Invalid capture session identity.");
+  }
   return value;
 };
 var validateCaptureRequest = (value) => {
-  if (!value || typeof value !== "object") throw new Error("Invalid capture request.");
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid capture request.");
+  }
+  if (value.operation === "context") {
+    let fields2 = ["operation", "action"];
+    if (["prepare", "replay", "restore"].includes(value.action)) {
+      fields2.push("directory", "romContentSha256", "producer");
+      const request = value;
+      validateCaptureRequest({
+        operation: "file-start",
+        file: request.directory,
+        romContentSha256: request.romContentSha256,
+        producer: request.producer,
+        bufferBytes: 8388608
+      });
+    } else if (value.action === "start" || value.action === "stop" || value.action === "mark") {
+      fields2.push("session");
+      captureSession(value.session);
+      if (value.action === "mark") {
+        fields2.push("label");
+        if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
+          throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
+        }
+      }
+    } else if (value.action !== "abort" && value.action !== "status") {
+      throw new Error("Unsupported capture context action.");
+    }
+    if (Object.keys(value).some((key) => !fields2.includes(key))) {
+      throw new Error("Unsupported capture context field.");
+    }
+    return;
+  }
   if (value.operation === "file-capabilities") {
-    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key)))
+    if (Object.keys(value).some((key) => !["operation", "scope"].includes(key))) {
       throw new Error("Unsupported native file capability field.");
-    if (value.scope !== void 0) captureScope(value.scope);
+    }
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
     return;
   }
   if (value.operation === "file-start") {
@@ -13032,38 +13069,55 @@ var validateCaptureRequest = (value) => {
         "producer",
         "measureStages"
       ].includes(key)
-    ))
+    )) {
       throw new Error("Unsupported native file start field.");
-    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean")
+    }
+    if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
       throw new Error("Native file profiling must be boolean.");
+    }
     validateCaptureRequest({
       operation: "start",
       bufferBytes: value.bufferBytes,
       scope: value.scope
     });
     const bounded = (text, max) => typeof text === "string" && text.length > 0 && !text.includes("\0") && new TextEncoder().encode(text).length <= max;
-    if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key) => !["id", "revision"].includes(key)))
+    if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key) => !["id", "revision"].includes(key))) {
       throw new Error(
         "Native file capture requires an absolute bounded path and exact ROM/producer identity."
       );
+    }
     return;
   }
   let fields = ["operation", "session"];
-  if (value.operation === "capabilities") fields = ["operation", "scope"];
-  if (value.operation === "start") fields = ["operation", "bufferBytes", "scope"];
-  if (value.operation === "read") fields = ["operation", "session", "chunk"];
-  if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
-  if (Object.keys(value).some((key) => !fields.includes(key)))
+  if (value.operation === "capabilities") {
+    fields = ["operation", "scope"];
+  }
+  if (value.operation === "start") {
+    fields = ["operation", "bufferBytes", "scope"];
+  }
+  if (value.operation === "read") {
+    fields = ["operation", "session", "chunk"];
+  }
+  if (value.operation === "ack") {
+    fields = ["operation", "session", "chunk", "event"];
+  }
+  if (Object.keys(value).some((key) => !fields.includes(key))) {
     throw new Error(
       "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
     );
-  if (value.operation === "capabilities" || value.operation === "start") {
-    if (value.scope !== void 0) captureScope(value.scope);
   }
-  if (value.operation === "capabilities") return;
+  if (value.operation === "capabilities" || value.operation === "start") {
+    if (value.scope !== void 0) {
+      captureScope(value.scope);
+    }
+  }
+  if (value.operation === "capabilities") {
+    return;
+  }
   if (value.operation === "start") {
-    if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024)
+    if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024) {
       throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+    }
     return;
   }
   captureSession(value.session);
@@ -13076,12 +13130,16 @@ var validateCaptureRequest = (value) => {
     "file-stop",
     "file-abort",
     "file-release"
-  ].includes(value.operation))
+  ].includes(value.operation)) {
     return;
+  }
   if (value.operation === "read" || value.operation === "ack") {
-    if (!captureU64(value.chunk)) throw new Error("Capture chunk sequence starts at one.");
-    if (value.operation === "ack" && !captureU64(value.event))
+    if (!captureU64(value.chunk)) {
+      throw new Error("Capture chunk sequence starts at one.");
+    }
+    if (value.operation === "ack" && !captureU64(value.event)) {
       throw new Error("Capture event sequence starts at one.");
+    }
     return;
   }
   throw new Error("Unsupported capture operation.");
@@ -13089,9 +13147,15 @@ var validateCaptureRequest = (value) => {
 var validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
   captureScope(scope);
   let reserve = 71;
-  if (scope === "snes.cpu-bus") reserve = 64;
-  if (scope === "snes.cpu-bus-transfers") reserve = 80;
-  if (scope === "snes.cpu-bus-ppu") reserve = 88;
+  if (scope === "snes.cpu-bus") {
+    reserve = 64;
+  }
+  if (scope === "snes.cpu-bus-transfers") {
+    reserve = 80;
+  }
+  if (scope === "snes.cpu-bus-ppu") {
+    reserve = 88;
+  }
   const expected = {
     version: 2,
     scope,
@@ -13102,24 +13166,34 @@ var validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => 
     overheadBytes: 4194304,
     resumeSession: false
   };
-  if (!value || typeof value !== "object" || Object.entries(expected).some(([key, item]) => value[key] !== item))
+  if (!value || typeof value !== "object" || Object.entries(expected).some(([key, item]) => value[key] !== item)) {
     throw new Error("Unsupported capture scope, reserve, or ownership contract.");
-  if (value.nativeFile === true)
+  }
+  if (value.nativeFile === true) {
     return { ...expected, nativeFile: true };
+  }
   return expected;
 };
 var validateCapturePosition = (value, session, scope) => {
-  if (!value || typeof value !== "object") throw new Error("Invalid capture position.");
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid capture position.");
+  }
   const p = value;
   captureSession(p.session);
-  if (session !== void 0 && p.session !== session) throw new Error("Capture session changed.");
-  if (p.scope !== void 0) captureScope(p.scope);
-  if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope))
+  if (session !== void 0 && p.session !== session) {
+    throw new Error("Capture session changed.");
+  }
+  if (p.scope !== void 0) {
+    captureScope(p.scope);
+  }
+  if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
     throw new Error("Capture scope changed or was not confirmed by the producer.");
+  }
   if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
     p.state
-  ))
+  )) {
     throw new Error("Invalid capture state.");
+  }
   const bounds = [
     p.releasedThrough,
     p.durableThrough,
@@ -13127,35 +13201,44 @@ var validateCapturePosition = (value, session, scope) => {
     p.deliveredThrough,
     p.producedThrough
   ].map(captureU64);
-  if (bounds.some((v, i) => i > 0 && v < bounds[i - 1]))
+  if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
     throw new Error("Capture ownership boundaries are inconsistent.");
-  if (captureU64(p.chunkThrough) > captureU64(p.producedChunks))
+  }
+  if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
     throw new Error("Capture chunk boundary is inconsistent.");
+  }
   captureU64(p.throttleCount);
-  if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator))
+  if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
     throw new Error("Invalid capture clock domain.");
-  if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256)
+  }
+  if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
     throw new Error("Capture integrity failed.");
+  }
   if (![p.bufferedBytes, p.allocatedBytes].every(
     (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-  ) || p.bufferedBytes > p.allocatedBytes)
+  ) || p.bufferedBytes > p.allocatedBytes) {
     throw new Error("Capture allocation exceeds its bounds.");
-  if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks))
+  }
+  if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
     throw new Error("Capture terminal totals do not reconcile.");
+  }
   return p;
 };
 var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
   let crc = byte;
-  for (let bit2 = 0; bit2 < 8; bit2++) crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+  for (let bit2 = 0; bit2 < 8; bit2++) {
+    crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+  }
   return crc >>> 0;
 });
 var crcSlices = [crcTable];
-for (let slice = 1; slice < 8; slice++)
+for (let slice = 1; slice < 8; slice++) {
   crcSlices.push(
     Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
   );
+}
 
-// ../debug-adapter/src/sidecar-protocol.ts
+// packages/debug-adapter/src/sidecar-protocol.ts
 var DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
 var DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
 var DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -13200,80 +13283,103 @@ var positiveInteger = (value) => typeof value === "number" && Number.isSafeInteg
 var nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 var sessionPattern = /^[\w-]{32,128}$/;
 function assertDebugSidecarSessionToken(value) {
-  if (typeof value !== "string" || !sessionPattern.test(value))
+  if (typeof value !== "string" || !sessionPattern.test(value)) {
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
+  }
 }
 var assertRequestBounds = (message, limits) => {
   const args = message.arguments ?? {};
-  if (!isRecord(args)) throw new Error("Sidecar request arguments must be an object.");
+  if (!isRecord(args)) {
+    throw new Error("Sidecar request arguments must be an object.");
+  }
   if (message.command === "readMemory") {
     const count = args.count;
-    if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes)
+    if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
       throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
+    }
   }
   if (message.command === "disassemble") {
     const count = args.count;
-    if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions)
+    if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
       throw new Error(
         `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
       );
+    }
   }
   if (message.command === "setBreakpoints") {
     const breakpoints = args.breakpoints;
-    if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints)
+    if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
       throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
+    }
   }
   if (message.command === "readTrace") {
     const maxEvents = args.maxEvents;
-    if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents)
+    if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
       throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
+    }
   }
 };
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord(value)) throw new Error("Sidecar message must be an object.");
-  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL)
+  if (!isRecord(value)) {
+    throw new Error("Sidecar message must be an object.");
+  }
+  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
     throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);
-  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION)
+  }
+  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION) {
     throw new Error(`Unsupported sidecar protocol version '${String(value.version)}'.`);
+  }
   assertDebugSidecarSessionToken(value.session);
-  if (!positiveInteger(value.sequence))
+  if (!positiveInteger(value.sequence)) {
     throw new Error("Sidecar message sequence must be a positive safe integer.");
+  }
   if (value.type === "request") {
-    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command))
+    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command)) {
       throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
+    }
     assertRequestBounds(value, limits);
     return;
   }
   if (value.type === "response") {
-    if (!positiveInteger(value.requestSequence))
+    if (!positiveInteger(value.requestSequence)) {
       throw new Error("Sidecar response requestSequence must be a positive safe integer.");
-    if (typeof value.success !== "boolean")
+    }
+    if (typeof value.success !== "boolean") {
       throw new Error("Sidecar response success must be boolean.");
-    if (!value.success && typeof value.error !== "string")
+    }
+    if (!value.success && typeof value.error !== "string") {
       throw new Error("Failed sidecar response must include an error string.");
+    }
     return;
   }
   if (value.type === "event") {
-    if (!DEBUG_SIDECAR_EVENTS.includes(value.event))
+    if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
-    if (!isRecord(value.body)) throw new Error("Sidecar event body must be an object.");
+    }
+    if (!isRecord(value.body)) {
+      throw new Error("Sidecar event body must be an object.");
+    }
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
 var validateLimits = (limits) => {
   for (const [name, value] of Object.entries(limits)) {
-    if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
+    if (!positiveInteger(value)) {
+      throw new Error(`${name} must be a positive safe integer.`);
+    }
   }
-  if (limits.maxBufferedBytes < limits.maxFrameBytes + 4)
+  if (limits.maxBufferedBytes < limits.maxFrameBytes + 4) {
     throw new Error("maxBufferedBytes must hold at least one complete framed message.");
+  }
 };
 var encodeDebugSidecarMessage = (message, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) => {
   validateLimits(limits);
   assertDebugSidecarMessage(message, limits);
   const body = Buffer.from(JSON.stringify(message), "utf8");
-  if (body.length > limits.maxFrameBytes)
+  if (body.length > limits.maxFrameBytes) {
     throw new Error(`Sidecar frame exceeds ${limits.maxFrameBytes} bytes.`);
+  }
   const frame = Buffer.allocUnsafe(body.length + 4);
   frame.writeUInt32BE(body.length, 0);
   body.copy(frame, 4);
@@ -13297,16 +13403,22 @@ var DebugSidecarMessageParser = class {
    * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
    */
   push(chunk) {
-    if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes)
+    if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
       throw new Error(`Sidecar receive buffer exceeds ${this.#limits.maxBufferedBytes} bytes.`);
+    }
     this.#buffer = Buffer.concat([this.#buffer, chunk]);
     const messages = [];
     while (this.#buffer.length >= 4) {
       const length = this.#buffer.readUInt32BE(0);
-      if (length === 0) throw new Error("Sidecar frame body cannot be empty.");
-      if (length > this.#limits.maxFrameBytes)
+      if (length === 0) {
+        throw new Error("Sidecar frame body cannot be empty.");
+      }
+      if (length > this.#limits.maxFrameBytes) {
         throw new Error(`Sidecar frame declares ${length} bytes, above the configured limit.`);
-      if (this.#buffer.length < length + 4) break;
+      }
+      if (this.#buffer.length < length + 4) {
+        break;
+      }
       const body = this.#buffer.subarray(4, length + 4);
       this.#buffer = this.#buffer.subarray(length + 4);
       let decoded;
@@ -13316,10 +13428,11 @@ var DebugSidecarMessageParser = class {
         throw new Error("Sidecar frame contains invalid JSON.");
       }
       assertDebugSidecarMessage(decoded, this.#limits);
-      if (decoded.sequence <= this.#lastSequence)
+      if (decoded.sequence <= this.#lastSequence) {
         throw new Error(
           `Sidecar sequence ${decoded.sequence} is not greater than ${this.#lastSequence}.`
         );
+      }
       this.#lastSequence = decoded.sequence;
       messages.push(decoded);
     }
@@ -13353,8 +13466,9 @@ var DebugSidecarMessageQueue = class {
    */
   enqueue(message) {
     const frame = encodeDebugSidecarMessage(message, this.#limits);
-    if (this.#frames.length >= this.#limits.maxQueuedMessages || this.#bytes + frame.length > this.#limits.maxQueuedBytes)
+    if (this.#frames.length >= this.#limits.maxQueuedMessages || this.#bytes + frame.length > this.#limits.maxQueuedBytes) {
       throw new Error("Sidecar outgoing queue exceeded its backpressure limit.");
+    }
     this.#frames.push(frame);
     this.#bytes += frame.length;
   }
@@ -13364,44 +13478,55 @@ var DebugSidecarMessageQueue = class {
    */
   dequeue() {
     const frame = this.#frames.shift();
-    if (frame) this.#bytes -= frame.length;
+    if (frame) {
+      this.#bytes -= frame.length;
+    }
     return frame;
   }
 };
 
-// ../debug-adapter/src/node-stdio-transport.ts
+// packages/debug-adapter/src/node-stdio-transport.ts
 var DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
 
-// ../debug-adapter/src/sidecar-server.ts
+// packages/debug-adapter/src/sidecar-server.ts
 var stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
 var record = (value, context) => {
-  if (typeof value !== "object" || value === null || Array.isArray(value))
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error(`${context} must be an object.`);
+  }
   return value;
 };
 var integer = (value, context, minimum = 0) => {
-  if (!Number.isSafeInteger(value) || value < minimum)
+  if (!Number.isSafeInteger(value) || value < minimum) {
     throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+  }
   return value;
 };
 var positiveInteger2 = (value, context) => integer(value, context, 1);
 var string = (value, context) => {
-  if (typeof value !== "string" || value.length === 0)
+  if (typeof value !== "string" || value.length === 0) {
     throw new Error(`${context} must be a non-empty string.`);
+  }
   return value;
 };
 var optionalPositiveInteger = (value, context) => value === void 0 ? void 0 : positiveInteger2(value, context);
 var boolean = (value, context, defaultValue) => {
-  if (value === void 0) return defaultValue;
-  if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
+  if (value === void 0) {
+    return defaultValue;
+  }
+  if (typeof value !== "boolean") {
+    throw new Error(`${context} must be boolean.`);
+  }
   return value;
 };
 var address = (value, context) => {
   const candidate = record(value, context);
-  if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0)
+  if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0) {
     throw new Error(`${context}.architecture must be a non-empty string.`);
-  if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0)
+  }
+  if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0) {
     throw new Error(`${context}.addressSpace must be a non-empty string.`);
+  }
   const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer(candidate.outputOffset, `${context}.outputOffset`);
   return {
     architecture: candidate.architecture,
@@ -13411,7 +13536,9 @@ var address = (value, context) => {
   };
 };
 var addresses = (value, context) => {
-  if (!Array.isArray(value)) throw new Error(`${context} must be an array.`);
+  if (!Array.isArray(value)) {
+    throw new Error(`${context} must be an array.`);
+  }
   return value.map((entry, index) => address(entry, `${context}[${index}]`));
 };
 var asError = (error) => error instanceof Error ? error : new Error(String(error));
@@ -13434,8 +13561,9 @@ var DebugSidecarServer = class {
    * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
    */
   constructor(options) {
-    if (typeof options.backend !== "string" || options.backend.length === 0)
+    if (typeof options.backend !== "string" || options.backend.length === 0) {
       throw new Error("Sidecar backend name must be a non-empty string.");
+    }
     assertDebugSidecarSessionToken(options.session);
     this.#backendName = options.backend;
     this.#implementation = options.implementation;
@@ -13457,7 +13585,9 @@ var DebugSidecarServer = class {
    * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
    */
   receive(data) {
-    if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+    if (this.#closed) {
+      return Promise.reject(new Error("Sidecar server is closed."));
+    }
     const receive = this.#receiveTail.then(() => this.#receive(data));
     this.#receiveTail = receive.catch(() => void 0);
     return receive.catch(async (error) => {
@@ -13471,7 +13601,9 @@ var DebugSidecarServer = class {
    * @returns {Promise<void>} Completion of transport cleanup.
    */
   async close(error) {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     this.#closed = true;
     this.#eventSubscription.dispose();
     await this.#writeTail.catch(() => void 0);
@@ -13479,10 +13611,12 @@ var DebugSidecarServer = class {
   }
   async #receive(data) {
     for (const message of this.#parser.push(data)) {
-      if (message.session !== this.#session)
+      if (message.session !== this.#session) {
         throw new Error("Sidecar request session does not match this connection.");
-      if (message.type !== "request")
+      }
+      if (message.type !== "request") {
         throw new Error("Sidecar client sent a non-request message on a server-only channel.");
+      }
       await this.#handle(message);
     }
   }
@@ -13506,15 +13640,22 @@ var DebugSidecarServer = class {
         ...failure ? { error: failure.message } : { result }
       })
     );
-    for (const event of events) await this.#send(this.#eventEnvelope(event));
-    if (request.command === "shutdown" && !failure) await this.close();
+    for (const event of events) {
+      await this.#send(this.#eventEnvelope(event));
+    }
+    if (request.command === "shutdown" && !failure) {
+      await this.close();
+    }
   }
   async #dispatch(request) {
     const args = record(request.arguments ?? {}, "Sidecar request arguments");
     if (request.command === "initialize") {
-      if (args.backend !== this.#backendName) throw new Error("Unexpected backend identity.");
-      if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION)
+      if (args.backend !== this.#backendName) {
+        throw new Error("Unexpected backend identity.");
+      }
+      if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
         throw new Error("Unsupported backend protocol version.");
+      }
       return {
         backend: this.#backendName,
         backendProtocolVersion: DEBUG_BACKEND_PROTOCOL_VERSION,
@@ -13544,21 +13685,26 @@ var DebugSidecarServer = class {
       return {};
     }
     if (request.command === "step") {
-      if (!stepKinds.has(args.kind))
+      if (!stepKinds.has(args.kind)) {
         throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+      }
       await this.#implementation.step(
         positiveInteger2(args.threadId, "Step threadId"),
         args.kind
       );
       return {};
     }
-    if (request.command === "threads") return this.#implementation.threads();
-    if (request.command === "stackFrames")
+    if (request.command === "threads") {
+      return this.#implementation.threads();
+    }
+    if (request.command === "stackFrames") {
       return this.#implementation.stackFrames(
         positiveInteger2(args.threadId, "Stack frames threadId")
       );
-    if (request.command === "registers")
+    }
+    if (request.command === "registers") {
       return this.#implementation.registers(positiveInteger2(args.frameId, "Registers frameId"));
+    }
     if (request.command === "readMemory") {
       const memory = await this.#implementation.readMemory(
         address(args.address, "Memory address"),
@@ -13570,25 +13716,29 @@ var DebugSidecarServer = class {
         unreadableBytes: memory.unreadableBytes
       };
     }
-    if (request.command === "setBreakpoints")
+    if (request.command === "setBreakpoints") {
       return this.#implementation.setBreakpoints(
         addresses(args.breakpoints, "Breakpoint addresses")
       );
-    if (request.command === "disassemble")
+    }
+    if (request.command === "disassemble") {
       return this.#implementation.disassemble(
         address(args.address, "Disassembly address"),
         integer(args.count, "Disassembly count")
       );
+    }
     if (request.command === "capture") {
       const capture = args;
       validateCaptureRequest(capture);
-      if (!this.#implementation.capture)
+      if (!this.#implementation.capture) {
         throw new Error("This backend does not support capture v2.");
+      }
       return this.#implementation.capture(capture);
     }
     if (request.command === "startTrace") {
-      if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full")
+      if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full") {
         throw new Error("Trace detail must be pc or full.");
+      }
       await this.#implementation.startTrace({
         architecture: string(args.architecture, "Trace architecture"),
         addressSpace: string(args.addressSpace, "Trace address space"),
@@ -13596,18 +13746,25 @@ var DebugSidecarServer = class {
       });
       return {};
     }
-    if (request.command === "readTrace")
+    if (request.command === "readTrace") {
       return this.#implementation.readTrace(positiveInteger2(args.maxEvents, "Trace batch size"));
+    }
     if (request.command === "stopTrace") {
       await this.#implementation.stopTrace();
       return {};
     }
-    if (request.command === "ping") return { pong: true };
-    if (request.command === "shutdown") return {};
+    if (request.command === "ping") {
+      return { pong: true };
+    }
+    if (request.command === "shutdown") {
+      return {};
+    }
     throw new Error(`Unsupported command '${String(request.command)}'.`);
   }
   #backendEvent(event) {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     if (this.#capturedEvents) {
       this.#capturedEvents.push(event);
       return;
@@ -13617,30 +13774,34 @@ var DebugSidecarServer = class {
     );
   }
   #eventEnvelope(event) {
-    if (event.type === "stopped")
+    if (event.type === "stopped") {
       return this.#envelope({
         type: "event",
         event: "stopped",
         body: { reason: event.reason, threadId: event.threadId }
       });
-    if (event.type === "continued")
+    }
+    if (event.type === "continued") {
       return this.#envelope({
         type: "event",
         event: "continued",
         body: { threadId: event.threadId, allThreads: event.allThreads }
       });
-    if (event.type === "terminated")
+    }
+    if (event.type === "terminated") {
       return this.#envelope({
         type: "event",
         event: "terminated",
         body: { restart: event.restart }
       });
-    if (event.type === "breakpoint")
+    }
+    if (event.type === "breakpoint") {
       return this.#envelope({
         type: "event",
         event: "breakpoint",
         body: { breakpoint: event.breakpoint }
       });
+    }
     return this.#envelope({
       type: "event",
       event: "output",
@@ -13648,8 +13809,9 @@ var DebugSidecarServer = class {
     });
   }
   #envelope(message) {
-    if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0)
+    if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0) {
       throw new Error("Sidecar server sequence exhausted.");
+    }
     return {
       protocol: DEBUG_SIDECAR_PROTOCOL,
       version: DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -13659,7 +13821,9 @@ var DebugSidecarServer = class {
     };
   }
   #send(message) {
-    if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+    if (this.#closed) {
+      return Promise.reject(new Error("Sidecar server is closed."));
+    }
     this.#outgoing.enqueue(message);
     const write2 = this.#writeTail.then(async () => {
       let frame = this.#outgoing.dequeue();
@@ -13673,19 +13837,73 @@ var DebugSidecarServer = class {
   }
 };
 
-// ../debug-sidecar-ares/src/ares-process-host.ts
-import { spawn } from "node:child_process";
+// packages/debug-adapter/src/capture-context.ts
 import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
+import { lstat, open, readdir, readFile, link, unlink } from "node:fs/promises";
+import path from "node:path";
+var verifyCaptureContext = async (directory, identity) => {
+  const metadataFile = path.join(directory, "manifest.json");
+  const metadataStat = await lstat(metadataFile);
+  if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
+    throw new Error("Invalid capture context manifest.");
+  }
+  const manifest = JSON.parse(await readFile(metadataFile, "utf8"));
+  const producer = manifest.producer;
+  if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity.romContentSha256 || producer?.id !== identity.producer.id || producer?.revision !== identity.producer.revision || !manifest.files || typeof manifest.files !== "object") {
+    throw new Error("Capture context requires the matching ROM and emulator build.");
+  }
+  const files = manifest.files;
+  for (const name of [
+    "start.bst",
+    "wram-start.bin",
+    "wram-end.bin",
+    "inputs.bin",
+    "identity.txt",
+    "machine.json",
+    "start-clock.txt",
+    "end-clock.txt",
+    "boundaries.json"
+  ]) {
+    if (!files[name]) {
+      throw new Error(`Capture context is missing ${name}.`);
+    }
+  }
+  for (const [name, artifact] of Object.entries(files)) {
+    if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+      name
+    ) || !artifact || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+      throw new Error("Invalid capture context artifact descriptor.");
+    }
+    const file = path.join(directory, name), stat2 = await lstat(file);
+    if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && stat2.size !== 131072 || name === "inputs.bin" && stat2.size % 18) {
+      throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
+    }
+    const hash = createHash("sha256");
+    for await (const bytes of createReadStream(file)) {
+      hash.update(bytes);
+    }
+    if (hash.digest("hex") !== artifact.sha256) {
+      throw new Error(`Capture context checksum mismatch: ${name}.`);
+    }
+  }
+};
+
+// packages/debug-sidecar-ares/src/ares-process-host.ts
+import { spawn } from "node:child_process";
+import { createHash as createHash2 } from "node:crypto";
+import { createReadStream as createReadStream2 } from "node:fs";
 import { mkdir, stat } from "node:fs/promises";
 import net2 from "node:net";
-import path from "node:path";
+import path2 from "node:path";
 
-// ../debug-sidecar-ares/src/gdb-rsp-client.ts
+// packages/debug-sidecar-ares/src/gdb-rsp-client.ts
 var asError2 = (error) => error instanceof Error ? error : new Error(String(error));
 var checksum = (payload) => {
   let value = 0;
-  for (let index = 0; index < payload.length; index++) value = value + payload[index] & 255;
+  for (let index = 0; index < payload.length; index++) {
+    value = value + payload[index] & 255;
+  }
   return value;
 };
 var escapedPayload = (payload) => {
@@ -13701,34 +13919,46 @@ var escapedPayload = (payload) => {
 };
 var unescapePayload = (payload) => {
   if (!payload.includes(125)) {
-    if (payload.includes(42))
+    if (payload.includes(42)) {
       throw new Error("RSP run-length encoded payloads are not supported on the ares channel.");
+    }
     return payload.toString("ascii");
   }
   const result = Buffer.allocUnsafe(payload.length);
   let length = 0;
   for (let index = 0; index < payload.length; index++) {
     const byte = payload[index];
-    if (byte === 42)
+    if (byte === 42) {
       throw new Error("RSP run-length encoded payloads are not supported on the ares channel.");
+    }
     if (byte !== 125) {
       result[length++] = byte;
       continue;
     }
     const escaped = payload[++index];
-    if (escaped === void 0) throw new Error("RSP payload ends inside an escape sequence.");
+    if (escaped === void 0) {
+      throw new Error("RSP payload ends inside an escape sequence.");
+    }
     result[length++] = escaped ^ 32;
   }
   return result.toString("ascii", 0, length);
 };
 var hexDigit = (byte) => {
-  if (byte >= 48 && byte <= 57) return byte - 48;
-  if (byte >= 65 && byte <= 70) return byte - 65 + 10;
-  if (byte >= 97 && byte <= 102) return byte - 97 + 10;
+  if (byte >= 48 && byte <= 57) {
+    return byte - 48;
+  }
+  if (byte >= 65 && byte <= 70) {
+    return byte - 65 + 10;
+  }
+  if (byte >= 97 && byte <= 102) {
+    return byte - 97 + 10;
+  }
   return -1;
 };
 var stop = (payload) => {
-  if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) return void 0;
+  if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) {
+    return void 0;
+  }
   return { signal: Number.parseInt(payload.slice(1, 3), 16), payload };
 };
 var GdbRspClient = class {
@@ -13762,11 +13992,13 @@ var GdbRspClient = class {
       ["RSP maximum packet bytes", this.#maxPacketBytes],
       ["RSP maximum buffered bytes", this.#maxBufferedBytes]
     ]) {
-      if (!Number.isSafeInteger(value) || value <= 0)
+      if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
+      }
     }
-    if (this.#maxBufferedBytes < this.#maxPacketBytes + 4)
+    if (this.#maxBufferedBytes < this.#maxPacketBytes + 4) {
       throw new Error("RSP receive buffer must hold one maximum-sized framed packet.");
+    }
     this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
     this.#closeSubscription = this.#transport.onClose(
       (error) => this.#fail(error ?? new Error("RSP transport closed."), false)
@@ -13778,8 +14010,12 @@ var GdbRspClient = class {
   }
   /** @returns {Promise<void>} Completion after writing the required initial acknowledgement byte. */
   async start() {
-    if (this.#closed) throw new Error("RSP client is closed.");
-    if (this.#started) throw new Error("RSP client has already started.");
+    if (this.#closed) {
+      throw new Error("RSP client is closed.");
+    }
+    if (this.#started) {
+      throw new Error("RSP client has already started.");
+    }
     this.#started = true;
     await this.#write(Uint8Array.of(43));
   }
@@ -13832,12 +14068,16 @@ var GdbRspClient = class {
   /** @returns {Promise<void>} Completion after writing the out-of-band interrupt byte. */
   interrupt() {
     this.#assertReady();
-    if (this.#pending) return Promise.reject(new Error("An RSP request is already pending."));
+    if (this.#pending) {
+      return Promise.reject(new Error("An RSP request is already pending."));
+    }
     return this.#write(Uint8Array.of(3));
   }
   /** @returns {Promise<void>} Completion after closing the transport. */
   async close() {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     this.#fail(new Error("RSP client closed."), false);
     await this.#transport.close();
   }
@@ -13847,7 +14087,9 @@ var GdbRspClient = class {
     } catch (error) {
       return Promise.reject(asError2(error));
     }
-    if (this.#pending) return Promise.reject(new Error("An RSP request is already pending."));
+    if (this.#pending) {
+      return Promise.reject(new Error("An RSP request is already pending."));
+    }
     let packet;
     try {
       packet = this.#packet(command);
@@ -13865,18 +14107,23 @@ var GdbRspClient = class {
   }
   #sendExecutionCommand(command) {
     this.#assertReady();
-    if (this.#pending) return Promise.reject(new Error("An RSP request is already pending."));
+    if (this.#pending) {
+      return Promise.reject(new Error("An RSP request is already pending."));
+    }
     return this.#write(this.#packet(command));
   }
   #packet(command) {
     const payload = escapedPayload(command);
-    if (payload.length > this.#maxPacketBytes)
+    if (payload.length > this.#maxPacketBytes) {
       throw new Error(`RSP payload exceeds ${this.#maxPacketBytes} bytes.`);
+    }
     const sum = checksum(payload).toString(16).padStart(2, "0");
     return Buffer.concat([Buffer.from("$", "ascii"), payload, Buffer.from(`#${sum}`, "ascii")]);
   }
   #receive(data) {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     try {
       this.#append(data);
       while (this.#start < this.#end) {
@@ -13892,15 +14139,19 @@ var GdbRspClient = class {
         const offset = this.#buffer.subarray(this.#scan, this.#end).indexOf(35);
         if (offset < 0) {
           this.#scan = this.#end;
-          if (this.#end - this.#start - 1 > this.#maxPacketBytes)
+          if (this.#end - this.#start - 1 > this.#maxPacketBytes) {
             throw new Error(`RSP packet exceeds ${this.#maxPacketBytes} bytes.`);
+          }
           return;
         }
         const hash = this.#scan + offset;
         this.#scan = hash;
-        if (hash - this.#start - 1 > this.#maxPacketBytes)
+        if (hash - this.#start - 1 > this.#maxPacketBytes) {
           throw new Error(`RSP packet exceeds ${this.#maxPacketBytes} bytes.`);
-        if (this.#end < hash + 3) return;
+        }
+        if (this.#end < hash + 3) {
+          return;
+        }
         const payload = this.#buffer.subarray(this.#start + 1, hash);
         const high = hexDigit(this.#buffer[hash + 1]);
         const low = hexDigit(this.#buffer[hash + 2]);
@@ -13928,8 +14179,9 @@ var GdbRspClient = class {
   #append(data) {
     const used = this.#end - this.#start;
     const required = used + data.length;
-    if (required > this.#maxBufferedBytes)
+    if (required > this.#maxBufferedBytes) {
       throw new Error(`RSP receive buffer exceeds ${this.#maxBufferedBytes} bytes.`);
+    }
     if (this.#end + data.length > this.#buffer.length) {
       if (required > this.#buffer.length) {
         const capacity = Math.min(
@@ -13939,7 +14191,9 @@ var GdbRspClient = class {
         const next = Buffer.allocUnsafe(capacity);
         this.#buffer.copy(next, 0, this.#start, this.#end);
         this.#buffer = next;
-      } else this.#buffer.copy(this.#buffer, 0, this.#start, this.#end);
+      } else {
+        this.#buffer.copy(this.#buffer, 0, this.#start, this.#end);
+      }
       this.#scan -= this.#start;
       this.#start = 0;
       this.#end = used;
@@ -13950,29 +14204,41 @@ var GdbRspClient = class {
   #deliver(payload) {
     const stopped = stop(payload);
     if (stopped && !this.#pending?.acceptStop) {
-      for (const listener of this.#stopListeners) listener(stopped);
+      for (const listener of this.#stopListeners) {
+        listener(stopped);
+      }
       return;
     }
     const pending = this.#pending;
-    if (!pending) throw new Error("RSP response arrived without a pending request.");
+    if (!pending) {
+      throw new Error("RSP response arrived without a pending request.");
+    }
     clearTimeout(pending.timer);
     this.#pending = void 0;
     pending.resolve(payload);
   }
   #assertReady() {
-    if (this.#closed) throw new Error("RSP client is closed.");
-    if (!this.#started) throw new Error("RSP client has not started.");
+    if (this.#closed) {
+      throw new Error("RSP client is closed.");
+    }
+    if (!this.#started) {
+      throw new Error("RSP client has not started.");
+    }
   }
   #write(data) {
     const write2 = this.#writeTail.then(() => {
-      if (this.#closed) throw new Error("RSP client is closed.");
+      if (this.#closed) {
+        throw new Error("RSP client is closed.");
+      }
       return this.#transport.write(data);
     });
     this.#writeTail = write2.catch(() => void 0);
     return write2;
   }
   #fail(error, closeTransport = true) {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     this.#closed = true;
     this.#buffer = Buffer.alloc(0);
     this.#start = this.#end = 0;
@@ -13986,13 +14252,17 @@ var GdbRspClient = class {
       this.#pending = void 0;
     }
     this.#stopListeners.clear();
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
     this.#closeListeners.clear();
-    if (closeTransport) void this.#transport.close().catch(() => void 0);
+    if (closeTransport) {
+      void this.#transport.close().catch(() => void 0);
+    }
   }
 };
 
-// ../debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
+// packages/debug-sidecar-ares/src/node-tcp-gdb-rsp-transport.ts
 import net from "node:net";
 var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   #socket;
@@ -14008,7 +14278,9 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
     this.#socket.setNoDelay(true);
     this.#socket.on("data", (data) => {
       const bytes = typeof data === "string" ? Buffer.from(data) : data;
-      for (const listener of this.#dataListeners) listener(bytes);
+      for (const listener of this.#dataListeners) {
+        listener(bytes);
+      }
     });
     this.#socket.on("error", (error) => {
       this.#terminalError = error;
@@ -14022,18 +14294,21 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
    */
   static async connect(options) {
     const host = options.host ?? "127.0.0.1";
-    if (host !== "127.0.0.1" && host !== "::1")
+    if (host !== "127.0.0.1" && host !== "::1") {
       throw new Error("RSP transport host must be a numeric loopback address.");
-    if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65535)
+    }
+    if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65535) {
       throw new Error("RSP transport port must be an integer between 1 and 65535.");
+    }
     const connectTimeoutMs = options.connectTimeoutMs ?? 3e3;
     const shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1e3;
     for (const [name, value] of [
       ["RSP connect timeout", connectTimeoutMs],
       ["RSP shutdown timeout", shutdownTimeoutMs]
     ]) {
-      if (!Number.isSafeInteger(value) || value <= 0)
+      if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
+      }
     }
     const socket = new net.Socket();
     await new Promise((resolve, reject) => {
@@ -14064,11 +14339,16 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
   /** @inheritdoc */
   write(data) {
-    if (this.#closed) return Promise.reject(new Error("RSP TCP transport is closed."));
+    if (this.#closed) {
+      return Promise.reject(new Error("RSP TCP transport is closed."));
+    }
     return new Promise((resolve, reject) => {
       this.#socket.write(data, (error) => {
-        if (error) reject(error);
-        else resolve();
+        if (error) {
+          reject(error);
+        } else {
+          resolve();
+        }
       });
     });
   }
@@ -14088,7 +14368,9 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
   }
   /** @inheritdoc */
   async close() {
-    if (this.#closed) return;
+    if (this.#closed) {
+      return;
+    }
     this.#closed = true;
     if (this.#socket.destroyed) {
       this.#notifyClosed(this.#terminalError);
@@ -14107,34 +14389,45 @@ var NodeTcpGdbRspTransport = class _NodeTcpGdbRspTransport {
     });
   }
   #notifyClosed(error) {
-    if (this.#notified) return;
+    if (this.#notified) {
+      return;
+    }
     this.#notified = true;
     this.#closed = true;
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {
+      listener(error);
+    }
     this.#closeListeners.clear();
     this.#dataListeners.clear();
   }
 };
 
-// ../debug-sidecar-ares/src/ares-process-host.ts
+// packages/debug-sidecar-ares/src/ares-process-host.ts
 var ARES_RUNTIME_MANIFEST_VERSION = 1;
 var sha256Pattern = /^[\dA-Fa-f]{64}$/;
 var revisionPattern = /^[\dA-Fa-f]{40}$/;
 var checkedSha256 = (value, name) => {
-  if (!sha256Pattern.test(value)) throw new Error(`${name} must be a 64-digit SHA-256 value.`);
+  if (!sha256Pattern.test(value)) {
+    throw new Error(`${name} must be a 64-digit SHA-256 value.`);
+  }
   return value.toLowerCase();
 };
 var checkedRevision = (value, name) => {
-  if (!revisionPattern.test(value)) throw new Error(`${name} must be a 40-digit git revision.`);
+  if (!revisionPattern.test(value)) {
+    throw new Error(`${name} must be a 40-digit git revision.`);
+  }
   return value.toLowerCase();
 };
 var checkedAbsolutePath = (value, name) => {
-  if (!path.isAbsolute(value)) throw new Error(`${name} must be an absolute path.`);
-  return path.normalize(value);
+  if (!path2.isAbsolute(value)) {
+    throw new Error(`${name} must be an absolute path.`);
+  }
+  return path2.normalize(value);
 };
 var checkedResourcePath = (value) => {
-  if (value === "." || value.includes("\\") || path.posix.isAbsolute(value) || path.posix.normalize(value) !== value || value.split("/").includes(".."))
+  if (value === "." || value.includes("\\") || path2.posix.isAbsolute(value) || path2.posix.normalize(value) !== value || value.split("/").includes("..")) {
     throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
+  }
   return value;
 };
 var errorValue = (error) => error instanceof Error ? error : new Error(String(error));
@@ -14181,12 +14474,16 @@ var NodeAresProcessHandle = class {
     return this.#exit;
   }
   kill(signal) {
-    if (!this.#exited) this.#child.kill(signal);
+    if (!this.#exited) {
+      this.#child.kill(signal);
+    }
   }
 };
 var nodeSha256 = async (file) => {
-  const digest = createHash("sha256");
-  for await (const chunk of createReadStream(file)) digest.update(chunk);
+  const digest = createHash2("sha256");
+  for await (const chunk of createReadStream2(file)) {
+    digest.update(chunk);
+  }
   return digest.digest("hex");
 };
 var reserveLoopbackPort = async () => {
@@ -14202,8 +14499,11 @@ var reserveLoopbackPort = async () => {
   }
   await new Promise(
     (resolve, reject) => server.close((error) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
     })
   );
   return address4.port;
@@ -14225,28 +14525,35 @@ var nodeAresProcessRuntime = Object.freeze({
   })
 });
 var manifestRecord = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value))
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error("Ares runtime manifest must be an object.");
+  }
   return value;
 };
 var manifestString = (value, name) => {
-  if (typeof value !== "string" || value.length === 0)
+  if (typeof value !== "string" || value.length === 0) {
     throw new Error(`${name} must be a non-empty string.`);
+  }
   return value;
 };
 var parseAresRuntimeManifest = (value) => {
   const manifest = manifestRecord(value);
-  if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION)
+  if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION) {
     throw new Error(`Unsupported ares runtime manifest version ${String(manifest.schemaVersion)}.`);
-  if (manifest.emulator !== "ares") throw new Error("Runtime manifest is not for ares.");
-  if (manifest.frontend !== void 0 && manifest.frontend !== "headless" && manifest.frontend !== "desktop")
+  }
+  if (manifest.emulator !== "ares") {
+    throw new Error("Runtime manifest is not for ares.");
+  }
+  if (manifest.frontend !== void 0 && manifest.frontend !== "headless" && manifest.frontend !== "desktop") {
     throw new Error("Ares runtime frontend must be 'headless' or 'desktop'.");
+  }
   const buildConfiguration = manifestString(
     manifest.buildConfiguration,
     "Ares build configuration"
   );
-  if (!Array.isArray(manifest.resources))
+  if (!Array.isArray(manifest.resources)) {
     throw new Error("Ares runtime manifest resources must be an array.");
+  }
   const resources = Object.freeze(
     manifest.resources.map((value2, index) => {
       const resource = manifestRecord(value2);
@@ -14262,8 +14569,9 @@ var parseAresRuntimeManifest = (value) => {
       });
     })
   );
-  if (new Set(resources.map((resource) => resource.path)).size !== resources.length)
+  if (new Set(resources.map((resource) => resource.path)).size !== resources.length) {
     throw new Error("Ares runtime manifest contains duplicate resource paths.");
+  }
   return Object.freeze({
     schemaVersion: ARES_RUNTIME_MANIFEST_VERSION,
     emulator: "ares",
@@ -14327,11 +14635,14 @@ var AresProcessHost = class {
       "Ares runtime directory"
     );
     this.#manifest = parseAresRuntimeManifest(options.manifest);
-    const executableRelative = path.relative(this.#runtimeDirectory, this.#executable);
-    if (executableRelative === "" || executableRelative === ".." || executableRelative.startsWith(`..${path.sep}`) || path.isAbsolute(executableRelative))
+    const executableRelative = path2.relative(this.#runtimeDirectory, this.#executable);
+    if (executableRelative === "" || executableRelative === ".." || executableRelative.startsWith(`..${path2.sep}`) || path2.isAbsolute(executableRelative)) {
       throw new Error("Ares executable must be contained within its portable runtime directory.");
+    }
     this.#system = options.system ?? "Super Famicom";
-    if (this.#system.length === 0) throw new Error("Ares system name must be non-empty.");
+    if (this.#system.length === 0) {
+      throw new Error("Ares system name must be non-empty.");
+    }
     this.#fastBoot = options.fastBoot ?? true;
     this.#env = options.env ?? {};
     this.#startupTimeoutMs = options.startupTimeoutMs ?? 1e4;
@@ -14348,8 +14659,9 @@ var AresProcessHost = class {
       ["Ares connect retry delay", this.#connectRetryMs],
       ["Ares output limit", this.#maxOutputBytes]
     ]) {
-      if (!Number.isSafeInteger(value) || value <= 0)
+      if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
+      }
     }
   }
   /** @returns {AresRuntimeManifest} Normalized immutable launch identity. */
@@ -14382,7 +14694,9 @@ var AresProcessHost = class {
       try {
         return await this.#connect();
       } catch (error) {
-        if (launched) await this.#terminateCurrent();
+        if (launched) {
+          await this.#terminateCurrent();
+        }
         throw error;
       }
     });
@@ -14393,16 +14707,17 @@ var AresProcessHost = class {
   }
   async #launch() {
     await this.#verifyIdentity();
-    await mkdir(path.join(this.#runtimeDirectory, "saves"), { recursive: true });
+    const desktop = this.#manifest.frontend === "desktop";
+    if (!desktop) {
+      await mkdir(path2.join(this.#runtimeDirectory, "saves"), { recursive: true });
+    }
     const port = await this.#runtime.reserveLoopbackPort();
     const args = [
       "--system",
       this.#system,
       "--settings-file",
-      path.join(this.#runtimeDirectory, "settings.bml"),
-      "--setting",
-      `Paths/Saves=${path.join(this.#runtimeDirectory, "saves")}`,
-      ...this.#manifest.frontend === "desktop" ? [
+      path2.join(this.#runtimeDirectory, "settings.bml"),
+      ...desktop ? [
         `Developer/DebugServerPort=${port}`,
         "Developer/DebugServerEnabled=true",
         "Developer/DebugServerUseIPv4=true",
@@ -14415,6 +14730,8 @@ var AresProcessHost = class {
         "General/RunAhead=false",
         "General/Rewind=false"
       ].flatMap((setting) => ["--setting", setting]) : [
+        "--setting",
+        `Paths/Saves=${path2.join(this.#runtimeDirectory, "saves")}`,
         "--gdb-port",
         String(port),
         "--gdb-ipv4",
@@ -14438,11 +14755,15 @@ var AresProcessHost = class {
   async #connect() {
     const processHandle = this.#process;
     const port = this.#port;
-    if (!processHandle || port === void 0) throw new Error("Ares process is not running.");
+    if (!processHandle || port === void 0) {
+      throw new Error("Ares process is not running.");
+    }
     const deadline = Date.now() + this.#startupTimeoutMs;
     let lastError = new Error("Ares RSP listener was not ready.");
     while (Date.now() < deadline) {
-      if (processHandle.exited) throw await this.#exitError(processHandle, "before RSP connected");
+      if (processHandle.exited) {
+        throw await this.#exitError(processHandle, "before RSP connected");
+      }
       try {
         const remaining = Math.max(1, deadline - Date.now());
         const transport = await this.#runtime.connect(port, Math.min(remaining, 250));
@@ -14452,28 +14773,33 @@ var AresProcessHost = class {
       }
       await this.#runtime.delay(Math.min(this.#connectRetryMs, Math.max(1, deadline - Date.now())));
     }
-    if (processHandle.exited) throw await this.#exitError(processHandle, "before RSP connected");
+    if (processHandle.exited) {
+      throw await this.#exitError(processHandle, "before RSP connected");
+    }
     throw new Error(
       `Ares RSP listener on 127.0.0.1:${port} was not ready within ${this.#startupTimeoutMs} ms: ${lastError.message}`
     );
   }
   async #verifyIdentity() {
-    if (this.#runtime.platform !== this.#manifest.platform)
+    if (this.#runtime.platform !== this.#manifest.platform) {
       throw new Error(
         `Ares manifest platform '${this.#manifest.platform}' does not match '${this.#runtime.platform}'.`
       );
-    if (this.#runtime.architecture !== this.#manifest.architecture)
+    }
+    if (this.#runtime.architecture !== this.#manifest.architecture) {
       throw new Error(
         `Ares manifest architecture '${this.#manifest.architecture}' does not match '${this.#runtime.architecture}'.`
       );
+    }
     const runtimeInfo = await stat(this.#runtimeDirectory).catch(() => void 0);
-    if (runtimeInfo && !runtimeInfo.isDirectory())
+    if (runtimeInfo && !runtimeInfo.isDirectory()) {
       throw new Error("Ares runtime path exists but is not a directory.");
+    }
     await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
     await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
     for (const resource of this.#manifest.resources) {
       await this.#verifyHash(
-        path.join(this.#runtimeDirectory, resource.path),
+        path2.join(this.#runtimeDirectory, resource.path),
         resource.sha256,
         `resource '${resource.path}'`
       );
@@ -14488,18 +14814,23 @@ var AresProcessHost = class {
         `Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`
       );
     }
-    if (actual !== expected)
+    if (actual !== expected) {
       throw new Error(
         `Ares ${context} SHA-256 mismatch: expected ${expected}, received ${actual}.`
       );
+    }
   }
   async #terminateCurrent() {
     const processHandle = this.#process;
     this.#process = void 0;
     this.#port = void 0;
-    if (!processHandle || processHandle.exited) return;
+    if (!processHandle || processHandle.exited) {
+      return;
+    }
     processHandle.kill("SIGTERM");
-    if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs)) return;
+    if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs)) {
+      return;
+    }
     processHandle.kill("SIGKILL");
     await processHandle.waitForExit();
   }
@@ -14508,8 +14839,11 @@ var AresProcessHost = class {
     const status = exit.signal ? `signal ${exit.signal}` : `code ${String(exit.code)}`;
     const detail = this.output.trim();
     let suffix = ".";
-    if (exit.error) suffix = `: ${exit.error.message}`;
-    else if (detail) suffix = `: ${detail}`;
+    if (exit.error) {
+      suffix = `: ${exit.error.message}`;
+    } else if (detail) {
+      suffix = `: ${detail}`;
+    }
     return new Error(`Ares exited with ${status} ${context}${suffix}`);
   }
   #captureOutput(stream, data) {
@@ -14529,11 +14863,11 @@ var AresProcessHost = class {
   }
 };
 
-// ../debug-sidecar-ares/src/ares-rsp-backend.ts
+// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
 init_src();
 init_src2();
 
-// ../debug-sidecar-ares/src/profile.ts
+// packages/debug-sidecar-ares/src/profile.ts
 var ARES_RSP_BACKEND_ID = "ares-rsp";
 var ARES_65816_ARCHITECTURE = "snes.65816";
 var ARES_65816_ADDRESS_SPACE = "snes.cpu";
@@ -14618,27 +14952,35 @@ var ARES_RSP_CAPABILITIES = Object.freeze({
   ])
 });
 
-// ../debug-sidecar-ares/src/trace-details.ts
+// packages/debug-sidecar-ares/src/trace-details.ts
 var integer2 = (value, maximum = Number.MAX_SAFE_INTEGER) => {
-  if (!/^[\da-f]+$/i.test(value)) throw new Error("Malformed rich trace integer.");
+  if (!/^[\da-f]+$/i.test(value)) {
+    throw new Error("Malformed rich trace integer.");
+  }
   const result = Number.parseInt(value, 16);
-  if (!Number.isSafeInteger(result) || result > maximum)
+  if (!Number.isSafeInteger(result) || result > maximum) {
     throw new Error("Rich trace integer exceeds its bound.");
+  }
   return result;
 };
 var parseAresTraceDetails = (response, maximum) => {
   const match = /^([01]):([\da-f]+):([\da-f]+):([\da-f]+):(.*)$/i.exec(response);
-  if (!match || response.length > 16534)
+  if (!match || response.length > 16534) {
     throw new Error("Malformed rich instruction trace response.");
+  }
   const rows = match[5] === "" ? [] : match[5].split(";");
-  if (rows.length && rows.pop() !== "") throw new Error("Rich trace row is unterminated.");
-  if (rows.length > maximum || rows.length > 240)
+  if (rows.length && rows.pop() !== "") {
+    throw new Error("Rich trace row is unterminated.");
+  }
+  if (rows.length > maximum || rows.length > 240) {
     throw new Error("Rich trace exceeds the requested batch limit.");
+  }
   const addresses2 = [];
   const details = rows.map((row) => {
     const fields = row.split(",");
-    if (fields.length !== 5 || !/^[\da-f]{40}$/i.test(fields[1]) || !/^[\da-f]{2,8}$/i.test(fields[2]) || fields[2].length % 2 !== 0 || fields[4].length % 21 !== 0 || fields[4].length > 32 * 21)
+    if (fields.length !== 5 || !/^[\da-f]{40}$/i.test(fields[1]) || !/^[\da-f]{2,8}$/i.test(fields[2]) || fields[2].length % 2 !== 0 || fields[4].length % 21 !== 0 || fields[4].length > 32 * 21) {
       throw new Error("Malformed rich trace instruction fields.");
+    }
     addresses2.push(integer2(fields[0], 16777215));
     const names = ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"];
     const maxima = [65535, 65535, 65535, 65535, 65535, 255, 255, 65535, 255, 1];
@@ -14648,14 +14990,16 @@ var parseAresTraceDetails = (response, maximum) => {
         integer2(fields[1].slice(index * 4, index * 4 + 4), maxima[index])
       ])
     );
-    if ((state.pb << 16 | state.pc) !== addresses2.at(-1))
+    if ((state.pb << 16 | state.pc) !== addresses2.at(-1)) {
       throw new Error("Trace PC disagrees with captured processor state.");
+    }
     const memoryAccesses = Array.from({ length: fields[4].length / 21 }, (_, index) => {
       const raw = fields[4].slice(index * 21, index * 21 + 21);
       const actor = ["cpu", "dma", "hdma"][integer2(raw[19], 2)];
       const channel = integer2(raw[20], 15);
-      if (actor === "cpu" && channel !== 15 || actor !== "cpu" && channel > 7)
+      if (actor === "cpu" && channel !== 15 || actor !== "cpu" && channel > 7) {
         throw new Error("Invalid trace DMA channel.");
+      }
       return {
         addressSpace: "snes.cpu",
         address: integer2(raw.slice(0, 16), 16777215),
@@ -14674,7 +15018,9 @@ var parseAresTraceDetails = (response, maximum) => {
     };
   });
   const sequenceStart = integer2(match[2]);
-  if (sequenceStart < 1) throw new Error("Invalid trace sequence.");
+  if (sequenceStart < 1) {
+    throw new Error("Invalid trace sequence.");
+  }
   return {
     architecture: "snes.65816",
     addressSpace: "snes.cpu",
@@ -14687,48 +15033,59 @@ var parseAresTraceDetails = (response, maximum) => {
   };
 };
 
-// ../debug-sidecar-ares/src/ares-rsp-backend.ts
+// packages/debug-sidecar-ares/src/ares-rsp-backend.ts
 var ARES_NAMED_MEMORY_READ_CHUNK_BYTES = 4096;
 var asError3 = (error) => error instanceof Error ? error : new Error(String(error));
 var checkedInteger = (value, context, maximum = Number.MAX_SAFE_INTEGER) => {
-  if (!Number.isSafeInteger(value) || value < 0 || value > maximum)
+  if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
     throw new Error(`${context} must be an integer between 0 and ${maximum}.`);
+  }
   return value;
 };
 var checkedAddress = (value, context) => {
-  if (value.architecture !== ARES_65816_ARCHITECTURE)
+  if (value.architecture !== ARES_65816_ARCHITECTURE) {
     throw new Error(`${context} uses unsupported architecture '${value.architecture}'.`);
-  if (value.addressSpace !== ARES_65816_ADDRESS_SPACE)
+  }
+  if (value.addressSpace !== ARES_65816_ADDRESS_SPACE) {
     throw new Error(`${context} uses unsupported address space '${value.addressSpace}'.`);
+  }
   checkedInteger(value.address, `${context} address`, 16777215);
   return { ...value, address: value.address & 16777215 };
 };
 var checkedMemoryAddress = (value, context) => {
-  if (value.architecture !== ARES_65816_ARCHITECTURE)
+  if (value.architecture !== ARES_65816_ARCHITECTURE) {
     throw new Error(`${context} uses unsupported architecture '${value.architecture}'.`);
-  if (value.addressSpace !== ARES_65816_WRAM_ADDRESS_SPACE && value.addressSpace !== ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE)
+  }
+  if (value.addressSpace !== ARES_65816_WRAM_ADDRESS_SPACE && value.addressSpace !== ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE) {
     throw new Error(`${context} uses unsupported memory address space '${value.addressSpace}'.`);
+  }
   checkedInteger(value.address, `${context} address`, 16777215);
   return { ...value };
 };
 var isEvenHex = (value) => {
-  if (value.length % 2 !== 0) return false;
+  if (value.length % 2 !== 0) {
+    return false;
+  }
   for (const character of value) {
     const code = character.codePointAt(0) ?? -1;
-    if (!(code >= 48 && code <= 57 || code >= 65 && code <= 70 || code >= 97 && code <= 102))
+    if (!(code >= 48 && code <= 57 || code >= 65 && code <= 70 || code >= 97 && code <= 102)) {
       return false;
+    }
   }
   return true;
 };
 var littleEndian = (hex2) => {
   const bytes = hex2.match(/../g);
-  if (!bytes || bytes.join("") !== hex2) throw new Error("Malformed little-endian register data.");
+  if (!bytes || bytes.join("") !== hex2) {
+    throw new Error("Malformed little-endian register data.");
+  }
   return Number.parseInt([...bytes].reverse().join(""), 16);
 };
 var registerHex = (value, bits) => value.toString(16).toUpperCase().padStart(Math.ceil(bits / 4), "0");
 var parseRegisters = (payload) => {
-  if (!/^[\dA-Fa-f]{32}$/.test(payload))
+  if (!/^[\dA-Fa-f]{32}$/.test(payload)) {
     throw new Error(`Expected 16 bytes of ares 65816 registers, received ${payload.length / 2}.`);
+  }
   return {
     a: littleEndian(payload.slice(0, 4)),
     x: littleEndian(payload.slice(4, 8)),
@@ -14744,18 +15101,24 @@ var parseRegisters = (payload) => {
 };
 var logicalPc = (registers2) => (registers2.pb << 16 | registers2.pc) & 16777215;
 var stopSignal = (payload) => {
-  if (!/^[ST][\dA-Fa-f]{2}/.test(payload))
+  if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) {
     throw new Error(`Expected an RSP stop packet, received '${payload}'.`);
+  }
   return Number.parseInt(payload.slice(1, 3), 16);
 };
 var expectOkay = (payload, context) => {
-  if (payload !== "OK") throw new Error(`${context} failed with RSP response '${payload}'.`);
+  if (payload !== "OK") {
+    throw new Error(`${context} failed with RSP response '${payload}'.`);
+  }
 };
 var safeHexInteger = (value, context) => {
-  if (!/^[\dA-Fa-f]+$/.test(value)) throw new Error(`${context} is not hexadecimal.`);
+  if (!/^[\dA-Fa-f]+$/.test(value)) {
+    throw new Error(`${context} is not hexadecimal.`);
+  }
   const parsed = Number(BigInt(`0x${value}`));
-  if (!Number.isSafeInteger(parsed))
+  if (!Number.isSafeInteger(parsed)) {
     throw new Error(`${context} exceeds JavaScript safe integer range.`);
+  }
   return parsed;
 };
 var AresRspDebugBackend = class {
@@ -14767,12 +15130,16 @@ var AresRspDebugBackend = class {
   #captureNative = false;
   #captureScope;
   #busCaptureSupported = false;
+  #contextBoundaryHeld = false;
+  #contextReplayPending = false;
   get capabilities() {
-    if (!this.#richTrace) return ARES_RSP_CAPABILITIES;
+    if (!this.#richTrace) {
+      return ARES_RSP_CAPABILITIES;
+    }
     return {
       ...ARES_RSP_CAPABILITIES,
       architectures: ARES_RSP_CAPABILITIES.architectures.map((architecture) => {
-        if (architecture.architecture === "snes.65816")
+        if (architecture.architecture === "snes.65816") {
           return {
             ...architecture,
             addressSpaces: [...architecture.addressSpaces, "snes.sram"],
@@ -14782,13 +15149,15 @@ var AresRspDebugBackend = class {
             ],
             trace: { ...architecture.trace, instructionDetails: true }
           };
-        if (architecture.architecture === "snes.spc700")
+        }
+        if (architecture.architecture === "snes.spc700") {
           return {
             ...architecture,
             memory: true,
             addressSpaces: [...architecture.addressSpaces, "snes.spc700.aram"],
             memorySpaces: [{ addressSpace: "snes.spc700.aram", sideEffectFree: true }]
           };
+        }
         return architecture;
       })
     };
@@ -14815,11 +15184,15 @@ var AresRspDebugBackend = class {
     this.#terminate = options.terminate ?? (() => Promise.resolve());
     this.#stopTimeoutMs = options.stopTimeoutMs ?? 5e3;
     checkedInteger(this.#stopTimeoutMs, "Ares stop timeout");
-    if (this.#stopTimeoutMs === 0) throw new Error("Ares stop timeout must be positive.");
+    if (this.#stopTimeoutMs === 0) {
+      throw new Error("Ares stop timeout must be positive.");
+    }
   }
   /** @inheritdoc */
   async connect(options = {}) {
-    if (this.#connected) throw new Error("ares RSP backend is already connected.");
+    if (this.#connected) {
+      throw new Error("ares RSP backend is already connected.");
+    }
     const reset = options.reset ?? true;
     if (!reset && this.#client && !this.#client.closed) {
       await this.#handshakeStop(this.#client, this.#instructionBoundaryStop);
@@ -14836,7 +15209,9 @@ var AresRspDebugBackend = class {
     }
     this.#richTrace = false;
     const client = await this.#createClient({ reset: options.reset ?? true });
-    if (client.closed) throw new Error("ares RSP client factory returned a closed client.");
+    if (client.closed) {
+      throw new Error("ares RSP client factory returned a closed client.");
+    }
     this.#client = client;
     this.#subscriptions = [
       client.onStop((event) => this.#stoppedEvent(event)),
@@ -14847,12 +15222,14 @@ var AresRspDebugBackend = class {
       const supported = await client.request("qSupported");
       this.#captureV2 = supported.split(";").includes("uttoriCaptureV2+");
       this.#busCaptureSupported = false;
-      if (!supported.includes("qXfer:features:read+") || !supported.includes("xmlRegisters+") || !supported.includes("uttoriNamedMemory+") || !supported.includes("uttoriInstructionTrace+"))
+      if (!supported.includes("qXfer:features:read+") || !supported.includes("xmlRegisters+") || !supported.includes("uttoriNamedMemory+") || !supported.includes("uttoriInstructionTrace+")) {
         throw new Error("ares RSP server does not advertise the required debugger extensions.");
+      }
       const target = await this.#readTargetDescription(client);
       for (const register4 of ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"]) {
-        if (!target.includes(`name="${register4}"`))
+        if (!target.includes(`name="${register4}"`)) {
           throw new Error(`ares RSP target description is missing register '${register4}'.`);
+        }
       }
       this.#richTrace = supported.includes("uttoriInstructionDetails+") && supported.includes("uttoriSramMemory+") && supported.includes("uttoriAramMemory+");
       this.#instructionBoundaryStop = supported.includes("uttoriInstructionBoundaryStop+");
@@ -14879,7 +15256,9 @@ var AresRspDebugBackend = class {
       this.#captureSession = void 0;
       this.#captureScope = void 0;
     }
-    if (this.#trace?.active) await this.stopTrace();
+    if (this.#trace?.active) {
+      await this.stopTrace();
+    }
     if (!terminate) {
       await this.setBreakpoints([]);
       this.#connected = false;
@@ -14892,7 +15271,9 @@ var AresRspDebugBackend = class {
       expectOkay(await client.request("D"), "ares RSP detach");
     } catch (error) {
       const failure = asError3(error);
-      if (!client.closed || failure.message !== "RSP transport closed.") detachError = failure;
+      if (!client.closed || failure.message !== "RSP transport closed.") {
+        detachError = failure;
+      }
     }
     await client.close().catch((error) => {
       detachError ??= asError3(error);
@@ -14904,12 +15285,16 @@ var AresRspDebugBackend = class {
     this.#trace = void 0;
     await this.#terminate();
     this.#emit({ type: "terminated", restart: false });
-    if (detachError) throw detachError;
+    if (detachError) {
+      throw detachError;
+    }
   }
   /** @inheritdoc */
   async pause(threadId) {
     this.#assertThread(threadId);
-    if (this.#stopped) return;
+    if (this.#stopped) {
+      return;
+    }
     this.#pendingStopReason = "pause";
     await this.#requireConnected().interrupt();
   }
@@ -14917,6 +15302,9 @@ var AresRspDebugBackend = class {
   async continue(threadId) {
     this.#assertThread(threadId);
     const client = this.#requireStopped();
+    if (this.#contextBoundaryHeld) {
+      throw new Error("Capture context is fixing its execution boundary.");
+    }
     this.#stopped = false;
     this.#pendingStopReason = this.#breakpoints.size > 0 ? "breakpoint" : "exception";
     this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
@@ -14925,9 +15313,13 @@ var AresRspDebugBackend = class {
   /** @inheritdoc */
   async step(threadId, kind) {
     this.#assertThread(threadId);
-    if (kind !== "instruction" && kind !== "in")
+    if (kind !== "instruction" && kind !== "in") {
       throw new Error(`ares does not support ${kind} stepping.`);
+    }
     const client = this.#requireStopped();
+    if (this.#contextBoundaryHeld) {
+      throw new Error("Capture context is fixing its execution boundary.");
+    }
     this.#stopped = false;
     this.#pendingStopReason = "step";
     this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
@@ -14960,7 +15352,9 @@ var AresRspDebugBackend = class {
   }
   /** @inheritdoc */
   async registers(frameId) {
-    if (frameId !== ARES_65816_FRAME_ID) throw new Error(`Unknown ares frame ${frameId}.`);
+    if (frameId !== ARES_65816_FRAME_ID) {
+      throw new Error(`Unknown ares frame ${frameId}.`);
+    }
     const registers2 = await this.#registerSnapshot();
     return [
       { name: "A", value: registerHex(registers2.a, 16), bits: 16, group: "CPU" },
@@ -14981,7 +15375,9 @@ var AresRspDebugBackend = class {
     const checked = extra ? { ...address4 } : checkedMemoryAddress(address4, "Memory request");
     checkedInteger(checked.address, "Memory address", 16777215);
     checkedInteger(count, "Memory count", 1048576);
-    if (count === 0) return { address: checked, bytes: new Uint8Array(), unreadableBytes: 0 };
+    if (count === 0) {
+      return { address: checked, bytes: new Uint8Array(), unreadableBytes: 0 };
+    }
     const bytes = new Uint8Array(count);
     let offset = 0;
     const client = this.#requireStopped();
@@ -14990,16 +15386,20 @@ var AresRspDebugBackend = class {
       const response = await client.request(
         `qUttoriMemoryRead:${checked.addressSpace}:${(checked.address + offset).toString(16)},${requested.toString(16)}`
       );
-      if (response.startsWith("E"))
+      if (response.startsWith("E")) {
         throw new Error(`ares RSP named memory read failed with response '${response}'.`);
-      if (!isEvenHex(response) || response.length > requested * 2)
+      }
+      if (!isEvenHex(response) || response.length > requested * 2) {
         throw new Error(
           "ares RSP named memory response is malformed or exceeds the requested count."
         );
+      }
       const available = Buffer.from(response, "hex");
       bytes.set(available, offset);
       offset += available.length;
-      if (available.length < requested) break;
+      if (available.length < requested) {
+        break;
+      }
     }
     return { address: checked, bytes, unreadableBytes: count - offset };
   }
@@ -15007,11 +15407,14 @@ var AresRspDebugBackend = class {
   async setBreakpoints(addresses2) {
     const client = this.#requireStopped();
     const requested = addresses2.map((entry, index) => checkedAddress(entry, `Breakpoint ${index}`));
-    if (new Set(requested.map(({ address: address4 }) => address4)).size !== requested.length)
+    if (new Set(requested.map(({ address: address4 }) => address4)).size !== requested.length) {
       throw new Error("Duplicate ares execute breakpoint addresses are not allowed.");
+    }
     const wanted = new Set(requested.map(({ address: address4 }) => address4));
     for (const address4 of this.#breakpoints.keys()) {
-      if (wanted.has(address4)) continue;
+      if (wanted.has(address4)) {
+        continue;
+      }
       expectOkay(await client.request(`z0,${address4.toString(16)},1`), "Remove breakpoint");
       this.#breakpoints.delete(address4);
     }
@@ -15029,7 +15432,9 @@ var AresRspDebugBackend = class {
         verified: response === "OK",
         ...response === "OK" ? {} : { message: `ares RSP response '${response}'.` }
       };
-      if (breakpoint.verified) this.#breakpoints.set(value.address, breakpoint);
+      if (breakpoint.verified) {
+        this.#breakpoints.set(value.address, breakpoint);
+      }
       results.push(breakpoint);
     }
     return results;
@@ -15050,17 +15455,20 @@ var AresRspDebugBackend = class {
     const instructions = [];
     for (let index = 0; index < count; index++) {
       const memory = await this.#readCpuBus(current, 4);
-      if (!memory) break;
+      if (!memory) {
+        break;
+      }
       const decoded = this.#decoder.decode({
         source: new Uint8ArrayDecoderSource(memory),
         offset: 0,
         logicalAddress: current,
         state: { ...state, programBank: current >>> 16 }
       });
-      if (decoded.kind !== "instruction")
+      if (decoded.kind !== "instruction") {
         throw new Error(
           decoded.kind === "ambiguous" ? decoded.reason : `65816 decode failed: ${decoded.message}`
         );
+      }
       instructions.push({
         address: this.#address(current),
         bytes: [...decoded.instruction.bytes],
@@ -15074,10 +15482,79 @@ var AresRspDebugBackend = class {
   async capture(request) {
     validateCaptureRequest(request);
     const client = this.#requireConnected();
-    if (!this.#captureV2)
+    if (request.operation === "context") {
+      const identity = this.#nativeFileIdentity;
+      if (!identity) {
+        throw new Error("Capture context requires a verified local ares runtime.");
+      }
+      if (request.action === "stop" || request.action === "mark") {
+        if (!this.#stopped) {
+          await this.#waitForStop(client, "capture context", () => this.pause());
+        }
+      }
+      this.#requireStopped();
+      const fields2 = ["qUttoriContext", request.action];
+      const encode = (value2) => Buffer.from(value2, "utf8").toString("hex");
+      if ("directory" in request) {
+        if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
+          throw new Error("Capture context ROM/build does not match the verified runtime.");
+        }
+        if (request.action === "replay" || request.action === "restore") {
+          await verifyCaptureContext(request.directory, request);
+        }
+        fields2.push(
+          encode(request.directory),
+          encode(request.romContentSha256),
+          encode(request.producer.id),
+          encode(request.producer.revision)
+        );
+      }
+      if ("session" in request) {
+        fields2.push(request.session);
+      }
+      if (request.action === "mark") {
+        fields2.push(encode(request.label));
+      }
+      if (request.action === "prepare" || request.action === "stop") {
+        this.#contextBoundaryHeld = true;
+      }
+      try {
+        const response2 = await client.request(fields2.join(":"));
+        const expected = {
+          prepare: ["prepared"],
+          start: ["recording"],
+          stop: ["draining", "complete"],
+          mark: ["recording"],
+          abort: ["aborted"],
+          restore: ["restored"],
+          replay: ["replaying"],
+          status: ["idle", "replaying", "replay-diverged"]
+        };
+        if (!expected[request.action].includes(response2)) {
+          throw new Error(
+            `Capture context ${request.action} is unsupported or failed (${response2.slice(0, 32)}). Rebuild the context-capable runtime.`
+          );
+        }
+        if (request.action === "start" || request.action === "abort") {
+          this.#contextBoundaryHeld = false;
+        }
+        if (request.action === "replay") {
+          this.#contextReplayPending = true;
+        }
+        if (request.action === "restore" || request.action === "abort") {
+          this.#contextReplayPending = false;
+        }
+        return { contextState: response2 };
+      } catch (error) {
+        this.#contextBoundaryHeld = false;
+        throw error;
+      }
+    }
+    if (!this.#captureV2) {
       throw new Error(
         "The active ares runtime does not support lossless capture v2. Install the capture-v2 runtime and restart debugging."
       );
+    }
     if (request.operation === "file-start" || request.operation === "file-capabilities" || request.operation === "file-status" || request.operation === "file-stop" || request.operation === "file-abort" || request.operation === "file-release") {
       const negotiation2 = request.operation === "file-start" || request.operation === "file-capabilities";
       const scope = negotiation2 ? request.scope ?? "snes.65816.instructions" : this.#captureScope;
@@ -15091,12 +15568,14 @@ var AresRspDebugBackend = class {
       if (request.operation === "file-start") {
         this.#requireStopped();
         const identity = this.#nativeFileIdentity;
-        if (!identity)
+        if (!identity) {
           throw new Error("Native file capture requires a verified local runtime host.");
-        if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision)
+        }
+        if (request.romContentSha256 !== identity.romSha256 || request.producer.id !== "ares" || request.producer.revision !== identity.executableSha256 && request.producer.revision !== identity.producerRevision) {
           throw new Error(
             "Native capture identity does not match the verified ROM and executable."
           );
+        }
         await this.capture({ operation: "file-capabilities", scope });
         const encode = (value3) => Buffer.from(value3, "utf8").toString("hex");
         fields2.push(
@@ -15107,19 +15586,26 @@ var AresRspDebugBackend = class {
           encode(request.producer.id),
           encode(request.producer.revision)
         );
-        if (request.measureStages) fields2.push("profile");
-      } else if (request.operation === "file-capabilities") fields2.push(scopes[scope]);
-      else fields2.push(request.session);
+        if (request.measureStages) {
+          fields2.push("profile");
+        }
+      } else if (request.operation === "file-capabilities") {
+        fields2.push(scopes[scope]);
+      } else {
+        fields2.push(request.session);
+      }
       const response2 = await client.request(fields2.join(":"));
-      if (response2.length > 8193 || response2.length % 2 !== 1 || !/^J[\da-f]+$/.test(response2))
+      if (response2.length > 8193 || response2.length % 2 !== 1 || !/^J[\da-f]+$/.test(response2)) {
         throw new Error(
           `Native file capture ${request.operation} is unsupported or rejected (${response2.slice(0, 32)}). Use the capture-file runtime.`
         );
+      }
       const value2 = JSON.parse(Buffer.from(response2.slice(1), "hex").toString("utf8"));
       if (request.operation === "file-capabilities") {
         const capabilities = validateCaptureCapabilities(value2, scope);
-        if (!capabilities.nativeFile)
+        if (!capabilities.nativeFile) {
           throw new Error("Runtime did not confirm native file ownership.");
+        }
         return capabilities;
       }
       const position2 = validateCapturePosition(
@@ -15143,6 +15629,9 @@ var AresRspDebugBackend = class {
         this.#captureScope = void 0;
       }
       validateCapturePosition(position2, void 0, scope);
+      if (request.operation === "file-stop" || request.operation === "file-abort") {
+        this.#contextBoundaryHeld = false;
+      }
       return position2;
     }
     const negotiation = request.operation === "start" || request.operation === "capabilities";
@@ -15150,21 +15639,32 @@ var AresRspDebugBackend = class {
     const ppu = requestedScope === "snes.cpu-bus-ppu";
     const bus = ppu || requestedScope === "snes.cpu-bus" || requestedScope === "snes.cpu-bus-transfers";
     const transfers = requestedScope === "snes.cpu-bus-transfers";
-    if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported))
+    if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported)) {
       await this.capture({ operation: "capabilities", scope: requestedScope });
+    }
     let operation = request.operation;
-    if (request.operation === "capabilities" && bus)
+    if (request.operation === "capabilities" && bus) {
       operation = transfers ? "transfer-capabilities" : "bus-capabilities";
-    if (request.operation === "capabilities" && ppu) operation = "ppu-capabilities";
+    }
+    if (request.operation === "capabilities" && ppu) {
+      operation = "ppu-capabilities";
+    }
     const fields = ["qUttoriCapture", operation];
     if (request.operation === "start") {
       fields.push(request.bufferBytes);
-      if (ppu) fields.push("bus-ppu");
-      else if (bus) fields.push(transfers ? "bus-transfers" : "bus");
+      if (ppu) {
+        fields.push("bus-ppu");
+      } else if (bus) {
+        fields.push(transfers ? "bus-transfers" : "bus");
+      }
     } else if (request.operation !== "capabilities") {
       fields.push(request.session);
-      if (request.operation === "read" || request.operation === "ack") fields.push(request.chunk);
-      if (request.operation === "ack") fields.push(request.event);
+      if (request.operation === "read" || request.operation === "ack") {
+        fields.push(request.chunk);
+      }
+      if (request.operation === "ack") {
+        fields.push(request.event);
+      }
     }
     const response = await client.request(fields.join(":"));
     if (request.operation === "capabilities" && bus && (!response || /^e[\da-f]{2}$/i.test(response))) {
@@ -15178,19 +15678,24 @@ var AresRspDebugBackend = class {
         `The active ares runtime does not support CPU/DMA/HDMA ${feature}. Use the ${runtime} runtime and restart debugging.`
       );
     }
-    if (/^e[\da-f]{2}$/i.test(response))
+    if (/^e[\da-f]{2}$/i.test(response)) {
       throw new Error(`Capture ${request.operation} rejected (${response}).`);
+    }
     if (request.operation === "read") {
-      if (response.length > 524288 || response.length % 2 || !/^[\da-f]*$/.test(response))
+      if (response.length > 524288 || response.length % 2 || !/^[\da-f]*$/.test(response)) {
         throw new Error("Malformed capture chunk response.");
+      }
       return { hex: response };
     }
-    if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
+    if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response)) {
       throw new Error("Malformed capture control response.");
+    }
     const value = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
     if (request.operation === "capabilities") {
       const capabilities = validateCaptureCapabilities(value, requestedScope);
-      if (bus && !transfers && !ppu) this.#busCaptureSupported = true;
+      if (bus && !transfers && !ppu) {
+        this.#busCaptureSupported = true;
+      }
       return capabilities;
     }
     const position = validateCapturePosition(
@@ -15216,18 +15721,23 @@ var AresRspDebugBackend = class {
       this.#captureSession = void 0;
       this.#captureScope = void 0;
     }
+    if (request.operation === "stop" || request.operation === "abort") {
+      this.#contextBoundaryHeld = false;
+    }
     return position;
   }
   async startTrace(options) {
-    if (options.architecture !== ARES_65816_ARCHITECTURE || options.addressSpace !== ARES_65816_ADDRESS_SPACE)
+    if (options.architecture !== ARES_65816_ARCHITECTURE || options.addressSpace !== ARES_65816_ADDRESS_SPACE) {
       throw new Error(
         `Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`
       );
+    }
     const client = this.#requireStopped();
-    if (options.detail === "full" && !this.#richTrace)
+    if (options.detail === "full" && !this.#richTrace) {
       throw new Error(
         "This runtime supports PC-only traces. Rebuild the maintained runtime for captured bytes/state and bus accesses."
       );
+    }
     expectOkay(
       await client.request(options.detail === "full" ? "QUttoriTrace:2" : "QUttoriTrace:1"),
       "Start instruction trace"
@@ -15237,10 +15747,13 @@ var AresRspDebugBackend = class {
   /** @inheritdoc */
   async readTrace(maxEvents) {
     checkedInteger(maxEvents, "Trace batch size", ARES_TRACE_BATCH_EVENTS);
-    if (maxEvents === 0)
+    if (maxEvents === 0) {
       throw new Error(`Trace batch size must be between 1 and ${ARES_TRACE_BATCH_EVENTS}.`);
+    }
     const trace = this.#trace;
-    if (!trace) throw new Error("No ares instruction trace has been started.");
+    if (!trace) {
+      throw new Error("No ares instruction trace has been started.");
+    }
     if (trace.detail === "full") {
       const result = parseAresTraceDetails(
         await this.#requireConnected().request(`qUttoriTraceDetailRead:${maxEvents.toString(16)}`),
@@ -15253,14 +15766,16 @@ var AresRspDebugBackend = class {
       `qUttoriTraceRead:${maxEvents.toString(16)}`
     );
     const match = /^([01]):([\dA-Fa-f]+):([\dA-Fa-f]+):([\dA-Fa-f]*)$/.exec(response);
-    if (!match || match[4].length % 16 !== 0)
+    if (!match || match[4].length % 16 !== 0) {
       throw new Error("ares RSP instruction trace response is malformed.");
+    }
     const addresses2 = Array.from(
       { length: match[4].length / 16 },
       (_, index) => safeHexInteger(match[4].slice(index * 16, index * 16 + 16), "Trace address")
     );
-    if (addresses2.length > maxEvents || addresses2.some((address4) => address4 > 16777215))
+    if (addresses2.length > maxEvents || addresses2.some((address4) => address4 > 16777215)) {
       throw new Error("ares RSP instruction trace response exceeds the requested bounds.");
+    }
     const active = match[1] === "1";
     trace.active = active;
     return {
@@ -15275,7 +15790,9 @@ var AresRspDebugBackend = class {
   /** @inheritdoc */
   async stopTrace() {
     const trace = this.#trace;
-    if (!trace) throw new Error("No ares instruction trace has been started.");
+    if (!trace) {
+      throw new Error("No ares instruction trace has been started.");
+    }
     expectOkay(await this.#requireConnected().request("QUttoriTrace:0"), "Stop instruction trace");
     trace.active = false;
   }
@@ -15288,14 +15805,18 @@ var AresRspDebugBackend = class {
     const response = await this.#requireStopped().request(
       `m${address4.toString(16)},${count.toString(16)}`
     );
-    if (response.startsWith("E"))
+    if (response.startsWith("E")) {
       throw new Error(`ares RSP CPU-bus disassembly read failed with response '${response}'.`);
-    if (!isEvenHex(response) || response.length > count * 2)
+    }
+    if (!isEvenHex(response) || response.length > count * 2) {
       throw new Error(
         "ares RSP CPU-bus disassembly response is malformed or exceeds the requested count."
       );
+    }
     const available = Buffer.from(response, "hex");
-    if (available.length === 0) return void 0;
+    if (available.length === 0) {
+      return void 0;
+    }
     const bytes = new Uint8Array(count);
     bytes.set(available);
     return bytes;
@@ -15307,12 +15828,17 @@ var AresRspDebugBackend = class {
       const response = await client.request(
         `qXfer:features:read:target.xml:${offset.toString(16)},1000`
       );
-      if (!response.startsWith("l") && !response.startsWith("m"))
+      if (!response.startsWith("l") && !response.startsWith("m")) {
         throw new Error("ares RSP target description returned an invalid continuation marker.");
+      }
       const chunk = response.slice(1);
       target += chunk;
-      if (target.length > 65536) throw new Error("ares RSP target description exceeds 64 KiB.");
-      if (response.startsWith("l")) return target;
+      if (target.length > 65536) {
+        throw new Error("ares RSP target description exceeds 64 KiB.");
+      }
+      if (response.startsWith("l")) {
+        return target;
+      }
       offset += Buffer.byteLength(chunk, "ascii");
     }
     throw new Error("ares RSP target description did not terminate within 16 packets.");
@@ -15360,49 +15886,88 @@ var AresRspDebugBackend = class {
     };
   }
   #assertThread(threadId) {
-    if (threadId !== void 0 && threadId !== ARES_65816_THREAD_ID)
+    if (threadId !== void 0 && threadId !== ARES_65816_THREAD_ID) {
       throw new Error(`Unknown ares thread ${threadId}.`);
+    }
   }
   #requireConnected() {
-    if (!this.#connected || !this.#client || this.#client.closed)
+    if (!this.#connected || !this.#client || this.#client.closed) {
       throw new Error("ares RSP backend is not connected.");
+    }
     return this.#client;
   }
   #requireStopped() {
     const client = this.#requireConnected();
-    if (!this.#stopped) throw new Error("ares RSP backend must be stopped for this operation.");
+    if (!this.#stopped) {
+      throw new Error("ares RSP backend must be stopped for this operation.");
+    }
     return client;
   }
   #stoppedEvent(event) {
-    if (!this.#connected) return;
+    if (!this.#connected) {
+      return;
+    }
     stopSignal(event.payload);
     this.#stopped = true;
     const reason = this.#pendingStopReason ?? "exception";
     this.#pendingStopReason = void 0;
+    if (this.#contextReplayPending && this.#client) {
+      void this.#client.request("qUttoriContext:status").then(
+        (status) => {
+          this.#contextReplayPending = status === "replaying";
+          if (status === "idle" || status === "replay-diverged") {
+            this.#emit({
+              type: "output",
+              category: status === "idle" ? "console" : "stderr",
+              text: status === "idle" ? "Capture replay reached the recorded endpoint; WRAM and input consumption match.\n" : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n"
+            });
+          }
+        },
+        (error) => {
+          this.#emit({
+            type: "output",
+            category: "stderr",
+            text: `Could not verify capture replay outcome: ${String(error)}
+`
+          });
+        }
+      ).finally(() => this.#emit({ type: "stopped", reason, threadId: ARES_65816_THREAD_ID }));
+      return;
+    }
     this.#emit({ type: "stopped", reason, threadId: ARES_65816_THREAD_ID });
   }
   #clientClosed(client, error) {
-    if (this.#expectedClose.has(client) || this.#client !== client) return;
+    if (this.#expectedClose.has(client) || this.#client !== client) {
+      return;
+    }
     this.#releaseClient(client);
     this.#emit({ type: "output", category: "stderr", text: `${error.message}
 ` });
     this.#emit({ type: "terminated", restart: true });
   }
   #releaseClient(client) {
-    if (this.#client !== client) return;
-    for (const subscription of this.#subscriptions) subscription.dispose();
+    if (this.#client !== client) {
+      return;
+    }
+    for (const subscription of this.#subscriptions) {
+      subscription.dispose();
+    }
     this.#subscriptions = [];
     this.#client = void 0;
     this.#connected = false;
     this.#instructionBoundaryStop = false;
+    this.#contextBoundaryHeld = false;
+    this.#contextReplayPending = false;
     this.#trace = void 0;
   }
   #emit(event) {
-    for (const listener of this.#listeners) listener(event);
+    for (const listener of this.#listeners) {
+      listener(event);
+    }
   }
 };
 
-// ../debug-sidecar-ares/src/sidecar.ts
+// packages/debug-sidecar-ares/src/sidecar.ts
 var usage = `Usage: uttori-asm-debug-sidecar-ares [options]
 
 Required:
@@ -15422,22 +15987,31 @@ var parseAresSidecarArguments = (arguments_) => {
   let fastBoot = true;
   for (let index = 0; index < arguments_.length; index++) {
     const argument = arguments_[index];
-    if (argument === void 0) throw new Error("Ares sidecar arguments cannot contain holes.");
+    if (argument === void 0) {
+      throw new Error("Ares sidecar arguments cannot contain holes.");
+    }
     if (argument === "--no-fast-boot") {
       fastBoot = false;
       continue;
     }
-    if (!optionNames.has(argument)) throw new Error(`Unknown ares sidecar option '${argument}'.`);
-    if (values.has(argument)) throw new Error(`Duplicate ares sidecar option '${argument}'.`);
+    if (!optionNames.has(argument)) {
+      throw new Error(`Unknown ares sidecar option '${argument}'.`);
+    }
+    if (values.has(argument)) {
+      throw new Error(`Duplicate ares sidecar option '${argument}'.`);
+    }
     const value = arguments_[++index];
-    if (!value || value.startsWith("--"))
+    if (!value || value.startsWith("--")) {
       throw new Error(`Ares sidecar option '${argument}' requires a value.`);
+    }
     values.set(argument, value);
   }
   const required = (name) => {
     const value = values.get(name);
-    if (!value) throw new Error(`Missing required ares sidecar option '${name}'.`);
-    return path2.resolve(value);
+    if (!value) {
+      throw new Error(`Missing required ares sidecar option '${name}'.`);
+    }
+    return path3.resolve(value);
   };
   const system = values.get("--system");
   return {
@@ -15451,8 +16025,11 @@ var parseAresSidecarArguments = (arguments_) => {
 };
 var write = (stream, data) => new Promise((resolve, reject) => {
   stream.write(data, (error) => {
-    if (error) reject(error);
-    else resolve();
+    if (error) {
+      reject(error);
+    } else {
+      resolve();
+    }
   });
 });
 var runAresSidecar = async (arguments_, environment = process.env) => {
@@ -15460,7 +16037,7 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   const session = environment[DEBUG_SIDECAR_SESSION_ENV];
   assertDebugSidecarSessionToken(session);
   const manifest = parseAresRuntimeManifest(
-    JSON.parse(await readFile(options.manifest, "utf8"))
+    JSON.parse(await readFile2(options.manifest, "utf8"))
   );
   const host = new AresProcessHost({
     executable: options.executable,
@@ -15481,11 +16058,14 @@ var runAresSidecar = async (arguments_, environment = process.env) => {
   });
   let ending = false;
   const close = async (error) => {
-    if (ending) return;
+    if (ending) {
+      return;
+    }
     ending = true;
-    if (error)
+    if (error) {
       await write(process.stderr, `${error.stack ?? error.message}
 `).catch(() => void 0);
+    }
     process.stdin.pause();
     await host.terminate().catch(() => void 0);
     await new Promise((resolve) => process.stdout.end(resolve));

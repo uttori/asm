@@ -544,7 +544,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
   }
   const traceMode = workspace
     .getConfiguration("asm", session.workspaceFolder?.uri)
-    .get<string>("debug.traceMode", "live");
+    .get<string>("debug.traceMode", "lossless-instructions");
   const ppu = traceMode === "lossless-bus-ppu";
   const transfers = ppu || traceMode === "lossless-bus-transfers";
   const bus = transfers || traceMode === "lossless-bus";
@@ -606,6 +606,7 @@ const startRuntimeTraceWithLease = async (): Promise<void> => {
       file: destination.fsPath,
       format: "act2",
       scope: captureScope,
+      context: settings.get<boolean>("debug.captureContext", true),
       transport: async (request) =>
         (await session.customRequest("uttori/capture", request)) as CaptureResultV2,
     });
@@ -750,6 +751,69 @@ const startRuntimeTrace = async (): Promise<void> => {
     throw error;
   }
   release();
+};
+
+/** Save a named visual milestone at an acknowledged pause; leave the game paused
+ * so users can inspect or step from the same recorded boundary. */
+const markRuntimeCapture = async (): Promise<void> => {
+  const active = activeTraceRecording;
+  if (!active || active.recorder instanceof RuntimeTraceFileRecorder) {
+    throw new Error("Start a lossless capture before adding a milestone.");
+  }
+  const label = await window.showInputBox({
+    prompt: "Capture milestone",
+    placeHolder: "Accepted payment / refund / Sprite joins",
+  });
+  if (!label?.trim()) {
+    return;
+  }
+  await active.session.customRequest("uttori/capture", {
+    operation: "context",
+    action: "mark",
+    session: active.recorder.position.session,
+    label,
+  });
+};
+
+/** Restore a verified bundle into the active matching runtime. Replay supplies
+ * recorded serial inputs until the saved endpoint; restore leaves controls live
+ * for a new branch such as refusing payment or having insufficient money.
+ * @param {boolean} replay Whether to supply recorded console inputs after restoring.
+ */
+const restoreRuntimeCapture = async (replay: boolean): Promise<void> => {
+  if (activeTraceRecording) {
+    throw new Error("Stop the active recording before restoring a capture.");
+  }
+  const session = debug.activeDebugSession;
+  if (!session || session.type !== UTTORI_ASM_DEBUG_TYPE) {
+    throw new Error("Start a matching ares debug session first.");
+  }
+  const selected = await window.showOpenDialog({
+    canSelectFolders: true,
+    canSelectFiles: false,
+    canSelectMany: false,
+    openLabel: replay ? "Replay Capture" : "Restore Capture State",
+  });
+  if (!selected?.[0]) {
+    return;
+  }
+  const trace = await chooseTrace(session);
+  if (!trace) {
+    return;
+  }
+  const metadata = traceMetadata(session, trace);
+  await session.customRequest("uttori/capture", {
+    operation: "context",
+    action: replay ? "replay" : "restore",
+    directory: selected[0].fsPath,
+    romContentSha256: metadata.romContentSha256,
+    producer: metadata.producer,
+  });
+  void window.showInformationMessage(
+    replay
+      ? "Assembly: capture replay is armed. Continue to replay recorded inputs and pause at the saved endpoint."
+      : "Assembly: pre-action state restored. Start a new capture before trying an alternative action.",
+  );
 };
 
 /**
@@ -1205,6 +1269,13 @@ export const registerDebugging = (extensionRoot: string): readonly Disposable[] 
       new UttoriDebugAdapterFactory(extensionRoot, output),
     ),
     commands.registerCommand(UTTORI_TRACE_START_COMMAND, () => runTraceCommand(startRuntimeTrace)),
+    commands.registerCommand("asm.trace.mark", () => runTraceCommand(markRuntimeCapture)),
+    commands.registerCommand("asm.trace.replay", () =>
+      runTraceCommand(() => restoreRuntimeCapture(true)),
+    ),
+    commands.registerCommand("asm.trace.restore", () =>
+      runTraceCommand(() => restoreRuntimeCapture(false)),
+    ),
     commands.registerCommand("asm.trace.cancelLiveAnalysis", () => {
       for (const analysis of liveAnalyses) {
         analysis.cancel();

@@ -11,33 +11,57 @@ import {
   type ProjectConfigurationDefaults,
 } from "@uttori/asm-plugin-loader-node";
 
+/** Editor plugin entry: a module specifier alone, or a specifier with activation options. */
 export type PluginModuleSetting = string | PluginModuleRequest;
 
+/** Host-resolved settings used to load plugins and construct a matching workspace index. */
 export interface ProjectEnvironmentSettings {
+  /** Base directory for config discovery, relative plugin/include paths, and the index cache. */
   readonly cwd: string;
+  /** Allows project config and external plugin loading; false limits activation to host defaults. */
   readonly workspaceTrusted: boolean;
+  /** Explicit config path, absolute or relative to cwd; omitted to discover the project config. */
   readonly configFile?: string;
+  /** Additional plugin requests; ignored for activation while the workspace is untrusted. */
   readonly plugins?: readonly PluginModuleSetting[];
+  /** Target ID or alias overriding the project config and host default. */
   readonly target?: string;
+  /** Architecture override; omitted to use configured/host defaults, then the target's default. */
   readonly architecture?: string;
+  /** Analysis roots, resolved by the host; omitted or empty to derive roots from open documents. */
   readonly entryPoints?: readonly string[];
+  /** Replaces configured include paths when supplied; relative entries resolve against cwd. */
   readonly includePaths?: readonly string[];
 }
 
+/** Published environment/index pair, valid until the controller replaces or disposes it. */
 export interface ProjectEnvironmentState {
+  /** Activated plugins and resolved target configuration; disposal belongs to the controller. */
   readonly loaded: LoadedProjectEnvironment;
+  /** Mutable analysis index using exactly the environment exposed by loaded. */
   readonly index: WorkspaceIndex;
+  /** User-facing warning when workspace trust prevented requested plugin configuration. */
   readonly trustNotice?: string;
 }
 
+/** Host-owned plugin catalog and defaults retained across environment replacements. */
 export interface ProjectEnvironmentControllerOptions {
+  /** Pre-imported plugins keyed by module specifier, available without external module loading. */
   readonly bundledPlugins: ReadonlyMap<string, AssemblerPlugin>;
+  /** Fallback configuration for untrusted workspaces or projects with no config/plugin requests. */
   readonly defaults: ProjectConfigurationDefaults;
+  /** Receives plugin/index messages and warnings if a replaced environment cannot be disposed. */
   readonly logger?: PluginLogger;
-  /** Forwarded to the loader so bundled plugins stay active even when a project config lists a subset. */
+  /** Activates all bundled plugins even when a config lists a subset; omitted defaults to false. */
   readonly activateBundledPlugins?: boolean;
 }
 
+/**
+ * Normalizes editor shorthand before the loader performs full plugin validation.
+ * @param {readonly PluginModuleSetting[] | undefined} plugins Editor entries; omitted means none.
+ * @returns {readonly PluginModuleRequest[]} Module requests preserving supplied activation options.
+ * @throws {Error} A shorthand string is blank or an object has no string module specifier.
+ */
 const configuredPluginModules = (
   plugins: readonly PluginModuleSetting[] | undefined,
 ): readonly PluginModuleRequest[] =>
@@ -63,10 +87,20 @@ const configuredPluginModules = (
  * until the replacement index has been constructed and populated successfully.
  */
 export class ProjectEnvironmentController {
+  /** Last successfully published pair; absent before the first replacement and after disposal. */
   #state?: ProjectEnvironmentState;
 
+  /**
+   * Retains host configuration without loading plugins; call replace before accessing current.
+   * @param {ProjectEnvironmentControllerOptions} options Host configuration, retained by reference.
+   */
   constructor(private readonly options: ProjectEnvironmentControllerOptions) {}
 
+  /**
+   * Exposes the live pair without transferring ownership of its plugin lifecycle.
+   * @returns {ProjectEnvironmentState} The most recently committed environment and index.
+   * @throws {Error} No environment has been published, or the controller has been disposed.
+   */
   get current(): ProjectEnvironmentState {
     if (!this.#state) {
       throw new Error("The project environment has not been initialized.");
@@ -74,6 +108,15 @@ export class ProjectEnvironmentController {
     return this.#state;
   }
 
+  /**
+   * Loads and indexes a candidate before publishing it, then disposes the previous environment.
+   * Callers must serialize replacements and disposal. A failed candidate leaves current intact;
+   * failure to dispose the old environment after publication is logged without undoing the swap.
+   * @param {ProjectEnvironmentSettings} settings Configuration for the candidate environment.
+   * @param {ReadonlyMap<string, string>} overlays Absolute source paths to unsaved text, copied into the new index.
+   * @returns {Promise<ProjectEnvironmentState>} The published pair after previous-plugin cleanup.
+   * @throws {Error} Configuration, plugin loading, or initial indexing fails.
+   */
   async replace(
     settings: ProjectEnvironmentSettings,
     overlays: ReadonlyMap<string, string> = new Map(),
@@ -84,6 +127,8 @@ export class ProjectEnvironmentController {
     const hasWorkspaceConfiguration =
       Boolean(settings.configFile) || Boolean(configuredPath && existsSync(configuredPath));
     const workspacePluginsRequested = hasWorkspaceConfiguration || pluginModules.length > 0;
+    // Untrusted projects must not activate workspace plugins; trusted explicit requests own
+    // their defaults so a host target cannot silently replace missing project configuration.
     const useHostDefaults =
       !settings.workspaceTrusted || (!hasWorkspaceConfiguration && pluginModules.length === 0);
     const loader = new NodePluginLoader();
@@ -117,6 +162,7 @@ export class ProjectEnvironmentController {
         logger: this.options.logger,
         cacheDir: path.join(cwd, ".uttori-asm", "cache"),
       });
+      // Seed unsaved buffers before analysis so the replacement reflects the editor snapshot.
       for (const [file, content] of overlays) {
         index.updateDocument(file, content);
       }
@@ -139,6 +185,7 @@ export class ProjectEnvironmentController {
       throw error;
     }
 
+    // Publish first: cleanup failure must not discard an already usable candidate.
     const previous = this.#state;
     this.#state = next;
     try {
@@ -151,6 +198,12 @@ export class ProjectEnvironmentController {
     return next;
   }
 
+  /**
+   * Creates a build session using the same plugin environment and target as current analysis.
+   * @param {Omit<AssemblerOptions, "environment" | "target" | "architecture" | "targetOptions">} options Per-build options; environment selection is owned by the controller.
+   * @returns {Assembler} A new session that the caller must dispose before replacing the environment.
+   * @throws {Error} There is no current environment or assembler initialization fails.
+   */
   createAssembler(
     options: Omit<
       AssemblerOptions,
@@ -167,6 +220,12 @@ export class ProjectEnvironmentController {
     });
   }
 
+  /**
+   * Clears current before awaiting plugin cleanup; repeated calls with no current state do nothing.
+   * Callers must finish active builds and serialize this with replace.
+   * @returns {Promise<void>} Resolves after the active environment is disposed.
+   * @throws {Error} Plugin cleanup fails; current remains cleared.
+   */
   async dispose(): Promise<void> {
     const current = this.#state;
     this.#state = undefined;

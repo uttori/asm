@@ -27,7 +27,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// src/runtime/live-bus-analysis-process.ts
+// packages/vscode-extension/src/runtime/live-bus-analysis-process.ts
 var live_bus_analysis_process_exports = {};
 __export(live_bus_analysis_process_exports, {
   handleLiveBusProcessMessage: () => handleLiveBusProcessMessage,
@@ -36,35 +36,46 @@ __export(live_bus_analysis_process_exports, {
 module.exports = __toCommonJS(live_bus_analysis_process_exports);
 var import_promises3 = require("node:timers/promises");
 
-// ../debug-adapter/src/capture-v2.ts
+// packages/debug-adapter/src/capture-v2.ts
 var maxU64 = (1n << 64n) - 1n;
 var captureScope = (value) => {
-  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
+  if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
     throw new Error("Unsupported capture scope.");
+  }
   return value;
 };
 var captureU64 = (value) => {
-  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64)
+  if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
     throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
+  }
   return BigInt(value);
 };
 var captureSession = (value) => {
-  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value))
+  if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
     throw new Error("Invalid capture session identity.");
+  }
   return value;
 };
 var validateCapturePosition = (value, session, scope) => {
-  if (!value || typeof value !== "object") throw new Error("Invalid capture position.");
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid capture position.");
+  }
   const p = value;
   captureSession(p.session);
-  if (session !== void 0 && p.session !== session) throw new Error("Capture session changed.");
-  if (p.scope !== void 0) captureScope(p.scope);
-  if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope))
+  if (session !== void 0 && p.session !== session) {
+    throw new Error("Capture session changed.");
+  }
+  if (p.scope !== void 0) {
+    captureScope(p.scope);
+  }
+  if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
     throw new Error("Capture scope changed or was not confirmed by the producer.");
+  }
   if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
     p.state
-  ))
+  )) {
     throw new Error("Invalid capture state.");
+  }
   const bounds = [
     p.releasedThrough,
     p.durableThrough,
@@ -72,100 +83,129 @@ var validateCapturePosition = (value, session, scope) => {
     p.deliveredThrough,
     p.producedThrough
   ].map(captureU64);
-  if (bounds.some((v, i) => i > 0 && v < bounds[i - 1]))
+  if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
     throw new Error("Capture ownership boundaries are inconsistent.");
-  if (captureU64(p.chunkThrough) > captureU64(p.producedChunks))
+  }
+  if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
     throw new Error("Capture chunk boundary is inconsistent.");
+  }
   captureU64(p.throttleCount);
-  if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator))
+  if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
     throw new Error("Invalid capture clock domain.");
-  if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256)
+  }
+  if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
     throw new Error("Capture integrity failed.");
+  }
   if (![p.bufferedBytes, p.allocatedBytes].every(
     (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-  ) || p.bufferedBytes > p.allocatedBytes)
+  ) || p.bufferedBytes > p.allocatedBytes) {
     throw new Error("Capture allocation exceeds its bounds.");
-  if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks))
+  }
+  if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
     throw new Error("Capture terminal totals do not reconcile.");
+  }
   return p;
 };
 var crcTable = Uint32Array.from({ length: 256 }, (_, byte) => {
   let crc = byte;
-  for (let bit = 0; bit < 8; bit++) crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+  for (let bit = 0; bit < 8; bit++) {
+    crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+  }
   return crc >>> 0;
 });
 var crcSlices = [crcTable];
-for (let slice = 1; slice < 8; slice++)
+for (let slice = 1; slice < 8; slice++) {
   crcSlices.push(
     Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
   );
+}
 var captureCrc32c = (bytes, zeroChecksum = false) => {
   let crc = 4294967295;
   let i = 0;
   for (; i + 8 <= bytes.length; i += 8) {
     let low = bytes[i] | bytes[i + 1] << 8 | bytes[i + 2] << 16 | bytes[i + 3] << 24;
-    if (zeroChecksum && i === 56) low = 0;
+    if (zeroChecksum && i === 56) {
+      low = 0;
+    }
     const a = crc ^ low;
     crc = crcSlices[7][a & 255] ^ crcSlices[6][a >>> 8 & 255] ^ crcSlices[5][a >>> 16 & 255] ^ crcSlices[4][a >>> 24] ^ crcSlices[3][bytes[i + 4]] ^ crcSlices[2][bytes[i + 5]] ^ crcSlices[1][bytes[i + 6]] ^ crcSlices[0][bytes[i + 7]];
   }
-  for (; i < bytes.length; i++)
+  for (; i < bytes.length; i++) {
     crc = crc >>> 8 ^ crcTable[(crc ^ (zeroChecksum && i >= 56 && i < 60 ? 0 : bytes[i])) & 255];
+  }
   return (crc ^ 4294967295) >>> 0;
 };
 var captureChunkRecords = (chunk) => {
-  if (chunk.scope === "snes.65816.instructions") return chunk.instructions;
-  if (chunk.scope === "snes.cpu-bus") return chunk.accesses;
+  if (chunk.scope === "snes.65816.instructions") {
+    return chunk.instructions;
+  }
+  if (chunk.scope === "snes.cpu-bus") {
+    return chunk.accesses;
+  }
   return chunk.events;
 };
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
-  if (bytes.length < 64 || bytes.length > 262144)
+  if (bytes.length < 64 || bytes.length > 262144) {
     throw new Error("Capture chunk length exceeds bounds.");
+  }
   const b = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0)
+  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0) {
     throw new Error("Unsupported capture envelope.");
-  if (b.toString("hex", 8, 24) !== session)
+  }
+  if (b.toString("hex", 8, 24) !== session) {
     throw new Error("Capture chunk belongs to another session.");
-  if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64)
+  }
+  if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64) {
     throw new Error("Capture payload lengths disagree.");
-  if (captureCrc32c(bytes, true) !== b.readUInt32LE(56))
+  }
+  if (captureCrc32c(bytes, true) !== b.readUInt32LE(56)) {
     throw new Error("Capture checksum mismatch.");
+  }
   const sequence = b.readBigUInt64LE(24), first = b.readBigUInt64LE(32), count = b.readUInt32LE(40);
   const through = first + BigInt(count) - 1n;
   const maxRecords = scope === "snes.65816.instructions" ? 3854 : 4095;
-  if (!sequence || !first || !count || count > maxRecords || through > maxU64)
+  if (!sequence || !first || !count || count > maxRecords || through > maxU64) {
     throw new Error("Invalid capture sequence range.");
+  }
   const identity = {
     session,
     sequence: String(sequence),
     first: String(first),
     through: String(through)
   };
-  if (scope === "snes.cpu-bus")
+  if (scope === "snes.cpu-bus") {
     return {
       ...identity,
       scope,
       accesses: decodeBusAccesses(b, first, count)
     };
-  if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu")
+  }
+  if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu") {
     return {
       ...identity,
       scope,
       events: decodeBusAccesses(b, first, count, true, scope === "snes.cpu-bus-ppu")
     };
+  }
   const instructions = [];
   let offset = 64;
   for (let i = 0; i < count; i++) {
-    if (offset + 68 > b.length) throw new Error("Truncated capture record.");
+    if (offset + 68 > b.length) {
+      throw new Error("Truncated capture record.");
+    }
     const length = b.readUInt32LE(offset + 4), n = b[offset + 48];
     const event = first + BigInt(i), ordinal = b.readBigUInt64LE(offset + 32), address = b.readBigUInt64LE(offset + 40);
-    if (b.readUInt16LE(offset) !== 1 || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0)
+    if (b.readUInt16LE(offset) !== 1 || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0) {
       throw new Error("Unsupported required capture record.");
-    if (n < 1 || n > 4 || length !== 67 + n || offset + length > b.length || b.readUInt16LE(offset + 49) !== 16)
+    }
+    if (n < 1 || n > 4 || length !== 67 + n || offset + length > b.length || b.readUInt16LE(offset + 49) !== 16) {
       throw new Error("Invalid instruction record length.");
-    if (b.readBigUInt64LE(offset + 8) !== event || ordinal !== event || address > 0xffffffn)
+    }
+    if (b.readBigUInt64LE(offset + 8) !== event || ordinal !== event || address > 0xffffffn) {
       throw new Error("Instruction identity disagrees with capture scope.");
+    }
     const r = offset + 51 + n;
     const state = {
       a: b.readUInt16LE(r),
@@ -179,11 +219,13 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
       p: b[r + 14],
       e: b[r + 15]
     };
-    if (state.e > 1 || (state.pb << 16 | state.pc) !== Number(address))
+    if (state.e > 1 || (state.pb << 16 | state.pc) !== Number(address)) {
       throw new Error("Captured PC/state mismatch.");
+    }
     const cycle = b.readBigUInt64LE(offset + 24);
-    if (i && cycle < BigInt(instructions[i - 1].cycle))
+    if (i && cycle < BigInt(instructions[i - 1].cycle)) {
       throw new Error("Capture clock moved backwards.");
+    }
     instructions.push({
       sequence: String(event),
       ordinal: String(ordinal),
@@ -193,8 +235,9 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
     });
     offset += length;
   }
-  if (offset !== b.length)
+  if (offset !== b.length) {
     throw new Error("Capture record count does not consume the payload exactly.");
+  }
   return {
     ...identity,
     scope,
@@ -202,8 +245,9 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   };
 }
 var decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
-  if (!transfers && b.length !== 64 + count * 64)
+  if (!transfers && b.length !== 64 + count * 64) {
     throw new Error("Invalid bus record payload length.");
+  }
   const accesses = [];
   const actors = ["cpu", "dma", "hdma"];
   const phases = ["cpu", "dma", "hdma-table", "hdma-indirect", "hdma-transfer"];
@@ -211,10 +255,14 @@ var decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
   let lastCycle = 0n;
   let offset = 64;
   for (let i = 0; i < count; i++) {
-    if (offset + 64 > b.length) throw new Error("Truncated bus/transfer record.");
+    if (offset + 64 > b.length) {
+      throw new Error("Truncated bus/transfer record.");
+    }
     if (transfers && b.readUInt16LE(offset) === 3) {
       const marker = decodeTransfer(b, offset, first + BigInt(i));
-      if (BigInt(marker.cycle) < lastCycle) throw new Error("Capture clock moved backwards.");
+      if (BigInt(marker.cycle) < lastCycle) {
+        throw new Error("Capture clock moved backwards.");
+      }
       lastCycle = BigInt(marker.cycle);
       accesses.push(marker);
       offset += 80;
@@ -222,8 +270,9 @@ var decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
     }
     const extended = ppu && b.readUInt16LE(offset + 2) === 2;
     const length = extended ? 88 : 64;
-    if (b.readUInt16LE(offset) !== 2 || b.readUInt16LE(offset + 2) !== (extended ? 2 : 1) || b.readUInt32LE(offset + 4) !== length || offset + length > b.length || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt16LE(offset + 62) !== 0)
+    if (b.readUInt16LE(offset) !== 2 || b.readUInt16LE(offset + 2) !== (extended ? 2 : 1) || b.readUInt32LE(offset + 4) !== length || offset + length > b.length || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt16LE(offset + 62) !== 0) {
       throw new Error("Unsupported required bus capture record.");
+    }
     const event = first + BigInt(i);
     const cycle = b.readBigUInt64LE(offset + 24);
     const ordinal = b.readBigUInt64LE(offset + 32);
@@ -232,17 +281,23 @@ var decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
     const direction = b[offset + 53], actor = b[offset + 54], channel = b[offset + 55];
     const phase = b[offset + 56], context = b[offset + 57];
     const hcounter = b.readUInt16LE(offset + 58), vcounter = b.readUInt16LE(offset + 60);
-    if (b.readBigUInt64LE(offset + 8) !== event || address > 0xffffffn || pc > 16777215)
+    if (b.readBigUInt64LE(offset + 8) !== event || address > 0xffffffn || pc > 16777215) {
       throw new Error("Bus identity disagrees with capture scope.");
+    }
     const expectedActor = phase === 0 ? 0 : 2;
     const phaseActor = phase === 1 ? 1 : expectedActor;
-    if (direction > 1 || phase >= phases.length || actor !== phaseActor || (actor === 0 ? channel !== 255 : channel > 7) || (phase === 2 || phase === 3) && direction !== 0 || context >= contexts.length || ordinal !== 0n !== (context === 1) || hcounter >= 1368 || vcounter >= 313)
+    if (direction > 1 || phase >= phases.length || actor !== phaseActor || (actor === 0 ? channel !== 255 : channel > 7) || (phase === 2 || phase === 3) && direction !== 0 || context >= contexts.length || ordinal !== 0n !== (context === 1) || hcounter >= 1368 || vcounter >= 313) {
       throw new Error("Invalid bus attribution or timing fields.");
-    if (cycle < lastCycle) throw new Error("Capture clock moved backwards.");
+    }
+    if (cycle < lastCycle) {
+      throw new Error("Capture clock moved backwards.");
+    }
     lastCycle = cycle;
     const port = Number(address) & 65535;
     const dataPort = direction === 1 && !(Number(address) & 4194304) && [8452, 8472, 8473, 8482].includes(port);
-    if (ppu && extended !== dataPort) throw new Error("Missing or misplaced PPU effect.");
+    if (ppu && extended !== dataPort) {
+      throw new Error("Missing or misplaced PPU effect.");
+    }
     accesses.push({
       ...extended ? { ppu: decodePPUEffect(b, offset, port) } : {},
       sequence: String(event),
@@ -261,19 +316,22 @@ var decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
     });
     offset += length;
   }
-  if (offset !== b.length)
+  if (offset !== b.length) {
     throw new Error("Capture record count does not consume the payload exactly.");
+  }
   return accesses;
 };
 var decodeTransfer = (b, offset, event) => {
-  if (offset + 80 > b.length || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 4) !== 80 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt32LE(offset + 76) !== 0)
+  if (offset + 80 > b.length || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 4) !== 80 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt32LE(offset + 76) !== 0) {
     throw new Error("Unsupported transfer capture record.");
+  }
   const sequence = b.readBigUInt64LE(offset + 8), ordinal = b.readBigUInt64LE(offset + 32), transferId = b.readBigUInt64LE(offset + 40), pc = b.readUInt32LE(offset + 48);
   const boundary = b[offset + 52], actor = b[offset + 53], channel = b[offset + 54], context = b[offset + 55];
   const hcounter = b.readUInt16LE(offset + 56), vcounter = b.readUInt16LE(offset + 58), transferred = b.readUInt32LE(offset + 72);
   const owned = ordinal !== 0n;
-  if (sequence !== event || pc > 16777215 || boundary > 2 || actor !== 1 && actor !== 2 || channel > 7 || context > 4 || owned !== (context === 1) || hcounter >= 1368 || vcounter >= 313 || b[offset + 71] > 15 || boundary === 0 && (transferId !== event || transferred !== 0) || boundary !== 0 && (transferId >= event || transferred < 1 || transferred > 65536) || actor === 2 && (boundary === 2 || transferred > 4))
+  if (sequence !== event || pc > 16777215 || boundary > 2 || actor !== 1 && actor !== 2 || channel > 7 || context > 4 || owned !== (context === 1) || hcounter >= 1368 || vcounter >= 313 || b[offset + 71] > 15 || boundary === 0 && (transferId !== event || transferred !== 0) || boundary !== 0 && (transferId >= event || transferred < 1 || transferred > 65536) || actor === 2 && (boundary === 2 || transferred > 4)) {
     throw new Error("Invalid transfer boundary identity, attribution or counters.");
+  }
   return {
     kind: "transfer",
     sequence: String(sequence),
@@ -305,25 +363,38 @@ var decodePPUEffect = (b, offset, port) => {
   const target = b[offset + 64], outcome = b[offset + 65], count = b[offset + 66], flags = b[offset + 67];
   const hcounter = b.readUInt16LE(offset + 68), vcounter = b.readUInt16LE(offset + 70);
   let expectedTarget = 1;
-  if (port === 8482) expectedTarget = 2;
-  if (port === 8452) expectedTarget = 3;
-  if (target !== expectedTarget || outcome > 2 || count > 2 || flags > 15 || (flags & 3) === 3 || target !== 1 && flags & 8 || hcounter >= 1368 || vcounter >= 313 || b.readUInt32LE(offset + 82) !== 0 || b.readUInt16LE(offset + 86) !== 0)
+  if (port === 8482) {
+    expectedTarget = 2;
+  }
+  if (port === 8452) {
+    expectedTarget = 3;
+  }
+  if (target !== expectedTarget || outcome > 2 || count > 2 || flags > 15 || (flags & 3) === 3 || target !== 1 && flags & 8 || hcounter >= 1368 || vcounter >= 313 || b.readUInt32LE(offset + 82) !== 0 || b.readUInt16LE(offset + 86) !== 0) {
     throw new Error("Invalid PPU effect identity, flags or raster.");
-  if (outcome === 0 && (count === 0 || target === 1 && count !== 1 || target === 2 && count !== 2) || outcome !== 0 && count !== 0 || outcome === 1 && (target !== 1 || !(flags & 2)) || outcome === 2 && (target === 1 || flags & 2))
+  }
+  if (outcome === 0 && (count === 0 || target === 1 && count !== 1 || target === 2 && count !== 2) || outcome !== 0 && count !== 0 || outcome === 1 && (target !== 1 || !(flags & 2)) || outcome === 2 && (target === 1 || flags & 2)) {
     throw new Error("Invalid PPU effect outcome or byte count.");
+  }
   const bytes = [];
   const vramBytes = flags & 8 ? 131072 : 65536;
   for (let i = 0; i < 2; i++) {
     const address = b.readUInt32LE(offset + 72 + i * 4), value = b[offset + 80 + i];
     if (i >= count) {
-      if (address || value) throw new Error("Nonzero unused PPU effect slot.");
+      if (address || value) {
+        throw new Error("Nonzero unused PPU effect slot.");
+      }
       continue;
     }
     let bound = vramBytes;
-    if (target === 2) bound = 512;
-    if (target === 3) bound = 544;
-    if (address >= bound || target === 1 && ((address & 1) !== (port & 1) || value !== b[offset + 52]) || target === 2 && (i === 0 ? (address & 1) !== 0 : address !== bytes[0].address + 1 || value !== (b[offset + 52] & 127)) || target === 3 && i === count - 1 && value !== b[offset + 52])
+    if (target === 2) {
+      bound = 512;
+    }
+    if (target === 3) {
+      bound = 544;
+    }
+    if (address >= bound || target === 1 && ((address & 1) !== (port & 1) || value !== b[offset + 52]) || target === 2 && (i === 0 ? (address & 1) !== 0 : address !== bytes[0].address + 1 || value !== (b[offset + 52] & 127)) || target === 3 && i === count - 1 && value !== b[offset + 52]) {
       throw new Error("Invalid PPU physical byte address or value.");
+    }
     bytes.push({ address, value });
   }
   return {
@@ -339,11 +410,11 @@ var decodePPUEffect = (b, offset, port) => {
   };
 };
 
-// ../debug-adapter/src/capture-file.ts
+// packages/debug-adapter/src/capture-file.ts
 var import_promises = require("node:fs/promises");
 var import_promises2 = require("node:timers/promises");
 
-// ../debug-adapter/src/capture-file-reader.ts
+// packages/debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader = class {
   #read;
   #windowBytes;
@@ -354,8 +425,9 @@ var CaptureFrameReader = class {
    * The cap amortizes small metadata reads without loading an entire archive.
    */
   constructor(read, windowBytes = 1048576) {
-    if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576)
+    if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576) {
       throw new Error("Invalid capture read-ahead window.");
+    }
     this.#read = read;
     this.#windowBytes = windowBytes;
   }
@@ -367,22 +439,30 @@ var CaptureFrameReader = class {
    * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
    */
   async read(length, offset, limit) {
-    if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit)
+    if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
       throw new Error("Torn capture frame or invalid component length.");
+    }
     const relative = offset - this.#start;
     let available = 0;
-    if (relative >= 0 && relative <= this.#valid)
+    if (relative >= 0 && relative <= this.#valid) {
       available = Math.min(this.#valid - relative, limit - offset);
-    if (available >= length) return Buffer.from(this.#buffer.subarray(relative, relative + length));
+    }
+    if (available >= length) {
+      return Buffer.from(this.#buffer.subarray(relative, relative + length));
+    }
     const nextLength = Math.min(this.#windowBytes, limit - offset);
     const next = this.#buffer.length >= nextLength ? this.#buffer : Buffer.allocUnsafe(nextLength);
-    if (available) this.#buffer.copy(next, 0, relative, relative + available);
+    if (available) {
+      this.#buffer.copy(next, 0, relative, relative + available);
+    }
     this.#buffer = next;
     this.#valid = 0;
     let got = available;
     while (got < nextLength) {
       const { bytesRead } = await this.#read(this.#buffer, got, nextLength - got, offset + got);
-      if (!bytesRead) throw new Error("Torn capture frame.");
+      if (!bytesRead) {
+        throw new Error("Torn capture frame.");
+      }
       got += bytesRead;
     }
     this.#start = offset;
@@ -391,30 +471,37 @@ var CaptureFrameReader = class {
   }
 };
 
-// ../debug-adapter/src/capture-file.ts
+// packages/debug-adapter/src/capture-file.ts
 var metadataValid = (m) => {
-  if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision)
+  if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
     throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+  }
 };
 var checkCaptureSize = (size, options) => {
   const limit = options.maxBytes ?? Number.MAX_SAFE_INTEGER;
-  if (!Number.isSafeInteger(limit) || limit < 1)
+  if (!Number.isSafeInteger(limit) || limit < 1) {
     throw new Error("Capture maximum bytes must be a positive safe integer.");
-  if (size > limit)
+  }
+  if (size > limit) {
     throw new Error(
       "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
     );
+  }
 };
 var validateCaptureFileHeader = (value) => {
-  if (!value || typeof value !== "object") throw new Error("Missing capture session header.");
+  if (!value || typeof value !== "object") {
+    throw new Error("Missing capture session header.");
+  }
   const header = value;
   metadataValid(header);
   captureSession(header.session);
   captureScope(header.scope);
-  if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator))
+  if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator)) {
     throw new Error("Invalid session clock domain.");
-  if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024)
+  }
+  if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024) {
     throw new Error("Unsupported capture session contract.");
+  }
   return header;
 };
 var readCaptureBytes = async (handle, length, offset) => {
@@ -422,7 +509,9 @@ var readCaptureBytes = async (handle, length, offset) => {
   let got = 0;
   while (got < length) {
     const result = await handle.read(bytes, got, length - got, offset + got);
-    if (!result.bytesRead) throw new Error("Torn capture frame.");
+    if (!result.bytesRead) {
+      throw new Error("Torn capture frame.");
+    }
     got += result.bytesRead;
   }
   return bytes;
@@ -458,12 +547,14 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
       const identity = await handle.stat();
       const prefix = await readCaptureBytes(handle, 12, 0);
       const length = prefix.readUInt32LE(4);
-      if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536)
+      if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536) {
         throw new Error("Invalid native capture header.");
+      }
       checkCaptureSize(12 + length, options);
       const body = await readCaptureBytes(handle, length, 12);
-      if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+      if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
         throw new Error("Capture metadata checksum mismatch.");
+      }
       const header = validateCaptureFileHeader(
         JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body))
       );
@@ -495,24 +586,31 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
    * @returns {Promise<void>} Settlement of one bounded read slice.
    */
   async readThrough(value, accept, maxChunks = 16, publishedFile) {
-    if (this.#failed) throw new Error("Native capture cursor failed previously.");
+    if (this.#failed) {
+      throw new Error("Native capture cursor failed previously.");
+    }
     try {
       this.#options.signal?.throwIfAborted();
       const position = nativePosition(value, this.header.session, this.header.scope);
       const bytes = Number(captureU64(position.fileBytes));
-      if (!Number.isSafeInteger(bytes) || bytes < this.#watermark || bytes < this.#offset || !Number.isSafeInteger(maxChunks) || maxChunks < 1 || maxChunks > 256)
+      if (!Number.isSafeInteger(bytes) || bytes < this.#watermark || bytes < this.#offset || !Number.isSafeInteger(maxChunks) || maxChunks < 1 || maxChunks > 256) {
         throw new Error("Native capture watermark or chunk budget is invalid.");
+      }
       checkCaptureSize(bytes, this.#options);
-      if (position.fileState === "incomplete") throw new Error("Native capture was interrupted.");
+      if (position.fileState === "incomplete") {
+        throw new Error("Native capture was interrupted.");
+      }
       if (this.#complete) {
-        if (bytes !== this.#watermark || position.fileState !== "complete")
+        if (bytes !== this.#watermark || position.fileState !== "complete") {
           throw new Error("Completed native capture changed.");
+        }
         return;
       }
       this.#watermark = bytes;
       const before = await this.#handle.stat();
-      if (before.size < bytes)
+      if (before.size < bytes) {
         throw new Error("Native capture is shorter than its durable watermark.");
+      }
       const reader = new CaptureFrameReader(
         (buffer, start, length, offset) => {
           this.#options.signal?.throwIfAborted();
@@ -522,18 +620,22 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
       );
       const read = async (length) => {
         this.#options.signal?.throwIfAborted();
-        if (this.#offset + length > bytes)
+        if (this.#offset + length > bytes) {
           throw new Error("Native durable watermark splits a frame.");
+        }
         const result = await reader.read(length, this.#offset, bytes);
         this.#offset += length;
         return result;
       };
       const json = async (prefix) => {
         const length = prefix.readUInt32LE(4);
-        if (length > 65536) throw new Error("Capture metadata exceeds bounds.");
+        if (length > 65536) {
+          throw new Error("Capture metadata exceeds bounds.");
+        }
         const body = await read(length);
-        if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+        if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
           throw new Error("Capture metadata checksum mismatch.");
+        }
         return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
       };
       for (let count = 0; this.#offset < bytes && count < maxChunks; count++) {
@@ -545,45 +647,56 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
             this.header.session,
             this.header.scope
           );
-          if (terminal.state !== "complete" || position.fileState !== "complete" || captureU64(terminal.producedThrough) !== this.#event || captureU64(terminal.producedChunks) !== this.#chunk || position.producedThrough !== terminal.producedThrough || position.producedChunks !== terminal.producedChunks || this.#offset !== bytes)
+          if (terminal.state !== "complete" || position.fileState !== "complete" || captureU64(terminal.producedThrough) !== this.#event || captureU64(terminal.producedChunks) !== this.#chunk || position.producedThrough !== terminal.producedThrough || position.producedChunks !== terminal.producedChunks || this.#offset !== bytes) {
             throw new Error("Native capture terminal disagrees with the consumed prefix.");
+          }
           const after = await this.#handle.stat();
-          if (after.size !== bytes || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
+          if (after.size !== bytes || before.size !== after.size || before.mtimeMs !== after.mtimeMs) {
             throw new Error("Native capture changed during final validation.");
+          }
           if (publishedFile) {
             const published = await (0, import_promises.lstat)(publishedFile);
-            if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino)
+            if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino) {
               throw new Error("Native capture publication replaced the opened file.");
+            }
           }
           this.#complete = true;
           break;
         }
-        if (magic !== "ACT2") throw new Error("Native capture expected an ACT2 chunk.");
+        if (magic !== "ACT2") {
+          throw new Error("Native capture expected an ACT2 chunk.");
+        }
         const envelope = Buffer.concat([prefix, await read(52)]);
         const length = envelope.readUInt32LE(48);
-        if (length > 262144 - 64) throw new Error("Capture chunk exceeds its bound.");
+        if (length > 262144 - 64) {
+          throw new Error("Capture chunk exceeds its bound.");
+        }
         const chunk = decodeCaptureChunk(
           Buffer.concat([envelope, await read(length)]),
           this.header.session,
           this.header.scope
         );
         const records = captureChunkRecords(chunk);
-        if (captureU64(chunk.sequence) !== this.#chunk + 1n || captureU64(chunk.first) !== this.#event + 1n || captureU64(records[0].cycle) < this.#cycle || captureU64(chunk.through) > captureU64(position.durableThrough))
+        if (captureU64(chunk.sequence) !== this.#chunk + 1n || captureU64(chunk.first) !== this.#event + 1n || captureU64(records[0].cycle) < this.#cycle || captureU64(chunk.through) > captureU64(position.durableThrough)) {
           throw new Error("Noncontiguous native capture history.");
+        }
         const ackPrefix = await read(12);
-        if (ackPrefix.toString("ascii", 0, 4) !== "ACK2")
+        if (ackPrefix.toString("ascii", 0, 4) !== "ACK2") {
           throw new Error("Native capture chunk has no checkpoint.");
+        }
         const ack = await json(ackPrefix);
-        if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through)
+        if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
           throw new Error("Native checkpoint disagrees with its chunk.");
+        }
         accept(chunk);
         this.#chunk = captureU64(chunk.sequence);
         this.#event = captureU64(chunk.through);
         this.#cycle = captureU64(records.at(-1).cycle);
         await (0, import_promises2.setImmediate)(void 0, { signal: this.#options.signal });
       }
-      if (this.#offset === bytes && !this.#complete && position.fileState === "complete")
+      if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
         throw new Error("Completed native capture has no terminal frame.");
+      }
       this.#options.onProgress?.(this.#offset, bytes);
     } catch (error) {
       this.#failed = true;
@@ -597,20 +710,23 @@ var NativeCaptureFileCursor = class _NativeCaptureFileCursor {
 };
 var nativePosition = (value, session, scope) => {
   const position = validateCapturePosition(value, session, scope);
-  if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState))
+  if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
     throw new Error("Invalid native file state.");
+  }
   captureU64(position.fileBytes);
   captureU64(position.fileBatches);
   if (position.fileProfile) {
-    for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"])
+    for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"]) {
       captureU64(position.fileProfile[field]);
+    }
   }
-  if (position.state === "complete" !== (position.fileState === "complete"))
+  if (position.state === "complete" !== (position.fileState === "complete")) {
     throw new Error("Native file publication and producer completion disagree.");
+  }
   return position;
 };
 
-// ../disassembler/src/canonical-json.ts
+// packages/disassembler/src/canonical-json.ts
 var canonicalValue = (value) => {
   if (Array.isArray(value)) {
     return value.map(canonicalValue);
@@ -642,13 +758,13 @@ var canonicalValue = (value) => {
 var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 2)}
 `;
 
-// ../disassembler/src/sqlite-store.ts
-var import_node_crypto3 = require("node:crypto");
-var import_node_fs4 = __toESM(require("node:fs"), 1);
-var import_node_path4 = __toESM(require("node:path"), 1);
+// packages/disassembler/src/sqlite-store.ts
+var import_node_crypto4 = require("node:crypto");
+var import_node_fs3 = __toESM(require("node:fs"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
 
-// ../disassembler/src/analysis-sources.ts
+// packages/disassembler/src/analysis-sources.ts
 var sorted = (values) => [...new Set(values)].sort();
 var key = (...values) => JSON.stringify(values);
 var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
@@ -704,19 +820,19 @@ var buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map(
   );
 };
 
-// ../disassembler/src/project-store.ts
+// packages/disassembler/src/project-store.ts
 var fs2 = __toESM(require("node:fs"), 1);
 var import_node_path2 = __toESM(require("node:path"), 1);
 
-// ../disassembler/src/project-transaction.ts
+// packages/disassembler/src/project-transaction.ts
 var import_node_crypto = require("node:crypto");
 
-// ../disassembler/src/project-types.ts
+// packages/disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
 var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
 var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
-// ../disassembler/src/record-id-set.ts
+// packages/disassembler/src/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
 var import_node_os = __toESM(require("node:os"), 1);
 var import_node_path = __toESM(require("node:path"), 1);
@@ -779,7 +895,7 @@ var RecordIdSet = class {
   }
 };
 
-// ../disassembler/src/runtime-ppu.ts
+// packages/disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect = (effect, access) => {
   const port = access.address & 65535;
   let target = "vram";
@@ -872,7 +988,7 @@ var createRuntimePPUAccumulator = () => {
   };
 };
 
-// ../disassembler/src/runtime-bus-types.ts
+// packages/disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact = (fact) => {
   if (fact.addressSpace !== "snes.cpu" || !Number.isInteger(fact.address) || fact.address < 0 || fact.address > 16777215 || !Number.isInteger(fact.pc) || fact.pc < 0 || fact.pc > 16777215 || !Number.isInteger(fact.value) || fact.value < 0 || fact.value > 255 || !["read", "write"].includes(fact.direction) || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(fact.context)) {
     throw new Error("Invalid bus access coordinates, value, direction or context.");
@@ -906,7 +1022,7 @@ var validateRuntimeBusFact = (fact) => {
   return void 0;
 };
 
-// ../disassembler/src/trace-detail.ts
+// packages/disassembler/src/trace-detail.ts
 var isArray = (value) => Array.isArray(value);
 var validateRuntimeInstructionDetails = (value, count) => {
   if (!Array.isArray(value) || value.length !== count) {
@@ -942,7 +1058,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
   });
 };
 
-// ../disassembler/src/project-validation.ts
+// packages/disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest = (manifest) => {
   if (manifest.format !== ANALYSIS_PROJECT_FORMAT) {
     throw new Error(`Unsupported analysis project format '${String(manifest.format)}'.`);
@@ -985,18 +1101,28 @@ var FORBIDDEN_ROM_PAYLOAD_KEYS = /* @__PURE__ */ new Set(["romBytes", "fileBytes
 var assertNoRomPayload = (value, location) => {
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index++) {
-      assertNoRomPayload(value[index], `${location}[${index}]`);
+      const entry = value[index];
+      if (entry && typeof entry === "object") {
+        assertNoRomPayload(entry, `${location}[${index}]`);
+      }
     }
     return;
   }
   if (!value || typeof value !== "object") {
     return;
   }
-  for (const [key2, entry] of Object.entries(value)) {
+  const record = value;
+  for (const key2 in record) {
+    if (!Object.hasOwn(record, key2)) {
+      continue;
+    }
     if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
       throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
     }
-    assertNoRomPayload(entry, `${location}.${key2}`);
+    const entry = record[key2];
+    if (entry && typeof entry === "object") {
+      assertNoRomPayload(entry, `${location}.${key2}`);
+    }
   }
 };
 var isStableId = (id) => {
@@ -1319,57 +1445,58 @@ var validateLoadedShards = (shards, project) => {
   const addressSpaceById = new Map(
     addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
   );
-  const addressedRecords = [
-    ...shards.annotations,
-    ...shards.labels,
-    ...shards.comments,
-    ...shards.regions,
-    ...shards.analysis.filter(
-      (record) => "addressSpace" in record
-    )
-  ];
-  for (const record of addressedRecords) {
-    const addressSpace = addressSpaceById.get(record.addressSpace);
-    if (!addressSpace) {
-      throw new Error(
-        `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
-      );
-    }
-    const maximum = 2 ** addressSpace.addressBits;
-    const addresses = [];
-    if ("start" in record) {
-      addresses.push(record.start, record.end - 1);
-    } else if ("address" in record) {
-      addresses.push(record.address);
-      if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
-        addresses.push(record.end - 1);
+  const outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
+  for (const records of [
+    shards.annotations,
+    shards.labels,
+    shards.comments,
+    shards.regions,
+    shards.analysis
+  ]) {
+    for (const record of records) {
+      if (!("addressSpace" in record)) {
+        continue;
       }
-    } else {
-      if ("fromAddress" in record) {
-        addresses.push(record.fromAddress);
+      const addressSpace = addressSpaceById.get(record.addressSpace);
+      if (!addressSpace) {
+        throw new Error(
+          `Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`
+        );
       }
-      if ("toAddress" in record && record.toAddress !== void 0) {
-        addresses.push(record.toAddress);
-      }
-      if ("targets" in record) {
-        for (const target of record.targets) {
-          addresses.push(target);
+      const maximum = 2 ** addressSpace.addressBits;
+      let invalid = false;
+      if ("start" in record) {
+        invalid = outsideSpace(record.start, maximum) || outsideSpace(record.end - 1, maximum);
+      } else if ("address" in record) {
+        invalid = outsideSpace(record.address, maximum);
+        if ("kind" in record && record.kind === "conflict" && record.end !== void 0) {
+          invalid ||= outsideSpace(record.end - 1, maximum);
+        }
+      } else {
+        if ("fromAddress" in record) {
+          invalid = outsideSpace(record.fromAddress, maximum);
+        }
+        if ("toAddress" in record && record.toAddress !== void 0) {
+          invalid ||= outsideSpace(record.toAddress, maximum);
+        }
+        if ("targets" in record) {
+          for (const target of record.targets) {
+            invalid ||= outsideSpace(target, maximum);
+          }
         }
       }
-    }
-    if (addresses.some(
-      (address) => !Number.isSafeInteger(address) || address < 0 || address >= maximum
-    )) {
-      throw new Error(
-        `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
-      );
+      if (invalid) {
+        throw new Error(
+          `Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`
+        );
+      }
     }
   }
   validateRuntimeRecords(shards.runtime, project, shards.evidence);
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// ../disassembler/src/project-transaction.ts
+// packages/disassembler/src/project-transaction.ts
 var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
 var ANALYSIS_PROJECT_REVISION_VERSION = 1;
 var AnalysisProjectStaleError = class extends Error {
@@ -1396,29 +1523,140 @@ var assertAnalysisProjectRevision = (store, expected) => {
   }
 };
 
-// ../disassembler/src/sqlite-payload.ts
+// packages/disassembler/src/sqlite-payload.ts
 var import_node_util = require("node:util");
+var import_node_zlib2 = require("node:zlib");
+
+// packages/disassembler/src/sqlite-runtime-payload.ts
 var import_node_zlib = require("node:zlib");
+var MAGIC = Buffer.from([85, 65, 82, 1]);
+var FIELDS = [
+  ["a", 2],
+  ["d", 2],
+  ["db", 1],
+  ["e", 1],
+  ["p", 1],
+  ["pb", 1],
+  ["pc", 2],
+  ["s", 2],
+  ["x", 2],
+  ["y", 2]
+];
+var FIELD_NAMES = new Set(FIELDS.map(([key2]) => key2));
+var HEADER_BYTES = 7;
+var CHECKSUM_BYTES = 4;
+var encodePackedRuntimePayload = (record) => {
+  if (Object.keys(record.state).some((key2) => !FIELD_NAMES.has(key2))) {
+    return void 0;
+  }
+  const bytes = record.bytes;
+  if (bytes !== void 0) {
+    if (bytes.length < 1 || bytes.length > 4) {
+      return void 0;
+    }
+    for (const value of bytes) {
+      if (!Number.isInteger(value) || value < 0 || value > 255) {
+        return void 0;
+      }
+    }
+  }
+  let mask = 0;
+  let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
+  for (const [index, [key2, width]] of FIELDS.entries()) {
+    if (!Object.hasOwn(record.state, key2)) {
+      continue;
+    }
+    const value = record.state[key2];
+    const max = key2 === "e" ? 1 : 2 ** (width * 8) - 1;
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
+      return void 0;
+    }
+    mask |= 1 << index;
+    size += width;
+  }
+  const encoded = Buffer.allocUnsafe(size);
+  MAGIC.copy(encoded);
+  encoded.writeUInt16LE(mask, 4);
+  encoded[6] = bytes?.length ?? 0;
+  let offset = HEADER_BYTES;
+  for (const byte of bytes ?? []) {
+    encoded[offset++] = byte;
+  }
+  for (const [index, [key2, width]] of FIELDS.entries()) {
+    if (mask & 1 << index) {
+      encoded.writeUIntLE(record.state[key2], offset, width);
+      offset += width;
+    }
+  }
+  encoded.writeUInt32LE((0, import_node_zlib.crc32)(encoded.subarray(0, offset)), offset);
+  return encoded;
+};
+var isPackedRuntimePayload = (bytes) => bytes[0] === MAGIC[0] && bytes[1] === MAGIC[1] && bytes[2] === MAGIC[2];
+var decodePackedRuntimePayload = (bytes) => {
+  const encoded = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (encoded.length < HEADER_BYTES + CHECKSUM_BYTES || !encoded.subarray(0, 4).equals(MAGIC)) {
+    throw new Error("Unsupported or truncated packed runtime payload.");
+  }
+  const mask = encoded.readUInt16LE(4);
+  const byteCount = encoded[6];
+  let expected = HEADER_BYTES + byteCount + CHECKSUM_BYTES;
+  for (const [index, [, width]] of FIELDS.entries()) {
+    if (mask & 1 << index) {
+      expected += width;
+    }
+  }
+  if (mask >= 1 << FIELDS.length || byteCount > 4 || encoded.length !== expected) {
+    throw new Error("Invalid packed runtime payload layout.");
+  }
+  const end = expected - CHECKSUM_BYTES;
+  if ((0, import_node_zlib.crc32)(encoded.subarray(0, end)) !== encoded.readUInt32LE(end)) {
+    throw new Error("Corrupt packed runtime payload checksum.");
+  }
+  const state = {};
+  let offset = HEADER_BYTES + byteCount;
+  for (const [index, [key2, width]] of FIELDS.entries()) {
+    if (mask & 1 << index) {
+      const value = encoded.readUIntLE(offset, width);
+      if (key2 === "e" && value > 1) {
+        throw new Error("Invalid packed emulation register.");
+      }
+      state[key2] = value;
+      offset += width;
+    }
+  }
+  if (byteCount === 0) {
+    return { state };
+  }
+  return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
+};
+
+// packages/disassembler/src/sqlite-payload.ts
 var MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 var HEADER = Buffer.from([85, 65, 80, 1]);
-var HEADER_BYTES = 8;
+var HEADER_BYTES2 = 8;
 var utf8 = new import_node_util.TextDecoder("utf-8", { fatal: true });
 var encodeSqlitePayload = (json) => {
   const bytes = Buffer.byteLength(json);
   if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
     throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
   }
-  if (bytes < 256) {
+  if (bytes < 1024) {
     return json;
   }
-  const compressed = (0, import_node_zlib.deflateSync)(json, { level: 1, chunkSize: Math.min(bytes, 16 * 1024) });
-  if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8))) {
+  const small = bytes < 16 * 1024;
+  const compressed = (0, import_node_zlib2.deflateSync)(json, {
+    level: 1,
+    windowBits: small ? 12 : 15,
+    memLevel: small ? 3 : 8,
+    chunkSize: Math.min(bytes, 16 * 1024)
+  });
+  if (compressed.length + HEADER_BYTES2 > bytes - Math.max(32, Math.ceil(bytes / 8))) {
     return json;
   }
-  const result = Buffer.allocUnsafe(HEADER_BYTES + compressed.length);
+  const result = Buffer.allocUnsafe(HEADER_BYTES2 + compressed.length);
   HEADER.copy(result);
   result.writeUInt32LE(bytes, 4);
-  compressed.copy(result, HEADER_BYTES);
+  compressed.copy(result, HEADER_BYTES2);
   return result;
 };
 var decodeSqlitePayload = (value) => {
@@ -1432,7 +1670,10 @@ var decodeSqlitePayload = (value) => {
     throw new Error("Invalid SQLite payload representation.");
   }
   const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-  if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER)) {
+  if (isPackedRuntimePayload(encoded)) {
+    return JSON.stringify(decodePackedRuntimePayload(encoded));
+  }
+  if (encoded.length <= HEADER_BYTES2 || !encoded.subarray(0, 4).equals(HEADER)) {
     throw new Error("Unsupported or truncated SQLite payload codec.");
   }
   const bytes = encoded.readUInt32LE(4);
@@ -1440,7 +1681,7 @@ var decodeSqlitePayload = (value) => {
     throw new Error("SQLite compressed payload exceeds the decoded size limit.");
   }
   try {
-    const decoded = (0, import_node_zlib.inflateSync)(encoded.subarray(HEADER_BYTES), {
+    const decoded = (0, import_node_zlib2.inflateSync)(encoded.subarray(HEADER_BYTES2), {
       maxOutputLength: bytes,
       chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
     });
@@ -1451,6 +1692,12 @@ var decodeSqlitePayload = (value) => {
   } catch (cause) {
     throw new Error("Corrupt SQLite compressed payload.", { cause });
   }
+};
+var parseSqlitePayload = (value) => {
+  if (import_node_util.types.isUint8Array(value) && isPackedRuntimePayload(value)) {
+    return decodePackedRuntimePayload(value);
+  }
+  return JSON.parse(decodeSqlitePayload(value));
 };
 var sqliteRuntimeIdentity = (id) => {
   const split = id.lastIndexOf(":") + 1;
@@ -1473,7 +1720,7 @@ var decodeSqliteRuntimeIdentity = (prefix, suffix) => {
   return prefix + Buffer.from(suffix).toString("hex");
 };
 
-// ../disassembler/src/sqlite-records.ts
+// packages/disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds = (left, right) => {
   if (left.id < right.id) {
     return -1;
@@ -1629,7 +1876,7 @@ var runtimeColumns = (record) => {
 };
 var runtimeFromRow = (row) => {
   const fields = row;
-  const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(decodeSqlitePayload(fields.payload));
+  const extra = fields.payload === null || fields.payload === void 0 ? {} : parseSqlitePayload(fields.payload);
   if (typeof fields.evidence !== "string") {
     throw new Error("Missing SQLite runtime evidence dictionary entry.");
   }
@@ -1637,7 +1884,7 @@ var runtimeFromRow = (row) => {
   const kind = fields.kind;
   const architecture = fields.architecture;
   const count = Number(fields.count);
-  const id = fields.id_prefix === void 0 ? fields.id : decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+  const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
   if (kind === "runtime-execution") {
     return {
       id,
@@ -1752,7 +1999,7 @@ var analysisAddress = (record) => {
   return { addressSpace: null, address: null };
 };
 
-// ../disassembler/src/project-store.ts
+// packages/disassembler/src/project-store.ts
 var parseAnalysisProjectManifest = (input) => {
   if (!input || typeof input !== "object") {
     throw new Error("Invalid analysis project manifest.");
@@ -1776,7 +2023,7 @@ var openAnalysisProjectStore = (directory) => {
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
 
-// ../disassembler/src/project-edit.ts
+// packages/disassembler/src/project-edit.ts
 var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
 var evidenceReferences = (shards, evidenceId) => [
   ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
@@ -1813,7 +2060,7 @@ var explainProjectEvidence = (shards, shard, recordId) => {
   return { shard, record, evidence, referencedBy, conflicts };
 };
 
-// ../disassembler/src/runtime-evidence.ts
+// packages/disassembler/src/runtime-evidence.ts
 var emptyCounts = () => ({
   analysis: 0,
   annotations: 0,
@@ -1947,6 +2194,9 @@ var explanationReport = (shards) => {
   return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
 };
 var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
+  if (incoming.length === 0) {
+    return prior;
+  }
   const records = new Map(prior.map((record) => [record.id, record]));
   for (const record of incoming) {
     const current = records.get(record.id);
@@ -2055,21 +2305,21 @@ var inspectRuntimeEvidence = (shards) => ({
   explanations: explanationReport(shards)
 });
 
-// ../disassembler/src/sqlite-annotation-query.ts
+// packages/disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
 var decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
 var runtimeSelect = (pairedState = false) => {
   const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
-  const identity = pairedState ? "o.state_id" : "o.id";
   const prefix = pairedState ? "o.state_prefix_id" : "o.prefix_id";
   const row = pairedState ? "-o.oid" : "o.oid";
-  return `SELECT ${row} AS storage_rowid,${kind} AS kind,${identity} AS id,
+  return `SELECT ${row} AS storage_rowid,${kind} AS kind,i.value AS id,
     p.value AS id_prefix,e.value AS evidence,o.count,f.architecture,
     f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
     f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
     f.accessed_address_space,f.accessed_address,f.coverage,
     CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
     FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+    LEFT JOIN runtime_identities i ON i.iid=o.identity_id
     LEFT JOIN runtime_prefixes p ON p.id=${prefix}
     LEFT JOIN runtime_evidence e ON e.id=o.evidence_id`;
 };
@@ -2231,7 +2481,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   );
   const pairedLocations = database.prepare(
     `SELECT DISTINCT f.address FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
-      WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address>=? AND f.address<? AND o.state_id IS NOT NULL LIMIT 2001`
+      WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address>=? AND f.address<? AND o.state_prefix_id IS NOT NULL LIMIT 2001`
   );
   const memoryLocations = database.prepare(
     "SELECT DISTINCT instruction_address AS address FROM runtime_facts WHERE kind='runtime-memory-access' AND instruction_address_space=? AND instruction_address>=? AND instruction_address<? LIMIT 2001"
@@ -2294,7 +2544,7 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
     `${runtimeSelect()} WHERE f.kind=? AND f.address_space=? AND f.address=? ORDER BY o.oid LIMIT ?`
   );
   const pairedState = database.prepare(
-    `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`
+    `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_prefix_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`
   );
   const memory = database.prepare(
     `${runtimeSelect()} WHERE f.kind='runtime-memory-access' AND f.instruction_address_space=? AND f.instruction_address=? ORDER BY o.oid LIMIT ?`
@@ -2397,19 +2647,8 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   };
 };
 
-// ../disassembler/src/sqlite-query-cache.ts
+// packages/disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-var upgradeQueryCacheStorage = (db) => {
-  const schema = db.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='query_cache'").get();
-  if (!schema || !/without\s+rowid/i.test(String(schema.sql))) {
-    return;
-  }
-  db.exec(`CREATE TEMP TABLE query_cache_upgrade AS SELECT * FROM main.query_cache;
-    DROP TABLE main.query_cache;
-    ${QUERY_CACHE_SCHEMA};
-    INSERT INTO main.query_cache SELECT * FROM temp.query_cache_upgrade;
-    DROP TABLE temp.query_cache_upgrade;`);
-};
 var installQueryCache = (db, key2, dependencies) => {
   if (!/^[\d_a-z]+$/.test(key2)) {
     throw new Error("Invalid internal query cache key.");
@@ -2430,10 +2669,10 @@ var installQueryCache = (db, key2, dependencies) => {
   }
   db.exec(QUERY_CACHE_SCHEMA);
   for (const table of dependencies.flatMap(
-    (name) => name === "runtime" ? ["runtime_facts", "runtime_observations"] : [name]
+    (name) => name === "runtime" ? ["runtime_facts", "runtime_observations", "runtime_identities"] : [name]
   )) {
     for (const event of ["INSERT", "UPDATE", "DELETE"]) {
-      const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,id,evidence_id,count,state_prefix_id,state_id" : event;
+      const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
       db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key2}_${table}_${event} AFTER ${update} ON ${table} BEGIN
       DELETE FROM query_cache WHERE name='${key2}'; END`);
     }
@@ -2454,7 +2693,7 @@ var writeQueryCache = (db, key2, signature, value) => {
   );
 };
 
-// ../disassembler/src/sqlite-coverage-query.ts
+// packages/disassembler/src/sqlite-coverage-query.ts
 var decode2 = (value) => JSON.parse(decodeSqlitePayload(value));
 var coverageSignature = (manifest) => JSON.stringify([1, manifest.rom, manifest.addressSpaces]);
 var cachedCoverage = (db, manifest) => readQueryCache(db, "coverage", coverageSignature(manifest));
@@ -2790,7 +3029,7 @@ var coveragePage = (db, kind, offset) => {
   return db.prepare(`SELECT payload FROM ${table} ORDER BY ${order} LIMIT 200 OFFSET ?`).all(offset).map((row) => JSON.parse(String(row.payload)));
 };
 
-// ../disassembler/src/sqlite-graph-query.ts
+// packages/disassembler/src/sqlite-graph-query.ts
 var decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
 var unique = (ids) => [...new Set(ids)].sort((a, b) => a.localeCompare(b));
 var numbers = (ids) => [...new Set(ids)].sort((a, b) => a - b);
@@ -2811,11 +3050,11 @@ var prepareGraph = (db) => {
   for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
     if (row.kind === "cfg-node") {
       const node = decode3(row.payload);
-      const path5 = node.evidencePath.length ? node.evidencePath : [node.id];
+      const path4 = node.evidencePath.length ? node.evidencePath : [node.id];
       let owner;
-      for (let i = path5.length - 1; i >= 0; i--) {
-        if (entries.has(path5[i])) {
-          owner = path5[i];
+      for (let i = path4.length - 1; i >= 0; i--) {
+        if (entries.has(path4[i])) {
+          owner = path4[i];
           break;
         }
       }
@@ -2970,24 +3209,23 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
-// ../disassembler/src/sqlite-maintenance.ts
-var import_node_fs2 = __toESM(require("node:fs"), 1);
-var import_node_path3 = __toESM(require("node:path"), 1);
-var SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
-var assertNoSqliteMigration = (file) => {
-  if (import_node_fs2.default.existsSync(import_node_path3.default.join(import_node_path3.default.dirname(file), SQLITE_MIGRATION_DIRECTORY))) {
-    throw new Error(
-      "Analysis storage migration is in progress. Retry after it completes, or run project-migrate to recover an interrupted migration."
-    );
-  }
-};
-var sqliteFileIdentity = (file) => {
-  const stat = import_node_fs2.default.statSync(file, { bigint: true });
-  return `${stat.dev}:${stat.ino}`;
-};
-
-// ../disassembler/src/sqlite-runtime-storage.ts
+// packages/disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto2 = require("node:crypto");
+var RUNTIME_RECORD_STREAM_SQL = [true, false].map(
+  (paired) => `
+  SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
+    ${paired ? "'runtime-cpu-state'" : "f.kind"} AS kind,f.architecture,
+    f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
+    f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
+    f.accessed_address_space,f.accessed_address,f.coverage,
+    CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
+  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+  LEFT JOIN runtime_identities i ON i.iid=o.identity_id
+  LEFT JOIN runtime_prefixes p ON p.id=o.${paired ? "state_prefix_id" : "prefix_id"}
+  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id
+  ${paired ? "WHERE o.state_prefix_id IS NOT NULL" : ""}
+  ORDER BY o.oid ${paired ? "DESC" : "ASC"}`
+);
 var RUNTIME_STORAGE_SCHEMA = `
 CREATE TABLE runtime_facts (
   fid INTEGER PRIMARY KEY, fingerprint BLOB UNIQUE,
@@ -2997,33 +3235,40 @@ CREATE TABLE runtime_facts (
   instruction_address_space TEXT, instruction_address INTEGER,
   accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT, payload BLOB
 );
+CREATE TABLE runtime_identities (
+  iid INTEGER PRIMARY KEY, value BLOB NOT NULL UNIQUE
+);
 CREATE TABLE runtime_observations (
   oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_facts(fid),
-  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id), id BLOB NOT NULL,
+  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
+  identity_id INTEGER NOT NULL REFERENCES runtime_identities(iid),
   evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id), count INTEGER NOT NULL,
-  state_prefix_id INTEGER REFERENCES runtime_prefixes(id), state_id BLOB,
+  state_prefix_id INTEGER REFERENCES runtime_prefixes(id),
   query_file_offset INTEGER, query_size INTEGER, query_data BLOB, query_ready INTEGER NOT NULL DEFAULT 0,
-  UNIQUE(prefix_id,id), UNIQUE(state_prefix_id,state_id),
-  CHECK ((state_prefix_id IS NULL) = (state_id IS NULL))
+  UNIQUE(prefix_id,identity_id), UNIQUE(state_prefix_id,identity_id)
 );
 CREATE INDEX runtime_observation_fact ON runtime_observations(fact_id);
+CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id);
 CREATE VIEW runtime AS
- SELECT o.oid AS rowid,o.prefix_id,o.id,f.kind,f.architecture,o.count,
+ SELECT o.oid AS rowid,o.prefix_id,i.value AS id,f.kind,f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
  f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
  f.accessed_address_space,f.accessed_address,f.coverage,o.evidence_id,
  CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,
  o.query_file_offset,o.query_size,o.query_data,o.query_ready
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+ LEFT JOIN runtime_identities i ON i.iid=o.identity_id
  UNION ALL
- SELECT -o.oid,o.state_prefix_id,o.state_id,'runtime-cpu-state',f.architecture,o.count,
+ SELECT -o.oid,o.state_prefix_id,i.value,'runtime-cpu-state',f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
  f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
  f.accessed_address_space,f.accessed_address,f.coverage,o.evidence_id,
  CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END,NULL,NULL,NULL,1
- FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.state_id IS NOT NULL;
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+ LEFT JOIN runtime_identities i ON i.iid=o.identity_id WHERE o.state_prefix_id IS NOT NULL;
 CREATE TRIGGER runtime_collect_fact AFTER DELETE ON runtime_observations BEGIN
  DELETE FROM runtime_facts WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
+ DELETE FROM runtime_identities WHERE iid=OLD.identity_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id);
 END;
 CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query_size,query_data,query_ready ON runtime BEGIN
  UPDATE runtime_observations SET query_file_offset=NEW.query_file_offset,query_size=NEW.query_size,
@@ -3031,25 +3276,26 @@ CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query
 END;
 -- Compatibility mutations detach one logical record. They must never change another capture's shared fact.
 CREATE TRIGGER runtime_insert INSTEAD OF INSERT ON runtime BEGIN
+ INSERT OR IGNORE INTO runtime_identities(value) VALUES(NEW.id);
  INSERT INTO runtime_facts(kind,architecture,address_space,address,start,"end",from_address_space,from_address,
  to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,payload)
  VALUES(NEW.kind,NEW.architecture,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,
  CASE WHEN json_valid(NEW.payload) THEN jsonb(NEW.payload) ELSE NEW.payload END);
- INSERT INTO runtime_observations(fact_id,prefix_id,id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
- VALUES(last_insert_rowid(),NEW.prefix_id,NEW.id,NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
+ INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
+ VALUES(last_insert_rowid(),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
  CASE WHEN NEW.kind='runtime-execution' THEN 0 ELSE 1 END);
 END;
 CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
  -- Deleting just the instruction preserves its independent logical state record.
  INSERT INTO runtime_facts(kind,architecture,address_space,address,payload)
  SELECT 'runtime-cpu-state',f.architecture,f.address_space,f.address,f.payload
- FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_id IS NOT NULL;
- INSERT INTO runtime_observations(fact_id,prefix_id,id,evidence_id,count,query_ready)
- SELECT last_insert_rowid(),state_prefix_id,state_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_id IS NOT NULL;
- UPDATE runtime_observations SET state_prefix_id=NULL,state_id=NULL WHERE oid=-OLD.rowid;
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_prefix_id IS NOT NULL;
+ INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_ready)
+ SELECT last_insert_rowid(),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
+ UPDATE runtime_observations SET state_prefix_id=NULL WHERE oid=-OLD.rowid;
  -- A preceding instruction deletion may have detached this virtual state; stable identity still finds it.
- DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND id=OLD.id;
+ DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE value=OLD.id);
 END;
 CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,architecture,count,address_space,address,start,"end",
  from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
@@ -3068,21 +3314,24 @@ var SqliteRuntimeWriter = class {
   #pair;
   #findPair;
   #removeObservation;
+  #findIdentity;
+  #insertIdentity;
   constructor(db) {
     this.#findFact = db.prepare("SELECT fid FROM runtime_facts WHERE fingerprint=?");
     this.#insertFact = db.prepare(`INSERT INTO runtime_facts(fingerprint,kind,architecture,address_space,address,start,"end",
       from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
       accessed_address_space,accessed_address,coverage,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CASE WHEN typeof(?)='text' THEN jsonb(?) ELSE ? END)`);
     this.#insertObservation = db.prepare(
-      "INSERT INTO runtime_observations(fact_id,prefix_id,id,evidence_id,count,state_prefix_id,state_id,query_ready) VALUES(?,?,?,?,?,?,?,?)"
+      "INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready) VALUES(?,?,?,?,?,?,?)"
     );
-    this.#pair = db.prepare(
-      "UPDATE runtime_observations SET state_prefix_id=?,state_id=? WHERE oid=?"
-    );
+    this.#pair = db.prepare("UPDATE runtime_observations SET state_prefix_id=? WHERE oid=?");
     this.#findPair = db.prepare(`SELECT o.*,f.kind,f.architecture,f.address_space,f.address,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
       FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
-      WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND o.id=?`);
+      WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
+      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE value=?)`);
     this.#removeObservation = db.prepare("DELETE FROM runtime_observations WHERE oid=?");
+    this.#findIdentity = db.prepare("SELECT iid FROM runtime_identities WHERE value=?");
+    this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
   }
   /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
    * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
@@ -3094,7 +3343,6 @@ var SqliteRuntimeWriter = class {
     const evidence = intern("runtime_evidence", JSON.stringify(record.evidence));
     const columns = runtimeColumns(record);
     let statePrefix = null;
-    let stateId = null;
     const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
       record.id
     );
@@ -3105,15 +3353,12 @@ var SqliteRuntimeWriter = class {
       );
       const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
       const expectedKind = record.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-      if (other && other.kind === expectedKind && other.state_id === null && other.count === record.count && other.evidence_id === evidence && other.architecture === record.architecture && other.address_space === record.addressSpace && other.address === record.address && canonicalJson(
-        JSON.parse(decodeSqlitePayload(other.payload)).state
-      ) === canonicalJson(record.state)) {
+      if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record.count && other.evidence_id === evidence && other.architecture === record.architecture && other.address_space === record.addressSpace && other.address === record.address && canonicalJson(parseSqlitePayload(other.payload).state) === canonicalJson(record.state)) {
         if (record.kind === "runtime-cpu-state") {
-          this.#pair.run(prefix, identity.suffix, other.oid);
+          this.#pair.run(prefix, other.oid);
           return;
         }
         statePrefix = Number(other.prefix_id);
-        stateId = other.id;
         this.#removeObservation.run(other.oid);
       }
     }
@@ -3121,7 +3366,7 @@ var SqliteRuntimeWriter = class {
     const fingerprint = (0, import_node_crypto2.createHash)("sha256").update(
       // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
       // per row. Nulls, two-space indentation and the trailing newline preserve
-      // persisted v2 fingerprints. Changing the layout would duplicate old facts.
+      // persisted fact fingerprints. Changing the layout would duplicate retained facts.
       // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
       JSON.stringify(
         {
@@ -3149,7 +3394,15 @@ var SqliteRuntimeWriter = class {
     const found = this.#findFact.get(fingerprint);
     let fid = found?.fid;
     if (fid === void 0) {
-      const encoded = payload === null ? null : encodeSqlitePayload(payload);
+      let encoded = null;
+      if (payload !== null) {
+        if (record.architecture === "snes.65816" && (record.kind === "runtime-instruction" || record.kind === "runtime-cpu-state")) {
+          const snapshot = record.kind === "runtime-instruction" ? { bytes: record.bytes, state: record.state } : { state: record.state };
+          encoded = encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
+        } else {
+          encoded = encodeSqlitePayload(payload);
+        }
+      }
       fid = this.#insertFact.run(
         fingerprint,
         record.kind,
@@ -3172,20 +3425,203 @@ var SqliteRuntimeWriter = class {
         encoded
       ).lastInsertRowid;
     }
+    const foundIdentity = this.#findIdentity.get(identity.suffix);
+    const identityId = foundIdentity?.iid ?? this.#insertIdentity.run(identity.suffix).lastInsertRowid;
     this.#insertObservation.run(
       fid,
       prefix,
-      identity.suffix,
+      identityId,
       evidence,
       record.count,
       statePrefix,
-      stateId,
       record.kind === "runtime-execution" ? 0 : 1
     );
   }
 };
 
-// ../disassembler/src/sqlite-source-query.ts
+// packages/disassembler/src/sqlite-runtime-summary.ts
+var import_node_crypto3 = require("node:crypto");
+var KEY = "instruction_variants";
+var BUILD = "instruction_variants_build";
+var INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
+var RUNTIME_SUMMARY_ROWS_SQL = `SELECT i.value AS id,f.kind,f.architecture,f.address_space,f.address,
+    grouped.total AS count,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,
+    p.value AS id_prefix,e.value AS evidence
+  FROM (SELECT s.sample,s.total FROM query_runtime_variant_sources s
+    JOIN query_runtime_variant_keys k ON k.id=s.variant
+    ORDER BY k.address,s.evidence,k.key LIMIT -1) grouped
+  CROSS JOIN runtime_observations o ON o.oid=grouped.sample
+  CROSS JOIN runtime_facts f ON f.fid=o.fact_id
+  LEFT JOIN runtime_identities i ON i.iid=o.identity_id
+  LEFT JOIN runtime_prefixes p ON p.id=o.prefix_id
+  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id`;
+var installSummary = (db) => {
+  installQueryCache(db, KEY, []);
+  db.exec(`${INVALIDATE}
+    CREATE TABLE query_runtime_variant_keys(
+      id INTEGER PRIMARY KEY,address INTEGER NOT NULL,key TEXT NOT NULL,UNIQUE(address,key));
+    CREATE TABLE query_runtime_variant_sources(
+      variant INTEGER NOT NULL,evidence INTEGER NOT NULL,total INTEGER NOT NULL,
+      observations INTEGER NOT NULL,sample INTEGER NOT NULL,
+      PRIMARY KEY(variant,evidence)) WITHOUT ROWID;
+    CREATE TABLE query_runtime_variant_pending(oid INTEGER PRIMARY KEY);
+    CREATE TRIGGER summary_observation_insert AFTER INSERT ON runtime_observations BEGIN
+      DELETE FROM query_cache WHERE name='${BUILD}';
+      INSERT OR IGNORE INTO query_runtime_variant_pending
+        SELECT NEW.oid WHERE EXISTS(SELECT 1 FROM query_cache WHERE name='${KEY}')
+        AND EXISTS(SELECT 1 FROM runtime_facts WHERE fid=NEW.fact_id AND kind='runtime-instruction');
+    END;
+    CREATE TRIGGER summary_observation_update AFTER UPDATE OF
+      oid,fact_id,prefix_id,identity_id,evidence_id,count ON runtime_observations
+      WHEN OLD.oid IS NOT NEW.oid OR OLD.fact_id IS NOT NEW.fact_id
+        OR OLD.prefix_id IS NOT NEW.prefix_id OR OLD.identity_id IS NOT NEW.identity_id
+        OR OLD.evidence_id IS NOT NEW.evidence_id OR OLD.count IS NOT NEW.count
+      BEGIN ${INVALIDATE} END;
+    CREATE TRIGGER summary_observation_delete AFTER DELETE ON runtime_observations
+      BEGIN ${INVALIDATE} END;
+    CREATE TRIGGER summary_observation_replace BEFORE INSERT ON runtime_observations
+      WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
+        EXISTS(SELECT 1 FROM runtime_observations WHERE oid=NEW.oid) OR
+        EXISTS(SELECT 1 FROM runtime_observations WHERE prefix_id=NEW.prefix_id AND identity_id=NEW.identity_id) OR
+        EXISTS(SELECT 1 FROM runtime_observations WHERE state_prefix_id=NEW.state_prefix_id AND identity_id=NEW.identity_id))
+      BEGIN ${INVALIDATE} END;`);
+  for (const [table, primary, unique2] of [
+    ["runtime_facts", "fid", "fingerprint"],
+    ["runtime_identities", "iid", "value"],
+    ["runtime_prefixes", "id", "value"],
+    ["runtime_evidence", "id", "value"]
+  ]) {
+    db.exec(`CREATE TRIGGER summary_${table}_replace BEFORE INSERT ON ${table}
+      WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
+        EXISTS(SELECT 1 FROM ${table} WHERE ${primary}=NEW.${primary}) OR
+        EXISTS(SELECT 1 FROM ${table} WHERE ${unique2}=NEW.${unique2}))
+      BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
+  }
+};
+var runtimeSummaryGroupSql = (incremental) => {
+  const from = incremental ? `query_runtime_variant_pending pending
+      CROSS JOIN runtime_observations o ON o.oid=pending.oid
+      CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
+  return `SELECT f.address,analysis_instruction_variant(
+      CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
+      o.evidence_id AS evidence,SUM(o.count) AS total,COUNT(*) AS observations,MIN(o.oid) AS sample
+    FROM ${from}
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
+    GROUP BY f.address,key,o.evidence_id`;
+};
+var registerVariantKey = (db, fields, masks) => {
+  db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
+    const record = parseSqlitePayload(
+      payload
+    );
+    const state = {};
+    for (const key2 of fields) {
+      const value = record.state[key2];
+      const mask = masks[key2];
+      if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
+        state[key2] = value & mask.mask;
+      } else if (value !== void 0) {
+        state[key2] = value;
+      }
+    }
+    return JSON.stringify([record.bytes, state]);
+  });
+};
+var isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
+var runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks) => {
+  if (fields.some((field) => !/^\w+$/.test(field))) {
+    throw new Error("Invalid instruction state field.");
+  }
+  const signature = JSON.stringify([4, architecture, space, fields, masks]);
+  if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_runtime_variant_keys'").get()) {
+    transaction(() => {
+      if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_runtime_variant_keys'").get()) {
+        installSummary(db);
+      }
+    });
+  }
+  if (!isCurrent(db, signature)) {
+    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
+    let incremental = false;
+    transaction(() => {
+      incremental = readQueryCache(db, KEY, signature) !== void 0;
+      writeQueryCache(db, BUILD, pending, null);
+    });
+    let completed = false;
+    let cleanupError;
+    try {
+      registerVariantKey(db, fields, masks);
+      transaction(() => {
+        db.exec(`CREATE TEMP TABLE runtime_summary_groups(
+          address INTEGER,key TEXT,evidence INTEGER,total INTEGER,observations INTEGER,sample INTEGER)`);
+        db.prepare(
+          `INSERT INTO temp.runtime_summary_groups ${runtimeSummaryGroupSql(incremental)}`
+        ).run(architecture, space);
+      }, false);
+      transaction(() => {
+        if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
+          throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
+        }
+        if (!incremental) {
+          db.exec(
+            "DELETE FROM query_runtime_variant_sources; DELETE FROM query_runtime_variant_keys;"
+          );
+        }
+        db.exec(`INSERT OR IGNORE INTO query_runtime_variant_keys(address,key)
+          SELECT address,key FROM temp.runtime_summary_groups;
+          INSERT INTO query_runtime_variant_sources
+            SELECT k.id,g.evidence,g.total,g.observations,g.sample FROM temp.runtime_summary_groups g
+            JOIN query_runtime_variant_keys k ON k.address=g.address AND k.key=g.key WHERE true
+          ON CONFLICT(variant,evidence) DO UPDATE SET
+            total=total+excluded.total,observations=observations+excluded.observations,
+            sample=MIN(sample,excluded.sample);
+          DELETE FROM query_runtime_variant_pending;`);
+        const observations = Number(
+          db.prepare("SELECT COALESCE(SUM(observations),0) AS n FROM temp.runtime_summary_groups").get().n
+        );
+        writeQueryCache(db, KEY, signature, { incremental, observations });
+        db.prepare("DELETE FROM query_cache WHERE name=?").run(BUILD);
+      });
+      completed = true;
+    } finally {
+      try {
+        db.exec("DROP TABLE IF EXISTS temp.runtime_summary_groups");
+        transaction(() => {
+          db.prepare("DELETE FROM query_cache WHERE name=? AND signature=?").run(BUILD, pending);
+        });
+      } catch (error) {
+        if (completed) {
+          cleanupError = error instanceof Error ? error : new Error("Instruction summary cleanup failed.", { cause: error });
+        }
+      }
+    }
+    if (cleanupError !== void 0) {
+      throw cleanupError;
+    }
+  }
+  return (function* () {
+    if (!isCurrent(db, signature)) {
+      throw new Error("Runtime changed before reading instruction variants. Retry reanalysis.");
+    }
+    const rows = db.prepare(RUNTIME_SUMMARY_ROWS_SQL);
+    for (const row of rows.iterate()) {
+      const record = runtimeFromRow(row);
+      if (record.kind !== "runtime-instruction") {
+        throw new Error("Invalid instruction summary representative.");
+      }
+      yield {
+        ...record,
+        state: Object.fromEntries(
+          Object.entries(record.state).filter(([key2]) => fields.includes(key2))
+        )
+      };
+    }
+  })();
+};
+
+// packages/disassembler/src/sqlite-source-query.ts
 var collections = ["labels", "comments", "annotations", "regions"];
 var sourceEvidence = `WITH source_evidence AS (
   SELECT DISTINCT e.id FROM runtime_evidence e, json_each(e.value) member
@@ -3327,8 +3763,8 @@ var readSourcePage = (db, source, group, offset = 0) => {
   });
 };
 
-// ../disassembler/src/sqlite-storage-policy.ts
-var import_node_fs3 = __toESM(require("node:fs"), 1);
+// packages/disassembler/src/sqlite-storage-policy.ts
+var import_node_fs2 = __toESM(require("node:fs"), 1);
 var DEFAULT_ANALYSIS_STORAGE_POLICY = {
   cacheMaxBytes: 256 * 1024 ** 2,
   databaseMaxBytes: 0
@@ -3360,18 +3796,18 @@ var storageSnapshot = (db, file) => {
   const size = Number(db.prepare("PRAGMA page_size").get().page_size);
   const pages = Number(db.prepare("PRAGMA page_count").get().page_count);
   const free = Number(db.prepare("PRAGMA freelist_count").get().freelist_count);
-  const rows = db.prepare("SELECT COUNT(*) AS n,COUNT(state_id) AS paired FROM runtime_observations").get();
+  const rows = db.prepare("SELECT COUNT(*) AS n,COUNT(state_prefix_id) AS paired FROM runtime_observations").get();
   const captures = db.prepare("SELECT COUNT(*) AS n FROM capture_catalog").get();
   let walBytes = 0;
   try {
-    walBytes = import_node_fs3.default.statSync(`${file}-wal`).size;
+    walBytes = import_node_fs2.default.statSync(`${file}-wal`).size;
   } catch (error) {
     if (error.code !== "ENOENT") {
       throw error;
     }
   }
   return {
-    databaseBytes: import_node_fs3.default.statSync(file).size,
+    databaseBytes: import_node_fs2.default.statSync(file).size,
     walBytes,
     livePageBytes: (pages - free) * size,
     freePageBytes: free * size,
@@ -3397,7 +3833,14 @@ var enforceDatabaseBudget = (db) => {
 var CACHES = [
   { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
   { key: "graph", tables: ["query_graph_nodes", "query_graph_edges"] },
-  { key: "instruction_variants", tables: ["query_runtime_variants"] },
+  {
+    key: "instruction_variants",
+    tables: [
+      "query_runtime_variant_keys",
+      "query_runtime_variant_sources",
+      "query_runtime_variant_pending"
+    ]
+  },
   { key: "runtime_architectures", tables: ["query_runtime_architectures"] },
   { key: "evidence_links", tables: ["query_evidence_links"] }
 ];
@@ -3422,6 +3865,10 @@ var maintainStorageCaches = (db) => {
   const evicted = [];
   for (const cache of entries) {
     const token = db.prepare("SELECT signature FROM query_cache WHERE name=?").get(cache.key);
+    const summaryBuilder = cache.key === "instruction_variants" && db.prepare("SELECT 1 FROM query_cache WHERE name='instruction_variants_build'").get();
+    if (summaryBuilder) {
+      continue;
+    }
     if (String(token?.signature).startsWith("pending:")) {
       continue;
     }
@@ -3442,7 +3889,7 @@ var maintainStorageCaches = (db) => {
   return { evicted, cacheBytes: optionalCacheBytes(db) };
 };
 
-// ../disassembler/src/trace-cache.ts
+// packages/disassembler/src/trace-cache.ts
 var TraceCache = class {
   #entries = /* @__PURE__ */ new Map();
   /** Dense victim slots avoid scanning the Map. Hits never reorder either structure. */
@@ -3512,9 +3959,9 @@ var TraceCache = class {
   }
 };
 
-// ../disassembler/src/sqlite-store.ts
+// packages/disassembler/src/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
-var ANALYSIS_SQLITE_STORAGE_VERSION = 2;
+var ANALYSIS_SQLITE_STORAGE_VERSION = 3;
 var SCHEMA = `
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
@@ -3577,7 +4024,7 @@ CREATE TABLE IF NOT EXISTS runtime_evidence (
 );
 ${RUNTIME_STORAGE_SCHEMA}
 ${CAPTURE_CATALOG_SCHEMA}
-PRAGMA user_version=2;
+PRAGMA user_version=3;
 `;
 var SCHEMA_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
@@ -3585,7 +4032,7 @@ var SCHEMA_INDEX_STATEMENTS = [
   'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
   'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
   // Point lookups through the virtual-state branch need an index on its exposed negative ID.
-  "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_id IS NOT NULL",
+  "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL",
   "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
   "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'"
 ];
@@ -3597,9 +4044,13 @@ var analysisProjectSqlitePath = (directory, manifest) => {
   if (relative !== ANALYSIS_PROJECT_SQLITE_FILE) {
     throw new Error(`Unsupported analysis sqlite path '${relative}'.`);
   }
-  return import_node_path4.default.join(directory, relative);
+  return import_node_path3.default.join(directory, relative);
 };
-var parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
+var parseRecord = (payload) => parseSqlitePayload(payload);
+var sqliteFileIdentity = (file) => {
+  const stat = import_node_fs3.default.statSync(file, { bigint: true });
+  return `${stat.dev}:${stat.ino}`;
+};
 var SqliteAnalysisStore = class {
   #database;
   #fileIdentity;
@@ -3624,11 +4075,9 @@ var SqliteAnalysisStore = class {
    * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
    * @param {string} file SQLite path. Parent directory must already exist.
    * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
-   * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
    */
-  constructor(file, createSchema = true, deferIndexes = false) {
-    assertNoSqliteMigration(file);
-    if (!createSchema && !import_node_fs4.default.existsSync(file)) {
+  constructor(file, createSchema = true) {
+    if (!createSchema && !import_node_fs3.default.existsSync(file)) {
       throw new Error(`Analysis database does not exist: ${file}`);
     }
     this.file = file;
@@ -3646,16 +4095,14 @@ var SqliteAnalysisStore = class {
       );
       if (createSchema && empty && initialVersion === 0) {
         this.#database.exec(SCHEMA);
-        if (!deferIndexes) {
-          for (const sql of SCHEMA_INDEX_STATEMENTS) {
-            this.#database.exec(sql);
-          }
+        for (const sql of SCHEMA_INDEX_STATEMENTS) {
+          this.#database.exec(sql);
         }
       }
       const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
       if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
         throw new Error(
-          `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+          `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Only the current storage format is supported.`
         );
       }
       this.#database.exec(
@@ -3822,7 +4269,6 @@ var SqliteAnalysisStore = class {
    * @returns {T} Callback result after a successful commit.
    */
   transaction(action, write = true) {
-    assertNoSqliteMigration(this.file);
     if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
       throw new Error(
         "Analysis database was replaced. Close this connection and reload the project."
@@ -3831,9 +4277,6 @@ var SqliteAnalysisStore = class {
     this.#clearDictionaryCache();
     this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
     try {
-      if (write) {
-        upgradeQueryCacheStorage(this.#database);
-      }
       const revision = write ? this.revision() : 0;
       const result = action();
       if (result !== null && (typeof result === "object" || typeof result === "function") && "then" in result && typeof result.then === "function") {
@@ -4023,6 +4466,12 @@ var SqliteAnalysisStore = class {
         this.#replaceRuntime(shards.runtime ?? []);
         continue;
       }
+      if (!this.#database.prepare(`SELECT 1 FROM ${kind} LIMIT 1`).get()) {
+        for (const record of shards[kind] ?? []) {
+          this.#insertRecord(kind, record);
+        }
+        continue;
+      }
       this.#database.exec("DELETE FROM temp.replacement_ids");
       const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
       const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
@@ -4076,24 +4525,6 @@ var SqliteAnalysisStore = class {
     this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
       SELECT 1 FROM temp.replacement_runtime_ids keep JOIN runtime_prefixes p ON p.value=keep.prefix
       WHERE p.id=runtime.prefix_id AND keep.id=runtime.id)`);
-  }
-  /**
-   * Append validated migration rows without materializing a complete table. Runtime IDs are checked
-   * through the logical view because paired states share physical storage with an instruction.
-   * @param {ShardKind} kind Destination semantic table.
-   * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
-   */
-  appendRecords(kind, records) {
-    this.#requireTransaction();
-    for (const record of records) {
-      if (kind === "runtime") {
-        if (!this.insertRuntime(record)) {
-          throw new Error(`Duplicate runtime record ID '${record.id}'.`);
-        }
-      } else {
-        this.#insertRecord(kind, record);
-      }
-    }
   }
   /**
    * Insert a content-addressed runtime fact once. An ID collision with different content is an
@@ -4218,8 +4649,10 @@ var SqliteAnalysisStore = class {
    * @yields {RuntimeEvidenceRecord} One runtime fact.
    */
   *runtimeRecords() {
-    for (const row of this.#database.prepare(`${RUNTIME_SELECT} ORDER BY r.rowid`).iterate()) {
-      yield runtimeFromRow(row);
+    for (const sql of RUNTIME_RECORD_STREAM_SQL) {
+      for (const row of this.#database.prepare(sql).iterate()) {
+        yield runtimeFromRow(row);
+      }
     }
   }
   /**
@@ -4522,7 +4955,7 @@ var SqliteAnalysisStore = class {
     if (cached !== void 0) {
       return cached;
     }
-    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
     this.transaction(() => {
       installQueryCache(this.#database, key2, dependencies);
       writeQueryCache(this.#database, key2, pending, null);
@@ -4628,78 +5061,14 @@ var SqliteAnalysisStore = class {
    * Prepare before starting the consuming read transaction.
    */
   runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
-    if (stateFields.some((field) => !/^\w+$/.test(field))) {
-      throw new Error("Invalid instruction state field.");
-    }
-    const signature = JSON.stringify([3, architecture, space, stateFields, masks]);
-    try {
-      this.cachedProjection(
-        "instruction_variants",
-        signature,
-        ["runtime"],
-        () => {
-          this.#database.function(
-            "analysis_instruction_variant",
-            { deterministic: true },
-            (value) => {
-              const record = parseRecord(value);
-              const state = {};
-              for (const key2 of stateFields) {
-                const value2 = record.state[key2], mask = masks[key2];
-                if (mask && typeof value2 === "number" && Number.isInteger(value2) && value2 >= 0 && value2 <= mask.max) {
-                  state[key2] = value2 & mask.mask;
-                } else if (value2 !== void 0) {
-                  state[key2] = value2;
-                }
-              }
-              return JSON.stringify([record.bytes, state]);
-            }
-          );
-          this.#database.exec(
-            "CREATE TEMP TABLE instruction_variants_pending(payload TEXT NOT NULL)"
-          );
-          const insert = this.#database.prepare(
-            "INSERT INTO temp.instruction_variants_pending VALUES(?)"
-          );
-          const rows = this.#database.prepare(`WITH grouped AS (
-          SELECT MIN(rowid) AS sample,SUM(count) AS total FROM runtime WHERE kind='runtime-instruction' AND architecture=? AND address_space=?
-          GROUP BY address,evidence_id,analysis_instruction_variant(payload))
-          SELECT r.*,g.total,p.value AS id_prefix,e.value AS evidence FROM grouped g JOIN runtime r ON r.rowid=g.sample JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id`);
-          for (const row of rows.iterate(architecture, space)) {
-            const record = runtimeFromRow({ ...row, count: row.total });
-            if (record.kind === "runtime-instruction") {
-              insert.run(
-                JSON.stringify({
-                  ...record,
-                  state: Object.fromEntries(
-                    Object.entries(record.state).filter(([key2]) => stateFields.includes(key2))
-                  )
-                })
-              );
-            }
-          }
-          return true;
-        },
-        () => {
-          this.#database.exec(`CREATE TABLE IF NOT EXISTS query_runtime_variants(payload TEXT NOT NULL);
-          DELETE FROM query_runtime_variants;
-          INSERT INTO query_runtime_variants SELECT payload FROM temp.instruction_variants_pending;`);
-        }
-      );
-      if (!readQueryCache(this.#database, "instruction_variants", signature)) {
-        throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
-      }
-    } finally {
-      this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
-    }
-    const statement = this.#database.prepare(
-      "SELECT payload FROM query_runtime_variants ORDER BY rowid"
+    return runtimeInstructionSummary(
+      this.#database,
+      (action, write) => this.transaction(action, write),
+      architecture,
+      space,
+      stateFields,
+      masks
     );
-    return (function* () {
-      for (const row of statement.iterate()) {
-        yield JSON.parse(String(row.payload));
-      }
-    })();
   }
   /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
    * @param {string} architecture Target processor.
@@ -4890,59 +5259,6 @@ var SqliteAnalysisStore = class {
     return rows.map((row) => parseRecord(row.payload));
   }
   /**
-   * Stream decoded records in insertion order for migration digest verification.
-   * @param {ShardKind} kind Semantic table to traverse.
-   * @returns {IterableIterator} Cursor retaining only the current decoded record.
-   * @yields {object} Original semantic record.
-   */
-  *records(kind) {
-    if (kind === "runtime") {
-      yield* this.runtimeRecords();
-      return;
-    }
-    if (!["evidence", "labels", "comments", "regions", "annotations", "analysis", "imports"].includes(
-      kind
-    )) {
-      throw new Error(`Unknown analysis table '${kind}'.`);
-    }
-    for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY rowid`).iterate()) {
-      yield parseRecord(row.payload);
-    }
-  }
-  /**
-   * Initialize a migrated project's unchanged logical identity once, inside its first publication.
-   * @param {AnalysisProjectManifest} manifest Validated authoritative source manifest and revision.
-   */
-  initializeMigratedManifest(manifest) {
-    this.#requireTransaction();
-    if (this.#database.prepare("SELECT 1 FROM meta LIMIT 1").get()) {
-      throw new Error("Migration manifest can only initialize an empty metadata header.");
-    }
-    const insert = this.#database.prepare("INSERT INTO meta (k,v) VALUES (?,?)");
-    insert.run("revision", String(manifest.revision ?? 0));
-    insert.run("manifest", canonicalJson(manifest));
-  }
-  /**
-   * Build deferred indexes and check all physical structures before closing a staged migration file.
-   * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
-   * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
-   */
-  finishMigration() {
-    for (const sql of SCHEMA_INDEX_STATEMENTS) {
-      this.#database.exec(sql);
-    }
-    const integrity = this.#database.prepare("PRAGMA integrity_check").all();
-    if (integrity.length !== 1 || integrity[0].integrity_check !== "ok") {
-      throw new Error("Migrated SQLite database failed integrity validation.");
-    }
-    if (this.#database.prepare("PRAGMA foreign_key_check").get()) {
-      throw new Error("Migrated SQLite database contains an invalid dictionary reference.");
-    }
-    this.#database.exec(
-      "PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; PRAGMA journal_mode=WAL;"
-    );
-  }
-  /**
    * Materialize complete record arrays without semantic validation. Run inside a read transaction.
    * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
    * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
@@ -5008,11 +5324,11 @@ var SqliteAnalysisStore = class {
    * @param {string} directory Project root for the watcher hint.
    */
   writePointer(directory) {
-    const temporary = import_node_path4.default.join(directory, `.analysis.json.${(0, import_node_crypto3.randomUUID)()}.tmp`);
+    const temporary = import_node_path3.default.join(directory, `.analysis.json.${(0, import_node_crypto4.randomUUID)()}.tmp`);
     try {
       this.transaction(() => {
-        import_node_fs4.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-        import_node_fs4.default.renameSync(temporary, import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+        import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
+        import_node_fs3.default.renameSync(temporary, import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
       });
     } catch (error) {
       process.emitWarning(
@@ -5020,14 +5336,14 @@ var SqliteAnalysisStore = class {
       );
     } finally {
       try {
-        import_node_fs4.default.rmSync(temporary, { force: true });
+        import_node_fs3.default.rmSync(temporary, { force: true });
       } catch {
       }
     }
   }
   /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
   compact() {
-    const disk = import_node_fs4.default.statfsSync(import_node_path4.default.dirname(this.file));
+    const disk = import_node_fs3.default.statfsSync(import_node_path3.default.dirname(this.file));
     const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
     const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
     if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
@@ -5124,10 +5440,10 @@ var SqliteAnalysisStore = class {
   }
 };
 
-// ../disassembler/src/runtime-bus-trace.ts
-var import_node_crypto4 = require("node:crypto");
+// packages/disassembler/src/runtime-bus-trace.ts
+var import_node_crypto5 = require("node:crypto");
 
-// ../disassembler/src/runtime-graphics.ts
+// packages/disassembler/src/runtime-graphics.ts
 var mapVram = (address, mapping) => {
   if (mapping === 0) {
     return address;
@@ -5354,7 +5670,7 @@ var createRuntimeGraphicsAccumulator = () => {
   };
 };
 
-// ../disassembler/src/runtime-transfer.ts
+// packages/disassembler/src/runtime-transfer.ts
 var validateRuntimeTransferBoundary = (marker) => {
   const { configuration: c } = marker;
   if (!c || !["dma", "hdma"].includes(marker.actor) || !Number.isInteger(marker.channel) || marker.channel < 0 || marker.channel > 7 || !["begin", "complete", "interrupted"].includes(marker.boundary) || typeof marker.transferId !== "string" || !/^(0|[1-9]\d{0,19})$/.test(marker.transferId) || BigInt(marker.transferId) > 0xffffffffffffffffn || !Number.isInteger(marker.pc) || marker.pc < 0 || marker.pc > 16777215 || !["unattributed", "instruction", "interrupt", "wait", "stop"].includes(marker.context) || !Number.isInteger(marker.transferred) || marker.transferred < 0 || marker.transferred > 65536) {
@@ -5542,7 +5858,7 @@ var createRuntimeTransferAccumulator = () => {
   };
 };
 
-// ../disassembler/src/runtime-bus-trace.ts
+// packages/disassembler/src/runtime-bus-trace.ts
 var RUNTIME_BUS_TRACE_FORMAT = "uttori-asm-bus-trace";
 var RUNTIME_BUS_INDEX_PROFILE = "bus-access-v1";
 var unsigned = (value) => {
@@ -5611,7 +5927,7 @@ var createRuntimeBusTraceImporter = (metadata, context, storage) => {
     values: () => memory.values(),
     clear: () => memory.clear()
   };
-  const hash = (0, import_node_crypto4.createHash)("sha256").update(`uttori-bus-index-v1
+  const hash = (0, import_node_crypto5.createHash)("sha256").update(`uttori-bus-index-v1
 ${JSON.stringify(meta)}
 `);
   const factKeys = new TraceCache(context.cacheMetrics?.facts);
@@ -5725,7 +6041,7 @@ ${JSON.stringify(meta)}
         const factJson = JSON.stringify(fact);
         let key2 = factKeys.get(factJson);
         if (key2 === void 0) {
-          key2 = (0, import_node_crypto4.createHash)("sha256").update(factJson).digest("hex");
+          key2 = (0, import_node_crypto5.createHash)("sha256").update(factJson).digest("hex");
           factKeys.insert(factJson, key2);
         }
         if (index.add(key2, () => ({
@@ -5929,10 +6245,10 @@ ${JSON.stringify(meta)}
   return { push, finish };
 };
 
-// ../disassembler/src/runtime-bus-project.ts
-var import_node_fs5 = __toESM(require("node:fs"), 1);
+// packages/disassembler/src/runtime-bus-project.ts
+var import_node_fs4 = __toESM(require("node:fs"), 1);
 var captureFileIdentity = (file) => {
-  const stat = import_node_fs5.default.statSync(file, { bigint: true });
+  const stat = import_node_fs4.default.statSync(file, { bigint: true });
   if (!stat.isFile()) {
     throw new Error("Capture input must be a regular file.");
   }
@@ -6070,7 +6386,7 @@ var importRuntimeBusTraceSourceIntoProject = async (source, directory, context, 
   }
 };
 
-// src/runtime/live-bus-analysis-process.ts
+// packages/vscode-extension/src/runtime/live-bus-analysis-process.ts
 var cancellation = new AbortController();
 var latest;
 var started = false;

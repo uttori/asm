@@ -49,7 +49,8 @@ export interface RuntimeEvidenceMergeResult {
  * Reimporting an identical batch returns `changed: false`. Differing observations remain separate
  * and are surfaced through `conflicts`. Diagnostic getters are lazy. Reading or serializing
  * them can require substantially more memory than merging the facts alone.
- * @param {AnalysisProjectShards} shards Existing native project shards.
+ * Collections without incoming records retain their input arrays. Treat all shared records as readonly.
+ * @param {AnalysisProjectShards} shards Valid native project shards with unique IDs in each collection.
  * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
  * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.
  */

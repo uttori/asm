@@ -19,21 +19,25 @@ const addressesMatch = (left, right) => left.architecture === right.architecture
     (left.address === right.address ||
         (left.outputOffset !== undefined && left.outputOffset === right.outputOffset));
 const assertAddress = (actual, expected, context) => {
-    if (!addressesMatch(actual, expected))
+    if (!addressesMatch(actual, expected)) {
         fail(`${context}: expected ${expected.architecture}/${expected.addressSpace}/${expected.address.toString(16)}, received ${actual.architecture}/${actual.addressSpace}/${actual.address.toString(16)}.`);
+    }
 };
 const assertCapability = (actual, expected) => {
     const spaces = [...actual.addressSpaces].sort();
     const expectedSpaces = [...expected.addressSpaces].sort();
-    if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces))
+    if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces)) {
         fail(`${expected.architecture}: expected address spaces ${expectedSpaces.join(", ")}, received ${spaces.join(", ")}.`);
+    }
     const memorySpaces = [...actual.memorySpaces].sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
     const expectedMemorySpaces = [...expected.memorySpaces].sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
-    if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces))
+    if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces)) {
         fail(`${expected.architecture}: expected memory spaces ${JSON.stringify(expectedMemorySpaces)}, received ${JSON.stringify(memorySpaces)}.`);
+    }
     for (const [key, value] of Object.entries(expected.capabilities)) {
-        if (actual[key] !== value)
+        if (actual[key] !== value) {
             fail(`${expected.architecture}: expected capability '${key}' to be ${value}.`);
+        }
     }
 };
 class EventLog {
@@ -47,8 +51,9 @@ class EventLog {
     }
     async waitFor(predicate, start, timeoutMs) {
         const existing = this.events.slice(start).find(predicate);
-        if (existing)
+        if (existing) {
             return existing;
+        }
         return new Promise((resolve, reject) => {
             const started = Date.now();
             const timer = setInterval(() => {
@@ -95,17 +100,20 @@ const withBackend = async (options, action) => {
 const eventTypes = (events) => events.map((event) => event.type);
 const scenarios = {
     "protocol-and-capabilities": async (options) => withBackend(options, (backend) => {
-        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION)
+        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
             fail(`Expected backend protocol ${String(DEBUG_BACKEND_PROTOCOL_VERSION)}.`);
+        }
         if (options.fixture.initialAddress.architecture !== options.fixture.primaryArchitecture ||
-            options.fixture.initialAddress.addressSpace !== options.fixture.primaryAddressSpace)
+            options.fixture.initialAddress.addressSpace !== options.fixture.primaryAddressSpace) {
             fail("The primary fixture identity does not match its initial address.");
+        }
         const architectures = new Map(backend.capabilities.architectures.map((capability) => [
             capability.architecture,
             capability,
         ]));
-        if (architectures.size !== backend.capabilities.architectures.length)
+        if (architectures.size !== backend.capabilities.architectures.length) {
             fail("Architecture capability identifiers must be unique.");
+        }
         for (const expected of options.fixture.architectures) {
             assertCapability(requireValue(architectures.get(expected.architecture), `Missing architecture capability '${expected.architecture}'.`), expected);
         }
@@ -119,17 +127,21 @@ const scenarios = {
         assertAddress(frame.pc, options.fixture.initialAddress, "Initial PC");
         const registerNames = new Set((await backend.registers(frame.id)).map(({ name }) => name));
         for (const name of options.fixture.requiredRegisters) {
-            if (!registerNames.has(name))
+            if (!registerNames.has(name)) {
                 fail(`Missing required register '${name}'.`);
+            }
         }
         const memory = await backend.readMemory(options.fixture.memoryAddress, options.fixture.memoryBytes.length);
-        if (memory.unreadableBytes !== 0)
+        if (memory.unreadableBytes !== 0) {
             fail(`Expected complete memory read. ${memory.unreadableBytes} byte(s) were unreadable.`);
-        if (JSON.stringify([...memory.bytes]) !== JSON.stringify(options.fixture.memoryBytes))
+        }
+        if (JSON.stringify([...memory.bytes]) !== JSON.stringify(options.fixture.memoryBytes)) {
             fail("Memory bytes did not match the conformance fixture.");
+        }
         const instruction = requireValue((await backend.disassemble(options.fixture.disassemblyAddress, 1))[0], "Disassembler returned no instruction.");
-        if (instruction.text !== options.fixture.disassemblyText)
+        if (instruction.text !== options.fixture.disassemblyText) {
             fail(`Expected disassembly '${options.fixture.disassemblyText}', received '${instruction.text}'.`);
+        }
     }),
     "exact-instruction-step": async (options) => withBackend(options, async (backend, events, timeoutMs) => {
         await backend.connect({ reset: true });
@@ -138,8 +150,9 @@ const scenarios = {
         await backend.step(thread.id, "instruction");
         await events.waitFor((event) => event.type === "stopped" && event.reason === "step", start, timeoutMs);
         const relevant = eventTypes(events.events.slice(start)).filter((type) => ["continued", "stopped"].includes(type));
-        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"]))
+        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"])) {
             fail(`Instruction step event order was ${relevant.join(" -> ")}.`);
+        }
         const frame = requireValue((await backend.stackFrames(thread.id))[0], "Missing stepped frame.");
         assertAddress(frame.pc, options.fixture.steppedAddress, "Stepped PC");
     }),
@@ -147,18 +160,21 @@ const scenarios = {
         await backend.connect({ reset: true });
         const thread = requireValue((await backend.threads()).find((candidate) => candidate.architecture === options.fixture.primaryArchitecture), "Missing primary thread.");
         const [breakpoint] = await backend.setBreakpoints([options.fixture.breakpointAddress]);
-        if (!breakpoint?.verified)
+        if (!breakpoint?.verified) {
             fail("Conformance breakpoint was not verified.");
+        }
         const start = events.events.length;
         await backend.continue(thread.id);
         await events.waitFor((event) => event.type === "stopped" && event.reason === "breakpoint", start, timeoutMs);
         const relevant = eventTypes(events.events.slice(start)).filter((type) => ["continued", "stopped"].includes(type));
-        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"]))
+        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"])) {
             fail(`Continue event order was ${relevant.join(" -> ")}.`);
+        }
         const frame = requireValue((await backend.stackFrames(thread.id))[0], "Missing breakpoint frame.");
         assertAddress(frame.pc, options.fixture.breakpointAddress, "Breakpoint PC");
-        if ((await backend.setBreakpoints([])).length !== 0)
+        if ((await backend.setBreakpoints([])).length !== 0) {
             fail("Clearing the breakpoint set did not return an empty result.");
+        }
     }),
     "reconnect-without-reset": async (options) => withBackend(options, async (backend) => {
         await backend.connect({ reset: true });
@@ -179,8 +195,9 @@ const scenarios = {
         catch {
             rejected = true;
         }
-        if (!rejected)
+        if (!rejected) {
             fail("Negative memory-read count was accepted.");
+        }
     }),
 };
 /**

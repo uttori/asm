@@ -29,8 +29,9 @@ export const cleanWorkspaceBuild = (workspace?: string): void => {
   const directories = GENERATED_PACKAGE_DIRECTORIES.filter(
     (relative) => workspace === undefined || relative === `packages/${workspace}/dist`,
   );
-  if (directories.length === 0)
+  if (directories.length === 0) {
     throw new Error(`Unknown package cleanup workspace '${workspace}'.`);
+  }
   for (const relative of directories) {
     const destination = path.resolve(root, relative);
     const contained = path.relative(root, destination);

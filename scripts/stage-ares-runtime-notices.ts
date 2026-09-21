@@ -50,11 +50,16 @@ const parseArguments = (arguments_: readonly string[]): Options => {
       process.exit(0);
     }
     const name = names.get(argument ?? "");
-    if (!name) throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
-    if (seen.has(name)) throw new Error(`Duplicate argument '${String(argument)}'.`);
+    if (!name) {
+      throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
+    }
+    if (seen.has(name)) {
+      throw new Error(`Duplicate argument '${String(argument)}'.`);
+    }
     const value = arguments_[++index];
-    if (!value || value.startsWith("--"))
+    if (!value || value.startsWith("--")) {
       throw new Error(`Argument '${String(argument)}' requires a path.`);
+    }
     parsed[name] = path.resolve(value);
     seen.add(name);
   }
@@ -62,12 +67,15 @@ const parseArguments = (arguments_: readonly string[]): Options => {
 };
 
 const assertDirectory = (directory: string, label: string): void => {
-  if (!statSync(directory).isDirectory())
+  if (!statSync(directory).isDirectory()) {
     throw new Error(`${label} is not a directory: ${directory}`);
+  }
 };
 
 const assertFile = (file: string, label: string): void => {
-  if (!statSync(file).isFile()) throw new Error(`${label} is not a file: ${file}`);
+  if (!statSync(file).isFile()) {
+    throw new Error(`${label} is not a file: ${file}`);
+  }
 };
 
 const sha256 = (file: string): string =>
@@ -87,10 +95,11 @@ const sourceRevision = execFileSync("git", ["-C", source, "rev-parse", "HEAD"], 
   encoding: "utf8",
   stdio: ["ignore", "pipe", "pipe"],
 }).trim();
-if (sourceRevision !== manifest.forkRevision)
+if (sourceRevision !== manifest.forkRevision) {
   throw new Error(
     `Source revision mismatch: manifest '${manifest.forkRevision}', checkout '${sourceRevision}'.`,
   );
+}
 
 const notices: readonly NoticeSource[] = [
   { destination: "LICENSES/ares-LICENSE.txt", source: path.join(source, "LICENSE") },
@@ -123,8 +132,9 @@ const notices: readonly NoticeSource[] = [
 for (const notice of notices) {
   assertFile(notice.source, `Notice source '${notice.destination}'`);
   const destination = path.resolve(runtime, notice.destination);
-  if (!destination.startsWith(`${runtime}${path.sep}`))
+  if (!destination.startsWith(`${runtime}${path.sep}`)) {
     throw new Error(`Notice destination escapes runtime root: ${notice.destination}`);
+  }
   mkdirSync(path.dirname(destination), { recursive: true });
   copyFileSync(notice.source, destination);
 }

@@ -187,17 +187,7 @@ test("parseCliArguments: rejects malformed, incomplete, and inapplicable argumen
   t.throws(() => parseCliArguments(["disassemble", "game.sfc", "--verbose"]), {
     message: /--verbose.*not supported.*disassemble/,
   });
-  t.throws(() => parseCliArguments(["assemble", "main.asm", "--convert-runtime"]), {
-    message: /--convert-runtime.*not supported.*assemble/,
-  });
-  for (const flag of [
-    "--force",
-    "--allow-code-regression",
-    "--debug",
-    "--verbose",
-    "--help",
-    "--convert-runtime",
-  ]) {
+  for (const flag of ["--force", "--allow-code-regression", "--debug", "--verbose", "--help"]) {
     t.throws(() => parseCliArguments(["main.asm", `${flag}=false`]), { message: /takes no value/ });
   }
 });
@@ -222,10 +212,6 @@ test("parseCliArguments: parses analysis project commands and validates mapper/h
   const validate = parseCliArguments(["project-validate", "game.analysis", "--rom=game.sfc"]);
   t.is(validate.command, "project-validate");
   t.is(validate.rom, "game.sfc");
-  const migrate = parseCliArguments(["project-migrate", "game.analysis", "--convert-runtime"]);
-  t.is(migrate.command, "project-migrate");
-  t.is(migrate.input, "game.analysis");
-  t.true(migrate.convertRuntime);
   t.is(parseCliArguments(["project-compact", "game.analysis"]).command, "project-compact");
   const analyze = parseCliArguments([
     "analyze",
@@ -721,9 +707,6 @@ test("E2E: runCli project-validate accepts matching ROMs and rejects identity dr
   );
   t.is(await runCli(["project-validate", project]), 0);
   t.is(await runCli(["project-validate", project, "--rom", rom]), 0);
-  const databaseBeforeMigration = await fs.readFile(path.join(project, "analysis.sqlite"));
-  t.is(await runCli(["project-migrate", project]), 0);
-  t.deepEqual(await fs.readFile(path.join(project, "analysis.sqlite")), databaseBeforeMigration);
   t.deepEqual(JSON.parse(await fs.readFile(path.join(project, "analysis.json"), "utf8")), manifest);
   await fs.writeFile(rom, new Uint8Array(0x8000));
   t.is(await runCli(["project-validate", project, "--rom", rom]), 1);
@@ -732,23 +715,6 @@ test("E2E: runCli project-validate accepts matching ROMs and rejects identity dr
   await fs.writeFile(path.join(corrupt, "analysis.json"), "{");
   t.is(await runCli(["project-validate", corrupt]), 1);
 });
-
-test.serial(
-  "E2E: runCli project-migrate convert-runtime rewrites current projects and reports missing ones",
-  async (t) => {
-    const temporary = await temporaryDirectory(t, "uttori-cli-migrate-");
-    const logs = captureConsole(t);
-    const rom = path.join(temporary, "fixture.sfc");
-    const project = path.join(temporary, "fixture.analysis");
-    await fs.writeFile(rom, loromRom());
-    t.is(await runCli(["disassemble", rom, project, "--mapper=lorom"]), 0);
-    t.is(await runCli(["project-migrate", path.join(temporary, "missing")]), 1);
-    t.true(logs.stderr.join("\n").includes("Project storage migration failed"));
-    t.is(await runCli(["project-migrate", project, "--convert-runtime"]), 0);
-    t.true(logs.stdout.join("\n").includes("Success: storage format"));
-    t.true(logs.stdout.join("\n").includes("Verified original retained"));
-  },
-);
 
 test.serial(
   "E2E: runCli project-compact and project-storage inspect, pin, and expire captures",

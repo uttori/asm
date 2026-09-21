@@ -27,9 +27,13 @@ const dynamicBitMnemonicBase: Readonly<Record<number, string>> = {
 };
 const mnemonicAgrees = (opcode: number, mnemonic: string | undefined): boolean => {
   const expected = spc700Specifications[opcode]?.mnemonic;
-  if (mnemonic === expected) return true;
+  if (mnemonic === expected) {
+    return true;
+  }
   const base = dynamicBitMnemonicBase[opcode];
-  if (base === undefined || mnemonic === undefined) return false;
+  if (base === undefined || mnemonic === undefined) {
+    return false;
+  }
   return (
     mnemonic === base ||
     (mnemonic.startsWith(base) &&
@@ -42,7 +46,9 @@ const macroPattern = /macro\s+Op(\d+)\(\)([\S\s]*?)endmacro/g;
 for (const match of oracleSource.matchAll(macroPattern)) {
   const opcode = Number(match[1]);
   const mnemonic = match[2]?.match(/print\s+"\s*([a-z][\da-z]*)(?:\.[blw])?/i)?.[1]?.toUpperCase();
-  if (Number.isInteger(opcode) && mnemonic) observed.set(opcode, mnemonic);
+  if (Number.isInteger(opcode) && mnemonic) {
+    observed.set(opcode, mnemonic);
+  }
 }
 
 const mismatches: string[] = [];
@@ -118,7 +124,9 @@ try {
   const result = spawnSync(executable, ["--no-title-check", oracleCopy, romPath], {
     encoding: "utf8",
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
   if (result.status !== 0) {
     throw new Error(
       `SNES-ROM-Framework SPC700 executable oracle failed (${result.status ?? "signal"}):\n${result.stderr || result.stdout}`,

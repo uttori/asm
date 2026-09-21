@@ -35,7 +35,31 @@ export interface CapturePositionV2 {
     readonly droppedInScope: "0";
     readonly error: string;
 }
-export type CaptureRequestV2 = {
+/** Local runtime companion operations. Identity is checked against the launched
+ * executable before any path or replay state reaches the emulator. */
+export type CaptureContextRequest = {
+    readonly operation: "context";
+    readonly action: "prepare" | "replay" | "restore";
+    readonly directory: string;
+    readonly romContentSha256: string;
+    readonly producer: {
+        readonly id: string;
+        readonly revision: string;
+    };
+} | {
+    readonly operation: "context";
+    readonly action: "start" | "stop";
+    readonly session: string;
+} | {
+    readonly operation: "context";
+    readonly action: "mark";
+    readonly session: string;
+    readonly label: string;
+} | {
+    readonly operation: "context";
+    readonly action: "abort" | "status";
+};
+export type CaptureRequestV2 = CaptureContextRequest | {
     readonly operation: "file-capabilities";
     readonly scope?: CaptureScopeV2;
 } | {
@@ -76,6 +100,8 @@ export type CaptureRequestV2 = {
 };
 export type CaptureResultV2 = CaptureCapabilitiesV2 | CapturePositionV2 | {
     readonly hex: string;
+} | {
+    readonly contextState: string;
 };
 export type CaptureTransportV2 = (request: CaptureRequestV2) => Promise<CaptureResultV2>;
 /**

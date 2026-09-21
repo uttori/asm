@@ -26,8 +26,9 @@ export class DebugSidecarClient {
         this.#transport = options.transport;
         this.#session = options.session;
         this.#requestTimeoutMs = options.requestTimeoutMs ?? 5_000;
-        if (!Number.isSafeInteger(this.#requestTimeoutMs) || this.#requestTimeoutMs <= 0)
+        if (!Number.isSafeInteger(this.#requestTimeoutMs) || this.#requestTimeoutMs <= 0) {
             throw new Error("Sidecar request timeout must be a positive safe integer.");
+        }
         this.#limits = options.limits ?? DEFAULT_DEBUG_SIDECAR_LIMITS;
         this.#parser = new DebugSidecarMessageParser(this.#limits);
         this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
@@ -68,12 +69,15 @@ export class DebugSidecarClient {
      * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
      */
     request(command, arguments_ = {}) {
-        if (this.#closed)
+        if (this.#closed) {
             return Promise.reject(new Error("Sidecar client is closed."));
-        if (this.#pending.size >= this.#limits.maxQueuedMessages)
+        }
+        if (this.#pending.size >= this.#limits.maxQueuedMessages) {
             return Promise.reject(new Error("Too many pending sidecar requests."));
-        if (!Number.isSafeInteger(this.#nextSequence) || this.#nextSequence <= 0)
+        }
+        if (!Number.isSafeInteger(this.#nextSequence) || this.#nextSequence <= 0) {
             return Promise.reject(new Error("Sidecar request sequence exhausted."));
+        }
         const sequence = this.#nextSequence++;
         const message = {
             protocol: DEBUG_SIDECAR_PROTOCOL,
@@ -91,16 +95,18 @@ export class DebugSidecarClient {
         catch (error) {
             return Promise.reject(asError(error));
         }
-        if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes)
+        if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes) {
             return Promise.reject(new Error("Queued sidecar request bytes exceed the backpressure limit."));
+        }
         this.#queuedWriteBytes += frame.length;
         return new Promise((resolve, reject) => {
             const timer = setTimeout(() => this.#fail(new Error(`Sidecar request '${command}' timed out.`)), this.#requestTimeoutMs);
             this.#pending.set(sequence, { resolve, reject, timer });
             const write = this.#writeTail
                 .then(() => {
-                if (this.#closed)
+                if (this.#closed) {
                     throw new Error("Sidecar client is closed.");
+                }
                 return this.#transport.write(frame);
             })
                 .finally(() => {
@@ -115,34 +121,42 @@ export class DebugSidecarClient {
      * @returns {Promise<void>} Completion of the transport close.
      */
     async close() {
-        if (this.#closed)
+        if (this.#closed) {
             return;
+        }
         this.#fail(new Error("Sidecar client closed."), false);
         await this.#transport.close();
     }
     #receive(data) {
-        if (this.#closed)
+        if (this.#closed) {
             return;
+        }
         try {
             for (const message of this.#parser.push(data)) {
-                if (message.session !== this.#session)
+                if (message.session !== this.#session) {
                     throw new Error("Sidecar message session does not match this connection.");
-                if (message.type === "request")
+                }
+                if (message.type === "request") {
                     throw new Error("Sidecar server sent a request on a client-only channel.");
+                }
                 if (message.type === "event") {
-                    for (const listener of this.#eventListeners)
+                    for (const listener of this.#eventListeners) {
                         listener(message);
+                    }
                     continue;
                 }
                 const pending = this.#pending.get(message.requestSequence);
-                if (!pending)
+                if (!pending) {
                     throw new Error(`Sidecar response references unknown request ${message.requestSequence}.`);
+                }
                 clearTimeout(pending.timer);
                 this.#pending.delete(message.requestSequence);
-                if (message.success)
+                if (message.success) {
                     pending.resolve(message.result);
-                else
+                }
+                else {
                     pending.reject(new Error(message.error ?? "Sidecar request failed."));
+                }
             }
         }
         catch (error) {
@@ -150,8 +164,9 @@ export class DebugSidecarClient {
         }
     }
     #fail(error, closeTransport = true) {
-        if (this.#closed)
+        if (this.#closed) {
             return;
+        }
         this.#closed = true;
         this.#closeError = error;
         this.#dataSubscription.dispose();
@@ -161,12 +176,14 @@ export class DebugSidecarClient {
             pending.reject(error);
         }
         this.#pending.clear();
-        for (const listener of this.#closeListeners)
+        for (const listener of this.#closeListeners) {
             listener(error);
+        }
         this.#closeListeners.clear();
         this.#eventListeners.clear();
-        if (closeTransport)
+        if (closeTransport) {
             void this.#transport.close().catch(() => undefined);
+        }
     }
 }
 //# sourceMappingURL=sidecar-client.js.map

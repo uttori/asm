@@ -1,7 +1,6 @@
 # @uttori/asm-debug-adapter
 
-Emulator-neutral debugger contracts, a Debug Adapter Protocol bridge, deterministic replay,
-and the authenticated sidecar protocol used by Uttori ASM.
+Emulator-neutral debugger contracts, a Debug Adapter Protocol bridge, deterministic replay, and the authenticated sidecar protocol used by Uttori ASM.
 
 ## Install
 

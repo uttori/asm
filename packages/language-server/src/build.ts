@@ -2,28 +2,59 @@
 import fs from "node:fs";
 import path from "node:path";
 
+/** Minimal logging sink for build progress and user-actionable failures. */
 export type BuildLogger = {
+  /**
+   * Records build progress, timings, or artifact paths.
+   * @param {string} message Human-readable log text.
+   */
   info(message: string): void;
+  /**
+   * Reports a condition that permits the build to continue.
+   * @param {string} message Human-readable warning text.
+   */
   warn(message: string): void;
+  /**
+   * Reports a build failure without prescribing how the sink displays it.
+   * @param {string} message Human-readable failure text.
+   */
   error(message: string): void;
 };
 
+/** Source selection and explanation returned before any assembly or filesystem validation. */
 export type ResolvedBuildEntry = {
+  /** Absolute path selected for assembly; existence is checked by the caller. */
   file: string;
+  /** Human-readable selection rationale for the build log. */
   reason: string;
+  /** Whether file is one of the configured project roots rather than an unconfigured active file. */
   usedEntryPoint: boolean;
+  /** Absolute active-editor path, retained even when a different project root was selected. */
   requestedFile?: string;
 };
 
+/** Artifact destinations and byte comparisons after a successful pair commit. */
 export interface BuildArtifactPairResult {
+  /** Absolute destination of the assembled binary. */
   readonly outputPath: string;
+  /** Absolute sidecar path, formed by appending .debug.json to outputPath. */
   readonly debugMapPath: string;
+  /** Binary bytes differed from disk or the binary was absent; does not indicate a write count. */
   readonly outputChanged: boolean;
+  /** Debug-map bytes differed from disk or the sidecar was absent. */
   readonly debugMapChanged: boolean;
 }
 
+/** Process-local suffix paired with the PID to distinguish successive artifact staging files. */
 let temporaryArtifactSequence = 0;
 
+/**
+ * Compares bytes without treating an absent destination as an I/O failure.
+ * @param {string} file Destination to inspect.
+ * @param {Uint8Array} content Proposed contents.
+ * @returns {boolean} True only when the destination exists and all bytes match.
+ * @throws {Error} Reading fails for a reason other than a missing file.
+ */
 const sameFileContent = (file: string, content: Uint8Array): boolean => {
   try {
     return Buffer.from(content).equals(fs.readFileSync(file));
@@ -35,6 +66,13 @@ const sameFileContent = (file: string, content: Uint8Array): boolean => {
   }
 };
 
+/**
+ * Writes an exclusive temporary sibling for a later same-filesystem rename.
+ * @param {string} file Final destination whose parent directory already exists.
+ * @param {Uint8Array} content Complete artifact bytes to stage.
+ * @returns {string} Temporary path owned by the caller, which must rename or remove it.
+ * @throws {Error} The staging path already exists or the write fails.
+ */
 const stageArtifact = (file: string, content: Uint8Array): string => {
   temporaryArtifactSequence += 1;
   // Stage beside the destination so the later rename stays on the same filesystem.
@@ -49,11 +87,13 @@ const stageArtifact = (file: string, content: Uint8Array): string => {
 /**
  * Commits the binary and its identity-bearing debug map only after both are fully staged.
  * Each rename is atomic. Readers that race the two renames see either a valid pair or an
- * identity mismatch that the debugger rejects. A failed second rename restores the prior pair.
+ * identity mismatch that the debugger rejects. A failed second rename attempts to restore
+ * the prior binary. If both contents match disk, no files are rewritten; otherwise both are staged.
  * @param {string} outputPath Destination binary.
  * @param {Uint8Array} output Exact binary bytes.
  * @param {string} debugMapJson Canonical debug-map JSON fingerprinting `output`.
  * @returns {BuildArtifactPairResult} Paths and content-change state.
+ * @throws {Error} Reading, staging, renaming, rollback, or temporary-file cleanup fails.
  */
 export function commitBuildArtifactPair(
   outputPath: string,
@@ -83,6 +123,7 @@ export function commitBuildArtifactPair(
     stagedMap = undefined;
   } catch (error) {
     if (outputCommitted) {
+      // The sidecar still has its old identity; restore the matching binary, or remove a new one.
       if (oldOutput) {
         const rollback = stageArtifact(resolvedOutput, oldOutput);
         fs.renameSync(rollback, resolvedOutput);
@@ -110,6 +151,7 @@ export function commitBuildArtifactPair(
  * @param {readonly string[]} entryPoints Project entry points (absolute or workspace-relative).
  * @param {string} workspaceRoot Workspace folder used to resolve relative entries.
  * @returns {ResolvedBuildEntry} The file to assemble and why it was chosen.
+ * @throws {Error} Neither an active file nor a configured entry point is available.
  */
 export function resolveBuildEntry(
   requestedFile: string | undefined,

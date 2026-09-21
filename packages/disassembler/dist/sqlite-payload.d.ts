@@ -8,10 +8,15 @@ export declare const MAX_SQLITE_PAYLOAD_BYTES: number;
 export declare const encodeSqlitePayload: (json: string) => string | Buffer;
 /**
  * Decode one bounded payload, rejecting unknown codecs, corrupt checksums, and invalid UTF-8.
- * @param {unknown} value SQLite TEXT or a versioned compressed BLOB.
- * @returns {string} Original JSON text. Malformed storage throws without returning partial content.
+ * @param {unknown} value SQLite TEXT or a versioned compressed/packed BLOB.
+ * @returns {string} Lossless semantic JSON. Malformed storage throws without returning partial content.
  */
 export declare const decodeSqlitePayload: (value: unknown) => string;
+/** Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
+ * @param {unknown} value Stored TEXT or a supported versioned BLOB.
+ * @returns {T} Decoded semantic data; callers still validate the requested record type.
+ */
+export declare const parseSqlitePayload: <T>(value: unknown) => T;
 /** Exact external ID split. BLOB suffixes represent only canonical lowercase SHA-256 text. */
 export interface SqliteRuntimeIdentity {
     readonly prefix: string;

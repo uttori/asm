@@ -8,13 +8,10 @@ import {
   RomImage,
   writeAnalysisProject,
   openAnalysisProjectStore,
-  loadAnalysisProject,
   importRuntimeInstructionTrace,
   importRuntimeTraceIntoProject,
   importRuntimeTraceSourceIntoProject,
   validateRuntimeInstructionTraceMetadata,
-  mergeRuntimeEvidence,
-  migrateAnalysisProjectStorage,
   project65816AnalysisState,
   type AnalysisProject,
   type RuntimeInstructionTraceArtifact,
@@ -111,6 +108,7 @@ test("shared facts and virtual state pairs keep exact per-capture counts and det
     t.is(store.storageSnapshot().pairedStates, 2);
     t.is(store.storageSnapshot().observations, 4);
     t.is(store.counts().runtime, 6);
+    t.is(db.prepare("SELECT COUNT(*) AS n FROM runtime_identities").get()!.n, 2);
     t.is(store.runtimeExecutionCounts().events, 6);
     // A point lookup must use both physical IDs and the virtual-state expression index.
     // Otherwise each execution-offset update can scan the entire paired-state history.
@@ -136,6 +134,7 @@ test("shared facts and virtual state pairs keep exact per-capture counts and det
     db.exec("DELETE FROM runtime");
     t.is(store.storageSnapshot().observations, 0);
     t.is(store.storageSnapshot().facts, 0);
+    t.is(db.prepare("SELECT COUNT(*) AS n FROM runtime_identities").get()!.n, 0);
   } finally {
     db.close();
     store.close();
@@ -191,57 +190,46 @@ test("cache eviction invalidates disposable projections and rebuilds them withou
   }
 });
 
-test("format-one conversion preserves counts/provenance, narrows only paired native state, and cannot recount a full reimport", async (t) => {
+test("full-profile capture imports increment summaries once and no-op reimports preserve the warm cache", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const base = project();
-  const full = importRuntimeInstructionTrace(trace(), { ...context, indexMode: "full" });
-  const merged = mergeRuntimeEvidence(base.shards, full.batch);
-  const independent = {
-    id: "standalone",
-    kind: "runtime-cpu-state" as const,
-    architecture: "snes.65816",
-    addressSpace: "snes.cpu",
-    address: 0x8000,
-    count: 1,
-    evidence: [],
-    state: { a: 99 },
-  };
-  writeAnalysisProject(directory, {
-    ...base,
-    shards: { ...merged.shards, runtime: [...merged.shards.runtime, independent] },
-  });
-  const db = new DatabaseSync(path.join(directory, "analysis.sqlite"));
-  // Reconstruct the preceding physical layout so this covers dictionary-based legacy reads too.
-  db.exec(`CREATE TABLE old_runtime AS SELECT prefix_id,id,kind,architecture,count,address_space,address,start,"end",from_address_space,from_address,
-    to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,evidence_id,payload FROM runtime;
-    DROP VIEW runtime; DROP TABLE runtime_observations; DROP TABLE runtime_facts; ALTER TABLE old_runtime RENAME TO runtime;
-    CREATE UNIQUE INDEX old_identity ON runtime(prefix_id,id); PRAGMA user_version=1;`);
-  db.close();
-  const migration = await migrateAnalysisProjectStorage(directory, { convertRuntime: true });
-  t.true(migration.changed);
-  t.true(fs.existsSync(migration.backupFile!));
-  const loaded = loadAnalysisProject(directory);
-  t.deepEqual(loaded.shards.evidence, merged.shards.evidence);
-  t.deepEqual(
-    loaded.shards.runtime.find((r) => r.id === "standalone"),
-    independent,
-  );
-  t.is(loaded.shards.runtime.filter((r) => r.kind === "runtime-instruction").length, 1);
-  t.is(loaded.shards.runtime.filter((r) => r.kind === "runtime-instruction")[0].count, 3);
-  t.is(loaded.shards.imports[0].indexProfile, "65816-analysis-v2");
-  const again = await importRuntimeTraceSourceIntoProject(source(trace()), directory, {
-    ...context,
-    indexMode: "full",
-  });
-  t.false(again.changed);
-  t.is(again.added.runtime, 0);
-  t.true(again.warnings.some((warning) => warning.includes("different profile")));
+  writeAnalysisProject(directory, project());
+  const options = { ...context, indexMode: "full" as const };
+  await importRuntimeTraceSourceIntoProject(source(trace()), directory, options);
   const store = openAnalysisProjectStore(directory);
+  const db = new DatabaseSync(store.file);
   try {
-    t.is(store.runtimeExecutionCounts().events, 3);
-    t.is(store.captureCatalog().length, 1);
+    const variants = () => [
+      ...store.runtimeInstructionVariants("snes.65816", "snes.cpu", ["p", "e", "d", "db"]),
+    ];
+    const stats = () =>
+      JSON.parse(
+        String(
+          db.prepare("SELECT payload FROM query_cache WHERE name='instruction_variants'").get()!
+            .payload,
+        ),
+      );
+    const before = variants();
+    t.deepEqual(stats(), { incremental: false, observations: 3 });
+    const again = await importRuntimeTraceSourceIntoProject(source(trace()), directory, options);
+    t.false(again.changed);
+    t.deepEqual(variants(), before);
+    t.deepEqual(stats(), { incremental: false, observations: 3 });
+    await importRuntimeTraceSourceIntoProject(source(trace("second")), directory, options);
+    t.is(
+      variants().reduce((count, row) => count + row.count, 0),
+      6,
+    );
+    t.deepEqual(stats(), { incremental: true, observations: 3 });
+    t.is(store.storageSnapshot().pairedStates, 6);
+    t.is(store.captureCatalog().length, 2);
+    t.true(
+      [...store.runtimeRecordsByKinds(["runtime-instruction"])].every(
+        (row) => row.kind === "runtime-instruction" && ("a" in row.state || "A" in row.state),
+      ),
+    );
   } finally {
+    db.close();
     store.close();
   }
 });
@@ -265,25 +253,4 @@ test("project byte ceiling rolls back a complete new publication and its capture
   } finally {
     after.close();
   }
-});
-
-test("conversion rejects malformed originals before equivalent variants can hide an invalid count", async (t) => {
-  const directory = temporary();
-  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  const base = project();
-  const full = importRuntimeInstructionTrace(trace(), { ...context, indexMode: "full" });
-  writeAnalysisProject(directory, {
-    ...base,
-    shards: mergeRuntimeEvidence(base.shards, full.batch).shards,
-  });
-  const db = new DatabaseSync(path.join(directory, "analysis.sqlite"));
-  db.exec(
-    "UPDATE runtime SET count=-1 WHERE rowid=(SELECT rowid FROM runtime WHERE kind='runtime-instruction' LIMIT 1)",
-  );
-  db.close();
-  const error = await t.throwsAsync(
-    migrateAnalysisProjectStorage(directory, { convertRuntime: true }),
-  );
-  t.regex(error!.message, /count/i);
-  t.false(fs.existsSync(path.join(directory, "analysis.sqlite.pre-retention.backup")));
 });

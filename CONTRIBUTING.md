@@ -117,6 +117,10 @@ esbuild use that condition. Direct development commands should include `--condit
 alongside `--import=tsx`. Consumer verification deliberately enables neither. Keep this distinction
 so tests cannot pass against stale output or mask an installed-package resolution error.
 
+The extension's `src/package.json` marks its TypeScript as ESM while the shipped bundle remains
+CommonJS. Keep this boundary: compiling shared sources as both ESM and CommonJS gives c8 incompatible
+source maps for the same filename and corrupts merged coverage.
+
 Builds and standalone tools require Node 26. The extension and its embedded executables target the
 Node 24 runtime shipped by the minimum supported VS Code. `npm run vscode:smoke` type-checks against
 that editor's own API declarations and checks SQLite in the real Extension Host.

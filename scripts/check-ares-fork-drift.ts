@@ -117,18 +117,24 @@ const parseArguments = (arguments_: readonly string[]): Options => {
       process.exit(0);
     }
     if (argument === "--current") {
-      if (index !== 0 || selectedCurrent)
+      if (index !== 0 || selectedCurrent) {
         throw new Error("Argument '--current' must appear once and before path overrides.");
+      }
       parsed = { ...currentDefaults };
       selectedCurrent = true;
       continue;
     }
     const name = optionNames.get(argument ?? "");
-    if (!name) throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
-    if (seen.has(name)) throw new Error(`Duplicate argument '${String(argument)}'.`);
+    if (!name) {
+      throw new Error(`Unknown argument '${String(argument)}'.\n${usage}`);
+    }
+    if (seen.has(name)) {
+      throw new Error(`Duplicate argument '${String(argument)}'.`);
+    }
     const value = arguments_[++index];
-    if (!value || value.startsWith("--"))
+    if (!value || value.startsWith("--")) {
       throw new Error(`Argument '${String(argument)}' requires a path.`);
+    }
     parsed[name] = path.resolve(value);
     seen.add(name);
   }
@@ -153,17 +159,21 @@ const gitBytes = (repo: string, arguments_: readonly string[]): Buffer =>
   });
 
 const assertEqual = (actual: string | number, expected: string | number, label: string): void => {
-  if (actual !== expected)
+  if (actual !== expected) {
     throw new Error(`${label} mismatch: expected '${String(expected)}', got '${String(actual)}'.`);
+  }
 };
 
 const assertFile = (file: string, label: string): void => {
-  if (!statSync(file).isFile()) throw new Error(`${label} is not a file: ${file}`);
+  if (!statSync(file).isFile()) {
+    throw new Error(`${label} is not a file: ${file}`);
+  }
 };
 
 const assertDirectory = (directory: string, label: string): void => {
-  if (!statSync(directory).isDirectory())
+  if (!statSync(directory).isDirectory()) {
     throw new Error(`${label} is not a directory: ${directory}`);
+  }
 };
 
 const options = parseArguments(process.argv.slice(2));
@@ -208,8 +218,9 @@ const mergeBase = gitText(options.repo, [
   manifest.upstreamRevision,
   manifest.forkRevision,
 ]);
-if (!mergeBase)
+if (!mergeBase) {
   throw new Error("Pinned upstream and fork revisions have no visible common ancestor.");
+}
 const headlessPatchCommits = Number(
   gitText(options.repo, [
     "rev-list",
@@ -252,8 +263,9 @@ assertEqual(
   manifest.headlessPatchSha256,
   "Stored headless patch SHA-256",
 );
-if (!generatedHeadlessPatch.equals(storedHeadlessPatch))
+if (!generatedHeadlessPatch.equals(storedHeadlessPatch)) {
   throw new Error("Stored headless patch bytes differ from format-patch output.");
+}
 
 const changedFiles = gitText(options.repo, [
   "diff-tree",
@@ -291,16 +303,18 @@ const lineCounts = gitText(options.repo, [
     (totals, [addedText, deletedText]) => {
       const added = Number(addedText);
       const deleted = Number(deletedText);
-      if (!Number.isSafeInteger(added) || !Number.isSafeInteger(deleted))
+      if (!Number.isSafeInteger(added) || !Number.isSafeInteger(deleted)) {
         throw new Error("Patch budget cannot include binary or invalid numstat entries.");
+      }
       return { added: totals.added + added, deleted: totals.deleted + deleted };
     },
     { added: 0, deleted: 0 },
   );
-if (lineCounts.added > MAX_ADDED_LINES || lineCounts.deleted > MAX_DELETED_LINES)
+if (lineCounts.added > MAX_ADDED_LINES || lineCounts.deleted > MAX_DELETED_LINES) {
   throw new Error(
     `Patch budget exceeded: ${lineCounts.added}/${MAX_ADDED_LINES} added, ${lineCounts.deleted}/${MAX_DELETED_LINES} deleted.`,
   );
+}
 
 const generatedPatch = gitBytes(options.repo, [
   "format-patch",
@@ -311,8 +325,9 @@ const generatedPatch = gitBytes(options.repo, [
 const storedPatch = readFileSync(options.patch);
 assertEqual(sha256(generatedPatch), manifest.patchSha256, "Generated patch SHA-256");
 assertEqual(sha256(storedPatch), manifest.patchSha256, "Stored patch SHA-256");
-if (!generatedPatch.equals(storedPatch))
+if (!generatedPatch.equals(storedPatch)) {
   throw new Error("Stored patch bytes differ from format-patch output.");
+}
 
 assertEqual(fileSha256(options.executable), manifest.executableSha256, "Executable SHA-256");
 assertEqual(fileSha256(options.rom), manifest.romSha256, "ROM SHA-256");
@@ -334,8 +349,9 @@ const [upstreamOnlyText, forkOnlyText] = gitText(options.repo, [
 ]).split(/\s+/);
 const upstreamOnlyCommits = Number(upstreamOnlyText);
 const forkOnlyCommits = Number(forkOnlyText);
-if (!Number.isSafeInteger(upstreamOnlyCommits) || !Number.isSafeInteger(forkOnlyCommits))
+if (!Number.isSafeInteger(upstreamOnlyCommits) || !Number.isSafeInteger(forkOnlyCommits)) {
   throw new Error("Git returned invalid fork drift counts.");
+}
 
 process.stdout.write(
   `${JSON.stringify(

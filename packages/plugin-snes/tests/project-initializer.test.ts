@@ -463,6 +463,8 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
               address: "$7E1847",
               category: "Menu",
               description: "Selects the active ring-menu mode.",
+              notes: ["menu.txt:L12."],
+              sources: ["Menu capture frame 42."],
             },
           ],
         },
@@ -496,6 +498,25 @@ test("RAM-map edits regenerate documented definitions and symbolic disassembly o
       romFile,
     });
     t.true(verified.comparison.equal);
+    // The persisted option must reach the renderer on later CLI/editor regenerations.
+    const mapFile = path.join(outputDirectory, "ram-map.json");
+    const ramMap = JSON.parse(await fs.readFile(mapFile, "utf8"));
+    ramMap.includeSourceInformation = true;
+    await fs.writeFile(mapFile, JSON.stringify(ramMap));
+    exportSnesProject({
+      projectDirectory: path.join(outputDirectory, "analysis"),
+      sourceDirectory: outputDirectory,
+      romFile,
+    });
+    const withSources = await fs.readFile(path.join(outputDirectory, "ram-defines.asm"), "utf8");
+    t.regex(
+      withSources,
+      /^RAM_RING_MENU_MODE = \$7E1847 ; Menu — Selects the active ring-menu mode\. menu\.txt:L12\. Menu capture frame 42\.$/m,
+    );
+    t.true(
+      (await verifySnesProjectRoundTrip({ sourceDirectory: outputDirectory, romFile })).comparison
+        .equal,
+    );
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
   }

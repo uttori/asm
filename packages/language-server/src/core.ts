@@ -1,4 +1,8 @@
-/** Re-exports the target-neutral analysis surface used by LSP providers. */
+/**
+ * Re-exports the target-neutral analysis surface used by the language server.
+ * Implementations and their contracts live in asm-core; transport and LSP payload conversion
+ * belong in this package. Keeping this bridge free of target setup allows plugin-provided tooling.
+ */
 export {
   Assembler,
   WorkspaceIndex,

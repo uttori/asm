@@ -310,6 +310,8 @@ documented hardware definitions in `defines.asm`, a checksum-preserving
 `uttori-asm.config.json`, and a versioned `generated-files.json`.
 It also creates a user-owned `ram-map.json`, its local `ram-map.schema.json`, and generated `ram-defines.asm`.
 Edit `ram-map.json` and run `export` again to regenerate definitions and substitute exact known RAM / WRAM operands in the bank source.
+RAM definition comments omit source citations by default. Set `"includeSourceInformation": true`
+at the top level of `ram-map.json` to include them; descriptive notes remain visible in either mode.
 The manifest hashes this input separately, so `verify-roundtrip` reports a stale map until source has been regenerated.
 The manifest assigns every content byte to exactly one code, raw, padding, SNES-header, or vector span.
 A copier header is preserved as its own asset when present.

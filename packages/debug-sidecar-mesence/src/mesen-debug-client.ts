@@ -37,7 +37,7 @@ const asError = (error: unknown): Error =>
 
 const positiveInteger = (value: number, context: string): number => {
   if (!Number.isSafeInteger(value) || value <= 0)
-    throw new Error(`${context} must be a positive safe integer.`);
+    {throw new Error(`${context} must be a positive safe integer.`);}
   return value;
 };
 
@@ -64,7 +64,7 @@ export class FramedMesenDebugClient implements MesenDebugClient {
   /** @param {FramedMesenDebugClientOptions} options Transport, one-session token, and bounds. */
   constructor(options: FramedMesenDebugClientOptions) {
     if (!/^[\dA-Fa-f]{64}$/.test(options.token))
-      throw new Error("Mesen debug token must contain 256 bits of hexadecimal data.");
+      {throw new Error("Mesen debug token must contain 256 bits of hexadecimal data.");}
     this.#transport = options.transport;
     this.#token = options.token.toLowerCase();
     this.#requestTimeoutMs = positiveInteger(
@@ -88,7 +88,7 @@ export class FramedMesenDebugClient implements MesenDebugClient {
       "Mesen maximum queued bytes",
     );
     if (this.#maxQueuedBytes < this.#maxRequestBytes + 4)
-      throw new Error("Mesen queued-byte bound must hold one maximum-sized request frame.");
+      {throw new Error("Mesen queued-byte bound must hold one maximum-sized request frame.");}
     this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
     this.#closeSubscription = this.#transport.onClose((error) =>
       this.#fail(error ?? new Error("Mesen debug transport closed."), false),
@@ -102,11 +102,11 @@ export class FramedMesenDebugClient implements MesenDebugClient {
 
   /** @inheritdoc */
   request(method: string, parameters: Readonly<Record<string, unknown>> = {}): Promise<unknown> {
-    if (this.#closed) return Promise.reject(new Error("Mesen debug client is closed."));
+    if (this.#closed) {return Promise.reject(new Error("Mesen debug client is closed."));}
     if (!/^[A-Za-z][\dA-Za-z]*$/.test(method))
-      return Promise.reject(new Error("Mesen debug method has an invalid name."));
+      {return Promise.reject(new Error("Mesen debug method has an invalid name."));}
     if (this.#nextId > Number.MAX_SAFE_INTEGER)
-      return Promise.reject(new Error("Mesen debug request identifier space is exhausted."));
+      {return Promise.reject(new Error("Mesen debug request identifier space is exhausted."));}
     const id = this.#nextId++;
     let payload: Uint8Array;
     try {
@@ -124,21 +124,21 @@ export class FramedMesenDebugClient implements MesenDebugClient {
       return Promise.reject(asError(error));
     }
     if (payload.length === 0 || payload.length > this.#maxRequestBytes)
-      return Promise.reject(
+      {return Promise.reject(
         new Error(`Mesen debug request exceeds ${this.#maxRequestBytes} bytes.`),
-      );
+      );}
     const packet = Buffer.allocUnsafe(payload.length + 4);
     packet.writeUInt32BE(payload.length, 0);
     packet.set(payload, 4);
     const queuedCount = this.#queue.length + (this.#pending ? 1 : 0);
     if (queuedCount >= this.#maxQueuedRequests)
-      return Promise.reject(
+      {return Promise.reject(
         new Error(`Mesen debug request queue exceeds ${this.#maxQueuedRequests} requests.`),
-      );
+      );}
     if (this.#queuedBytes + packet.length > this.#maxQueuedBytes)
-      return Promise.reject(
+      {return Promise.reject(
         new Error(`Mesen debug request queue exceeds ${this.#maxQueuedBytes} bytes.`),
-      );
+      );}
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
         () => this.#fail(new Error(`Mesen debug request '${method}' timed out.`)),
@@ -164,15 +164,15 @@ export class FramedMesenDebugClient implements MesenDebugClient {
 
   /** @inheritdoc */
   async close(): Promise<void> {
-    if (this.#closed) return;
+    if (this.#closed) {return;}
     this.#fail(new Error("Mesen debug client closed."), false);
     await this.#transport.close();
   }
 
   #pump(): void {
-    if (this.#closed || this.#pending) return;
+    if (this.#closed || this.#pending) {return;}
     const request = this.#queue.shift();
-    if (!request) return;
+    if (!request) {return;}
     this.#pending = request;
     void this.#transport
       .write(request.packet)
@@ -180,17 +180,17 @@ export class FramedMesenDebugClient implements MesenDebugClient {
   }
 
   #receive(data: Uint8Array): void {
-    if (this.#closed) return;
+    if (this.#closed) {return;}
     try {
       const maximumBuffered = this.#maxResponseBytes + 4;
       if (this.#buffer.length + data.length > maximumBuffered)
-        throw new Error(`Mesen debug receive buffer exceeds ${maximumBuffered} bytes.`);
+        {throw new Error(`Mesen debug receive buffer exceeds ${maximumBuffered} bytes.`);}
       this.#buffer = Buffer.concat([this.#buffer, data]);
       while (this.#buffer.length >= 4) {
         const length = this.#buffer.readUInt32BE(0);
         if (length === 0 || length > this.#maxResponseBytes)
-          throw new Error(`Mesen debug response length ${length} is outside protocol bounds.`);
-        if (this.#buffer.length < length + 4) return;
+          {throw new Error(`Mesen debug response length ${length} is outside protocol bounds.`);}
+        if (this.#buffer.length < length + 4) {return;}
         const payload = this.#buffer.subarray(4, length + 4);
         this.#buffer = this.#buffer.subarray(length + 4);
         this.#deliver(payload);
@@ -208,27 +208,27 @@ export class FramedMesenDebugClient implements MesenDebugClient {
       throw new Error("Mesen debug response is not valid UTF-8 JSON.");
     }
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed))
-      throw new Error("Mesen response must be an object.");
+      {throw new Error("Mesen response must be an object.");}
     const response = parsed as Readonly<Record<string, unknown>>;
     if (response.version !== MESEN_NATIVE_PROTOCOL_VERSION)
-      throw new Error("Mesen debug response uses an unsupported protocol version.");
+      {throw new Error("Mesen debug response uses an unsupported protocol version.");}
     const pending = this.#pending;
-    if (!pending) throw new Error("Mesen debug response arrived without a pending request.");
+    if (!pending) {throw new Error("Mesen debug response arrived without a pending request.");}
     if (response.id !== pending.id)
-      throw new Error(`Mesen debug response id ${String(response.id)} is out of order.`);
-    if (typeof response.ok !== "boolean") throw new Error("Mesen debug response lacks ok state.");
+      {throw new Error(`Mesen debug response id ${String(response.id)} is out of order.`);}
+    if (typeof response.ok !== "boolean") {throw new Error("Mesen debug response lacks ok state.");}
     if (!response.ok && (typeof response.error !== "string" || response.error.length === 0))
-      throw new Error("Mesen debug error response lacks a message.");
+      {throw new Error("Mesen debug error response lacks a message.");}
     clearTimeout(pending.timer);
     this.#pending = undefined;
     this.#queuedBytes -= pending.packet.length;
-    if (response.ok) pending.resolve(response.result);
-    else pending.reject(new Error(`Mesen ${pending.method} failed: ${String(response.error)}`));
+    if (response.ok) {pending.resolve(response.result);}
+    else {pending.reject(new Error(`Mesen ${pending.method} failed: ${String(response.error)}`));}
     this.#pump();
   }
 
   #fail(error: Error, closeTransport = true): void {
-    if (this.#closed) return;
+    if (this.#closed) {return;}
     this.#closed = true;
     this.#closeError = error;
     this.#dataSubscription.dispose();
@@ -241,8 +241,8 @@ export class FramedMesenDebugClient implements MesenDebugClient {
       clearTimeout(request.timer);
       request.reject(error);
     }
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {listener(error);}
     this.#closeListeners.clear();
-    if (closeTransport) void this.#transport.close().catch(() => undefined);
+    if (closeTransport) {void this.#transport.close().catch(() => undefined);}
   }
 }

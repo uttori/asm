@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, PluginError, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, mergeRuntimeEvidence, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, migrateAnalysisProjectStorage, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, mergeRuntimeEvidence, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
 import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, exportMesenLabels, identifySnesFileOffset, importMesen65816Trace, importMesenLabels, importMesenSnesCdl, } from "@uttori/asm-plugin-snes";
 import { publishOutputFiles } from "./output-files.js";
@@ -25,7 +25,6 @@ const commandOptions = {
     "verify-roundtrip": ["--rom"],
     "project-validate": ["--rom"],
     "project-compact": [],
-    "project-migrate": ["--convert-runtime"],
     "project-storage": ["--cache-max-mib", "--storage-max-mib"],
     "evidence-import": [
         "--rom",
@@ -49,7 +48,6 @@ const booleanOptions = new Set([
     "--force",
     "--allow-code-regression",
     "--debug",
-    "--convert-runtime",
 ]);
 const commandsWithOutput = new Set([
     "assemble",
@@ -70,7 +68,6 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
   uttori-asm project-compact <project-directory>
-  uttori-asm project-migrate <project-directory> [--convert-runtime]
   uttori-asm project-storage <project-directory> [storage-options]
 
 Creation options (disassemble):
@@ -102,7 +99,6 @@ Export options (export):
   Default destination: <project stem>.source
 
 Storage options (project-storage, budget options also accepted by evidence-import):
-  --convert-runtime           project-migrate only: convert trace detail. Retain backup
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
 
@@ -158,7 +154,6 @@ export const parseCliArguments = (argv) => {
     let instructionTrace;
     let traceMaxMiB;
     const storagePolicy = {};
-    let convertRuntime = false;
     let traceIndex;
     const entryPoints = [];
     let maxWorkItems;
@@ -198,10 +193,6 @@ export const parseCliArguments = (argv) => {
             throw new Error(`${flag} takes no value. Omit it to disable it.`);
         }
         suppliedOptions.add(flag);
-        if (flag === "--convert-runtime") {
-            convertRuntime = true;
-            continue;
-        }
         if (flag === "--help") {
             help = true;
             continue;
@@ -388,7 +379,6 @@ export const parseCliArguments = (argv) => {
         instructionTrace,
         traceMaxMiB,
         traceIndex,
-        ...(convertRuntime ? { convertRuntime } : {}),
         ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
         entryPoints: Object.freeze(entryPoints),
         maxWorkItems,
@@ -1040,36 +1030,6 @@ const runCommand = async (parsed, cwd) => {
     }
     if (parsed.command === "project-validate") {
         return validateProject(parsed, cwd);
-    }
-    if (parsed.command === "project-migrate") {
-        try {
-            const result = await migrateAnalysisProjectStorage(path.resolve(cwd, parsed.input), {
-                convertRuntime: parsed.convertRuntime,
-                onProgress: ({ phase, table, records }) => {
-                    if (records === undefined || records % 100000 === 0) {
-                        console.log(`Storage migration: ${phase}${table ? ` ${table}` : ""}${records === undefined ? "" : ` (${records} records)`}.`);
-                    }
-                },
-            });
-            console.log(`Success: storage format ${result.storageVersion}. ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`);
-            for (const step of result.timings ?? []) {
-                console.log(`${step.step}: ${(step.durationMs / 1000).toFixed(3)} s`);
-            }
-            if (result.backupFile) {
-                console.log(`Verified original retained at '${result.backupFile}'.`);
-            }
-            for (const note of result.notes ?? []) {
-                console.log(note);
-            }
-            for (const warning of result.warnings) {
-                console.warn(warning);
-            }
-            return result.warnings.length ? 1 : 0;
-        }
-        catch (error) {
-            console.error(`Project storage migration failed: ${formatFailure(error)}`);
-            return 1;
-        }
     }
     if (parsed.command === "project-storage") {
         let store;

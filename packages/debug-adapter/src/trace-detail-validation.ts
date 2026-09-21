@@ -13,7 +13,7 @@ export const validateDebugTraceDetails = (
   count: number,
 ): readonly DebugTraceInstructionDetail[] => {
   if (!Array.isArray(value) || value.length !== count)
-    throw new Error("Trace details must align with instruction addresses.");
+    {throw new Error("Trace details must align with instruction addresses.");}
   for (const detail of value as DebugTraceInstructionDetail[]) {
     if (
       !detail ||
@@ -22,7 +22,7 @@ export const validateDebugTraceDetails = (
       detail.bytes.length > 16 ||
       detail.bytes.some((byte) => !Number.isInteger(byte) || byte < 0 || byte > 255)
     )
-      throw new Error("Invalid trace instruction bytes.");
+      {throw new Error("Invalid trace instruction bytes.");}
     if (
       !detail.state ||
       typeof detail.state !== "object" ||
@@ -34,17 +34,17 @@ export const validateDebugTraceDetails = (
           (typeof entry === "number" && !Number.isFinite(entry)),
       )
     )
-      throw new Error("Invalid trace instruction state.");
+      {throw new Error("Invalid trace instruction state.");}
     if (
       detail.droppedMemoryAccesses !== undefined &&
       (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)
     )
-      throw new Error("Invalid trace memory loss.");
+      {throw new Error("Invalid trace memory loss.");}
     if (
       detail.memoryAccesses !== undefined &&
       (!isArray(detail.memoryAccesses) || detail.memoryAccesses.length > 256)
     )
-      throw new Error("Invalid trace memory access bound.");
+      {throw new Error("Invalid trace memory access bound.");}
     for (const access of detail.memoryAccesses ?? []) {
       if (
         !access ||
@@ -64,7 +64,7 @@ export const validateDebugTraceDetails = (
             access.channel > 7 ||
             !["dma", "hdma"].includes(access.actor ?? "cpu")))
       )
-        throw new Error("Invalid trace bus operation.");
+        {throw new Error("Invalid trace bus operation.");}
     }
   }
   return value as DebugTraceInstructionDetail[];

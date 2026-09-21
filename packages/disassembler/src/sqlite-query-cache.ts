@@ -6,28 +6,6 @@ import type { ShardKind } from "./project-types.js";
 const QUERY_CACHE_SCHEMA =
   "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
 
-/**
- * Upgrade the disposable cache layout inside the caller's write transaction. Existing triggers
- * keep targeting the same table name, and rollback restores both its old schema and contents.
- * @param {DatabaseSync} db Project connection with an active write transaction.
- */
-export const upgradeQueryCacheStorage = (db: DatabaseSync): void => {
-  const schema = db
-    .prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='query_cache'")
-    .get();
-  if (!schema || !/without\s+rowid/i.test(String(schema.sql))) {
-    return;
-  }
-  // A large unrelated graph cache made every missing-key invalidation read overflow pages.
-  // Copy within SQLite, without materializing JSON in JS or renaming the table (which would
-  // rewrite dependent triggers to the temporary name). No authoritative project data changes.
-  db.exec(`CREATE TEMP TABLE query_cache_upgrade AS SELECT * FROM main.query_cache;
-    DROP TABLE main.query_cache;
-    ${QUERY_CACHE_SCHEMA};
-    INSERT INTO main.query_cache SELECT * FROM temp.query_cache_upgrade;
-    DROP TABLE temp.query_cache_upgrade;`);
-};
-
 /** Install dependency-specific invalidation. Cached projections survive unrelated publications.
  * The caller owns the writer transaction. Trigger names and tables come only from internal constants.
  * @param {DatabaseSync} db Open project database.
@@ -61,12 +39,12 @@ export const installQueryCache = (
   }
   db.exec(QUERY_CACHE_SCHEMA);
   for (const table of dependencies.flatMap((name) =>
-    name === "runtime" ? ["runtime_facts", "runtime_observations"] : [name],
+    name === "runtime" ? ["runtime_facts", "runtime_observations", "runtime_identities"] : [name],
   )) {
     for (const event of ["INSERT", "UPDATE", "DELETE"]) {
       const update =
         table === "runtime_observations" && event === "UPDATE"
-          ? "UPDATE OF fact_id,prefix_id,id,evidence_id,count,state_prefix_id,state_id"
+          ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id"
           : event;
       db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key}_${table}_${event} AFTER ${update} ON ${table} BEGIN
       DELETE FROM query_cache WHERE name='${key}'; END`);

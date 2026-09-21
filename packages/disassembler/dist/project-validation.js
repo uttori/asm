@@ -46,21 +46,39 @@ export const validateAnalysisProjectManifest = (manifest) => {
     }
 };
 const FORBIDDEN_ROM_PAYLOAD_KEYS = new Set(["romBytes", "fileBytes", "contentBytes", "byteData"]);
+/**
+ * Reject embedded ROM payload fields at any depth, preserving the offending property's path.
+ * @param {unknown} value JSON-compatible record or collection to inspect.
+ * @param {string} location Path included in a rejected property's diagnostic.
+ * @returns {void} Throws on the first forbidden payload field.
+ */
 const assertNoRomPayload = (value, location) => {
     if (Array.isArray(value)) {
         for (let index = 0; index < value.length; index++) {
-            assertNoRomPayload(value[index], `${location}[${index}]`);
+            const entry = value[index];
+            if (entry && typeof entry === "object") {
+                assertNoRomPayload(entry, `${location}[${index}]`);
+            }
         }
         return;
     }
     if (!value || typeof value !== "object") {
         return;
     }
-    for (const [key, entry] of Object.entries(value)) {
+    // Most record fields are scalars. Avoid allocating entry tuples and diagnostic paths for every
+    // scalar in a full-project scan. Only objects can contain a forbidden property further down.
+    const record = value;
+    for (const key in record) {
+        if (!Object.hasOwn(record, key)) {
+            continue;
+        }
         if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key)) {
             throw new Error(`ROM byte payload '${location}.${key}' is forbidden in analysis projects.`);
         }
-        assertNoRomPayload(entry, `${location}.${key}`);
+        const entry = record[key];
+        if (entry && typeof entry === "object") {
+            assertNoRomPayload(entry, `${location}.${key}`);
+        }
     }
 };
 const isStableId = (id) => {
@@ -424,45 +442,52 @@ export const validateLoadedShards = (shards, project) => {
         }
     }
     const addressSpaceById = new Map(addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace]));
-    const addressedRecords = [
-        ...shards.annotations,
-        ...shards.labels,
-        ...shards.comments,
-        ...shards.regions,
-        ...shards.analysis.filter((record) => "addressSpace" in record),
-    ];
-    for (const record of addressedRecords) {
-        const addressSpace = addressSpaceById.get(record.addressSpace);
-        if (!addressSpace) {
-            throw new Error(`Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`);
-        }
-        const maximum = 2 ** addressSpace.addressBits;
-        const addresses = [];
-        if ("start" in record) {
-            addresses.push(record.start, record.end - 1);
-        }
-        else if ("address" in record) {
-            addresses.push(record.address);
-            if ("kind" in record && record.kind === "conflict" && record.end !== undefined) {
-                addresses.push(record.end - 1);
+    // Scan collections in place. Flattening them and collecting each record's addresses creates
+    // substantial temporary allocation when validating a complete CFG before every save or load.
+    const outsideSpace = (address, exclusiveMaximum) => !Number.isSafeInteger(address) || address < 0 || address >= exclusiveMaximum;
+    for (const records of [
+        shards.annotations,
+        shards.labels,
+        shards.comments,
+        shards.regions,
+        shards.analysis,
+    ]) {
+        for (const record of records) {
+            if (!("addressSpace" in record)) {
+                continue;
             }
-        }
-        else {
-            if ("fromAddress" in record) {
-                addresses.push(record.fromAddress);
+            const addressSpace = addressSpaceById.get(record.addressSpace);
+            if (!addressSpace) {
+                throw new Error(`Analysis record '${record.id}' refers to unknown address space '${record.addressSpace}'.`);
             }
-            if ("toAddress" in record && record.toAddress !== undefined) {
-                addresses.push(record.toAddress);
+            const maximum = 2 ** addressSpace.addressBits;
+            let invalid = false;
+            if ("start" in record) {
+                invalid = outsideSpace(record.start, maximum) || outsideSpace(record.end - 1, maximum);
             }
-            // Imported target lists can outgrow the engine's call-argument limit. Validate every target.
-            if ("targets" in record) {
-                for (const target of record.targets) {
-                    addresses.push(target);
+            else if ("address" in record) {
+                invalid = outsideSpace(record.address, maximum);
+                if ("kind" in record && record.kind === "conflict" && record.end !== undefined) {
+                    invalid ||= outsideSpace(record.end - 1, maximum);
                 }
             }
-        }
-        if (addresses.some((address) => !Number.isSafeInteger(address) || address < 0 || address >= maximum)) {
-            throw new Error(`Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`);
+            else {
+                if ("fromAddress" in record) {
+                    invalid = outsideSpace(record.fromAddress, maximum);
+                }
+                if ("toAddress" in record && record.toAddress !== undefined) {
+                    invalid ||= outsideSpace(record.toAddress, maximum);
+                }
+                // Imported target lists can outgrow the engine's call-argument limit. Visit them directly.
+                if ("targets" in record) {
+                    for (const target of record.targets) {
+                        invalid ||= outsideSpace(target, maximum);
+                    }
+                }
+            }
+            if (invalid) {
+                throw new Error(`Analysis record '${record.id}' exceeds address space '${record.addressSpace}'.`);
+            }
         }
     }
     validateRuntimeRecords(shards.runtime, project, shards.evidence);

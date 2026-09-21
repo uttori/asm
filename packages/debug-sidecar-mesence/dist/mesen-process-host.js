@@ -12,18 +12,21 @@ export const MESEN_NATIVE_TOKEN_ENV = "MESEN_DEBUG_SERVER_TOKEN";
 const sha256Pattern = /^[\dA-Fa-f]{64}$/;
 const revisionPattern = /^[\dA-Fa-f]{40}$/;
 const checkedSha256 = (value, name) => {
-    if (!sha256Pattern.test(value))
+    if (!sha256Pattern.test(value)) {
         throw new Error(`${name} must be a 64-digit SHA-256 value.`);
+    }
     return value.toLowerCase();
 };
 const checkedRevision = (value) => {
-    if (!revisionPattern.test(value))
+    if (!revisionPattern.test(value)) {
         throw new Error("Mesen upstream revision must be a 40-digit git revision.");
+    }
     return value.toLowerCase();
 };
 const checkedAbsolutePath = (value, name) => {
-    if (!path.isAbsolute(value))
+    if (!path.isAbsolute(value)) {
         throw new Error(`${name} must be an absolute path.`);
+    }
     return path.normalize(value);
 };
 const checkedResourcePath = (value) => {
@@ -31,8 +34,9 @@ const checkedResourcePath = (value) => {
         value.includes("\\") ||
         path.posix.isAbsolute(value) ||
         path.posix.normalize(value) !== value ||
-        value.split("/").includes(".."))
+        value.split("/").includes("..")) {
         throw new Error(`Mesen resource path '${value}' must be normalized and relative.`);
+    }
     return value;
 };
 const errorValue = (error) => error instanceof Error ? error : new Error(String(error));
@@ -79,14 +83,16 @@ class NodeMesenProcessHandle {
         return this.#exit;
     }
     kill(signal) {
-        if (!this.#exited)
+        if (!this.#exited) {
             this.#child.kill(signal);
+        }
     }
 }
 const nodeSha256 = async (file) => {
     const digest = createHash("sha256");
-    for await (const chunk of createReadStream(file))
+    for await (const chunk of createReadStream(file)) {
         digest.update(chunk);
+    }
     return digest.digest("hex");
 };
 const reserveLoopbackPort = async () => {
@@ -101,10 +107,12 @@ const reserveLoopbackPort = async () => {
         throw new Error("Unable to reserve an IPv4 loopback port for MesenCE.");
     }
     await new Promise((resolve, reject) => server.close((error) => {
-        if (error)
+        if (error) {
             reject(error);
-        else
+        }
+        else {
             resolve();
+        }
     }));
     return address.port;
 };
@@ -127,13 +135,15 @@ export const nodeMesenProcessRuntime = Object.freeze({
     }),
 });
 const manifestRecord = (value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value))
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
         throw new Error("Mesen runtime manifest must be an object.");
+    }
     return value;
 };
 const manifestString = (value, name) => {
-    if (typeof value !== "string" || value.length === 0)
+    if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${name} must be a non-empty string.`);
+    }
     return value;
 };
 /**
@@ -143,12 +153,15 @@ const manifestString = (value, name) => {
  */
 export const parseMesenRuntimeManifest = (value) => {
     const manifest = manifestRecord(value);
-    if (manifest.schemaVersion !== MESEN_RUNTIME_MANIFEST_VERSION)
+    if (manifest.schemaVersion !== MESEN_RUNTIME_MANIFEST_VERSION) {
         throw new Error(`Unsupported Mesen runtime manifest version ${String(manifest.schemaVersion)}.`);
-    if (manifest.emulator !== "MesenCE")
+    }
+    if (manifest.emulator !== "MesenCE") {
         throw new Error("Runtime manifest is not for MesenCE.");
-    if (!Array.isArray(manifest.resources))
+    }
+    if (!Array.isArray(manifest.resources)) {
         throw new Error("Mesen runtime manifest resources must be an array.");
+    }
     const resources = Object.freeze(manifest.resources.map((value, index) => {
         const resource = manifestRecord(value);
         const resourcePath = checkedResourcePath(manifestString(resource.path, `Mesen resource ${index} path`));
@@ -157,8 +170,9 @@ export const parseMesenRuntimeManifest = (value) => {
             sha256: checkedSha256(manifestString(resource.sha256, `Resource '${resourcePath}' SHA-256`), `Resource '${resourcePath}' SHA-256`),
         });
     }));
-    if (new Set(resources.map(({ path: resourcePath }) => resourcePath)).size !== resources.length)
+    if (new Set(resources.map(({ path: resourcePath }) => resourcePath)).size !== resources.length) {
         throw new Error("Mesen runtime manifest contains duplicate resource paths.");
+    }
     return Object.freeze({
         schemaVersion: MESEN_RUNTIME_MANIFEST_VERSION,
         emulator: "MesenCE",
@@ -197,8 +211,9 @@ export class MesenProcessHost {
         this.#executable = checkedAbsolutePath(options.executable, "Mesen executable");
         this.#rom = checkedAbsolutePath(options.rom, "Mesen ROM");
         this.#runtimeDirectory = checkedAbsolutePath(options.runtimeDirectory, "Mesen runtime directory");
-        if (path.dirname(this.#executable) !== this.#runtimeDirectory)
+        if (path.dirname(this.#executable) !== this.#runtimeDirectory) {
             throw new Error("Mesen executable must reside directly in its portable runtime directory.");
+        }
         this.#manifest = parseMesenRuntimeManifest(options.manifest);
         this.#env = options.env ?? {};
         this.#startupTimeoutMs = options.startupTimeoutMs ?? 10_000;
@@ -217,8 +232,9 @@ export class MesenProcessHost {
             ["Mesen native lifetime", this.#nativeLifetimeSeconds],
             ["Mesen output limit", this.#maxOutputBytes],
         ]) {
-            if (!Number.isSafeInteger(value) || value <= 0)
+            if (!Number.isSafeInteger(value) || value <= 0) {
                 throw new Error(`${name} must be a positive safe integer.`);
+            }
         }
     }
     /** @returns {MesenRuntimeManifest} Normalized immutable launch identity. */
@@ -256,8 +272,9 @@ export class MesenProcessHost {
                 return await this.#connect();
             }
             catch (error) {
-                if (launched)
+                if (launched) {
                     await this.#terminateCurrent();
+                }
                 throw error;
             }
         });
@@ -270,8 +287,9 @@ export class MesenProcessHost {
         await this.#verifyIdentity();
         const port = await this.#runtime.reserveLoopbackPort();
         const token = this.#runtime.randomToken().toLowerCase();
-        if (!sha256Pattern.test(token))
+        if (!sha256Pattern.test(token)) {
             throw new Error("Mesen runtime generated an invalid 256-bit native token.");
+        }
         const args = [
             "--testrunner",
             `--debugserverport=${port}`,
@@ -301,13 +319,15 @@ export class MesenProcessHost {
         const processHandle = this.#process;
         const port = this.#port;
         const token = this.#token;
-        if (!processHandle || port === undefined || token === undefined)
+        if (!processHandle || port === undefined || token === undefined) {
             throw new Error("MesenCE process is not running.");
+        }
         const deadline = Date.now() + this.#startupTimeoutMs;
         let lastError = new Error("MesenCE debugger listener was not ready.");
         while (Date.now() < deadline) {
-            if (processHandle.exited)
+            if (processHandle.exited) {
                 throw await this.#exitError(processHandle, "before debugger connected");
+            }
             try {
                 const remaining = Math.max(1, deadline - Date.now());
                 const transport = await this.#runtime.connect(port, Math.min(remaining, 250));
@@ -322,18 +342,22 @@ export class MesenProcessHost {
             }
             await this.#runtime.delay(Math.min(this.#connectRetryMs, Math.max(1, deadline - Date.now())));
         }
-        if (processHandle.exited)
+        if (processHandle.exited) {
             throw await this.#exitError(processHandle, "before debugger connected");
+        }
         throw new Error(`MesenCE debugger listener on 127.0.0.1:${port} was not ready within ${this.#startupTimeoutMs} ms: ${lastError.message}`);
     }
     async #verifyIdentity() {
-        if (this.#runtime.platform !== this.#manifest.platform)
+        if (this.#runtime.platform !== this.#manifest.platform) {
             throw new Error(`Mesen manifest platform '${this.#manifest.platform}' does not match '${this.#runtime.platform}'.`);
-        if (this.#runtime.architecture !== this.#manifest.architecture)
+        }
+        if (this.#runtime.architecture !== this.#manifest.architecture) {
             throw new Error(`Mesen manifest architecture '${this.#manifest.architecture}' does not match '${this.#runtime.architecture}'.`);
+        }
         const runtimeInfo = await stat(this.#runtimeDirectory).catch(() => undefined);
-        if (!runtimeInfo?.isDirectory())
+        if (!runtimeInfo?.isDirectory()) {
             throw new Error("Mesen portable runtime path must be an existing directory.");
+        }
         await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
         await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
         for (const resource of this.#manifest.resources) {
@@ -349,19 +373,22 @@ export class MesenProcessHost {
         catch (error) {
             throw new Error(`Unable to verify MesenCE ${context} at '${file}': ${errorValue(error).message}`);
         }
-        if (actual !== expected)
+        if (actual !== expected) {
             throw new Error(`MesenCE ${context} SHA-256 mismatch: expected ${expected}, received ${actual}.`);
+        }
     }
     async #terminateCurrent() {
         const processHandle = this.#process;
         this.#process = undefined;
         this.#port = undefined;
         this.#token = undefined;
-        if (!processHandle || processHandle.exited)
+        if (!processHandle || processHandle.exited) {
             return;
+        }
         processHandle.kill("SIGTERM");
-        if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs))
+        if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs)) {
             return;
+        }
         processHandle.kill("SIGKILL");
         await processHandle.waitForExit();
     }
@@ -370,10 +397,12 @@ export class MesenProcessHost {
         const status = exit.signal ? `signal ${exit.signal}` : `code ${String(exit.code)}`;
         const detail = this.output.trim();
         let suffix = ".";
-        if (exit.error)
+        if (exit.error) {
             suffix = `: ${exit.error.message}`;
-        else if (detail)
+        }
+        else if (detail) {
             suffix = `: ${detail}`;
+        }
         return new Error(`MesenCE exited with ${status} ${context}${suffix}`);
     }
     #captureOutput(stream, data) {

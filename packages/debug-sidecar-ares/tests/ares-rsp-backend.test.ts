@@ -895,3 +895,39 @@ test("native file capture binds local manifest identity and keeps event bytes of
   t.is(commands.at(-1), `qUttoriCaptureFile:stop:${busSession}`);
   await backend.disconnect();
 });
+
+test("capture context binds the runtime identity and holds the setup boundary", async (t) => {
+  const client = new FakeAresRspClient(fakeState());
+  const original = client.request.bind(client);
+  const commands: string[] = [];
+  client.request = async (command) => {
+    if (!command.startsWith("qUttoriContext:")) {return original(command);}
+    commands.push(command);
+    if (command.startsWith("qUttoriContext:prepare:")) {return "prepared";}
+    if (command.startsWith("qUttoriContext:start:")) {return "recording";}
+    if (command === "qUttoriContext:abort") {return "aborted";}
+    return "";
+  };
+  const nativeFileIdentity = { romSha256: "a".repeat(64), executableSha256: "b".repeat(64) };
+  const backend = new AresRspDebugBackend({ createClient: async () => client, nativeFileIdentity });
+  await backend.connect();
+  const request = {
+    operation: "context",
+    action: "prepare",
+    directory: "/tmp/capture: é.context",
+    romContentSha256: nativeFileIdentity.romSha256,
+    producer: { id: "ares", revision: nativeFileIdentity.executableSha256 },
+  } as const;
+  await t.throwsAsync(backend.capture({ ...request, romContentSha256: "c".repeat(64) }), {
+    message: /does not match/,
+  });
+  t.is(commands.length, 0);
+  t.deepEqual(await backend.capture(request), { contextState: "prepared" });
+  t.true(commands[0].includes(Buffer.from(request.directory).toString("hex")));
+  await t.throwsAsync(backend.continue(), { message: /fixing its execution boundary/ });
+  await backend.capture({ operation: "context", action: "start", session: "1".repeat(32) });
+  await t.notThrowsAsync(backend.continue());
+  await backend.pause();
+  await backend.capture({ operation: "context", action: "abort" });
+  await backend.disconnect();
+});

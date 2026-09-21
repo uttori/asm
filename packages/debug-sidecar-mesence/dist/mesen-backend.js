@@ -61,49 +61,59 @@ const memorySpaces = Object.freeze({
 });
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
 const record = (value, context) => {
-    if (typeof value !== "object" || value === null || Array.isArray(value))
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
         throw new Error(`${context} must be an object.`);
+    }
     return value;
 };
 const integer = (value, context, maximum = Number.MAX_SAFE_INTEGER) => {
-    if (!Number.isSafeInteger(value) || value < 0 || value > maximum)
+    if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
         throw new Error(`${context} must be an integer between 0 and ${maximum}.`);
+    }
     return value;
 };
 const boolean = (value, context) => {
-    if (typeof value !== "boolean")
+    if (typeof value !== "boolean") {
         throw new Error(`${context} must be a boolean.`);
+    }
     return value;
 };
 const string = (value, context) => {
-    if (typeof value !== "string")
+    if (typeof value !== "string") {
         throw new Error(`${context} must be a string.`);
+    }
     return value;
 };
 const processor = (value, context) => {
     const name = string(value, context);
-    if (name !== "65816" && name !== "spc700" && name !== "superfx")
+    if (name !== "65816" && name !== "spc700" && name !== "superfx") {
         throw new Error(`${context} is unsupported.`);
+    }
     return name;
 };
 const maximumPc = (cpu) => (cpu === "spc700" ? 0xffff : 0xff_ffff);
 const parseHello = (value) => {
     const input = record(value, "Mesen hello");
     if (integer(input.protocolVersion, "Mesen native protocol version") !==
-        MESEN_NATIVE_PROTOCOL_VERSION)
+        MESEN_NATIVE_PROTOCOL_VERSION) {
         throw new Error(`Mesen native protocol version ${String(input.protocolVersion)} is unsupported.`);
-    if (string(input.emulator, "Mesen emulator identity") !== "MesenCE")
+    }
+    if (string(input.emulator, "Mesen emulator identity") !== "MesenCE") {
         throw new Error("Mesen emulator identity is unsupported.");
+    }
     if (!Array.isArray(input.processors) ||
         input.processors.length === 0 ||
-        input.processors.length > 3)
+        input.processors.length > 3) {
         throw new Error("Mesen processor list must contain between one and three entries.");
+    }
     const available = input.processors.map((entry, index) => processor(entry, `Mesen processor ${index}`));
-    if (new Set(available).size !== available.length || !available.includes("65816"))
+    if (new Set(available).size !== available.length || !available.includes("65816")) {
         throw new Error("Mesen processor list must contain one unique 65816 entry.");
+    }
     const maxMemoryRead = integer(input.maxMemoryRead, "Mesen maximum memory read", 1_048_576);
-    if (maxMemoryRead < 1)
+    if (maxMemoryRead < 1) {
         throw new Error("Mesen maximum memory read must be positive.");
+    }
     return {
         stopped: boolean(input.stopped, "Mesen stopped state"),
         processors: available,
@@ -113,8 +123,9 @@ const parseHello = (value) => {
 const parseStatus = (value, expected) => {
     const input = record(value, "Mesen status");
     const cpu = processor(input.cpu, "Mesen status processor");
-    if (cpu !== expected)
+    if (cpu !== expected) {
         throw new Error(`Mesen status processor '${cpu}' did not match requested '${expected}'.`);
+    }
     return {
         stopped: boolean(input.stopped, "Mesen status stopped state"),
         cpu,
@@ -125,8 +136,9 @@ const parseStatus = (value, expected) => {
 const parseResume = (value, expected) => {
     const input = record(value, "Mesen resume response");
     const cpu = processor(input.cpu, "Mesen resume processor");
-    if (cpu !== expected)
+    if (cpu !== expected) {
         throw new Error(`Mesen resume processor '${cpu}' did not match requested '${expected}'.`);
+    }
     return boolean(input.stopped, "Mesen resume stopped state");
 };
 const registerInteger = (registers, name, bits) => integer(registers[name], `Mesen register ${name}`, bits > 32 ? Number.MAX_SAFE_INTEGER : 2 ** bits - 1);
@@ -174,18 +186,22 @@ export class MesenDebugBackend {
         this.#terminate = options.terminate ?? (() => Promise.resolve());
         this.#pollIntervalMs = options.pollIntervalMs ?? 16;
         integer(this.#pollIntervalMs, "Mesen status poll interval", 60_000);
-        if (this.#pollIntervalMs < 1)
+        if (this.#pollIntervalMs < 1) {
             throw new Error("Mesen status poll interval must be positive.");
+        }
     }
     /** @inheritdoc */
     async connect(options = {}) {
-        if (this.#connected)
+        if (this.#connected) {
             throw new Error("Mesen backend is already connected.");
-        if (this.#client)
+        }
+        if (this.#client) {
             await this.#releaseClient(this.#client);
+        }
         const client = await this.#createClient({ reset: options.reset ?? true });
-        if (client.closed)
+        if (client.closed) {
             throw new Error("Mesen client factory returned a closed client.");
+        }
         this.#client = client;
         this.#closeSubscription = client.onClose((error) => this.#clientClosed(client, error));
         try {
@@ -193,12 +209,15 @@ export class MesenDebugBackend {
             this.#availableProcessors = hello.processors;
             this.#maxMemoryRead = hello.maxMemoryRead;
             let stopped = hello.stopped;
-            if (options.reset ?? true)
+            if (options.reset ?? true) {
                 stopped = (await this.#statusRequest("reset", "65816")).stopped;
-            else if (!stopped)
+            }
+            else if (!stopped) {
                 stopped = (await this.#statusRequest("pause", "65816")).stopped;
-            if (!stopped)
+            }
+            if (!stopped) {
                 throw new Error("Mesen did not reach a coherent stopped state during connect.");
+            }
             this.#connected = true;
             this.#stopped = true;
             this.#emit({ type: "stopped", reason: "entry", threadId: threads["65816"].id });
@@ -236,18 +255,21 @@ export class MesenDebugBackend {
             });
             this.#emit({ type: "terminated", restart: false });
         }
-        if (failure)
+        if (failure) {
             throw failure;
+        }
     }
     /** @inheritdoc */
     async pause(threadId) {
         const descriptor = this.#thread(threadId ?? threads["65816"].id);
-        if (this.#stopped)
+        if (this.#stopped) {
             return;
+        }
         this.#executionEpoch++;
         const status = await this.#statusRequest("pause", descriptor.processor);
-        if (!status.stopped)
+        if (!status.stopped) {
             throw new Error("Mesen pause completed without a stopped state.");
+        }
         this.#stopped = true;
         this.#emit({ type: "stopped", reason: "pause", threadId: descriptor.id });
     }
@@ -267,17 +289,20 @@ export class MesenDebugBackend {
     /** @inheritdoc */
     async step(threadId, kind) {
         const descriptor = this.#thread(threadId);
-        if (kind !== "instruction" && kind !== "in")
+        if (kind !== "instruction" && kind !== "in") {
             throw new Error(`Mesen does not support ${kind} stepping for ${descriptor.name}.`);
+        }
         this.#requireStopped();
         this.#stopped = false;
         const epoch = ++this.#executionEpoch;
         this.#emit({ type: "continued", threadId: descriptor.id, allThreads: true });
         const status = await this.#statusRequest("step", descriptor.processor);
-        if (!status.stopped)
+        if (!status.stopped) {
             throw new Error("Mesen instruction step completed without stopping.");
-        if (epoch !== this.#executionEpoch)
+        }
+        if (epoch !== this.#executionEpoch) {
             return;
+        }
         this.#stopped = true;
         this.#emit({ type: "stopped", reason: "step", threadId: descriptor.id });
     }
@@ -350,8 +375,9 @@ export class MesenDebugBackend {
             ];
         }
         const registerArray = values.R;
-        if (!Array.isArray(registerArray) || registerArray.length !== 16)
+        if (!Array.isArray(registerArray) || registerArray.length !== 16) {
             throw new Error("Mesen Super FX register array must contain 16 entries.");
+        }
         const sfr = record(values.SFR, "Mesen Super FX status register");
         const generalRegisters = registerArray.map((value, index) => ({
             name: `R${index}`,
@@ -388,32 +414,37 @@ export class MesenDebugBackend {
     async readMemory(address, count) {
         const descriptor = this.#checkedMemoryAddress(address, false);
         integer(count, "Mesen memory count", 1_048_576);
-        if (count === 0)
+        if (count === 0) {
             return { address: { ...address }, bytes: new Uint8Array(), unreadableBytes: 0 };
+        }
         const bytes = await this.#readNativeMemory(descriptor, address.address, count);
         return { address: { ...address }, bytes, unreadableBytes: count - bytes.length };
     }
     /** @inheritdoc */
     async setBreakpoints(addresses) {
         this.#requireStopped();
-        if (addresses.length > 256)
+        if (addresses.length > 256) {
             throw new Error("Mesen accepts at most 256 execute breakpoints.");
+        }
         const checked = addresses.map((address, index) => {
             if (address.architecture !== MESEN_65816_ARCHITECTURE ||
-                address.addressSpace !== MESEN_65816_ADDRESS_SPACE)
+                address.addressSpace !== MESEN_65816_ADDRESS_SPACE) {
                 throw new Error(`Mesen breakpoint ${index} is not a 65816 execution address.`);
+            }
             integer(address.address, `Mesen breakpoint ${index} address`, 0xff_ffff);
             return { ...address };
         });
-        if (new Set(checked.map(({ address }) => address)).size !== checked.length)
+        if (new Set(checked.map(({ address }) => address)).size !== checked.length) {
             throw new Error("Duplicate Mesen execute breakpoint addresses are not allowed.");
+        }
         const result = record(await this.#requireConnected().request("setBreakpoints", {
             cpu: "65816",
             addresses: checked.map(({ address }) => address),
         }), "Mesen breakpoint response");
         const count = integer(result.count, "Mesen breakpoint response count", 256);
-        if (count !== checked.length)
+        if (count !== checked.length) {
             throw new Error("Mesen did not install the complete breakpoint set.");
+        }
         const next = new Map();
         const breakpoints = checked.map((address) => {
             const breakpoint = this.#breakpoints.get(address.address) ??
@@ -422,8 +453,9 @@ export class MesenDebugBackend {
             return breakpoint;
         });
         this.#breakpoints.clear();
-        for (const [address, breakpoint] of next)
+        for (const [address, breakpoint] of next) {
             this.#breakpoints.set(address, breakpoint);
+        }
         return breakpoints;
     }
     /** @inheritdoc */
@@ -438,20 +470,22 @@ export class MesenDebugBackend {
             const memory = await this.#readNativeMemory(descriptor, current, 4);
             const source = new Uint8ArrayDecoderSource(memory);
             const decoded = (() => {
-                if (descriptor.processor === "65816")
+                if (descriptor.processor === "65816") {
                     return this.#cpuDecoder.decode({
                         source,
                         offset: 0,
                         logicalAddress: current,
                         state: this.#cpuDecodeState(status),
                     });
-                if (descriptor.processor === "spc700")
+                }
+                if (descriptor.processor === "spc700") {
                     return this.#spcDecoder.decode({
                         source,
                         offset: 0,
                         logicalAddress: current,
                         state: this.#spcDecodeState(status),
                     });
+                }
                 return this.#superFxDecoder.decode({
                     source,
                     offset: 0,
@@ -459,13 +493,16 @@ export class MesenDebugBackend {
                     state: superFxDecodeState(superFxState),
                 });
             })();
-            if (decoded.kind !== "instruction")
+            if (decoded.kind !== "instruction") {
                 throw new Error(decoded.kind === "ambiguous" ? decoded.reason : `Mesen decode failed: ${decoded.message}`);
+            }
             const text = (() => {
-                if (descriptor.processor === "65816")
+                if (descriptor.processor === "65816") {
                     return formatCpu65816Instruction(decoded.instruction);
-                if (descriptor.processor === "spc700")
+                }
+                if (descriptor.processor === "spc700") {
                     return formatSpc700Instruction(decoded.instruction);
+                }
                 return formatSuperFxInstruction(decoded.instruction);
             })();
             instructions.push({
@@ -473,8 +510,9 @@ export class MesenDebugBackend {
                 bytes: [...decoded.instruction.bytes],
                 text,
             });
-            if (superFxState)
+            if (superFxState) {
                 superFxState = transferSuperFxState(decoded.instruction, superFxState);
+            }
             current = (current + decoded.instruction.size) & maximumPc(descriptor.processor);
         }
         return instructions;
@@ -500,8 +538,9 @@ export class MesenDebugBackend {
         try {
             while (this.#connected && !this.#stopped && epoch === this.#executionEpoch) {
                 await delay(this.#pollIntervalMs);
-                if (!this.#connected || this.#stopped || epoch !== this.#executionEpoch)
+                if (!this.#connected || this.#stopped || epoch !== this.#executionEpoch) {
                     return;
+                }
                 const status = await this.#readStatus(descriptor.processor, false);
                 if (status.stopped) {
                     this.#acceptRunningStop(status, descriptor, epoch);
@@ -510,8 +549,9 @@ export class MesenDebugBackend {
             }
         }
         catch (error) {
-            if (epoch !== this.#executionEpoch || !this.#connected)
+            if (epoch !== this.#executionEpoch || !this.#connected) {
                 return;
+            }
             const failure = asError(error);
             this.#emit({ type: "output", category: "stderr", text: `${failure.message}\n` });
             this.#emit({ type: "terminated", restart: true });
@@ -523,8 +563,9 @@ export class MesenDebugBackend {
         }
     }
     #acceptRunningStop(status, descriptor, epoch) {
-        if (epoch !== this.#executionEpoch || this.#stopped)
+        if (epoch !== this.#executionEpoch || this.#stopped) {
             return;
+        }
         this.#stopped = true;
         const reason = descriptor.processor === "65816" && this.#breakpoints.has(status.programCounter)
             ? "breakpoint"
@@ -532,8 +573,9 @@ export class MesenDebugBackend {
         this.#emit({ type: "stopped", reason, threadId: descriptor.id });
     }
     async #readStatus(cpu, requireStopped = true) {
-        if (requireStopped)
+        if (requireStopped) {
             this.#requireStopped();
+        }
         return this.#statusRequest("status", cpu);
     }
     async #statusRequest(method, cpu) {
@@ -578,25 +620,31 @@ export class MesenDebugBackend {
     }
     #executionDescriptor(address) {
         const descriptor = memorySpaces[address.addressSpace];
-        if (!descriptor || threads[descriptor.processor].architecture !== address.architecture)
+        if (!descriptor || threads[descriptor.processor].architecture !== address.architecture) {
             throw new Error(`Mesen execution address '${address.architecture}/${address.addressSpace}' is unsupported.`);
+        }
         let expectedSpace = MESEN_SUPERFX_ROM_ADDRESS_SPACE;
-        if (descriptor.processor === "65816")
+        if (descriptor.processor === "65816") {
             expectedSpace = MESEN_65816_ADDRESS_SPACE;
-        else if (descriptor.processor === "spc700")
+        }
+        else if (descriptor.processor === "spc700") {
             expectedSpace = MESEN_SPC700_ADDRESS_SPACE;
-        if (address.addressSpace !== expectedSpace)
+        }
+        if (address.addressSpace !== expectedSpace) {
             throw new Error(`Mesen address space '${address.addressSpace}' is not executable.`);
+        }
         integer(address.address, "Mesen execution address", descriptor.maximumAddress);
         this.#requireProcessor(descriptor.processor);
         return descriptor;
     }
     #checkedMemoryAddress(address, allowExecutionBus) {
         const descriptor = memorySpaces[address.addressSpace];
-        if (!descriptor || threads[descriptor.processor].architecture !== address.architecture)
+        if (!descriptor || threads[descriptor.processor].architecture !== address.architecture) {
             throw new Error(`Mesen memory address '${address.architecture}/${address.addressSpace}' is unsupported.`);
-        if (!allowExecutionBus && address.addressSpace === MESEN_65816_ADDRESS_SPACE)
+        }
+        if (!allowExecutionBus && address.addressSpace === MESEN_65816_ADDRESS_SPACE) {
             throw new Error("Mesen logical CPU-bus memory is reserved for disassembly.");
+        }
         integer(address.address, "Mesen memory address", descriptor.maximumAddress);
         this.#requireProcessor(descriptor.processor);
         return descriptor;
@@ -612,14 +660,17 @@ export class MesenDebugBackend {
                 address: address + offset,
                 length: requested,
             }), "Mesen memory response");
-            if (string(response.space, "Mesen memory response space") !== descriptor.native)
+            if (string(response.space, "Mesen memory response space") !== descriptor.native) {
                 throw new Error("Mesen memory response used the wrong address space.");
-            if (integer(response.address, "Mesen memory response address") !== address + offset)
+            }
+            if (integer(response.address, "Mesen memory response address") !== address + offset) {
                 throw new Error("Mesen memory response used the wrong address.");
+            }
             const encoded = string(response.data, "Mesen memory response data");
             const chunk = Buffer.from(encoded, "base64");
-            if (chunk.toString("base64") !== encoded || chunk.length !== requested)
+            if (chunk.toString("base64") !== encoded || chunk.length !== requested) {
                 throw new Error("Mesen memory response is not canonical base64 of the requested length.");
+            }
             bytes.set(chunk, offset);
             offset += chunk.length;
         }
@@ -628,49 +679,58 @@ export class MesenDebugBackend {
     #executionAddress(cpu, address) {
         const architecture = threads[cpu].architecture;
         let addressSpace = MESEN_SUPERFX_ROM_ADDRESS_SPACE;
-        if (cpu === "65816")
+        if (cpu === "65816") {
             addressSpace = MESEN_65816_ADDRESS_SPACE;
-        else if (cpu === "spc700")
+        }
+        else if (cpu === "spc700") {
             addressSpace = MESEN_SPC700_ADDRESS_SPACE;
+        }
         return { architecture, addressSpace, address };
     }
     #thread(id) {
         integer(id, "Mesen thread id");
         const descriptor = Object.values(threads).find((candidate) => candidate.id === id);
-        if (!descriptor || !this.#availableProcessors.includes(descriptor.processor))
+        if (!descriptor || !this.#availableProcessors.includes(descriptor.processor)) {
             throw new Error(`Unknown Mesen thread ${id}.`);
+        }
         return descriptor;
     }
     #frame(id) {
         integer(id, "Mesen frame id");
         const descriptor = Object.values(threads).find((candidate) => candidate.frameId === id);
-        if (!descriptor || !this.#availableProcessors.includes(descriptor.processor))
+        if (!descriptor || !this.#availableProcessors.includes(descriptor.processor)) {
             throw new Error(`Unknown Mesen frame ${id}.`);
+        }
         return descriptor;
     }
     #requireProcessor(cpu) {
-        if (!this.#availableProcessors.includes(cpu))
+        if (!this.#availableProcessors.includes(cpu)) {
             throw new Error(`Mesen processor '${cpu}' is not available for this cartridge.`);
+        }
     }
     #requireClient() {
-        if (!this.#client || this.#client.closed)
+        if (!this.#client || this.#client.closed) {
             throw new Error("Mesen client is not available.");
+        }
         return this.#client;
     }
     #requireConnected() {
-        if (!this.#connected)
+        if (!this.#connected) {
             throw new Error("Mesen backend is not connected.");
+        }
         return this.#requireClient();
     }
     #requireStopped() {
         const client = this.#requireConnected();
-        if (!this.#stopped)
+        if (!this.#stopped) {
             throw new Error("Mesen backend must be stopped for this operation.");
+        }
         return client;
     }
     #clientClosed(client, error) {
-        if (this.#expectedClose.has(client) || this.#client !== client)
+        if (this.#expectedClose.has(client) || this.#client !== client) {
             return;
+        }
         this.#executionEpoch++;
         this.#closeSubscription?.dispose();
         this.#closeSubscription = undefined;
@@ -685,8 +745,9 @@ export class MesenDebugBackend {
         this.#emit({ type: "terminated", restart: true });
     }
     async #releaseClient(client) {
-        if (this.#client !== client)
+        if (this.#client !== client) {
             return;
+        }
         this.#executionEpoch++;
         this.#closeSubscription?.dispose();
         this.#closeSubscription = undefined;
@@ -695,8 +756,9 @@ export class MesenDebugBackend {
         await client.close();
     }
     #emit(event) {
-        for (const listener of this.#listeners)
+        for (const listener of this.#listeners) {
             listener(event);
+        }
     }
 }
 //# sourceMappingURL=mesen-backend.js.map

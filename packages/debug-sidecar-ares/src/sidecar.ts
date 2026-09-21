@@ -45,21 +45,21 @@ export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSi
   let fastBoot = true;
   for (let index = 0; index < arguments_.length; index++) {
     const argument = arguments_[index];
-    if (argument === undefined) throw new Error("Ares sidecar arguments cannot contain holes.");
+    if (argument === undefined) {throw new Error("Ares sidecar arguments cannot contain holes.");}
     if (argument === "--no-fast-boot") {
       fastBoot = false;
       continue;
     }
-    if (!optionNames.has(argument)) throw new Error(`Unknown ares sidecar option '${argument}'.`);
-    if (values.has(argument)) throw new Error(`Duplicate ares sidecar option '${argument}'.`);
+    if (!optionNames.has(argument)) {throw new Error(`Unknown ares sidecar option '${argument}'.`);}
+    if (values.has(argument)) {throw new Error(`Duplicate ares sidecar option '${argument}'.`);}
     const value = arguments_[++index];
     if (!value || value.startsWith("--"))
-      throw new Error(`Ares sidecar option '${argument}' requires a value.`);
+      {throw new Error(`Ares sidecar option '${argument}' requires a value.`);}
     values.set(argument, value);
   }
   const required = (name: string): string => {
     const value = values.get(name);
-    if (!value) throw new Error(`Missing required ares sidecar option '${name}'.`);
+    if (!value) {throw new Error(`Missing required ares sidecar option '${name}'.`);}
     return path.resolve(value);
   };
   const system = values.get("--system");
@@ -76,8 +76,8 @@ export const parseAresSidecarArguments = (arguments_: readonly string[]): AresSi
 const write = (stream: NodeJS.WritableStream, data: string | Uint8Array): Promise<void> =>
   new Promise((resolve, reject) => {
     stream.write(data, (error?: Error | null) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {reject(error);}
+      else {resolve();}
     });
   });
 
@@ -116,10 +116,10 @@ export const runAresSidecar = async (
   });
   let ending = false;
   const close = async (error?: Error): Promise<void> => {
-    if (ending) return;
+    if (ending) {return;}
     ending = true;
     if (error)
-      await write(process.stderr, `${error.stack ?? error.message}\n`).catch(() => undefined);
+      {await write(process.stderr, `${error.stack ?? error.message}\n`).catch(() => undefined);}
     process.stdin.pause();
     await host.terminate().catch(() => undefined);
     await new Promise<void>((resolve) => process.stdout.end(resolve));

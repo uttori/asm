@@ -9,12 +9,12 @@ export interface DebugTraceBufferOptions {
 
 const positiveInteger = (value: number, context: string): number => {
   if (!Number.isSafeInteger(value) || value <= 0)
-    throw new Error(`${context} must be a positive safe integer.`);
+    {throw new Error(`${context} must be a positive safe integer.`);}
   return value;
 };
 
 const identity = (value: string, context: string): string => {
-  if (value.length === 0) throw new Error(`${context} must be a non-empty string.`);
+  if (value.length === 0) {throw new Error(`${context} must be a non-empty string.`);}
   return value;
 };
 
@@ -71,9 +71,9 @@ export class DebugTraceBuffer {
    * @param {number} address Architecture-local logical instruction address.
    */
   append(address: number): void {
-    if (!this.#active) return;
+    if (!this.#active) {return;}
     if (!Number.isSafeInteger(address) || address < 0)
-      throw new Error("Trace address must be a non-negative safe integer.");
+      {throw new Error("Trace address must be a non-negative safe integer.");}
     if (this.#length === this.capacity) {
       this.#head = (this.#head + 1) % this.capacity;
       this.#length--;
@@ -95,7 +95,7 @@ export class DebugTraceBuffer {
     const sequenceStart = this.#nextSequence - this.#length;
     const addresses = Array.from({ length: count }, (_, index) => {
       const address = this.#addresses[(this.#head + index) % this.capacity];
-      if (address === undefined) throw new Error("Trace ring contains an uninitialized entry.");
+      if (address === undefined) {throw new Error("Trace ring contains an uninitialized entry.");}
       return address;
     });
     this.#head = (this.#head + count) % this.capacity;

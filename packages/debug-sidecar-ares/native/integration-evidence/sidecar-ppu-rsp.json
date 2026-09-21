@@ -1,0 +1,93 @@
+{
+  "hostVideo": "None",
+  "audioVideoBlocking": false,
+  "fixtureKind": "dense-dma",
+  "pauseMs": 87.23262499999964,
+  "sink": "stream",
+  "ppu": {
+    "portWrites": 32768,
+    "written": 16384,
+    "blocked": 0,
+    "latched": 16384,
+    "byteWrites": 32768,
+    "renderingRestricted": 1268,
+    "omittedWrites": 32704
+  },
+  "transfers": [
+    {
+      "actor": "dma",
+      "channel": 0,
+      "complete": 1,
+      "interrupted": 0,
+      "leadingPartial": 0,
+      "trailingPartial": 0,
+      "bothPartial": 0,
+      "attemptedSlots": 32768,
+      "reads": 32768,
+      "writes": 32768
+    },
+    {
+      "actor": "hdma",
+      "channel": 1,
+      "complete": 5,
+      "interrupted": 0,
+      "leadingPartial": 0,
+      "trailingPartial": 0,
+      "bothPartial": 0,
+      "attemptedSlots": 5,
+      "reads": 5,
+      "writes": 5
+    },
+    {
+      "actor": "hdma",
+      "channel": 2,
+      "complete": 2,
+      "interrupted": 0,
+      "leadingPartial": 0,
+      "trailingPartial": 0,
+      "bothPartial": 0,
+      "attemptedSlots": 2,
+      "reads": 2,
+      "writes": 2
+    }
+  ],
+  "omittedWindows": 0,
+  "fixtureSha256": "b4e4ea317d9c8083bf95b0e7f0eb7b5b1fbd869621615f0f71e8901618470a9b",
+  "executableSha256": "a20ed90fe535df92ac1d259ddc98783be8146c91ef993b1874c14122c8b0c198",
+  "bundledSidecarSha256": "973fb42491cc184f4569f217ce59b6440d4d5046c17cd1bcbb8d06d3516a6232",
+  "scope": "snes.cpu-bus-ppu",
+  "consumer": "15ms-delay-per-read",
+  "checks": [
+    "verified runtime launch",
+    "DAP capture forwarding",
+    "bundled stdio sidecar",
+    "bounded ACT2 chunks up to 256 KiB",
+    "durable writer and final drain",
+    "DMA step drains while awaiting asynchronous stop",
+    "independent debugger pause retained",
+    "direct and indirect HDMA attribution"
+  ],
+  "observedEvents": 65617,
+  "droppedEvents": 0,
+  "throttleCount": "2",
+  "recordingMs": 587.8955410000003,
+  "finalDrainMs": 174.2514589999996,
+  "captureWallMs": 762.1469999999999,
+  "validationMs": 182.09995800000024,
+  "emulatedSeconds": 0.012605790476190476,
+  "emulatedMasterClocks": "270738",
+  "stepEvents": 66893,
+  "actors": {
+    "cpu": 20,
+    "dma": 65536,
+    "hdma": 45
+  },
+  "phases": [
+    "cpu",
+    "dma",
+    "hdma-indirect",
+    "hdma-table",
+    "hdma-transfer"
+  ],
+  "elapsedMs": 944.2619159999999
+}

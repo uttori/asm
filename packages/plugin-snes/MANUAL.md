@@ -645,11 +645,22 @@ To add a WRAM name, edit the generated workspace's user-owned `ram-map.json`:
 {
   "format": "uttori-asm-snes-ram-map",
   "schemaVersion": 1,
+  "includeSourceInformation": false,
   "variables": [
     { "name": "PlayerHealth", "address": "$7E0100", "size": 2, "description": "Current health." }
   ]
 }
 ```
+
+`includeSourceInformation` defaults to `false`. Set it to `true` to include provenance citations
+in generated RAM definition comments. Store new citations in each variable's optional `sources`
+array; keep descriptive notes in `notes`, which remain visible. Existing standalone file/line
+citations such as `Secret of Mana information.txt:L401.` and file paths such as
+`research/weather.md` in `notes` also follow this setting. References embedded in explanatory prose
+are preserved. Descriptions, categories and sizes are always included, and comments end with punctuation.
+For example, the default renders `RAM_SNOW_AMOUNT = $7ECFF7 ; Party — Snow amount.`;
+enabling source information restores its citation. The setting affects generated comments only;
+the input map retains all citations.
 
 Keep existing entries when adding a variable. From the directory containing the analysis project,
 run `uttori-asm export game.analysis source --rom game.sfc`, then

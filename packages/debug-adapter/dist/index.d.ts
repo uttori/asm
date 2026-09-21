@@ -12,4 +12,5 @@ export * from "./sidecar-server.js";
 export * from "./trace-buffer.js";
 export * from "./capture-v2.js";
 export * from "./capture-file.js";
+export * from "./capture-context.js";
 //# sourceMappingURL=index.d.ts.map

@@ -52,16 +52,16 @@ const decode = <T>(payload: unknown): T => JSON.parse(decodeSqlitePayload(payloa
  */
 const runtimeSelect = (pairedState = false): string => {
   const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
-  const identity = pairedState ? "o.state_id" : "o.id";
   const prefix = pairedState ? "o.state_prefix_id" : "o.prefix_id";
   const row = pairedState ? "-o.oid" : "o.oid";
-  return `SELECT ${row} AS storage_rowid,${kind} AS kind,${identity} AS id,
+  return `SELECT ${row} AS storage_rowid,${kind} AS kind,i.value AS id,
     p.value AS id_prefix,e.value AS evidence,o.count,f.architecture,
     f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
     f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
     f.accessed_address_space,f.accessed_address,f.coverage,
     CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
     FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+    LEFT JOIN runtime_identities i ON i.iid=o.identity_id
     LEFT JOIN runtime_prefixes p ON p.id=${prefix}
     LEFT JOIN runtime_evidence e ON e.id=o.evidence_id`;
 };
@@ -298,7 +298,7 @@ export const readSqliteAnnotationView = (
   );
   const pairedLocations = database.prepare(
     `SELECT DISTINCT f.address FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
-      WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address>=? AND f.address<? AND o.state_id IS NOT NULL LIMIT 2001`,
+      WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address>=? AND f.address<? AND o.state_prefix_id IS NOT NULL LIMIT 2001`,
   );
   const memoryLocations = database.prepare(
     "SELECT DISTINCT instruction_address AS address FROM runtime_facts WHERE kind='runtime-memory-access' AND instruction_address_space=? AND instruction_address>=? AND instruction_address<? LIMIT 2001",
@@ -364,7 +364,7 @@ export const readSqliteAnnotationView = (
     `${runtimeSelect()} WHERE f.kind=? AND f.address_space=? AND f.address=? ORDER BY o.oid LIMIT ?`,
   );
   const pairedState = database.prepare(
-    `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`,
+    `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_prefix_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`,
   );
   const memory = database.prepare(
     `${runtimeSelect()} WHERE f.kind='runtime-memory-access' AND f.instruction_address_space=? AND f.instruction_address=? ORDER BY o.oid LIMIT ?`,

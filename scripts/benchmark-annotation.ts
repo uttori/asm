@@ -16,7 +16,6 @@ import {
   loadAnalysisProjectViewSnapshot,
   loadSourceExportManifest,
   openAnalysisProjectStore,
-  migrateAnalysisProjectStorage,
   type DisassemblyAnnotationEditRequest,
 } from "@uttori/asm-disassembler";
 import {
@@ -35,15 +34,15 @@ const { values } = parseArgs({
     source: { type: "string" },
     rom: { type: "string" },
     output: { type: "string" },
-    "convert-runtime": { type: "boolean", default: false },
     "keep-temp": { type: "boolean", default: false },
     "reuse-source": { type: "string" },
   },
 });
-if (!values.source || !values.rom)
+if (!values.source || !values.rom) {
   throw new Error(
     "Usage: npm run benchmark:annotation -- --source <disassembly-directory> --rom <rom-file> [--output <report.json>]",
   );
+}
 const source = path.resolve(values.source);
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-benchmark-"));
 const sourceDirectory = values["reuse-source"]
@@ -94,35 +93,16 @@ try {
     "generated-files.json",
     "analysis/analysis.json",
   ]);
-  if (!values["reuse-source"])
+  if (!values["reuse-source"]) {
     for (const file of files) {
       const destination = path.resolve(sourceDirectory, file);
-      if (!destination.startsWith(`${sourceDirectory}${path.sep}`))
+      if (!destination.startsWith(`${sourceDirectory}${path.sep}`)) {
         throw new Error("Unsafe source path.");
+      }
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       fs.copyFileSync(path.join(source, file), destination);
     }
-  let migration;
-  if (values["convert-runtime"]) {
-    migration = await measure("storageMigration", () =>
-      migrateAnalysisProjectStorage(projectDirectory, {
-        convertRuntime: true,
-        onProgress: ({ phase, table, records }) => {
-          if (records === undefined || records % 100000 === 0)
-            console.log(`migration ${phase} ${table ?? ""} ${records ?? ""}`);
-        },
-      }),
-    );
   }
-  if (values.output && migration)
-    fs.writeFileSync(
-      path.resolve(values.output),
-      JSON.stringify(
-        { status: "migration-verified", migration, stagesMs: stages, sourceDirectory },
-        null,
-        2,
-      ),
-    );
   const store = openAnalysisProjectStore(projectDirectory);
   const storageBeforeQueries = store.storageSnapshot();
   try {
@@ -176,7 +156,9 @@ try {
     const label = snapshot.shards.labels.find((record) =>
       ["snes.cpu", "rom.file"].includes(record.addressSpace),
     );
-    if (!label) throw new Error("Benchmark needs an existing SNES or ROM label.");
+    if (!label) {
+      throw new Error("Benchmark needs an existing SNES or ROM label.");
+    }
     const request: DisassemblyAnnotationEditRequest = {
       addressSpace: label.addressSpace,
       address: label.address,
@@ -227,8 +209,9 @@ try {
       { annotationRefresh: { target, receipt } },
     ),
   );
-  if (!exported)
+  if (!exported) {
     throw new Error("Source inputs changed. Annotation refresh requires stable inputs.");
+  }
   const verification = await measure("verify", () => client.run("verify", target, budget));
   const after = await measure("coverage", () =>
     client.run("coverage", { ...target, sourceManifest: exported.manifest }, budget),
@@ -238,17 +221,18 @@ try {
     before.before.instructions !== after.instructions ||
     before.before.runtimeEvents !== after.runtimeEvents ||
     after.manifestSha256 !== receipt.after
-  )
+  ) {
     throw new Error(
       "Annotation refresh changed analysis counts or failed ROM/revision verification.",
     );
+  }
   const report = {
     date: new Date().toISOString(),
     node: process.version,
     platform: process.platform,
     arch: process.arch,
     stagesMs: stages,
-    ...(migration ? { migration, storageBeforeQueries } : {}),
+    storageBeforeQueries,
     annotationSaveAndRegenerateMs: stages.annotationSave + stages.annotationRefresh + stages.verify,
     instructions: after.instructions,
     runtimeRecords: after.runtimeRecords,
@@ -260,11 +244,15 @@ try {
       "One local run. The first annotation refresh includes cold export metadata loading. Setup and the separate legacy comparison load are excluded. Legacy save retains full validation. No legacy reanalysis is timed by this script. Background annotation queries are measured separately by benchmark-annotation-queries.ts.",
   };
   console.log(JSON.stringify(report, null, 2));
-  if (values.output)
+  if (values.output) {
     fs.writeFileSync(path.resolve(values.output), `${JSON.stringify(report, null, 2)}\n`);
+  }
 } finally {
   client.dispose();
   annotationClient.dispose();
-  if (!values["keep-temp"]) fs.rmSync(root, { recursive: true, force: true });
-  else console.log(`Retained benchmark workspace: ${root}`);
+  if (!values["keep-temp"]) {
+    fs.rmSync(root, { recursive: true, force: true });
+  } else {
+    console.log(`Retained benchmark workspace: ${root}`);
+  }
 }

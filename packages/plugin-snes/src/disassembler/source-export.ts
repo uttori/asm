@@ -1519,7 +1519,7 @@ export const exportSnes65816Source = (
   writeFile(
     directory,
     SNES_RAM_DEFINES_SOURCE,
-    renderSnesRamDefines(ramMap.variables),
+    renderSnesRamDefines(ramMap.variables, ramMap.file),
     "source",
     files,
   );

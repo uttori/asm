@@ -138,6 +138,18 @@ test("analysis projects preserve deterministic records without ROM bytes", async
     t.throws(() => writeAnalysisProject(temporary, forbidden), {
       message: /ROM byte payload/,
     });
+    const nested = {
+      ...forbiddenInput,
+      shards: {
+        ...forbiddenInput.shards,
+        evidence: [
+          { ...forbiddenInput.shards.evidence[0], extra: [0, null, { nested: { byteData: [] } }] },
+        ],
+      },
+    } as unknown as AnalysisProject;
+    t.throws(() => writeAnalysisProject(temporary, nested), {
+      message: /shards\.evidence\[0]\.extra\[2]\.nested\.byteData/,
+    });
   } finally {
     await fs.rm(temporary, { recursive: true, force: true });
   }

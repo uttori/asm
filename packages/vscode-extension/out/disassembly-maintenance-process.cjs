@@ -42,10 +42,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// ../disassembler/src/asset-codec.ts
+// packages/disassembler/src/asset-codec.ts
 var import_node_crypto, isAsciiAlphaNumeric, isStableId, assertStableId, assertNonNegativeInteger, canonicalizeAssetValue, stableText, sha256, sameBytes, assertSafeExtractedPath, normalizeReferences, normalizeChildren, normalizeInspection, inspectionValue, normalizeFiles, normalizeDecoded, decodedFingerprint, AssetCodecRegistry, validateRequest, validateInspectedRange, isAncestor, planAssets, codecForAsset, decodePlannedAsset, encodePlannedAsset, verifyAssetPlan;
 var init_asset_codec = __esm({
-  "../disassembler/src/asset-codec.ts"() {
+  "packages/disassembler/src/asset-codec.ts"() {
     "use strict";
     import_node_crypto = require("node:crypto");
     isAsciiAlphaNumeric = (character) => {
@@ -251,16 +251,16 @@ var init_asset_codec = __esm({
        * @returns {AssetCodec} Registered codec.
        */
       resolve(id) {
-        const visit = (current, path16) => {
+        const visit = (current, path15) => {
           const codec = this.#codecs.get(current);
           if (!codec) {
             throw new Error(`Unknown asset codec '${current}'.`);
           }
-          if (path16.includes(current)) {
-            throw new Error(`Asset codec dependency cycle: ${[...path16, current].join(" -> ")}.`);
+          if (path15.includes(current)) {
+            throw new Error(`Asset codec dependency cycle: ${[...path15, current].join(" -> ")}.`);
           }
           for (const dependency of codec.dependencies ?? []) {
-            visit(dependency, [...path16, current]);
+            visit(dependency, [...path15, current]);
           }
           return codec;
         };
@@ -526,10 +526,10 @@ var init_asset_codec = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/common.ts
+// packages/disassembler/src/asset-codecs/common.ts
 var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
 var init_common = __esm({
-  "../disassembler/src/asset-codecs/common.ts"() {
+  "packages/disassembler/src/asset-codecs/common.ts"() {
     "use strict";
     objectValue = (value, label) => {
       if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
@@ -659,8 +659,8 @@ var init_common = __esm({
       return values;
     };
     defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
-    jsonFile = (path16, value) => ({
-      path: path16,
+    jsonFile = (path15, value) => ({
+      path: path15,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -668,10 +668,10 @@ var init_common = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/index-table.ts
+// packages/disassembler/src/asset-codecs/index-table.ts
 var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor, indexTableAssetCodec;
 var init_index_table = __esm({
-  "../disassembler/src/asset-codecs/index-table.ts"() {
+  "packages/disassembler/src/asset-codecs/index-table.ts"() {
     "use strict";
     init_common();
     INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
@@ -758,12 +758,12 @@ var init_index_table = __esm({
       decode: (context) => {
         const entries3 = indexesFor(context);
         const value = { kind: "index-table", indexes: entries3.indexes };
-        const path16 = stringOption(
+        const path15 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path16, value)] };
+        return { value, files: [jsonFile(path15, value)] };
       },
       encode: (context) => {
         const resolved = settings(context);
@@ -793,10 +793,10 @@ var init_index_table = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/pointer-table.ts
+// packages/disassembler/src/asset-codecs/pointer-table.ts
 var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor2, pointerTableAssetCodec;
 var init_pointer_table = __esm({
-  "../disassembler/src/asset-codecs/pointer-table.ts"() {
+  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
     "use strict";
     init_common();
     POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
@@ -898,12 +898,12 @@ var init_pointer_table = __esm({
           addresses: entries3.addresses,
           rawValues: entries3.rawValues
         };
-        const path16 = stringOption(
+        const path15 = stringOption(
           entries3.settings.options,
           "path",
           defaultAssetPath(context.request.id, "json")
         );
-        return { value, files: [jsonFile(path16, value)] };
+        return { value, files: [jsonFile(path15, value)] };
       },
       encode: (context) => {
         const resolved = settings2(context);
@@ -941,10 +941,10 @@ var init_pointer_table = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/raw.ts
+// packages/disassembler/src/asset-codecs/raw.ts
 var import_node_crypto2, RAW_ASSET_CODEC_ID, rawAssetCodec;
 var init_raw = __esm({
-  "../disassembler/src/asset-codecs/raw.ts"() {
+  "packages/disassembler/src/asset-codecs/raw.ts"() {
     "use strict";
     import_node_crypto2 = require("node:crypto");
     init_common();
@@ -962,7 +962,7 @@ var init_raw = __esm({
       decode: (context) => {
         const bytes = readExactAssetBytes(context);
         const options = optionsFor(context);
-        const path16 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
+        const path15 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
         const mediaType = stringOption(options, "mediaType", "application/octet-stream");
         return {
           value: {
@@ -970,7 +970,7 @@ var init_raw = __esm({
             bytes: [...bytes],
             sha256: (0, import_node_crypto2.createHash)("sha256").update(bytes).digest("hex")
           },
-          files: [{ path: path16, mediaType, bytes }]
+          files: [{ path: path15, mediaType, bytes }]
         };
       },
       encode: ({ decoded, request }) => {
@@ -981,10 +981,10 @@ var init_raw = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/scalar-array.ts
+// packages/disassembler/src/asset-codecs/scalar-array.ts
 var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
 var init_scalar_array = __esm({
-  "../disassembler/src/asset-codecs/scalar-array.ts"() {
+  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
     "use strict";
     init_common();
     SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
@@ -1012,8 +1012,8 @@ var init_scalar_array = __esm({
           (_, index) => readInteger(bytes, index * width2, width2, endian, signed2)
         );
         const value = { kind: "scalar-array", width: width2, endian, signed: signed2, values };
-        const path16 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path16, value)] };
+        const path15 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path15, value)] };
       },
       encode: (context) => {
         const { width: width2, endian, signed: signed2, count, size } = settings3(context);
@@ -1032,10 +1032,10 @@ var init_scalar_array = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/struct-array.ts
+// packages/disassembler/src/asset-codecs/struct-array.ts
 var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
 var init_struct_array = __esm({
-  "../disassembler/src/asset-codecs/struct-array.ts"() {
+  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
     "use strict";
     init_common();
     STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
@@ -1169,8 +1169,8 @@ var init_struct_array = __esm({
           raw: [...bytes],
           records: records2
         };
-        const path16 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path16, value)] };
+        const path15 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
+        return { value, files: [jsonFile(path15, value)] };
       },
       encode: (context) => {
         const { fields, stride, count, size } = settings4(context);
@@ -1213,10 +1213,10 @@ var init_struct_array = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/text.ts
+// packages/disassembler/src/asset-codecs/text.ts
 var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
 var init_text = __esm({
-  "../disassembler/src/asset-codecs/text.ts"() {
+  "packages/disassembler/src/asset-codecs/text.ts"() {
     "use strict";
     init_common();
     TEXT_ASSET_CODEC_ID = "uttori.asset.text";
@@ -1341,7 +1341,7 @@ var init_text = __esm({
         const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
         const payload = terminated ? bytes.subarray(0, -1) : bytes;
         const value = { kind: "text", text: textValue(payload, resolved), terminated };
-        const path16 = stringOption(
+        const path15 = stringOption(
           resolved.options,
           "path",
           defaultAssetPath(context.request.id, "txt")
@@ -1350,7 +1350,7 @@ var init_text = __esm({
           value,
           files: [
             {
-              path: path16,
+              path: path15,
               mediaType: "text/plain; charset=utf-8",
               bytes: new TextEncoder().encode(value.text)
             }
@@ -1385,10 +1385,10 @@ var init_text = __esm({
   }
 });
 
-// ../disassembler/src/asset-codecs/index.ts
+// packages/disassembler/src/asset-codecs/index.ts
 var builtinAssetCodecs, createBuiltinAssetCodecRegistry;
 var init_asset_codecs = __esm({
-  "../disassembler/src/asset-codecs/index.ts"() {
+  "packages/disassembler/src/asset-codecs/index.ts"() {
     "use strict";
     init_asset_codec();
     init_index_table();
@@ -1423,10 +1423,10 @@ var init_asset_codecs = __esm({
   }
 });
 
-// ../disassembler/src/asset-preview.ts
+// packages/disassembler/src/asset-preview.ts
 var import_node_crypto3, isAsciiAlphaNumeric2, isStableId2, sha2562, sameBytes2, normalizeFiles2, AssetPreviewRegistry, renderVerifiedAssetPreview;
 var init_asset_preview = __esm({
-  "../disassembler/src/asset-preview.ts"() {
+  "packages/disassembler/src/asset-preview.ts"() {
     "use strict";
     import_node_crypto3 = require("node:crypto");
     init_asset_codec();
@@ -1538,17 +1538,17 @@ var init_asset_preview = __esm({
   }
 });
 
-// ../disassembler/src/analysis-graph.ts
+// packages/disassembler/src/analysis-graph.ts
 var init_analysis_graph = __esm({
-  "../disassembler/src/analysis-graph.ts"() {
+  "packages/disassembler/src/analysis-graph.ts"() {
     "use strict";
   }
 });
 
-// ../disassembler/src/compression-codec.ts
+// packages/disassembler/src/compression-codec.ts
 var import_node_crypto4, isAsciiAlphaNumeric3, isStableId3, sameBytes3, sha2563, assertBytes, normalizeOptions, validateConstraints, CompressionCodecRegistry, decodeDeterministically, encodeDeterministically, verifyCompressionCodec, reencodeCompressedRange;
 var init_compression_codec = __esm({
-  "../disassembler/src/compression-codec.ts"() {
+  "packages/disassembler/src/compression-codec.ts"() {
     "use strict";
     import_node_crypto4 = require("node:crypto");
     isAsciiAlphaNumeric3 = (character) => {
@@ -1747,10 +1747,10 @@ var init_compression_codec = __esm({
   }
 });
 
-// ../disassembler/src/coverage-map.ts
+// packages/disassembler/src/coverage-map.ts
 var CLASSIFICATION_ORDER, RUNTIME_ORDER, annotationClassification, compareStrings, arraysEqual, segmentsEqual, coverageAddressSpace, buildRomCoverageMap;
 var init_coverage_map = __esm({
-  "../disassembler/src/coverage-map.ts"() {
+  "packages/disassembler/src/coverage-map.ts"() {
     "use strict";
     CLASSIFICATION_ORDER = [
       "opcode",
@@ -2111,10 +2111,10 @@ var init_coverage_map = __esm({
   }
 });
 
-// ../disassembler/src/canonical-json.ts
+// packages/disassembler/src/canonical-json.ts
 var canonicalValue, canonicalJson;
 var init_canonical_json = __esm({
-  "../disassembler/src/canonical-json.ts"() {
+  "packages/disassembler/src/canonical-json.ts"() {
     "use strict";
     canonicalValue = (value) => {
       if (Array.isArray(value)) {
@@ -2149,10 +2149,10 @@ var init_canonical_json = __esm({
   }
 });
 
-// ../disassembler/src/instruction-annotations.ts
+// packages/disassembler/src/instruction-annotations.ts
 var sortedStrings, sortedNumbers, valueKey, locationKey, addValue, addAll, numberField, effectiveAddress, annotationState, runtimeState, buildInstructionAnalysisAnnotations;
 var init_instruction_annotations = __esm({
-  "../disassembler/src/instruction-annotations.ts"() {
+  "packages/disassembler/src/instruction-annotations.ts"() {
     "use strict";
     init_canonical_json();
     sortedStrings = (values) => values ? [...new Set(values)].sort((left, right) => left.localeCompare(right)) : [];
@@ -2525,10 +2525,10 @@ var init_instruction_annotations = __esm({
   }
 });
 
-// ../disassembler/src/interval-index.ts
+// packages/disassembler/src/interval-index.ts
 var HalfOpenIntervalIndex;
 var init_interval_index = __esm({
-  "../disassembler/src/interval-index.ts"() {
+  "packages/disassembler/src/interval-index.ts"() {
     "use strict";
     HalfOpenIntervalIndex = class {
       #entries;
@@ -2602,10 +2602,10 @@ var init_interval_index = __esm({
   }
 });
 
-// ../disassembler/src/analysis-sources.ts
+// packages/disassembler/src/analysis-sources.ts
 var sorted, key, buildAnalysisSourceCatalog;
 var init_analysis_sources = __esm({
-  "../disassembler/src/analysis-sources.ts"() {
+  "packages/disassembler/src/analysis-sources.ts"() {
     "use strict";
     sorted = (values) => [...new Set(values)].sort();
     key = (...values) => JSON.stringify(values);
@@ -2664,10 +2664,10 @@ var init_analysis_sources = __esm({
   }
 });
 
-// ../disassembler/src/project-labels.ts
+// packages/disassembler/src/project-labels.ts
 var validateSourceLabelName, legacySourceLabelName, projectSourceLabelNames;
 var init_project_labels = __esm({
-  "../disassembler/src/project-labels.ts"() {
+  "packages/disassembler/src/project-labels.ts"() {
     "use strict";
     validateSourceLabelName = (name) => {
       if (typeof name !== "string" || name.length > 256 || !/^[A-Z_a-z]\w*$/.test(name)) {
@@ -2705,10 +2705,10 @@ var init_project_labels = __esm({
   }
 });
 
-// ../disassembler/src/project-types.ts
+// packages/disassembler/src/project-types.ts
 var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
 var init_project_types = __esm({
-  "../disassembler/src/project-types.ts"() {
+  "packages/disassembler/src/project-types.ts"() {
     "use strict";
     ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
     ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
@@ -2716,10 +2716,10 @@ var init_project_types = __esm({
   }
 });
 
-// ../disassembler/src/record-id-set.ts
+// packages/disassembler/src/record-id-set.ts
 var import_node_fs, import_node_os, import_node_path, import_node_sqlite, RecordIdSet;
 var init_record_id_set = __esm({
-  "../disassembler/src/record-id-set.ts"() {
+  "packages/disassembler/src/record-id-set.ts"() {
     "use strict";
     import_node_fs = __toESM(require("node:fs"), 1);
     import_node_os = __toESM(require("node:os"), 1);
@@ -2785,10 +2785,10 @@ var init_record_id_set = __esm({
   }
 });
 
-// ../disassembler/src/runtime-ppu.ts
+// packages/disassembler/src/runtime-ppu.ts
 var normalizeRuntimePPUEffect, createRuntimePPUAccumulator;
 var init_runtime_ppu = __esm({
-  "../disassembler/src/runtime-ppu.ts"() {
+  "packages/disassembler/src/runtime-ppu.ts"() {
     "use strict";
     normalizeRuntimePPUEffect = (effect, access) => {
       const port = access.address & 65535;
@@ -2884,10 +2884,10 @@ var init_runtime_ppu = __esm({
   }
 });
 
-// ../disassembler/src/runtime-bus-types.ts
+// packages/disassembler/src/runtime-bus-types.ts
 var validateRuntimeBusFact;
 var init_runtime_bus_types = __esm({
-  "../disassembler/src/runtime-bus-types.ts"() {
+  "packages/disassembler/src/runtime-bus-types.ts"() {
     "use strict";
     init_runtime_ppu();
     validateRuntimeBusFact = (fact) => {
@@ -2925,10 +2925,10 @@ var init_runtime_bus_types = __esm({
   }
 });
 
-// ../disassembler/src/trace-detail.ts
+// packages/disassembler/src/trace-detail.ts
 var isArray, validateRuntimeInstructionDetails;
 var init_trace_detail = __esm({
-  "../disassembler/src/trace-detail.ts"() {
+  "packages/disassembler/src/trace-detail.ts"() {
     "use strict";
     isArray = (value) => Array.isArray(value);
     validateRuntimeInstructionDetails = (value, count) => {
@@ -2967,10 +2967,10 @@ var init_trace_detail = __esm({
   }
 });
 
-// ../disassembler/src/project-validation.ts
+// packages/disassembler/src/project-validation.ts
 var validateAnalysisProjectManifest, FORBIDDEN_ROM_PAYLOAD_KEYS, assertNoRomPayload, isStableId4, assertCodecReference, createRuntimeRecordValidator, validateRuntimeRecords, validateLoadedShards;
 var init_project_validation = __esm({
-  "../disassembler/src/project-validation.ts"() {
+  "packages/disassembler/src/project-validation.ts"() {
     "use strict";
     init_project_types();
     init_record_id_set();
@@ -3018,18 +3018,28 @@ var init_project_validation = __esm({
     assertNoRomPayload = (value, location) => {
       if (Array.isArray(value)) {
         for (let index = 0; index < value.length; index++) {
-          assertNoRomPayload(value[index], `${location}[${index}]`);
+          const entry = value[index];
+          if (entry && typeof entry === "object") {
+            assertNoRomPayload(entry, `${location}[${index}]`);
+          }
         }
         return;
       }
       if (!value || typeof value !== "object") {
         return;
       }
-      for (const [key2, entry] of Object.entries(value)) {
+      const record5 = value;
+      for (const key2 in record5) {
+        if (!Object.hasOwn(record5, key2)) {
+          continue;
+        }
         if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
           throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
         }
-        assertNoRomPayload(entry, `${location}.${key2}`);
+        const entry = record5[key2];
+        if (entry && typeof entry === "object") {
+          assertNoRomPayload(entry, `${location}.${key2}`);
+        }
       }
     };
     isStableId4 = (id) => {
@@ -3352,50 +3362,51 @@ var init_project_validation = __esm({
       const addressSpaceById = new Map(
         addressSpaces.map((addressSpace) => [addressSpace.id, addressSpace])
       );
-      const addressedRecords = [
-        ...shards.annotations,
-        ...shards.labels,
-        ...shards.comments,
-        ...shards.regions,
-        ...shards.analysis.filter(
-          (record5) => "addressSpace" in record5
-        )
-      ];
-      for (const record5 of addressedRecords) {
-        const addressSpace = addressSpaceById.get(record5.addressSpace);
-        if (!addressSpace) {
-          throw new Error(
-            `Analysis record '${record5.id}' refers to unknown address space '${record5.addressSpace}'.`
-          );
-        }
-        const maximum = 2 ** addressSpace.addressBits;
-        const addresses3 = [];
-        if ("start" in record5) {
-          addresses3.push(record5.start, record5.end - 1);
-        } else if ("address" in record5) {
-          addresses3.push(record5.address);
-          if ("kind" in record5 && record5.kind === "conflict" && record5.end !== void 0) {
-            addresses3.push(record5.end - 1);
+      const outsideSpace = (address5, exclusiveMaximum) => !Number.isSafeInteger(address5) || address5 < 0 || address5 >= exclusiveMaximum;
+      for (const records2 of [
+        shards.annotations,
+        shards.labels,
+        shards.comments,
+        shards.regions,
+        shards.analysis
+      ]) {
+        for (const record5 of records2) {
+          if (!("addressSpace" in record5)) {
+            continue;
           }
-        } else {
-          if ("fromAddress" in record5) {
-            addresses3.push(record5.fromAddress);
+          const addressSpace = addressSpaceById.get(record5.addressSpace);
+          if (!addressSpace) {
+            throw new Error(
+              `Analysis record '${record5.id}' refers to unknown address space '${record5.addressSpace}'.`
+            );
           }
-          if ("toAddress" in record5 && record5.toAddress !== void 0) {
-            addresses3.push(record5.toAddress);
-          }
-          if ("targets" in record5) {
-            for (const target of record5.targets) {
-              addresses3.push(target);
+          const maximum = 2 ** addressSpace.addressBits;
+          let invalid = false;
+          if ("start" in record5) {
+            invalid = outsideSpace(record5.start, maximum) || outsideSpace(record5.end - 1, maximum);
+          } else if ("address" in record5) {
+            invalid = outsideSpace(record5.address, maximum);
+            if ("kind" in record5 && record5.kind === "conflict" && record5.end !== void 0) {
+              invalid ||= outsideSpace(record5.end - 1, maximum);
+            }
+          } else {
+            if ("fromAddress" in record5) {
+              invalid = outsideSpace(record5.fromAddress, maximum);
+            }
+            if ("toAddress" in record5 && record5.toAddress !== void 0) {
+              invalid ||= outsideSpace(record5.toAddress, maximum);
+            }
+            if ("targets" in record5) {
+              for (const target of record5.targets) {
+                invalid ||= outsideSpace(target, maximum);
+              }
             }
           }
-        }
-        if (addresses3.some(
-          (address5) => !Number.isSafeInteger(address5) || address5 < 0 || address5 >= maximum
-        )) {
-          throw new Error(
-            `Analysis record '${record5.id}' exceeds address space '${record5.addressSpace}'.`
-          );
+          if (invalid) {
+            throw new Error(
+              `Analysis record '${record5.id}' exceeds address space '${record5.addressSpace}'.`
+            );
+          }
         }
       }
       validateRuntimeRecords(shards.runtime, project, shards.evidence);
@@ -3404,10 +3415,10 @@ var init_project_validation = __esm({
   }
 });
 
-// ../disassembler/src/project-transaction.ts
+// packages/disassembler/src/project-transaction.ts
 var import_node_crypto5, fs2, import_node_path2, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, commitAnalysisProjectAnnotationUpdate, commitAnalysisProjectSelectedEdit, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
-  "../disassembler/src/project-transaction.ts"() {
+  "packages/disassembler/src/project-transaction.ts"() {
     "use strict";
     import_node_crypto5 = require("node:crypto");
     fs2 = __toESM(require("node:fs"), 1);
@@ -3576,33 +3587,149 @@ var init_project_transaction = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-payload.ts
-var import_node_util, import_node_zlib, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES, utf8, encodeSqlitePayload, decodeSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
+// packages/disassembler/src/sqlite-runtime-payload.ts
+var import_node_zlib, MAGIC, FIELDS, FIELD_NAMES, HEADER_BYTES, CHECKSUM_BYTES, encodePackedRuntimePayload, isPackedRuntimePayload, decodePackedRuntimePayload;
+var init_sqlite_runtime_payload = __esm({
+  "packages/disassembler/src/sqlite-runtime-payload.ts"() {
+    "use strict";
+    import_node_zlib = require("node:zlib");
+    MAGIC = Buffer.from([85, 65, 82, 1]);
+    FIELDS = [
+      ["a", 2],
+      ["d", 2],
+      ["db", 1],
+      ["e", 1],
+      ["p", 1],
+      ["pb", 1],
+      ["pc", 2],
+      ["s", 2],
+      ["x", 2],
+      ["y", 2]
+    ];
+    FIELD_NAMES = new Set(FIELDS.map(([key2]) => key2));
+    HEADER_BYTES = 7;
+    CHECKSUM_BYTES = 4;
+    encodePackedRuntimePayload = (record5) => {
+      if (Object.keys(record5.state).some((key2) => !FIELD_NAMES.has(key2))) {
+        return void 0;
+      }
+      const bytes = record5.bytes;
+      if (bytes !== void 0) {
+        if (bytes.length < 1 || bytes.length > 4) {
+          return void 0;
+        }
+        for (const value of bytes) {
+          if (!Number.isInteger(value) || value < 0 || value > 255) {
+            return void 0;
+          }
+        }
+      }
+      let mask = 0;
+      let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
+      for (const [index, [key2, width2]] of FIELDS.entries()) {
+        if (!Object.hasOwn(record5.state, key2)) {
+          continue;
+        }
+        const value = record5.state[key2];
+        const max = key2 === "e" ? 1 : 2 ** (width2 * 8) - 1;
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
+          return void 0;
+        }
+        mask |= 1 << index;
+        size += width2;
+      }
+      const encoded = Buffer.allocUnsafe(size);
+      MAGIC.copy(encoded);
+      encoded.writeUInt16LE(mask, 4);
+      encoded[6] = bytes?.length ?? 0;
+      let offset = HEADER_BYTES;
+      for (const byte2 of bytes ?? []) {
+        encoded[offset++] = byte2;
+      }
+      for (const [index, [key2, width2]] of FIELDS.entries()) {
+        if (mask & 1 << index) {
+          encoded.writeUIntLE(record5.state[key2], offset, width2);
+          offset += width2;
+        }
+      }
+      encoded.writeUInt32LE((0, import_node_zlib.crc32)(encoded.subarray(0, offset)), offset);
+      return encoded;
+    };
+    isPackedRuntimePayload = (bytes) => bytes[0] === MAGIC[0] && bytes[1] === MAGIC[1] && bytes[2] === MAGIC[2];
+    decodePackedRuntimePayload = (bytes) => {
+      const encoded = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      if (encoded.length < HEADER_BYTES + CHECKSUM_BYTES || !encoded.subarray(0, 4).equals(MAGIC)) {
+        throw new Error("Unsupported or truncated packed runtime payload.");
+      }
+      const mask = encoded.readUInt16LE(4);
+      const byteCount = encoded[6];
+      let expected = HEADER_BYTES + byteCount + CHECKSUM_BYTES;
+      for (const [index, [, width2]] of FIELDS.entries()) {
+        if (mask & 1 << index) {
+          expected += width2;
+        }
+      }
+      if (mask >= 1 << FIELDS.length || byteCount > 4 || encoded.length !== expected) {
+        throw new Error("Invalid packed runtime payload layout.");
+      }
+      const end = expected - CHECKSUM_BYTES;
+      if ((0, import_node_zlib.crc32)(encoded.subarray(0, end)) !== encoded.readUInt32LE(end)) {
+        throw new Error("Corrupt packed runtime payload checksum.");
+      }
+      const state = {};
+      let offset = HEADER_BYTES + byteCount;
+      for (const [index, [key2, width2]] of FIELDS.entries()) {
+        if (mask & 1 << index) {
+          const value = encoded.readUIntLE(offset, width2);
+          if (key2 === "e" && value > 1) {
+            throw new Error("Invalid packed emulation register.");
+          }
+          state[key2] = value;
+          offset += width2;
+        }
+      }
+      if (byteCount === 0) {
+        return { state };
+      }
+      return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-payload.ts
+var import_node_util, import_node_zlib2, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES2, utf8, encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
-  "../disassembler/src/sqlite-payload.ts"() {
+  "packages/disassembler/src/sqlite-payload.ts"() {
     "use strict";
     import_node_util = require("node:util");
-    import_node_zlib = require("node:zlib");
+    import_node_zlib2 = require("node:zlib");
+    init_sqlite_runtime_payload();
     MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
     HEADER = Buffer.from([85, 65, 80, 1]);
-    HEADER_BYTES = 8;
+    HEADER_BYTES2 = 8;
     utf8 = new import_node_util.TextDecoder("utf-8", { fatal: true });
     encodeSqlitePayload = (json) => {
       const bytes = Buffer.byteLength(json);
       if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
         throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
       }
-      if (bytes < 256) {
+      if (bytes < 1024) {
         return json;
       }
-      const compressed = (0, import_node_zlib.deflateSync)(json, { level: 1, chunkSize: Math.min(bytes, 16 * 1024) });
-      if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8))) {
+      const small = bytes < 16 * 1024;
+      const compressed = (0, import_node_zlib2.deflateSync)(json, {
+        level: 1,
+        windowBits: small ? 12 : 15,
+        memLevel: small ? 3 : 8,
+        chunkSize: Math.min(bytes, 16 * 1024)
+      });
+      if (compressed.length + HEADER_BYTES2 > bytes - Math.max(32, Math.ceil(bytes / 8))) {
         return json;
       }
-      const result = Buffer.allocUnsafe(HEADER_BYTES + compressed.length);
+      const result = Buffer.allocUnsafe(HEADER_BYTES2 + compressed.length);
       HEADER.copy(result);
       result.writeUInt32LE(bytes, 4);
-      compressed.copy(result, HEADER_BYTES);
+      compressed.copy(result, HEADER_BYTES2);
       return result;
     };
     decodeSqlitePayload = (value) => {
@@ -3616,7 +3743,10 @@ var init_sqlite_payload = __esm({
         throw new Error("Invalid SQLite payload representation.");
       }
       const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-      if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER)) {
+      if (isPackedRuntimePayload(encoded)) {
+        return JSON.stringify(decodePackedRuntimePayload(encoded));
+      }
+      if (encoded.length <= HEADER_BYTES2 || !encoded.subarray(0, 4).equals(HEADER)) {
         throw new Error("Unsupported or truncated SQLite payload codec.");
       }
       const bytes = encoded.readUInt32LE(4);
@@ -3624,7 +3754,7 @@ var init_sqlite_payload = __esm({
         throw new Error("SQLite compressed payload exceeds the decoded size limit.");
       }
       try {
-        const decoded = (0, import_node_zlib.inflateSync)(encoded.subarray(HEADER_BYTES), {
+        const decoded = (0, import_node_zlib2.inflateSync)(encoded.subarray(HEADER_BYTES2), {
           maxOutputLength: bytes,
           chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
         });
@@ -3635,6 +3765,12 @@ var init_sqlite_payload = __esm({
       } catch (cause) {
         throw new Error("Corrupt SQLite compressed payload.", { cause });
       }
+    };
+    parseSqlitePayload = (value) => {
+      if (import_node_util.types.isUint8Array(value) && isPackedRuntimePayload(value)) {
+        return decodePackedRuntimePayload(value);
+      }
+      return JSON.parse(decodeSqlitePayload(value));
     };
     sqliteRuntimeIdentity = (id) => {
       const split = id.lastIndexOf(":") + 1;
@@ -3659,10 +3795,10 @@ var init_sqlite_payload = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-records.ts
+// packages/disassembler/src/sqlite-records.ts
 var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
 var init_sqlite_records = __esm({
-  "../disassembler/src/sqlite-records.ts"() {
+  "packages/disassembler/src/sqlite-records.ts"() {
     "use strict";
     init_canonical_json();
     init_sqlite_payload();
@@ -3821,7 +3957,7 @@ var init_sqlite_records = __esm({
     };
     runtimeFromRow = (row) => {
       const fields = row;
-      const extra = fields.payload === null || fields.payload === void 0 ? {} : JSON.parse(decodeSqlitePayload(fields.payload));
+      const extra = fields.payload === null || fields.payload === void 0 ? {} : parseSqlitePayload(fields.payload);
       if (typeof fields.evidence !== "string") {
         throw new Error("Missing SQLite runtime evidence dictionary entry.");
       }
@@ -3829,7 +3965,7 @@ var init_sqlite_records = __esm({
       const kind = fields.kind;
       const architecture = fields.architecture;
       const count = Number(fields.count);
-      const id = fields.id_prefix === void 0 ? fields.id : decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+      const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
       if (kind === "runtime-execution") {
         return {
           id,
@@ -3946,10 +4082,10 @@ var init_sqlite_records = __esm({
   }
 });
 
-// ../disassembler/src/project-store.ts
+// packages/disassembler/src/project-store.ts
 var fs3, import_node_path3, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
-  "../disassembler/src/project-store.ts"() {
+  "packages/disassembler/src/project-store.ts"() {
     "use strict";
     fs3 = __toESM(require("node:fs"), 1);
     import_node_path3 = __toESM(require("node:path"), 1);
@@ -4042,10 +4178,10 @@ var init_project_store = __esm({
   }
 });
 
-// ../disassembler/src/project-edit.ts
+// packages/disassembler/src/project-edit.ts
 var RANGE_CLASSIFICATIONS, isStableId5, manifestWithoutShards, assertStableId2, recordMatches, sortedUnique, sortedUniqueNumbers, assertManualEvidenceRequest, manualEvidence, addressSpaceMaximum, conflictIdFor, evidenceReferences, applyRangeClassificationEdit, revertRangeClassificationEdit, STATE_FIELD_MAXIMUMS, validateManualState, stateConflictFields, applyStateEntryPointEdit, revertStateEntryPointEdit, applyTargetResolutionEdit, revertTargetResolutionEdit, applyLabelRenameEdit, revertLabelRenameEdit, applyDisassemblyAnnotationEdit, revertDisassemblyAnnotationEdit, explainProjectEvidence;
 var init_project_edit = __esm({
-  "../disassembler/src/project-edit.ts"() {
+  "packages/disassembler/src/project-edit.ts"() {
     "use strict";
     init_project_labels();
     init_project_store();
@@ -4724,10 +4860,10 @@ var init_project_edit = __esm({
   }
 });
 
-// ../disassembler/src/runtime-evidence.ts
+// packages/disassembler/src/runtime-evidence.ts
 var emptyCounts, sortedUnique2, stateValueKey, conflictReport, explanationReport, mergeRecords, mergeRuntimeEvidence, inspectRuntimeEvidence;
 var init_runtime_evidence = __esm({
-  "../disassembler/src/runtime-evidence.ts"() {
+  "packages/disassembler/src/runtime-evidence.ts"() {
     "use strict";
     init_project_store();
     emptyCounts = () => ({
@@ -4863,6 +4999,9 @@ var init_runtime_evidence = __esm({
       return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
     };
     mergeRecords = (kind, prior, incoming, added, updated, existing) => {
+      if (incoming.length === 0) {
+        return prior;
+      }
       const records2 = new Map(prior.map((record5) => [record5.id, record5]));
       for (const record5 of incoming) {
         const current = records2.get(record5.id);
@@ -4973,10 +5112,10 @@ var init_runtime_evidence = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-annotation-query.ts
+// packages/disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView;
 var init_sqlite_annotation_query = __esm({
-  "../disassembler/src/sqlite-annotation-query.ts"() {
+  "packages/disassembler/src/sqlite-annotation-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -4984,16 +5123,16 @@ var init_sqlite_annotation_query = __esm({
     decode = (payload) => JSON.parse(decodeSqlitePayload(payload));
     runtimeSelect = (pairedState = false) => {
       const kind = pairedState ? "'runtime-cpu-state'" : "f.kind";
-      const identity2 = pairedState ? "o.state_id" : "o.id";
       const prefix = pairedState ? "o.state_prefix_id" : "o.prefix_id";
       const row = pairedState ? "-o.oid" : "o.oid";
-      return `SELECT ${row} AS storage_rowid,${kind} AS kind,${identity2} AS id,
+      return `SELECT ${row} AS storage_rowid,${kind} AS kind,i.value AS id,
     p.value AS id_prefix,e.value AS evidence,o.count,f.architecture,
     f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
     f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
     f.accessed_address_space,f.accessed_address,f.coverage,
     CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
     FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+    LEFT JOIN runtime_identities i ON i.iid=o.identity_id
     LEFT JOIN runtime_prefixes p ON p.id=${prefix}
     LEFT JOIN runtime_evidence e ON e.id=o.evidence_id`;
     };
@@ -5155,7 +5294,7 @@ var init_sqlite_annotation_query = __esm({
       );
       const pairedLocations = database.prepare(
         `SELECT DISTINCT f.address FROM runtime_facts f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
-      WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address>=? AND f.address<? AND o.state_id IS NOT NULL LIMIT 2001`
+      WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address>=? AND f.address<? AND o.state_prefix_id IS NOT NULL LIMIT 2001`
       );
       const memoryLocations = database.prepare(
         "SELECT DISTINCT instruction_address AS address FROM runtime_facts WHERE kind='runtime-memory-access' AND instruction_address_space=? AND instruction_address>=? AND instruction_address<? LIMIT 2001"
@@ -5218,7 +5357,7 @@ var init_sqlite_annotation_query = __esm({
         `${runtimeSelect()} WHERE f.kind=? AND f.address_space=? AND f.address=? ORDER BY o.oid LIMIT ?`
       );
       const pairedState = database.prepare(
-        `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`
+        `${runtimeSelect(true)} WHERE f.kind='runtime-instruction' AND f.address_space=? AND f.address=? AND o.state_prefix_id IS NOT NULL ORDER BY o.oid DESC LIMIT ?`
       );
       const memory = database.prepare(
         `${runtimeSelect()} WHERE f.kind='runtime-memory-access' AND f.instruction_address_space=? AND f.instruction_address=? ORDER BY o.oid LIMIT ?`
@@ -5323,23 +5462,12 @@ var init_sqlite_annotation_query = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-query-cache.ts
-var QUERY_CACHE_SCHEMA, upgradeQueryCacheStorage, installQueryCache, readQueryCache, writeQueryCache;
+// packages/disassembler/src/sqlite-query-cache.ts
+var QUERY_CACHE_SCHEMA, installQueryCache, readQueryCache, writeQueryCache;
 var init_sqlite_query_cache = __esm({
-  "../disassembler/src/sqlite-query-cache.ts"() {
+  "packages/disassembler/src/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-    upgradeQueryCacheStorage = (db) => {
-      const schema = db.prepare("SELECT sql FROM sqlite_schema WHERE type='table' AND name='query_cache'").get();
-      if (!schema || !/without\s+rowid/i.test(String(schema.sql))) {
-        return;
-      }
-      db.exec(`CREATE TEMP TABLE query_cache_upgrade AS SELECT * FROM main.query_cache;
-    DROP TABLE main.query_cache;
-    ${QUERY_CACHE_SCHEMA};
-    INSERT INTO main.query_cache SELECT * FROM temp.query_cache_upgrade;
-    DROP TABLE temp.query_cache_upgrade;`);
-    };
     installQueryCache = (db, key2, dependencies) => {
       if (!/^[\d_a-z]+$/.test(key2)) {
         throw new Error("Invalid internal query cache key.");
@@ -5360,10 +5488,10 @@ var init_sqlite_query_cache = __esm({
       }
       db.exec(QUERY_CACHE_SCHEMA);
       for (const table of dependencies.flatMap(
-        (name) => name === "runtime" ? ["runtime_facts", "runtime_observations"] : [name]
+        (name) => name === "runtime" ? ["runtime_facts", "runtime_observations", "runtime_identities"] : [name]
       )) {
         for (const event of ["INSERT", "UPDATE", "DELETE"]) {
-          const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,id,evidence_id,count,state_prefix_id,state_id" : event;
+          const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
           db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key2}_${table}_${event} AFTER ${update} ON ${table} BEGIN
       DELETE FROM query_cache WHERE name='${key2}'; END`);
         }
@@ -5386,10 +5514,10 @@ var init_sqlite_query_cache = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-coverage-query.ts
+// packages/disassembler/src/sqlite-coverage-query.ts
 var decode2, coverageSignature, cachedCoverage, prepareCoverage, publishCoverage, coveragePage;
 var init_sqlite_coverage_query = __esm({
-  "../disassembler/src/sqlite-coverage-query.ts"() {
+  "packages/disassembler/src/sqlite-coverage-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_query_cache();
@@ -5730,10 +5858,10 @@ var init_sqlite_coverage_query = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-graph-query.ts
+// packages/disassembler/src/sqlite-graph-query.ts
 var decode3, unique, numbers, prepareGraph, publishGraph;
 var init_sqlite_graph_query = __esm({
-  "../disassembler/src/sqlite-graph-query.ts"() {
+  "packages/disassembler/src/sqlite-graph-query.ts"() {
     "use strict";
     init_sqlite_payload();
     decode3 = (value) => JSON.parse(decodeSqlitePayload(value));
@@ -5756,11 +5884,11 @@ var init_sqlite_graph_query = __esm({
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
           const node = decode3(row.payload);
-          const path16 = node.evidencePath.length ? node.evidencePath : [node.id];
+          const path15 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner;
-          for (let i = path16.length - 1; i >= 0; i--) {
-            if (entries3.has(path16[i])) {
-              owner = path16[i];
+          for (let i = path15.length - 1; i >= 0; i--) {
+            if (entries3.has(path15[i])) {
+              owner = path15[i];
               break;
             }
           }
@@ -5917,46 +6045,31 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-maintenance.ts
-var import_node_fs2, import_node_path4, SQLITE_MIGRATION_DIRECTORY, SQLITE_MIGRATION_BACKUP, assertNoSqliteMigration, sqliteFileIdentity, syncSqlitePath;
-var init_sqlite_maintenance = __esm({
-  "../disassembler/src/sqlite-maintenance.ts"() {
-    "use strict";
-    import_node_fs2 = __toESM(require("node:fs"), 1);
-    import_node_path4 = __toESM(require("node:path"), 1);
-    SQLITE_MIGRATION_DIRECTORY = ".analysis-storage-migration";
-    SQLITE_MIGRATION_BACKUP = "analysis.sqlite.pre-retention.backup";
-    assertNoSqliteMigration = (file) => {
-      if (import_node_fs2.default.existsSync(import_node_path4.default.join(import_node_path4.default.dirname(file), SQLITE_MIGRATION_DIRECTORY))) {
-        throw new Error(
-          "Analysis storage migration is in progress. Retry after it completes, or run project-migrate to recover an interrupted migration."
-        );
-      }
-    };
-    sqliteFileIdentity = (file) => {
-      const stat2 = import_node_fs2.default.statSync(file, { bigint: true });
-      return `${stat2.dev}:${stat2.ino}`;
-    };
-    syncSqlitePath = (file) => {
-      const descriptor2 = import_node_fs2.default.openSync(file, "r");
-      try {
-        import_node_fs2.default.fsyncSync(descriptor2);
-      } finally {
-        import_node_fs2.default.closeSync(descriptor2);
-      }
-    };
-  }
-});
-
-// ../disassembler/src/sqlite-runtime-storage.ts
-var import_node_crypto6, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
+// packages/disassembler/src/sqlite-runtime-storage.ts
+var import_node_crypto6, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
-  "../disassembler/src/sqlite-runtime-storage.ts"() {
+  "packages/disassembler/src/sqlite-runtime-storage.ts"() {
     "use strict";
     import_node_crypto6 = require("node:crypto");
     init_canonical_json();
     init_sqlite_payload();
     init_sqlite_records();
+    init_sqlite_runtime_payload();
+    RUNTIME_RECORD_STREAM_SQL = [true, false].map(
+      (paired) => `
+  SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
+    ${paired ? "'runtime-cpu-state'" : "f.kind"} AS kind,f.architecture,
+    f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
+    f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
+    f.accessed_address_space,f.accessed_address,f.coverage,
+    CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
+  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+  LEFT JOIN runtime_identities i ON i.iid=o.identity_id
+  LEFT JOIN runtime_prefixes p ON p.id=o.${paired ? "state_prefix_id" : "prefix_id"}
+  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id
+  ${paired ? "WHERE o.state_prefix_id IS NOT NULL" : ""}
+  ORDER BY o.oid ${paired ? "DESC" : "ASC"}`
+    );
     RUNTIME_STORAGE_SCHEMA = `
 CREATE TABLE runtime_facts (
   fid INTEGER PRIMARY KEY, fingerprint BLOB UNIQUE,
@@ -5966,33 +6079,40 @@ CREATE TABLE runtime_facts (
   instruction_address_space TEXT, instruction_address INTEGER,
   accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT, payload BLOB
 );
+CREATE TABLE runtime_identities (
+  iid INTEGER PRIMARY KEY, value BLOB NOT NULL UNIQUE
+);
 CREATE TABLE runtime_observations (
   oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_facts(fid),
-  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id), id BLOB NOT NULL,
+  prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
+  identity_id INTEGER NOT NULL REFERENCES runtime_identities(iid),
   evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id), count INTEGER NOT NULL,
-  state_prefix_id INTEGER REFERENCES runtime_prefixes(id), state_id BLOB,
+  state_prefix_id INTEGER REFERENCES runtime_prefixes(id),
   query_file_offset INTEGER, query_size INTEGER, query_data BLOB, query_ready INTEGER NOT NULL DEFAULT 0,
-  UNIQUE(prefix_id,id), UNIQUE(state_prefix_id,state_id),
-  CHECK ((state_prefix_id IS NULL) = (state_id IS NULL))
+  UNIQUE(prefix_id,identity_id), UNIQUE(state_prefix_id,identity_id)
 );
 CREATE INDEX runtime_observation_fact ON runtime_observations(fact_id);
+CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id);
 CREATE VIEW runtime AS
- SELECT o.oid AS rowid,o.prefix_id,o.id,f.kind,f.architecture,o.count,
+ SELECT o.oid AS rowid,o.prefix_id,i.value AS id,f.kind,f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
  f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
  f.accessed_address_space,f.accessed_address,f.coverage,o.evidence_id,
  CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,
  o.query_file_offset,o.query_size,o.query_data,o.query_ready
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+ LEFT JOIN runtime_identities i ON i.iid=o.identity_id
  UNION ALL
- SELECT -o.oid,o.state_prefix_id,o.state_id,'runtime-cpu-state',f.architecture,o.count,
+ SELECT -o.oid,o.state_prefix_id,i.value,'runtime-cpu-state',f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
  f.to_address_space,f.to_address,f.instruction_address_space,f.instruction_address,
  f.accessed_address_space,f.accessed_address,f.coverage,o.evidence_id,
  CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END,NULL,NULL,NULL,1
- FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.state_id IS NOT NULL;
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
+ LEFT JOIN runtime_identities i ON i.iid=o.identity_id WHERE o.state_prefix_id IS NOT NULL;
 CREATE TRIGGER runtime_collect_fact AFTER DELETE ON runtime_observations BEGIN
  DELETE FROM runtime_facts WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
+ DELETE FROM runtime_identities WHERE iid=OLD.identity_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id);
 END;
 CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query_size,query_data,query_ready ON runtime BEGIN
  UPDATE runtime_observations SET query_file_offset=NEW.query_file_offset,query_size=NEW.query_size,
@@ -6000,25 +6120,26 @@ CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query
 END;
 -- Compatibility mutations detach one logical record. They must never change another capture's shared fact.
 CREATE TRIGGER runtime_insert INSTEAD OF INSERT ON runtime BEGIN
+ INSERT OR IGNORE INTO runtime_identities(value) VALUES(NEW.id);
  INSERT INTO runtime_facts(kind,architecture,address_space,address,start,"end",from_address_space,from_address,
  to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,payload)
  VALUES(NEW.kind,NEW.architecture,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,
  CASE WHEN json_valid(NEW.payload) THEN jsonb(NEW.payload) ELSE NEW.payload END);
- INSERT INTO runtime_observations(fact_id,prefix_id,id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
- VALUES(last_insert_rowid(),NEW.prefix_id,NEW.id,NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
+ INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
+ VALUES(last_insert_rowid(),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
  CASE WHEN NEW.kind='runtime-execution' THEN 0 ELSE 1 END);
 END;
 CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
  -- Deleting just the instruction preserves its independent logical state record.
  INSERT INTO runtime_facts(kind,architecture,address_space,address,payload)
  SELECT 'runtime-cpu-state',f.architecture,f.address_space,f.address,f.payload
- FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_id IS NOT NULL;
- INSERT INTO runtime_observations(fact_id,prefix_id,id,evidence_id,count,query_ready)
- SELECT last_insert_rowid(),state_prefix_id,state_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_id IS NOT NULL;
- UPDATE runtime_observations SET state_prefix_id=NULL,state_id=NULL WHERE oid=-OLD.rowid;
+ FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_prefix_id IS NOT NULL;
+ INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_ready)
+ SELECT last_insert_rowid(),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
+ UPDATE runtime_observations SET state_prefix_id=NULL WHERE oid=-OLD.rowid;
  -- A preceding instruction deletion may have detached this virtual state; stable identity still finds it.
- DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND id=OLD.id;
+ DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE value=OLD.id);
 END;
 CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,architecture,count,address_space,address,start,"end",
  from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
@@ -6037,21 +6158,24 @@ END;
       #pair;
       #findPair;
       #removeObservation;
+      #findIdentity;
+      #insertIdentity;
       constructor(db) {
         this.#findFact = db.prepare("SELECT fid FROM runtime_facts WHERE fingerprint=?");
         this.#insertFact = db.prepare(`INSERT INTO runtime_facts(fingerprint,kind,architecture,address_space,address,start,"end",
       from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
       accessed_address_space,accessed_address,coverage,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CASE WHEN typeof(?)='text' THEN jsonb(?) ELSE ? END)`);
         this.#insertObservation = db.prepare(
-          "INSERT INTO runtime_observations(fact_id,prefix_id,id,evidence_id,count,state_prefix_id,state_id,query_ready) VALUES(?,?,?,?,?,?,?,?)"
+          "INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id,query_ready) VALUES(?,?,?,?,?,?,?)"
         );
-        this.#pair = db.prepare(
-          "UPDATE runtime_observations SET state_prefix_id=?,state_id=? WHERE oid=?"
-        );
+        this.#pair = db.prepare("UPDATE runtime_observations SET state_prefix_id=? WHERE oid=?");
         this.#findPair = db.prepare(`SELECT o.*,f.kind,f.architecture,f.address_space,f.address,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
       FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
-      WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND o.id=?`);
+      WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
+      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE value=?)`);
         this.#removeObservation = db.prepare("DELETE FROM runtime_observations WHERE oid=?");
+        this.#findIdentity = db.prepare("SELECT iid FROM runtime_identities WHERE value=?");
+        this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
       }
       /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
        * @param {RuntimeEvidenceRecord} record Validated source fact with a stable external ID.
@@ -6063,7 +6187,6 @@ END;
         const evidence = intern("runtime_evidence", JSON.stringify(record5.evidence));
         const columns = runtimeColumns(record5);
         let statePrefix = null;
-        let stateId = null;
         const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
           record5.id
         );
@@ -6074,15 +6197,12 @@ END;
           );
           const other = this.#findPair.get(otherIdentity.prefix, otherIdentity.suffix);
           const expectedKind = record5.kind === "runtime-instruction" ? "runtime-cpu-state" : "runtime-instruction";
-          if (other && other.kind === expectedKind && other.state_id === null && other.count === record5.count && other.evidence_id === evidence && other.architecture === record5.architecture && other.address_space === record5.addressSpace && other.address === record5.address && canonicalJson(
-            JSON.parse(decodeSqlitePayload(other.payload)).state
-          ) === canonicalJson(record5.state)) {
+          if (other && other.kind === expectedKind && other.state_prefix_id === null && other.count === record5.count && other.evidence_id === evidence && other.architecture === record5.architecture && other.address_space === record5.addressSpace && other.address === record5.address && canonicalJson(parseSqlitePayload(other.payload).state) === canonicalJson(record5.state)) {
             if (record5.kind === "runtime-cpu-state") {
-              this.#pair.run(prefix, identity2.suffix, other.oid);
+              this.#pair.run(prefix, other.oid);
               return;
             }
             statePrefix = Number(other.prefix_id);
-            stateId = other.id;
             this.#removeObservation.run(other.oid);
           }
         }
@@ -6090,7 +6210,7 @@ END;
         const fingerprint = (0, import_node_crypto6.createHash)("sha256").update(
           // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
           // per row. Nulls, two-space indentation and the trailing newline preserve
-          // persisted v2 fingerprints. Changing the layout would duplicate old facts.
+          // persisted fact fingerprints. Changing the layout would duplicate retained facts.
           // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
           JSON.stringify(
             {
@@ -6118,7 +6238,15 @@ END;
         const found = this.#findFact.get(fingerprint);
         let fid = found?.fid;
         if (fid === void 0) {
-          const encoded = payload === null ? null : encodeSqlitePayload(payload);
+          let encoded = null;
+          if (payload !== null) {
+            if (record5.architecture === "snes.65816" && (record5.kind === "runtime-instruction" || record5.kind === "runtime-cpu-state")) {
+              const snapshot = record5.kind === "runtime-instruction" ? { bytes: record5.bytes, state: record5.state } : { state: record5.state };
+              encoded = encodePackedRuntimePayload(snapshot) ?? encodeSqlitePayload(payload);
+            } else {
+              encoded = encodeSqlitePayload(payload);
+            }
+          }
           fid = this.#insertFact.run(
             fingerprint,
             record5.kind,
@@ -6141,14 +6269,15 @@ END;
             encoded
           ).lastInsertRowid;
         }
+        const foundIdentity = this.#findIdentity.get(identity2.suffix);
+        const identityId = foundIdentity?.iid ?? this.#insertIdentity.run(identity2.suffix).lastInsertRowid;
         this.#insertObservation.run(
           fid,
           prefix,
-          identity2.suffix,
+          identityId,
           evidence,
           record5.count,
           statePrefix,
-          stateId,
           record5.kind === "runtime-execution" ? 0 : 1
         );
       }
@@ -6156,10 +6285,201 @@ END;
   }
 });
 
-// ../disassembler/src/sqlite-source-query.ts
+// packages/disassembler/src/sqlite-runtime-summary.ts
+var import_node_crypto7, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryGroupSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
+var init_sqlite_runtime_summary = __esm({
+  "packages/disassembler/src/sqlite-runtime-summary.ts"() {
+    "use strict";
+    import_node_crypto7 = require("node:crypto");
+    init_sqlite_payload();
+    init_sqlite_query_cache();
+    init_sqlite_records();
+    KEY = "instruction_variants";
+    BUILD = "instruction_variants_build";
+    INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
+    RUNTIME_SUMMARY_ROWS_SQL = `SELECT i.value AS id,f.kind,f.architecture,f.address_space,f.address,
+    grouped.total AS count,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,
+    p.value AS id_prefix,e.value AS evidence
+  FROM (SELECT s.sample,s.total FROM query_runtime_variant_sources s
+    JOIN query_runtime_variant_keys k ON k.id=s.variant
+    ORDER BY k.address,s.evidence,k.key LIMIT -1) grouped
+  CROSS JOIN runtime_observations o ON o.oid=grouped.sample
+  CROSS JOIN runtime_facts f ON f.fid=o.fact_id
+  LEFT JOIN runtime_identities i ON i.iid=o.identity_id
+  LEFT JOIN runtime_prefixes p ON p.id=o.prefix_id
+  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id`;
+    installSummary = (db) => {
+      installQueryCache(db, KEY, []);
+      db.exec(`${INVALIDATE}
+    CREATE TABLE query_runtime_variant_keys(
+      id INTEGER PRIMARY KEY,address INTEGER NOT NULL,key TEXT NOT NULL,UNIQUE(address,key));
+    CREATE TABLE query_runtime_variant_sources(
+      variant INTEGER NOT NULL,evidence INTEGER NOT NULL,total INTEGER NOT NULL,
+      observations INTEGER NOT NULL,sample INTEGER NOT NULL,
+      PRIMARY KEY(variant,evidence)) WITHOUT ROWID;
+    CREATE TABLE query_runtime_variant_pending(oid INTEGER PRIMARY KEY);
+    CREATE TRIGGER summary_observation_insert AFTER INSERT ON runtime_observations BEGIN
+      DELETE FROM query_cache WHERE name='${BUILD}';
+      INSERT OR IGNORE INTO query_runtime_variant_pending
+        SELECT NEW.oid WHERE EXISTS(SELECT 1 FROM query_cache WHERE name='${KEY}')
+        AND EXISTS(SELECT 1 FROM runtime_facts WHERE fid=NEW.fact_id AND kind='runtime-instruction');
+    END;
+    CREATE TRIGGER summary_observation_update AFTER UPDATE OF
+      oid,fact_id,prefix_id,identity_id,evidence_id,count ON runtime_observations
+      WHEN OLD.oid IS NOT NEW.oid OR OLD.fact_id IS NOT NEW.fact_id
+        OR OLD.prefix_id IS NOT NEW.prefix_id OR OLD.identity_id IS NOT NEW.identity_id
+        OR OLD.evidence_id IS NOT NEW.evidence_id OR OLD.count IS NOT NEW.count
+      BEGIN ${INVALIDATE} END;
+    CREATE TRIGGER summary_observation_delete AFTER DELETE ON runtime_observations
+      BEGIN ${INVALIDATE} END;
+    CREATE TRIGGER summary_observation_replace BEFORE INSERT ON runtime_observations
+      WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
+        EXISTS(SELECT 1 FROM runtime_observations WHERE oid=NEW.oid) OR
+        EXISTS(SELECT 1 FROM runtime_observations WHERE prefix_id=NEW.prefix_id AND identity_id=NEW.identity_id) OR
+        EXISTS(SELECT 1 FROM runtime_observations WHERE state_prefix_id=NEW.state_prefix_id AND identity_id=NEW.identity_id))
+      BEGIN ${INVALIDATE} END;`);
+      for (const [table, primary, unique2] of [
+        ["runtime_facts", "fid", "fingerprint"],
+        ["runtime_identities", "iid", "value"],
+        ["runtime_prefixes", "id", "value"],
+        ["runtime_evidence", "id", "value"]
+      ]) {
+        db.exec(`CREATE TRIGGER summary_${table}_replace BEFORE INSERT ON ${table}
+      WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
+        EXISTS(SELECT 1 FROM ${table} WHERE ${primary}=NEW.${primary}) OR
+        EXISTS(SELECT 1 FROM ${table} WHERE ${unique2}=NEW.${unique2}))
+      BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
+      }
+    };
+    runtimeSummaryGroupSql = (incremental) => {
+      const from = incremental ? `query_runtime_variant_pending pending
+      CROSS JOIN runtime_observations o ON o.oid=pending.oid
+      CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
+      return `SELECT f.address,analysis_instruction_variant(
+      CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
+      o.evidence_id AS evidence,SUM(o.count) AS total,COUNT(*) AS observations,MIN(o.oid) AS sample
+    FROM ${from}
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
+    GROUP BY f.address,key,o.evidence_id`;
+    };
+    registerVariantKey = (db, fields, masks) => {
+      db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
+        const record5 = parseSqlitePayload(
+          payload
+        );
+        const state = {};
+        for (const key2 of fields) {
+          const value = record5.state[key2];
+          const mask = masks[key2];
+          if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
+            state[key2] = value & mask.mask;
+          } else if (value !== void 0) {
+            state[key2] = value;
+          }
+        }
+        return JSON.stringify([record5.bytes, state]);
+      });
+    };
+    isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
+    runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks) => {
+      if (fields.some((field) => !/^\w+$/.test(field))) {
+        throw new Error("Invalid instruction state field.");
+      }
+      const signature = JSON.stringify([4, architecture, space, fields, masks]);
+      if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_runtime_variant_keys'").get()) {
+        transaction(() => {
+          if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_runtime_variant_keys'").get()) {
+            installSummary(db);
+          }
+        });
+      }
+      if (!isCurrent(db, signature)) {
+        const pending = `pending:${(0, import_node_crypto7.randomUUID)()}`;
+        let incremental = false;
+        transaction(() => {
+          incremental = readQueryCache(db, KEY, signature) !== void 0;
+          writeQueryCache(db, BUILD, pending, null);
+        });
+        let completed = false;
+        let cleanupError;
+        try {
+          registerVariantKey(db, fields, masks);
+          transaction(() => {
+            db.exec(`CREATE TEMP TABLE runtime_summary_groups(
+          address INTEGER,key TEXT,evidence INTEGER,total INTEGER,observations INTEGER,sample INTEGER)`);
+            db.prepare(
+              `INSERT INTO temp.runtime_summary_groups ${runtimeSummaryGroupSql(incremental)}`
+            ).run(architecture, space);
+          }, false);
+          transaction(() => {
+            if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
+              throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
+            }
+            if (!incremental) {
+              db.exec(
+                "DELETE FROM query_runtime_variant_sources; DELETE FROM query_runtime_variant_keys;"
+              );
+            }
+            db.exec(`INSERT OR IGNORE INTO query_runtime_variant_keys(address,key)
+          SELECT address,key FROM temp.runtime_summary_groups;
+          INSERT INTO query_runtime_variant_sources
+            SELECT k.id,g.evidence,g.total,g.observations,g.sample FROM temp.runtime_summary_groups g
+            JOIN query_runtime_variant_keys k ON k.address=g.address AND k.key=g.key WHERE true
+          ON CONFLICT(variant,evidence) DO UPDATE SET
+            total=total+excluded.total,observations=observations+excluded.observations,
+            sample=MIN(sample,excluded.sample);
+          DELETE FROM query_runtime_variant_pending;`);
+            const observations = Number(
+              db.prepare("SELECT COALESCE(SUM(observations),0) AS n FROM temp.runtime_summary_groups").get().n
+            );
+            writeQueryCache(db, KEY, signature, { incremental, observations });
+            db.prepare("DELETE FROM query_cache WHERE name=?").run(BUILD);
+          });
+          completed = true;
+        } finally {
+          try {
+            db.exec("DROP TABLE IF EXISTS temp.runtime_summary_groups");
+            transaction(() => {
+              db.prepare("DELETE FROM query_cache WHERE name=? AND signature=?").run(BUILD, pending);
+            });
+          } catch (error) {
+            if (completed) {
+              cleanupError = error instanceof Error ? error : new Error("Instruction summary cleanup failed.", { cause: error });
+            }
+          }
+        }
+        if (cleanupError !== void 0) {
+          throw cleanupError;
+        }
+      }
+      return (function* () {
+        if (!isCurrent(db, signature)) {
+          throw new Error("Runtime changed before reading instruction variants. Retry reanalysis.");
+        }
+        const rows = db.prepare(RUNTIME_SUMMARY_ROWS_SQL);
+        for (const row of rows.iterate()) {
+          const record5 = runtimeFromRow(row);
+          if (record5.kind !== "runtime-instruction") {
+            throw new Error("Invalid instruction summary representative.");
+          }
+          yield {
+            ...record5,
+            state: Object.fromEntries(
+              Object.entries(record5.state).filter(([key2]) => fields.includes(key2))
+            )
+          };
+        }
+      })();
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-source-query.ts
 var collections, sourceEvidence, sourceRuntime, instructionKinds, hex, sourceQueriesReady, prepareSourceQueries, readSourceSummary, readSourcePage;
 var init_sqlite_source_query = __esm({
-  "../disassembler/src/sqlite-source-query.ts"() {
+  "packages/disassembler/src/sqlite-source-query.ts"() {
     "use strict";
     init_sqlite_payload();
     init_sqlite_records();
@@ -6306,25 +6626,16 @@ var init_sqlite_source_query = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-storage-policy.ts
-var import_node_fs3, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_COLUMNS, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
+// packages/disassembler/src/sqlite-storage-policy.ts
+var import_node_fs2, DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
-  "../disassembler/src/sqlite-storage-policy.ts"() {
+  "packages/disassembler/src/sqlite-storage-policy.ts"() {
     "use strict";
-    import_node_fs3 = __toESM(require("node:fs"), 1);
+    import_node_fs2 = __toESM(require("node:fs"), 1);
     DEFAULT_ANALYSIS_STORAGE_POLICY = {
       cacheMaxBytes: 256 * 1024 ** 2,
       databaseMaxBytes: 0
     };
-    CAPTURE_CATALOG_COLUMNS = [
-      "sha256",
-      "profile",
-      "source_name",
-      "imported_at",
-      "last_seen_at",
-      "observed_events",
-      "dropped_events"
-    ];
     CAPTURE_CATALOG_SCHEMA = `CREATE TABLE capture_catalog (
   sha256 TEXT PRIMARY KEY, profile TEXT NOT NULL, source_name TEXT NOT NULL,
   imported_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL,
@@ -6352,18 +6663,18 @@ var init_sqlite_storage_policy = __esm({
       const size = Number(db.prepare("PRAGMA page_size").get().page_size);
       const pages = Number(db.prepare("PRAGMA page_count").get().page_count);
       const free = Number(db.prepare("PRAGMA freelist_count").get().freelist_count);
-      const rows = db.prepare("SELECT COUNT(*) AS n,COUNT(state_id) AS paired FROM runtime_observations").get();
+      const rows = db.prepare("SELECT COUNT(*) AS n,COUNT(state_prefix_id) AS paired FROM runtime_observations").get();
       const captures = db.prepare("SELECT COUNT(*) AS n FROM capture_catalog").get();
       let walBytes = 0;
       try {
-        walBytes = import_node_fs3.default.statSync(`${file}-wal`).size;
+        walBytes = import_node_fs2.default.statSync(`${file}-wal`).size;
       } catch (error) {
         if (error.code !== "ENOENT") {
           throw error;
         }
       }
       return {
-        databaseBytes: import_node_fs3.default.statSync(file).size,
+        databaseBytes: import_node_fs2.default.statSync(file).size,
         walBytes,
         livePageBytes: (pages - free) * size,
         freePageBytes: free * size,
@@ -6389,7 +6700,14 @@ var init_sqlite_storage_policy = __esm({
     CACHES = [
       { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
       { key: "graph", tables: ["query_graph_nodes", "query_graph_edges"] },
-      { key: "instruction_variants", tables: ["query_runtime_variants"] },
+      {
+        key: "instruction_variants",
+        tables: [
+          "query_runtime_variant_keys",
+          "query_runtime_variant_sources",
+          "query_runtime_variant_pending"
+        ]
+      },
       { key: "runtime_architectures", tables: ["query_runtime_architectures"] },
       { key: "evidence_links", tables: ["query_evidence_links"] }
     ];
@@ -6414,6 +6732,10 @@ var init_sqlite_storage_policy = __esm({
       const evicted = [];
       for (const cache of entries3) {
         const token = db.prepare("SELECT signature FROM query_cache WHERE name=?").get(cache.key);
+        const summaryBuilder = cache.key === "instruction_variants" && db.prepare("SELECT 1 FROM query_cache WHERE name='instruction_variants_build'").get();
+        if (summaryBuilder) {
+          continue;
+        }
         if (String(token?.signature).startsWith("pending:")) {
           continue;
         }
@@ -6436,10 +6758,10 @@ var init_sqlite_storage_policy = __esm({
   }
 });
 
-// ../disassembler/src/trace-cache.ts
+// packages/disassembler/src/trace-cache.ts
 var TraceCache;
 var init_trace_cache = __esm({
-  "../disassembler/src/trace-cache.ts"() {
+  "packages/disassembler/src/trace-cache.ts"() {
     "use strict";
     TraceCache = class {
       #entries = /* @__PURE__ */ new Map();
@@ -6512,14 +6834,14 @@ var init_trace_cache = __esm({
   }
 });
 
-// ../disassembler/src/sqlite-store.ts
-var import_node_crypto7, import_node_fs4, import_node_path5, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, SqliteAnalysisStore;
+// packages/disassembler/src/sqlite-store.ts
+var import_node_crypto8, import_node_fs3, import_node_path4, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
-  "../disassembler/src/sqlite-store.ts"() {
+  "packages/disassembler/src/sqlite-store.ts"() {
     "use strict";
-    import_node_crypto7 = require("node:crypto");
-    import_node_fs4 = __toESM(require("node:fs"), 1);
-    import_node_path5 = __toESM(require("node:path"), 1);
+    import_node_crypto8 = require("node:crypto");
+    import_node_fs3 = __toESM(require("node:fs"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
     import_node_sqlite2 = require("node:sqlite");
     init_analysis_sources();
     init_canonical_json();
@@ -6530,16 +6852,16 @@ var init_sqlite_store = __esm({
     init_sqlite_annotation_query();
     init_sqlite_coverage_query();
     init_sqlite_graph_query();
-    init_sqlite_maintenance();
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
     init_sqlite_runtime_storage();
+    init_sqlite_runtime_summary();
     init_sqlite_source_query();
     init_sqlite_storage_policy();
     init_trace_cache();
     ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
-    ANALYSIS_SQLITE_STORAGE_VERSION = 2;
+    ANALYSIS_SQLITE_STORAGE_VERSION = 3;
     SCHEMA = `
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
@@ -6602,7 +6924,7 @@ CREATE TABLE IF NOT EXISTS runtime_evidence (
 );
 ${RUNTIME_STORAGE_SCHEMA}
 ${CAPTURE_CATALOG_SCHEMA}
-PRAGMA user_version=2;
+PRAGMA user_version=3;
 `;
     SCHEMA_INDEX_STATEMENTS = [
       "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
@@ -6610,7 +6932,7 @@ PRAGMA user_version=2;
       'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
       'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
       // Point lookups through the virtual-state branch need an index on its exposed negative ID.
-      "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_id IS NOT NULL",
+      "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL",
       "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
       "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'"
     ];
@@ -6622,9 +6944,13 @@ PRAGMA user_version=2;
       if (relative2 !== ANALYSIS_PROJECT_SQLITE_FILE) {
         throw new Error(`Unsupported analysis sqlite path '${relative2}'.`);
       }
-      return import_node_path5.default.join(directory, relative2);
+      return import_node_path4.default.join(directory, relative2);
     };
-    parseRecord = (payload) => JSON.parse(decodeSqlitePayload(payload));
+    parseRecord = (payload) => parseSqlitePayload(payload);
+    sqliteFileIdentity = (file) => {
+      const stat2 = import_node_fs3.default.statSync(file, { bigint: true });
+      return `${stat2.dev}:${stat2.ino}`;
+    };
     SqliteAnalysisStore = class {
       #database;
       #fileIdentity;
@@ -6649,11 +6975,9 @@ PRAGMA user_version=2;
        * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
        * @param {string} file SQLite path. Parent directory must already exist.
        * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
-       * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
        */
-      constructor(file, createSchema = true, deferIndexes = false) {
-        assertNoSqliteMigration(file);
-        if (!createSchema && !import_node_fs4.default.existsSync(file)) {
+      constructor(file, createSchema = true) {
+        if (!createSchema && !import_node_fs3.default.existsSync(file)) {
           throw new Error(`Analysis database does not exist: ${file}`);
         }
         this.file = file;
@@ -6671,16 +6995,14 @@ PRAGMA user_version=2;
           );
           if (createSchema && empty && initialVersion === 0) {
             this.#database.exec(SCHEMA);
-            if (!deferIndexes) {
-              for (const sql of SCHEMA_INDEX_STATEMENTS) {
-                this.#database.exec(sql);
-              }
+            for (const sql of SCHEMA_INDEX_STATEMENTS) {
+              this.#database.exec(sql);
             }
           }
           const version = Number(this.#database.prepare("PRAGMA user_version").get()?.user_version);
           if (version !== ANALYSIS_SQLITE_STORAGE_VERSION) {
             throw new Error(
-              `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Run uttori-asm project-migrate <project-directory> for an older SQLite project.`
+              `Unsupported analysis storage format ${version}. Expected ${ANALYSIS_SQLITE_STORAGE_VERSION}. Only the current storage format is supported.`
             );
           }
           this.#database.exec(
@@ -6847,7 +7169,6 @@ PRAGMA user_version=2;
        * @returns {T} Callback result after a successful commit.
        */
       transaction(action, write = true) {
-        assertNoSqliteMigration(this.file);
         if (sqliteFileIdentity(this.file) !== this.#fileIdentity) {
           throw new Error(
             "Analysis database was replaced. Close this connection and reload the project."
@@ -6856,9 +7177,6 @@ PRAGMA user_version=2;
         this.#clearDictionaryCache();
         this.#database.exec(write ? "BEGIN IMMEDIATE" : "BEGIN");
         try {
-          if (write) {
-            upgradeQueryCacheStorage(this.#database);
-          }
           const revision = write ? this.revision() : 0;
           const result = action();
           if (result !== null && (typeof result === "object" || typeof result === "function") && "then" in result && typeof result.then === "function") {
@@ -7048,6 +7366,12 @@ PRAGMA user_version=2;
             this.#replaceRuntime(shards.runtime ?? []);
             continue;
           }
+          if (!this.#database.prepare(`SELECT 1 FROM ${kind} LIMIT 1`).get()) {
+            for (const record5 of shards[kind] ?? []) {
+              this.#insertRecord(kind, record5);
+            }
+            continue;
+          }
           this.#database.exec("DELETE FROM temp.replacement_ids");
           const find = this.#database.prepare(`SELECT payload FROM ${kind} WHERE id=?`);
           const remove = this.#database.prepare(`DELETE FROM ${kind} WHERE id=?`);
@@ -7101,24 +7425,6 @@ PRAGMA user_version=2;
         this.#database.exec(`DELETE FROM runtime WHERE NOT EXISTS (
       SELECT 1 FROM temp.replacement_runtime_ids keep JOIN runtime_prefixes p ON p.value=keep.prefix
       WHERE p.id=runtime.prefix_id AND keep.id=runtime.id)`);
-      }
-      /**
-       * Append validated migration rows without materializing a complete table. Runtime IDs are checked
-       * through the logical view because paired states share physical storage with an instruction.
-       * @param {ShardKind} kind Destination semantic table.
-       * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
-       */
-      appendRecords(kind, records2) {
-        this.#requireTransaction();
-        for (const record5 of records2) {
-          if (kind === "runtime") {
-            if (!this.insertRuntime(record5)) {
-              throw new Error(`Duplicate runtime record ID '${record5.id}'.`);
-            }
-          } else {
-            this.#insertRecord(kind, record5);
-          }
-        }
       }
       /**
        * Insert a content-addressed runtime fact once. An ID collision with different content is an
@@ -7243,8 +7549,10 @@ PRAGMA user_version=2;
        * @yields {RuntimeEvidenceRecord} One runtime fact.
        */
       *runtimeRecords() {
-        for (const row of this.#database.prepare(`${RUNTIME_SELECT} ORDER BY r.rowid`).iterate()) {
-          yield runtimeFromRow(row);
+        for (const sql of RUNTIME_RECORD_STREAM_SQL) {
+          for (const row of this.#database.prepare(sql).iterate()) {
+            yield runtimeFromRow(row);
+          }
         }
       }
       /**
@@ -7547,7 +7855,7 @@ PRAGMA user_version=2;
         if (cached !== void 0) {
           return cached;
         }
-        const pending = `pending:${(0, import_node_crypto7.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto8.randomUUID)()}`;
         this.transaction(() => {
           installQueryCache(this.#database, key2, dependencies);
           writeQueryCache(this.#database, key2, pending, null);
@@ -7653,78 +7961,14 @@ PRAGMA user_version=2;
        * Prepare before starting the consuming read transaction.
        */
       runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
-        if (stateFields.some((field) => !/^\w+$/.test(field))) {
-          throw new Error("Invalid instruction state field.");
-        }
-        const signature = JSON.stringify([3, architecture, space, stateFields, masks]);
-        try {
-          this.cachedProjection(
-            "instruction_variants",
-            signature,
-            ["runtime"],
-            () => {
-              this.#database.function(
-                "analysis_instruction_variant",
-                { deterministic: true },
-                (value) => {
-                  const record5 = parseRecord(value);
-                  const state = {};
-                  for (const key2 of stateFields) {
-                    const value2 = record5.state[key2], mask = masks[key2];
-                    if (mask && typeof value2 === "number" && Number.isInteger(value2) && value2 >= 0 && value2 <= mask.max) {
-                      state[key2] = value2 & mask.mask;
-                    } else if (value2 !== void 0) {
-                      state[key2] = value2;
-                    }
-                  }
-                  return JSON.stringify([record5.bytes, state]);
-                }
-              );
-              this.#database.exec(
-                "CREATE TEMP TABLE instruction_variants_pending(payload TEXT NOT NULL)"
-              );
-              const insert = this.#database.prepare(
-                "INSERT INTO temp.instruction_variants_pending VALUES(?)"
-              );
-              const rows = this.#database.prepare(`WITH grouped AS (
-          SELECT MIN(rowid) AS sample,SUM(count) AS total FROM runtime WHERE kind='runtime-instruction' AND architecture=? AND address_space=?
-          GROUP BY address,evidence_id,analysis_instruction_variant(payload))
-          SELECT r.*,g.total,p.value AS id_prefix,e.value AS evidence FROM grouped g JOIN runtime r ON r.rowid=g.sample JOIN runtime_prefixes p ON p.id=r.prefix_id JOIN runtime_evidence e ON e.id=r.evidence_id`);
-              for (const row of rows.iterate(architecture, space)) {
-                const record5 = runtimeFromRow({ ...row, count: row.total });
-                if (record5.kind === "runtime-instruction") {
-                  insert.run(
-                    JSON.stringify({
-                      ...record5,
-                      state: Object.fromEntries(
-                        Object.entries(record5.state).filter(([key2]) => stateFields.includes(key2))
-                      )
-                    })
-                  );
-                }
-              }
-              return true;
-            },
-            () => {
-              this.#database.exec(`CREATE TABLE IF NOT EXISTS query_runtime_variants(payload TEXT NOT NULL);
-          DELETE FROM query_runtime_variants;
-          INSERT INTO query_runtime_variants SELECT payload FROM temp.instruction_variants_pending;`);
-            }
-          );
-          if (!readQueryCache(this.#database, "instruction_variants", signature)) {
-            throw new Error("Runtime changed while building instruction variants. Retry reanalysis.");
-          }
-        } finally {
-          this.#database.exec("DROP TABLE IF EXISTS temp.instruction_variants_pending");
-        }
-        const statement = this.#database.prepare(
-          "SELECT payload FROM query_runtime_variants ORDER BY rowid"
+        return runtimeInstructionSummary(
+          this.#database,
+          (action, write) => this.transaction(action, write),
+          architecture,
+          space,
+          stateFields,
+          masks
         );
-        return (function* () {
-          for (const row of statement.iterate()) {
-            yield JSON.parse(String(row.payload));
-          }
-        })();
       }
       /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
        * @param {string} architecture Target processor.
@@ -7915,59 +8159,6 @@ PRAGMA user_version=2;
         return rows.map((row) => parseRecord(row.payload));
       }
       /**
-       * Stream decoded records in insertion order for migration digest verification.
-       * @param {ShardKind} kind Semantic table to traverse.
-       * @returns {IterableIterator} Cursor retaining only the current decoded record.
-       * @yields {object} Original semantic record.
-       */
-      *records(kind) {
-        if (kind === "runtime") {
-          yield* this.runtimeRecords();
-          return;
-        }
-        if (!["evidence", "labels", "comments", "regions", "annotations", "analysis", "imports"].includes(
-          kind
-        )) {
-          throw new Error(`Unknown analysis table '${kind}'.`);
-        }
-        for (const row of this.#database.prepare(`SELECT payload FROM ${kind} ORDER BY rowid`).iterate()) {
-          yield parseRecord(row.payload);
-        }
-      }
-      /**
-       * Initialize a migrated project's unchanged logical identity once, inside its first publication.
-       * @param {AnalysisProjectManifest} manifest Validated authoritative source manifest and revision.
-       */
-      initializeMigratedManifest(manifest) {
-        this.#requireTransaction();
-        if (this.#database.prepare("SELECT 1 FROM meta LIMIT 1").get()) {
-          throw new Error("Migration manifest can only initialize an empty metadata header.");
-        }
-        const insert = this.#database.prepare("INSERT INTO meta (k,v) VALUES (?,?)");
-        insert.run("revision", String(manifest.revision ?? 0));
-        insert.run("manifest", canonicalJson(manifest));
-      }
-      /**
-       * Build deferred indexes and check all physical structures before closing a staged migration file.
-       * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
-       * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
-       */
-      finishMigration() {
-        for (const sql of SCHEMA_INDEX_STATEMENTS) {
-          this.#database.exec(sql);
-        }
-        const integrity = this.#database.prepare("PRAGMA integrity_check").all();
-        if (integrity.length !== 1 || integrity[0].integrity_check !== "ok") {
-          throw new Error("Migrated SQLite database failed integrity validation.");
-        }
-        if (this.#database.prepare("PRAGMA foreign_key_check").get()) {
-          throw new Error("Migrated SQLite database contains an invalid dictionary reference.");
-        }
-        this.#database.exec(
-          "PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; PRAGMA journal_mode=WAL;"
-        );
-      }
-      /**
        * Materialize complete record arrays without semantic validation. Run inside a read transaction.
        * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.
        * @returns {AnalysisProjectShards} Decoded record arrays owned by the caller.
@@ -8033,11 +8224,11 @@ PRAGMA user_version=2;
        * @param {string} directory Project root for the watcher hint.
        */
       writePointer(directory) {
-        const temporary = import_node_path5.default.join(directory, `.analysis.json.${(0, import_node_crypto7.randomUUID)()}.tmp`);
+        const temporary = import_node_path4.default.join(directory, `.analysis.json.${(0, import_node_crypto8.randomUUID)()}.tmp`);
         try {
           this.transaction(() => {
-            import_node_fs4.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-            import_node_fs4.default.renameSync(temporary, import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+            import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
+            import_node_fs3.default.renameSync(temporary, import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
           });
         } catch (error) {
           process.emitWarning(
@@ -8045,14 +8236,14 @@ PRAGMA user_version=2;
           );
         } finally {
           try {
-            import_node_fs4.default.rmSync(temporary, { force: true });
+            import_node_fs3.default.rmSync(temporary, { force: true });
           } catch {
           }
         }
       }
       /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
       compact() {
-        const disk = import_node_fs4.default.statfsSync(import_node_path5.default.dirname(this.file));
+        const disk = import_node_fs3.default.statfsSync(import_node_path4.default.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
@@ -8151,559 +8342,14 @@ PRAGMA user_version=2;
   }
 });
 
-// ../disassembler/src/runtime-trace-profile.ts
-var RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState;
-var init_runtime_trace_profile = __esm({
-  "../disassembler/src/runtime-trace-profile.ts"() {
-    "use strict";
-    RUNTIME_ANALYSIS_PROFILE = "65816-analysis-v2";
-    project65816AnalysisState = (state) => {
-      const value = (key2, max) => {
-        const entry = state[key2] ?? state[key2.toUpperCase()];
-        return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
-      };
-      const result = {};
-      const e = value("e", 1);
-      const p = value("p", 255);
-      if (e !== void 0) {
-        result.e = e;
-      }
-      if (e === 1) {
-        result.p = 48;
-      } else if (p !== void 0) {
-        result.p = p & 48;
-      }
-      const db = value("db", 255);
-      const d = value("d", 65535);
-      if (db !== void 0) {
-        result.db = db;
-      }
-      if (d !== void 0) {
-        result.d = d;
-      }
-      return result;
-    };
-  }
-});
-
-// ../disassembler/src/sqlite-runtime-conversion.ts
-function* convertedRuntimeRecords(db) {
-  for (const row of db.prepare("SELECT payload,count FROM temp.converted_runtime").iterate()) {
-    yield { ...JSON.parse(String(row.payload)), count: Number(row.count) };
-  }
-}
-var import_node_crypto8, import_promises, migrationRuntimeQuery, RuntimeDigest, prepareRuntimeConversion;
-var init_sqlite_runtime_conversion = __esm({
-  "../disassembler/src/sqlite-runtime-conversion.ts"() {
-    "use strict";
-    import_node_crypto8 = require("node:crypto");
-    import_promises = require("node:timers/promises");
-    init_canonical_json();
-    init_runtime_trace_profile();
-    init_sqlite_payload();
-    init_sqlite_records();
-    migrationRuntimeQuery = (version) => version === 0 ? "SELECT r.* FROM runtime r" : `SELECT r.*,p.value AS id_prefix,e.value AS evidence FROM runtime r
-     LEFT JOIN runtime_prefixes p ON p.id=r.prefix_id LEFT JOIN runtime_evidence e ON e.id=r.evidence_id`;
-    RuntimeDigest = class {
-      #sum = 0n;
-      update(json) {
-        this.#sum = (this.#sum + BigInt(`0x${(0, import_node_crypto8.createHash)("sha256").update(json).digest("hex")}`)) % (1n << 256n);
-      }
-      digest(_encoding) {
-        return this.#sum.toString(16).padStart(64, "0");
-      }
-    };
-    prepareRuntimeConversion = async (db, version, options) => {
-      db.exec("CREATE TEMP TABLE converted_captures(sha256 TEXT PRIMARY KEY) WITHOUT ROWID");
-      const remember = db.prepare("INSERT OR IGNORE INTO temp.converted_captures VALUES(?)");
-      db.exec(
-        "CREATE TEMP TABLE converted_runtime(id TEXT PRIMARY KEY,payload TEXT NOT NULL,count INTEGER NOT NULL) WITHOUT ROWID"
-      );
-      const insert = db.prepare(`INSERT INTO temp.converted_runtime VALUES(?,?,?)
-    ON CONFLICT(id) DO UPDATE SET count=count+excluded.count WHERE payload=excluded.payload`);
-      const base = migrationRuntimeQuery(version);
-      const counterpart = db.prepare(
-        `${base} WHERE ${version === 0 ? "r.id=?" : "r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?"}`
-      );
-      let records2 = 0;
-      for (const row of db.prepare(base).iterate()) {
-        options.signal?.throwIfAborted();
-        let record5 = runtimeFromRow(row);
-        options.validateRecord(record5);
-        const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
-          record5.id
-        );
-        if (match && record5.architecture === "snes.65816" && (record5.kind === "runtime-instruction" || record5.kind === "runtime-cpu-state") && record5.addressSpace === "snes.cpu") {
-          let bytes;
-          if (record5.kind === "runtime-instruction") {
-            bytes = record5.bytes;
-          } else {
-            const codeId = `runtime:instruction-trace:${match[1]}:code:${match[3]}`;
-            const identity2 = sqliteRuntimeIdentity(codeId);
-            const otherRow = version === 0 ? counterpart.get(codeId) : counterpart.get(identity2.prefix, identity2.suffix);
-            const other = otherRow ? runtimeFromRow(otherRow) : void 0;
-            if (other?.kind === "runtime-instruction" && other.architecture === record5.architecture && other.addressSpace === record5.addressSpace && other.address === record5.address && canonicalJson(other.state) === canonicalJson(record5.state)) {
-              bytes = other.bytes;
-            }
-          }
-          if (bytes) {
-            remember.run(match[1]);
-            const state = project65816AnalysisState(record5.state);
-            const identity2 = (0, import_node_crypto8.createHash)("sha256").update(canonicalJson({ address: record5.address, bytes, state })).digest("hex");
-            record5 = {
-              ...record5,
-              state,
-              id: `runtime:instruction-trace:${match[1]}:${match[2]}:${identity2}`
-            };
-          }
-        }
-        if (insert.run(record5.id, canonicalJson({ ...record5, count: 0 }), record5.count).changes !== 1) {
-          throw new Error(`Conflicting projected runtime identity '${record5.id}'.`);
-        }
-        if (++records2 % 5e3 === 0) {
-          options.onProgress?.(records2);
-          await (0, import_promises.setImmediate)();
-        }
-      }
-      if (db.prepare(
-        "SELECT 1 FROM temp.converted_runtime WHERE typeof(count)!='integer' OR count>9007199254740991 LIMIT 1"
-      ).get()) {
-        throw new Error("Projected execution count exceeds the exact integer range.");
-      }
-    };
-  }
-});
-
-// ../disassembler/src/sqlite-migration.ts
-function* legacyRecords(database, kind, version, convert = false) {
-  if (kind === "runtime") {
-    if (convert) {
-      yield* convertedRuntimeRecords(database);
-    } else {
-      for (const row of database.prepare(migrationRuntimeQuery(version)).iterate()) {
-        yield runtimeFromRow(row);
-      }
-    }
-    return;
-  }
-  for (const row of database.prepare(`SELECT * FROM ${kind} ORDER BY id`).iterate()) {
-    let record5 = JSON.parse(decodeSqlitePayload(row.payload));
-    if (record5.id !== row.id) {
-      throw new Error(`Stored ${kind} ID differs from its payload.`);
-    }
-    if (convert && kind === "imports" && "format" in record5 && record5.format === "uttori-asm-instruction-trace" && database.prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?").get(record5.sourceSha256)) {
-      record5 = { ...record5, indexProfile: RUNTIME_ANALYSIS_PROFILE };
-    }
-    yield record5;
-  }
-}
-var import_node_crypto9, import_node_fs5, import_node_path6, import_node_perf_hooks, import_node_sqlite3, import_promises2, TABLES, RESERVE_BYTES, writeJournal, processAlive, sourceManifest, recoverMigration, migrateAnalysisProjectStorage;
-var init_sqlite_migration = __esm({
-  "../disassembler/src/sqlite-migration.ts"() {
+// packages/disassembler/src/rom-image.ts
+var import_node_crypto9, fs6, sha2564, detectCopierHeaderSize, RomImage;
+var init_rom_image = __esm({
+  "packages/disassembler/src/rom-image.ts"() {
     "use strict";
     import_node_crypto9 = require("node:crypto");
-    import_node_fs5 = __toESM(require("node:fs"), 1);
-    import_node_path6 = __toESM(require("node:path"), 1);
-    import_node_perf_hooks = require("node:perf_hooks");
-    import_node_sqlite3 = require("node:sqlite");
-    import_promises2 = require("node:timers/promises");
-    init_canonical_json();
-    init_project_store();
-    init_project_validation();
-    init_runtime_trace_profile();
-    init_sqlite_maintenance();
-    init_sqlite_payload();
-    init_sqlite_records();
-    init_sqlite_runtime_conversion();
-    init_sqlite_storage_policy();
-    init_sqlite_store();
-    TABLES = [
-      "evidence",
-      "labels",
-      "comments",
-      "regions",
-      "annotations",
-      "analysis",
-      "imports",
-      "runtime"
-    ];
-    RESERVE_BYTES = 256 * 1024 * 1024;
-    writeJournal = (stage, journal) => {
-      const temporary = import_node_path6.default.join(stage, "journal.tmp");
-      import_node_fs5.default.writeFileSync(temporary, JSON.stringify(journal), { mode: 384 });
-      syncSqlitePath(temporary);
-      import_node_fs5.default.renameSync(temporary, import_node_path6.default.join(stage, "journal.json"));
-      syncSqlitePath(stage);
-    };
-    processAlive = (pid) => {
-      if (!Number.isSafeInteger(pid) || pid <= 0) {
-        throw new Error("Invalid SQLite migration owner.");
-      }
-      try {
-        process.kill(pid, 0);
-        return true;
-      } catch (error) {
-        return error.code !== "ESRCH";
-      }
-    };
-    sourceManifest = (database) => {
-      const manifest = JSON.parse(
-        String(database.prepare("SELECT v FROM meta WHERE k='manifest'").get()?.v)
-      );
-      const revision = Number(database.prepare("SELECT v FROM meta WHERE k='revision'").get()?.v);
-      return parseAnalysisProjectManifest({ ...manifest, revision });
-    };
-    recoverMigration = (directory) => {
-      const stage = import_node_path6.default.join(directory, SQLITE_MIGRATION_DIRECTORY);
-      const file = import_node_path6.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE);
-      const backup = import_node_path6.default.join(directory, SQLITE_MIGRATION_BACKUP);
-      const journal = JSON.parse(
-        import_node_fs5.default.readFileSync(import_node_path6.default.join(stage, "journal.json"), "utf8")
-      );
-      if (!journal.released && processAlive(journal.pid)) {
-        throw new Error("Another process owns the analysis storage migration.");
-      }
-      const identity2 = sqliteFileIdentity(file);
-      if (identity2 === journal.targetIdentity && journal.result) {
-        const database = new import_node_sqlite3.DatabaseSync(file, { readOnly: true });
-        try {
-          if ((0, import_node_crypto9.createHash)("sha256").update(canonicalJson(sourceManifest(database))).digest("hex") !== journal.manifestSha256) {
-            throw new Error("Published migration identity differs from its recovery journal.");
-          }
-        } finally {
-          database.close();
-        }
-        if (sqliteFileIdentity(backup) !== journal.sourceIdentity) {
-          throw new Error("Migration backup identity differs from its recovery journal.");
-        }
-        import_node_fs5.default.rmSync(stage, { recursive: true });
-        syncSqlitePath(directory);
-        return { ...journal.result, recovered: true };
-      }
-      if (identity2 !== journal.sourceIdentity) {
-        throw new Error(
-          "Analysis database identity changed outside the recorded migration. Preserving recovery files."
-        );
-      }
-      if (import_node_fs5.default.existsSync(backup)) {
-        if (sqliteFileIdentity(backup) !== identity2) {
-          throw new Error("An unrelated migration backup already exists. Preserving both databases.");
-        }
-        import_node_fs5.default.unlinkSync(backup);
-      }
-      import_node_fs5.default.rmSync(stage, { recursive: true });
-      syncSqlitePath(directory);
-      return void 0;
-    };
-    migrateAnalysisProjectStorage = async (directory, options = {}) => {
-      directory = import_node_path6.default.resolve(directory);
-      const file = import_node_path6.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE);
-      const stage = import_node_path6.default.join(directory, SQLITE_MIGRATION_DIRECTORY);
-      const backup = import_node_path6.default.join(directory, SQLITE_MIGRATION_BACKUP);
-      if (import_node_fs5.default.existsSync(stage)) {
-        const recovered = recoverMigration(directory);
-        if (recovered) {
-          return recovered;
-        }
-      }
-      options.signal?.throwIfAborted();
-      if (import_node_fs5.default.lstatSync(file).isSymbolicLink()) {
-        throw new Error("Migrate a regular analysis database file, not a symbolic link.");
-      }
-      const probe = new import_node_sqlite3.DatabaseSync(file, { readOnly: true });
-      let version;
-      let manifest;
-      try {
-        version = Number(probe.prepare("PRAGMA user_version").get()?.user_version);
-        if (![0, 1, ANALYSIS_SQLITE_STORAGE_VERSION].includes(version)) {
-          throw new Error(`Cannot migrate unsupported analysis storage format ${version}.`);
-        }
-        manifest = sourceManifest(probe);
-      } finally {
-        probe.close();
-      }
-      let beforeBytes = import_node_fs5.default.statSync(file).size;
-      if (version === ANALYSIS_SQLITE_STORAGE_VERSION && !options.convertRuntime) {
-        return {
-          changed: false,
-          recovered: false,
-          storageVersion: version,
-          beforeBytes,
-          afterBytes: beforeBytes,
-          tables: {},
-          warnings: []
-        };
-      }
-      if (import_node_fs5.default.existsSync(backup)) {
-        throw new Error(`Migration backup already exists: ${backup}`);
-      }
-      const disk = import_node_fs5.default.statfsSync(directory);
-      const required = Math.ceil(beforeBytes * 0.75) + RESERVE_BYTES;
-      if (disk.bavail * disk.bsize < required) {
-        throw new Error(
-          `Insufficient migration workspace: need an estimated ${Math.ceil(required / 1024 / 1024)} MiB free.`
-        );
-      }
-      import_node_fs5.default.mkdirSync(stage, { mode: 448 });
-      let journal = {
-        pid: process.pid,
-        sourceIdentity: sqliteFileIdentity(file),
-        beforeBytes,
-        manifestSha256: (0, import_node_crypto9.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
-      };
-      let source;
-      let destination;
-      let linked = false;
-      let published = false;
-      let failed = false;
-      const warnings = [];
-      const notes2 = [];
-      try {
-        writeJournal(stage, journal);
-        syncSqlitePath(directory);
-        source = new import_node_sqlite3.DatabaseSync(file);
-        try {
-          source.exec(
-            "PRAGMA busy_timeout=1000; PRAGMA locking_mode=EXCLUSIVE; PRAGMA wal_checkpoint(TRUNCATE); PRAGMA journal_mode=DELETE; BEGIN EXCLUSIVE;"
-          );
-        } catch (cause) {
-          throw new Error(
-            `Cannot acquire exclusive migration access. Close clients using this analysis database and retry. ${String(cause)}`,
-            { cause }
-          );
-        }
-        manifest = sourceManifest(source);
-        beforeBytes = import_node_fs5.default.statSync(file).size;
-        journal = {
-          ...journal,
-          beforeBytes,
-          manifestSha256: (0, import_node_crypto9.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
-        };
-        writeJournal(stage, journal);
-        const stagedFile = import_node_path6.default.join(stage, ANALYSIS_PROJECT_SQLITE_FILE);
-        destination = new SqliteAnalysisStore(stagedFile, true, true);
-        const timings = [];
-        const tables = {};
-        if (options.convertRuntime) {
-          const started2 = import_node_perf_hooks.performance.now();
-          const validateOriginal = createRuntimeRecordValidator(
-            manifest,
-            [...legacyRecords(source, "evidence", version)],
-            false
-          );
-          try {
-            await prepareRuntimeConversion(source, version, {
-              signal: options.signal,
-              validateRecord: validateOriginal,
-              onProgress: (records2) => options.onProgress?.({ phase: "project", table: "runtime", records: records2 })
-            });
-          } finally {
-            validateOriginal.close();
-          }
-          timings.push({
-            step: "Project native runtime detail",
-            durationMs: import_node_perf_hooks.performance.now() - started2
-          });
-          notes2.push(
-            "Full register-index detail was converted to 65816-analysis-v2. The original database is retained in the migration backup."
-          );
-        }
-        for (const kind of TABLES) {
-          const started2 = import_node_perf_hooks.performance.now();
-          const hash = kind === "runtime" ? new RuntimeDigest() : (0, import_node_crypto9.createHash)("sha256");
-          let count = 0;
-          let bytes = 0;
-          let batch = [];
-          const flush = async () => {
-            if (batch.length === 0) {
-              return;
-            }
-            options.signal?.throwIfAborted();
-            const available = import_node_fs5.default.statfsSync(directory);
-            if (available.bavail * available.bsize < RESERVE_BYTES) {
-              throw new Error("Migration stopped before exhausting free disk space.");
-            }
-            destination.transaction(() => destination.appendRecords(kind, batch));
-            batch = [];
-            bytes = 0;
-            options.onProgress?.({ phase: "copy", table: kind, records: count });
-            await (0, import_promises2.setImmediate)();
-          };
-          for (const record5 of legacyRecords(source, kind, version, options.convertRuntime)) {
-            const json = canonicalJson(record5);
-            hash.update(json);
-            bytes += Buffer.byteLength(json);
-            batch.push(record5);
-            count++;
-            if (batch.length >= 2e3 || bytes >= 4 * 1024 * 1024) {
-              await flush();
-            }
-          }
-          await flush();
-          tables[kind] = { records: count, sha256: String(hash.digest("hex")) };
-          timings.push({ step: `Copy ${kind}`, durationMs: import_node_perf_hooks.performance.now() - started2 });
-        }
-        destination.transaction(() => destination.initializeMigratedManifest(manifest));
-        const context = {
-          evidence: destination.loadTable("evidence"),
-          regions: destination.loadTable("regions"),
-          labels: [],
-          comments: [],
-          annotations: [],
-          analysis: [],
-          imports: [],
-          runtime: []
-        };
-        validateLoadedShards(context, manifest);
-        const validateRuntime = createRuntimeRecordValidator(manifest, context.evidence, false);
-        for (const kind of TABLES) {
-          const started2 = import_node_perf_hooks.performance.now();
-          const hash = kind === "runtime" ? new RuntimeDigest() : (0, import_node_crypto9.createHash)("sha256");
-          let records2 = 0;
-          let batch = [];
-          let batchBytes = 0;
-          const validateBatch = () => {
-            if (batch.length !== 0) {
-              validateLoadedShards({ ...context, [kind]: batch }, manifest);
-            }
-            batch = [];
-            batchBytes = 0;
-          };
-          for (const record5 of destination.records(kind)) {
-            const json = canonicalJson(record5);
-            hash.update(json);
-            if (kind === "runtime") {
-              validateRuntime(record5);
-            } else if (kind !== "evidence" && kind !== "regions") {
-              batch.push(record5);
-              batchBytes += Buffer.byteLength(json);
-            }
-            records2++;
-            if (records2 % 2e3 === 0 || batchBytes >= 4 * 1024 * 1024) {
-              validateBatch();
-              options.signal?.throwIfAborted();
-              options.onProgress?.({ phase: "verify", table: kind, records: records2 });
-              await (0, import_promises2.setImmediate)();
-            }
-          }
-          validateBatch();
-          if (records2 !== tables[kind].records || hash.digest("hex") !== tables[kind].sha256) {
-            throw new Error(`Migrated ${kind} records differ from the original database.`);
-          }
-          timings.push({ step: `Verify ${kind}`, durationMs: import_node_perf_hooks.performance.now() - started2 });
-        }
-        validateRuntime.close();
-        destination.transaction(() => {
-          for (const report2 of destination.loadTable("imports")) {
-            destination.recordCaptureReceipt(report2);
-          }
-        });
-        if (version === ANALYSIS_SQLITE_STORAGE_VERSION) {
-          const staged = new import_node_sqlite3.DatabaseSync(stagedFile);
-          try {
-            staged.exec("BEGIN IMMEDIATE");
-            const catalogColumns = CAPTURE_CATALOG_COLUMNS.join(",");
-            const save = staged.prepare(
-              `INSERT OR REPLACE INTO capture_catalog (${catalogColumns}) VALUES (${CAPTURE_CATALOG_COLUMNS.map(() => "?").join(",")})`
-            );
-            const convertedCapture = options.convertRuntime ? source.prepare("SELECT 1 FROM temp.converted_captures WHERE sha256=?") : void 0;
-            for (const row of source.prepare(`SELECT ${catalogColumns} FROM capture_catalog`).iterate()) {
-              const converted = convertedCapture?.get(row.sha256);
-              save.run(
-                ...CAPTURE_CATALOG_COLUMNS.map(
-                  (column) => column === "profile" && converted ? RUNTIME_ANALYSIS_PROFILE : row[column]
-                )
-              );
-            }
-            const policy = source.prepare("SELECT v FROM meta WHERE k='storage-policy'").get()?.v;
-            if (policy) {
-              staged.prepare("INSERT OR REPLACE INTO meta VALUES('storage-policy',?)").run(policy);
-            }
-            staged.exec("COMMIT");
-          } finally {
-            staged.close();
-          }
-        }
-        options.signal?.throwIfAborted();
-        options.onProgress?.({ phase: "indexes" });
-        options.signal?.throwIfAborted();
-        const indexStarted = import_node_perf_hooks.performance.now();
-        destination.finishMigration();
-        timings.push({
-          step: "Build indexes and verify SQLite integrity",
-          durationMs: import_node_perf_hooks.performance.now() - indexStarted
-        });
-        await (0, import_promises2.setImmediate)();
-        options.signal?.throwIfAborted();
-        destination.close();
-        destination = void 0;
-        syncSqlitePath(stagedFile);
-        const result = {
-          changed: true,
-          recovered: false,
-          storageVersion: ANALYSIS_SQLITE_STORAGE_VERSION,
-          beforeBytes,
-          afterBytes: import_node_fs5.default.statSync(stagedFile).size,
-          backupFile: backup,
-          tables,
-          warnings,
-          notes: notes2,
-          timings
-        };
-        journal = { ...journal, targetIdentity: sqliteFileIdentity(stagedFile), result };
-        writeJournal(stage, journal);
-        options.signal?.throwIfAborted();
-        options.onProgress?.({ phase: "publish" });
-        options.signal?.throwIfAborted();
-        source.exec("COMMIT");
-        import_node_fs5.default.linkSync(file, backup);
-        linked = true;
-        syncSqlitePath(directory);
-        import_node_fs5.default.renameSync(stagedFile, file);
-        published = true;
-        syncSqlitePath(directory);
-        return result;
-      } catch (error) {
-        if (published && journal.result) {
-          warnings.push(`Storage was published, but final housekeeping failed: ${String(error)}`);
-          return { ...journal.result, warnings };
-        }
-        failed = true;
-        throw error;
-      } finally {
-        try {
-          try {
-            destination?.close();
-          } finally {
-            source?.close();
-          }
-          writeJournal(stage, { ...journal, released: true });
-          if (linked && !published && sqliteFileIdentity(file) === journal.sourceIdentity) {
-            import_node_fs5.default.unlinkSync(backup);
-          }
-          import_node_fs5.default.rmSync(stage, { recursive: true, force: true });
-          syncSqlitePath(directory);
-        } catch (error) {
-          const message = `SQLite migration cleanup needs recovery via project-migrate: ${String(error)}`;
-          if (failed) {
-            process.emitWarning(message);
-          } else {
-            warnings.push(message);
-          }
-        }
-      }
-    };
-  }
-});
-
-// ../disassembler/src/rom-image.ts
-var import_node_crypto10, fs8, sha2564, detectCopierHeaderSize, RomImage;
-var init_rom_image = __esm({
-  "../disassembler/src/rom-image.ts"() {
-    "use strict";
-    import_node_crypto10 = require("node:crypto");
-    fs8 = __toESM(require("node:fs"), 1);
-    sha2564 = (bytes) => (0, import_node_crypto10.createHash)("sha256").update(bytes).digest("hex");
+    fs6 = __toESM(require("node:fs"), 1);
+    sha2564 = (bytes) => (0, import_node_crypto9.createHash)("sha256").update(bytes).digest("hex");
     detectCopierHeaderSize = (fileSize) => {
       if (fileSize < 0) {
         throw new Error("ROM size cannot be negative.");
@@ -8753,7 +8399,7 @@ var init_rom_image = __esm({
        * @returns {RomImage} Loaded image.
        */
       static load(file, options = {}) {
-        return new _RomImage(fs8.readFileSync(file), { ...options, sourcePath: file });
+        return new _RomImage(fs6.readFileSync(file), { ...options, sourcePath: file });
       }
       /**
        * Headerless cartridge length in bytes.
@@ -8805,12 +8451,47 @@ var init_rom_image = __esm({
   }
 });
 
-// ../disassembler/src/runtime-trace.ts
-var import_node_crypto11, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2565, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
-var init_runtime_trace = __esm({
-  "../disassembler/src/runtime-trace.ts"() {
+// packages/disassembler/src/runtime-trace-profile.ts
+var RUNTIME_ANALYSIS_PROFILE, project65816AnalysisState;
+var init_runtime_trace_profile = __esm({
+  "packages/disassembler/src/runtime-trace-profile.ts"() {
     "use strict";
-    import_node_crypto11 = require("node:crypto");
+    RUNTIME_ANALYSIS_PROFILE = "65816-analysis-v2";
+    project65816AnalysisState = (state) => {
+      const value = (key2, max) => {
+        const entry = state[key2] ?? state[key2.toUpperCase()];
+        return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
+      };
+      const result = {};
+      const e = value("e", 1);
+      const p = value("p", 255);
+      if (e !== void 0) {
+        result.e = e;
+      }
+      if (e === 1) {
+        result.p = 48;
+      } else if (p !== void 0) {
+        result.p = p & 48;
+      }
+      const db = value("db", 255);
+      const d = value("d", 65535);
+      if (db !== void 0) {
+        result.db = db;
+      }
+      if (d !== void 0) {
+        result.d = d;
+      }
+      return result;
+    };
+  }
+});
+
+// packages/disassembler/src/runtime-trace.ts
+var import_node_crypto10, RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2565, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, validateRuntimeInstructionTrace, importRuntimeInstructionTrace, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
+var init_runtime_trace = __esm({
+  "packages/disassembler/src/runtime-trace.ts"() {
+    "use strict";
+    import_node_crypto10 = require("node:crypto");
     init_project_store();
     init_runtime_trace_profile();
     init_trace_detail();
@@ -8837,7 +8518,7 @@ var init_runtime_trace = __esm({
       }
       return value;
     };
-    sha2565 = (value) => (0, import_node_crypto11.createHash)("sha256").update(value).digest("hex");
+    sha2565 = (value) => (0, import_node_crypto10.createHash)("sha256").update(value).digest("hex");
     sha256Identity = (value, context) => {
       const identity2 = string(value, context);
       if (!/^[\da-f]{64}$/.test(identity2)) {
@@ -9003,7 +8684,7 @@ var init_runtime_trace = __esm({
       }
       const envelope = canonicalJson({ ...artifact, chunks: [] });
       const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
-      const hash = (0, import_node_crypto11.createHash)("sha256").update(envelope.slice(0, split));
+      const hash = (0, import_node_crypto10.createHash)("sha256").update(envelope.slice(0, split));
       const suffix = envelope.slice(split + 2);
       const validateChunk = createRuntimeTraceChunkValidator();
       const index = storage?.index ?? createMemoryFactIndex();
@@ -9042,7 +8723,7 @@ var init_runtime_trace = __esm({
         complete = !chunk.active;
         unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
         for (const address5 of chunk.addresses) {
-          if (index.add(`pc:${hex2(address5)}`, () => ({ kind: "execution", address: address5 }))) {
+          if (index.add(`pc:${address5}`, () => ({ kind: "execution", address: address5 }))) {
             reserve(1);
             executionRecords++;
           }
@@ -9255,14 +8936,14 @@ var init_runtime_trace = __esm({
   }
 });
 
-// ../disassembler/src/runtime-trace-file.ts
+// packages/disassembler/src/runtime-trace-file.ts
 async function* traceEntries(file, options) {
   const maxBytes = options.maxBytes ?? DEFAULT_RUNTIME_TRACE_MAX_BYTES;
   if (!Number.isSafeInteger(maxBytes) || maxBytes < 1) {
     throw new Error("Trace import maximum bytes must be a positive safe integer.");
   }
   options.signal?.throwIfAborted();
-  const before = await (0, import_promises3.stat)(file);
+  const before = await (0, import_promises.stat)(file);
   const checkSize = (size) => {
     if (size > maxBytes) {
       throw new Error(
@@ -9293,7 +8974,7 @@ async function* traceEntries(file, options) {
     parts.push(text2);
   };
   const decoder = new import_node_string_decoder.StringDecoder("utf8");
-  const stream = (0, import_node_fs6.createReadStream)(file, { highWaterMark: 64 * 1024 });
+  const stream = (0, import_node_fs4.createReadStream)(file, { highWaterMark: 64 * 1024 });
   let bytesRead = 0;
   try {
     for await (const bytes of stream) {
@@ -9431,7 +9112,7 @@ async function* traceEntries(file, options) {
     if (decoder.end() || String(mode3) !== "end" || !keys.has("chunks")) {
       fail2();
     }
-    const after = await (0, import_promises3.stat)(file);
+    const after = await (0, import_promises.stat)(file);
     if (bytesRead !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs) {
       throw new Error(
         "Instruction trace changed while it was being read. Stop recording before importing."
@@ -9464,12 +9145,12 @@ async function* readRuntimeTraceFileChunks(file, metadata, options = {}) {
     yield validateChunk(chunk);
   }
 }
-var import_node_fs6, import_promises3, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
+var import_node_fs4, import_promises, import_node_string_decoder, DEFAULT_RUNTIME_TRACE_MAX_BYTES, MAX_VALUE_CHARACTERS, readRuntimeTraceFileMetadata, createRuntimeTraceFileSource, importRuntimeInstructionTraceFile;
 var init_runtime_trace_file = __esm({
-  "../disassembler/src/runtime-trace-file.ts"() {
+  "packages/disassembler/src/runtime-trace-file.ts"() {
     "use strict";
-    import_node_fs6 = require("node:fs");
-    import_promises3 = require("node:fs/promises");
+    import_node_fs4 = require("node:fs");
+    import_promises = require("node:fs/promises");
     import_node_string_decoder = require("node:string_decoder");
     init_project_store();
     init_runtime_trace();
@@ -9519,28 +9200,28 @@ var init_runtime_trace_file = __esm({
   }
 });
 
-// ../disassembler/src/source-export.ts
-var import_node_crypto12, fs9, import_node_path7, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
+// packages/disassembler/src/source-export.ts
+var import_node_crypto11, fs7, import_node_path5, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
-  "../disassembler/src/source-export.ts"() {
+  "packages/disassembler/src/source-export.ts"() {
     "use strict";
-    import_node_crypto12 = require("node:crypto");
-    fs9 = __toESM(require("node:fs"), 1);
-    import_node_path7 = __toESM(require("node:path"), 1);
+    import_node_crypto11 = require("node:crypto");
+    fs7 = __toESM(require("node:fs"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
     init_canonical_json();
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
     SOURCE_EXPORT_MANIFEST = "generated-files.json";
-    sourceExportSha256 = (value) => (0, import_node_crypto12.createHash)("sha256").update(value).digest("hex");
+    sourceExportSha256 = (value) => (0, import_node_crypto11.createHash)("sha256").update(value).digest("hex");
     canonicalSourceExportJson = (value) => canonicalJson(value);
     assertSafePath = (relative2) => {
-      if (relative2 === "" || import_node_path7.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
+      if (relative2 === "" || import_node_path5.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
         throw new Error(`Unsafe generated-file path '${relative2}'.`);
       }
     };
     loadSourceExportManifest = (directory) => {
       const manifest = JSON.parse(
-        fs9.readFileSync(import_node_path7.default.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
+        fs7.readFileSync(import_node_path5.default.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
       );
       if (manifest.format !== SOURCE_EXPORT_FORMAT) {
         throw new Error("Invalid source-export format.");
@@ -9595,11 +9276,11 @@ var init_source_export = __esm({
     };
     validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
       for (const file of manifest.files) {
-        const absolute = import_node_path7.default.join(directory, file.path);
-        if (!fs9.existsSync(absolute)) {
+        const absolute = import_node_path5.default.join(directory, file.path);
+        if (!fs7.existsSync(absolute)) {
           throw new Error(`Generated file '${file.path}' is missing.`);
         }
-        const bytes = fs9.readFileSync(absolute);
+        const bytes = fs7.readFileSync(absolute);
         if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
           throw new Error(`Generated file '${file.path}' was modified after export.`);
         }
@@ -9607,11 +9288,11 @@ var init_source_export = __esm({
     };
     validateSourceExportInputs = (directory, manifest = loadSourceExportManifest(directory)) => {
       for (const input of manifest.inputs ?? []) {
-        const absolute = import_node_path7.default.join(directory, input.path);
-        if (!fs9.existsSync(absolute)) {
+        const absolute = import_node_path5.default.join(directory, input.path);
+        if (!fs7.existsSync(absolute)) {
           throw new Error(`Source input '${input.path}' is missing.`);
         }
-        const bytes = fs9.readFileSync(absolute);
+        const bytes = fs7.readFileSync(absolute);
         if (bytes.length !== input.size || sourceExportSha256(bytes) !== input.sha256) {
           throw new Error(`Source input '${input.path}' changed after the last export.`);
         }
@@ -9641,10 +9322,10 @@ var init_source_export = __esm({
   }
 });
 
-// ../disassembler/src/static-analysis.ts
+// packages/disassembler/src/static-analysis.ts
 var hexAddress, contextKey, nodeIdFor, sortedUnique3, sortWork, StaticWorkQueue, edgeIdFor, conflictKindFor, overriddenTargetKind, analyzeStaticControlFlow;
 var init_static_analysis = __esm({
-  "../disassembler/src/static-analysis.ts"() {
+  "packages/disassembler/src/static-analysis.ts"() {
     "use strict";
     hexAddress = (address5) => address5.toString(16).padStart(6, "0");
     contextKey = (context) => context.map((frame) => `${hexAddress(frame.callSite)}>${hexAddress(frame.returnAddress)}`).join("/");
@@ -9900,7 +9581,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path16 = [...item.path, nodeId];
+        const path15 = [...item.path, nodeId];
         nodes.set(nodeId, {
           id: nodeId,
           address: instruction2.address,
@@ -9916,7 +9597,7 @@ var init_static_analysis = __esm({
           effectiveAddresses: instruction2.effectiveAddresses ?? [],
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          evidencePath: path16
+          evidencePath: path15
         });
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
@@ -9973,7 +9654,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path16,
+            path: path15,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -9988,7 +9669,7 @@ var init_static_analysis = __esm({
                 address: target.address,
                 source: kind === "call" ? "call" : "interrupt",
                 evidence: targetEvidence,
-                evidencePath: path16
+                evidencePath: path15
               });
             }
           }
@@ -10023,7 +9704,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path16,
+              path: path15,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -10035,7 +9716,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path16,
+            path: path15,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -10082,10 +9763,10 @@ var init_static_analysis = __esm({
   }
 });
 
-// ../disassembler/src/runtime-trace-project.ts
+// packages/disassembler/src/runtime-trace-project.ts
 var importRuntimeTraceIntoProject, importRuntimeTraceSourceIntoProject, commitRuntimeEvidenceBatch;
 var init_runtime_trace_project = __esm({
-  "../disassembler/src/runtime-trace-project.ts"() {
+  "packages/disassembler/src/runtime-trace-project.ts"() {
     "use strict";
     init_project_store();
     init_project_transaction();
@@ -10260,10 +9941,10 @@ var init_runtime_trace_project = __esm({
   }
 });
 
-// ../disassembler/src/runtime-graphics.ts
+// packages/disassembler/src/runtime-graphics.ts
 var mapVram, createRuntimeGraphicsAccumulator;
 var init_runtime_graphics = __esm({
-  "../disassembler/src/runtime-graphics.ts"() {
+  "packages/disassembler/src/runtime-graphics.ts"() {
     "use strict";
     mapVram = (address5, mapping) => {
       if (mapping === 0) {
@@ -10493,10 +10174,10 @@ var init_runtime_graphics = __esm({
   }
 });
 
-// ../disassembler/src/runtime-transfer.ts
+// packages/disassembler/src/runtime-transfer.ts
 var validateRuntimeTransferBoundary, createRuntimeTransferAccumulator;
 var init_runtime_transfer = __esm({
-  "../disassembler/src/runtime-transfer.ts"() {
+  "packages/disassembler/src/runtime-transfer.ts"() {
     "use strict";
     validateRuntimeTransferBoundary = (marker) => {
       const { configuration: c } = marker;
@@ -10554,7 +10235,7 @@ var init_runtime_transfer = __esm({
       };
     };
     createRuntimeTransferAccumulator = () => {
-      const open3 = /* @__PURE__ */ new Map();
+      const open4 = /* @__PURE__ */ new Map();
       const activity = /* @__PURE__ */ new Map();
       const windows = [];
       let omittedWindows = 0;
@@ -10611,12 +10292,12 @@ var init_runtime_transfer = __esm({
             return;
           }
           const key2 = `${event.actor}:${event.channel}`;
-          let current = open3.get(key2);
+          let current = open4.get(key2);
           if (marker && event.boundary === "begin") {
             if (current) {
               throw new Error("Transfer began before the previous channel window ended.");
             }
-            open3.set(key2, {
+            open4.set(key2, {
               actor: event.actor,
               channel: event.channel,
               begin: event,
@@ -10627,7 +10308,7 @@ var init_runtime_transfer = __esm({
           }
           if (!current) {
             current = { actor: event.actor, channel: event.channel, reads: 0, writes: 0 };
-            open3.set(key2, current);
+            open4.set(key2, current);
           }
           if (!marker) {
             if (event.direction === "read") {
@@ -10666,16 +10347,16 @@ var init_runtime_transfer = __esm({
             status = event.boundary === "complete" ? "complete" : "interrupted";
           }
           retain({ ...current, end: event, status });
-          open3.delete(key2);
+          open4.delete(key2);
         },
         /** Close remaining windows without claiming completion or an attempted slot count.
          * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
          */
         finish: () => {
-          for (const current of open3.values()) {
+          for (const current of open4.values()) {
             retain({ ...current, status: current.begin ? "trailing-partial" : "both-partial" });
           }
-          open3.clear();
+          open4.clear();
           return {
             activity: [...activity.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value),
             windows,
@@ -10687,12 +10368,12 @@ var init_runtime_transfer = __esm({
   }
 });
 
-// ../disassembler/src/runtime-bus-trace.ts
-var import_node_crypto13, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
+// packages/disassembler/src/runtime-bus-trace.ts
+var import_node_crypto12, RUNTIME_BUS_TRACE_FORMAT, RUNTIME_BUS_INDEX_PROFILE, unsigned, validateRuntimeBusTraceMetadata, createRuntimeBusTraceImporter;
 var init_runtime_bus_trace = __esm({
-  "../disassembler/src/runtime-bus-trace.ts"() {
+  "packages/disassembler/src/runtime-bus-trace.ts"() {
     "use strict";
-    import_node_crypto13 = require("node:crypto");
+    import_node_crypto12 = require("node:crypto");
     init_runtime_bus_types();
     init_runtime_graphics();
     init_runtime_ppu();
@@ -10766,7 +10447,7 @@ var init_runtime_bus_trace = __esm({
         values: () => memory.values(),
         clear: () => memory.clear()
       };
-      const hash = (0, import_node_crypto13.createHash)("sha256").update(`uttori-bus-index-v1
+      const hash = (0, import_node_crypto12.createHash)("sha256").update(`uttori-bus-index-v1
 ${JSON.stringify(meta)}
 `);
       const factKeys = new TraceCache(context.cacheMetrics?.facts);
@@ -10880,7 +10561,7 @@ ${JSON.stringify(meta)}
             const factJson = JSON.stringify(fact);
             let key2 = factKeys.get(factJson);
             if (key2 === void 0) {
-              key2 = (0, import_node_crypto13.createHash)("sha256").update(factJson).digest("hex");
+              key2 = (0, import_node_crypto12.createHash)("sha256").update(factJson).digest("hex");
               factKeys.insert(factJson, key2);
             }
             if (index.add(key2, () => ({
@@ -11086,19 +10767,19 @@ ${JSON.stringify(meta)}
   }
 });
 
-// ../disassembler/src/runtime-bus-project.ts
-var import_node_fs7, captureFileIdentity, importRuntimeBusTraceSourceIntoProject;
+// packages/disassembler/src/runtime-bus-project.ts
+var import_node_fs5, captureFileIdentity, importRuntimeBusTraceSourceIntoProject;
 var init_runtime_bus_project = __esm({
-  "../disassembler/src/runtime-bus-project.ts"() {
+  "packages/disassembler/src/runtime-bus-project.ts"() {
     "use strict";
-    import_node_fs7 = __toESM(require("node:fs"), 1);
+    import_node_fs5 = __toESM(require("node:fs"), 1);
     init_project_store();
     init_project_transaction();
     init_project_validation();
     init_runtime_bus_trace();
     init_runtime_evidence();
     captureFileIdentity = (file) => {
-      const stat2 = import_node_fs7.default.statSync(file, { bigint: true });
+      const stat2 = import_node_fs5.default.statSync(file, { bigint: true });
       if (!stat2.isFile()) {
         throw new Error("Capture input must be a regular file.");
       }
@@ -11238,7 +10919,7 @@ var init_runtime_bus_project = __esm({
   }
 });
 
-// ../disassembler/src/index.ts
+// packages/disassembler/src/index.ts
 var src_exports = {};
 __export(src_exports, {
   ANALYSIS_PROJECT_FORMAT: () => ANALYSIS_PROJECT_FORMAT,
@@ -11322,7 +11003,6 @@ __export(src_exports, {
   loadAnalysisProjectViewSnapshot: () => loadAnalysisProjectViewSnapshot,
   loadSourceExportManifest: () => loadSourceExportManifest,
   mergeRuntimeEvidence: () => mergeRuntimeEvidence,
-  migrateAnalysisProjectStorage: () => migrateAnalysisProjectStorage,
   openAnalysisProjectStore: () => openAnalysisProjectStore,
   parseAnalysisProjectManifest: () => parseAnalysisProjectManifest,
   planAssets: () => planAssets,
@@ -11362,7 +11042,7 @@ __export(src_exports, {
   writeAnalysisProject: () => writeAnalysisProject
 });
 var init_src = __esm({
-  "../disassembler/src/index.ts"() {
+  "packages/disassembler/src/index.ts"() {
     "use strict";
     init_asset_codec();
     init_asset_codecs();
@@ -11373,7 +11053,6 @@ var init_src = __esm({
     init_instruction_annotations();
     init_interval_index();
     init_sqlite_store();
-    init_sqlite_migration();
     init_project_store();
     init_project_transaction();
     init_project_edit();
@@ -11399,7 +11078,7 @@ var init_src = __esm({
   }
 });
 
-// ../core/src/address-width.ts
+// packages/core/src/address-width.ts
 function maximumAddressForWidth(addressWidth) {
   if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
     throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
@@ -11414,15 +11093,15 @@ function normalizeAddressForWidth(address5, addressWidth) {
   return (address5 % modulus + modulus) % modulus;
 }
 var init_address_width = __esm({
-  "../core/src/address-width.ts"() {
+  "packages/core/src/address-width.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/crc32.ts
+// packages/core/src/crc32.ts
 var CRC32;
 var init_crc32 = __esm({
-  "../core/src/crc32.ts"() {
+  "packages/core/src/crc32.ts"() {
     "use strict";
     CRC32 = class _CRC32 {
       /** Precomputed CRC32 table. */
@@ -11458,21 +11137,21 @@ var init_crc32 = __esm({
   }
 });
 
-// ../core/src/addressToLine.ts
-var import_node_crypto14, fs11, sourceIdentity, AddressToLineMapping;
+// packages/core/src/addressToLine.ts
+var import_node_crypto13, fs9, sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
-  "../core/src/addressToLine.ts"() {
+  "packages/core/src/addressToLine.ts"() {
     "use strict";
-    import_node_crypto14 = require("node:crypto");
-    fs11 = __toESM(require("node:fs"), 1);
+    import_node_crypto13 = require("node:crypto");
+    fs9 = __toESM(require("node:fs"), 1);
     init_crc32();
     sourceIdentity = (filename) => {
       try {
-        const data = fs11.readFileSync(filename);
+        const data = fs9.readFileSync(filename);
         return {
           crc: CRC32.compute(data),
           size: data.length,
-          sha256: (0, import_node_crypto14.createHash)("sha256").update(data).digest("hex")
+          sha256: (0, import_node_crypto13.createHash)("sha256").update(data).digest("hex")
         };
       } catch {
         return { crc: 0, size: 0, sha256: "" };
@@ -11581,10 +11260,10 @@ var init_addressToLine = __esm({
   }
 });
 
-// ../core/src/architecture-registry.ts
+// packages/core/src/architecture-registry.ts
 var ArchitectureRegistry;
 var init_architecture_registry = __esm({
-  "../core/src/architecture-registry.ts"() {
+  "packages/core/src/architecture-registry.ts"() {
     "use strict";
     ArchitectureRegistry = class {
       definitions = /* @__PURE__ */ new Map();
@@ -11625,7 +11304,7 @@ var init_architecture_registry = __esm({
   }
 });
 
-// ../core/src/source-location.ts
+// packages/core/src/source-location.ts
 function createSourceSpan(start, end, line) {
   return {
     start,
@@ -11677,12 +11356,12 @@ function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
   };
 }
 var init_source_location = __esm({
-  "../core/src/source-location.ts"() {
+  "packages/core/src/source-location.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/diagnostics.ts
+// packages/core/src/diagnostics.ts
 function createAssemblySourceLocation(file, line, span) {
   return {
     file,
@@ -11720,7 +11399,7 @@ function diagnosticFromError(error, fallbackLocation, stage) {
 }
 var AssemblyError;
 var init_diagnostics = __esm({
-  "../core/src/diagnostics.ts"() {
+  "packages/core/src/diagnostics.ts"() {
     "use strict";
     init_source_location();
     AssemblyError = class extends Error {
@@ -11749,10 +11428,10 @@ var init_diagnostics = __esm({
   }
 });
 
-// ../core/src/directive-groups.ts
+// packages/core/src/directive-groups.ts
 var CORE_DIRECTIVE_GROUPS;
 var init_directive_groups = __esm({
-  "../core/src/directive-groups.ts"() {
+  "packages/core/src/directive-groups.ts"() {
     "use strict";
     CORE_DIRECTIVE_GROUPS = Object.freeze([
       "data",
@@ -11769,10 +11448,10 @@ var init_directive_groups = __esm({
   }
 });
 
-// ../core/src/directives/data.ts
+// packages/core/src/directives/data.ts
 var handleDataDirective, registerDataDirectives;
 var init_data = __esm({
-  "../core/src/directives/data.ts"() {
+  "packages/core/src/directives/data.ts"() {
     "use strict";
     handleDataDirective = ({ runtime }, words) => {
       runtime.handleDataDirective(words[0], words.slice(1));
@@ -11783,10 +11462,10 @@ var init_data = __esm({
   }
 });
 
-// ../core/src/directives/fill-pad.ts
+// packages/core/src/directives/fill-pad.ts
 var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
 var init_fill_pad = __esm({
-  "../core/src/directives/fill-pad.ts"() {
+  "packages/core/src/directives/fill-pad.ts"() {
     "use strict";
     FILL_PATTERN_SIZE = 12;
     PATTERN_WIDTH = {
@@ -11885,10 +11564,10 @@ var init_fill_pad = __esm({
   }
 });
 
-// ../core/src/directives/flow-control.ts
+// packages/core/src/directives/flow-control.ts
 var handleRelativeLabel, registerFlowControlDirectives;
 var init_flow_control = __esm({
-  "../core/src/directives/flow-control.ts"() {
+  "packages/core/src/directives/flow-control.ts"() {
     "use strict";
     handleRelativeLabel = ({ session }, _words, raw) => {
       session.symbolScope.handleRelativeLabel(raw);
@@ -11899,7 +11578,7 @@ var init_flow_control = __esm({
   }
 });
 
-// ../core/src/ir/expression-node.ts
+// packages/core/src/ir/expression-node.ts
 function attachRootSpan(node, text2) {
   if (!node.span) {
     node.span = createSourceSpan(0, text2.length);
@@ -12285,7 +11964,7 @@ function isBinaryOperator(value) {
 }
 var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
 var init_expression_node = __esm({
-  "../core/src/ir/expression-node.ts"() {
+  "packages/core/src/ir/expression-node.ts"() {
     "use strict";
     init_source_location();
     binaryPrecedence = {
@@ -12503,10 +12182,10 @@ var init_expression_node = __esm({
   }
 });
 
-// ../core/src/directives/include-source.ts
+// packages/core/src/directives/include-source.ts
 var IDENTITY_INCLUDE_DEFINES, NUMERIC_INCBIN_TARGET, expandIncludeFilename, resolveIncludeTarget, splitIncbinArrow, parseIncbinFilenameAndRange, applyEofEnd, findTopLevelHyphen, assertIncbinMathParensBalanced, parseIncbinUnprefixedHex, parseDeprecatedHyphenIncbinRange, evaluateIncbinRange, assertIncbinBounds, handleIncbin, handleIncsrc, handleInclude, registerIncludeSourceDirectives;
 var init_include_source = __esm({
-  "../core/src/directives/include-source.ts"() {
+  "packages/core/src/directives/include-source.ts"() {
     "use strict";
     init_expression_node();
     IDENTITY_INCLUDE_DEFINES = {
@@ -12780,10 +12459,10 @@ var init_include_source = __esm({
   }
 });
 
-// ../core/src/directives/layout.ts
+// packages/core/src/directives/layout.ts
 var handlePushBase, handlePullBase, handleArch, registerGenericLayoutDirectives, registerLayoutDirectives;
 var init_layout = __esm({
-  "../core/src/directives/layout.ts"() {
+  "packages/core/src/directives/layout.ts"() {
     "use strict";
     handlePushBase = ({ session }) => {
       session.pushBaseStack.push(session.currentTargetAddress);
@@ -12860,7 +12539,7 @@ var init_layout = __esm({
   }
 });
 
-// ../core/src/services/struct-initializer.ts
+// packages/core/src/services/struct-initializer.ts
 function splitInitializerList(text2) {
   const entries3 = [];
   const stack = [];
@@ -12952,15 +12631,15 @@ function isOpenStructInitializer(text2) {
   return depth > 0;
 }
 var init_struct_initializer = __esm({
-  "../core/src/services/struct-initializer.ts"() {
+  "packages/core/src/services/struct-initializer.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/syntax-profile.ts
+// packages/core/src/syntax-profile.ts
 var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
 var init_syntax_profile = __esm({
-  "../core/src/syntax-profile.ts"() {
+  "packages/core/src/syntax-profile.ts"() {
     "use strict";
     ASAR_SYNTAX_PROFILE = Object.freeze({
       id: "asar",
@@ -12995,7 +12674,7 @@ var init_syntax_profile = __esm({
   }
 });
 
-// ../core/src/services/command-text-service.ts
+// packages/core/src/services/command-text-service.ts
 function isLabelIdentifierStart(char) {
   const code = char.charCodeAt(0);
   return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
@@ -13068,7 +12747,7 @@ function isBareLabelReference(input) {
 }
 var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
 var init_command_text_service = __esm({
-  "../core/src/services/command-text-service.ts"() {
+  "packages/core/src/services/command-text-service.ts"() {
     "use strict";
     init_struct_initializer();
     init_syntax_profile();
@@ -13269,10 +12948,10 @@ var init_command_text_service = __esm({
   }
 });
 
-// ../core/src/directives/misc.ts
+// packages/core/src/directives/misc.ts
 var handlePullTable, handlePushTable, stripLeadingKeyword, unwrapQuoted, formatPrintArgs, handleAssert, handleError, hex6, invalidTableLine, parseAsarTableLine, handleClearTable, handleTable, handleWarnpc, registerMiscDirectives;
 var init_misc = __esm({
-  "../core/src/directives/misc.ts"() {
+  "packages/core/src/directives/misc.ts"() {
     "use strict";
     init_command_text_service();
     handlePullTable = ({ session }) => {
@@ -13435,7 +13114,7 @@ var init_misc = __esm({
   }
 });
 
-// ../core/src/directives/namespace.ts
+// packages/core/src/directives/namespace.ts
 function enterNamespace(session, name) {
   if (session.namespaceNestingEnabled) {
     session.namespaceNestingPath.push(name);
@@ -13450,7 +13129,7 @@ function enterNamespace(session, name) {
 }
 var handlePushNamespace, handlePullNamespace, handleNamespace, registerNamespaceDirectives;
 var init_namespace = __esm({
-  "../core/src/directives/namespace.ts"() {
+  "packages/core/src/directives/namespace.ts"() {
     "use strict";
     handlePushNamespace = ({ session }) => {
       session.namespaceStack.push(session.currentNamespace);
@@ -13522,10 +13201,10 @@ var init_namespace = __esm({
   }
 });
 
-// ../core/src/directives/struct-binary.ts
+// packages/core/src/directives/struct-binary.ts
 var registerStructBinaryDirectives;
 var init_struct_binary = __esm({
-  "../core/src/directives/struct-binary.ts"() {
+  "packages/core/src/directives/struct-binary.ts"() {
     "use strict";
     registerStructBinaryDirectives = (registry, context) => {
       registry.register("struct", context, ({ session }, words) => {
@@ -13547,10 +13226,10 @@ var init_struct_binary = __esm({
   }
 });
 
-// ../core/src/directives/registry.ts
+// packages/core/src/directives/registry.ts
 var DirectiveRegistry, createDirectiveRegistry;
 var init_registry = __esm({
-  "../core/src/directives/registry.ts"() {
+  "packages/core/src/directives/registry.ts"() {
     "use strict";
     init_directive_groups();
     init_data();
@@ -13676,19 +13355,19 @@ var init_registry = __esm({
   }
 });
 
-// ../core/src/file-provider.ts
+// packages/core/src/file-provider.ts
 function stripWrappingQuotes(filename) {
   if (filename.startsWith('"') && filename.endsWith('"') || filename.startsWith("'") && filename.endsWith("'") || filename.startsWith("`") && filename.endsWith("`")) {
     return filename.slice(1, -1);
   }
   return filename;
 }
-var import_node_fs8, import_node_path8, NodeAssemblyFileProvider;
+var import_node_fs6, import_node_path6, NodeAssemblyFileProvider;
 var init_file_provider = __esm({
-  "../core/src/file-provider.ts"() {
+  "packages/core/src/file-provider.ts"() {
     "use strict";
-    import_node_fs8 = __toESM(require("node:fs"), 1);
-    import_node_path8 = __toESM(require("node:path"), 1);
+    import_node_fs6 = __toESM(require("node:fs"), 1);
+    import_node_path6 = __toESM(require("node:path"), 1);
     NodeAssemblyFileProvider = class {
       /**
        * Find the first existing path: macro directory, current source directory, include paths, then cwd.
@@ -13701,21 +13380,21 @@ var init_file_provider = __esm({
           return void 0;
         }
         const normalized = stripWrappingQuotes(filename);
-        if (import_node_path8.default.isAbsolute(normalized)) {
-          return import_node_fs8.default.existsSync(normalized) ? normalized : void 0;
+        if (import_node_path6.default.isAbsolute(normalized)) {
+          return import_node_fs6.default.existsSync(normalized) ? normalized : void 0;
         }
         const candidates = /* @__PURE__ */ new Set();
         const baseDirectories = [
-          options.macroSourceFile ? import_node_path8.default.dirname(options.macroSourceFile) : void 0,
-          options.currentFile ? import_node_path8.default.dirname(options.currentFile) : void 0,
+          options.macroSourceFile ? import_node_path6.default.dirname(options.macroSourceFile) : void 0,
+          options.currentFile ? import_node_path6.default.dirname(options.currentFile) : void 0,
           ...options.includePaths ?? [],
           process.cwd()
         ].filter((entry) => Boolean(entry));
         for (const baseDirectory of baseDirectories) {
-          candidates.add(import_node_path8.default.resolve(baseDirectory, normalized));
+          candidates.add(import_node_path6.default.resolve(baseDirectory, normalized));
         }
         for (const candidate of candidates) {
-          if (import_node_fs8.default.existsSync(candidate)) {
+          if (import_node_fs6.default.existsSync(candidate)) {
             return candidate;
           }
         }
@@ -13724,28 +13403,28 @@ var init_file_provider = __esm({
       stat(filePath) {
         let st;
         try {
-          st = import_node_fs8.default.statSync(filePath);
+          st = import_node_fs6.default.statSync(filePath);
         } catch {
           return { exists: false, readable: false };
         }
         try {
-          import_node_fs8.default.accessSync(filePath, import_node_fs8.default.constants.R_OK);
+          import_node_fs6.default.accessSync(filePath, import_node_fs6.default.constants.R_OK);
           return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
         } catch {
           return { exists: true, readable: false, mtimeMs: st.mtimeMs };
         }
       }
       readFile(filePath) {
-        return new Uint8Array(import_node_fs8.default.readFileSync(filePath));
+        return new Uint8Array(import_node_fs6.default.readFileSync(filePath));
       }
       readTextFile(filePath, encoding = "utf8") {
-        return import_node_fs8.default.readFileSync(filePath, encoding);
+        return import_node_fs6.default.readFileSync(filePath, encoding);
       }
     };
   }
 });
 
-// ../core/src/internal-instrumentation.ts
+// packages/core/src/internal-instrumentation.ts
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
   metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
@@ -13771,23 +13450,23 @@ function measureInternalPhase(name, callback) {
   if (!metrics) {
     return callback();
   }
-  const start = import_node_perf_hooks2.performance.now();
+  const start = import_node_perf_hooks.performance.now();
   try {
     return callback();
   } finally {
-    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + import_node_perf_hooks2.performance.now() - start;
+    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + import_node_perf_hooks.performance.now() - start;
     sampleMemory(metrics);
   }
 }
-var import_node_perf_hooks2, activeInstrumentation;
+var import_node_perf_hooks, activeInstrumentation;
 var init_internal_instrumentation = __esm({
-  "../core/src/internal-instrumentation.ts"() {
+  "packages/core/src/internal-instrumentation.ts"() {
     "use strict";
-    import_node_perf_hooks2 = require("node:perf_hooks");
+    import_node_perf_hooks = require("node:perf_hooks");
   }
 });
 
-// ../core/src/ir/normalized-command.ts
+// packages/core/src/ir/normalized-command.ts
 function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
   if (!collectSourceMetadata) {
     return {
@@ -14077,7 +13756,7 @@ function splitCommaArguments(input) {
 }
 var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
 var init_normalized_command = __esm({
-  "../core/src/ir/normalized-command.ts"() {
+  "packages/core/src/ir/normalized-command.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_source_location();
@@ -14087,7 +13766,7 @@ var init_normalized_command = __esm({
   }
 });
 
-// ../core/src/mathcore.ts
+// packages/core/src/mathcore.ts
 function throwMathError(message) {
   throw new AssemblyError("MATH_EVALUATION_ERROR", message);
 }
@@ -14120,7 +13799,7 @@ function isWordChar(code) {
 }
 var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
 var init_mathcore = __esm({
-  "../core/src/mathcore.ts"() {
+  "packages/core/src/mathcore.ts"() {
     "use strict";
     init_diagnostics();
     init_internal_instrumentation();
@@ -15308,7 +14987,7 @@ var init_mathcore = __esm({
   }
 });
 
-// ../core/src/operand-syntax.ts
+// packages/core/src/operand-syntax.ts
 function parseOperandSyntax(operand) {
   const raw = operand;
   const trimmed = operand.trim();
@@ -15330,15 +15009,15 @@ function parseOperandSyntax(operand) {
   };
 }
 var init_operand_syntax = __esm({
-  "../core/src/operand-syntax.ts"() {
+  "packages/core/src/operand-syntax.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/operand-resolver.ts
+// packages/core/src/operand-resolver.ts
 var OperandResolver;
 var init_operand_resolver = __esm({
-  "../core/src/operand-resolver.ts"() {
+  "packages/core/src/operand-resolver.ts"() {
     "use strict";
     init_expression_node();
     init_operand_syntax();
@@ -15678,22 +15357,22 @@ var init_operand_resolver = __esm({
   }
 });
 
-// ../core/src/plugin/contracts.ts
+// packages/core/src/plugin/contracts.ts
 function definePlugin(plugin2) {
   return plugin2;
 }
 var PLUGIN_API_VERSION;
 var init_contracts = __esm({
-  "../core/src/plugin/contracts.ts"() {
+  "packages/core/src/plugin/contracts.ts"() {
     "use strict";
     PLUGIN_API_VERSION = 1;
   }
 });
 
-// ../core/src/plugin/diagnostics.ts
+// packages/core/src/plugin/diagnostics.ts
 var PluginError;
 var init_diagnostics2 = __esm({
-  "../core/src/plugin/diagnostics.ts"() {
+  "packages/core/src/plugin/diagnostics.ts"() {
     "use strict";
     PluginError = class extends Error {
       code;
@@ -15716,10 +15395,10 @@ var init_diagnostics2 = __esm({
   }
 });
 
-// ../core/src/lsp/directive-catalog.ts
+// packages/core/src/lsp/directive-catalog.ts
 var descriptor, directiveCatalog, directiveCatalogMap;
 var init_directive_catalog = __esm({
-  "../core/src/lsp/directive-catalog.ts"() {
+  "packages/core/src/lsp/directive-catalog.ts"() {
     "use strict";
     descriptor = (keyword, summary, syntax, group, operands) => ({
       keyword,
@@ -15899,10 +15578,10 @@ var init_directive_catalog = __esm({
   }
 });
 
-// ../core/src/plugin/environment.ts
+// packages/core/src/plugin/environment.ts
 var canonical, toMap, targetInvalid, ResolvedToolingCatalog, AssemblerEnvironment;
 var init_environment = __esm({
-  "../core/src/plugin/environment.ts"() {
+  "packages/core/src/plugin/environment.ts"() {
     "use strict";
     init_directive_groups();
     init_directive_catalog();
@@ -16317,9 +15996,9 @@ var init_environment = __esm({
   }
 });
 
-// ../../node_modules/semver/internal/constants.js
+// node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "../../node_modules/semver/internal/constants.js"(exports2, module2) {
+  "node_modules/semver/internal/constants.js"(exports2, module2) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -16349,9 +16028,9 @@ var require_constants = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/debug.js
+// node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "../../node_modules/semver/internal/debug.js"(exports2, module2) {
+  "node_modules/semver/internal/debug.js"(exports2, module2) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -16359,9 +16038,9 @@ var require_debug = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/re.js
+// node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "../../node_modules/semver/internal/re.js"(exports2, module2) {
+  "node_modules/semver/internal/re.js"(exports2, module2) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -16447,9 +16126,9 @@ var require_re = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/parse-options.js
+// node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "../../node_modules/semver/internal/parse-options.js"(exports2, module2) {
+  "node_modules/semver/internal/parse-options.js"(exports2, module2) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -16466,9 +16145,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/identifiers.js
+// node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "../../node_modules/semver/internal/identifiers.js"(exports2, module2) {
+  "node_modules/semver/internal/identifiers.js"(exports2, module2) {
     "use strict";
     var numeric2 = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -16491,9 +16170,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/semver.js
+// node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "../../node_modules/semver/classes/semver.js"(exports2, module2) {
+  "node_modules/semver/classes/semver.js"(exports2, module2) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -16783,9 +16462,9 @@ var require_semver = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/parse.js
+// node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "../../node_modules/semver/functions/parse.js"(exports2, module2) {
+  "node_modules/semver/functions/parse.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -16805,9 +16484,9 @@ var require_parse = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/valid.js
+// node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "../../node_modules/semver/functions/valid.js"(exports2, module2) {
+  "node_modules/semver/functions/valid.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -16818,9 +16497,9 @@ var require_valid = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/clean.js
+// node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "../../node_modules/semver/functions/clean.js"(exports2, module2) {
+  "node_modules/semver/functions/clean.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -16831,9 +16510,9 @@ var require_clean = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/inc.js
+// node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "../../node_modules/semver/functions/inc.js"(exports2, module2) {
+  "node_modules/semver/functions/inc.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier2, identifierBase) => {
@@ -16855,9 +16534,9 @@ var require_inc = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/diff.js
+// node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "../../node_modules/semver/functions/diff.js"(exports2, module2) {
+  "node_modules/semver/functions/diff.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -16899,9 +16578,9 @@ var require_diff = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/major.js
+// node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "../../node_modules/semver/functions/major.js"(exports2, module2) {
+  "node_modules/semver/functions/major.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -16909,9 +16588,9 @@ var require_major = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/minor.js
+// node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "../../node_modules/semver/functions/minor.js"(exports2, module2) {
+  "node_modules/semver/functions/minor.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -16919,9 +16598,9 @@ var require_minor = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/patch.js
+// node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "../../node_modules/semver/functions/patch.js"(exports2, module2) {
+  "node_modules/semver/functions/patch.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -16929,9 +16608,9 @@ var require_patch = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/prerelease.js
+// node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "../../node_modules/semver/functions/prerelease.js"(exports2, module2) {
+  "node_modules/semver/functions/prerelease.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -16942,9 +16621,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare.js
+// node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "../../node_modules/semver/functions/compare.js"(exports2, module2) {
+  "node_modules/semver/functions/compare.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -16952,9 +16631,9 @@ var require_compare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/rcompare.js
+// node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "../../node_modules/semver/functions/rcompare.js"(exports2, module2) {
+  "node_modules/semver/functions/rcompare.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -16962,9 +16641,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare-loose.js
+// node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "../../node_modules/semver/functions/compare-loose.js"(exports2, module2) {
+  "node_modules/semver/functions/compare-loose.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -16972,9 +16651,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/compare-build.js
+// node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "../../node_modules/semver/functions/compare-build.js"(exports2, module2) {
+  "node_modules/semver/functions/compare-build.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -16986,9 +16665,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/sort.js
+// node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "../../node_modules/semver/functions/sort.js"(exports2, module2) {
+  "node_modules/semver/functions/sort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -16996,9 +16675,9 @@ var require_sort = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/rsort.js
+// node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "../../node_modules/semver/functions/rsort.js"(exports2, module2) {
+  "node_modules/semver/functions/rsort.js"(exports2, module2) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -17006,9 +16685,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gt.js
+// node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "../../node_modules/semver/functions/gt.js"(exports2, module2) {
+  "node_modules/semver/functions/gt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -17016,9 +16695,9 @@ var require_gt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lt.js
+// node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "../../node_modules/semver/functions/lt.js"(exports2, module2) {
+  "node_modules/semver/functions/lt.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -17026,9 +16705,9 @@ var require_lt = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/eq.js
+// node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "../../node_modules/semver/functions/eq.js"(exports2, module2) {
+  "node_modules/semver/functions/eq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -17036,9 +16715,9 @@ var require_eq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/neq.js
+// node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "../../node_modules/semver/functions/neq.js"(exports2, module2) {
+  "node_modules/semver/functions/neq.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -17046,9 +16725,9 @@ var require_neq = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/gte.js
+// node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "../../node_modules/semver/functions/gte.js"(exports2, module2) {
+  "node_modules/semver/functions/gte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -17056,9 +16735,9 @@ var require_gte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/lte.js
+// node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "../../node_modules/semver/functions/lte.js"(exports2, module2) {
+  "node_modules/semver/functions/lte.js"(exports2, module2) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -17066,9 +16745,9 @@ var require_lte = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/cmp.js
+// node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "../../node_modules/semver/functions/cmp.js"(exports2, module2) {
+  "node_modules/semver/functions/cmp.js"(exports2, module2) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -17116,9 +16795,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/coerce.js
+// node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "../../node_modules/semver/functions/coerce.js"(exports2, module2) {
+  "node_modules/semver/functions/coerce.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -17162,9 +16841,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/truncate.js
+// node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "../../node_modules/semver/functions/truncate.js"(exports2, module2) {
+  "node_modules/semver/functions/truncate.js"(exports2, module2) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -17203,9 +16882,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// ../../node_modules/semver/internal/lrucache.js
+// node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "../../node_modules/semver/internal/lrucache.js"(exports2, module2) {
+  "node_modules/semver/internal/lrucache.js"(exports2, module2) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -17241,9 +16920,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/range.js
+// node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "../../node_modules/semver/classes/range.js"(exports2, module2) {
+  "node_modules/semver/classes/range.js"(exports2, module2) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -17626,9 +17305,9 @@ var require_range = __commonJS({
   }
 });
 
-// ../../node_modules/semver/classes/comparator.js
+// node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "../../node_modules/semver/classes/comparator.js"(exports2, module2) {
+  "node_modules/semver/classes/comparator.js"(exports2, module2) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -17739,9 +17418,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// ../../node_modules/semver/functions/satisfies.js
+// node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "../../node_modules/semver/functions/satisfies.js"(exports2, module2) {
+  "node_modules/semver/functions/satisfies.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -17756,9 +17435,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/to-comparators.js
+// node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "../../node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
+  "node_modules/semver/ranges/to-comparators.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -17766,9 +17445,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/max-satisfying.js
+// node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "../../node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
+  "node_modules/semver/ranges/max-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -17795,9 +17474,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/min-satisfying.js
+// node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "../../node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
+  "node_modules/semver/ranges/min-satisfying.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -17824,9 +17503,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/min-version.js
+// node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "../../node_modules/semver/ranges/min-version.js"(exports2, module2) {
+  "node_modules/semver/ranges/min-version.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -17883,9 +17562,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/valid.js
+// node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "../../node_modules/semver/ranges/valid.js"(exports2, module2) {
+  "node_modules/semver/ranges/valid.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -17899,9 +17578,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/outside.js
+// node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "../../node_modules/semver/ranges/outside.js"(exports2, module2) {
+  "node_modules/semver/ranges/outside.js"(exports2, module2) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -17968,9 +17647,9 @@ var require_outside = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/gtr.js
+// node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "../../node_modules/semver/ranges/gtr.js"(exports2, module2) {
+  "node_modules/semver/ranges/gtr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -17978,9 +17657,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/ltr.js
+// node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "../../node_modules/semver/ranges/ltr.js"(exports2, module2) {
+  "node_modules/semver/ranges/ltr.js"(exports2, module2) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -17988,9 +17667,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/intersects.js
+// node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "../../node_modules/semver/ranges/intersects.js"(exports2, module2) {
+  "node_modules/semver/ranges/intersects.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -18002,9 +17681,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/simplify.js
+// node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "../../node_modules/semver/ranges/simplify.js"(exports2, module2) {
+  "node_modules/semver/ranges/simplify.js"(exports2, module2) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -18052,9 +17731,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// ../../node_modules/semver/ranges/subset.js
+// node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "../../node_modules/semver/ranges/subset.js"(exports2, module2) {
+  "node_modules/semver/ranges/subset.js"(exports2, module2) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -18214,9 +17893,9 @@ var require_subset = __commonJS({
   }
 });
 
-// ../../node_modules/semver/index.js
+// node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "../../node_modules/semver/index.js"(exports2, module2) {
+  "node_modules/semver/index.js"(exports2, module2) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -18311,10 +17990,10 @@ var require_semver2 = __commonJS({
   }
 });
 
-// ../core/src/plugin/manager.ts
+// packages/core/src/plugin/manager.ts
 var import_semver, noopLogger, isLowerAlphaNumeric, isValidId, isValidContributionId, isRecord, isArray2, isEmptyOptions, deepFreeze, validateText, validateManifest, validatePlugin, validateContributionId, validateAliases, PluginManager;
 var init_manager = __esm({
-  "../core/src/plugin/manager.ts"() {
+  "packages/core/src/plugin/manager.ts"() {
     "use strict";
     import_semver = __toESM(require_semver2(), 1);
     init_directive_groups();
@@ -18949,10 +18628,10 @@ var init_manager = __esm({
   }
 });
 
-// ../core/src/plugin/session-state.ts
+// packages/core/src/plugin/session-state.ts
 var PluginSessionStateStore;
 var init_session_state = __esm({
-  "../core/src/plugin/session-state.ts"() {
+  "packages/core/src/plugin/session-state.ts"() {
     "use strict";
     init_diagnostics2();
     PluginSessionStateStore = class {
@@ -19090,9 +18769,9 @@ var init_session_state = __esm({
   }
 });
 
-// ../core/src/plugin/index.ts
+// packages/core/src/plugin/index.ts
 var init_plugin = __esm({
-  "../core/src/plugin/index.ts"() {
+  "packages/core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
     init_diagnostics2();
@@ -19102,10 +18781,10 @@ var init_plugin = __esm({
   }
 });
 
-// ../core/src/services/program-model-builder.ts
+// packages/core/src/services/program-model-builder.ts
 var ProgramModelBuilder;
 var init_program_model_builder = __esm({
-  "../core/src/services/program-model-builder.ts"() {
+  "packages/core/src/services/program-model-builder.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -19406,10 +19085,10 @@ var init_program_model_builder = __esm({
   }
 });
 
-// ../core/src/services/assembly-front-end-service.ts
+// packages/core/src/services/assembly-front-end-service.ts
 var AssemblyFrontEndService;
 var init_assembly_front_end_service = __esm({
-  "../core/src/services/assembly-front-end-service.ts"() {
+  "packages/core/src/services/assembly-front-end-service.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -19539,10 +19218,10 @@ var init_assembly_front_end_service = __esm({
   }
 });
 
-// ../core/src/services/command-lowering-service.ts
+// packages/core/src/services/command-lowering-service.ts
 var CommandLoweringService;
 var init_command_lowering_service = __esm({
-  "../core/src/services/command-lowering-service.ts"() {
+  "packages/core/src/services/command-lowering-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     CommandLoweringService = class {
@@ -19716,10 +19395,10 @@ var init_command_lowering_service = __esm({
   }
 });
 
-// ../core/src/services/define-engine.ts
+// packages/core/src/services/define-engine.ts
 var DefineEngine;
 var init_define_engine = __esm({
-  "../core/src/services/define-engine.ts"() {
+  "packages/core/src/services/define-engine.ts"() {
     "use strict";
     init_normalized_command();
     DefineEngine = class {
@@ -20069,10 +19748,10 @@ var init_define_engine = __esm({
   }
 });
 
-// ../core/src/services/directive-runtime-service.ts
+// packages/core/src/services/directive-runtime-service.ts
 var DirectiveRuntimeService;
 var init_directive_runtime_service = __esm({
-  "../core/src/services/directive-runtime-service.ts"() {
+  "packages/core/src/services/directive-runtime-service.ts"() {
     "use strict";
     init_address_width();
     init_command_text_service();
@@ -20334,10 +20013,10 @@ var init_directive_runtime_service = __esm({
   }
 });
 
-// ../core/src/services/front-end-command-service.ts
+// packages/core/src/services/front-end-command-service.ts
 var FrontEndCommandService;
 var init_front_end_command_service = __esm({
-  "../core/src/services/front-end-command-service.ts"() {
+  "packages/core/src/services/front-end-command-service.ts"() {
     "use strict";
     init_expression_node();
     init_normalized_command();
@@ -20520,10 +20199,10 @@ var init_front_end_command_service = __esm({
   }
 });
 
-// ../core/src/services/include-source-service.ts
+// packages/core/src/services/include-source-service.ts
 var IncludeSourceService;
 var init_include_source_service = __esm({
-  "../core/src/services/include-source-service.ts"() {
+  "packages/core/src/services/include-source-service.ts"() {
     "use strict";
     init_internal_instrumentation();
     IncludeSourceService = class {
@@ -20713,10 +20392,10 @@ var init_include_source_service = __esm({
   }
 });
 
-// ../core/src/services/macro-engine.ts
+// packages/core/src/services/macro-engine.ts
 var MacroEngine;
 var init_macro_engine = __esm({
-  "../core/src/services/macro-engine.ts"() {
+  "packages/core/src/services/macro-engine.ts"() {
     "use strict";
     init_internal_instrumentation();
     init_normalized_command();
@@ -21356,10 +21035,10 @@ var init_macro_engine = __esm({
   }
 });
 
-// ../core/src/services/output-writer-service.ts
+// packages/core/src/services/output-writer-service.ts
 var OutputWriterService;
 var init_output_writer_service = __esm({
-  "../core/src/services/output-writer-service.ts"() {
+  "packages/core/src/services/output-writer-service.ts"() {
     "use strict";
     init_address_width();
     OutputWriterService = class {
@@ -21551,10 +21230,10 @@ var init_output_writer_service = __esm({
   }
 });
 
-// ../core/src/services/data-struct-engine.ts
+// packages/core/src/services/data-struct-engine.ts
 var DataStructEngine;
 var init_data_struct_engine = __esm({
-  "../core/src/services/data-struct-engine.ts"() {
+  "packages/core/src/services/data-struct-engine.ts"() {
     "use strict";
     init_normalized_command();
     init_command_text_service();
@@ -21745,10 +21424,10 @@ var init_data_struct_engine = __esm({
   }
 });
 
-// ../core/src/services/struct-engine.ts
+// packages/core/src/services/struct-engine.ts
 var StructEngine;
 var init_struct_engine = __esm({
-  "../core/src/services/struct-engine.ts"() {
+  "packages/core/src/services/struct-engine.ts"() {
     "use strict";
     init_address_width();
     init_normalized_command();
@@ -22072,7 +21751,7 @@ var init_struct_engine = __esm({
   }
 });
 
-// ../core/src/services/struct-metadata.ts
+// packages/core/src/services/struct-metadata.ts
 function getStructMetadata(definition, property) {
   const count = definition.indexRange?.count ?? 1;
   const bytes = definition.size * count;
@@ -22091,12 +21770,12 @@ function getStructMetadata(definition, property) {
   }
 }
 var init_struct_metadata = __esm({
-  "../core/src/services/struct-metadata.ts"() {
+  "packages/core/src/services/struct-metadata.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/services/symbol-scope-service.ts
+// packages/core/src/services/symbol-scope-service.ts
 function fileBasename(file) {
   const normalized = file.replaceAll("\\", "/");
   const slash = normalized.lastIndexOf("/");
@@ -22115,7 +21794,7 @@ function parseUnnamedLabelReference(token) {
 }
 var SymbolScopeService;
 var init_symbol_scope_service = __esm({
-  "../core/src/services/symbol-scope-service.ts"() {
+  "packages/core/src/services/symbol-scope-service.ts"() {
     "use strict";
     init_syntax_profile();
     SymbolScopeService = class {
@@ -22973,10 +22652,10 @@ var init_symbol_scope_service = __esm({
   }
 });
 
-// ../core/src/assembler.ts
+// packages/core/src/assembler.ts
 var TOOLING_ANALYSIS_STAGES, Assembler;
 var init_assembler = __esm({
-  "../core/src/assembler.ts"() {
+  "packages/core/src/assembler.ts"() {
     "use strict";
     init_address_width();
     init_addressToLine();
@@ -26057,10 +25736,10 @@ var init_assembler = __esm({
   }
 });
 
-// ../core/src/architecture-types.ts
+// packages/core/src/architecture-types.ts
 var createEncoderRuntime;
 var init_architecture_types = __esm({
-  "../core/src/architecture-types.ts"() {
+  "packages/core/src/architecture-types.ts"() {
     "use strict";
     createEncoderRuntime = (context) => ({
       operandResolver: context.operands,
@@ -26085,10 +25764,10 @@ var init_architecture_types = __esm({
   }
 });
 
-// ../core/src/decoder-types.ts
+// packages/core/src/decoder-types.ts
 var Uint8ArrayDecoderSource;
 var init_decoder_types = __esm({
-  "../core/src/decoder-types.ts"() {
+  "packages/core/src/decoder-types.ts"() {
     "use strict";
     Uint8ArrayDecoderSource = class {
       #bytes;
@@ -26133,13 +25812,13 @@ var init_decoder_types = __esm({
   }
 });
 
-// ../core/src/debug-map.ts
-var import_node_crypto15, import_node_path9, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2566, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
+// packages/core/src/debug-map.ts
+var import_node_crypto14, import_node_path7, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2566, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
-  "../core/src/debug-map.ts"() {
+  "packages/core/src/debug-map.ts"() {
     "use strict";
-    import_node_crypto15 = require("node:crypto");
-    import_node_path9 = __toESM(require("node:path"), 1);
+    import_node_crypto14 = require("node:crypto");
+    import_node_path7 = __toESM(require("node:path"), 1);
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
     DEBUG_MAP_SCHEMA_VERSION = 1;
     canonicalValue2 = (value) => {
@@ -26155,14 +25834,14 @@ var init_debug_map = __esm({
     };
     canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue2(value), null, 2)}
 `;
-    sha2566 = (value) => (0, import_node_crypto15.createHash)("sha256").update(value).digest("hex");
+    sha2566 = (value) => (0, import_node_crypto14.createHash)("sha256").update(value).digest("hex");
     createDebugMap = (options) => {
-      const sourceRoot = import_node_path9.default.resolve(options.sourceRoot ?? process.cwd());
+      const sourceRoot = import_node_path7.default.resolve(options.sourceRoot ?? process.cwd());
       const entries3 = options.mapping.fileList.map((entry, originalId) => {
-        const absolute = import_node_path9.default.resolve(entry.name);
-        const relative2 = import_node_path9.default.relative(sourceRoot, absolute);
-        const portable = relative2 && !relative2.startsWith("..") && !import_node_path9.default.isAbsolute(relative2) ? relative2 : absolute;
-        return { entry, originalId, portable: portable.split(import_node_path9.default.sep).join("/") };
+        const absolute = import_node_path7.default.resolve(entry.name);
+        const relative2 = import_node_path7.default.relative(sourceRoot, absolute);
+        const portable = relative2 && !relative2.startsWith("..") && !import_node_path7.default.isAbsolute(relative2) ? relative2 : absolute;
+        return { entry, originalId, portable: portable.split(import_node_path7.default.sep).join("/") };
       }).sort((left, right) => left.portable.localeCompare(right.portable));
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
@@ -26218,7 +25897,7 @@ var init_debug_map = __esm({
       return options.outputOffset !== void 0 && range.outputStart !== void 0 && range.outputEnd !== void 0 && range.outputStart <= options.outputOffset && options.outputOffset < range.outputEnd;
     });
     debugMapRangesForSource = (map, sourcePath, line, architecture) => {
-      const normalized = sourcePath.split(import_node_path9.default.sep).join("/");
+      const normalized = sourcePath.split(import_node_path7.default.sep).join("/");
       const sourceIds = new Set(
         map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
       );
@@ -26229,65 +25908,65 @@ var init_debug_map = __esm({
   }
 });
 
-// ../core/src/ir/assembly-tree.ts
+// packages/core/src/ir/assembly-tree.ts
 var init_assembly_tree = __esm({
-  "../core/src/ir/assembly-tree.ts"() {
+  "packages/core/src/ir/assembly-tree.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/overlay-file-provider.ts
+// packages/core/src/lsp/overlay-file-provider.ts
 var init_overlay_file_provider = __esm({
-  "../core/src/lsp/overlay-file-provider.ts"() {
+  "packages/core/src/lsp/overlay-file-provider.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/root-analysis-cache.ts
+// packages/core/src/lsp/root-analysis-cache.ts
 var init_root_analysis_cache = __esm({
-  "../core/src/lsp/root-analysis-cache.ts"() {
+  "packages/core/src/lsp/root-analysis-cache.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/workspace-index.ts
+// packages/core/src/lsp/workspace-index.ts
 var init_workspace_index = __esm({
-  "../core/src/lsp/workspace-index.ts"() {
+  "packages/core/src/lsp/workspace-index.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/position-lookup.ts
+// packages/core/src/lsp/position-lookup.ts
 var init_position_lookup = __esm({
-  "../core/src/lsp/position-lookup.ts"() {
+  "packages/core/src/lsp/position-lookup.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/instruction-catalog.ts
+// packages/core/src/lsp/instruction-catalog.ts
 var init_instruction_catalog = __esm({
-  "../core/src/lsp/instruction-catalog.ts"() {
+  "packages/core/src/lsp/instruction-catalog.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/catalog.ts
+// packages/core/src/lsp/catalog.ts
 var init_catalog = __esm({
-  "../core/src/lsp/catalog.ts"() {
+  "packages/core/src/lsp/catalog.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/project-outline.ts
+// packages/core/src/lsp/project-outline.ts
 var init_project_outline = __esm({
-  "../core/src/lsp/project-outline.ts"() {
+  "packages/core/src/lsp/project-outline.ts"() {
     "use strict";
   }
 });
 
-// ../core/src/lsp/index.ts
+// packages/core/src/lsp/index.ts
 var init_lsp = __esm({
-  "../core/src/lsp/index.ts"() {
+  "packages/core/src/lsp/index.ts"() {
     "use strict";
     init_overlay_file_provider();
     init_root_analysis_cache();
@@ -26300,9 +25979,9 @@ var init_lsp = __esm({
   }
 });
 
-// ../core/src/index.ts
+// packages/core/src/index.ts
 var init_src2 = __esm({
-  "../core/src/index.ts"() {
+  "packages/core/src/index.ts"() {
     "use strict";
     init_assembler();
     init_struct_metadata();
@@ -26330,7 +26009,7 @@ var init_src2 = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/65816-spec.ts
+// packages/plugin-snes/src/architectures/65816-spec.ts
 function buildCpu65816Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of cpu65816Specifications) {
@@ -26355,7 +26034,7 @@ function buildCpu65816Catalog() {
 }
 var mode, cpu65816Modes, opcodeRows, summaries, conditionalBranches, flowFor, effects, entries, cpu65816Specifications;
 var init_spec = __esm({
-  "../plugin-snes/src/architectures/65816-spec.ts"() {
+  "packages/plugin-snes/src/architectures/65816-spec.ts"() {
     "use strict";
     mode = (id, syntax, minimumSize, maximumSize = minimumSize, widthFlag) => ({
       id,
@@ -26637,7 +26316,7 @@ var init_spec = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/65816-decoder.ts
+// packages/plugin-snes/src/architectures/65816-decoder.ts
 function formatCpu65816Instruction(instruction2) {
   if (instruction2.architecture !== "snes.65816") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as 65816.`);
@@ -26730,7 +26409,7 @@ function formatCpu65816Instruction(instruction2) {
 }
 var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor, buildInstruction, Cpu65816Decoder, hex3;
 var init_decoder = __esm({
-  "../plugin-snes/src/architectures/65816-decoder.ts"() {
+  "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
     init_spec();
     flagValue = (value) => {
@@ -27035,7 +26714,7 @@ var init_decoder = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/spc700-spec.ts
+// packages/plugin-snes/src/architectures/spc700-spec.ts
 function buildSpc700Catalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const specification2 of spc700Specifications) {
@@ -27060,7 +26739,7 @@ function buildSpc700Catalog() {
 }
 var mode2, spc700Modes, opcodeRows2, summaries2, spc700ConditionalBranches, flowFor2, effects2, entries2, spc700Specifications;
 var init_spc700_spec = __esm({
-  "../plugin-snes/src/architectures/spc700-spec.ts"() {
+  "packages/plugin-snes/src/architectures/spc700-spec.ts"() {
     "use strict";
     mode2 = (id, syntax, size) => ({
       id,
@@ -27312,7 +26991,7 @@ var init_spc700_spec = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/superfx-spec.ts
+// packages/plugin-snes/src/architectures/superfx-spec.ts
 function buildSuperFxCatalog() {
   const grouped = /* @__PURE__ */ new Map();
   for (const entry of superFxSpecifications) {
@@ -27380,7 +27059,7 @@ function buildSuperFxCatalog() {
 }
 var syntaxFor, implied, register, registerIndirect, nibble, baseDefinition, altDefinition, flowFor3, effectsFor2, summaryFor, specification, superFxOpcodeMatrix, superFxBaseSpecifications, superFxSpecifications, fusedFlow, fusedSyntax, fused, superFxFusedSpecifications;
 var init_superfx_spec = __esm({
-  "../plugin-snes/src/architectures/superfx-spec.ts"() {
+  "packages/plugin-snes/src/architectures/superfx-spec.ts"() {
     "use strict";
     syntaxFor = (encoding) => {
       switch (encoding) {
@@ -27896,10 +27575,10 @@ var init_superfx_spec = __esm({
   }
 });
 
-// ../plugin-snes/src/tooling/instruction-catalog.ts
+// packages/plugin-snes/src/tooling/instruction-catalog.ts
 var cpu65816Catalog, spc700Catalog, superFxCatalog;
 var init_instruction_catalog2 = __esm({
-  "../plugin-snes/src/tooling/instruction-catalog.ts"() {
+  "packages/plugin-snes/src/tooling/instruction-catalog.ts"() {
     "use strict";
     init_spec();
     init_spc700_spec();
@@ -27910,7 +27589,7 @@ var init_instruction_catalog2 = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/operand-classifiers.ts
+// packages/plugin-snes/src/architectures/operand-classifiers.ts
 function isSame65816Bank(expanded, currentAddress) {
   const match = expanded.trim().match(/^\$([\da-f]{5,6})(?:\s*,\s*[xy])?$/i);
   if (!match) {
@@ -28110,16 +27789,16 @@ function classifySuperFxOperand(resolver, operand) {
   return classifyGenericOperand({ raw, expanded, length });
 }
 var init_operand_classifiers = __esm({
-  "../plugin-snes/src/architectures/operand-classifiers.ts"() {
+  "packages/plugin-snes/src/architectures/operand-classifiers.ts"() {
     "use strict";
     init_src2();
   }
 });
 
-// ../plugin-snes/src/architectures/65816.ts
+// packages/plugin-snes/src/architectures/65816.ts
 var lower65816Operand, keepsFixedWidthAddressingMode, isIndexedMemory, Arch65816;
 var init__ = __esm({
-  "../plugin-snes/src/architectures/65816.ts"() {
+  "packages/plugin-snes/src/architectures/65816.ts"() {
     "use strict";
     init_src2();
     init_instruction_catalog2();
@@ -30080,7 +29759,7 @@ var init__ = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/spc700-decoder.ts
+// packages/plugin-snes/src/architectures/spc700-decoder.ts
 function formatSpc700Instruction(instruction2) {
   if (instruction2.architecture !== "snes.spc700") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as SPC700.`);
@@ -30090,7 +29769,7 @@ function formatSpc700Instruction(instruction2) {
 }
 var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder, hex4, formatOperands;
 var init_spc700_decoder = __esm({
-  "../plugin-snes/src/architectures/spc700-decoder.ts"() {
+  "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
     init_spc700_spec();
     readLittleEndian2 = (bytes, offset, width2) => {
@@ -30489,10 +30168,10 @@ var init_spc700_decoder = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/split-operands.ts
+// packages/plugin-snes/src/architectures/split-operands.ts
 var splitSingleOperand, splitCommaOperands, splitTopLevelCommaOperands;
 var init_split_operands = __esm({
-  "../plugin-snes/src/architectures/split-operands.ts"() {
+  "packages/plugin-snes/src/architectures/split-operands.ts"() {
     "use strict";
     splitSingleOperand = (text2) => text2 ? [text2] : [];
     splitCommaOperands = (text2) => text2 ? text2.split(",").map((operand) => operand.trim()) : [];
@@ -30522,7 +30201,7 @@ var init_split_operands = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/spc700.ts
+// packages/plugin-snes/src/architectures/spc700.ts
 function getAddressSize(operand) {
   const match = operand.match(/^\$([\dA-Fa-f]+)/);
   if (!match) {
@@ -30619,7 +30298,7 @@ function parseSpcBitNumber(raw) {
 }
 var lowerSpc700Operand, hasOwn, IMPLIED_SPC_OPCODES, SHIFT_INC_DEC_OPCODES, MOV_ONE_BYTE_PAIRS, memOpTables, branchOpcodes, bitSetClearOpcodes, wordOpsWithYaLeft, wordOpsWithYaRight, singleWordOps, NUMBERED_BIT_OPCODE, ArchSPC700;
 var init_spc700 = __esm({
-  "../plugin-snes/src/architectures/spc700.ts"() {
+  "packages/plugin-snes/src/architectures/spc700.ts"() {
     "use strict";
     init_src2();
     init_instruction_catalog2();
@@ -32521,7 +32200,7 @@ var init_spc700 = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/superfx-decoder.ts
+// packages/plugin-snes/src/architectures/superfx-decoder.ts
 function formatSuperFxInstruction(instruction2) {
   if (instruction2.architecture !== "snes.superfx") {
     throw new Error(`Cannot format architecture '${instruction2.architecture}' as SuperFX.`);
@@ -32570,7 +32249,7 @@ function formatSuperFxInstruction(instruction2) {
 }
 var word, register3, immediate2, address2, operandsFor3, r15Target, controlsFor, buildInstruction3, buildFusedInstruction, matchFused, availableAt, truncated, prefixAlt, SuperFxDecoder, hex5;
 var init_superfx_decoder = __esm({
-  "../plugin-snes/src/architectures/superfx-decoder.ts"() {
+  "packages/plugin-snes/src/architectures/superfx-decoder.ts"() {
     "use strict";
     init_superfx_spec();
     word = (bytes, offset) => (bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8;
@@ -32868,10 +32547,10 @@ var init_superfx_decoder = __esm({
   }
 });
 
-// ../plugin-snes/src/asar/compatibility.ts
+// packages/plugin-snes/src/asar/compatibility.ts
 var ASAR_COMPAT_NO_OP_DIRECTIVES, assertMapperAvailable, applyMapperSelection, isFreespaceAvailable, encodeSuperFxMoveShortAddress, getChecksumHeaderOffset, calculateHeaderChecksum, shouldRedirectOrgToSpcblock, shouldEnableSpcInlineCompat, shouldUseNoromAddressing, shouldAutoCloseSpcblock, shouldEndifCloseInnermostWhile;
 var init_compatibility = __esm({
-  "../plugin-snes/src/asar/compatibility.ts"() {
+  "packages/plugin-snes/src/asar/compatibility.ts"() {
     "use strict";
     ASAR_COMPAT_NO_OP_DIRECTIVES = [
       "fastrom",
@@ -32947,10 +32626,10 @@ var init_compatibility = __esm({
   }
 });
 
-// ../plugin-snes/src/architectures/superfx.ts
+// packages/plugin-snes/src/architectures/superfx.ts
 var lowerSuperFxOperand, hasOwn2, ALT1, ALT2, ALT3, IMPLIED_OPCODES, PREFIXED_OPCODES, SHORT_BRANCH_OPCODES, REGISTER_OPS, IMMEDIATE_OPS, INDIRECT_OPS, encodedOpSize, fitsSignedByte, isShortRamAddress, ArchSuperFX;
 var init_superfx = __esm({
-  "../plugin-snes/src/architectures/superfx.ts"() {
+  "packages/plugin-snes/src/architectures/superfx.ts"() {
     "use strict";
     init_src2();
     init_compatibility();
@@ -33735,7 +33414,7 @@ var init_superfx = __esm({
   }
 });
 
-// ../plugin-snes/src/directives/ca65-compat.ts
+// packages/plugin-snes/src/directives/ca65-compat.ts
 function getActiveArch65816(session) {
   const { definition } = session.resolveActiveArchitecture();
   if (definition?.encoder instanceof Arch65816) {
@@ -33819,13 +33498,13 @@ function handlePopcpu(session, state) {
   session.selectArchitecture(archId, archId);
 }
 var init_ca65_compat = __esm({
-  "../plugin-snes/src/directives/ca65-compat.ts"() {
+  "packages/plugin-snes/src/directives/ca65-compat.ts"() {
     "use strict";
     init__();
   }
 });
 
-// ../plugin-snes/src/directives/freespace.ts
+// packages/plugin-snes/src/directives/freespace.ts
 function handleFreespace(session, state, words) {
   if (state.inSpcBlock) {
     throw new Error(`${words[0]} is unavailable inside spcblock.`);
@@ -33881,13 +33560,13 @@ function handleProt(session, words) {
   }
 }
 var init_freespace = __esm({
-  "../plugin-snes/src/directives/freespace.ts"() {
+  "packages/plugin-snes/src/directives/freespace.ts"() {
     "use strict";
     init_compatibility();
   }
 });
 
-// ../plugin-snes/src/directives/layout.ts
+// packages/plugin-snes/src/directives/layout.ts
 function handleMapper(state, words) {
   assertMapperAvailable(state.inSpcBlock);
   const keyword = words[0].toLowerCase();
@@ -33955,7 +33634,7 @@ function handleStartpos(session, state, words) {
 }
 var MAPPER_KEYWORDS;
 var init_layout2 = __esm({
-  "../plugin-snes/src/directives/layout.ts"() {
+  "packages/plugin-snes/src/directives/layout.ts"() {
     "use strict";
     init_compatibility();
     MAPPER_KEYWORDS = [
@@ -33971,10 +33650,10 @@ var init_layout2 = __esm({
   }
 });
 
-// ../plugin-snes/src/services/spc-runtime.ts
+// packages/plugin-snes/src/services/spc-runtime.ts
 var SnesSpcRuntimeService;
 var init_spc_runtime = __esm({
-  "../plugin-snes/src/services/spc-runtime.ts"() {
+  "packages/plugin-snes/src/services/spc-runtime.ts"() {
     "use strict";
     init_compatibility();
     SnesSpcRuntimeService = class {
@@ -34110,17 +33789,17 @@ var init_spc_runtime = __esm({
   }
 });
 
-// ../plugin-snes/src/directives/spc.ts
+// packages/plugin-snes/src/directives/spc.ts
 var createSpcRuntime;
 var init_spc = __esm({
-  "../plugin-snes/src/directives/spc.ts"() {
+  "packages/plugin-snes/src/directives/spc.ts"() {
     "use strict";
     init_spc_runtime();
     createSpcRuntime = (session, state) => new SnesSpcRuntimeService(session, state);
   }
 });
 
-// ../plugin-snes/src/session-state.ts
+// packages/plugin-snes/src/session-state.ts
 function cloneSnesSessionState(value) {
   return {
     ...value,
@@ -34131,7 +33810,7 @@ function cloneSnesSessionState(value) {
 }
 var SNES_SESSION_STATE_ID, snesSessionStateKey;
 var init_session_state2 = __esm({
-  "../plugin-snes/src/session-state.ts"() {
+  "packages/plugin-snes/src/session-state.ts"() {
     "use strict";
     SNES_SESSION_STATE_ID = "snes.session-state";
     snesSessionStateKey = {
@@ -34140,10 +33819,10 @@ var init_session_state2 = __esm({
   }
 });
 
-// ../plugin-snes/src/target/address-space.ts
+// packages/plugin-snes/src/target/address-space.ts
 var snesRomAddressSpace;
 var init_address_space = __esm({
-  "../plugin-snes/src/target/address-space.ts"() {
+  "packages/plugin-snes/src/target/address-space.ts"() {
     "use strict";
     snesRomAddressSpace = {
       name: "snes-rom",
@@ -34328,10 +34007,10 @@ var init_address_space = __esm({
   }
 });
 
-// ../plugin-snes/src/tooling/directive-catalog.ts
+// packages/plugin-snes/src/tooling/directive-catalog.ts
 var op, directiveCatalog2, directiveByKeyword;
 var init_directive_catalog2 = __esm({
-  "../plugin-snes/src/tooling/directive-catalog.ts"() {
+  "packages/plugin-snes/src/tooling/directive-catalog.ts"() {
     "use strict";
     op = (keyword, summary, syntax, operands) => ({
       keyword,
@@ -34953,10 +34632,10 @@ var init_directive_catalog2 = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/65816-state.ts
+// packages/plugin-snes/src/disassembler/65816-state.ts
 var unknown, known, joinValue, sameEntry, joinStack, normalize, unknownCpu65816State, resetCpu65816State, nativeVectorCpu65816State, emulationVectorCpu65816State, joinCpu65816States, flagOverride, applyCpu65816StateOverride, enterCpu65816Address, decoderFlag, cpu65816DecodeState, adjustStackPointer, push, pull, pushedBytes, pulledBytes, loseStackPrecision, sourceValue, CARRY_UNKNOWN_MNEMONICS, transferCpu65816State, cpu65816StateKey;
 var init_state = __esm({
-  "../plugin-snes/src/disassembler/65816-state.ts"() {
+  "packages/plugin-snes/src/disassembler/65816-state.ts"() {
     "use strict";
     unknown = () => ({ kind: "unknown" });
     known = (value) => ({ kind: "known", value });
@@ -35228,10 +34907,10 @@ var init_state = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/address-identities.ts
+// packages/plugin-snes/src/disassembler/address-identities.ts
 var SNES_FILE_ADDRESS_SPACE, SNES_CPU_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, createSnesAddressContext, mirrorsForOffset, identifySnesFileOffset, identifySnesCpuAddress;
 var init_address_identities = __esm({
-  "../plugin-snes/src/disassembler/address-identities.ts"() {
+  "packages/plugin-snes/src/disassembler/address-identities.ts"() {
     "use strict";
     init_address_space();
     SNES_FILE_ADDRESS_SPACE = "rom.file";
@@ -35318,10 +34997,10 @@ var init_address_identities = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/hardware-registers.ts
+// packages/plugin-snes/src/disassembler/hardware-registers.ts
 var FIXED_REGISTER_DEFINITIONS, FIXED_REGISTER_ALIASES, FIXED_REGISTERS, DMA_REGISTER_DEFINITIONS, DMA_REGISTERS_BY_OFFSET, identifySnesHardwareRegister, hex7, SNES_HARDWARE_DEFINES_SOURCE, snesHardwareDefineRecords, snesHardwareDefines, CONTROLLER_MASKS, INTERRUPT_STATUS_MASKS, renderConstants, renderSnesHardwareDefines;
 var init_hardware_registers = __esm({
-  "../plugin-snes/src/disassembler/hardware-registers.ts"() {
+  "packages/plugin-snes/src/disassembler/hardware-registers.ts"() {
     "use strict";
     FIXED_REGISTER_DEFINITIONS = [
       {
@@ -35800,10 +35479,10 @@ var init_hardware_registers = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/rom-header.ts
+// packages/plugin-snes/src/disassembler/rom-header.ts
 var SNES_MAPPERS, SNES_CPU_VECTOR_DEFINITIONS, HEADER_OFFSETS, snesInternalHeaderOffset, asciiField, sizeBytes, mapModeName, regionName, chipsetDescription, parseSnesInternalRomHeader, HEADER_SPECS, defaultAddressContext, scoreCandidate, detectSnesRom;
 var init_rom_header = __esm({
-  "../plugin-snes/src/disassembler/rom-header.ts"() {
+  "packages/plugin-snes/src/disassembler/rom-header.ts"() {
     "use strict";
     init_address_space();
     SNES_MAPPERS = [
@@ -36200,10 +35879,10 @@ var init_rom_header = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/65816-analysis.ts
+// packages/plugin-snes/src/disassembler/65816-analysis.ts
 var DATA_CLASSIFICATIONS, EVIDENCE_RANK, vectorState, readVector, stateOverrideFor, controlTargetKind, controlsFor2, isIndexedOrIndirect, unresolvedAddressExplanation, mappedAddressExplanation, mappedRomOffset, effectiveAddressesFor, knownBoolean, knownNumber, annotationState2, recordsFor, annotationsFor, analyzeSnes65816;
 var init_analysis = __esm({
-  "../plugin-snes/src/disassembler/65816-analysis.ts"() {
+  "packages/plugin-snes/src/disassembler/65816-analysis.ts"() {
     "use strict";
     init_src2();
     init_src();
@@ -36763,12 +36442,12 @@ var init_analysis = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/dizraw-import.ts
-var import_node_crypto16, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
+// packages/plugin-snes/src/disassembler/dizraw-import.ts
+var import_node_crypto15, SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
 var init_dizraw_import = __esm({
-  "../plugin-snes/src/disassembler/dizraw-import.ts"() {
+  "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
     "use strict";
-    import_node_crypto16 = require("node:crypto");
+    import_node_crypto15 = require("node:crypto");
     SUBSTITUTIONS = [
       ["0001E", "ZQ"],
       ["B0001", "Zq"],
@@ -36994,7 +36673,7 @@ var init_dizraw_import = __esm({
       if (!mapper) {
         throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
       }
-      const sourceSha256 = (0, import_node_crypto16.createHash)("sha256").update(xml).digest("hex");
+      const sourceSha256 = (0, import_node_crypto15.createHash)("sha256").update(xml).digest("hex");
       const sourceName = options.sourceName ?? "import.dizraw";
       const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
       const labelsElement = element(data.body, "Labels");
@@ -37176,12 +36855,12 @@ var init_dizraw_import = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/mesen-runtime.ts
-var import_node_crypto17, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2567, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
+// packages/plugin-snes/src/disassembler/mesen-runtime.ts
+var import_node_crypto16, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2567, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
 var init_mesen_runtime = __esm({
-  "../plugin-snes/src/disassembler/mesen-runtime.ts"() {
+  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
     "use strict";
-    import_node_crypto17 = require("node:crypto");
+    import_node_crypto16 = require("node:crypto");
     init_src2();
     init_src();
     init_decoder();
@@ -37197,7 +36876,7 @@ var init_mesen_runtime = __esm({
     CDL_MEMORY_8 = 32;
     CDL_GSU = 64;
     CDL_CX4 = 128;
-    sha2567 = (value) => (0, import_node_crypto17.createHash)("sha256").update(value).digest("hex");
+    sha2567 = (value) => (0, import_node_crypto16.createHash)("sha256").update(value).digest("hex");
     stableSuffix = (value) => sha2567(canonicalJson(value)).slice(0, 16);
     hex8 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
     assertContext = (rom, mapper, context) => {
@@ -37828,12 +37507,12 @@ var init_mesen_runtime = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-address-space.ts
-var import_node_crypto18, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
+// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+var import_node_crypto17, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
 var init_spc700_address_space = __esm({
-  "../plugin-snes/src/disassembler/spc700-address-space.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
     "use strict";
-    import_node_crypto18 = require("node:crypto");
+    import_node_crypto17 = require("node:crypto");
     SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
     SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SPC700_ARAM_ADDRESS_SPACE,
@@ -37858,7 +37537,7 @@ var init_spc700_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto18.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto17.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       /**
        * Number of represented ARAM bytes.
@@ -37917,12 +37596,12 @@ var init_spc700_address_space = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/mesen-labels.ts
-var import_node_crypto19, LABEL_PATTERN, MEMORY_TYPES, sha2568, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
+// packages/plugin-snes/src/disassembler/mesen-labels.ts
+var import_node_crypto18, LABEL_PATTERN, MEMORY_TYPES, sha2568, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
 var init_mesen_labels = __esm({
-  "../plugin-snes/src/disassembler/mesen-labels.ts"() {
+  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
     "use strict";
-    import_node_crypto19 = require("node:crypto");
+    import_node_crypto18 = require("node:crypto");
     init_address_identities();
     init_mesen_runtime();
     init_spc700_address_space();
@@ -37969,7 +37648,7 @@ var init_mesen_labels = __esm({
         maximum: 65536
       }
     };
-    sha2568 = (value) => (0, import_node_crypto19.createHash)("sha256").update(value).digest("hex");
+    sha2568 = (value) => (0, import_node_crypto18.createHash)("sha256").update(value).digest("hex");
     reportFor = (operation, sourceName, sourceSha256, imported, unsupported, warnings) => ({
       id: `${operation}:mesence-labels:${sourceSha256}`,
       format: "mesence-labels",
@@ -38223,10 +37902,10 @@ var init_mesen_labels = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/framework-asset-helpers.ts
+// packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
 var assertInteger, readLittleEndian3, decodeFrameworkRelativePointerTable, deriveFrameworkAssetExtractionRanges, decodeFrameworkSamplePointers, deriveFrameworkSampleExtractionRanges;
 var init_framework_asset_helpers = __esm({
-  "../plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
+  "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
     "use strict";
     assertInteger = (value, name) => {
       if (!Number.isSafeInteger(value) || value < 0) {
@@ -38366,10 +38045,10 @@ var init_framework_asset_helpers = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/code-preservation.ts
+// packages/plugin-snes/src/disassembler/code-preservation.ts
 var union, lostCodeRanges;
 var init_code_preservation = __esm({
-  "../plugin-snes/src/disassembler/code-preservation.ts"() {
+  "packages/plugin-snes/src/disassembler/code-preservation.ts"() {
     "use strict";
     union = (ranges) => {
       const merged = [];
@@ -38417,13 +38096,13 @@ var init_code_preservation = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/ram-map.ts
-var fs13, import_node_path10, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, renderSnesRamDefines, renderSnesRamMapSchema;
+// packages/plugin-snes/src/disassembler/ram-map.ts
+var fs11, import_node_path8, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, isLegacySourceNote, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
-  "../plugin-snes/src/disassembler/ram-map.ts"() {
+  "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
-    fs13 = __toESM(require("node:fs"), 1);
-    import_node_path10 = __toESM(require("node:path"), 1);
+    fs11 = __toESM(require("node:fs"), 1);
+    import_node_path8 = __toESM(require("node:path"), 1);
     init_src();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
@@ -38488,6 +38167,9 @@ var init_ram_map = __esm({
       if (!Array.isArray(file.variables)) {
         throw new Error("RAM map must contain a variables array.");
       }
+      if (file.includeSourceInformation !== void 0 && typeof file.includeSourceInformation !== "boolean") {
+        throw new Error("RAM-map includeSourceInformation must be a boolean.");
+      }
       const names = /* @__PURE__ */ new Set();
       const addresses3 = /* @__PURE__ */ new Set();
       const variables = file.variables.map((input, index) => {
@@ -38541,6 +38223,18 @@ var init_ram_map = __esm({
           }
           return cleanText(note, `${name} note`);
         });
+        let sources;
+        if (record5.sources !== void 0) {
+          if (!Array.isArray(record5.sources)) {
+            throw new Error(`RAM-map sources for '${name}' must be an array.`);
+          }
+          sources = record5.sources.map((source) => {
+            if (typeof source !== "string") {
+              throw new Error(`RAM-map sources for '${name}' must be strings.`);
+            }
+            return cleanText(source, `${name} source`);
+          });
+        }
         return {
           name,
           address: address5,
@@ -38548,7 +38242,8 @@ var init_ram_map = __esm({
           size,
           ...category ? { category } : {},
           description,
-          notes: notes2
+          notes: notes2,
+          ...sources === void 0 ? {} : { sources }
         };
       });
       const sorted2 = variables.sort(
@@ -38569,15 +38264,16 @@ var init_ram_map = __esm({
       $schema: `./${SNES_RAM_MAP_SCHEMA_SOURCE}`,
       format: SNES_RAM_MAP_FORMAT,
       schemaVersion: SNES_RAM_MAP_SCHEMA_VERSION,
+      includeSourceInformation: false,
       variables: []
     });
     loadSnesRamMap = (directory) => {
-      const file = import_node_path10.default.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs13.existsSync(file)) {
-        fs13.mkdirSync(directory, { recursive: true });
-        fs13.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      const file = import_node_path8.default.join(directory, SNES_RAM_MAP_SOURCE);
+      if (!fs11.existsSync(file)) {
+        fs11.mkdirSync(directory, { recursive: true });
+        fs11.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs13.readFileSync(file);
+      const sourceBytes = fs11.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -38608,7 +38304,17 @@ var init_ram_map = __esm({
         (variable) => Array.from({ length: variable.size }, (_, offset) => [variable.address + offset, variable])
       )
     );
-    renderSnesRamDefines = (variables) => {
+    isLegacySourceNote = (note) => {
+      const citation = note.endsWith(".") ? note.slice(0, -1) : note;
+      const separator = citation.lastIndexOf(":");
+      if (separator >= 0) {
+        const file = citation.slice(0, separator);
+        const lines = citation.slice(separator + 1);
+        return /^[^!:;?]+\.(?:txt|md|asm|json)$/i.test(file) && (/^l\d+$/i.test(lines) || /^l\d+-l?\d+$/i.test(lines));
+      }
+      return /^[\w./-]+\.(?:txt|md|asm|json)$/i.test(citation);
+    };
+    renderSnesRamDefines = (variables, options = {}) => {
       const lines = [
         `; Generated from ${SNES_RAM_MAP_SOURCE} by Uttori ASM.`,
         `; Edit ${SNES_RAM_MAP_SOURCE}, then run Assembly: Analyze and Regenerate Disassembly.`,
@@ -38619,13 +38325,17 @@ var init_ram_map = __esm({
             variable.category,
             variable.description,
             variable.size === 1 ? void 0 : `Size: ${variable.size} bytes.`,
-            ...variable.notes
+            ...variable.notes.filter(
+              (note) => options.includeSourceInformation || !isLegacySourceNote(note)
+            ),
+            ...options.includeSourceInformation ? variable.sources ?? [] : []
           ].filter((entry) => Boolean(entry));
           const categorySeparator = variable.category ? " \u2014 " : "";
           const comment2 = variable.category ? `${details[0]}${categorySeparator}${details.slice(1).join(" ")}` : details.join(" ");
+          const sentence = /[!.?]$/.test(comment2) ? comment2 : `${comment2}.`;
           return [
             ...index > 0 && variables[index - 1]?.category !== variable.category ? [""] : [],
-            `${variable.name} = ${hex9(variable.address)} ; ${comment2}`
+            `${variable.name} = ${hex9(variable.address)} ; ${sentence}`
           ];
         }),
         ""
@@ -38644,6 +38354,11 @@ var init_ram_map = __esm({
         format: { const: SNES_RAM_MAP_FORMAT },
         schemaVersion: { const: SNES_RAM_MAP_SCHEMA_VERSION },
         source: { type: "string", description: "Optional human-readable provenance." },
+        includeSourceInformation: {
+          type: "boolean",
+          default: false,
+          description: "Include source citations in generated definition comments. Descriptive notes are always included."
+        },
         variables: {
           type: "array",
           items: {
@@ -38667,7 +38382,12 @@ var init_ram_map = __esm({
               size: { type: "integer", minimum: 1, maximum: 131072 },
               category: { type: "string", minLength: 1 },
               description: { type: "string", minLength: 1 },
-              notes: { type: "array", items: { type: "string", minLength: 1 } }
+              notes: { type: "array", items: { type: "string", minLength: 1 } },
+              sources: {
+                type: "array",
+                items: { type: "string", minLength: 1 },
+                description: "Provenance citations, shown only when includeSourceInformation is true."
+              }
             }
           }
         }
@@ -38676,7 +38396,7 @@ var init_ram_map = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/struct-expressions.ts
+// packages/plugin-snes/src/disassembler/struct-expressions.ts
 function describeSnesStructAccess(binding, address5, width2) {
   const { structure } = binding;
   if (address5 < binding.address || address5 + width2 > binding.address + binding.count * structure.size) {
@@ -38724,7 +38444,7 @@ function describeSnesStructAccess(binding, address5, width2) {
 }
 var SnesStructExpressionResolver;
 var init_struct_expressions = __esm({
-  "../plugin-snes/src/disassembler/struct-expressions.ts"() {
+  "packages/plugin-snes/src/disassembler/struct-expressions.ts"() {
     "use strict";
     init_src2();
     SnesStructExpressionResolver = class {
@@ -38933,10 +38653,10 @@ var init_struct_expressions = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/struct-instruction-uses.ts
+// packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
 var record2, integer2, text, hex10, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, renderSnesStructUseComments;
 var init_struct_instruction_uses = __esm({
-  "../plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
+  "packages/plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
     "use strict";
     init_struct_expressions();
     record2 = (value) => {
@@ -39130,13 +38850,13 @@ var init_struct_instruction_uses = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/struct-map.ts
-var fs14, import_node_path11, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer3, identifier, notes, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+// packages/plugin-snes/src/disassembler/struct-map.ts
+var fs12, import_node_path9, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer3, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
-  "../plugin-snes/src/disassembler/struct-map.ts"() {
+  "packages/plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
-    fs14 = __toESM(require("node:fs"), 1);
-    import_node_path11 = __toESM(require("node:path"), 1);
+    fs12 = __toESM(require("node:fs"), 1);
+    import_node_path9 = __toESM(require("node:path"), 1);
     init_ram_map();
     init_struct_instruction_uses();
     SNES_STRUCT_MAP_SOURCE = "struct-map.json";
@@ -39171,6 +38891,22 @@ var init_struct_map = __esm({
         throw new Error("Struct-map notes must be an array of strings.");
       }
       return value.map(comment);
+    };
+    entryComments = (value, firstIndex, count) => {
+      const result = {};
+      for (const [key2, text2] of Object.entries(object(value))) {
+        const index = Number(key2);
+        if (!/^(0|[1-9]\d*)$/.test(key2) || !Number.isSafeInteger(index) || index < firstIndex || index >= firstIndex + count) {
+          throw new Error(
+            `Struct entry comment index '${key2}' is outside the binding's logical indexes.`
+          );
+        }
+        if (typeof text2 !== "string" || !comment(text2)) {
+          throw new Error(`Struct entry comment '${key2}' must be a non-empty string.`);
+        }
+        result[index] = comment(text2);
+      }
+      return result;
     };
     validateSnesStructMap = (value) => {
       const file = object(value);
@@ -39261,6 +38997,9 @@ var init_struct_map = __esm({
         if (fileOffset === void 0 && (address5 < 8257536 || address5 + length > 8388608)) {
           throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
         }
+        if (entry.entryComments !== void 0 && fileOffset === void 0) {
+          throw new Error(`Struct entry comments require a ROM binding ('${name}').`);
+        }
         return {
           name,
           structure,
@@ -39268,7 +39007,10 @@ var init_struct_map = __esm({
           count,
           firstIndex,
           ...fileOffset === void 0 ? {} : { fileOffset },
-          notes: notes(entry.notes)
+          notes: notes(entry.notes),
+          ...entry.entryComments === void 0 ? {} : {
+            entryComments: entryComments(entry.entryComments, firstIndex, count)
+          }
         };
       }).sort((a, b) => a.address - b.address);
       for (let index = 1; index < bindings.length; index++) {
@@ -39294,11 +39036,11 @@ var init_struct_map = __esm({
       return { structures, bindings, ...instructionUses.length ? { instructionUses } : {} };
     };
     loadSnesStructMap = (directory) => {
-      const filename = import_node_path11.default.join(directory, SNES_STRUCT_MAP_SOURCE);
-      if (!fs14.existsSync(filename)) {
+      const filename = import_node_path9.default.join(directory, SNES_STRUCT_MAP_SOURCE);
+      if (!fs12.existsSync(filename)) {
         return void 0;
       }
-      const sourceBytes = fs14.readFileSync(filename);
+      const sourceBytes = fs12.readFileSync(filename);
       return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
     };
     completeFields = (structure) => {
@@ -39473,13 +39215,13 @@ var init_struct_map = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/source-export.ts
-var fs15, import_node_path12, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rawClassifications, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
+// packages/plugin-snes/src/disassembler/source-export.ts
+var fs13, import_node_path10, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rawClassifications, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
-  "../plugin-snes/src/disassembler/source-export.ts"() {
+  "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
-    fs15 = __toESM(require("node:fs"), 1);
-    import_node_path12 = __toESM(require("node:path"), 1);
+    fs13 = __toESM(require("node:fs"), 1);
+    import_node_path10 = __toESM(require("node:path"), 1);
     init_src2();
     init_src();
     init_decoder();
@@ -40159,12 +39901,12 @@ var init_source_export2 = __esm({
       return grouped;
     };
     preflight = (directory, force) => {
-      if (!fs15.existsSync(directory)) {
+      if (!fs13.existsSync(directory)) {
         return void 0;
       }
-      const manifestFile = import_node_path12.default.join(directory, SOURCE_EXPORT_MANIFEST);
-      if (!fs15.existsSync(manifestFile)) {
-        const unexpected = fs15.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
+      const manifestFile = import_node_path10.default.join(directory, SOURCE_EXPORT_MANIFEST);
+      if (!fs13.existsSync(manifestFile)) {
+        const unexpected = fs13.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
           throw new Error(
             `Export directory '${directory}' is not empty. Pass --force to write into it.`
@@ -40180,9 +39922,9 @@ var init_source_export2 = __esm({
     };
     writeFile = (root, relative2, bytes, kind, files) => {
       const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
-      const destination = import_node_path12.default.join(root, relative2);
-      fs15.mkdirSync(import_node_path12.default.dirname(destination), { recursive: true });
-      fs15.writeFileSync(destination, value);
+      const destination = import_node_path10.default.join(root, relative2);
+      fs13.mkdirSync(import_node_path10.default.dirname(destination), { recursive: true });
+      fs13.writeFileSync(destination, value);
       files.push({ path: relative2, kind, size: value.length, sha256: sourceExportSha256(value) });
     };
     regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions.filter((region) => {
@@ -40382,12 +40124,14 @@ var init_source_export2 = __esm({
               record5,
               rom.read(record5.start, record5.end - record5.start)
             );
+            const entryComment = record5.binding.entryComments?.[record5.index];
+            const suffix = entryComment ? ` ; ${entryComment}` : "";
             if (table) {
-              lines.push(`    [${record5.index}] = ${literal}`);
+              lines.push(`    [${record5.index}] = ${literal}${suffix}`);
               table.nextIndex = record5.index + 1;
             } else {
               const reference = record5.binding.count === 1 && record5.index === 0 ? record5.binding.name : `${record5.binding.name}[${record5.index}]`;
-              lines.push(`  dataStruct ${reference}, ${literal}`);
+              lines.push(`  dataStruct ${reference}, ${literal}${suffix}`);
             }
             spans.push({
               id: `struct:${span.start.toString(16).padStart(6, "0")}`,
@@ -40400,6 +40144,11 @@ var init_source_export2 = __esm({
               regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
             });
           } else if (span.structField) {
+            const record5 = span.structField.record;
+            const entryComment = record5?.binding.entryComments?.[record5.index];
+            if (record5?.start === span.start && entryComment) {
+              lines.push(`; ${entryComment}`);
+            }
             lines.push(
               ...renderSnesStructData(
                 span.structField,
@@ -40480,7 +40229,7 @@ var init_source_export2 = __esm({
       writeFile(
         directory,
         SNES_RAM_DEFINES_SOURCE,
-        renderSnesRamDefines(ramMap.variables),
+        renderSnesRamDefines(ramMap.variables, ramMap.file),
         "source",
         files
       );
@@ -40567,14 +40316,14 @@ var init_source_export2 = __esm({
         if (currentPaths.has(stale.path)) {
           continue;
         }
-        const staleFile = import_node_path12.default.join(directory, stale.path);
-        if (fs15.existsSync(staleFile) && fs15.statSync(staleFile).isFile()) {
-          fs15.unlinkSync(staleFile);
+        const staleFile = import_node_path10.default.join(directory, stale.path);
+        if (fs13.existsSync(staleFile) && fs13.statSync(staleFile).isFile()) {
+          fs13.unlinkSync(staleFile);
         }
       }
-      fs15.mkdirSync(directory, { recursive: true });
-      fs15.writeFileSync(
-        import_node_path12.default.join(directory, SOURCE_EXPORT_MANIFEST),
+      fs13.mkdirSync(directory, { recursive: true });
+      fs13.writeFileSync(
+        import_node_path10.default.join(directory, SOURCE_EXPORT_MANIFEST),
         canonicalSourceExportJson(manifest)
       );
       return manifest;
@@ -40582,10 +40331,10 @@ var init_source_export2 = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-hardware-registers.ts
+// packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts
 var registers, byAddress, identifySpc700HardwareRegister;
 var init_spc700_hardware_registers = __esm({
-  "../plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-hardware-registers.ts"() {
     "use strict";
     registers = [
       { address: 240, symbol: "TEST", description: "APU test register" },
@@ -40618,10 +40367,10 @@ var init_spc700_hardware_registers = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-state.ts
+// packages/plugin-snes/src/disassembler/spc700-state.ts
 var unknown2, known3, unknownSpc700State, applySpc700StateOverride, joinDirectPage, sameStackEntry, joinStack2, joinSpc700States, spc700StateKey, spc700DecodeState, push2, pop, transferSpc700State;
 var init_spc700_state = __esm({
-  "../plugin-snes/src/disassembler/spc700-state.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-state.ts"() {
     "use strict";
     unknown2 = () => ({ kind: "unknown" });
     known3 = (value) => ({ kind: "known", value });
@@ -40698,10 +40447,10 @@ var init_spc700_state = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-analysis.ts
+// packages/plugin-snes/src/disassembler/spc700-analysis.ts
 var DATA_CLASSIFICATIONS2, EVIDENCE_RANK2, intervalContains, stateOverrideFor2, readWord, controlTargetKind2, controlsFor3, isIndexedOrIndirect2, effectiveAddressesFor2, annotationState3, recordsFor2, annotationsFor2, analyzeSpc700Aram;
 var init_spc700_analysis = __esm({
-  "../plugin-snes/src/disassembler/spc700-analysis.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-analysis.ts"() {
     "use strict";
     init_src2();
     init_src();
@@ -41138,10 +40887,10 @@ var init_spc700_analysis = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/spc700-upload.ts
+// packages/plugin-snes/src/disassembler/spc700-upload.ts
 var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex13, materializeSpc700UploadBlock, spc700UploadProjectRecords;
 var init_spc700_upload = __esm({
-  "../plugin-snes/src/disassembler/spc700-upload.ts"() {
+  "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
     init_address_identities();
     init_spc700_address_space();
@@ -41333,10 +41082,10 @@ var init_spc700_upload = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/superfx-state.ts
+// packages/plugin-snes/src/disassembler/superfx-state.ts
 var known4, unknown3, initialSuperFxState, joinValue2, joinSuperFxStates, decodeValue, superFxDecodeState, enterSuperFxAddress, detailNumber, transferSuperFxState, superFxStateKey;
 var init_superfx_state = __esm({
-  "../plugin-snes/src/disassembler/superfx-state.ts"() {
+  "packages/plugin-snes/src/disassembler/superfx-state.ts"() {
     "use strict";
     known4 = (value) => ({ kind: "known", value });
     unknown3 = () => ({ kind: "unknown" });
@@ -41414,10 +41163,10 @@ var init_superfx_state = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/processor-source-export.ts
+// packages/plugin-snes/src/disassembler/processor-source-export.ts
 var hex14, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
 var init_processor_source_export = __esm({
-  "../plugin-snes/src/disassembler/processor-source-export.ts"() {
+  "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
     init_src2();
     init_spc700_decoder();
@@ -41514,12 +41263,12 @@ var init_processor_source_export = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/function-heuristics.ts
-var import_node_crypto20, isArray3, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
+// packages/plugin-snes/src/disassembler/function-heuristics.ts
+var import_node_crypto19, isArray3, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
-  "../plugin-snes/src/disassembler/function-heuristics.ts"() {
+  "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
-    import_node_crypto20 = require("node:crypto");
+    import_node_crypto19 = require("node:crypto");
     init_src();
     init_hardware_registers();
     isArray3 = (value) => Array.isArray(value);
@@ -41704,7 +41453,7 @@ var init_function_heuristics = __esm({
         const key2 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
         const prior = found.get(key2);
         found.set(key2, {
-          id: `heuristic:snes:${(0, import_node_crypto20.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
+          id: `heuristic:snes:${(0, import_node_crypto19.createHash)("sha256").update(key2).digest("hex").slice(0, 24)}`,
           rule,
           role,
           addressSpace: node.addressSpace,
@@ -42058,7 +41807,7 @@ var init_function_heuristics = __esm({
       const roles = [...found.values()].sort(
         (a, b) => a.address - b.address || a.id.localeCompare(b.id)
       );
-      const signature = (0, import_node_crypto20.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
+      const signature = (0, import_node_crypto19.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
       const evidence = roles.map((role) => ({
         id: `${role.id}:evidence`,
         source: "detector",
@@ -42081,12 +41830,12 @@ var init_function_heuristics = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/runtime-code.ts
-var import_node_crypto21, runtimeDecodeState, analyzeSnesRuntimeCode;
+// packages/plugin-snes/src/disassembler/runtime-code.ts
+var import_node_crypto20, runtimeDecodeState, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
-  "../plugin-snes/src/disassembler/runtime-code.ts"() {
+  "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
-    import_node_crypto21 = require("node:crypto");
+    import_node_crypto20 = require("node:crypto");
     init_src2();
     init_src();
     init_decoder();
@@ -42127,7 +41876,7 @@ var init_runtime_code = __esm({
           continue;
         }
         const state = runtimeDecodeState(sample);
-        const variant = (0, import_node_crypto21.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
+        const variant = (0, import_node_crypto20.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
         const id = `runtime:code:${variant}`;
         const duplicate = nodes.get(id);
         if (duplicate) {
@@ -42313,12 +42062,12 @@ var init_runtime_code = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/superfx-address-space.ts
-var import_node_crypto22, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
+// packages/plugin-snes/src/disassembler/superfx-address-space.ts
+var import_node_crypto21, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
 var init_superfx_address_space = __esm({
-  "../plugin-snes/src/disassembler/superfx-address-space.ts"() {
+  "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
-    import_node_crypto22 = require("node:crypto");
+    import_node_crypto21 = require("node:crypto");
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SUPERFX_ROM_ADDRESS_SPACE,
@@ -42339,7 +42088,7 @@ var init_superfx_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto22.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto21.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       get length() {
         return this.#bytes.length;
@@ -42375,13 +42124,13 @@ var init_superfx_address_space = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/project-initializer.ts
-var fs16, import_node_path13, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace;
+// packages/plugin-snes/src/disassembler/project-initializer.ts
+var fs14, import_node_path11, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace;
 var init_project_initializer = __esm({
-  "../plugin-snes/src/disassembler/project-initializer.ts"() {
+  "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
-    fs16 = __toESM(require("node:fs"), 1);
-    import_node_path13 = __toESM(require("node:path"), 1);
+    fs14 = __toESM(require("node:fs"), 1);
+    import_node_path11 = __toESM(require("node:path"), 1);
     init_src2();
     init_src();
     init_address_space();
@@ -42422,7 +42171,7 @@ var init_project_initializer = __esm({
       }
     };
     assertDizRawFile = (file) => {
-      if (import_node_path13.default.extname(file).toLowerCase() !== ".dizraw") {
+      if (import_node_path11.default.extname(file).toLowerCase() !== ".dizraw") {
         throw new Error(
           "Only uncompressed .dizraw imports are supported. Compressed .diz input is not supported."
         );
@@ -42430,53 +42179,53 @@ var init_project_initializer = __esm({
     };
     importDizRawFile = (file, rom) => {
       assertDizRawFile(file);
-      return importDizRaw(fs16.readFileSync(file, "utf8"), {
-        sourceName: import_node_path13.default.basename(file),
+      return importDizRaw(fs14.readFileSync(file, "utf8"), {
+        sourceName: import_node_path11.default.basename(file),
         expectedRomSize: rom.length
       });
     };
     ensureWritableDestination = (directory) => {
-      if (!fs16.existsSync(directory)) {
+      if (!fs14.existsSync(directory)) {
         return;
       }
-      const stat2 = fs16.statSync(directory);
+      const stat2 = fs14.statSync(directory);
       if (!stat2.isDirectory()) {
         throw new Error(`Destination '${directory}' is not a directory.`);
       }
-      if (fs16.readdirSync(directory).length > 0) {
+      if (fs14.readdirSync(directory).length > 0) {
         throw new Error(`Destination '${directory}' must be empty.`);
       }
     };
     safeWorkspacePath = (relative2) => {
-      if (relative2 === "" || import_node_path13.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === "" || part === "..")) {
+      if (relative2 === "" || import_node_path11.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === "" || part === "..")) {
         throw new Error(`Unsafe workspace file path '${relative2}'.`);
       }
       return relative2;
     };
     temporarySibling = (destination, suffix) => {
-      const resolved = import_node_path13.default.resolve(destination);
-      const parent = import_node_path13.default.dirname(resolved);
-      fs16.mkdirSync(parent, { recursive: true });
-      return fs16.mkdtempSync(import_node_path13.default.join(parent, `.${import_node_path13.default.basename(resolved)}.${suffix}-`));
+      const resolved = import_node_path11.default.resolve(destination);
+      const parent = import_node_path11.default.dirname(resolved);
+      fs14.mkdirSync(parent, { recursive: true });
+      return fs14.mkdtempSync(import_node_path11.default.join(parent, `.${import_node_path11.default.basename(resolved)}.${suffix}-`));
     };
     removeDirectory = (directory) => {
-      fs16.rmSync(directory, { recursive: true, force: true });
+      fs14.rmSync(directory, { recursive: true, force: true });
     };
     commitStagedDirectory = (staging, destination) => {
-      const resolved = import_node_path13.default.resolve(destination);
+      const resolved = import_node_path11.default.resolve(destination);
       ensureWritableDestination(resolved);
-      if (!fs16.existsSync(resolved)) {
-        fs16.renameSync(staging, resolved);
+      if (!fs14.existsSync(resolved)) {
+        fs14.renameSync(staging, resolved);
         return;
       }
-      const backup = `${resolved}.empty-${import_node_path13.default.basename(staging)}`;
-      fs16.renameSync(resolved, backup);
+      const backup = `${resolved}.empty-${import_node_path11.default.basename(staging)}`;
+      fs14.renameSync(resolved, backup);
       try {
-        fs16.renameSync(staging, resolved);
-        fs16.rmdirSync(backup);
+        fs14.renameSync(staging, resolved);
+        fs14.rmdirSync(backup);
       } catch (error) {
-        if (!fs16.existsSync(resolved) && fs16.existsSync(backup)) {
-          fs16.renameSync(backup, resolved);
+        if (!fs14.existsSync(resolved) && fs14.existsSync(backup)) {
+          fs14.renameSync(backup, resolved);
         }
         throw error;
       }
@@ -42484,7 +42233,7 @@ var init_project_initializer = __esm({
     probeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       const detection = detectSnesRom(rom, {
@@ -42492,7 +42241,7 @@ var init_project_initializer = __esm({
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       throwIfCancelled(options.signal);
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path13.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path11.default.resolve(options.dizRawFile), rom) : void 0;
       const detectedMapper = detection.mapper;
       const importedMapper = imported?.mapping.mapper;
       const conflict = options.mapper === void 0 && detectedMapper !== void 0 && importedMapper !== void 0 && detectedMapper !== importedMapper;
@@ -42520,7 +42269,7 @@ var init_project_initializer = __esm({
       };
     };
     createSnesAnalysisProject = (options) => {
-      const projectDirectory = import_node_path13.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path11.default.resolve(options.projectDirectory);
       ensureWritableDestination(projectDirectory);
       const probe = probeSnesProject(options);
       if (probe.mapperSelectionRequired || probe.detection.mapper === void 0) {
@@ -42530,10 +42279,10 @@ var init_project_initializer = __esm({
       }
       throwIfCancelled(options.signal);
       report(options, "create", "Creating the native analysis project.");
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: probe.rom.headerSize
       });
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path13.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path11.default.resolve(options.dizRawFile), rom) : void 0;
       const mapper = options.mapper ?? probe.detection.mapper;
       const importWarnings = imported && options.mapper && options.mapper !== imported.mapping.mapper ? [
         ...imported.report.warnings,
@@ -42591,7 +42340,7 @@ var init_project_initializer = __esm({
     analyzeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "analyze", "Preparing SQL instruction indexes.");
-      const projectDirectory = import_node_path13.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path11.default.resolve(options.projectDirectory);
       const store = openAnalysisProjectStore(projectDirectory);
       let previousCode = [];
       const loaded = (() => {
@@ -42644,16 +42393,16 @@ var init_project_initializer = __esm({
         }
       })();
       report(options, "analyze", "Building static analysis from the validated runtime view.");
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: loaded.manifest.rom.headerSize
       });
       validateProjectRom(loaded.manifest, rom);
       if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
       }
-      const heuristicFile = import_node_path13.default.join(projectDirectory, "heuristics.json");
+      const heuristicFile = import_node_path11.default.join(projectDirectory, "heuristics.json");
       const heuristicConfig = validateSnesHeuristicConfiguration(
-        options.heuristics ?? (fs16.existsSync(heuristicFile) ? JSON.parse(fs16.readFileSync(heuristicFile, "utf8")) : {})
+        options.heuristics ?? (fs14.existsSync(heuristicFile) ? JSON.parse(fs14.readFileSync(heuristicFile, "utf8")) : {})
       );
       const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
       const editableRecords = loaded.view.analysis.filter(
@@ -42838,8 +42587,8 @@ var init_project_initializer = __esm({
     exportSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "export", "Preparing SQL export indexes and metadata.");
-      const projectDirectory = import_node_path13.default.resolve(options.projectDirectory);
-      const sourceDirectory = import_node_path13.default.resolve(options.sourceDirectory);
+      const projectDirectory = import_node_path11.default.resolve(options.projectDirectory);
+      const sourceDirectory = import_node_path11.default.resolve(options.sourceDirectory);
       const store = openAnalysisProjectStore(projectDirectory);
       try {
         store.prepareAnnotationQueries();
@@ -42849,7 +42598,7 @@ var init_project_initializer = __esm({
           if (options.expectedRevision !== void 0 && options.expectedRevision !== revision.manifestSha256) {
             throw new Error("Analysis changed before source refresh. Run regeneration again.");
           }
-          const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+          const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
             headerSize: loaded.manifest.rom.headerSize
           });
           validateProjectRom(loaded.manifest, rom);
@@ -42877,11 +42626,11 @@ var init_project_initializer = __esm({
     verifySnesProjectRoundTrip = async (options) => {
       throwIfCancelled(options.signal);
       report(options, "verify", "Validating generated files, inputs and ROM identity.");
-      const sourceDirectory = import_node_path13.default.resolve(options.sourceDirectory);
+      const sourceDirectory = import_node_path11.default.resolve(options.sourceDirectory);
       const manifest = loadSourceExportManifest(sourceDirectory);
       validateSourceExportFiles(sourceDirectory, manifest);
       validateSourceExportInputs(sourceDirectory, manifest);
-      const rom = RomImage.load(import_node_path13.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path11.default.resolve(options.romFile), {
         headerSize: manifest.rom.headerSize
       });
       if (rom.identity.sha256 !== manifest.rom.sha256 || rom.identity.contentSha256 !== manifest.rom.contentSha256) {
@@ -42893,7 +42642,7 @@ var init_project_initializer = __esm({
       const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src3(), src_exports2));
       throwIfCancelled(options.signal);
       const environment = await createSnesAssemblerEnvironment2();
-      const entrySource = import_node_path13.default.join(sourceDirectory, manifest.entrySource);
+      const entrySource = import_node_path11.default.join(sourceDirectory, manifest.entrySource);
       const assembler = new Assembler({
         environment,
         target: TARGET_ID,
@@ -42905,28 +42654,28 @@ var init_project_initializer = __esm({
         assembler.setIncludePaths([sourceDirectory]);
         assembler.setCurrentFile(entrySource);
         report(options, "verify", "Parsing generated assembly and includes.");
-        const source = fs16.readFileSync(entrySource, "utf8");
+        const source = fs14.readFileSync(entrySource, "utf8");
         const program = assembler.buildProgramModel(source, entrySource, 0);
         report(options, "verify", "Assembling the ROM.");
         assembler.assembleProgram(program);
         throwIfCancelled(options.signal);
         report(options, "verify", "Writing build outputs and comparing ROM bytes.");
         const content = Buffer.from(assembler.getBinaryOutput());
-        const contentOutput = import_node_path13.default.join(sourceDirectory, manifest.contentOutput);
-        const finalOutput = import_node_path13.default.join(sourceDirectory, manifest.finalOutput);
-        fs16.mkdirSync(import_node_path13.default.dirname(contentOutput), { recursive: true });
-        fs16.writeFileSync(contentOutput, content);
+        const contentOutput = import_node_path11.default.join(sourceDirectory, manifest.contentOutput);
+        const finalOutput = import_node_path11.default.join(sourceDirectory, manifest.finalOutput);
+        fs14.mkdirSync(import_node_path11.default.dirname(contentOutput), { recursive: true });
+        fs14.writeFileSync(contentOutput, content);
         const final = manifest.rom.headerSize === 0 ? content : Buffer.concat([
-          fs16.readFileSync(
-            import_node_path13.default.join(
+          fs14.readFileSync(
+            import_node_path11.default.join(
               sourceDirectory,
               manifest.spans.find((span) => span.role === "copier-header").file
             )
           ),
           content
         ]);
-        fs16.mkdirSync(import_node_path13.default.dirname(finalOutput), { recursive: true });
-        fs16.writeFileSync(finalOutput, final);
+        fs14.mkdirSync(import_node_path11.default.dirname(finalOutput), { recursive: true });
+        fs14.writeFileSync(finalOutput, final);
         const comparison = compareByteImages(rom.fileBytes(), final);
         if (!comparison.equal) {
           throw new Error(
@@ -42937,7 +42686,7 @@ var init_project_initializer = __esm({
         if (options.emitDebugMap ?? true) {
           report(options, "verify", "Generating the debug map.");
           debugMap = `${contentOutput}.debug.json`;
-          fs16.writeFileSync(
+          fs14.writeFileSync(
             debugMap,
             canonicalDebugMapJson(
               createDebugMap({
@@ -42961,7 +42710,7 @@ var init_project_initializer = __esm({
       }
     };
     initializeSnesDisassemblyWorkspace = async (options) => {
-      const outputDirectory = import_node_path13.default.resolve(options.outputDirectory);
+      const outputDirectory = import_node_path11.default.resolve(options.outputDirectory);
       ensureWritableDestination(outputDirectory);
       const staging = temporarySibling(outputDirectory, "workspace");
       const analysisTemporary = temporarySibling(outputDirectory, "workspace-analysis-destination");
@@ -42997,27 +42746,27 @@ var init_project_initializer = __esm({
         });
         throwIfCancelled(options.signal);
         report(options, "configure", "Writing workspace configuration.");
-        fs16.renameSync(analysisTemporary, import_node_path13.default.join(staging, "analysis"));
+        fs14.renameSync(analysisTemporary, import_node_path11.default.join(staging, "analysis"));
         for (const file of options.workspaceFiles ?? []) {
           const relative2 = safeWorkspacePath(file.path);
-          const destination = import_node_path13.default.join(staging, relative2);
-          fs16.mkdirSync(import_node_path13.default.dirname(destination), { recursive: true });
-          fs16.writeFileSync(destination, file.contents);
+          const destination = import_node_path11.default.join(staging, relative2);
+          fs14.mkdirSync(import_node_path11.default.dirname(destination), { recursive: true });
+          fs14.writeFileSync(destination, file.contents);
         }
         throwIfCancelled(options.signal);
         report(options, "commit", "Committing the completed workspace.");
         commitStagedDirectory(staging, outputDirectory);
-        const remap = (value) => import_node_path13.default.join(outputDirectory, import_node_path13.default.relative(staging, value));
+        const remap = (value) => import_node_path11.default.join(outputDirectory, import_node_path11.default.relative(staging, value));
         return {
           outputDirectory,
           probe: project.probe,
           project: {
             ...project,
-            projectDirectory: import_node_path13.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path11.default.join(outputDirectory, "analysis")
           },
           analysis: {
             ...analysis,
-            projectDirectory: import_node_path13.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path11.default.join(outputDirectory, "analysis")
           },
           source: { ...source, sourceDirectory: outputDirectory },
           roundTrip: {
@@ -43037,10 +42786,10 @@ var init_project_initializer = __esm({
   }
 });
 
-// ../plugin-snes/src/disassembler/superfx-analysis.ts
+// packages/plugin-snes/src/disassembler/superfx-analysis.ts
 var DATA_CLASSIFICATIONS3, contains, applyEntryState, controlsFor4, effectiveAddressesFor3, recordsFor3, annotationsFor3, analyzeSuperFxRom;
 var init_superfx_analysis = __esm({
-  "../plugin-snes/src/disassembler/superfx-analysis.ts"() {
+  "packages/plugin-snes/src/disassembler/superfx-analysis.ts"() {
     "use strict";
     init_src2();
     init_src();
@@ -43339,10 +43088,10 @@ var init_superfx_analysis = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/common.ts
+// packages/plugin-snes/src/assets/common.ts
 var objectValue2, optionsFor2, integerOption2, stringOption2, readBytes, resolveCount, resolveGrid, decodedObject2, arrayValue, integerValue, defaultPath, jsonFile2;
 var init_common2 = __esm({
-  "../plugin-snes/src/assets/common.ts"() {
+  "packages/plugin-snes/src/assets/common.ts"() {
     "use strict";
     objectValue2 = (value, label) => {
       if (value === void 0) {
@@ -43439,8 +43188,8 @@ var init_common2 = __esm({
       return value;
     };
     defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile2 = (path16, value) => ({
-      path: path16,
+    jsonFile2 = (path15, value) => ({
+      path: path15,
       mediaType: "application/json",
       bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
 `)
@@ -43448,10 +43197,10 @@ var init_common2 = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/brr.ts
+// packages/plugin-snes/src/assets/brr.ts
 var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
 var init_brr = __esm({
-  "../plugin-snes/src/assets/brr.ts"() {
+  "packages/plugin-snes/src/assets/brr.ts"() {
     "use strict";
     init_common2();
     SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
@@ -43515,7 +43264,7 @@ var init_brr = __esm({
           };
         });
         const value = { kind: "snes-brr", blocks };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
+        const path15 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
         const metadataPath = stringOption2(
           options,
           "metadataPath",
@@ -43523,7 +43272,7 @@ var init_brr = __esm({
         );
         return {
           value,
-          files: [{ path: path16, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
+          files: [{ path: path15, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
         };
       },
       encode: (context) => {
@@ -43568,10 +43317,10 @@ var init_brr = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/palette.ts
+// packages/plugin-snes/src/assets/palette.ts
 var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
 var init_palette = __esm({
-  "../plugin-snes/src/assets/palette.ts"() {
+  "packages/plugin-snes/src/assets/palette.ts"() {
     "use strict";
     init_common2();
     SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
@@ -43597,8 +43346,8 @@ var init_palette = __esm({
           };
         });
         const value = { kind: "snes-palette-bgr555", colors };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile2(path16, value)] };
+        const path15 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
+        return { value, files: [jsonFile2(path15, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 2);
@@ -43629,10 +43378,10 @@ var init_palette = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/tilemap.ts
+// packages/plugin-snes/src/assets/tilemap.ts
 var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
 var init_tilemap = __esm({
-  "../plugin-snes/src/assets/tilemap.ts"() {
+  "packages/plugin-snes/src/assets/tilemap.ts"() {
     "use strict";
     init_common2();
     SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
@@ -43675,8 +43424,8 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           entries: entries3
         };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile2(path16, value)] };
+        const path15 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
+        return { value, files: [jsonFile2(path15, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 2);
@@ -43735,12 +43484,12 @@ var init_tilemap = __esm({
           ...dimensions(resolved),
           indexes: [...bytes]
         };
-        const path16 = stringOption2(
+        const path15 = stringOption2(
           options,
           "path",
           defaultPath(context.request.id, "mode7-tilemap.json")
         );
-        return { value, files: [jsonFile2(path16, value)] };
+        return { value, files: [jsonFile2(path15, value)] };
       },
       encode: (context) => {
         const resolved = resolveGrid(context, 1);
@@ -43764,10 +43513,10 @@ var init_tilemap = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/tiles.ts
+// packages/plugin-snes/src/assets/tiles.ts
 var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
 var init_tiles = __esm({
-  "../plugin-snes/src/assets/tiles.ts"() {
+  "packages/plugin-snes/src/assets/tiles.ts"() {
     "use strict";
     init_common2();
     SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
@@ -43840,12 +43589,12 @@ var init_tiles = __esm({
             tileHeight: 8,
             tiles
           };
-          const path16 = stringOption2(
+          const path15 = stringOption2(
             options,
             "path",
             defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
           );
-          return { value, files: [jsonFile2(path16, value)] };
+          return { value, files: [jsonFile2(path15, value)] };
         },
         encode: (context) => {
           const { count, size } = resolveCount(context, bytesPerTile);
@@ -43908,8 +43657,8 @@ var init_tiles = __esm({
           tileHeight: 8,
           tiles
         };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile2(path16, value)] };
+        const path15 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
+        return { value, files: [jsonFile2(path15, value)] };
       },
       encode: (context) => {
         const { count, size } = resolveCount(context, 64);
@@ -43938,10 +43687,10 @@ var init_tiles = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/previews.ts
+// packages/plugin-snes/src/assets/previews.ts
 var SNES_SVG_ASSET_PREVIEW_ID, objectValue3, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer, registerSnesAssetPreviewRenderers;
 var init_previews = __esm({
-  "../plugin-snes/src/assets/previews.ts"() {
+  "packages/plugin-snes/src/assets/previews.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -44080,10 +43829,10 @@ var init_previews = __esm({
   }
 });
 
-// ../plugin-snes/src/assets/index.ts
+// packages/plugin-snes/src/assets/index.ts
 var snesAssetCodecs, registerSnesAssetCodecs;
 var init_assets = __esm({
-  "../plugin-snes/src/assets/index.ts"() {
+  "packages/plugin-snes/src/assets/index.ts"() {
     "use strict";
     init_brr();
     init_palette();
@@ -44116,7 +43865,7 @@ var init_assets = __esm({
   }
 });
 
-// ../plugin-snes/src/index.ts
+// packages/plugin-snes/src/index.ts
 var src_exports2 = {};
 __export(src_exports2, {
   ASAR_COMPAT_NO_OP_DIRECTIVES: () => ASAR_COMPAT_NO_OP_DIRECTIVES,
@@ -44299,7 +44048,7 @@ async function createSnesAssemblerEnvironment() {
 }
 var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin, src_default;
 var init_src3 = __esm({
-  "../plugin-snes/src/index.ts"() {
+  "packages/plugin-snes/src/index.ts"() {
     "use strict";
     init_src2();
     init_decoder();
@@ -44808,19 +44557,19 @@ var init_src3 = __esm({
   }
 });
 
-// ../debug-adapter/src/contracts.ts
+// packages/debug-adapter/src/contracts.ts
 var DEBUG_BACKEND_PROTOCOL_VERSION;
 var init_contracts2 = __esm({
-  "../debug-adapter/src/contracts.ts"() {
+  "packages/debug-adapter/src/contracts.ts"() {
     "use strict";
     DEBUG_BACKEND_PROTOCOL_VERSION = 1;
   }
 });
 
-// ../debug-adapter/src/conformance.ts
+// packages/debug-adapter/src/conformance.ts
 var DEBUG_BACKEND_CONFORMANCE_VERSION, DEBUG_BACKEND_CONFORMANCE_SCENARIOS, fail, requireValue, addressesMatch, assertAddress, assertCapability, EventLog, withTimeout, withBackend, eventTypes, scenarios, runDebugBackendConformance;
 var init_conformance = __esm({
-  "../debug-adapter/src/conformance.ts"() {
+  "packages/debug-adapter/src/conformance.ts"() {
     "use strict";
     init_contracts2();
     DEBUG_BACKEND_CONFORMANCE_VERSION = 1;
@@ -44838,31 +44587,35 @@ var init_conformance = __esm({
     requireValue = (value, message) => value === void 0 ? fail(message) : value;
     addressesMatch = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && (left.address === right.address || left.outputOffset !== void 0 && left.outputOffset === right.outputOffset);
     assertAddress = (actual, expected, context) => {
-      if (!addressesMatch(actual, expected))
+      if (!addressesMatch(actual, expected)) {
         fail(
           `${context}: expected ${expected.architecture}/${expected.addressSpace}/${expected.address.toString(16)}, received ${actual.architecture}/${actual.addressSpace}/${actual.address.toString(16)}.`
         );
+      }
     };
     assertCapability = (actual, expected) => {
       const spaces = [...actual.addressSpaces].sort();
       const expectedSpaces = [...expected.addressSpaces].sort();
-      if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces))
+      if (JSON.stringify(spaces) !== JSON.stringify(expectedSpaces)) {
         fail(
           `${expected.architecture}: expected address spaces ${expectedSpaces.join(", ")}, received ${spaces.join(", ")}.`
         );
+      }
       const memorySpaces = [...actual.memorySpaces].sort(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace)
       );
       const expectedMemorySpaces = [...expected.memorySpaces].sort(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace)
       );
-      if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces))
+      if (JSON.stringify(memorySpaces) !== JSON.stringify(expectedMemorySpaces)) {
         fail(
           `${expected.architecture}: expected memory spaces ${JSON.stringify(expectedMemorySpaces)}, received ${JSON.stringify(memorySpaces)}.`
         );
+      }
       for (const [key2, value] of Object.entries(expected.capabilities)) {
-        if (actual[key2] !== value)
+        if (actual[key2] !== value) {
           fail(`${expected.architecture}: expected capability '${key2}' to be ${value}.`);
+        }
       }
     };
     EventLog = class {
@@ -44876,7 +44629,9 @@ var init_conformance = __esm({
       }
       async waitFor(predicate, start, timeoutMs) {
         const existing = this.events.slice(start).find(predicate);
-        if (existing) return existing;
+        if (existing) {
+          return existing;
+        }
         return new Promise((resolve, reject) => {
           const started2 = Date.now();
           const timer = setInterval(() => {
@@ -44933,18 +44688,21 @@ var init_conformance = __esm({
     eventTypes = (events) => events.map((event) => event.type);
     scenarios = {
       "protocol-and-capabilities": async (options) => withBackend(options, (backend) => {
-        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION)
+        if (backend.protocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
           fail(`Expected backend protocol ${String(DEBUG_BACKEND_PROTOCOL_VERSION)}.`);
-        if (options.fixture.initialAddress.architecture !== options.fixture.primaryArchitecture || options.fixture.initialAddress.addressSpace !== options.fixture.primaryAddressSpace)
+        }
+        if (options.fixture.initialAddress.architecture !== options.fixture.primaryArchitecture || options.fixture.initialAddress.addressSpace !== options.fixture.primaryAddressSpace) {
           fail("The primary fixture identity does not match its initial address.");
+        }
         const architectures = new Map(
           backend.capabilities.architectures.map((capability) => [
             capability.architecture,
             capability
           ])
         );
-        if (architectures.size !== backend.capabilities.architectures.length)
+        if (architectures.size !== backend.capabilities.architectures.length) {
           fail("Architecture capability identifiers must be unique.");
+        }
         for (const expected of options.fixture.architectures) {
           assertCapability(
             requireValue(
@@ -44970,24 +44728,29 @@ var init_conformance = __esm({
         assertAddress(frame.pc, options.fixture.initialAddress, "Initial PC");
         const registerNames = new Set((await backend.registers(frame.id)).map(({ name }) => name));
         for (const name of options.fixture.requiredRegisters) {
-          if (!registerNames.has(name)) fail(`Missing required register '${name}'.`);
+          if (!registerNames.has(name)) {
+            fail(`Missing required register '${name}'.`);
+          }
         }
         const memory = await backend.readMemory(
           options.fixture.memoryAddress,
           options.fixture.memoryBytes.length
         );
-        if (memory.unreadableBytes !== 0)
+        if (memory.unreadableBytes !== 0) {
           fail(`Expected complete memory read. ${memory.unreadableBytes} byte(s) were unreadable.`);
-        if (JSON.stringify([...memory.bytes]) !== JSON.stringify(options.fixture.memoryBytes))
+        }
+        if (JSON.stringify([...memory.bytes]) !== JSON.stringify(options.fixture.memoryBytes)) {
           fail("Memory bytes did not match the conformance fixture.");
+        }
         const instruction2 = requireValue(
           (await backend.disassemble(options.fixture.disassemblyAddress, 1))[0],
           "Disassembler returned no instruction."
         );
-        if (instruction2.text !== options.fixture.disassemblyText)
+        if (instruction2.text !== options.fixture.disassemblyText) {
           fail(
             `Expected disassembly '${options.fixture.disassemblyText}', received '${instruction2.text}'.`
           );
+        }
       }),
       "exact-instruction-step": async (options) => withBackend(options, async (backend, events, timeoutMs) => {
         await backend.connect({ reset: true });
@@ -45007,8 +44770,9 @@ var init_conformance = __esm({
         const relevant = eventTypes(events.events.slice(start)).filter(
           (type) => ["continued", "stopped"].includes(type)
         );
-        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"]))
+        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"])) {
           fail(`Instruction step event order was ${relevant.join(" -> ")}.`);
+        }
         const frame = requireValue(
           (await backend.stackFrames(thread2.id))[0],
           "Missing stepped frame."
@@ -45024,7 +44788,9 @@ var init_conformance = __esm({
           "Missing primary thread."
         );
         const [breakpoint2] = await backend.setBreakpoints([options.fixture.breakpointAddress]);
-        if (!breakpoint2?.verified) fail("Conformance breakpoint was not verified.");
+        if (!breakpoint2?.verified) {
+          fail("Conformance breakpoint was not verified.");
+        }
         const start = events.events.length;
         await backend.continue(thread2.id);
         await events.waitFor(
@@ -45035,15 +44801,17 @@ var init_conformance = __esm({
         const relevant = eventTypes(events.events.slice(start)).filter(
           (type) => ["continued", "stopped"].includes(type)
         );
-        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"]))
+        if (JSON.stringify(relevant) !== JSON.stringify(["continued", "stopped"])) {
           fail(`Continue event order was ${relevant.join(" -> ")}.`);
+        }
         const frame = requireValue(
           (await backend.stackFrames(thread2.id))[0],
           "Missing breakpoint frame."
         );
         assertAddress(frame.pc, options.fixture.breakpointAddress, "Breakpoint PC");
-        if ((await backend.setBreakpoints([])).length !== 0)
+        if ((await backend.setBreakpoints([])).length !== 0) {
           fail("Clearing the breakpoint set did not return an empty result.");
+        }
       }),
       "reconnect-without-reset": async (options) => withBackend(options, async (backend) => {
         await backend.connect({ reset: true });
@@ -45074,7 +44842,9 @@ var init_conformance = __esm({
         } catch {
           rejected = true;
         }
-        if (!rejected) fail("Negative memory-read count was accepted.");
+        if (!rejected) {
+          fail("Negative memory-read count was accepted.");
+        }
       })
     };
     runDebugBackendConformance = async (options) => {
@@ -45101,10 +44871,10 @@ var init_conformance = __esm({
   }
 });
 
-// ../debug-adapter/src/debug-expression.ts
+// packages/debug-adapter/src/debug-expression.ts
 var MAX_EXPRESSION_CHARACTERS, MAX_EXPRESSION_DEPTH, MAX_SHIFT, MAX_EXPONENT, MAX_MAGNITUDE, binaryPrecedence2, checked, parseDigits, digitPattern, tokenize, DebugExpressionParser, evaluateDebugExpression, formatDebugExpressionValue;
 var init_debug_expression = __esm({
-  "../debug-adapter/src/debug-expression.ts"() {
+  "packages/debug-adapter/src/debug-expression.ts"() {
     "use strict";
     MAX_EXPRESSION_CHARACTERS = 256;
     MAX_EXPRESSION_DEPTH = 32;
@@ -45134,25 +44904,39 @@ var init_debug_expression = __esm({
       "**": 6
     });
     checked = (value) => {
-      if (value > MAX_MAGNITUDE || value < -MAX_MAGNITUDE)
+      if (value > MAX_MAGNITUDE || value < -MAX_MAGNITUDE) {
         throw new Error("Debugger expression result exceeds 256 bits.");
+      }
       return value;
     };
     parseDigits = (digits, radix) => {
-      if (digits.length === 0) throw new Error("Debugger expression contains an empty number.");
-      if (radix === 16) return BigInt(`0x${digits}`);
-      if (radix === 2) return BigInt(`0b${digits}`);
+      if (digits.length === 0) {
+        throw new Error("Debugger expression contains an empty number.");
+      }
+      if (radix === 16) {
+        return BigInt(`0x${digits}`);
+      }
+      if (radix === 2) {
+        return BigInt(`0b${digits}`);
+      }
       return BigInt(digits);
     };
     digitPattern = (radix) => {
-      if (radix === 16) return /[\dA-Fa-f]/;
-      if (radix === 2) return /[01]/;
+      if (radix === 16) {
+        return /[\dA-Fa-f]/;
+      }
+      if (radix === 2) {
+        return /[01]/;
+      }
       return /\d/;
     };
     tokenize = (expression) => {
-      if (expression.length === 0) throw new Error("Debugger expression cannot be empty.");
-      if (expression.length > MAX_EXPRESSION_CHARACTERS)
+      if (expression.length === 0) {
+        throw new Error("Debugger expression cannot be empty.");
+      }
+      if (expression.length > MAX_EXPRESSION_CHARACTERS) {
         throw new Error(`Debugger expression exceeds ${MAX_EXPRESSION_CHARACTERS} characters.`);
+      }
       const tokens = [];
       let index = 0;
       let expectsOperand = true;
@@ -45178,7 +44962,9 @@ var init_debug_expression = __esm({
           const radix = character === "$" ? 16 : 2;
           const pattern = digitPattern(radix);
           let end = index + 1;
-          while (end < expression.length && pattern.test(expression[end])) end++;
+          while (end < expression.length && pattern.test(expression[end])) {
+            end++;
+          }
           tokens.push({ type: "number", value: parseDigits(expression.slice(index + 1, end), radix) });
           expectsOperand = false;
           index = end;
@@ -45187,11 +44973,17 @@ var init_debug_expression = __esm({
         if (/\d/.test(character)) {
           const prefix = expression.slice(index, index + 2).toLowerCase();
           let radix = 10;
-          if (prefix === "0x") radix = 16;
-          if (prefix === "0b") radix = 2;
+          if (prefix === "0x") {
+            radix = 16;
+          }
+          if (prefix === "0b") {
+            radix = 2;
+          }
           let end = index + (radix === 10 ? 0 : 2);
           const pattern = digitPattern(radix);
-          while (end < expression.length && pattern.test(expression[end])) end++;
+          while (end < expression.length && pattern.test(expression[end])) {
+            end++;
+          }
           const start = index + (radix === 10 ? 0 : 2);
           tokens.push({ type: "number", value: parseDigits(expression.slice(start, end), radix) });
           expectsOperand = false;
@@ -45200,7 +44992,9 @@ var init_debug_expression = __esm({
         }
         if (/[A-Z_a-z]/.test(character)) {
           let end = index + 1;
-          while (end < expression.length && /\w/.test(expression[end])) end++;
+          while (end < expression.length && /\w/.test(expression[end])) {
+            end++;
+          }
           tokens.push({ type: "identifier", value: expression.slice(index, end) });
           expectsOperand = false;
           index = end;
@@ -45211,7 +45005,9 @@ var init_debug_expression = __esm({
         );
         const single = "+-*/%&|^~<>=!".includes(character) ? character : void 0;
         const value = operator ?? single;
-        if (!value) throw new Error(`Unsupported debugger expression character '${character}'.`);
+        if (!value) {
+          throw new Error(`Unsupported debugger expression character '${character}'.`);
+        }
         tokens.push({ type: "operator", value });
         expectsOperand = true;
         index += value.length;
@@ -45229,18 +45025,25 @@ var init_debug_expression = __esm({
       }
       parse() {
         const result = this.#expression(0, 0);
-        if (this.#peek().type !== "end") throw new Error("Unexpected debugger expression token.");
+        if (this.#peek().type !== "end") {
+          throw new Error("Unexpected debugger expression token.");
+        }
         return result;
       }
       #expression(minimumPrecedence, depth) {
-        if (depth > MAX_EXPRESSION_DEPTH)
+        if (depth > MAX_EXPRESSION_DEPTH) {
           throw new Error(`Debugger expression exceeds ${MAX_EXPRESSION_DEPTH} nested operations.`);
+        }
         let left = this.#prefix(depth);
         while (true) {
           const token = this.#peek();
-          if (token.type !== "operator") break;
+          if (token.type !== "operator") {
+            break;
+          }
           const precedence = binaryPrecedence2[token.value];
-          if (precedence === void 0 || precedence < minimumPrecedence) break;
+          if (precedence === void 0 || precedence < minimumPrecedence) {
+            break;
+          }
           this.#index++;
           const rightAssociative = token.value === "**";
           const right = this.#expression(precedence + (rightAssociative ? 0 : 1), depth + 1);
@@ -45250,11 +45053,17 @@ var init_debug_expression = __esm({
       }
       #prefix(depth) {
         const token = this.#tokens[this.#index++] ?? { type: "end" };
-        if (token.type === "number") return { value: token.value };
-        if (token.type === "identifier") return this.#register(token.value);
+        if (token.type === "number") {
+          return { value: token.value };
+        }
+        if (token.type === "identifier") {
+          return this.#register(token.value);
+        }
         if (token.type === "left") {
           const value = this.#expression(0, depth + 1);
-          if (this.#peek().type !== "right") throw new Error("Debugger expression is missing ')'.");
+          if (this.#peek().type !== "right") {
+            throw new Error("Debugger expression is missing ')'.");
+          }
           this.#index++;
           return value;
         }
@@ -45289,20 +45098,26 @@ var init_debug_expression = __esm({
         );
         const register5 = exact ?? (insensitive.length === 1 ? insensitive[0] : void 0);
         if (!register5) {
-          if (insensitive.length > 1) throw new Error(`Register '${name}' is ambiguous.`);
+          if (insensitive.length > 1) {
+            throw new Error(`Register '${name}' is ambiguous.`);
+          }
           throw new Error(`Unknown register '${name}'.`);
         }
-        if (!/^[\dA-Fa-f]+$/.test(register5.value))
+        if (!/^[\dA-Fa-f]+$/.test(register5.value)) {
           throw new Error(`Register '${register5.name}' has an invalid hexadecimal value.`);
+        }
         return { value: BigInt(`0x${register5.value}`), bits: register5.bits };
       }
       #binary(operator, left, right) {
-        if ((operator === "/" || operator === "%") && right === 0n)
+        if ((operator === "/" || operator === "%") && right === 0n) {
           throw new Error("Debugger expression divides by zero.");
-        if ((operator === "<<" || operator === ">>") && (right < 0n || right > MAX_SHIFT))
+        }
+        if ((operator === "<<" || operator === ">>") && (right < 0n || right > MAX_SHIFT)) {
           throw new Error(`Debugger expression shift must be between 0 and ${MAX_SHIFT}.`);
-        if (operator === "**" && (right < 0n || right > MAX_EXPONENT))
+        }
+        if (operator === "**" && (right < 0n || right > MAX_EXPONENT)) {
           throw new Error(`Debugger expression exponent must be between 0 and ${MAX_EXPONENT}.`);
+        }
         const value = (() => {
           switch (operator) {
             case "||":
@@ -45359,56 +45174,69 @@ var init_debug_expression = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-v2.ts
+// packages/debug-adapter/src/capture-v2.ts
 function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
   captureSession(session);
   captureScope(scope);
-  if (bytes.length < 64 || bytes.length > 262144)
+  if (bytes.length < 64 || bytes.length > 262144) {
     throw new Error("Capture chunk length exceeds bounds.");
+  }
   const b = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0)
+  if (b.toString("ascii", 0, 4) !== "ACT2" || b.readUInt16LE(4) !== 2 || b.readUInt16LE(6) !== 0 || b.readUInt32LE(44) !== 64 || b.readUInt32LE(60) !== 0) {
     throw new Error("Unsupported capture envelope.");
-  if (b.toString("hex", 8, 24) !== session)
+  }
+  if (b.toString("hex", 8, 24) !== session) {
     throw new Error("Capture chunk belongs to another session.");
-  if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64)
+  }
+  if (b.readUInt32LE(48) !== bytes.length - 64 || b.readUInt32LE(52) !== bytes.length - 64) {
     throw new Error("Capture payload lengths disagree.");
-  if (captureCrc32c(bytes, true) !== b.readUInt32LE(56))
+  }
+  if (captureCrc32c(bytes, true) !== b.readUInt32LE(56)) {
     throw new Error("Capture checksum mismatch.");
+  }
   const sequence = b.readBigUInt64LE(24), first = b.readBigUInt64LE(32), count = b.readUInt32LE(40);
   const through = first + BigInt(count) - 1n;
   const maxRecords = scope === "snes.65816.instructions" ? 3854 : 4095;
-  if (!sequence || !first || !count || count > maxRecords || through > maxU64)
+  if (!sequence || !first || !count || count > maxRecords || through > maxU64) {
     throw new Error("Invalid capture sequence range.");
+  }
   const identity2 = {
     session,
     sequence: String(sequence),
     first: String(first),
     through: String(through)
   };
-  if (scope === "snes.cpu-bus")
+  if (scope === "snes.cpu-bus") {
     return {
       ...identity2,
       scope,
       accesses: decodeBusAccesses(b, first, count)
     };
-  if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu")
+  }
+  if (scope === "snes.cpu-bus-transfers" || scope === "snes.cpu-bus-ppu") {
     return {
       ...identity2,
       scope,
       events: decodeBusAccesses(b, first, count, true, scope === "snes.cpu-bus-ppu")
     };
+  }
   const instructions = [];
   let offset = 64;
   for (let i = 0; i < count; i++) {
-    if (offset + 68 > b.length) throw new Error("Truncated capture record.");
+    if (offset + 68 > b.length) {
+      throw new Error("Truncated capture record.");
+    }
     const length = b.readUInt32LE(offset + 4), n = b[offset + 48];
     const event = first + BigInt(i), ordinal = b.readBigUInt64LE(offset + 32), address5 = b.readBigUInt64LE(offset + 40);
-    if (b.readUInt16LE(offset) !== 1 || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0)
+    if (b.readUInt16LE(offset) !== 1 || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0) {
       throw new Error("Unsupported required capture record.");
-    if (n < 1 || n > 4 || length !== 67 + n || offset + length > b.length || b.readUInt16LE(offset + 49) !== 16)
+    }
+    if (n < 1 || n > 4 || length !== 67 + n || offset + length > b.length || b.readUInt16LE(offset + 49) !== 16) {
       throw new Error("Invalid instruction record length.");
-    if (b.readBigUInt64LE(offset + 8) !== event || ordinal !== event || address5 > 0xffffffn)
+    }
+    if (b.readBigUInt64LE(offset + 8) !== event || ordinal !== event || address5 > 0xffffffn) {
       throw new Error("Instruction identity disagrees with capture scope.");
+    }
     const r = offset + 51 + n;
     const state = {
       a: b.readUInt16LE(r),
@@ -45422,11 +45250,13 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
       p: b[r + 14],
       e: b[r + 15]
     };
-    if (state.e > 1 || (state.pb << 16 | state.pc) !== Number(address5))
+    if (state.e > 1 || (state.pb << 16 | state.pc) !== Number(address5)) {
       throw new Error("Captured PC/state mismatch.");
+    }
     const cycle = b.readBigUInt64LE(offset + 24);
-    if (i && cycle < BigInt(instructions[i - 1].cycle))
+    if (i && cycle < BigInt(instructions[i - 1].cycle)) {
       throw new Error("Capture clock moved backwards.");
+    }
     instructions.push({
       sequence: String(event),
       ordinal: String(ordinal),
@@ -45436,8 +45266,9 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
     });
     offset += length;
   }
-  if (offset !== b.length)
+  if (offset !== b.length) {
     throw new Error("Capture record count does not consume the payload exactly.");
+  }
   return {
     ...identity2,
     scope,
@@ -45446,30 +45277,67 @@ function decodeCaptureChunk(bytes, session, scope = "snes.65816.instructions") {
 }
 var maxU64, captureScope, captureU64, captureSession, validateCaptureRequest, validateCaptureCapabilities, validateCapturePosition, crcTable, crcSlices, captureCrc32c, captureChunkRecords, decodeBusAccesses, decodeTransfer, decodePPUEffect;
 var init_capture_v2 = __esm({
-  "../debug-adapter/src/capture-v2.ts"() {
+  "packages/debug-adapter/src/capture-v2.ts"() {
     "use strict";
     maxU64 = (1n << 64n) - 1n;
     captureScope = (value) => {
-      if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu")
+      if (value !== "snes.65816.instructions" && value !== "snes.cpu-bus" && value !== "snes.cpu-bus-transfers" && value !== "snes.cpu-bus-ppu") {
         throw new Error("Unsupported capture scope.");
+      }
       return value;
     };
     captureU64 = (value) => {
-      if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64)
+      if (typeof value !== "string" || !/^(0|[1-9]\d{0,19})$/.test(value) || BigInt(value) > maxU64) {
         throw new Error("Capture counter must be a canonical unsigned 64-bit decimal string.");
+      }
       return BigInt(value);
     };
     captureSession = (value) => {
-      if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value))
+      if (typeof value !== "string" || !/^[\da-f]{32}$/.test(value)) {
         throw new Error("Invalid capture session identity.");
+      }
       return value;
     };
     validateCaptureRequest = (value) => {
-      if (!value || typeof value !== "object") throw new Error("Invalid capture request.");
+      if (!value || typeof value !== "object") {
+        throw new Error("Invalid capture request.");
+      }
+      if (value.operation === "context") {
+        let fields2 = ["operation", "action"];
+        if (["prepare", "replay", "restore"].includes(value.action)) {
+          fields2.push("directory", "romContentSha256", "producer");
+          const request = value;
+          validateCaptureRequest({
+            operation: "file-start",
+            file: request.directory,
+            romContentSha256: request.romContentSha256,
+            producer: request.producer,
+            bufferBytes: 8388608
+          });
+        } else if (value.action === "start" || value.action === "stop" || value.action === "mark") {
+          fields2.push("session");
+          captureSession(value.session);
+          if (value.action === "mark") {
+            fields2.push("label");
+            if (typeof value.label !== "string" || !value.label.trim() || value.label.includes("\0") || new TextEncoder().encode(value.label).length > 256) {
+              throw new Error("Capture milestone labels must contain 1\u2013256 UTF-8 bytes.");
+            }
+          }
+        } else if (value.action !== "abort" && value.action !== "status") {
+          throw new Error("Unsupported capture context action.");
+        }
+        if (Object.keys(value).some((key2) => !fields2.includes(key2))) {
+          throw new Error("Unsupported capture context field.");
+        }
+        return;
+      }
       if (value.operation === "file-capabilities") {
-        if (Object.keys(value).some((key2) => !["operation", "scope"].includes(key2)))
+        if (Object.keys(value).some((key2) => !["operation", "scope"].includes(key2))) {
           throw new Error("Unsupported native file capability field.");
-        if (value.scope !== void 0) captureScope(value.scope);
+        }
+        if (value.scope !== void 0) {
+          captureScope(value.scope);
+        }
         return;
       }
       if (value.operation === "file-start") {
@@ -45483,38 +45351,55 @@ var init_capture_v2 = __esm({
             "producer",
             "measureStages"
           ].includes(key2)
-        ))
+        )) {
           throw new Error("Unsupported native file start field.");
-        if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean")
+        }
+        if (value.measureStages !== void 0 && typeof value.measureStages !== "boolean") {
           throw new Error("Native file profiling must be boolean.");
+        }
         validateCaptureRequest({
           operation: "start",
           bufferBytes: value.bufferBytes,
           scope: value.scope
         });
         const bounded = (text2, max) => typeof text2 === "string" && text2.length > 0 && !text2.includes("\0") && new TextEncoder().encode(text2).length <= max;
-        if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key2) => !["id", "revision"].includes(key2)))
+        if (!bounded(value.file, 4096) || !/^(?:\/|[a-z]:[/\\]|\\\\)/i.test(value.file) || !/^[\da-f]{64}$/.test(value.romContentSha256) || !bounded(value.producer?.id, 256) || !bounded(value.producer?.revision, 1024) || Object.keys(value.producer).some((key2) => !["id", "revision"].includes(key2))) {
           throw new Error(
             "Native file capture requires an absolute bounded path and exact ROM/producer identity."
           );
+        }
         return;
       }
       let fields = ["operation", "session"];
-      if (value.operation === "capabilities") fields = ["operation", "scope"];
-      if (value.operation === "start") fields = ["operation", "bufferBytes", "scope"];
-      if (value.operation === "read") fields = ["operation", "session", "chunk"];
-      if (value.operation === "ack") fields = ["operation", "session", "chunk", "event"];
-      if (Object.keys(value).some((key2) => !fields.includes(key2)))
+      if (value.operation === "capabilities") {
+        fields = ["operation", "scope"];
+      }
+      if (value.operation === "start") {
+        fields = ["operation", "bufferBytes", "scope"];
+      }
+      if (value.operation === "read") {
+        fields = ["operation", "session", "chunk"];
+      }
+      if (value.operation === "ack") {
+        fields = ["operation", "session", "chunk", "event"];
+      }
+      if (Object.keys(value).some((key2) => !fields.includes(key2))) {
         throw new Error(
           "Unsupported capture negotiation field. Capture requires an explicit supported stream with durable ownership."
         );
-      if (value.operation === "capabilities" || value.operation === "start") {
-        if (value.scope !== void 0) captureScope(value.scope);
       }
-      if (value.operation === "capabilities") return;
+      if (value.operation === "capabilities" || value.operation === "start") {
+        if (value.scope !== void 0) {
+          captureScope(value.scope);
+        }
+      }
+      if (value.operation === "capabilities") {
+        return;
+      }
       if (value.operation === "start") {
-        if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024)
+        if (!Number.isSafeInteger(value.bufferBytes) || value.bufferBytes < 4718656 || value.bufferBytes > 64 * 1024 * 1024) {
           throw new Error("Capture buffer must be between 4718656 bytes and 64 MiB.");
+        }
         return;
       }
       captureSession(value.session);
@@ -45527,12 +45412,16 @@ var init_capture_v2 = __esm({
         "file-stop",
         "file-abort",
         "file-release"
-      ].includes(value.operation))
+      ].includes(value.operation)) {
         return;
+      }
       if (value.operation === "read" || value.operation === "ack") {
-        if (!captureU64(value.chunk)) throw new Error("Capture chunk sequence starts at one.");
-        if (value.operation === "ack" && !captureU64(value.event))
+        if (!captureU64(value.chunk)) {
+          throw new Error("Capture chunk sequence starts at one.");
+        }
+        if (value.operation === "ack" && !captureU64(value.event)) {
           throw new Error("Capture event sequence starts at one.");
+        }
         return;
       }
       throw new Error("Unsupported capture operation.");
@@ -45540,9 +45429,15 @@ var init_capture_v2 = __esm({
     validateCaptureCapabilities = (value, scope = "snes.65816.instructions") => {
       captureScope(scope);
       let reserve = 71;
-      if (scope === "snes.cpu-bus") reserve = 64;
-      if (scope === "snes.cpu-bus-transfers") reserve = 80;
-      if (scope === "snes.cpu-bus-ppu") reserve = 88;
+      if (scope === "snes.cpu-bus") {
+        reserve = 64;
+      }
+      if (scope === "snes.cpu-bus-transfers") {
+        reserve = 80;
+      }
+      if (scope === "snes.cpu-bus-ppu") {
+        reserve = 88;
+      }
       const expected = {
         version: 2,
         scope,
@@ -45553,24 +45448,34 @@ var init_capture_v2 = __esm({
         overheadBytes: 4194304,
         resumeSession: false
       };
-      if (!value || typeof value !== "object" || Object.entries(expected).some(([key2, item]) => value[key2] !== item))
+      if (!value || typeof value !== "object" || Object.entries(expected).some(([key2, item]) => value[key2] !== item)) {
         throw new Error("Unsupported capture scope, reserve, or ownership contract.");
-      if (value.nativeFile === true)
+      }
+      if (value.nativeFile === true) {
         return { ...expected, nativeFile: true };
+      }
       return expected;
     };
     validateCapturePosition = (value, session, scope) => {
-      if (!value || typeof value !== "object") throw new Error("Invalid capture position.");
+      if (!value || typeof value !== "object") {
+        throw new Error("Invalid capture position.");
+      }
       const p = value;
       captureSession(p.session);
-      if (session !== void 0 && p.session !== session) throw new Error("Capture session changed.");
-      if (p.scope !== void 0) captureScope(p.scope);
-      if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope))
+      if (session !== void 0 && p.session !== session) {
+        throw new Error("Capture session changed.");
+      }
+      if (p.scope !== void 0) {
+        captureScope(p.scope);
+      }
+      if (scope !== void 0 && (p.scope ?? "snes.65816.instructions") !== captureScope(scope)) {
         throw new Error("Capture scope changed or was not confirmed by the producer.");
+      }
       if (!["armed", "recording", "throttled", "stopping", "draining", "complete", "incomplete"].includes(
         p.state
-      ))
+      )) {
         throw new Error("Invalid capture state.");
+      }
       const bounds = [
         p.releasedThrough,
         p.durableThrough,
@@ -45578,54 +45483,71 @@ var init_capture_v2 = __esm({
         p.deliveredThrough,
         p.producedThrough
       ].map(captureU64);
-      if (bounds.some((v, i) => i > 0 && v < bounds[i - 1]))
+      if (bounds.some((v, i) => i > 0 && v < bounds[i - 1])) {
         throw new Error("Capture ownership boundaries are inconsistent.");
-      if (captureU64(p.chunkThrough) > captureU64(p.producedChunks))
+      }
+      if (captureU64(p.chunkThrough) > captureU64(p.producedChunks)) {
         throw new Error("Capture chunk boundary is inconsistent.");
+      }
       captureU64(p.throttleCount);
-      if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator))
+      if (!captureU64(p.clockNumerator) || !captureU64(p.clockDenominator)) {
         throw new Error("Invalid capture clock domain.");
-      if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256)
+      }
+      if (p.droppedInScope !== "0" || typeof p.error !== "string" || p.error.length > 256) {
         throw new Error("Capture integrity failed.");
+      }
       if (![p.bufferedBytes, p.allocatedBytes].every(
         (v) => Number.isSafeInteger(v) && v >= 0 && v <= 64 * 1024 * 1024
-      ) || p.bufferedBytes > p.allocatedBytes)
+      ) || p.bufferedBytes > p.allocatedBytes) {
         throw new Error("Capture allocation exceeds its bounds.");
-      if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks))
+      }
+      if (p.state === "complete" && (p.error || p.bufferedBytes || new Set(bounds.map(String)).size !== 1 || p.chunkThrough !== p.producedChunks)) {
         throw new Error("Capture terminal totals do not reconcile.");
+      }
       return p;
     };
     crcTable = Uint32Array.from({ length: 256 }, (_, byte2) => {
       let crc = byte2;
-      for (let bit2 = 0; bit2 < 8; bit2++) crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+      for (let bit2 = 0; bit2 < 8; bit2++) {
+        crc = crc >>> 1 ^ (crc & 1 ? 2197175160 : 0);
+      }
       return crc >>> 0;
     });
     crcSlices = [crcTable];
-    for (let slice = 1; slice < 8; slice++)
+    for (let slice = 1; slice < 8; slice++) {
       crcSlices.push(
         Uint32Array.from(crcSlices[slice - 1], (crc) => crc >>> 8 ^ crcTable[crc & 255])
       );
+    }
     captureCrc32c = (bytes, zeroChecksum = false) => {
       let crc = 4294967295;
       let i = 0;
       for (; i + 8 <= bytes.length; i += 8) {
         let low = bytes[i] | bytes[i + 1] << 8 | bytes[i + 2] << 16 | bytes[i + 3] << 24;
-        if (zeroChecksum && i === 56) low = 0;
+        if (zeroChecksum && i === 56) {
+          low = 0;
+        }
         const a = crc ^ low;
         crc = crcSlices[7][a & 255] ^ crcSlices[6][a >>> 8 & 255] ^ crcSlices[5][a >>> 16 & 255] ^ crcSlices[4][a >>> 24] ^ crcSlices[3][bytes[i + 4]] ^ crcSlices[2][bytes[i + 5]] ^ crcSlices[1][bytes[i + 6]] ^ crcSlices[0][bytes[i + 7]];
       }
-      for (; i < bytes.length; i++)
+      for (; i < bytes.length; i++) {
         crc = crc >>> 8 ^ crcTable[(crc ^ (zeroChecksum && i >= 56 && i < 60 ? 0 : bytes[i])) & 255];
+      }
       return (crc ^ 4294967295) >>> 0;
     };
     captureChunkRecords = (chunk) => {
-      if (chunk.scope === "snes.65816.instructions") return chunk.instructions;
-      if (chunk.scope === "snes.cpu-bus") return chunk.accesses;
+      if (chunk.scope === "snes.65816.instructions") {
+        return chunk.instructions;
+      }
+      if (chunk.scope === "snes.cpu-bus") {
+        return chunk.accesses;
+      }
       return chunk.events;
     };
     decodeBusAccesses = (b, first, count, transfers = false, ppu = false) => {
-      if (!transfers && b.length !== 64 + count * 64)
+      if (!transfers && b.length !== 64 + count * 64) {
         throw new Error("Invalid bus record payload length.");
+      }
       const accesses = [];
       const actors = ["cpu", "dma", "hdma"];
       const phases = ["cpu", "dma", "hdma-table", "hdma-indirect", "hdma-transfer"];
@@ -45633,10 +45555,14 @@ var init_capture_v2 = __esm({
       let lastCycle = 0n;
       let offset = 64;
       for (let i = 0; i < count; i++) {
-        if (offset + 64 > b.length) throw new Error("Truncated bus/transfer record.");
+        if (offset + 64 > b.length) {
+          throw new Error("Truncated bus/transfer record.");
+        }
         if (transfers && b.readUInt16LE(offset) === 3) {
           const marker = decodeTransfer(b, offset, first + BigInt(i));
-          if (BigInt(marker.cycle) < lastCycle) throw new Error("Capture clock moved backwards.");
+          if (BigInt(marker.cycle) < lastCycle) {
+            throw new Error("Capture clock moved backwards.");
+          }
           lastCycle = BigInt(marker.cycle);
           accesses.push(marker);
           offset += 80;
@@ -45644,8 +45570,9 @@ var init_capture_v2 = __esm({
         }
         const extended = ppu && b.readUInt16LE(offset + 2) === 2;
         const length = extended ? 88 : 64;
-        if (b.readUInt16LE(offset) !== 2 || b.readUInt16LE(offset + 2) !== (extended ? 2 : 1) || b.readUInt32LE(offset + 4) !== length || offset + length > b.length || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt16LE(offset + 62) !== 0)
+        if (b.readUInt16LE(offset) !== 2 || b.readUInt16LE(offset + 2) !== (extended ? 2 : 1) || b.readUInt32LE(offset + 4) !== length || offset + length > b.length || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt16LE(offset + 62) !== 0) {
           throw new Error("Unsupported required bus capture record.");
+        }
         const event = first + BigInt(i);
         const cycle = b.readBigUInt64LE(offset + 24);
         const ordinal = b.readBigUInt64LE(offset + 32);
@@ -45654,17 +45581,23 @@ var init_capture_v2 = __esm({
         const direction = b[offset + 53], actor = b[offset + 54], channel = b[offset + 55];
         const phase = b[offset + 56], context = b[offset + 57];
         const hcounter = b.readUInt16LE(offset + 58), vcounter = b.readUInt16LE(offset + 60);
-        if (b.readBigUInt64LE(offset + 8) !== event || address5 > 0xffffffn || pc > 16777215)
+        if (b.readBigUInt64LE(offset + 8) !== event || address5 > 0xffffffn || pc > 16777215) {
           throw new Error("Bus identity disagrees with capture scope.");
+        }
         const expectedActor = phase === 0 ? 0 : 2;
         const phaseActor = phase === 1 ? 1 : expectedActor;
-        if (direction > 1 || phase >= phases.length || actor !== phaseActor || (actor === 0 ? channel !== 255 : channel > 7) || (phase === 2 || phase === 3) && direction !== 0 || context >= contexts.length || ordinal !== 0n !== (context === 1) || hcounter >= 1368 || vcounter >= 313)
+        if (direction > 1 || phase >= phases.length || actor !== phaseActor || (actor === 0 ? channel !== 255 : channel > 7) || (phase === 2 || phase === 3) && direction !== 0 || context >= contexts.length || ordinal !== 0n !== (context === 1) || hcounter >= 1368 || vcounter >= 313) {
           throw new Error("Invalid bus attribution or timing fields.");
-        if (cycle < lastCycle) throw new Error("Capture clock moved backwards.");
+        }
+        if (cycle < lastCycle) {
+          throw new Error("Capture clock moved backwards.");
+        }
         lastCycle = cycle;
         const port = Number(address5) & 65535;
         const dataPort = direction === 1 && !(Number(address5) & 4194304) && [8452, 8472, 8473, 8482].includes(port);
-        if (ppu && extended !== dataPort) throw new Error("Missing or misplaced PPU effect.");
+        if (ppu && extended !== dataPort) {
+          throw new Error("Missing or misplaced PPU effect.");
+        }
         accesses.push({
           ...extended ? { ppu: decodePPUEffect(b, offset, port) } : {},
           sequence: String(event),
@@ -45683,19 +45616,22 @@ var init_capture_v2 = __esm({
         });
         offset += length;
       }
-      if (offset !== b.length)
+      if (offset !== b.length) {
         throw new Error("Capture record count does not consume the payload exactly.");
+      }
       return accesses;
     };
     decodeTransfer = (b, offset, event) => {
-      if (offset + 80 > b.length || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 4) !== 80 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt32LE(offset + 76) !== 0)
+      if (offset + 80 > b.length || b.readUInt16LE(offset + 2) !== 1 || b.readUInt32LE(offset + 4) !== 80 || b.readUInt32LE(offset + 16) !== 0 || b.readUInt32LE(offset + 20) !== 0 || b.readUInt32LE(offset + 76) !== 0) {
         throw new Error("Unsupported transfer capture record.");
+      }
       const sequence = b.readBigUInt64LE(offset + 8), ordinal = b.readBigUInt64LE(offset + 32), transferId = b.readBigUInt64LE(offset + 40), pc = b.readUInt32LE(offset + 48);
       const boundary = b[offset + 52], actor = b[offset + 53], channel = b[offset + 54], context = b[offset + 55];
       const hcounter = b.readUInt16LE(offset + 56), vcounter = b.readUInt16LE(offset + 58), transferred = b.readUInt32LE(offset + 72);
       const owned = ordinal !== 0n;
-      if (sequence !== event || pc > 16777215 || boundary > 2 || actor !== 1 && actor !== 2 || channel > 7 || context > 4 || owned !== (context === 1) || hcounter >= 1368 || vcounter >= 313 || b[offset + 71] > 15 || boundary === 0 && (transferId !== event || transferred !== 0) || boundary !== 0 && (transferId >= event || transferred < 1 || transferred > 65536) || actor === 2 && (boundary === 2 || transferred > 4))
+      if (sequence !== event || pc > 16777215 || boundary > 2 || actor !== 1 && actor !== 2 || channel > 7 || context > 4 || owned !== (context === 1) || hcounter >= 1368 || vcounter >= 313 || b[offset + 71] > 15 || boundary === 0 && (transferId !== event || transferred !== 0) || boundary !== 0 && (transferId >= event || transferred < 1 || transferred > 65536) || actor === 2 && (boundary === 2 || transferred > 4)) {
         throw new Error("Invalid transfer boundary identity, attribution or counters.");
+      }
       return {
         kind: "transfer",
         sequence: String(sequence),
@@ -45727,25 +45663,38 @@ var init_capture_v2 = __esm({
       const target = b[offset + 64], outcome = b[offset + 65], count = b[offset + 66], flags = b[offset + 67];
       const hcounter = b.readUInt16LE(offset + 68), vcounter = b.readUInt16LE(offset + 70);
       let expectedTarget = 1;
-      if (port === 8482) expectedTarget = 2;
-      if (port === 8452) expectedTarget = 3;
-      if (target !== expectedTarget || outcome > 2 || count > 2 || flags > 15 || (flags & 3) === 3 || target !== 1 && flags & 8 || hcounter >= 1368 || vcounter >= 313 || b.readUInt32LE(offset + 82) !== 0 || b.readUInt16LE(offset + 86) !== 0)
+      if (port === 8482) {
+        expectedTarget = 2;
+      }
+      if (port === 8452) {
+        expectedTarget = 3;
+      }
+      if (target !== expectedTarget || outcome > 2 || count > 2 || flags > 15 || (flags & 3) === 3 || target !== 1 && flags & 8 || hcounter >= 1368 || vcounter >= 313 || b.readUInt32LE(offset + 82) !== 0 || b.readUInt16LE(offset + 86) !== 0) {
         throw new Error("Invalid PPU effect identity, flags or raster.");
-      if (outcome === 0 && (count === 0 || target === 1 && count !== 1 || target === 2 && count !== 2) || outcome !== 0 && count !== 0 || outcome === 1 && (target !== 1 || !(flags & 2)) || outcome === 2 && (target === 1 || flags & 2))
+      }
+      if (outcome === 0 && (count === 0 || target === 1 && count !== 1 || target === 2 && count !== 2) || outcome !== 0 && count !== 0 || outcome === 1 && (target !== 1 || !(flags & 2)) || outcome === 2 && (target === 1 || flags & 2)) {
         throw new Error("Invalid PPU effect outcome or byte count.");
+      }
       const bytes = [];
       const vramBytes = flags & 8 ? 131072 : 65536;
       for (let i = 0; i < 2; i++) {
         const address5 = b.readUInt32LE(offset + 72 + i * 4), value = b[offset + 80 + i];
         if (i >= count) {
-          if (address5 || value) throw new Error("Nonzero unused PPU effect slot.");
+          if (address5 || value) {
+            throw new Error("Nonzero unused PPU effect slot.");
+          }
           continue;
         }
         let bound = vramBytes;
-        if (target === 2) bound = 512;
-        if (target === 3) bound = 544;
-        if (address5 >= bound || target === 1 && ((address5 & 1) !== (port & 1) || value !== b[offset + 52]) || target === 2 && (i === 0 ? (address5 & 1) !== 0 : address5 !== bytes[0].address + 1 || value !== (b[offset + 52] & 127)) || target === 3 && i === count - 1 && value !== b[offset + 52])
+        if (target === 2) {
+          bound = 512;
+        }
+        if (target === 3) {
+          bound = 544;
+        }
+        if (address5 >= bound || target === 1 && ((address5 & 1) !== (port & 1) || value !== b[offset + 52]) || target === 2 && (i === 0 ? (address5 & 1) !== 0 : address5 !== bytes[0].address + 1 || value !== (b[offset + 52] & 127)) || target === 3 && i === count - 1 && value !== b[offset + 52]) {
           throw new Error("Invalid PPU physical byte address or value.");
+        }
         bytes.push({ address: address5, value });
       }
       return {
@@ -45763,13 +45712,13 @@ var init_capture_v2 = __esm({
   }
 });
 
-// ../debug-adapter/src/dap.ts
-var import_node_async_hooks, import_node_path14, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
+// packages/debug-adapter/src/dap.ts
+var import_node_async_hooks, import_node_path12, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
-  "../debug-adapter/src/dap.ts"() {
+  "packages/debug-adapter/src/dap.ts"() {
     "use strict";
     import_node_async_hooks = require("node:async_hooks");
-    import_node_path14 = __toESM(require("node:path"), 1);
+    import_node_path12 = __toESM(require("node:path"), 1);
     init_debug_map();
     init_debug_expression();
     init_capture_v2();
@@ -45917,7 +45866,7 @@ var init_dap = __esm({
       constructor(options) {
         this.#backend = options.backend;
         this.#map = options.debugMap;
-        this.#sourceRoot = import_node_path14.default.resolve(options.sourceRoot ?? process.cwd());
+        this.#sourceRoot = import_node_path12.default.resolve(options.sourceRoot ?? process.cwd());
         this.#sourceBreakpointAddresses = options.sourceBreakpointAddresses;
         this.#sourceOutputOffset = options.sourceOutputOffset;
         this.#instructionAnnotation = options.instructionAnnotation;
@@ -46238,13 +46187,13 @@ var init_dap = __esm({
             if (range && this.#map) {
               const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
               if (source) {
-                const sourcePath = import_node_path14.default.isAbsolute(source.path) ? source.path : import_node_path14.default.resolve(this.#sourceRoot, source.path);
+                const sourcePath = import_node_path12.default.isAbsolute(source.path) ? source.path : import_node_path12.default.resolve(this.#sourceRoot, source.path);
                 return {
                   id: frame.id,
                   name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
                   line: range.line,
                   column: 1,
-                  source: { name: import_node_path14.default.basename(sourcePath), path: sourcePath },
+                  source: { name: import_node_path12.default.basename(sourcePath), path: sourcePath },
                   instructionPointerReference: formatDebugAddress(frame.pc)
                 };
               }
@@ -46685,7 +46634,7 @@ var init_dap = __esm({
         if (!this.#map) {
           return [];
         }
-        const normalized = sourcePath.split(import_node_path14.default.sep).join("/");
+        const normalized = sourcePath.split(import_node_path12.default.sep).join("/");
         const sourceIds = new Set(
           this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
         );
@@ -46935,7 +46884,9 @@ var init_dap = __esm({
           this.#executionEnded = true;
           this.#executionState = "unknown";
           this.#maintenanceResumeThreadId = void 0;
-          this.#cancelMaintenancePause(new Error("Debugger terminated while updating breakpoints."));
+          if (this.#maintenancePause) {
+            this.#cancelMaintenancePause(new Error("Debugger terminated while updating breakpoints."));
+          }
         }
         const translated = backendEvent(event);
         const context = this.#eventContext.getStore();
@@ -46987,10 +46938,10 @@ var init_dap = __esm({
   }
 });
 
-// ../debug-adapter/src/mock-script.ts
+// packages/debug-adapter/src/mock-script.ts
 var addressFor, instructionFor, createDebugMapReplayScript;
 var init_mock_script = __esm({
-  "../debug-adapter/src/mock-script.ts"() {
+  "packages/debug-adapter/src/mock-script.ts"() {
     "use strict";
     init_debug_map();
     addressFor = (range) => ({
@@ -47009,8 +46960,12 @@ var init_mock_script = __esm({
     };
     createDebugMapReplayScript = (map, output) => {
       const issues = validateDebugMap(map, output);
-      if (issues.length > 0) throw new Error(issues.join(" "));
-      if (map.ranges.length === 0) throw new Error("Debug map contains no executable source ranges.");
+      if (issues.length > 0) {
+        throw new Error(issues.join(" "));
+      }
+      if (map.ranges.length === 0) {
+        throw new Error("Debug map contains no executable source ranges.");
+      }
       const architectures = [...new Set(map.ranges.map((range) => range.architecture))].sort();
       const threads = architectures.map((architecture, index) => ({
         id: index + 1,
@@ -47068,48 +47023,61 @@ var init_mock_script = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-protocol.ts
+// packages/debug-adapter/src/sidecar-protocol.ts
 function assertDebugSidecarSessionToken(value) {
-  if (typeof value !== "string" || !sessionPattern.test(value))
+  if (typeof value !== "string" || !sessionPattern.test(value)) {
     throw new Error("Sidecar session token must be 32-128 base64url characters.");
+  }
 }
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord2(value)) throw new Error("Sidecar message must be an object.");
-  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL)
+  if (!isRecord2(value)) {
+    throw new Error("Sidecar message must be an object.");
+  }
+  if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
     throw new Error(`Unsupported sidecar protocol '${String(value.protocol)}'.`);
-  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION)
+  }
+  if (value.version !== DEBUG_SIDECAR_PROTOCOL_VERSION) {
     throw new Error(`Unsupported sidecar protocol version '${String(value.version)}'.`);
+  }
   assertDebugSidecarSessionToken(value.session);
-  if (!positiveInteger(value.sequence))
+  if (!positiveInteger(value.sequence)) {
     throw new Error("Sidecar message sequence must be a positive safe integer.");
+  }
   if (value.type === "request") {
-    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command))
+    if (!DEBUG_SIDECAR_COMMANDS.includes(value.command)) {
       throw new Error(`Unsupported sidecar command '${String(value.command)}'.`);
+    }
     assertRequestBounds(value, limits);
     return;
   }
   if (value.type === "response") {
-    if (!positiveInteger(value.requestSequence))
+    if (!positiveInteger(value.requestSequence)) {
       throw new Error("Sidecar response requestSequence must be a positive safe integer.");
-    if (typeof value.success !== "boolean")
+    }
+    if (typeof value.success !== "boolean") {
       throw new Error("Sidecar response success must be boolean.");
-    if (!value.success && typeof value.error !== "string")
+    }
+    if (!value.success && typeof value.error !== "string") {
       throw new Error("Failed sidecar response must include an error string.");
+    }
     return;
   }
   if (value.type === "event") {
-    if (!DEBUG_SIDECAR_EVENTS.includes(value.event))
+    if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
-    if (!isRecord2(value.body)) throw new Error("Sidecar event body must be an object.");
+    }
+    if (!isRecord2(value.body)) {
+      throw new Error("Sidecar event body must be an object.");
+    }
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
-var import_node_crypto23, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord2, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
+var import_node_crypto22, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord2, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
-  "../debug-adapter/src/sidecar-protocol.ts"() {
+  "packages/debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
-    import_node_crypto23 = require("node:crypto");
+    import_node_crypto22 = require("node:crypto");
     DEBUG_SIDECAR_PROTOCOL = "uttori-asm-debug-sidecar";
     DEBUG_SIDECAR_PROTOCOL_VERSION = 1;
     DEBUG_SIDECAR_COMMANDS = Object.freeze([
@@ -47153,46 +47121,56 @@ var init_sidecar_protocol = __esm({
     positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
     nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
     sessionPattern = /^[\w-]{32,128}$/;
-    createDebugSidecarSessionToken = () => (0, import_node_crypto23.randomBytes)(32).toString("base64url");
+    createDebugSidecarSessionToken = () => (0, import_node_crypto22.randomBytes)(32).toString("base64url");
     assertRequestBounds = (message, limits) => {
       const args = message.arguments ?? {};
-      if (!isRecord2(args)) throw new Error("Sidecar request arguments must be an object.");
+      if (!isRecord2(args)) {
+        throw new Error("Sidecar request arguments must be an object.");
+      }
       if (message.command === "readMemory") {
         const count = args.count;
-        if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes)
+        if (!nonNegativeInteger(count) || count > limits.maxMemoryReadBytes) {
           throw new Error(`Memory read count must be between 0 and ${limits.maxMemoryReadBytes}.`);
+        }
       }
       if (message.command === "disassemble") {
         const count = args.count;
-        if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions)
+        if (!nonNegativeInteger(count) || count > limits.maxDisassemblyInstructions) {
           throw new Error(
             `Disassembly count must be between 0 and ${limits.maxDisassemblyInstructions}.`
           );
+        }
       }
       if (message.command === "setBreakpoints") {
         const breakpoints = args.breakpoints;
-        if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints)
+        if (!Array.isArray(breakpoints) || breakpoints.length > limits.maxBreakpoints) {
           throw new Error(`Breakpoint count must be between 0 and ${limits.maxBreakpoints}.`);
+        }
       }
       if (message.command === "readTrace") {
         const maxEvents = args.maxEvents;
-        if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents)
+        if (!positiveInteger(maxEvents) || maxEvents > limits.maxTraceBatchEvents) {
           throw new Error(`Trace batch size must be between 1 and ${limits.maxTraceBatchEvents}.`);
+        }
       }
     };
     validateLimits = (limits) => {
       for (const [name, value] of Object.entries(limits)) {
-        if (!positiveInteger(value)) throw new Error(`${name} must be a positive safe integer.`);
+        if (!positiveInteger(value)) {
+          throw new Error(`${name} must be a positive safe integer.`);
+        }
       }
-      if (limits.maxBufferedBytes < limits.maxFrameBytes + 4)
+      if (limits.maxBufferedBytes < limits.maxFrameBytes + 4) {
         throw new Error("maxBufferedBytes must hold at least one complete framed message.");
+      }
     };
     encodeDebugSidecarMessage = (message, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) => {
       validateLimits(limits);
       assertDebugSidecarMessage(message, limits);
       const body = Buffer.from(JSON.stringify(message), "utf8");
-      if (body.length > limits.maxFrameBytes)
+      if (body.length > limits.maxFrameBytes) {
         throw new Error(`Sidecar frame exceeds ${limits.maxFrameBytes} bytes.`);
+      }
       const frame = Buffer.allocUnsafe(body.length + 4);
       frame.writeUInt32BE(body.length, 0);
       body.copy(frame, 4);
@@ -47216,16 +47194,22 @@ var init_sidecar_protocol = __esm({
        * @returns {DebugSidecarMessage[]} Complete messages decoded from the stream.
        */
       push(chunk) {
-        if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes)
+        if (this.#buffer.length + chunk.length > this.#limits.maxBufferedBytes) {
           throw new Error(`Sidecar receive buffer exceeds ${this.#limits.maxBufferedBytes} bytes.`);
+        }
         this.#buffer = Buffer.concat([this.#buffer, chunk]);
         const messages = [];
         while (this.#buffer.length >= 4) {
           const length = this.#buffer.readUInt32BE(0);
-          if (length === 0) throw new Error("Sidecar frame body cannot be empty.");
-          if (length > this.#limits.maxFrameBytes)
+          if (length === 0) {
+            throw new Error("Sidecar frame body cannot be empty.");
+          }
+          if (length > this.#limits.maxFrameBytes) {
             throw new Error(`Sidecar frame declares ${length} bytes, above the configured limit.`);
-          if (this.#buffer.length < length + 4) break;
+          }
+          if (this.#buffer.length < length + 4) {
+            break;
+          }
           const body = this.#buffer.subarray(4, length + 4);
           this.#buffer = this.#buffer.subarray(length + 4);
           let decoded;
@@ -47235,10 +47219,11 @@ var init_sidecar_protocol = __esm({
             throw new Error("Sidecar frame contains invalid JSON.");
           }
           assertDebugSidecarMessage(decoded, this.#limits);
-          if (decoded.sequence <= this.#lastSequence)
+          if (decoded.sequence <= this.#lastSequence) {
             throw new Error(
               `Sidecar sequence ${decoded.sequence} is not greater than ${this.#lastSequence}.`
             );
+          }
           this.#lastSequence = decoded.sequence;
           messages.push(decoded);
         }
@@ -47272,8 +47257,9 @@ var init_sidecar_protocol = __esm({
        */
       enqueue(message) {
         const frame = encodeDebugSidecarMessage(message, this.#limits);
-        if (this.#frames.length >= this.#limits.maxQueuedMessages || this.#bytes + frame.length > this.#limits.maxQueuedBytes)
+        if (this.#frames.length >= this.#limits.maxQueuedMessages || this.#bytes + frame.length > this.#limits.maxQueuedBytes) {
           throw new Error("Sidecar outgoing queue exceeded its backpressure limit.");
+        }
         this.#frames.push(frame);
         this.#bytes += frame.length;
       }
@@ -47283,24 +47269,27 @@ var init_sidecar_protocol = __esm({
        */
       dequeue() {
         const frame = this.#frames.shift();
-        if (frame) this.#bytes -= frame.length;
+        if (frame) {
+          this.#bytes -= frame.length;
+        }
         return frame;
       }
     };
   }
 });
 
-// ../debug-adapter/src/node-stdio-transport.ts
+// packages/debug-adapter/src/node-stdio-transport.ts
 var import_node_child_process, DEBUG_SIDECAR_SESSION_ENV, positiveInteger2, NodeStdioSidecarTransport;
 var init_node_stdio_transport = __esm({
-  "../debug-adapter/src/node-stdio-transport.ts"() {
+  "packages/debug-adapter/src/node-stdio-transport.ts"() {
     "use strict";
     import_node_child_process = require("node:child_process");
     init_sidecar_protocol();
     DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
     positiveInteger2 = (value, name) => {
-      if (!Number.isSafeInteger(value) || value <= 0)
+      if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
+      }
     };
     NodeStdioSidecarTransport = class {
       #child;
@@ -47322,7 +47311,9 @@ var init_node_stdio_transport = __esm({
        * @param {NodeStdioSidecarTransportOptions} options Explicit executable and lifecycle bounds.
        */
       constructor(options) {
-        if (options.command.length === 0) throw new Error("Sidecar command cannot be empty.");
+        if (options.command.length === 0) {
+          throw new Error("Sidecar command cannot be empty.");
+        }
         assertDebugSidecarSessionToken(options.session);
         this.#session = options.session;
         this.#shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1e3;
@@ -47345,7 +47336,9 @@ var init_node_stdio_transport = __esm({
           windowsHide: true
         });
         this.#child.stdout.on("data", (data) => {
-          for (const listener of this.#dataListeners) listener(data);
+          for (const listener of this.#dataListeners) {
+            listener(data);
+          }
         });
         this.#child.stderr.on("data", (data) => this.#captureStderr(data));
         this.#child.on(
@@ -47368,13 +47361,17 @@ var init_node_stdio_transport = __esm({
        * @returns {Promise<void>} Completion of the native pipe write.
        */
       write(data) {
-        if (this.#notified || this.#exited)
+        if (this.#notified || this.#exited) {
           return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));
+        }
         return new Promise((resolve, reject) => {
           try {
             this.#child.stdin.write(Buffer.from(data), (error) => {
-              if (error) reject(error);
-              else resolve();
+              if (error) {
+                reject(error);
+              } else {
+                resolve();
+              }
             });
           } catch (error) {
             reject(error instanceof Error ? error : new Error(String(error)));
@@ -47424,23 +47421,35 @@ var init_node_stdio_transport = __esm({
         this.#notifyClosed(error);
       }
       #notifyClosed(error) {
-        if (this.#notified) return;
+        if (this.#notified) {
+          return;
+        }
         this.#notified = true;
         this.#terminalError = error;
-        for (const listener of this.#closeListeners) listener(error);
+        for (const listener of this.#closeListeners) {
+          listener(error);
+        }
         this.#closeListeners.clear();
         this.#dataListeners.clear();
       }
       async #closeProcess() {
-        if (!this.#exited && !this.#child.stdin.destroyed) this.#child.stdin.end();
-        if (await this.#waitForExit(this.#shutdownTimeoutMs)) return;
+        if (!this.#exited && !this.#child.stdin.destroyed) {
+          this.#child.stdin.end();
+        }
+        if (await this.#waitForExit(this.#shutdownTimeoutMs)) {
+          return;
+        }
         this.#child.kill("SIGTERM");
-        if (await this.#waitForExit(this.#shutdownTimeoutMs)) return;
+        if (await this.#waitForExit(this.#shutdownTimeoutMs)) {
+          return;
+        }
         this.#child.kill("SIGKILL");
         await this.#exit;
       }
       async #waitForExit(timeoutMs) {
-        if (this.#exited) return true;
+        if (this.#exited) {
+          return true;
+        }
         return new Promise((resolve) => {
           const timer = setTimeout(() => resolve(false), timeoutMs);
           timer.unref();
@@ -47454,18 +47463,21 @@ var init_node_stdio_transport = __esm({
   }
 });
 
-// ../debug-adapter/src/trace-buffer.ts
+// packages/debug-adapter/src/trace-buffer.ts
 var positiveInteger3, identity, DebugTraceBuffer;
 var init_trace_buffer = __esm({
-  "../debug-adapter/src/trace-buffer.ts"() {
+  "packages/debug-adapter/src/trace-buffer.ts"() {
     "use strict";
     positiveInteger3 = (value, context) => {
-      if (!Number.isSafeInteger(value) || value <= 0)
+      if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${context} must be a positive safe integer.`);
+      }
       return value;
     };
     identity = (value, context) => {
-      if (value.length === 0) throw new Error(`${context} must be a non-empty string.`);
+      if (value.length === 0) {
+        throw new Error(`${context} must be a non-empty string.`);
+      }
       return value;
     };
     DebugTraceBuffer = class {
@@ -47510,9 +47522,12 @@ var init_trace_buffer = __esm({
        * @param {number} address Architecture-local logical instruction address.
        */
       append(address5) {
-        if (!this.#active) return;
-        if (!Number.isSafeInteger(address5) || address5 < 0)
+        if (!this.#active) {
+          return;
+        }
+        if (!Number.isSafeInteger(address5) || address5 < 0) {
           throw new Error("Trace address must be a non-negative safe integer.");
+        }
         if (this.#length === this.capacity) {
           this.#head = (this.#head + 1) % this.capacity;
           this.#length--;
@@ -47533,7 +47548,9 @@ var init_trace_buffer = __esm({
         const sequenceStart = this.#nextSequence - this.#length;
         const addresses3 = Array.from({ length: count }, (_, index) => {
           const address5 = this.#addresses[(this.#head + index) % this.capacity];
-          if (address5 === void 0) throw new Error("Trace ring contains an uninitialized entry.");
+          if (address5 === void 0) {
+            throw new Error("Trace ring contains an uninitialized entry.");
+          }
           return address5;
         });
         this.#head = (this.#head + count) % this.capacity;
@@ -47551,10 +47568,10 @@ var init_trace_buffer = __esm({
   }
 });
 
-// ../debug-adapter/src/replay-backend.ts
+// packages/debug-adapter/src/replay-backend.ts
 var REPLAY_TRACE_BUFFER_EVENTS, REPLAY_TRACE_BATCH_EVENTS, REPLAY_STEP_KINDS, replayArchitectureCapabilities, addressKey, addressesEqual, assertCount, ReplayDebugBackend;
 var init_replay_backend = __esm({
-  "../debug-adapter/src/replay-backend.ts"() {
+  "packages/debug-adapter/src/replay-backend.ts"() {
     "use strict";
     init_contracts2();
     init_trace_buffer();
@@ -47564,10 +47581,15 @@ var init_replay_backend = __esm({
     replayArchitectureCapabilities = (script) => {
       const architectureNames = /* @__PURE__ */ new Set();
       for (const snapshot of script.snapshots) {
-        for (const thread2 of snapshot.threads) architectureNames.add(thread2.architecture);
-        for (const frame of snapshot.frames) architectureNames.add(frame.pc.architecture);
-        for (const instruction2 of snapshot.instructions ?? [])
+        for (const thread2 of snapshot.threads) {
+          architectureNames.add(thread2.architecture);
+        }
+        for (const frame of snapshot.frames) {
+          architectureNames.add(frame.pc.architecture);
+        }
+        for (const instruction2 of snapshot.instructions ?? []) {
           architectureNames.add(instruction2.address.architecture);
+        }
       }
       return [...architectureNames].sort().map((architecture) => {
         const addressSpaces = /* @__PURE__ */ new Set();
@@ -47575,12 +47597,16 @@ var init_replay_backend = __esm({
         let disassemble = false;
         for (const snapshot of script.snapshots) {
           for (const frame of snapshot.frames) {
-            if (frame.pc.architecture !== architecture) continue;
+            if (frame.pc.architecture !== architecture) {
+              continue;
+            }
             addressSpaces.add(frame.pc.addressSpace);
             registers2 ||= (snapshot.registers[frame.id]?.length ?? 0) > 0;
           }
           for (const instruction2 of snapshot.instructions ?? []) {
-            if (instruction2.address.architecture !== architecture) continue;
+            if (instruction2.address.architecture !== architecture) {
+              continue;
+            }
             addressSpaces.add(instruction2.address.addressSpace);
             disassemble = true;
           }
@@ -47613,8 +47639,9 @@ var init_replay_backend = __esm({
     addressKey = (address5) => `${address5.architecture}\0${address5.addressSpace}\0${address5.outputOffset === void 0 ? `logical:${address5.address}` : `output:${address5.outputOffset}`}`;
     addressesEqual = (left, right) => left.architecture === right.architecture && left.addressSpace === right.addressSpace && (left.address === right.address || left.outputOffset !== void 0 && left.outputOffset === right.outputOffset);
     assertCount = (count) => {
-      if (!Number.isSafeInteger(count) || count < 0)
+      if (!Number.isSafeInteger(count) || count < 0) {
         throw new Error("Count must be a non-negative integer.");
+      }
     };
     ReplayDebugBackend = class {
       protocolVersion = DEBUG_BACKEND_PROTOCOL_VERSION;
@@ -47631,8 +47658,9 @@ var init_replay_backend = __esm({
        * @param {ReplayScript} script Replay timeline.
        */
       constructor(script) {
-        if (script.snapshots.length === 0)
+        if (script.snapshots.length === 0) {
           throw new Error("Replay script requires at least one snapshot.");
+        }
         this.#script = script;
         const architectures = script.architectures ? script.architectures.map((capability) => ({
           ...capability,
@@ -47690,7 +47718,9 @@ var init_replay_backend = __esm({
         this.#requireConnected();
         this.#trace?.stop();
         this.#connected = false;
-        if (options.terminate ?? true) this.#emit({ type: "terminated", restart: false });
+        if (options.terminate ?? true) {
+          this.#emit({ type: "terminated", restart: false });
+        }
         return Promise.resolve();
       }
       /**
@@ -47780,10 +47810,11 @@ var init_replay_backend = __esm({
         this.#requireConnected();
         assertCount(count);
         const spaceReadable = this.capabilities.architectures.find(({ architecture }) => architecture === address5.architecture)?.memorySpaces.some((memorySpace) => memorySpace.addressSpace === address5.addressSpace);
-        if (!spaceReadable)
+        if (!spaceReadable) {
           throw new Error(
             `Memory address space '${address5.architecture}/${address5.addressSpace}' is not readable.`
           );
+        }
         const bytes = new Uint8Array(count);
         let readable = 0;
         for (let offset = 0; offset < count; offset++) {
@@ -47791,7 +47822,9 @@ var init_replay_backend = __esm({
           const region = this.#snapshot.memory.find(
             (candidate) => candidate.addressSpace === address5.addressSpace && candidate.start <= current && current < candidate.start + candidate.bytes.length
           );
-          if (!region) continue;
+          if (!region) {
+            continue;
+          }
           bytes[offset] = region.bytes[current - region.start] ?? 0;
           readable++;
         }
@@ -47844,18 +47877,23 @@ var init_replay_backend = __esm({
       /** @inheritdoc */
       startTrace(options) {
         this.#requireConnected();
-        if (options.detail === "full") throw new Error("Replay supports PC-only instruction traces.");
+        if (options.detail === "full") {
+          throw new Error("Replay supports PC-only instruction traces.");
+        }
         const architecture = this.capabilities.architectures.find(
           (candidate) => candidate.architecture === options.architecture
         );
-        if (!architecture?.trace?.addressSpaces.includes(options.addressSpace))
+        if (!architecture?.trace?.addressSpaces.includes(options.addressSpace)) {
           throw new Error(
             `Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`
           );
+        }
         const frame = this.#snapshot.frames.find(
           (candidate) => candidate.pc.architecture === options.architecture && candidate.pc.addressSpace === options.addressSpace
         );
-        if (!frame) throw new Error("Current replay snapshot has no matching trace frame.");
+        if (!frame) {
+          throw new Error("Current replay snapshot has no matching trace frame.");
+        }
         this.#trace = new DebugTraceBuffer({
           architecture: options.architecture,
           addressSpace: options.addressSpace,
@@ -47869,21 +47907,26 @@ var init_replay_backend = __esm({
       readTrace(maxEvents) {
         this.#requireConnected();
         const trace = this.#trace;
-        if (!trace) throw new Error("No replay instruction trace has been started.");
+        if (!trace) {
+          throw new Error("No replay instruction trace has been started.");
+        }
         const capabilities = this.capabilities.architectures.find(
           ({ architecture }) => architecture === trace.architecture
         )?.trace;
         assertCount(maxEvents);
-        if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents)
+        if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents) {
           throw new Error(
             `Trace batch size must be between 1 and ${capabilities?.maxBatchEvents ?? 0}.`
           );
+        }
         return Promise.resolve(trace.read(maxEvents));
       }
       /** @inheritdoc */
       stopTrace() {
         this.#requireConnected();
-        if (!this.#trace) throw new Error("No replay instruction trace has been started.");
+        if (!this.#trace) {
+          throw new Error("No replay instruction trace has been started.");
+        }
         this.#trace.stop();
         return Promise.resolve();
       }
@@ -47900,46 +47943,60 @@ var init_replay_backend = __esm({
         return this.#script.snapshots[this.#index];
       }
       #requireConnected() {
-        if (!this.#connected) throw new Error("Debug backend is not connected.");
+        if (!this.#connected) {
+          throw new Error("Debug backend is not connected.");
+        }
       }
       #recordTraceAddress(threadId) {
         const trace = this.#trace;
-        if (!trace?.active) return;
+        if (!trace?.active) {
+          return;
+        }
         const frame = this.#snapshot.frames.find(
           (candidate) => candidate.threadId === threadId && candidate.pc.architecture === trace.architecture && candidate.pc.addressSpace === trace.addressSpace
         );
-        if (frame) trace.append(frame.pc.address);
+        if (frame) {
+          trace.append(frame.pc.address);
+        }
       }
       #emit(event) {
-        for (const listener of this.#listeners) listener(event);
+        for (const listener of this.#listeners) {
+          listener(event);
+        }
       }
     };
   }
 });
 
-// ../debug-adapter/src/trace-detail-validation.ts
+// packages/debug-adapter/src/trace-detail-validation.ts
 var isArray4, validateDebugTraceDetails;
 var init_trace_detail_validation = __esm({
-  "../debug-adapter/src/trace-detail-validation.ts"() {
+  "packages/debug-adapter/src/trace-detail-validation.ts"() {
     "use strict";
     isArray4 = (value) => Array.isArray(value);
     validateDebugTraceDetails = (value, count) => {
-      if (!Array.isArray(value) || value.length !== count)
+      if (!Array.isArray(value) || value.length !== count) {
         throw new Error("Trace details must align with instruction addresses.");
+      }
       for (const detail of value) {
-        if (!detail || !isArray4(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255))
+        if (!detail || !isArray4(detail.bytes) || detail.bytes.length < 1 || detail.bytes.length > 16 || detail.bytes.some((byte2) => !Number.isInteger(byte2) || byte2 < 0 || byte2 > 255)) {
           throw new Error("Invalid trace instruction bytes.");
+        }
         if (!detail.state || typeof detail.state !== "object" || isArray4(detail.state) || Object.entries(detail.state).some(
           ([key2, entry]) => !key2 || !["number", "boolean", "string"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
-        ))
+        )) {
           throw new Error("Invalid trace instruction state.");
-        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0))
+        }
+        if (detail.droppedMemoryAccesses !== void 0 && (!Number.isSafeInteger(detail.droppedMemoryAccesses) || detail.droppedMemoryAccesses < 0)) {
           throw new Error("Invalid trace memory loss.");
-        if (detail.memoryAccesses !== void 0 && (!isArray4(detail.memoryAccesses) || detail.memoryAccesses.length > 256))
+        }
+        if (detail.memoryAccesses !== void 0 && (!isArray4(detail.memoryAccesses) || detail.memoryAccesses.length > 256)) {
           throw new Error("Invalid trace memory access bound.");
+        }
         for (const access of detail.memoryAccesses ?? []) {
-          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu")))
+          if (!access || typeof access.addressSpace !== "string" || !access.addressSpace || !Number.isSafeInteger(access.address) || access.address < 0 || !["read", "write", "fetch"].includes(access.access) || !Number.isInteger(access.width) || access.width < 1 || access.width > 8 || access.value !== void 0 && (!Number.isSafeInteger(access.value) || access.value < 0) || access.actor !== void 0 && !["cpu", "dma", "hdma"].includes(access.actor) || access.channel !== void 0 && (!Number.isInteger(access.channel) || access.channel < 0 || access.channel > 7 || !["dma", "hdma"].includes(access.actor ?? "cpu"))) {
             throw new Error("Invalid trace bus operation.");
+          }
         }
       }
       return value;
@@ -47947,10 +48004,10 @@ var init_trace_detail_validation = __esm({
   }
 });
 
-// ../debug-adapter/src/sidecar-backend.ts
+// packages/debug-adapter/src/sidecar-backend.ts
 var stopReasons, stepKinds, record3, array, string2, boolean, integer4, positiveInteger4, address3, addressesEqual2, architectureCapabilities, backendCapabilities, capabilityIdentity, thread, stackFrame, register4, breakpoint, byte, instruction, traceBatch, base64Bytes, uniqueIds, backendEvent2, SidecarDebugBackend;
 var init_sidecar_backend = __esm({
-  "../debug-adapter/src/sidecar-backend.ts"() {
+  "packages/debug-adapter/src/sidecar-backend.ts"() {
     "use strict";
     init_contracts2();
     init_trace_detail_validation();
@@ -47958,26 +48015,33 @@ var init_sidecar_backend = __esm({
     stopReasons = /* @__PURE__ */ new Set(["entry", "pause", "step", "breakpoint", "exception"]);
     stepKinds = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
     record3 = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value))
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
         throw new Error(`${context} must be an object.`);
+      }
       return value;
     };
     array = (value, context) => {
-      if (!Array.isArray(value)) throw new Error(`${context} must be an array.`);
+      if (!Array.isArray(value)) {
+        throw new Error(`${context} must be an array.`);
+      }
       return value;
     };
     string2 = (value, context) => {
-      if (typeof value !== "string" || value.length === 0)
+      if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
+      }
       return value;
     };
     boolean = (value, context) => {
-      if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
+      if (typeof value !== "boolean") {
+        throw new Error(`${context} must be boolean.`);
+      }
       return value;
     };
     integer4 = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum)
+      if (!Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+      }
       return value;
     };
     positiveInteger4 = (value, context) => integer4(value, context, 1);
@@ -47997,8 +48061,9 @@ var init_sidecar_backend = __esm({
       const addressSpaces = array(candidate.addressSpaces, `${context}.addressSpaces`).map(
         (entry, index) => string2(entry, `${context}.addressSpaces[${index}]`)
       );
-      if (new Set(addressSpaces).size !== addressSpaces.length)
+      if (new Set(addressSpaces).size !== addressSpaces.length) {
         throw new Error(`${context}.addressSpaces must be unique.`);
+      }
       const memorySpaces = array(candidate.memorySpaces, `${context}.memorySpaces`).map((entry, index) => {
         const memorySpace = record3(entry, `${context}.memorySpaces[${index}]`);
         return {
@@ -48012,31 +48077,40 @@ var init_sidecar_backend = __esm({
           )
         };
       }).sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
-      if (new Set(memorySpaces.map(({ addressSpace }) => addressSpace)).size !== memorySpaces.length)
+      if (new Set(memorySpaces.map(({ addressSpace }) => addressSpace)).size !== memorySpaces.length) {
         throw new Error(`${context}.memorySpaces must use unique address spaces.`);
-      if (memorySpaces.some(({ addressSpace }) => !addressSpaces.includes(addressSpace)))
+      }
+      if (memorySpaces.some(({ addressSpace }) => !addressSpaces.includes(addressSpace))) {
         throw new Error(`${context}.memorySpaces must be declared in addressSpaces.`);
+      }
       const memory = boolean(candidate.memory, `${context}.memory`);
       const hasMemorySpaces = memorySpaces.length > 0;
-      if (memory !== hasMemorySpaces)
+      if (memory !== hasMemorySpaces) {
         throw new Error(`${context}.memory must match whether memorySpaces is non-empty.`);
+      }
       const trace = (() => {
-        if (candidate.trace === null) return null;
+        if (candidate.trace === null) {
+          return null;
+        }
         const value2 = record3(candidate.trace, `${context}.trace`);
         const traceAddressSpaces = array(value2.addressSpaces, `${context}.trace.addressSpaces`).map((entry, index) => string2(entry, `${context}.trace.addressSpaces[${index}]`)).sort();
-        if (traceAddressSpaces.length === 0)
+        if (traceAddressSpaces.length === 0) {
           throw new Error(`${context}.trace.addressSpaces must not be empty.`);
-        if (new Set(traceAddressSpaces).size !== traceAddressSpaces.length)
+        }
+        if (new Set(traceAddressSpaces).size !== traceAddressSpaces.length) {
           throw new Error(`${context}.trace.addressSpaces must be unique.`);
-        if (traceAddressSpaces.some((addressSpace) => !addressSpaces.includes(addressSpace)))
+        }
+        if (traceAddressSpaces.some((addressSpace) => !addressSpaces.includes(addressSpace))) {
           throw new Error(`${context}.trace.addressSpaces must be declared in addressSpaces.`);
+        }
         const maxBufferedEvents = positiveInteger4(
           value2.maxBufferedEvents,
           `${context}.trace.maxBufferedEvents`
         );
         const maxBatchEvents = positiveInteger4(value2.maxBatchEvents, `${context}.trace.maxBatchEvents`);
-        if (maxBatchEvents > maxBufferedEvents)
+        if (maxBatchEvents > maxBufferedEvents) {
           throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);
+        }
         return {
           addressSpaces: traceAddressSpaces,
           maxBufferedEvents,
@@ -48045,15 +48119,19 @@ var init_sidecar_backend = __esm({
         };
       })();
       const stepKinds3 = (() => {
-        if (candidate.stepKinds === void 0) return void 0;
+        if (candidate.stepKinds === void 0) {
+          return void 0;
+        }
         const values = array(candidate.stepKinds, `${context}.stepKinds`).map(
           (entry, index) => string2(entry, `${context}.stepKinds[${index}]`)
         );
         const allowed = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry)))
+        if (values.some((entry) => !allowed.has(entry))) {
           throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        if (new Set(values).size !== values.length)
+        }
+        if (new Set(values).size !== values.length) {
           throw new Error(`${context}.stepKinds must be unique.`);
+        }
         return values;
       })();
       return {
@@ -48074,18 +48152,23 @@ var init_sidecar_backend = __esm({
     backendCapabilities = (value, context) => {
       const candidate = record3(value, context);
       const architectures = array(candidate.architectures, `${context}.architectures`).map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`)).sort((left, right) => left.architecture.localeCompare(right.architecture));
-      if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length)
+      if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length) {
         throw new Error(`${context}.architectures must use unique architecture identifiers.`);
+      }
       const stepKinds3 = (() => {
-        if (candidate.stepKinds === void 0) return void 0;
+        if (candidate.stepKinds === void 0) {
+          return void 0;
+        }
         const values = array(candidate.stepKinds, `${context}.stepKinds`).map(
           (entry, index) => string2(entry, `${context}.stepKinds[${index}]`)
         );
         const allowed = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
-        if (values.some((entry) => !allowed.has(entry)))
+        if (values.some((entry) => !allowed.has(entry))) {
           throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
-        if (new Set(values).size !== values.length)
+        }
+        if (new Set(values).size !== values.length) {
           throw new Error(`${context}.stepKinds must be unique.`);
+        }
         return values;
       })();
       return Object.freeze({
@@ -48158,7 +48241,9 @@ var init_sidecar_backend = __esm({
     };
     byte = (value, context) => {
       const result = integer4(value, context);
-      if (result > 255) throw new Error(`${context} must be an unsigned byte.`);
+      if (result > 255) {
+        throw new Error(`${context} must be an unsigned byte.`);
+      }
       return result;
     };
     instruction = (value, context) => {
@@ -48195,43 +48280,54 @@ var init_sidecar_backend = __esm({
       };
     };
     base64Bytes = (value, context) => {
-      if (typeof value !== "string") throw new Error(`${context} must be canonical base64.`);
+      if (typeof value !== "string") {
+        throw new Error(`${context} must be canonical base64.`);
+      }
       const bytes = Buffer.from(value, "base64");
-      if (bytes.toString("base64") !== value) throw new Error(`${context} must be canonical base64.`);
+      if (bytes.toString("base64") !== value) {
+        throw new Error(`${context} must be canonical base64.`);
+      }
       return new Uint8Array(bytes);
     };
     uniqueIds = (values, context) => {
-      if (new Set(values.map(({ id }) => id)).size !== values.length)
+      if (new Set(values.map(({ id }) => id)).size !== values.length) {
         throw new Error(`${context} must use unique ids.`);
+      }
       return values;
     };
     backendEvent2 = (message) => {
       const body = record3(message.body, `Sidecar '${message.event}' event body`);
       if (message.event === "stopped") {
         const reason = string2(body.reason, "Stopped event reason");
-        if (!stopReasons.has(reason)) throw new Error(`Unsupported stop reason '${reason}'.`);
+        if (!stopReasons.has(reason)) {
+          throw new Error(`Unsupported stop reason '${reason}'.`);
+        }
         return {
           type: "stopped",
           reason,
           threadId: positiveInteger4(body.threadId, "Stopped event threadId")
         };
       }
-      if (message.event === "continued")
+      if (message.event === "continued") {
         return {
           type: "continued",
           threadId: positiveInteger4(body.threadId, "Continued event threadId"),
           allThreads: boolean(body.allThreads, "Continued event allThreads")
         };
-      if (message.event === "terminated")
+      }
+      if (message.event === "terminated") {
         return { type: "terminated", restart: boolean(body.restart, "Terminated event restart") };
-      if (message.event === "breakpoint")
+      }
+      if (message.event === "breakpoint") {
         return { type: "breakpoint", breakpoint: breakpoint(body.breakpoint, "Breakpoint event") };
+      }
       return {
         type: "output",
         category: (() => {
           const category = string2(body.category, "Output event category");
-          if (!(/* @__PURE__ */ new Set(["console", "stdout", "stderr"])).has(category))
+          if (!(/* @__PURE__ */ new Set(["console", "stdout", "stderr"])).has(category)) {
             throw new Error(`Unsupported output category '${category}'.`);
+          }
           return category;
         })(),
         text: string2(body.text, "Output event text")
@@ -48264,17 +48360,20 @@ var init_sidecar_backend = __esm({
       }
       /** @inheritdoc */
       async connect(options = {}) {
-        if (this.#connected) throw new Error("Debug backend is already connected.");
+        if (this.#connected) {
+          throw new Error("Debug backend is already connected.");
+        }
         const client = await this.#ensureClient();
         const response = record3(
           await client.request("connect", { reset: options.reset ?? true }),
           "Sidecar connect response"
         );
-        if (response.capabilities !== void 0)
+        if (response.capabilities !== void 0) {
           this.#capabilities = backendCapabilities(
             response.capabilities,
             "Connected runtime capabilities"
           );
+        }
         this.#connected = true;
       }
       /** @inheritdoc */
@@ -48283,7 +48382,9 @@ var init_sidecar_backend = __esm({
         const terminate = options.terminate ?? true;
         await client.request("disconnect", { terminate });
         this.#connected = false;
-        if (!terminate) return;
+        if (!terminate) {
+          return;
+        }
         this.#expectedClose.add(client);
         let shutdownError;
         try {
@@ -48293,8 +48394,9 @@ var init_sidecar_backend = __esm({
         }
         await client.close();
         this.#releaseClient(client);
-        if (shutdownError)
+        if (shutdownError) {
           throw shutdownError instanceof Error ? shutdownError : new Error("Sidecar shutdown failed with a non-Error rejection.");
+        }
       }
       /** @inheritdoc */
       async pause(threadId) {
@@ -48310,7 +48412,9 @@ var init_sidecar_backend = __esm({
       }
       /** @inheritdoc */
       async step(threadId, kind) {
-        if (!stepKinds.has(kind)) throw new Error(`Unsupported step kind '${String(kind)}'.`);
+        if (!stepKinds.has(kind)) {
+          throw new Error(`Unsupported step kind '${String(kind)}'.`);
+        }
         await this.#requireConnected().request("step", {
           threadId: positiveInteger4(threadId, "Thread id"),
           kind
@@ -48335,8 +48439,9 @@ var init_sidecar_backend = __esm({
           result.map((entry, index) => stackFrame(entry, `Stack frames response[${index}]`)),
           "Stack frames response"
         );
-        if (frames.some((frame) => frame.threadId !== expectedThreadId))
+        if (frames.some((frame) => frame.threadId !== expectedThreadId)) {
           throw new Error("Stack frames response contains a frame for another thread.");
+        }
         return frames;
       }
       /** @inheritdoc */
@@ -48356,10 +48461,11 @@ var init_sidecar_backend = __esm({
         const readable = this.capabilities.architectures.find(({ architecture }) => architecture === checkedAddress.architecture)?.memorySpaces.some(
           (memorySpace) => memorySpace.addressSpace === checkedAddress.addressSpace
         );
-        if (!readable)
+        if (!readable) {
           throw new Error(
             `Memory address space '${checkedAddress.architecture}/${checkedAddress.addressSpace}' is not readable.`
           );
+        }
         const result = record3(
           await this.#requireConnected().request("readMemory", {
             address: checkedAddress,
@@ -48368,16 +48474,19 @@ var init_sidecar_backend = __esm({
           "Memory response"
         );
         const returnedAddress = address3(result.address, "Memory response.address");
-        if (!addressesEqual2(returnedAddress, checkedAddress))
+        if (!addressesEqual2(returnedAddress, checkedAddress)) {
           throw new Error("Memory response address does not match the request.");
+        }
         const bytes = base64Bytes(result.data, "Memory response.data");
-        if (bytes.length !== checkedCount)
+        if (bytes.length !== checkedCount) {
           throw new Error(
             `Memory response returned ${bytes.length} byte(s), expected ${checkedCount}.`
           );
+        }
         const unreadableBytes = integer4(result.unreadableBytes, "Memory response.unreadableBytes");
-        if (unreadableBytes > checkedCount)
+        if (unreadableBytes > checkedCount) {
           throw new Error("Memory response unreadableBytes exceeds the requested count.");
+        }
         return { address: returnedAddress, bytes, unreadableBytes };
       }
       /** @inheritdoc */
@@ -48391,8 +48500,9 @@ var init_sidecar_backend = __esm({
           result.map((entry, index) => breakpoint(entry, `Breakpoints response[${index}]`)),
           "Breakpoints response"
         );
-        if (breakpoints.length !== checked2.length)
+        if (breakpoints.length !== checked2.length) {
           throw new Error("Breakpoints response count does not match the request.");
+        }
         return breakpoints;
       }
       /** @inheritdoc */
@@ -48406,8 +48516,9 @@ var init_sidecar_backend = __esm({
           }),
           "Disassembly response"
         );
-        if (result.length > checkedCount)
+        if (result.length > checkedCount) {
           throw new Error("Disassembly response exceeds the requested instruction count.");
+        }
         return result.map((entry, index) => instruction(entry, `Disassembly response[${index}]`));
       }
       /** @inheritdoc */
@@ -48419,10 +48530,12 @@ var init_sidecar_backend = __esm({
         const architecture = string2(options.architecture, "Trace architecture");
         const addressSpace = string2(options.addressSpace, "Trace address space");
         const supported = this.capabilities.architectures.find((candidate) => candidate.architecture === architecture)?.trace?.addressSpaces.includes(addressSpace);
-        if (!supported)
+        if (!supported) {
           throw new Error(`Instruction trace '${architecture}/${addressSpace}' is not supported.`);
-        if (options.detail !== void 0 && !["pc", "full"].includes(options.detail))
+        }
+        if (options.detail !== void 0 && !["pc", "full"].includes(options.detail)) {
           throw new Error("Invalid trace detail mode.");
+        }
         await this.#requireConnected().request("startTrace", {
           architecture,
           addressSpace,
@@ -48439,12 +48552,15 @@ var init_sidecar_backend = __esm({
         const capabilities = this.capabilities.architectures.find(
           ({ architecture }) => architecture === result.architecture
         )?.trace;
-        if (!capabilities?.addressSpaces.includes(result.addressSpace))
+        if (!capabilities?.addressSpaces.includes(result.addressSpace)) {
           throw new Error("Trace response uses an unsupported architecture/address space.");
-        if (checkedMaxEvents > capabilities.maxBatchEvents)
+        }
+        if (checkedMaxEvents > capabilities.maxBatchEvents) {
           throw new Error(`Trace batch size exceeds backend maximum ${capabilities.maxBatchEvents}.`);
-        if (result.addresses.length > checkedMaxEvents)
+        }
+        if (result.addresses.length > checkedMaxEvents) {
           throw new Error("Trace response exceeds the requested event count.");
+        }
         return result;
       }
       /** @inheritdoc */
@@ -48458,11 +48574,15 @@ var init_sidecar_backend = __esm({
       }
       async #ensureClient() {
         if (this.#client && !this.#client.closed) {
-          if (!this.#initialized) await this.#initialize(this.#client);
+          if (!this.#initialized) {
+            await this.#initialize(this.#client);
+          }
           return this.#client;
         }
         const client = await this.#createClient();
-        if (client.closed) throw new Error("Sidecar client factory returned a closed client.");
+        if (client.closed) {
+          throw new Error("Sidecar client factory returned a closed client.");
+        }
         this.#client = client;
         this.#clientSubscriptions = [
           client.onEvent((event) => this.#emit(backendEvent2(event))),
@@ -48486,52 +48606,68 @@ var init_sidecar_backend = __esm({
           }),
           "Sidecar initialize response"
         );
-        if (string2(result.backend, "Sidecar initialize backend") !== this.#backend)
+        if (string2(result.backend, "Sidecar initialize backend") !== this.#backend) {
           throw new Error("Sidecar initialize response named a different backend.");
-        if (integer4(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !== this.protocolVersion)
+        }
+        if (integer4(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !== this.protocolVersion) {
           throw new Error(
             `Unsupported debug backend protocol '${String(result.backendProtocolVersion)}'.`
           );
+        }
         const capabilities = backendCapabilities(
           result.capabilities,
           "Sidecar initialize capabilities"
         );
-        if (capabilityIdentity(capabilities) !== capabilityIdentity(this.#configuredCapabilities))
+        if (capabilityIdentity(capabilities) !== capabilityIdentity(this.#configuredCapabilities)) {
           throw new Error("Sidecar capabilities do not match the configured revision manifest.");
+        }
         this.#initialized = true;
       }
       #requireConnected() {
-        if (!this.#connected || !this.#client || this.#client.closed)
+        if (!this.#connected || !this.#client || this.#client.closed) {
           throw new Error("Debug backend is not connected.");
+        }
         return this.#client;
       }
       #clientClosed(client, error) {
-        if (this.#client !== client) return;
+        if (this.#client !== client) {
+          return;
+        }
         const expected = this.#expectedClose.has(client);
         this.#connected = false;
         this.#releaseClient(client);
-        if (!expected) this.#emit({ type: "terminated", restart: true });
-        if (!expected) this.#emit({ type: "output", category: "stderr", text: `${error.message}
+        if (!expected) {
+          this.#emit({ type: "terminated", restart: true });
+        }
+        if (!expected) {
+          this.#emit({ type: "output", category: "stderr", text: `${error.message}
 ` });
+        }
       }
       #releaseClient(client) {
-        if (this.#client !== client) return;
-        for (const subscription of this.#clientSubscriptions) subscription.dispose();
+        if (this.#client !== client) {
+          return;
+        }
+        for (const subscription of this.#clientSubscriptions) {
+          subscription.dispose();
+        }
         this.#clientSubscriptions = [];
         this.#client = void 0;
         this.#initialized = false;
       }
       #emit(event) {
-        for (const listener of this.#listeners) listener(event);
+        for (const listener of this.#listeners) {
+          listener(event);
+        }
       }
     };
   }
 });
 
-// ../debug-adapter/src/sidecar-client.ts
+// packages/debug-adapter/src/sidecar-client.ts
 var asError, DebugSidecarClient;
 var init_sidecar_client = __esm({
-  "../debug-adapter/src/sidecar-client.ts"() {
+  "packages/debug-adapter/src/sidecar-client.ts"() {
     "use strict";
     init_sidecar_protocol();
     asError = (error) => error instanceof Error ? error : new Error(String(error));
@@ -48560,8 +48696,9 @@ var init_sidecar_client = __esm({
         this.#transport = options.transport;
         this.#session = options.session;
         this.#requestTimeoutMs = options.requestTimeoutMs ?? 5e3;
-        if (!Number.isSafeInteger(this.#requestTimeoutMs) || this.#requestTimeoutMs <= 0)
+        if (!Number.isSafeInteger(this.#requestTimeoutMs) || this.#requestTimeoutMs <= 0) {
           throw new Error("Sidecar request timeout must be a positive safe integer.");
+        }
         this.#limits = options.limits ?? DEFAULT_DEBUG_SIDECAR_LIMITS;
         this.#parser = new DebugSidecarMessageParser(this.#limits);
         this.#dataSubscription = this.#transport.onData((data) => this.#receive(data));
@@ -48604,11 +48741,15 @@ var init_sidecar_client = __esm({
         * @returns {Promise<unknown>} Untrusted command result for the typed backend adapter to validate.
         */
       request(command, arguments_ = {}) {
-        if (this.#closed) return Promise.reject(new Error("Sidecar client is closed."));
-        if (this.#pending.size >= this.#limits.maxQueuedMessages)
+        if (this.#closed) {
+          return Promise.reject(new Error("Sidecar client is closed."));
+        }
+        if (this.#pending.size >= this.#limits.maxQueuedMessages) {
           return Promise.reject(new Error("Too many pending sidecar requests."));
-        if (!Number.isSafeInteger(this.#nextSequence) || this.#nextSequence <= 0)
+        }
+        if (!Number.isSafeInteger(this.#nextSequence) || this.#nextSequence <= 0) {
           return Promise.reject(new Error("Sidecar request sequence exhausted."));
+        }
         const sequence = this.#nextSequence++;
         const message = {
           protocol: DEBUG_SIDECAR_PROTOCOL,
@@ -48625,10 +48766,11 @@ var init_sidecar_client = __esm({
         } catch (error) {
           return Promise.reject(asError(error));
         }
-        if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes)
+        if (this.#queuedWriteBytes + frame.length > this.#limits.maxQueuedBytes) {
           return Promise.reject(
             new Error("Queued sidecar request bytes exceed the backpressure limit.")
           );
+        }
         this.#queuedWriteBytes += frame.length;
         return new Promise((resolve, reject) => {
           const timer = setTimeout(
@@ -48637,7 +48779,9 @@ var init_sidecar_client = __esm({
           );
           this.#pending.set(sequence, { resolve, reject, timer });
           const write = this.#writeTail.then(() => {
-            if (this.#closed) throw new Error("Sidecar client is closed.");
+            if (this.#closed) {
+              throw new Error("Sidecar client is closed.");
+            }
             return this.#transport.write(frame);
           }).finally(() => {
             this.#queuedWriteBytes -= frame.length;
@@ -48651,38 +48795,52 @@ var init_sidecar_client = __esm({
        * @returns {Promise<void>} Completion of the transport close.
        */
       async close() {
-        if (this.#closed) return;
+        if (this.#closed) {
+          return;
+        }
         this.#fail(new Error("Sidecar client closed."), false);
         await this.#transport.close();
       }
       #receive(data) {
-        if (this.#closed) return;
+        if (this.#closed) {
+          return;
+        }
         try {
           for (const message of this.#parser.push(data)) {
-            if (message.session !== this.#session)
+            if (message.session !== this.#session) {
               throw new Error("Sidecar message session does not match this connection.");
-            if (message.type === "request")
+            }
+            if (message.type === "request") {
               throw new Error("Sidecar server sent a request on a client-only channel.");
+            }
             if (message.type === "event") {
-              for (const listener of this.#eventListeners) listener(message);
+              for (const listener of this.#eventListeners) {
+                listener(message);
+              }
               continue;
             }
             const pending = this.#pending.get(message.requestSequence);
-            if (!pending)
+            if (!pending) {
               throw new Error(
                 `Sidecar response references unknown request ${message.requestSequence}.`
               );
+            }
             clearTimeout(pending.timer);
             this.#pending.delete(message.requestSequence);
-            if (message.success) pending.resolve(message.result);
-            else pending.reject(new Error(message.error ?? "Sidecar request failed."));
+            if (message.success) {
+              pending.resolve(message.result);
+            } else {
+              pending.reject(new Error(message.error ?? "Sidecar request failed."));
+            }
           }
         } catch (error) {
           this.#fail(asError(error));
         }
       }
       #fail(error, closeTransport = true) {
-        if (this.#closed) return;
+        if (this.#closed) {
+          return;
+        }
         this.#closed = true;
         this.#closeError = error;
         this.#dataSubscription.dispose();
@@ -48692,52 +48850,65 @@ var init_sidecar_client = __esm({
           pending.reject(error);
         }
         this.#pending.clear();
-        for (const listener of this.#closeListeners) listener(error);
+        for (const listener of this.#closeListeners) {
+          listener(error);
+        }
         this.#closeListeners.clear();
         this.#eventListeners.clear();
-        if (closeTransport) void this.#transport.close().catch(() => void 0);
+        if (closeTransport) {
+          void this.#transport.close().catch(() => void 0);
+        }
       }
     };
   }
 });
 
-// ../debug-adapter/src/sidecar-server.ts
+// packages/debug-adapter/src/sidecar-server.ts
 var stepKinds2, record4, integer5, positiveInteger5, string3, optionalPositiveInteger, boolean2, address4, addresses2, asError2, DebugSidecarServer;
 var init_sidecar_server = __esm({
-  "../debug-adapter/src/sidecar-server.ts"() {
+  "packages/debug-adapter/src/sidecar-server.ts"() {
     "use strict";
     init_contracts2();
     init_sidecar_protocol();
     init_capture_v2();
     stepKinds2 = /* @__PURE__ */ new Set(["instruction", "over", "in", "out"]);
     record4 = (value, context) => {
-      if (typeof value !== "object" || value === null || Array.isArray(value))
+      if (typeof value !== "object" || value === null || Array.isArray(value)) {
         throw new Error(`${context} must be an object.`);
+      }
       return value;
     };
     integer5 = (value, context, minimum = 0) => {
-      if (!Number.isSafeInteger(value) || value < minimum)
+      if (!Number.isSafeInteger(value) || value < minimum) {
         throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+      }
       return value;
     };
     positiveInteger5 = (value, context) => integer5(value, context, 1);
     string3 = (value, context) => {
-      if (typeof value !== "string" || value.length === 0)
+      if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${context} must be a non-empty string.`);
+      }
       return value;
     };
     optionalPositiveInteger = (value, context) => value === void 0 ? void 0 : positiveInteger5(value, context);
     boolean2 = (value, context, defaultValue) => {
-      if (value === void 0) return defaultValue;
-      if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
+      if (value === void 0) {
+        return defaultValue;
+      }
+      if (typeof value !== "boolean") {
+        throw new Error(`${context} must be boolean.`);
+      }
       return value;
     };
     address4 = (value, context) => {
       const candidate = record4(value, context);
-      if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0)
+      if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0) {
         throw new Error(`${context}.architecture must be a non-empty string.`);
-      if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0)
+      }
+      if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0) {
         throw new Error(`${context}.addressSpace must be a non-empty string.`);
+      }
       const outputOffset = candidate.outputOffset === void 0 ? void 0 : integer5(candidate.outputOffset, `${context}.outputOffset`);
       return {
         architecture: candidate.architecture,
@@ -48747,7 +48918,9 @@ var init_sidecar_server = __esm({
       };
     };
     addresses2 = (value, context) => {
-      if (!Array.isArray(value)) throw new Error(`${context} must be an array.`);
+      if (!Array.isArray(value)) {
+        throw new Error(`${context} must be an array.`);
+      }
       return value.map((entry, index) => address4(entry, `${context}[${index}]`));
     };
     asError2 = (error) => error instanceof Error ? error : new Error(String(error));
@@ -48770,8 +48943,9 @@ var init_sidecar_server = __esm({
        * @param {DebugSidecarServerOptions} options Identity, backend, transport, and safety bounds.
        */
       constructor(options) {
-        if (typeof options.backend !== "string" || options.backend.length === 0)
+        if (typeof options.backend !== "string" || options.backend.length === 0) {
           throw new Error("Sidecar backend name must be a non-empty string.");
+        }
         assertDebugSidecarSessionToken(options.session);
         this.#backendName = options.backend;
         this.#implementation = options.implementation;
@@ -48793,7 +48967,9 @@ var init_sidecar_server = __esm({
        * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
        */
       receive(data) {
-        if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+        if (this.#closed) {
+          return Promise.reject(new Error("Sidecar server is closed."));
+        }
         const receive = this.#receiveTail.then(() => this.#receive(data));
         this.#receiveTail = receive.catch(() => void 0);
         return receive.catch(async (error) => {
@@ -48807,7 +48983,9 @@ var init_sidecar_server = __esm({
        * @returns {Promise<void>} Completion of transport cleanup.
        */
       async close(error) {
-        if (this.#closed) return;
+        if (this.#closed) {
+          return;
+        }
         this.#closed = true;
         this.#eventSubscription.dispose();
         await this.#writeTail.catch(() => void 0);
@@ -48815,10 +48993,12 @@ var init_sidecar_server = __esm({
       }
       async #receive(data) {
         for (const message of this.#parser.push(data)) {
-          if (message.session !== this.#session)
+          if (message.session !== this.#session) {
             throw new Error("Sidecar request session does not match this connection.");
-          if (message.type !== "request")
+          }
+          if (message.type !== "request") {
             throw new Error("Sidecar client sent a non-request message on a server-only channel.");
+          }
           await this.#handle(message);
         }
       }
@@ -48842,15 +49022,22 @@ var init_sidecar_server = __esm({
             ...failure ? { error: failure.message } : { result }
           })
         );
-        for (const event of events) await this.#send(this.#eventEnvelope(event));
-        if (request.command === "shutdown" && !failure) await this.close();
+        for (const event of events) {
+          await this.#send(this.#eventEnvelope(event));
+        }
+        if (request.command === "shutdown" && !failure) {
+          await this.close();
+        }
       }
       async #dispatch(request) {
         const args = record4(request.arguments ?? {}, "Sidecar request arguments");
         if (request.command === "initialize") {
-          if (args.backend !== this.#backendName) throw new Error("Unexpected backend identity.");
-          if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION)
+          if (args.backend !== this.#backendName) {
+            throw new Error("Unexpected backend identity.");
+          }
+          if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION) {
             throw new Error("Unsupported backend protocol version.");
+          }
           return {
             backend: this.#backendName,
             backendProtocolVersion: DEBUG_BACKEND_PROTOCOL_VERSION,
@@ -48880,21 +49067,26 @@ var init_sidecar_server = __esm({
           return {};
         }
         if (request.command === "step") {
-          if (!stepKinds2.has(args.kind))
+          if (!stepKinds2.has(args.kind)) {
             throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+          }
           await this.#implementation.step(
             positiveInteger5(args.threadId, "Step threadId"),
             args.kind
           );
           return {};
         }
-        if (request.command === "threads") return this.#implementation.threads();
-        if (request.command === "stackFrames")
+        if (request.command === "threads") {
+          return this.#implementation.threads();
+        }
+        if (request.command === "stackFrames") {
           return this.#implementation.stackFrames(
             positiveInteger5(args.threadId, "Stack frames threadId")
           );
-        if (request.command === "registers")
+        }
+        if (request.command === "registers") {
           return this.#implementation.registers(positiveInteger5(args.frameId, "Registers frameId"));
+        }
         if (request.command === "readMemory") {
           const memory = await this.#implementation.readMemory(
             address4(args.address, "Memory address"),
@@ -48906,25 +49098,29 @@ var init_sidecar_server = __esm({
             unreadableBytes: memory.unreadableBytes
           };
         }
-        if (request.command === "setBreakpoints")
+        if (request.command === "setBreakpoints") {
           return this.#implementation.setBreakpoints(
             addresses2(args.breakpoints, "Breakpoint addresses")
           );
-        if (request.command === "disassemble")
+        }
+        if (request.command === "disassemble") {
           return this.#implementation.disassemble(
             address4(args.address, "Disassembly address"),
             integer5(args.count, "Disassembly count")
           );
+        }
         if (request.command === "capture") {
           const capture = args;
           validateCaptureRequest(capture);
-          if (!this.#implementation.capture)
+          if (!this.#implementation.capture) {
             throw new Error("This backend does not support capture v2.");
+          }
           return this.#implementation.capture(capture);
         }
         if (request.command === "startTrace") {
-          if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full")
+          if (args.detail !== void 0 && args.detail !== "pc" && args.detail !== "full") {
             throw new Error("Trace detail must be pc or full.");
+          }
           await this.#implementation.startTrace({
             architecture: string3(args.architecture, "Trace architecture"),
             addressSpace: string3(args.addressSpace, "Trace address space"),
@@ -48932,18 +49128,25 @@ var init_sidecar_server = __esm({
           });
           return {};
         }
-        if (request.command === "readTrace")
+        if (request.command === "readTrace") {
           return this.#implementation.readTrace(positiveInteger5(args.maxEvents, "Trace batch size"));
+        }
         if (request.command === "stopTrace") {
           await this.#implementation.stopTrace();
           return {};
         }
-        if (request.command === "ping") return { pong: true };
-        if (request.command === "shutdown") return {};
+        if (request.command === "ping") {
+          return { pong: true };
+        }
+        if (request.command === "shutdown") {
+          return {};
+        }
         throw new Error(`Unsupported command '${String(request.command)}'.`);
       }
       #backendEvent(event) {
-        if (this.#closed) return;
+        if (this.#closed) {
+          return;
+        }
         if (this.#capturedEvents) {
           this.#capturedEvents.push(event);
           return;
@@ -48953,30 +49156,34 @@ var init_sidecar_server = __esm({
         );
       }
       #eventEnvelope(event) {
-        if (event.type === "stopped")
+        if (event.type === "stopped") {
           return this.#envelope({
             type: "event",
             event: "stopped",
             body: { reason: event.reason, threadId: event.threadId }
           });
-        if (event.type === "continued")
+        }
+        if (event.type === "continued") {
           return this.#envelope({
             type: "event",
             event: "continued",
             body: { threadId: event.threadId, allThreads: event.allThreads }
           });
-        if (event.type === "terminated")
+        }
+        if (event.type === "terminated") {
           return this.#envelope({
             type: "event",
             event: "terminated",
             body: { restart: event.restart }
           });
-        if (event.type === "breakpoint")
+        }
+        if (event.type === "breakpoint") {
           return this.#envelope({
             type: "event",
             event: "breakpoint",
             body: { breakpoint: event.breakpoint }
           });
+        }
         return this.#envelope({
           type: "event",
           event: "output",
@@ -48984,8 +49191,9 @@ var init_sidecar_server = __esm({
         });
       }
       #envelope(message) {
-        if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0)
+        if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0) {
           throw new Error("Sidecar server sequence exhausted.");
+        }
         return {
           protocol: DEBUG_SIDECAR_PROTOCOL,
           version: DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -48995,7 +49203,9 @@ var init_sidecar_server = __esm({
         };
       }
       #send(message) {
-        if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+        if (this.#closed) {
+          return Promise.reject(new Error("Sidecar server is closed."));
+        }
         this.#outgoing.enqueue(message);
         const write = this.#writeTail.then(async () => {
           let frame = this.#outgoing.dequeue();
@@ -49011,10 +49221,251 @@ var init_sidecar_server = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file-reader.ts
+// packages/debug-adapter/src/capture-context.ts
+var import_node_crypto23, import_node_fs7, import_promises2, import_node_path13, CaptureContextRecorder, verifyCaptureContext;
+var init_capture_context = __esm({
+  "packages/debug-adapter/src/capture-context.ts"() {
+    "use strict";
+    import_node_crypto23 = require("node:crypto");
+    import_node_fs7 = require("node:fs");
+    import_promises2 = require("node:fs/promises");
+    import_node_path13 = __toESM(require("node:path"), 1);
+    CaptureContextRecorder = class {
+      directory;
+      transport;
+      #metadata;
+      #native;
+      constructor(archive, metadata, transport) {
+        this.directory = `${archive}.context`;
+        this.#metadata = {
+          architecture: metadata.architecture,
+          addressSpace: metadata.addressSpace,
+          romContentSha256: metadata.romContentSha256,
+          producer: metadata.producer
+        };
+        this.#native = transport;
+        this.transport = async (request) => {
+          if (request.operation === "start" || request.operation === "file-start") {
+            await this.#request(
+              {
+                operation: "context",
+                action: "prepare",
+                directory: this.directory,
+                romContentSha256: metadata.romContentSha256,
+                producer: metadata.producer
+              },
+              "prepared"
+            );
+            let session;
+            try {
+              const position = await transport(request);
+              if (!("session" in position)) {
+                throw new Error("Capture did not return a session.");
+              }
+              session = position.session;
+              await this.#request({ operation: "context", action: "start", session }, "recording");
+              return position;
+            } catch (error) {
+              if (session) {
+                await transport({
+                  operation: request.operation === "file-start" ? "file-abort" : "abort",
+                  session
+                }).catch(() => void 0);
+              }
+              await transport({ operation: "context", action: "abort" }).catch(() => void 0);
+              throw error;
+            }
+          }
+          if (request.operation === "stop" || request.operation === "file-stop") {
+            for (; ; ) {
+              const result = await transport({
+                operation: "context",
+                action: "stop",
+                session: request.session
+              });
+              if (!("contextState" in result)) {
+                throw new Error("Missing capture context stop status.");
+              }
+              if (result.contextState === "complete") {
+                break;
+              }
+              if (result.contextState !== "draining") {
+                throw new Error(`Capture context stop failed: ${result.contextState}.`);
+              }
+              await new Promise((resolve) => setTimeout(resolve, 10));
+            }
+          }
+          if (request.operation === "abort" || request.operation === "file-abort") {
+            await transport({ operation: "context", action: "abort" }).catch(() => void 0);
+          }
+          return transport(request);
+        };
+      }
+      /** Publish integrity hashes and trace-relative boundaries after primary publication.
+       * Failures retain all files without claiming a complete context bundle.
+       * @param {CaptureFileSummary} summary Completed primary archive whose session/counters must match.
+       */
+      async finish(summary) {
+        const boundaries = JSON.parse(
+          await (0, import_promises2.readFile)(import_node_path13.default.join(this.directory, "boundaries.json"), "utf8")
+        );
+        if (boundaries.session !== summary.position.session || boundaries.end?.eventThrough !== summary.position.producedThrough) {
+          throw new Error("Capture context boundary does not match the completed ACT2 archive.");
+        }
+        const files = {};
+        for (const name of (await (0, import_promises2.readdir)(this.directory)).sort()) {
+          if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+            name
+          )) {
+            throw new Error(`Unexpected capture context artifact: ${name}.`);
+          }
+          const file = import_node_path13.default.join(this.directory, name);
+          const stat2 = await (0, import_promises2.lstat)(file);
+          if (!stat2.isFile() || stat2.isSymbolicLink()) {
+            throw new Error("Capture context artifacts must be regular files.");
+          }
+          if (name.startsWith("wram-") && stat2.size !== 131072) {
+            throw new Error("WRAM snapshots must contain exactly 128 KiB.");
+          }
+          if (name === "inputs.bin" && stat2.size % 18) {
+            throw new Error("Controller evidence has an incomplete row.");
+          }
+          const hash = (0, import_node_crypto23.createHash)("sha256");
+          for await (const bytes of (0, import_node_fs7.createReadStream)(file)) {
+            hash.update(bytes);
+          }
+          const handle2 = await (0, import_promises2.open)(file, "r+");
+          try {
+            await handle2.sync();
+          } finally {
+            await handle2.close();
+          }
+          files[name] = { bytes: stat2.size, sha256: hash.digest("hex") };
+        }
+        for (const name of [
+          "start.bst",
+          "wram-start.bin",
+          "wram-end.bin",
+          "inputs.bin",
+          "milestones.jsonl",
+          "identity.txt",
+          "machine.json",
+          "start-clock.txt",
+          "end-clock.txt"
+        ]) {
+          if (!files[name]) {
+            throw new Error(`Missing capture context artifact: ${name}.`);
+          }
+        }
+        if (summary.scope === "snes.65816.instructions" && !files["graphics.act2"]) {
+          throw new Error("Instruction context is missing its graphics companion.");
+        }
+        if (files["graphics.act2"] && boundaries.graphicsWindowFrames !== null) {
+          throw new Error("Capture context requires full-capture graphics from the native runtime.");
+        }
+        const manifest = import_node_path13.default.join(this.directory, "manifest.json");
+        const handle = await (0, import_promises2.open)(`${manifest}.partial`, "wx");
+        try {
+          await handle.writeFile(
+            `${JSON.stringify(
+              {
+                format: "uttori-capture-context",
+                version: 1,
+                ...this.#metadata,
+                archive: import_node_path13.default.basename(summary.archive),
+                scope: summary.scope,
+                boundaries,
+                wram: { address: 8257536, bytes: 131072 },
+                inputs: {
+                  file: "inputs.bin",
+                  rowBytes: 18,
+                  encoding: "le-u64-clock,u64-instruction-ordinal,u8-port,u8-serial-bits"
+                },
+                visuals: {
+                  timing: "last-presented-frame",
+                  automaticIntervalFrames: 300,
+                  automaticLimit: 24
+                },
+                graphics: files["graphics.act2"] ? { scope: "snes.cpu-bus-ppu", windowFrames: null, file: "graphics.act2" } : {
+                  scope: summary.scope,
+                  windowFrames: null,
+                  file: null,
+                  primaryArchive: import_node_path13.default.basename(summary.archive)
+                },
+                files
+              },
+              null,
+              2
+            )}
+`
+          );
+          await handle.sync();
+        } finally {
+          await handle.close();
+        }
+        await (0, import_promises2.link)(`${manifest}.partial`, manifest);
+        await (0, import_promises2.unlink)(`${manifest}.partial`);
+      }
+      async #request(request, expected) {
+        const result = await this.#native(request);
+        if (!("contextState" in result) || result.contextState !== expected) {
+          throw new Error(`Capture context requires ${expected} status.`);
+        }
+      }
+    };
+    verifyCaptureContext = async (directory, identity2) => {
+      const metadataFile = import_node_path13.default.join(directory, "manifest.json");
+      const metadataStat = await (0, import_promises2.lstat)(metadataFile);
+      if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
+        throw new Error("Invalid capture context manifest.");
+      }
+      const manifest = JSON.parse(await (0, import_promises2.readFile)(metadataFile, "utf8"));
+      const producer = manifest.producer;
+      if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || producer?.id !== identity2.producer.id || producer?.revision !== identity2.producer.revision || !manifest.files || typeof manifest.files !== "object") {
+        throw new Error("Capture context requires the matching ROM and emulator build.");
+      }
+      const files = manifest.files;
+      for (const name of [
+        "start.bst",
+        "wram-start.bin",
+        "wram-end.bin",
+        "inputs.bin",
+        "identity.txt",
+        "machine.json",
+        "start-clock.txt",
+        "end-clock.txt",
+        "boundaries.json"
+      ]) {
+        if (!files[name]) {
+          throw new Error(`Capture context is missing ${name}.`);
+        }
+      }
+      for (const [name, artifact] of Object.entries(files)) {
+        if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
+          name
+        ) || !artifact || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || !/^[\da-f]{64}$/.test(artifact.sha256)) {
+          throw new Error("Invalid capture context artifact descriptor.");
+        }
+        const file = import_node_path13.default.join(directory, name), stat2 = await (0, import_promises2.lstat)(file);
+        if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && stat2.size !== 131072 || name === "inputs.bin" && stat2.size % 18) {
+          throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
+        }
+        const hash = (0, import_node_crypto23.createHash)("sha256");
+        for await (const bytes of (0, import_node_fs7.createReadStream)(file)) {
+          hash.update(bytes);
+        }
+        if (hash.digest("hex") !== artifact.sha256) {
+          throw new Error(`Capture context checksum mismatch: ${name}.`);
+        }
+      }
+    };
+  }
+});
+
+// packages/debug-adapter/src/capture-file-reader.ts
 var CaptureFrameReader;
 var init_capture_file_reader = __esm({
-  "../debug-adapter/src/capture-file-reader.ts"() {
+  "packages/debug-adapter/src/capture-file-reader.ts"() {
     "use strict";
     CaptureFrameReader = class {
       #read;
@@ -49026,8 +49477,9 @@ var init_capture_file_reader = __esm({
        * The cap amortizes small metadata reads without loading an entire archive.
        */
       constructor(read, windowBytes = 1048576) {
-        if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576)
+        if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576) {
           throw new Error("Invalid capture read-ahead window.");
+        }
         this.#read = read;
         this.#windowBytes = windowBytes;
       }
@@ -49039,22 +49491,30 @@ var init_capture_file_reader = __esm({
        * @returns {Promise<Buffer>} Owned component bytes, valid across subsequent refills.
        */
       async read(length, offset, limit) {
-        if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit)
+        if (!Number.isSafeInteger(length) || length < 0 || length > Math.min(262144, this.#windowBytes) || !Number.isSafeInteger(offset) || offset < 0 || !Number.isSafeInteger(limit) || offset + length > limit) {
           throw new Error("Torn capture frame or invalid component length.");
+        }
         const relative2 = offset - this.#start;
         let available = 0;
-        if (relative2 >= 0 && relative2 <= this.#valid)
+        if (relative2 >= 0 && relative2 <= this.#valid) {
           available = Math.min(this.#valid - relative2, limit - offset);
-        if (available >= length) return Buffer.from(this.#buffer.subarray(relative2, relative2 + length));
+        }
+        if (available >= length) {
+          return Buffer.from(this.#buffer.subarray(relative2, relative2 + length));
+        }
         const nextLength = Math.min(this.#windowBytes, limit - offset);
         const next = this.#buffer.length >= nextLength ? this.#buffer : Buffer.allocUnsafe(nextLength);
-        if (available) this.#buffer.copy(next, 0, relative2, relative2 + available);
+        if (available) {
+          this.#buffer.copy(next, 0, relative2, relative2 + available);
+        }
         this.#buffer = next;
         this.#valid = 0;
         let got = available;
         while (got < nextLength) {
           const { bytesRead } = await this.#read(this.#buffer, got, nextLength - got, offset + got);
-          if (!bytesRead) throw new Error("Torn capture frame.");
+          if (!bytesRead) {
+            throw new Error("Torn capture frame.");
+          }
           got += bytesRead;
         }
         this.#start = offset;
@@ -49065,23 +49525,27 @@ var init_capture_file_reader = __esm({
   }
 });
 
-// ../debug-adapter/src/capture-file.ts
-var import_promises4, import_promises5, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
+// packages/debug-adapter/src/capture-file.ts
+var import_promises3, import_promises4, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
 var init_capture_file = __esm({
-  "../debug-adapter/src/capture-file.ts"() {
+  "packages/debug-adapter/src/capture-file.ts"() {
     "use strict";
-    import_promises4 = require("node:fs/promises");
-    import_promises5 = require("node:timers/promises");
+    import_promises3 = require("node:fs/promises");
+    import_promises4 = require("node:timers/promises");
+    init_capture_context();
     init_capture_file_reader();
     init_capture_v2();
     pause = () => new Promise((resolve) => setTimeout(resolve, 10));
     metadataValid = (m) => {
-      if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision)
+      if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
         throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
+      }
     };
     jsonFrame = (magic, value) => {
       const body = Buffer.from(JSON.stringify(value));
-      if (body.length > 65536) throw new Error("Capture metadata exceeds its bound.");
+      if (body.length > 65536) {
+        throw new Error("Capture metadata exceeds its bound.");
+      }
       const header = Buffer.alloc(12);
       header.write(magic, "ascii");
       header.writeUInt32LE(body.length, 4);
@@ -49096,6 +49560,7 @@ var init_capture_file = __esm({
       #format;
       #scope;
       #transport;
+      #context;
       #handle;
       #position;
       #stopRequested = false;
@@ -49104,8 +49569,9 @@ var init_capture_file = __esm({
       #chunk = 0n;
       #cycle = 0n;
       #timings;
-      constructor(file, handle, transport, position, format, scope, measureStages) {
+      constructor(file, handle, transport, position, format, scope, measureStages, context) {
         this.#file = file;
+        this.#context = context;
         this.#format = format;
         this.#scope = scope;
         this.#archive = format === "act2" ? file : `${file}.act2`;
@@ -49152,39 +49618,48 @@ var init_capture_file = __esm({
         metadataValid(options);
         const scope = captureScope(options.scope ?? "snes.65816.instructions");
         const format = options.format ?? "json";
-        if (format !== "json" && format !== "act2")
+        if (format !== "json" && format !== "act2") {
           throw new Error("Unsupported capture output format.");
-        if (scope !== "snes.65816.instructions" && format !== "act2")
+        }
+        if (scope !== "snes.65816.instructions" && format !== "act2") {
           throw new Error("Bus capture requires ACT2 output. Instruction JSON cannot represent it.");
+        }
         validateCaptureCapabilities(
           await options.transport({ operation: "capabilities", scope }),
           scope
         );
         const archive = format === "act2" ? options.file : `${options.file}.act2`;
+        const context = options.context === false ? void 0 : new CaptureContextRecorder(archive, options, options.transport);
+        const transport = context?.transport ?? options.transport;
         if (format === "json") {
-          const destination = await (0, import_promises4.open)(options.file, "wx");
+          const destination = await (0, import_promises3.open)(options.file, "wx");
           await destination.close();
         } else {
-          const existing = await (0, import_promises4.lstat)(archive).catch((error) => {
-            if (error.code !== "ENOENT") throw error;
+          const existing = await (0, import_promises3.lstat)(archive).catch((error) => {
+            if (error.code !== "ENOENT") {
+              throw error;
+            }
             return void 0;
           });
-          if (existing) throw new Error("Capture destination already exists.");
+          if (existing) {
+            throw new Error("Capture destination already exists.");
+          }
         }
         let handle;
         let position;
         try {
-          handle = await (0, import_promises4.open)(`${archive}.partial`, "wx");
+          handle = await (0, import_promises3.open)(`${archive}.partial`, "wx");
           position = validateCapturePosition(
-            await options.transport({
+            await transport({
               operation: "start",
               bufferBytes: options.bufferBytes ?? 8 * 1024 * 1024,
               scope
             })
           );
           validateCapturePosition(position, void 0, scope);
-          if (position.producedThrough !== "0" || position.chunkThrough !== "0" || position.state !== "armed")
+          if (position.producedThrough !== "0" || position.chunkThrough !== "0" || position.state !== "armed") {
             throw new Error("Capture did not start at an empty armed boundary.");
+          }
           const header = {
             format: "uttori-ares-capture",
             version: 2,
@@ -49210,19 +49685,29 @@ var init_capture_file = __esm({
           return new _LosslessCaptureFileRecorder(
             options.file,
             handle,
-            options.transport,
+            transport,
             position,
             format,
             scope,
-            options.measureStages === true
+            options.measureStages === true,
+            context
           );
         } catch (error) {
-          if (position)
-            await options.transport({ operation: "abort", session: position.session }).catch(() => void 0);
+          if (position) {
+            await transport({ operation: "abort", session: position.session }).catch(() => void 0);
+          }
           await handle?.close().catch(() => void 0);
-          if (format === "json") await (0, import_promises4.unlink)(options.file).catch(() => void 0);
+          if (format === "json") {
+            await (0, import_promises3.unlink)(options.file).catch(() => void 0);
+          }
           throw error;
         }
+      }
+      /** Current producer session, for a paused user milestone.
+       * @returns {CapturePositionV2} Latest verified position; querying does not drain the archive.
+       */
+      get position() {
+        return this.#position;
       }
       async stop() {
         if (!this.#stopRequested) {
@@ -49251,7 +49736,9 @@ var init_capture_file = __esm({
        * @returns {number} Next boundary. Disabled profiling never reads the clock.
        */
       #mark(stage, start) {
-        if (!this.#timings) return 0;
+        if (!this.#timings) {
+          return 0;
+        }
         const now = performance.now(), elapsed = now - start, entry = this.#timings.stages[stage];
         entry.calls++;
         entry.totalMs += elapsed;
@@ -49269,15 +49756,19 @@ var init_capture_file = __esm({
               chunk: String(this.#chunk + 1n)
             });
             boundary = this.#mark("read", boundary);
-            if (!("hex" in result) || typeof result.hex !== "string" || result.hex.length > 524288 || result.hex.length % 2 || !/^[\da-f]*$/.test(result.hex))
+            if (!("hex" in result) || typeof result.hex !== "string" || result.hex.length > 524288 || result.hex.length % 2 || !/^[\da-f]*$/.test(result.hex)) {
               throw new Error("Invalid capture read response.");
+            }
             if (result.hex) {
               const bytes = Buffer.from(result.hex, "hex"), chunk = decodeCaptureChunk(bytes, session, this.#scope);
               const records2 = captureChunkRecords(chunk);
-              if (BigInt(chunk.sequence) !== this.#chunk + 1n || BigInt(chunk.first) !== this.#through + 1n || BigInt(records2[0].cycle) < this.#cycle)
+              if (BigInt(chunk.sequence) !== this.#chunk + 1n || BigInt(chunk.first) !== this.#through + 1n || BigInt(records2[0].cycle) < this.#cycle) {
                 throw new Error("Capture chunk is not contiguous.");
+              }
               boundary = this.#mark("decode", boundary);
-              if (this.#timings) this.#timings.bytes += bytes.length;
+              if (this.#timings) {
+                this.#timings.bytes += bytes.length;
+              }
               await this.#handle.writeFile(bytes);
               boundary = this.#mark("dataWrite", boundary);
               await this.#handle.sync();
@@ -49303,8 +49794,9 @@ var init_capture_file = __esm({
                 this.#scope
               );
               this.#mark("ack", boundary);
-              if (p2.durableThrough !== chunk.through || p2.chunkThrough !== chunk.sequence)
+              if (p2.durableThrough !== chunk.through || p2.chunkThrough !== chunk.sequence) {
                 throw new Error("Producer acknowledgement did not match the durable checkpoint.");
+              }
               this.#position = p2;
               this.#chunk = BigInt(chunk.sequence);
               this.#through = BigInt(chunk.through);
@@ -49317,30 +49809,37 @@ var init_capture_file = __esm({
                 this.#scope
               );
               boundary = this.#mark("status", boundary);
-              if (this.#position.state === "incomplete")
+              if (this.#position.state === "incomplete") {
                 throw new Error(`Native capture incomplete: ${this.#position.error}`);
-              if (this.#position.state === "complete") break;
+              }
+              if (this.#position.state === "complete") {
+                break;
+              }
               await pause();
               this.#mark("idle", boundary);
             }
           }
-          if (this.#cancelled)
+          if (this.#cancelled) {
             throw new Error(
               "Capture session ended before finalization. The partial archive retains its committed prefix."
             );
+          }
           const p = this.#position;
-          if (!this.#stopRequested || p.state !== "complete" || p.producedThrough !== String(this.#through) || p.producedChunks !== String(this.#chunk))
+          if (!this.#stopRequested || p.state !== "complete" || p.producedThrough !== String(this.#through) || p.producedChunks !== String(this.#chunk)) {
             throw new Error("Capture terminal accounting did not reconcile.");
+          }
           const finalStart = this.#timings ? performance.now() : 0;
           await this.#handle.writeFile(jsonFrame("END2", p));
           await this.#handle.sync();
           await this.#handle.close();
           const archive = this.#archive;
-          await (0, import_promises4.link)(this.#partial, archive);
-          await (0, import_promises4.unlink)(this.#partial);
-          if (this.#format === "json") await exportCaptureJson(archive, this.#file, true);
+          await (0, import_promises3.link)(this.#partial, archive);
+          await (0, import_promises3.unlink)(this.#partial);
+          if (this.#format === "json") {
+            await exportCaptureJson(archive, this.#file, true);
+          }
           this.#mark("finalize", finalStart);
-          return {
+          const summary = {
             ...this.#timings ? {
               timings: {
                 elapsedMs: performance.now() - this.#timings.started,
@@ -49355,8 +49854,11 @@ var init_capture_file = __esm({
             droppedEvents: 0,
             chunks: Number(this.#chunk),
             complete: true,
-            position: p
+            position: p,
+            ...this.#context ? { contextDirectory: this.#context.directory } : {}
           };
+          await this.#context?.finish(summary);
+          return summary;
         } catch (error) {
           await this.#transport({ operation: "abort", session }).catch(() => void 0);
           await this.#handle.close().catch(() => void 0);
@@ -49366,23 +49868,29 @@ var init_capture_file = __esm({
     };
     checkCaptureSize = (size, options) => {
       const limit = options.maxBytes ?? Number.MAX_SAFE_INTEGER;
-      if (!Number.isSafeInteger(limit) || limit < 1)
+      if (!Number.isSafeInteger(limit) || limit < 1) {
         throw new Error("Capture maximum bytes must be a positive safe integer.");
-      if (size > limit)
+      }
+      if (size > limit) {
         throw new Error(
           "Capture exceeds the import byte limit. Increase asm.trace.maxImportSizeMiB to import it."
         );
+      }
     };
     validateCaptureFileHeader = (value) => {
-      if (!value || typeof value !== "object") throw new Error("Missing capture session header.");
+      if (!value || typeof value !== "object") {
+        throw new Error("Missing capture session header.");
+      }
       const header = value;
       metadataValid(header);
       captureSession(header.session);
       captureScope(header.scope);
-      if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator))
+      if (header.clock?.id !== "snes.master" || !captureU64(header.clock.numerator) || !captureU64(header.clock.denominator)) {
         throw new Error("Invalid session clock domain.");
-      if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024)
+      }
+      if (header.format !== "uttori-ares-capture" || header.version !== 2 || header.ownership !== "durable-prefix" || header.compression !== "none" || header.checksum !== "crc32c" || header.maxChunkBytes !== 262144 || !Number.isSafeInteger(header.allocatedBytes) || header.allocatedBytes < 4718656 || header.allocatedBytes > 64 * 1024 * 1024) {
         throw new Error("Unsupported capture session contract.");
+      }
       return header;
     };
     readCaptureBytes = async (handle, length, offset) => {
@@ -49390,24 +49898,30 @@ var init_capture_file = __esm({
       let got = 0;
       while (got < length) {
         const result = await handle.read(bytes, got, length - got, offset + got);
-        if (!result.bytesRead) throw new Error("Torn capture frame.");
+        if (!result.bytesRead) {
+          throw new Error("Torn capture frame.");
+        }
         got += result.bytesRead;
       }
       return bytes;
     };
     readCaptureFileHeader = async (file, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises4.open)(file, "r");
+      const handle = await (0, import_promises3.open)(file, "r");
       try {
         checkCaptureSize((await handle.stat()).size, options);
         const prefix = await readCaptureBytes(handle, 12, 0);
-        if (prefix.toString("ascii", 0, 4) !== "ACS2")
+        if (prefix.toString("ascii", 0, 4) !== "ACS2") {
           throw new Error("Missing capture session header.");
+        }
         const length = prefix.readUInt32LE(4);
-        if (length > 65536) throw new Error("Capture metadata length exceeds bounds.");
+        if (length > 65536) {
+          throw new Error("Capture metadata length exceeds bounds.");
+        }
         const body = await readCaptureBytes(handle, length, 12);
-        if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+        if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
           throw new Error("Capture metadata checksum mismatch.");
+        }
         options.signal?.throwIfAborted();
         return validateCaptureFileHeader(
           JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body))
@@ -49418,7 +49932,7 @@ var init_capture_file = __esm({
     };
     recoverCaptureFile = async (file, accept, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises4.open)(file, "r");
+      const handle = await (0, import_promises3.open)(file, "r");
       let before;
       try {
         before = await handle.stat();
@@ -49443,17 +49957,21 @@ var init_capture_file = __esm({
       };
       const json = async (prefix) => {
         const length = prefix.readUInt32LE(4);
-        if (length > 65536) throw new Error("Capture metadata length exceeds bounds.");
+        if (length > 65536) {
+          throw new Error("Capture metadata length exceeds bounds.");
+        }
         const body = await read(length);
-        if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+        if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
           throw new Error("Capture metadata checksum mismatch.");
+        }
         return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
       };
       let header;
       try {
         const prefix = await read(12);
-        if (prefix.toString("ascii", 0, 4) !== "ACS2")
+        if (prefix.toString("ascii", 0, 4) !== "ACS2") {
           throw new Error("Missing capture session header.");
+        }
         header = validateCaptureFileHeader(await json(prefix));
       } catch (error) {
         await handle.close();
@@ -49466,20 +49984,26 @@ var init_capture_file = __esm({
         while (true) {
           const prefix = await read(12), magic = prefix.toString("ascii", 0, 4);
           if (magic === "ACT2") {
-            if (pending) throw new Error("Uncommitted capture chunk before another chunk.");
+            if (pending) {
+              throw new Error("Uncommitted capture chunk before another chunk.");
+            }
             const envelope = Buffer.concat([prefix, await read(52)]);
             const length = envelope.readUInt32LE(48);
-            if (length > 262144 - 64) throw new Error("Capture chunk exceeds negotiated bound.");
+            if (length > 262144 - 64) {
+              throw new Error("Capture chunk exceeds negotiated bound.");
+            }
             const bytes = Buffer.concat([envelope, await read(length)]);
             const started2 = options.onTiming ? performance.now() : 0;
             pending = decodeCaptureChunk(bytes, header.session, header.scope);
             options.onTiming?.("decode", performance.now() - started2);
-            if (BigInt(pending.sequence) !== chunkThrough + 1n || BigInt(pending.first) !== eventThrough + 1n || BigInt(captureChunkRecords(pending)[0].cycle) < lastCycle)
+            if (BigInt(pending.sequence) !== chunkThrough + 1n || BigInt(pending.first) !== eventThrough + 1n || BigInt(captureChunkRecords(pending)[0].cycle) < lastCycle) {
               throw new Error("Noncontiguous capture history.");
+            }
           } else if (magic === "ACK2") {
             const checkpoint = await json(prefix);
-            if (!pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through)
+            if (!pending || checkpoint.session !== header.session || checkpoint.chunkThrough !== pending.sequence || checkpoint.eventThrough !== pending.through) {
               throw new Error("Checkpoint does not match the pending chunk.");
+            }
             if (accept) {
               try {
                 const started2 = options.onTiming ? performance.now() : 0;
@@ -49495,15 +50019,19 @@ var init_capture_file = __esm({
             lastCycle = BigInt(captureChunkRecords(pending).at(-1).cycle);
             pending = void 0;
             options.onProgress?.(offset, before.size);
-            await (0, import_promises5.setImmediate)(void 0, { signal: options.signal });
+            await (0, import_promises4.setImmediate)(void 0, { signal: options.signal });
           } else if (magic === "END2") {
             const terminal = validateCapturePosition(await json(prefix), header.session, header.scope);
-            if (pending || terminal.state !== "complete" || captureU64(terminal.producedThrough) !== eventThrough || captureU64(terminal.producedChunks) !== chunkThrough)
+            if (pending || terminal.state !== "complete" || captureU64(terminal.producedThrough) !== eventThrough || captureU64(terminal.producedChunks) !== chunkThrough) {
               throw new Error("Terminal capture totals disagree with the committed prefix.");
+            }
             const after = await handle.stat();
-            if (after.size !== offset) throw new Error("Unexpected bytes after capture terminal.");
-            if (after.size !== before.size || after.mtimeMs !== before.mtimeMs)
+            if (after.size !== offset) {
+              throw new Error("Unexpected bytes after capture terminal.");
+            }
+            if (after.size !== before.size || after.mtimeMs !== before.mtimeMs) {
               throw new Error("Capture archive changed while being read.");
+            }
             options.onProgress?.(offset, before.size);
             options.signal?.throwIfAborted();
             return {
@@ -49512,11 +50040,15 @@ var init_capture_file = __esm({
               chunkThrough: String(chunkThrough),
               eventThrough: String(eventThrough)
             };
-          } else throw new Error("Unknown required capture frame.");
+          } else {
+            throw new Error("Unknown required capture frame.");
+          }
         }
       } catch (error) {
         options.signal?.throwIfAborted();
-        if (consumerFailed) throw error;
+        if (consumerFailed) {
+          throw error;
+        }
         return {
           header,
           complete: false,
@@ -49530,19 +50062,24 @@ var init_capture_file = __esm({
     };
     exportCaptureJson = async (archive, destination, reserved = false) => {
       const verified = await recoverCaptureFile(archive);
-      if (!verified.complete) throw new Error(`Capture archive is incomplete: ${verified.reason}`);
-      if (verified.header.scope !== "snes.65816.instructions")
+      if (!verified.complete) {
+        throw new Error(`Capture archive is incomplete: ${verified.reason}`);
+      }
+      if (verified.header.scope !== "snes.65816.instructions") {
         throw new Error(
           "Bus capture cannot be exported as an instruction trace. Retain the ACT2 archive."
         );
-      if (BigInt(verified.eventThrough) >= BigInt(Number.MAX_SAFE_INTEGER))
+      }
+      if (BigInt(verified.eventThrough) >= BigInt(Number.MAX_SAFE_INTEGER)) {
         throw new Error(
           "Legacy JSON sequence numbers cannot represent this capture. Retain the exact ACT2 archive."
         );
-      const h = await (0, import_promises4.open)(destination, reserved ? "r+" : "wx");
+      }
+      const h = await (0, import_promises3.open)(destination, reserved ? "r+" : "wx");
       try {
-        if (reserved && (await h.stat()).size !== 0)
+        if (reserved && (await h.stat()).size !== 0) {
           throw new Error("Reserved trace destination changed during capture.");
+        }
         const m = verified.header;
         await h.writeFile(
           JSON.stringify({
@@ -49556,8 +50093,9 @@ var init_capture_file = __esm({
         );
         let first = true;
         const result = await recoverCaptureFile(archive, async (chunk) => {
-          if (chunk.scope !== "snes.65816.instructions")
+          if (chunk.scope !== "snes.65816.instructions") {
             throw new Error("Capture scope changed during instruction export.");
+          }
           await h.writeFile(
             (first ? "" : ",") + JSON.stringify({
               sequenceStart: Number(chunk.first),
@@ -49569,8 +50107,9 @@ var init_capture_file = __esm({
           );
           first = false;
         });
-        if (!result.complete || result.eventThrough !== verified.eventThrough)
+        if (!result.complete || result.eventThrough !== verified.eventThrough) {
           throw new Error("Capture archive changed during export.");
+        }
         await h.writeFile("]}\n");
         await h.sync();
       } finally {
@@ -49603,17 +50142,19 @@ var init_capture_file = __esm({
        */
       static async open(file, options = {}) {
         options.signal?.throwIfAborted();
-        const handle = await (0, import_promises4.open)(file, "r");
+        const handle = await (0, import_promises3.open)(file, "r");
         try {
           const identity2 = await handle.stat();
           const prefix = await readCaptureBytes(handle, 12, 0);
           const length = prefix.readUInt32LE(4);
-          if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536)
+          if (prefix.toString("ascii", 0, 4) !== "ACS2" || length > 65536) {
             throw new Error("Invalid native capture header.");
+          }
           checkCaptureSize(12 + length, options);
           const body = await readCaptureBytes(handle, length, 12);
-          if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+          if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
             throw new Error("Capture metadata checksum mismatch.");
+          }
           const header = validateCaptureFileHeader(
             JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body))
           );
@@ -49645,24 +50186,31 @@ var init_capture_file = __esm({
        * @returns {Promise<void>} Settlement of one bounded read slice.
        */
       async readThrough(value, accept, maxChunks = 16, publishedFile) {
-        if (this.#failed) throw new Error("Native capture cursor failed previously.");
+        if (this.#failed) {
+          throw new Error("Native capture cursor failed previously.");
+        }
         try {
           this.#options.signal?.throwIfAborted();
           const position = nativePosition(value, this.header.session, this.header.scope);
           const bytes = Number(captureU64(position.fileBytes));
-          if (!Number.isSafeInteger(bytes) || bytes < this.#watermark || bytes < this.#offset || !Number.isSafeInteger(maxChunks) || maxChunks < 1 || maxChunks > 256)
+          if (!Number.isSafeInteger(bytes) || bytes < this.#watermark || bytes < this.#offset || !Number.isSafeInteger(maxChunks) || maxChunks < 1 || maxChunks > 256) {
             throw new Error("Native capture watermark or chunk budget is invalid.");
+          }
           checkCaptureSize(bytes, this.#options);
-          if (position.fileState === "incomplete") throw new Error("Native capture was interrupted.");
+          if (position.fileState === "incomplete") {
+            throw new Error("Native capture was interrupted.");
+          }
           if (this.#complete) {
-            if (bytes !== this.#watermark || position.fileState !== "complete")
+            if (bytes !== this.#watermark || position.fileState !== "complete") {
               throw new Error("Completed native capture changed.");
+            }
             return;
           }
           this.#watermark = bytes;
           const before = await this.#handle.stat();
-          if (before.size < bytes)
+          if (before.size < bytes) {
             throw new Error("Native capture is shorter than its durable watermark.");
+          }
           const reader = new CaptureFrameReader(
             (buffer, start, length, offset) => {
               this.#options.signal?.throwIfAborted();
@@ -49672,18 +50220,22 @@ var init_capture_file = __esm({
           );
           const read = async (length) => {
             this.#options.signal?.throwIfAborted();
-            if (this.#offset + length > bytes)
+            if (this.#offset + length > bytes) {
               throw new Error("Native durable watermark splits a frame.");
+            }
             const result = await reader.read(length, this.#offset, bytes);
             this.#offset += length;
             return result;
           };
           const json = async (prefix) => {
             const length = prefix.readUInt32LE(4);
-            if (length > 65536) throw new Error("Capture metadata exceeds bounds.");
+            if (length > 65536) {
+              throw new Error("Capture metadata exceeds bounds.");
+            }
             const body = await read(length);
-            if (captureCrc32c(body) !== prefix.readUInt32LE(8))
+            if (captureCrc32c(body) !== prefix.readUInt32LE(8)) {
               throw new Error("Capture metadata checksum mismatch.");
+            }
             return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(body));
           };
           for (let count = 0; this.#offset < bytes && count < maxChunks; count++) {
@@ -49695,45 +50247,56 @@ var init_capture_file = __esm({
                 this.header.session,
                 this.header.scope
               );
-              if (terminal.state !== "complete" || position.fileState !== "complete" || captureU64(terminal.producedThrough) !== this.#event || captureU64(terminal.producedChunks) !== this.#chunk || position.producedThrough !== terminal.producedThrough || position.producedChunks !== terminal.producedChunks || this.#offset !== bytes)
+              if (terminal.state !== "complete" || position.fileState !== "complete" || captureU64(terminal.producedThrough) !== this.#event || captureU64(terminal.producedChunks) !== this.#chunk || position.producedThrough !== terminal.producedThrough || position.producedChunks !== terminal.producedChunks || this.#offset !== bytes) {
                 throw new Error("Native capture terminal disagrees with the consumed prefix.");
+              }
               const after = await this.#handle.stat();
-              if (after.size !== bytes || before.size !== after.size || before.mtimeMs !== after.mtimeMs)
+              if (after.size !== bytes || before.size !== after.size || before.mtimeMs !== after.mtimeMs) {
                 throw new Error("Native capture changed during final validation.");
+              }
               if (publishedFile) {
-                const published = await (0, import_promises4.lstat)(publishedFile);
-                if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino)
+                const published = await (0, import_promises3.lstat)(publishedFile);
+                if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino) {
                   throw new Error("Native capture publication replaced the opened file.");
+                }
               }
               this.#complete = true;
               break;
             }
-            if (magic !== "ACT2") throw new Error("Native capture expected an ACT2 chunk.");
+            if (magic !== "ACT2") {
+              throw new Error("Native capture expected an ACT2 chunk.");
+            }
             const envelope = Buffer.concat([prefix, await read(52)]);
             const length = envelope.readUInt32LE(48);
-            if (length > 262144 - 64) throw new Error("Capture chunk exceeds its bound.");
+            if (length > 262144 - 64) {
+              throw new Error("Capture chunk exceeds its bound.");
+            }
             const chunk = decodeCaptureChunk(
               Buffer.concat([envelope, await read(length)]),
               this.header.session,
               this.header.scope
             );
             const records2 = captureChunkRecords(chunk);
-            if (captureU64(chunk.sequence) !== this.#chunk + 1n || captureU64(chunk.first) !== this.#event + 1n || captureU64(records2[0].cycle) < this.#cycle || captureU64(chunk.through) > captureU64(position.durableThrough))
+            if (captureU64(chunk.sequence) !== this.#chunk + 1n || captureU64(chunk.first) !== this.#event + 1n || captureU64(records2[0].cycle) < this.#cycle || captureU64(chunk.through) > captureU64(position.durableThrough)) {
               throw new Error("Noncontiguous native capture history.");
+            }
             const ackPrefix = await read(12);
-            if (ackPrefix.toString("ascii", 0, 4) !== "ACK2")
+            if (ackPrefix.toString("ascii", 0, 4) !== "ACK2") {
               throw new Error("Native capture chunk has no checkpoint.");
+            }
             const ack = await json(ackPrefix);
-            if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through)
+            if (ack.session !== this.header.session || ack.chunkThrough !== chunk.sequence || ack.eventThrough !== chunk.through) {
               throw new Error("Native checkpoint disagrees with its chunk.");
+            }
             accept(chunk);
             this.#chunk = captureU64(chunk.sequence);
             this.#event = captureU64(chunk.through);
             this.#cycle = captureU64(records2.at(-1).cycle);
-            await (0, import_promises5.setImmediate)(void 0, { signal: this.#options.signal });
+            await (0, import_promises4.setImmediate)(void 0, { signal: this.#options.signal });
           }
-          if (this.#offset === bytes && !this.#complete && position.fileState === "complete")
+          if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
             throw new Error("Completed native capture has no terminal frame.");
+          }
           this.#options.onProgress?.(this.#offset, bytes);
         } catch (error) {
           this.#failed = true;
@@ -49747,16 +50310,19 @@ var init_capture_file = __esm({
     };
     nativePosition = (value, session, scope) => {
       const position = validateCapturePosition(value, session, scope);
-      if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState))
+      if (!["preparing", "writing", "complete", "incomplete"].includes(position.fileState)) {
         throw new Error("Invalid native file state.");
+      }
       captureU64(position.fileBytes);
       captureU64(position.fileBatches);
       if (position.fileProfile) {
-        for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"])
+        for (const field of ["sealNs", "copyNs", "writeNs", "syncNs"]) {
           captureU64(position.fileProfile[field]);
+        }
       }
-      if (position.state === "complete" !== (position.fileState === "complete"))
+      if (position.state === "complete" !== (position.fileState === "complete")) {
         throw new Error("Native file publication and producer completion disagree.");
+      }
       return position;
     };
     NativeCaptureFileRecorder = class _NativeCaptureFileRecorder {
@@ -49764,6 +50330,7 @@ var init_capture_file = __esm({
       #file;
       #scope;
       #transport;
+      #context;
       #position;
       #stopRequested = false;
       #cancelled = false;
@@ -49773,8 +50340,9 @@ var init_capture_file = __esm({
       get position() {
         return this.#position;
       }
-      constructor(file, scope, transport, position) {
+      constructor(file, scope, transport, position, context) {
         this.#file = file;
+        this.#context = context;
         this.#scope = scope;
         this.#position = position;
         let tail = Promise.resolve();
@@ -49800,11 +50368,15 @@ var init_capture_file = __esm({
           await options.transport({ operation: "file-capabilities", scope }),
           scope
         );
-        if (!cap.nativeFile) throw new Error("Runtime does not support native file capture.");
+        if (!cap.nativeFile) {
+          throw new Error("Runtime does not support native file capture.");
+        }
+        const context = options.context === false ? void 0 : new CaptureContextRecorder(options.file, options, options.transport);
+        const transport = context?.transport ?? options.transport;
         let position;
         let session;
         try {
-          const initial = await options.transport({
+          const initial = await transport({
             operation: "file-start",
             ...options.measureStages ? { measureStages: true } : {},
             file: options.file,
@@ -49818,19 +50390,21 @@ var init_capture_file = __esm({
           while (position.fileState === "preparing") {
             await pause();
             position = nativePosition(
-              await options.transport({ operation: "file-status", session: position.session }),
+              await transport({ operation: "file-status", session: position.session }),
               position.session,
               scope
             );
           }
-          if (position.fileState !== "writing" || position.state !== "armed")
+          if (position.fileState !== "writing" || position.state !== "armed") {
             throw new Error(
               `Native file capture could not prepare its output: ${position.error || position.fileState}.`
             );
-          return new _NativeCaptureFileRecorder(options.file, scope, options.transport, position);
+          }
+          return new _NativeCaptureFileRecorder(options.file, scope, transport, position, context);
         } catch (error) {
-          if (session)
-            await options.transport({ operation: "file-abort", session }).catch(() => void 0);
+          if (session) {
+            await transport({ operation: "file-abort", session }).catch(() => void 0);
+          }
           throw error;
         }
       }
@@ -49870,13 +50444,15 @@ var init_capture_file = __esm({
               this.#scope
             );
             this.#position = p;
-            if (p.fileState === "incomplete" || p.state === "incomplete")
+            if (p.fileState === "incomplete" || p.state === "incomplete") {
               throw new Error(`Native capture incomplete: ${p.error}.`);
+            }
             if (p.fileState === "complete") {
               const events = captureU64(p.producedThrough), chunks = captureU64(p.producedChunks);
-              if (events > BigInt(Number.MAX_SAFE_INTEGER) || chunks > BigInt(Number.MAX_SAFE_INTEGER))
+              if (events > BigInt(Number.MAX_SAFE_INTEGER) || chunks > BigInt(Number.MAX_SAFE_INTEGER)) {
                 throw new Error("Native capture totals exceed the consumer's exact integer range.");
-              return {
+              }
+              const summary = {
                 file: this.#file,
                 archive: this.#file,
                 scope: this.#scope,
@@ -49884,8 +50460,11 @@ var init_capture_file = __esm({
                 droppedEvents: 0,
                 chunks: Number(chunks),
                 complete: true,
-                position: p
+                position: p,
+                ...this.#context ? { contextDirectory: this.#context.directory } : {}
               };
+              await this.#context?.finish(summary);
+              return summary;
             }
             await new Promise((resolve) => setTimeout(resolve, 50));
           }
@@ -49901,9 +50480,10 @@ var init_capture_file = __esm({
   }
 });
 
-// ../debug-adapter/src/index.ts
+// packages/debug-adapter/src/index.ts
 var src_exports3 = {};
 __export(src_exports3, {
+  CaptureContextRecorder: () => CaptureContextRecorder,
   DEBUG_BACKEND_CONFORMANCE_SCENARIOS: () => DEBUG_BACKEND_CONFORMANCE_SCENARIOS,
   DEBUG_BACKEND_CONFORMANCE_VERSION: () => DEBUG_BACKEND_CONFORMANCE_VERSION,
   DEBUG_BACKEND_PROTOCOL_VERSION: () => DEBUG_BACKEND_PROTOCOL_VERSION,
@@ -49948,10 +50528,11 @@ __export(src_exports3, {
   runDebugBackendConformance: () => runDebugBackendConformance,
   validateCaptureCapabilities: () => validateCaptureCapabilities,
   validateCapturePosition: () => validateCapturePosition,
-  validateCaptureRequest: () => validateCaptureRequest
+  validateCaptureRequest: () => validateCaptureRequest,
+  verifyCaptureContext: () => verifyCaptureContext
 });
 var init_src4 = __esm({
-  "../debug-adapter/src/index.ts"() {
+  "packages/debug-adapter/src/index.ts"() {
     "use strict";
     init_conformance();
     init_contracts2();
@@ -49967,23 +50548,24 @@ var init_src4 = __esm({
     init_trace_buffer();
     init_capture_v2();
     init_capture_file();
+    init_capture_context();
   }
 });
 
-// src/disassembly/maintenance-process.ts
+// packages/vscode-extension/src/disassembly/maintenance-process.ts
 var maintenance_process_exports = {};
 __export(maintenance_process_exports, {
   handleMaintenanceProcessMessage: () => handleMaintenanceProcessMessage
 });
 module.exports = __toCommonJS(maintenance_process_exports);
 
-// src/disassembly/maintenance-jobs.ts
-var path15 = __toESM(require("node:path"));
-var import_node_perf_hooks3 = require("node:perf_hooks");
+// packages/vscode-extension/src/disassembly/maintenance-jobs.ts
+var path14 = __toESM(require("node:path"), 1);
+var import_node_perf_hooks2 = require("node:perf_hooks");
 init_src();
 init_src3();
 
-// src/runtime/bus-source.ts
+// packages/vscode-extension/src/runtime/bus-source.ts
 var createEditorRuntimeBusSource = async (file, options = {}) => {
   const { canonicalJson: canonicalJson2, DEFAULT_RUNTIME_TRACE_MAX_BYTES: DEFAULT_RUNTIME_TRACE_MAX_BYTES2, validateRuntimeBusTraceMetadata: validateRuntimeBusTraceMetadata2 } = await Promise.resolve().then(() => (init_src(), src_exports));
   const { readCaptureFileHeader: readCaptureFileHeader2, recoverCaptureFile: recoverCaptureFile2 } = await Promise.resolve().then(() => (init_src4(), src_exports3));
@@ -50024,8 +50606,8 @@ var createEditorRuntimeBusSource = async (file, options = {}) => {
   };
 };
 
-// src/runtime/trace-source.ts
-var import_promises6 = require("node:fs/promises");
+// packages/vscode-extension/src/runtime/trace-source.ts
+var import_promises5 = require("node:fs/promises");
 var createEditorRuntimeTraceSource = async (file, options = {}) => {
   const {
     canonicalJson: canonicalJson2,
@@ -50034,7 +50616,7 @@ var createEditorRuntimeTraceSource = async (file, options = {}) => {
     validateRuntimeInstructionTraceMetadata: validateRuntimeInstructionTraceMetadata2
   } = await Promise.resolve().then(() => (init_src(), src_exports));
   options.signal?.throwIfAborted();
-  const handle = await (0, import_promises6.open)(file, "r");
+  const handle = await (0, import_promises5.open)(file, "r");
   const magic = Buffer.alloc(4);
   try {
     let offset = 0;
@@ -50098,7 +50680,7 @@ var createEditorRuntimeTraceSource = async (file, options = {}) => {
   };
 };
 
-// src/disassembly/maintenance-data.ts
+// packages/vscode-extension/src/disassembly/maintenance-data.ts
 var MAX_RUNTIME_ENTRY_SEEDS = 1e5;
 var normalizedSeeds = (value, snapshot) => {
   if (!value?.length) {
@@ -50130,7 +50712,7 @@ var normalizedSeeds = (value, snapshot) => {
   }));
 };
 
-// src/disassembly/maintenance-jobs.ts
+// packages/vscode-extension/src/disassembly/maintenance-jobs.ts
 var maintenanceSnapshot = (target) => {
   const store = openAnalysisProjectStore(target.projectDirectory);
   try {
@@ -50160,9 +50742,9 @@ var maintenanceSnapshot = (target) => {
 };
 var runMaintenanceJob = async (job, signal, progress) => {
   let stage = "Load worker inputs";
-  let started2 = import_node_perf_hooks3.performance.now();
+  let started2 = import_node_perf_hooks2.performance.now();
   const finish = (status2) => {
-    const ended = import_node_perf_hooks3.performance.now();
+    const ended = import_node_perf_hooks2.performance.now();
     progress({ timing: { step: stage, durationMs: ended - started2, status: status2 } });
     started2 = ended;
   };
@@ -50264,7 +50846,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
         target.projectDirectory,
         {
           projectRomContentSha256: target.sourceManifest.rom.contentSha256,
-          sourceName: path15.basename(traceFile),
+          sourceName: path14.basename(traceFile),
           indexMode: job.input.indexMode
         },
         {
@@ -50302,7 +50884,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
         projectDirectory,
         {
           projectRomContentSha256: romContentSha256,
-          sourceName: path15.basename(traceFile)
+          sourceName: path14.basename(traceFile)
         },
         {
           signal,
@@ -50315,7 +50897,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
   throw new Error("Unknown disassembly maintenance operation.");
 };
 
-// src/disassembly/maintenance-process.ts
+// packages/vscode-extension/src/disassembly/maintenance-process.ts
 var cancellation = new AbortController();
 var started = false;
 var handleMaintenanceProcessMessage = (message, send = (response, callback) => {

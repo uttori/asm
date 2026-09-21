@@ -1024,7 +1024,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     ].join("\n");
     writeFile(directory, SNES_HARDWARE_DEFINES_SOURCE, renderSnesHardwareDefines(), "source", files);
     writeFile(directory, SNES_RAM_MAP_SCHEMA_SOURCE, renderSnesRamMapSchema(), "configuration", files);
-    writeFile(directory, SNES_RAM_DEFINES_SOURCE, renderSnesRamDefines(ramMap.variables), "source", files);
+    writeFile(directory, SNES_RAM_DEFINES_SOURCE, renderSnesRamDefines(ramMap.variables, ramMap.file), "source", files);
     writeFile(directory, "main.asm", main, "source", files);
     if (structMap) {
         writeFile(directory, SNES_STRUCT_DEFINES_SOURCE, renderSnesStructDefines(structMap), "source", files);

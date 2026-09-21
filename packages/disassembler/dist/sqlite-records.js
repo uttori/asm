@@ -1,5 +1,5 @@
 import { canonicalJson } from "./canonical-json.js";
-import { decodeSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
+import { parseSqlitePayload, decodeSqliteRuntimeIdentity } from "./sqlite-payload.js";
 /**
  * Stable ordering for explicit runtime arrays, independent of insertion order in the working store.
  * @param {RuntimeEvidenceRecord} left First semantic record.
@@ -177,7 +177,7 @@ export const runtimeFromRow = (row) => {
     const fields = row;
     const extra = fields.payload === null || fields.payload === undefined
         ? {}
-        : JSON.parse(decodeSqlitePayload(fields.payload));
+        : parseSqlitePayload(fields.payload);
     // LEFT JOIN keeps a corrupt dictionary reference visible. Silently omitting the row would lose history.
     if (typeof fields.evidence !== "string") {
         throw new Error("Missing SQLite runtime evidence dictionary entry.");
@@ -186,10 +186,7 @@ export const runtimeFromRow = (row) => {
     const kind = fields.kind;
     const architecture = fields.architecture;
     const count = Number(fields.count);
-    // Legacy migration rows already have a complete text ID. Current rows join the prefix dictionary.
-    const id = fields.id_prefix === undefined
-        ? fields.id
-        : decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+    const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
     if (kind === "runtime-execution") {
         return {
             id,

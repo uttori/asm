@@ -103,11 +103,13 @@ An analysis project contains `analysis.sqlite` and an `analysis.json` watcher po
 stores the semantic manifest, monotonic revision, seven metadata collections, and columnar runtime
 facts. SchemaVersion remains 3. Legacy JSON/shard containers and manifest migrations are removed.
 Small user configuration, debug maps and capture interchange formats keep their JSON contracts.
-SQLite's separate physical format version is 2. Globally shared runtime facts hold coordinates and
+SQLite's separate physical format version is 3. Globally shared runtime facts hold coordinates and
 payloads. Compact observations retain source IDs, exact counts and provenance. Exact instruction/state
 pairs share physical storage and expose virtual CPU-state records through a SQL view. Canonical hash
-suffixes use binary keys. Larger payloads use the bounded, checksummed compression codec. Small
-runtime payloads use JSONB. Capture receipts survive optional detail expiry. Metadata uses rowid tables to avoid excessive overflow
+suffixes are interned once and referenced by integers, including both sides of a paired observation.
+Known numeric 65816 snapshots use a versioned, checksummed packed codec that preserves all register
+values and field presence. Other small runtime payloads use JSONB; larger payloads use the bounded,
+checksummed compression codec. Capture receipts survive optional detail expiry. Metadata uses rowid tables to avoid excessive overflow
 pages, while runtime indexes serve point, coverage, and memory-instruction queries.
 
 Full reads validate record values, provenance, address-space bounds, region relationships and the
@@ -125,8 +127,15 @@ SQLite WAL handles interrupted writers and concurrent readers. The database is a
 `analysis.json` is atomically refreshed after commit for watchers. A failed pointer refresh is a
 warning about an already committed operation, not a failed edit. Explicit compaction checkpoints and
 VACUUMs the database and prunes unused dictionaries. Normal edits create no filesystem generations.
-Current projects use schema 3 and SQLite storage format 2. Earlier development layouts are outside
-the support baseline. Imports retain facts and capture receipts without copying source files.
+Current projects use schema 3 and SQLite storage format 3 exclusively. The sole existing database
+has already been converted; older storage readers and migration commands are removed. Imports
+retain facts and capture receipts without copying source files.
+Instruction analysis uses compact decoder-key/provenance summaries. Persistent SQL triggers record
+new observation IDs, including writes from other connections. Grouping runs in a read snapshot and
+publishes through an ownership token; intervening mutations discard the staged result. Append-only
+imports update existing totals, while edits, deletions, replacements and rule changes rebuild from
+the authoritative evidence. Representative IDs and register values remain those of the earliest
+physical observation in each group. This cache is independent of the retained-state import profile.
 Disposable caches and WAL have separate maintenance controls. See the
 [storage contract](https://github.com/uttori/asm/blob/master/packages/disassembler/API.md#working-index-and-storage).
 

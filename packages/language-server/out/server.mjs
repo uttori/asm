@@ -41329,17 +41329,36 @@ var configuredPluginModules = (plugins) => (plugins ?? []).map((entry, index2) =
   };
 });
 var ProjectEnvironmentController = class {
+  /**
+   * Retains host configuration without loading plugins; call replace before accessing current.
+   * @param {ProjectEnvironmentControllerOptions} options Host configuration, retained by reference.
+   */
   constructor(options) {
     this.options = options;
   }
   options;
+  /** Last successfully published pair; absent before the first replacement and after disposal. */
   #state;
+  /**
+   * Exposes the live pair without transferring ownership of its plugin lifecycle.
+   * @returns {ProjectEnvironmentState} The most recently committed environment and index.
+   * @throws {Error} No environment has been published, or the controller has been disposed.
+   */
   get current() {
     if (!this.#state) {
       throw new Error("The project environment has not been initialized.");
     }
     return this.#state;
   }
+  /**
+   * Loads and indexes a candidate before publishing it, then disposes the previous environment.
+   * Callers must serialize replacements and disposal. A failed candidate leaves current intact;
+   * failure to dispose the old environment after publication is logged without undoing the swap.
+   * @param {ProjectEnvironmentSettings} settings Configuration for the candidate environment.
+   * @param {ReadonlyMap<string, string>} overlays Absolute source paths to unsaved text, copied into the new index.
+   * @returns {Promise<ProjectEnvironmentState>} The published pair after previous-plugin cleanup.
+   * @throws {Error} Configuration, plugin loading, or initial indexing fails.
+   */
   async replace(settings2, overlays = /* @__PURE__ */ new Map()) {
     const cwd = path9.resolve(settings2.cwd);
     const pluginModules = configuredPluginModules(settings2.plugins);
@@ -41403,6 +41422,12 @@ var ProjectEnvironmentController = class {
     }
     return next;
   }
+  /**
+   * Creates a build session using the same plugin environment and target as current analysis.
+   * @param {Omit<AssemblerOptions, "environment" | "target" | "architecture" | "targetOptions">} options Per-build options; environment selection is owned by the controller.
+   * @returns {Assembler} A new session that the caller must dispose before replacing the environment.
+   * @throws {Error} There is no current environment or assembler initialization fails.
+   */
   createAssembler(options = {}) {
     const { loaded } = this.current;
     return new Assembler({
@@ -41413,6 +41438,12 @@ var ProjectEnvironmentController = class {
       ...options
     });
   }
+  /**
+   * Clears current before awaiting plugin cleanup; repeated calls with no current state do nothing.
+   * Callers must finish active builds and serialize this with replace.
+   * @returns {Promise<void>} Resolves after the active environment is disposed.
+   * @throws {Error} Plugin cleanup fails; current remains cleared.
+   */
   async dispose() {
     const current = this.#state;
     this.#state = void 0;

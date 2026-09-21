@@ -1,19 +1,35 @@
 # Native ares sources and contributions
 
-New desktop work lives in `fixtures/external/ares`, currently on
-`codex/ares-desktop-u6`. The [U1–U6 contribution package](upstream/README.md)
-contains separate U3 register, U4 safe-memory, and U5 execution-boundary commits,
-the submitted U1/U2 integration layers, the paused save/load follow-up, native
-tests, and exact series verification.
-See the [contribution package](upstream/README.md) for source reconstruction and
-verification commands, and the [capture guide](../CAPTURE.md) for recording workflows and limits. This prepared debugger build has
-not replaced the staged rich-trace runtime.
+The maintained fork is [uttori/ares](https://github.com/uttori/ares), local branch `codex/ares-integration`,
+checked out at `fixtures/external/ares`. This consolidation is local-only; GitHub has
+not been updated. It combines current upstream, the
+submitted SNES debugger, native tests, rich tracing, lossless instruction/bus/
+DMA/HDMA/PPU capture, native file recording, and transport/throughput fixes.
+The optional historical headless frontend remains available in the same source tree.
 
-The active rich-trace runtime received a separate local paused save/load hotfix
-on 2026-09-09. It is installed at the existing editor launch path with verified
-manifest hashes and a retained rollback app. The original rich
-source checkout remains preserved. Maintenance lives on
-`codex/ares-rich-state-load-fix` in its own checkout.
+See the local `docs/ares-fork-consolidation.md` record for the exact
+source identity, validation, branch disposition, and build commands.
+The [integration manifest](integration.json) identifies the maintained source.
+The [capture guide](../CAPTURE.md) describes recording workflows and limits.
+The only local checkout is `fixtures/external/ares`. Its ignored `runtime/`
+directory contains the active desktop app, manifest, settings, and Secret of Mana
+saves; `.deps/` contains its build dependencies. Secret of Mana and the capture
+smoke scripts point to this runtime. Keep alternate work on branches in this
+checkout. The old `Local Only/ares-*` checkouts, runtime copies, archive refs, and
+stash have been removed; only the current effort, open PR `GDB_SNES`, and upstream
+`master` baseline remain as local branches.
+Current development also adds default context bundles in
+`ares/sfc/system/gdb-capture-context.cpp`, controller serial-input interception,
+locked screenshot snapshots, and an independent graphics sink spanning the full capture. Build and
+run `gdb-capture-context` (including its accurate-PPU CTest variant) to verify
+paused WRAM boundaries and replay to the same endpoint. These changes retain
+existing protocol/schema versions and contain no save/capture migration logic.
+
+The U1–U6 [contribution package](upstream/README.md) and capture patch packages below
+are historical, reproducible checkpoints. Their hashes and recorded bases remain
+unchanged. New work belongs on the integration branch; do not layer their patches
+onto it again. Their references to old runtime folders describe historical runs;
+those folders are no longer retained.
 
 ## Downstream lossless instruction capture
 

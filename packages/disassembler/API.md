@@ -1,6 +1,6 @@
 # Analysis API and storage
 
-Requires Node.js 26 or newer. The supported baseline is semantic schema 3 and SQLite storage format 2.
+Requires Node.js 26 or newer. The supported baseline is semantic schema 3 and SQLite storage format 3.
 
 Architecture-neutral ROM identity, persistent analysis-project primitives, and conservative control-flow traversal for Uttori ASM.
 
@@ -61,15 +61,34 @@ refresh was interrupted. Earlier development storage layouts are outside the sup
 source-export manifests, and native trace interchange remain JSON. Lossless ACT2 capture readers
 can supply decoded chunks directly through `RuntimeTraceSource`.
 
-Physical SQLite storage format 2 is recorded in `PRAGMA user_version`, independently of semantic
+Physical SQLite storage format 3 is recorded in `PRAGMA user_version`, independently of semantic
 schema version 3 and the logical revision. `runtime_facts` shares coordinates and payloads globally.
 `runtime_observations` retains each capture's identity, count and provenance. An exact instruction/state
 pair occupies one fact and relationship, with a virtual CPU-state row exposed by the `runtime` SQL
 view. Standalone state records remain independent. Point lookups index the negative virtual row IDs.
-Runtime prefixes/evidence sets are interned and hash suffixes use binary keys. Small runtime payloads
-use SQLite JSONB. Larger records still use the bounded, checksummed DEFLATE codec when it saves space.
+Runtime prefixes/evidence sets and identity suffixes are interned. Observations and their uniqueness
+indexes reference suffixes by integer, and paired states share that reference. Canonical hash suffixes
+remain binary; arbitrary text identities preserve their exact spelling.
+Numeric 65816 instruction/state payloads use UAR/1: a field-presence mask, instruction bytes, unsigned
+byte/word registers and CRC32. This codec preserves all flags and register values; it does not apply a
+retention profile. Aliases, unknowns, unexpected fields and other processors retain the general codec.
+Other small payloads use SQLite JSONB. Larger records use bounded, checksummed DEFLATE when it saves space.
 Metadata and compressed export projections use the same codec. Complete runtime arrays retain their
 semantic shape and sort by ID. Streaming consumers must not depend on physical row order.
+
+Use the store APIs, or query the `runtime` view with the connection's registered `analysis_json(payload)`
+function; raw SQLite JSON functions cannot decode UAR/1. Only SQLite storage format 3 is supported.
+The sole existing project has already been converted; migration commands and older layout readers
+are removed. Rebuild and reload consumers together when changing the storage contract.
+
+`runtimeInstructionVariants()` prepares a disposable summary of decoder keys and exact per-evidence
+counts, then streams representatives from retained facts. Appended instruction observations are
+journaled transactionally and incorporated on the next preparation. Other record mutations and
+decoder configuration changes force a full rebuild. Pairing a CPU snapshot or updating editor
+offsets does not recount instructions. Prepare before opening the consuming read transaction;
+concurrent changes during preparation reject publication and require a retry. Full register snapshots,
+capture receipts and imported IDs are never replaced by this summary. Its tables and pending journal
+count toward the optional cache budget; eviction only costs a subsequent rebuild.
 
 The semantic collections retain the in-memory `AnalysisProjectShards` shape. Database reads use
 stable ordering. Rewrites preserve logical records rather than promising identical SQLite bytes.

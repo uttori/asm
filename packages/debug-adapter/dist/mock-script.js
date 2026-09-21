@@ -23,10 +23,12 @@ const instructionFor = (range, output) => {
  */
 export const createDebugMapReplayScript = (map, output) => {
     const issues = validateDebugMap(map, output);
-    if (issues.length > 0)
+    if (issues.length > 0) {
         throw new Error(issues.join(" "));
-    if (map.ranges.length === 0)
+    }
+    if (map.ranges.length === 0) {
         throw new Error("Debug map contains no executable source ranges.");
+    }
     const architectures = [...new Set(map.ranges.map((range) => range.architecture))].sort();
     const threads = architectures.map((architecture, index) => ({
         id: index + 1,

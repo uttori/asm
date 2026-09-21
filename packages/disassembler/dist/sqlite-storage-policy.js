@@ -56,7 +56,7 @@ export const storageSnapshot = (db, file) => {
     const pages = Number(db.prepare("PRAGMA page_count").get().page_count);
     const free = Number(db.prepare("PRAGMA freelist_count").get().freelist_count);
     const rows = db
-        .prepare("SELECT COUNT(*) AS n,COUNT(state_id) AS paired FROM runtime_observations")
+        .prepare("SELECT COUNT(*) AS n,COUNT(state_prefix_id) AS paired FROM runtime_observations")
         .get();
     const captures = db.prepare("SELECT COUNT(*) AS n FROM capture_catalog").get();
     let walBytes = 0;
@@ -98,7 +98,14 @@ export const enforceDatabaseBudget = (db) => {
 const CACHES = [
     { key: "coverage", tables: ["query_coverage_segments", "query_coverage_details"] },
     { key: "graph", tables: ["query_graph_nodes", "query_graph_edges"] },
-    { key: "instruction_variants", tables: ["query_runtime_variants"] },
+    {
+        key: "instruction_variants",
+        tables: [
+            "query_runtime_variant_keys",
+            "query_runtime_variant_sources",
+            "query_runtime_variant_pending",
+        ],
+    },
     { key: "runtime_architectures", tables: ["query_runtime_architectures"] },
     { key: "evidence_links", tables: ["query_evidence_links"] },
 ];
@@ -137,6 +144,13 @@ export const maintainStorageCaches = (db) => {
     const evicted = [];
     for (const cache of entries) {
         const token = db.prepare("SELECT signature FROM query_cache WHERE name=?").get(cache.key);
+        // A builder reads the base summary and pending IDs under one snapshot. Eviction must not
+        // remove that base before it can publish; its separate ownership token protects the whole set.
+        const summaryBuilder = cache.key === "instruction_variants" &&
+            db.prepare("SELECT 1 FROM query_cache WHERE name='instruction_variants_build'").get();
+        if (summaryBuilder) {
+            continue;
+        }
         // Another process may be computing this projection. Its token must survive ordinary cleanup.
         if (String(token?.signature).startsWith("pending:")) {
             continue;

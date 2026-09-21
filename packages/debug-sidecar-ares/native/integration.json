@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/uttori/ares",
+  "branch": "codex/ares-integration",
+  "revision": "fc216895769cbbd0194385ff3a6c4116c02b28b1",
+  "upstreamRepository": "https://github.com/ares-emulator/ares",
+  "upstreamRevision": "17813a3ccda21ab9bd45f09bfc2f91196dbf50ff",
+  "captureSnapshotRevision": "e2e44086e147ac65f5009433cd6eade90d127a75",
+  "captureSnapshotTree": "9e05095a97c2a55dbd554faa61d436d5820a04cf",
+  "submittedDebuggerRevision": "61ffa763adf5776055b3533ac4f66e5a3f1b1466",
+  "contributionTestRevision": "f167edfc62b72101c873b6175855171ac5b093f8",
+  "mergedPullRequests": [
+    {
+      "number": 2624,
+      "mergeCommit": "2bd312e6028b39e000c2ffeaf99e64e81648e7e6",
+      "mergedAt": "2026-09-13T14:51:16Z"
+    },
+    {
+      "number": 2625,
+      "mergeCommit": "b15d4d378c0ae59628d914efba1dfac81b07f88f",
+      "mergedAt": "2026-09-13T14:55:10Z"
+    }
+  ],
+  "openPullRequest": {
+    "number": 2630,
+    "branch": "GDB_SNES",
+    "revision": "61ffa763adf5776055b3533ac4f66e5a3f1b1466"
+  },
+  "validation": {
+    "status": "passed",
+    "platform": "darwin",
+    "architecture": "arm64",
+    "desktopBuild": true,
+    "headlessBuild": true,
+    "nativeTests": {
+      "passed": 21,
+      "failed": 0,
+      "seconds": 17.71,
+      "command": "ctest --test-dir 'Local Only/ares-integration/build' -R '^gdb-' --output-on-failure"
+    },
+    "completePatchReconstructsTree": true,
+    "executableSha256": "a20ed90fe535df92ac1d259ddc98783be8146c91ef993b1874c14122c8b0c198",
+    "live": [
+      {
+        "evidence": "integration-evidence/desktop-capture.json",
+        "sha256": "f5b9e12579e9e644b25b9e58d6f737a63adb6d1d9920e02bec41deac0e773522",
+        "observedEvents": 228960,
+        "droppedEvents": 0
+      },
+      {
+        "evidence": "integration-evidence/sidecar-ppu-native.json",
+        "sha256": "a6f728a14db6963c3eacbd8fabcb2e6a6514c848ff05a2358d02a02895bcb337",
+        "observedEvents": 3541199,
+        "droppedEvents": 0
+      },
+      {
+        "evidence": "integration-evidence/sidecar-ppu-rsp.json",
+        "sha256": "3b55fb7975afb2ae3454711ec3bac949726dab706870311564003599568c9810",
+        "observedEvents": 65617,
+        "droppedEvents": 0
+      }
+    ]
+  },
+  "sourceTree": "b6bf46f4fc163de868b0d9a9c85f3d8c81210070",
+  "publication": "local-only; user requested no GitHub writes",
+  "remoteMasterRevision": "af4cbb04f067682a8a3cf42695ff78bed634b38d",
+  "localWorkspace": {
+    "sourceDirectory": "fixtures/external/ares",
+    "runtimeDirectory": "fixtures/external/ares/runtime",
+    "dependenciesDirectory": "fixtures/external/ares/.deps",
+    "buildDirectory": "fixtures/external/ares/build",
+    "workingTreeIncludesCurrentCaptureContext": true,
+    "retainedBranches": [
+      "codex/ares-integration",
+      "GDB_SNES",
+      "master"
+    ],
+    "archiveCopiesRetained": false,
+    "validation": {
+      "date": "2026-09-20",
+      "desktopBuild": true,
+      "headlessBuild": true,
+      "nativeTestsPassed": 23,
+      "nativeTestsFailed": 0,
+      "nativeTestSeconds": 18.76,
+      "unchangedSourceFiles": 3888,
+      "saveFilesVerified": 12,
+      "runtimeResourcesVerified": 109,
+      "runtimeSignatureVerified": true,
+      "captureEvents": 258766,
+      "droppedEvents": 0,
+      "contextReplayVerified": true
+    }
+  }
+}

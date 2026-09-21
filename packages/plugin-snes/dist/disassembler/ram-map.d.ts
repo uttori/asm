@@ -20,6 +20,8 @@ export interface SnesRamMapVariableInput {
     readonly category?: string;
     readonly description: string;
     readonly notes?: readonly string[];
+    /** Provenance citations, emitted only when includeSourceInformation is true. */
+    readonly sources?: readonly string[];
 }
 /** Versioned, user-owned RAM-map document. */
 export interface SnesRamMapFile {
@@ -27,6 +29,8 @@ export interface SnesRamMapFile {
     readonly format: typeof SNES_RAM_MAP_FORMAT;
     readonly schemaVersion: typeof SNES_RAM_MAP_SCHEMA_VERSION;
     readonly source?: string;
+    /** Include provenance citations in generated definition comments. Defaults to false. */
+    readonly includeSourceInformation?: boolean;
     readonly variables: readonly SnesRamMapVariableInput[];
 }
 /** Validated RAM variable used by source generation and operand lookup. */
@@ -39,6 +43,8 @@ export interface SnesRamMapVariable {
     readonly category?: string;
     readonly description: string;
     readonly notes: readonly string[];
+    /** Explicit citations kept separate from descriptive notes for optional source output. */
+    readonly sources?: readonly string[];
 }
 /** Validated RAM-map document plus the exact source bytes used for provenance. */
 export interface LoadedSnesRamMap {
@@ -78,9 +84,10 @@ export declare const indexSnesRamMap: (variables: readonly SnesRamMapVariable[])
 /**
  * Renders a documented generated definition file from a validated RAM map.
  * @param {readonly SnesRamMapVariable[]} variables Validated RAM variables.
+ * @param {Pick<SnesRamMapFile, "includeSourceInformation">} options Source citations are omitted by default; descriptive notes remain visible.
  * @returns {string} Generated assembler definitions with hover-ready comments.
  */
-export declare const renderSnesRamDefines: (variables: readonly SnesRamMapVariable[]) => string;
+export declare const renderSnesRamDefines: (variables: readonly SnesRamMapVariable[], options?: Pick<SnesRamMapFile, "includeSourceInformation">) => string;
 /**
  * Renders the local JSON Schema included beside every RAM map.
  * @returns {string} Canonical JSON Schema text.

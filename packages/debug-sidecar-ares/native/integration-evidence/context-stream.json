@@ -1,0 +1,38 @@
+{
+  "hostVideo": "None",
+  "audioVideoBlocking": false,
+  "fixtureKind": "dense-dma",
+  "pauseMs": 0.852666999999883,
+  "sink": "stream",
+  "fixtureSha256": "01c142ddbab4e568e19e85ccf7387601a286806ec5c7cbe7d122092ca236c50b",
+  "executableSha256": "bd426d0889184a812fd223945210aaac3761792a46fa9a8a7bcab1c2b55fe2c0",
+  "bundledSidecarSha256": "159bc2365f21048f7db55a8faed45f6d56384094d89004bd9faa2053687ed849",
+  "scope": "snes.65816.instructions",
+  "consumer": "unrestricted",
+  "checks": [
+    "verified runtime launch",
+    "DAP capture forwarding",
+    "bundled stdio sidecar",
+    "bounded ACT2 chunks up to 256 KiB",
+    "durable writer and final drain",
+    "full WRAM context snapshots",
+    "verified context artifact hashes",
+    "pre-action save-state and console-input replay",
+    "identical replay endpoint WRAM"
+  ],
+  "observedEvents": 41976,
+  "droppedEvents": 0,
+  "throttleCount": "1",
+  "recordingMs": 127.67333400000007,
+  "finalDrainMs": 224.99933299999998,
+  "captureWallMs": 352.67266700000005,
+  "validationMs": 83.35262499999976,
+  "emulatedSeconds": 0.04026805502645503,
+  "emulatedMasterClocks": "864848",
+  "context": {
+    "fullWramSnapshots": true,
+    "artifactHashesVerified": true,
+    "replayEndpointWramIdentical": true,
+    "graphicsCompanionComplete": true
+  }
+}

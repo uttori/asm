@@ -15,8 +15,9 @@ export class CaptureFrameReader {
      * The cap amortizes small metadata reads without loading an entire archive.
      */
     constructor(read, windowBytes = 1048576) {
-        if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576)
+        if (!Number.isSafeInteger(windowBytes) || windowBytes < 1 || windowBytes > 1048576) {
             throw new Error("Invalid capture read-ahead window.");
+        }
         this.#read = read;
         this.#windowBytes = windowBytes;
     }
@@ -34,18 +35,21 @@ export class CaptureFrameReader {
             !Number.isSafeInteger(offset) ||
             offset < 0 ||
             !Number.isSafeInteger(limit) ||
-            offset + length > limit)
+            offset + length > limit) {
             throw new Error("Torn capture frame or invalid component length.");
+        }
         const relative = offset - this.#start;
         let available = 0;
         // Buffered bytes still obey the caller's current snapshot/durable limit.
         // their presence in memory is not evidence that they may be consumed.
-        if (relative >= 0 && relative <= this.#valid)
+        if (relative >= 0 && relative <= this.#valid) {
             available = Math.min(this.#valid - relative, limit - offset);
+        }
         // Copy intentionally: views would alias later refills. Immutable windows keep
         // views valid but let tiny components retain whole windows and benchmarked at higher RSS.
-        if (available >= length)
+        if (available >= length) {
             return Buffer.from(this.#buffer.subarray(relative, relative + length));
+        }
         const nextLength = Math.min(this.#windowBytes, limit - offset);
         // Idle live polls allocate nothing. Short durable prefixes allocate only
         // their available bytes. Offline scans reuse the full window after first fill.
@@ -53,8 +57,9 @@ export class CaptureFrameReader {
         // Carry the unconsumed tail forward instead of rereading it when a frame
         // crosses the window boundary. Copies returned earlier cannot alias this
         // reusable window. This bounds external-buffer retention during long imports.
-        if (available)
+        if (available) {
             this.#buffer.copy(next, 0, relative, relative + available);
+        }
         this.#buffer = next;
         // Invalidate before I/O: a short read or failure must not expose partially
         // filled allocUnsafe storage as a valid cached frame on a later call.
@@ -62,8 +67,9 @@ export class CaptureFrameReader {
         let got = available;
         while (got < nextLength) {
             const { bytesRead } = await this.#read(this.#buffer, got, nextLength - got, offset + got);
-            if (!bytesRead)
+            if (!bytesRead) {
                 throw new Error("Torn capture frame.");
+            }
             got += bytesRead;
         }
         this.#start = offset;

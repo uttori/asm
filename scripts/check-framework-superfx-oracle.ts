@@ -17,7 +17,9 @@ const macroPattern = /macro\s+Op(\d+)\(\)([\S\s]*?)endmacro/g;
 for (const match of oracleSource.matchAll(macroPattern)) {
   const opcode = Number(match[1]);
   const mnemonic = match[2]?.match(/print\s+"\s*([a-z][\da-z]*)/i)?.[1]?.toUpperCase();
-  if (Number.isInteger(opcode) && mnemonic) observed.set(opcode, mnemonic);
+  if (Number.isInteger(opcode) && mnemonic) {
+    observed.set(opcode, mnemonic);
+  }
 }
 
 const sourceMnemonicAgrees = (
@@ -134,7 +136,9 @@ try {
   const result = spawnSync(executable, ["--no-title-check", oracleCopy, romPath], {
     encoding: "utf8",
   });
-  if (result.error) throw result.error;
+  if (result.error) {
+    throw result.error;
+  }
   if (result.status !== 0) {
     throw new Error(
       `SNES-ROM-Framework SuperFX executable oracle failed (${result.status ?? "signal"}):\n${result.stderr || result.stdout}`,

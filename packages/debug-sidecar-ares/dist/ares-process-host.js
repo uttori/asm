@@ -11,18 +11,21 @@ export const ARES_RUNTIME_MANIFEST_VERSION = 1;
 const sha256Pattern = /^[\dA-Fa-f]{64}$/;
 const revisionPattern = /^[\dA-Fa-f]{40}$/;
 const checkedSha256 = (value, name) => {
-    if (!sha256Pattern.test(value))
+    if (!sha256Pattern.test(value)) {
         throw new Error(`${name} must be a 64-digit SHA-256 value.`);
+    }
     return value.toLowerCase();
 };
 const checkedRevision = (value, name) => {
-    if (!revisionPattern.test(value))
+    if (!revisionPattern.test(value)) {
         throw new Error(`${name} must be a 40-digit git revision.`);
+    }
     return value.toLowerCase();
 };
 const checkedAbsolutePath = (value, name) => {
-    if (!path.isAbsolute(value))
+    if (!path.isAbsolute(value)) {
         throw new Error(`${name} must be an absolute path.`);
+    }
     return path.normalize(value);
 };
 const checkedResourcePath = (value) => {
@@ -30,8 +33,9 @@ const checkedResourcePath = (value) => {
         value.includes("\\") ||
         path.posix.isAbsolute(value) ||
         path.posix.normalize(value) !== value ||
-        value.split("/").includes(".."))
+        value.split("/").includes("..")) {
         throw new Error(`Ares resource path '${value}' must be normalized and relative.`);
+    }
     return value;
 };
 const errorValue = (error) => error instanceof Error ? error : new Error(String(error));
@@ -78,14 +82,16 @@ class NodeAresProcessHandle {
         return this.#exit;
     }
     kill(signal) {
-        if (!this.#exited)
+        if (!this.#exited) {
             this.#child.kill(signal);
+        }
     }
 }
 const nodeSha256 = async (file) => {
     const digest = createHash("sha256");
-    for await (const chunk of createReadStream(file))
+    for await (const chunk of createReadStream(file)) {
         digest.update(chunk);
+    }
     return digest.digest("hex");
 };
 const reserveLoopbackPort = async () => {
@@ -100,10 +106,12 @@ const reserveLoopbackPort = async () => {
         throw new Error("Unable to reserve an IPv4 loopback port for ares.");
     }
     await new Promise((resolve, reject) => server.close((error) => {
-        if (error)
+        if (error) {
             reject(error);
-        else
+        }
+        else {
             resolve();
+        }
     }));
     return address.port;
 };
@@ -125,13 +133,15 @@ export const nodeAresProcessRuntime = Object.freeze({
     }),
 });
 const manifestRecord = (value) => {
-    if (!value || typeof value !== "object" || Array.isArray(value))
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
         throw new Error("Ares runtime manifest must be an object.");
+    }
     return value;
 };
 const manifestString = (value, name) => {
-    if (typeof value !== "string" || value.length === 0)
+    if (typeof value !== "string" || value.length === 0) {
         throw new Error(`${name} must be a non-empty string.`);
+    }
     return value;
 };
 /**
@@ -141,17 +151,21 @@ const manifestString = (value, name) => {
  */
 export const parseAresRuntimeManifest = (value) => {
     const manifest = manifestRecord(value);
-    if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION)
+    if (manifest.schemaVersion !== ARES_RUNTIME_MANIFEST_VERSION) {
         throw new Error(`Unsupported ares runtime manifest version ${String(manifest.schemaVersion)}.`);
-    if (manifest.emulator !== "ares")
+    }
+    if (manifest.emulator !== "ares") {
         throw new Error("Runtime manifest is not for ares.");
+    }
     if (manifest.frontend !== undefined &&
         manifest.frontend !== "headless" &&
-        manifest.frontend !== "desktop")
+        manifest.frontend !== "desktop") {
         throw new Error("Ares runtime frontend must be 'headless' or 'desktop'.");
+    }
     const buildConfiguration = manifestString(manifest.buildConfiguration, "Ares build configuration");
-    if (!Array.isArray(manifest.resources))
+    if (!Array.isArray(manifest.resources)) {
         throw new Error("Ares runtime manifest resources must be an array.");
+    }
     const resources = Object.freeze(manifest.resources.map((value, index) => {
         const resource = manifestRecord(value);
         const resourcePath = checkedResourcePath(manifestString(resource.path, `Ares resource ${index} path`));
@@ -160,8 +174,9 @@ export const parseAresRuntimeManifest = (value) => {
             sha256: checkedSha256(manifestString(resource.sha256, `Resource '${resourcePath}' SHA-256`), `Resource '${resourcePath}' SHA-256`),
         });
     }));
-    if (new Set(resources.map((resource) => resource.path)).size !== resources.length)
+    if (new Set(resources.map((resource) => resource.path)).size !== resources.length) {
         throw new Error("Ares runtime manifest contains duplicate resource paths.");
+    }
     return Object.freeze({
         schemaVersion: ARES_RUNTIME_MANIFEST_VERSION,
         emulator: "ares",
@@ -209,11 +224,13 @@ export class AresProcessHost {
         if (executableRelative === "" ||
             executableRelative === ".." ||
             executableRelative.startsWith(`..${path.sep}`) ||
-            path.isAbsolute(executableRelative))
+            path.isAbsolute(executableRelative)) {
             throw new Error("Ares executable must be contained within its portable runtime directory.");
+        }
         this.#system = options.system ?? "Super Famicom";
-        if (this.#system.length === 0)
+        if (this.#system.length === 0) {
             throw new Error("Ares system name must be non-empty.");
+        }
         this.#fastBoot = options.fastBoot ?? true;
         this.#env = options.env ?? {};
         this.#startupTimeoutMs = options.startupTimeoutMs ?? 10_000;
@@ -230,8 +247,9 @@ export class AresProcessHost {
             ["Ares connect retry delay", this.#connectRetryMs],
             ["Ares output limit", this.#maxOutputBytes],
         ]) {
-            if (!Number.isSafeInteger(value) || value <= 0)
+            if (!Number.isSafeInteger(value) || value <= 0) {
                 throw new Error(`${name} must be a positive safe integer.`);
+            }
         }
     }
     /** @returns {AresRuntimeManifest} Normalized immutable launch identity. */
@@ -266,8 +284,9 @@ export class AresProcessHost {
                 return await this.#connect();
             }
             catch (error) {
-                if (launched)
+                if (launched) {
                     await this.#terminateCurrent();
+                }
                 throw error;
             }
         });
@@ -278,16 +297,19 @@ export class AresProcessHost {
     }
     async #launch() {
         await this.#verifyIdentity();
-        await mkdir(path.join(this.#runtimeDirectory, "saves"), { recursive: true });
+        const desktop = this.#manifest.frontend === "desktop";
+        // Desktop settings own save locations, including an empty path for saves
+        // beside the ROM. Overriding it hides existing SRAM/slots after a runtime switch.
+        if (!desktop) {
+            await mkdir(path.join(this.#runtimeDirectory, "saves"), { recursive: true });
+        }
         const port = await this.#runtime.reserveLoopbackPort();
         const args = [
             "--system",
             this.#system,
             "--settings-file",
             path.join(this.#runtimeDirectory, "settings.bml"),
-            "--setting",
-            `Paths/Saves=${path.join(this.#runtimeDirectory, "saves")}`,
-            ...(this.#manifest.frontend === "desktop"
+            ...(desktop
                 ? [
                     `Developer/DebugServerPort=${port}`,
                     "Developer/DebugServerEnabled=true",
@@ -302,6 +324,8 @@ export class AresProcessHost {
                     "General/Rewind=false",
                 ].flatMap((setting) => ["--setting", setting])
                 : [
+                    "--setting",
+                    `Paths/Saves=${path.join(this.#runtimeDirectory, "saves")}`,
                     "--gdb-port",
                     String(port),
                     "--gdb-ipv4",
@@ -325,13 +349,15 @@ export class AresProcessHost {
     async #connect() {
         const processHandle = this.#process;
         const port = this.#port;
-        if (!processHandle || port === undefined)
+        if (!processHandle || port === undefined) {
             throw new Error("Ares process is not running.");
+        }
         const deadline = Date.now() + this.#startupTimeoutMs;
         let lastError = new Error("Ares RSP listener was not ready.");
         while (Date.now() < deadline) {
-            if (processHandle.exited)
+            if (processHandle.exited) {
                 throw await this.#exitError(processHandle, "before RSP connected");
+            }
             try {
                 const remaining = Math.max(1, deadline - Date.now());
                 const transport = await this.#runtime.connect(port, Math.min(remaining, 250));
@@ -342,18 +368,22 @@ export class AresProcessHost {
             }
             await this.#runtime.delay(Math.min(this.#connectRetryMs, Math.max(1, deadline - Date.now())));
         }
-        if (processHandle.exited)
+        if (processHandle.exited) {
             throw await this.#exitError(processHandle, "before RSP connected");
+        }
         throw new Error(`Ares RSP listener on 127.0.0.1:${port} was not ready within ${this.#startupTimeoutMs} ms: ${lastError.message}`);
     }
     async #verifyIdentity() {
-        if (this.#runtime.platform !== this.#manifest.platform)
+        if (this.#runtime.platform !== this.#manifest.platform) {
             throw new Error(`Ares manifest platform '${this.#manifest.platform}' does not match '${this.#runtime.platform}'.`);
-        if (this.#runtime.architecture !== this.#manifest.architecture)
+        }
+        if (this.#runtime.architecture !== this.#manifest.architecture) {
             throw new Error(`Ares manifest architecture '${this.#manifest.architecture}' does not match '${this.#runtime.architecture}'.`);
+        }
         const runtimeInfo = await stat(this.#runtimeDirectory).catch(() => undefined);
-        if (runtimeInfo && !runtimeInfo.isDirectory())
+        if (runtimeInfo && !runtimeInfo.isDirectory()) {
             throw new Error("Ares runtime path exists but is not a directory.");
+        }
         await this.#verifyHash(this.#executable, this.#manifest.executableSha256, "executable");
         await this.#verifyHash(this.#rom, this.#manifest.romSha256, "ROM");
         for (const resource of this.#manifest.resources) {
@@ -369,18 +399,21 @@ export class AresProcessHost {
         catch (error) {
             throw new Error(`Unable to verify ares ${context} at '${file}': ${errorValue(error).message}`);
         }
-        if (actual !== expected)
+        if (actual !== expected) {
             throw new Error(`Ares ${context} SHA-256 mismatch: expected ${expected}, received ${actual}.`);
+        }
     }
     async #terminateCurrent() {
         const processHandle = this.#process;
         this.#process = undefined;
         this.#port = undefined;
-        if (!processHandle || processHandle.exited)
+        if (!processHandle || processHandle.exited) {
             return;
+        }
         processHandle.kill("SIGTERM");
-        if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs))
+        if (await waitWithTimeout(processHandle.waitForExit(), this.#shutdownTimeoutMs)) {
             return;
+        }
         processHandle.kill("SIGKILL");
         await processHandle.waitForExit();
     }
@@ -389,10 +422,12 @@ export class AresProcessHost {
         const status = exit.signal ? `signal ${exit.signal}` : `code ${String(exit.code)}`;
         const detail = this.output.trim();
         let suffix = ".";
-        if (exit.error)
+        if (exit.error) {
             suffix = `: ${exit.error.message}`;
-        else if (detail)
+        }
+        else if (detail) {
             suffix = `: ${detail}`;
+        }
         return new Error(`Ares exited with ${status} ${context}${suffix}`);
     }
     #captureOutput(stream, data) {

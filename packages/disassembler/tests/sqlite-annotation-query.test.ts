@@ -453,7 +453,9 @@ test("SQL coverage pages and totals match the standalone sweep and survive unrel
   const fixture = project();
   const shards = {
     ...fixture.shards,
-    regions: [{ id: "region", addressSpace: "file", start: 0, end: 4, evidence: [] }],
+    regions: [
+      { id: "region", name: "Test region", addressSpace: "file", start: 0, end: 4, evidence: [] },
+    ],
     analysis: [
       ...fixture.shards.analysis,
       {

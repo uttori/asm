@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
@@ -9,10 +9,187 @@ import {
   RomImage,
   writeAnalysisProject,
 } from "@uttori/asm-disassembler";
-import { downloadAndUnzipVSCode, runTests } from "@vscode/test-electron";
+import {
+  downloadAndUnzipVSCode,
+  resolveCliArgsFromVSCodeExecutablePath,
+  runTests,
+} from "@vscode/test-electron";
 
 /** VS Code release matching the extension's declared minimum API and embedded Node 24 runtime. */
 const VSCODE_TEST_VERSION = "1.128.0";
+
+/**
+ * Install the actual archive into a disposable profile and test it in production extension mode.
+ * A separate empty development extension supplies the test runner without replacing the installed
+ * package. Reopening the profile checks startup after shutdown. Restricted mode uses a direct
+ * launch because the upstream test harness always disables Workspace Trust.
+ * @param {string} workspace Temporary synthetic workspace.
+ * @param {string} tests Compiled Extension Host assertions.
+ * @param {string} executable Editor executable, either cached or explicitly selected.
+ * @param {string} vsix Candidate archive to install without rebuilding it.
+ * @returns {Promise<void>} Rejects on installation, assertion, or editor shutdown failure.
+ */
+const testInstalledArchive = async (
+  workspace: string,
+  tests: string,
+  executable: string,
+  vsix: string,
+): Promise<void> => {
+  const isolation = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-vsix-"));
+  try {
+    const extensions = path.join(isolation, "extensions");
+    const profile = path.join(isolation, "profile");
+    const driver = path.join(isolation, "driver");
+    fs.mkdirSync(driver);
+    fs.writeFileSync(
+      path.join(driver, "package.json"),
+      JSON.stringify({
+        name: "uttori-release-test-driver",
+        publisher: "uttori-tests",
+        version: "0.0.0",
+        engines: { vscode: "^1.128.0" },
+        main: "index.js",
+        activationEvents: ["*"],
+        capabilities: { untrustedWorkspaces: { supported: true } },
+      }),
+    );
+    fs.writeFileSync(path.join(driver, "index.js"), "exports.activate = () => {};\n");
+    const [cli, ...cliArgs] = resolveCliArgsFromVSCodeExecutablePath(executable, {
+      reuseMachineInstall: true,
+    });
+    execFileSync(
+      cli,
+      [
+        ...cliArgs,
+        "--user-data-dir",
+        profile,
+        "--extensions-dir",
+        extensions,
+        "--install-extension",
+        vsix,
+        "--force",
+      ],
+      {
+        stdio: "inherit",
+        timeout: 120_000,
+        shell: process.platform === "win32",
+      },
+    );
+    // Install the core archive as an ordinary consumer so the built-in TypeScript service resolves
+    // its emitted declarations and JSDoc without source conditions or a workspace symlink.
+    const npmCli = process.env.npm_execpath;
+    if (!npmCli) {
+      throw new Error("Run the installed smoke through npm run vscode:smoke:installed.");
+    }
+    const archives: string[] = [];
+    const npmEnvironment = { ...process.env, npm_config_cache: path.join(isolation, "npm-cache") };
+    for (const directory of ["packages/core", "node_modules/semver"]) {
+      const packed = execFileSync(
+        process.execPath,
+        [npmCli, "pack", "--ignore-scripts", "--json", "--pack-destination", isolation],
+        { cwd: path.resolve(directory), encoding: "utf8", env: npmEnvironment },
+      );
+      const [{ filename }] = JSON.parse(packed) as { filename: string }[];
+      archives.push(path.join(isolation, filename));
+    }
+    fs.writeFileSync(path.join(workspace, "package.json"), '{"private":true,"type":"module"}\n');
+    execFileSync(
+      process.execPath,
+      [
+        npmCli,
+        "install",
+        "--offline",
+        "--ignore-scripts",
+        "--no-audit",
+        "--no-fund",
+        "--package-lock=false",
+        ...archives,
+      ],
+      { cwd: workspace, stdio: "inherit", env: npmEnvironment },
+    );
+    for (const phase of ["installed", "reopen", "restricted"] as const) {
+      if (phase === "restricted") {
+        fs.writeFileSync(
+          path.join(workspace, "blocked-plugin.mjs"),
+          `import fs from 'node:fs'; fs.writeFileSync(${JSON.stringify(path.join(workspace, "plugin-executed"))}, 'executed'); throw new Error('Untrusted plugin executed');\n`,
+        );
+        fs.writeFileSync(
+          path.join(workspace, "uttori-asm.config.json"),
+          JSON.stringify({
+            plugins: [{ module: "./blocked-plugin.mjs" }],
+          }),
+        );
+      }
+      const userData = phase === "restricted" ? path.join(isolation, "restricted") : profile;
+      fs.mkdirSync(path.join(userData, "User"), { recursive: true });
+      fs.writeFileSync(
+        path.join(userData, "User/settings.json"),
+        JSON.stringify({
+          "security.workspace.trust.startupPrompt": "never",
+          "security.workspace.trust.banner": "never",
+          "workbench.startupEditor": "none",
+          "extensions.autoUpdate": false,
+          "update.mode": "none",
+        }),
+      );
+      const launchArgs = [
+        workspace,
+        "--user-data-dir",
+        userData,
+        "--extensions-dir",
+        extensions,
+        "--disable-gpu",
+        "--skip-welcome",
+        "--skip-release-notes",
+      ];
+      const env = { UTTORI_VSCODE_RELEASE_PHASE: phase, UTTORI_VSCODE_INSTALLED_ROOT: extensions };
+      if (phase !== "restricted") {
+        await runTests({
+          vscodeExecutablePath: executable,
+          extensionDevelopmentPath: driver,
+          extensionTestsPath: tests,
+          launchArgs,
+          extensionTestsEnv: env,
+        });
+        continue;
+      }
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(
+          executable,
+          [
+            ...launchArgs,
+            "--no-sandbox",
+            "--disable-updates",
+            `--extensionDevelopmentPath=${driver}`,
+            `--extensionTestsPath=${tests}`,
+          ],
+          {
+            env: { ...process.env, ...env },
+            stdio: "inherit",
+          },
+        );
+        const timer = setTimeout(() => {
+          child.kill();
+          reject(new Error("Restricted editor smoke exceeded 120 seconds."));
+        }, 120_000);
+        child.once("error", (error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+        child.once("exit", (code, signal) => {
+          clearTimeout(timer);
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Restricted editor smoke exited with ${signal ?? code}.`));
+          }
+        });
+      });
+    }
+  } finally {
+    fs.rmSync(isolation, { recursive: true, force: true });
+  }
+};
 
 /**
  * Checks the minimum editor's exact API in addition to the pinned development typings.
@@ -70,11 +247,14 @@ const main = async (): Promise<void> => {
   const root = process.cwd();
   const extensionDevelopmentPath = path.join(root, "packages/vscode-extension");
   const extensionTestsPath = path.join(extensionDevelopmentPath, "tests-host/out/index.cjs");
-  const vscodeExecutablePath = await downloadAndUnzipVSCode(VSCODE_TEST_VERSION);
+  const version = process.env.UTTORI_VSCODE_TEST_VERSION ?? VSCODE_TEST_VERSION;
+  const vscodeExecutablePath = process.env.UTTORI_VSCODE_TEST_EXECUTABLE
+    ? path.resolve(process.env.UTTORI_VSCODE_TEST_EXECUTABLE)
+    : await downloadAndUnzipVSCode(version);
   checkMinimumEditorApi(vscodeExecutablePath);
   if (process.env.UTTORI_VSCODE_LIVE_WORKSPACE) {
     await runTests({
-      version: VSCODE_TEST_VERSION,
+      version,
       vscodeExecutablePath,
       extensionDevelopmentPath,
       extensionTestsPath,
@@ -164,8 +344,17 @@ const main = async (): Promise<void> => {
         })),
       },
     });
+    if (process.env.UTTORI_VSCODE_TEST_VSIX) {
+      await testInstalledArchive(
+        workspacePath,
+        extensionTestsPath,
+        vscodeExecutablePath,
+        path.resolve(process.env.UTTORI_VSCODE_TEST_VSIX),
+      );
+      return;
+    }
     await runTests({
-      version: VSCODE_TEST_VERSION,
+      version,
       vscodeExecutablePath,
       extensionDevelopmentPath,
       extensionTestsPath,

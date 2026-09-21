@@ -2,7 +2,7 @@
 
 ## Supported code
 
-Uttori ASM is currently unreleased. Security fixes target the current `master` branch; no published
+Uttori ASM is currently unreleased. Security fixes target the current `master` branch. No published
 version or long-term-support window is promised yet. Do not change package versions solely to report
 or fix a vulnerability.
 
@@ -15,11 +15,11 @@ maintainer at `matthew.callis@gmail.com` with the subject `Uttori ASM security r
 
 Include:
 
-- the affected commit and package;
-- operating system and Node version;
-- the smallest synthetic reproduction;
-- expected and observed behavior;
-- security impact and required user interaction; and
+- the affected commit and package.
+- operating system and Node version.
+- the smallest synthetic reproduction.
+- expected and observed behavior.
+- security impact and required user interaction. And
 - whether the report contains information that must remain private.
 
 Do not send commercial ROMs, extracted copyrighted assets, emulator binaries, credentials, session

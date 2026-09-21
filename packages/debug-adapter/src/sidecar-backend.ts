@@ -38,29 +38,29 @@ const stepKinds = new Set<DebugStepKind>(["instruction", "over", "in", "out"]);
 
 const record = (value: unknown, context: string): UnknownRecord => {
   if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error(`${context} must be an object.`);
+    {throw new Error(`${context} must be an object.`);}
   return value as UnknownRecord;
 };
 
 const array = (value: unknown, context: string): unknown[] => {
-  if (!Array.isArray(value)) throw new Error(`${context} must be an array.`);
+  if (!Array.isArray(value)) {throw new Error(`${context} must be an array.`);}
   return value;
 };
 
 const string = (value: unknown, context: string): string => {
   if (typeof value !== "string" || value.length === 0)
-    throw new Error(`${context} must be a non-empty string.`);
+    {throw new Error(`${context} must be a non-empty string.`);}
   return value;
 };
 
 const boolean = (value: unknown, context: string): boolean => {
-  if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
+  if (typeof value !== "boolean") {throw new Error(`${context} must be boolean.`);}
   return value;
 };
 
 const integer = (value: unknown, context: string, minimum = 0): number => {
   if (!Number.isSafeInteger(value) || (value as number) < minimum)
-    throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+    {throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);}
   return value as number;
 };
 
@@ -95,7 +95,7 @@ const architectureCapabilities = (
     (entry, index) => string(entry, `${context}.addressSpaces[${index}]`),
   );
   if (new Set(addressSpaces).size !== addressSpaces.length)
-    throw new Error(`${context}.addressSpaces must be unique.`);
+    {throw new Error(`${context}.addressSpaces must be unique.`);}
   const memorySpaces = array(candidate.memorySpaces, `${context}.memorySpaces`)
     .map((entry, index) => {
       const memorySpace = record(entry, `${context}.memorySpaces[${index}]`);
@@ -112,32 +112,32 @@ const architectureCapabilities = (
     })
     .sort((left, right) => left.addressSpace.localeCompare(right.addressSpace));
   if (new Set(memorySpaces.map(({ addressSpace }) => addressSpace)).size !== memorySpaces.length)
-    throw new Error(`${context}.memorySpaces must use unique address spaces.`);
+    {throw new Error(`${context}.memorySpaces must use unique address spaces.`);}
   if (memorySpaces.some(({ addressSpace }) => !addressSpaces.includes(addressSpace)))
-    throw new Error(`${context}.memorySpaces must be declared in addressSpaces.`);
+    {throw new Error(`${context}.memorySpaces must be declared in addressSpaces.`);}
   const memory = boolean(candidate.memory, `${context}.memory`);
   const hasMemorySpaces = memorySpaces.length > 0;
   if (memory !== hasMemorySpaces)
-    throw new Error(`${context}.memory must match whether memorySpaces is non-empty.`);
+    {throw new Error(`${context}.memory must match whether memorySpaces is non-empty.`);}
   const trace = (() => {
-    if (candidate.trace === null) return null;
+    if (candidate.trace === null) {return null;}
     const value = record(candidate.trace, `${context}.trace`);
     const traceAddressSpaces = array(value.addressSpaces, `${context}.trace.addressSpaces`)
       .map((entry, index) => string(entry, `${context}.trace.addressSpaces[${index}]`))
       .sort();
     if (traceAddressSpaces.length === 0)
-      throw new Error(`${context}.trace.addressSpaces must not be empty.`);
+      {throw new Error(`${context}.trace.addressSpaces must not be empty.`);}
     if (new Set(traceAddressSpaces).size !== traceAddressSpaces.length)
-      throw new Error(`${context}.trace.addressSpaces must be unique.`);
+      {throw new Error(`${context}.trace.addressSpaces must be unique.`);}
     if (traceAddressSpaces.some((addressSpace) => !addressSpaces.includes(addressSpace)))
-      throw new Error(`${context}.trace.addressSpaces must be declared in addressSpaces.`);
+      {throw new Error(`${context}.trace.addressSpaces must be declared in addressSpaces.`);}
     const maxBufferedEvents = positiveInteger(
       value.maxBufferedEvents,
       `${context}.trace.maxBufferedEvents`,
     );
     const maxBatchEvents = positiveInteger(value.maxBatchEvents, `${context}.trace.maxBatchEvents`);
     if (maxBatchEvents > maxBufferedEvents)
-      throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);
+      {throw new Error(`${context}.trace.maxBatchEvents must not exceed maxBufferedEvents.`);}
     return {
       addressSpaces: traceAddressSpaces,
       maxBufferedEvents,
@@ -148,15 +148,15 @@ const architectureCapabilities = (
     };
   })();
   const stepKinds = (() => {
-    if (candidate.stepKinds === undefined) return undefined;
+    if (candidate.stepKinds === undefined) {return undefined;}
     const values = array(candidate.stepKinds, `${context}.stepKinds`).map((entry, index) =>
       string(entry, `${context}.stepKinds[${index}]`),
     );
     const allowed = new Set(["instruction", "over", "in", "out"]);
     if (values.some((entry) => !allowed.has(entry)))
-      throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
+      {throw new Error(`${context}.stepKinds contains an unsupported step kind.`);}
     if (new Set(values).size !== values.length)
-      throw new Error(`${context}.stepKinds must be unique.`);
+      {throw new Error(`${context}.stepKinds must be unique.`);}
     return values as DebugArchitectureCapabilities["stepKinds"];
   })();
   return {
@@ -181,17 +181,17 @@ const backendCapabilities = (value: unknown, context: string): DebugBackendCapab
     .map((entry, index) => architectureCapabilities(entry, `${context}.architectures[${index}]`))
     .sort((left, right) => left.architecture.localeCompare(right.architecture));
   if (new Set(architectures.map(({ architecture }) => architecture)).size !== architectures.length)
-    throw new Error(`${context}.architectures must use unique architecture identifiers.`);
+    {throw new Error(`${context}.architectures must use unique architecture identifiers.`);}
   const stepKinds = (() => {
-    if (candidate.stepKinds === undefined) return undefined;
+    if (candidate.stepKinds === undefined) {return undefined;}
     const values = array(candidate.stepKinds, `${context}.stepKinds`).map((entry, index) =>
       string(entry, `${context}.stepKinds[${index}]`),
     );
     const allowed = new Set(["instruction", "over", "in", "out"]);
     if (values.some((entry) => !allowed.has(entry)))
-      throw new Error(`${context}.stepKinds contains an unsupported step kind.`);
+      {throw new Error(`${context}.stepKinds contains an unsupported step kind.`);}
     if (new Set(values).size !== values.length)
-      throw new Error(`${context}.stepKinds must be unique.`);
+      {throw new Error(`${context}.stepKinds must be unique.`);}
     return values as DebugBackendCapabilities["stepKinds"];
   })();
   return Object.freeze({
@@ -278,7 +278,7 @@ const breakpoint = (value: unknown, context: string): DebugBreakpoint => {
 
 const byte = (value: unknown, context: string): number => {
   const result = integer(value, context);
-  if (result > 0xff) throw new Error(`${context} must be an unsigned byte.`);
+  if (result > 0xff) {throw new Error(`${context} must be an unsigned byte.`);}
   return result;
 };
 
@@ -323,9 +323,9 @@ const traceBatch = (value: unknown, context: string): DebugTraceBatch => {
 };
 
 const base64Bytes = (value: unknown, context: string): Uint8Array => {
-  if (typeof value !== "string") throw new Error(`${context} must be canonical base64.`);
+  if (typeof value !== "string") {throw new Error(`${context} must be canonical base64.`);}
   const bytes = Buffer.from(value, "base64");
-  if (bytes.toString("base64") !== value) throw new Error(`${context} must be canonical base64.`);
+  if (bytes.toString("base64") !== value) {throw new Error(`${context} must be canonical base64.`);}
   return new Uint8Array(bytes);
 };
 
@@ -334,7 +334,7 @@ const uniqueIds = <Value extends { readonly id: number }>(
   context: string,
 ): Value[] => {
   if (new Set(values.map(({ id }) => id)).size !== values.length)
-    throw new Error(`${context} must use unique ids.`);
+    {throw new Error(`${context} must use unique ids.`);}
   return values;
 };
 
@@ -342,7 +342,7 @@ const backendEvent = (message: DebugSidecarEvent): DebugBackendEvent => {
   const body = record(message.body, `Sidecar '${message.event}' event body`);
   if (message.event === "stopped") {
     const reason = string(body.reason, "Stopped event reason");
-    if (!stopReasons.has(reason)) throw new Error(`Unsupported stop reason '${reason}'.`);
+    if (!stopReasons.has(reason)) {throw new Error(`Unsupported stop reason '${reason}'.`);}
     return {
       type: "stopped",
       reason: reason as "entry" | "pause" | "step" | "breakpoint" | "exception",
@@ -350,21 +350,21 @@ const backendEvent = (message: DebugSidecarEvent): DebugBackendEvent => {
     };
   }
   if (message.event === "continued")
-    return {
+    {return {
       type: "continued",
       threadId: positiveInteger(body.threadId, "Continued event threadId"),
       allThreads: boolean(body.allThreads, "Continued event allThreads"),
-    };
+    };}
   if (message.event === "terminated")
-    return { type: "terminated", restart: boolean(body.restart, "Terminated event restart") };
+    {return { type: "terminated", restart: boolean(body.restart, "Terminated event restart") };}
   if (message.event === "breakpoint")
-    return { type: "breakpoint", breakpoint: breakpoint(body.breakpoint, "Breakpoint event") };
+    {return { type: "breakpoint", breakpoint: breakpoint(body.breakpoint, "Breakpoint event") };}
   return {
     type: "output",
     category: (() => {
       const category = string(body.category, "Output event category");
       if (!new Set(["console", "stdout", "stderr"]).has(category))
-        throw new Error(`Unsupported output category '${category}'.`);
+        {throw new Error(`Unsupported output category '${category}'.`);}
       return category as "console" | "stdout" | "stderr";
     })(),
     text: string(body.text, "Output event text"),
@@ -402,17 +402,17 @@ export class SidecarDebugBackend implements DebugBackend {
 
   /** @inheritdoc */
   async connect(options: DebugBackendConnectOptions = {}): Promise<void> {
-    if (this.#connected) throw new Error("Debug backend is already connected.");
+    if (this.#connected) {throw new Error("Debug backend is already connected.");}
     const client = await this.#ensureClient();
     const response = record(
       await client.request("connect", { reset: options.reset ?? true }),
       "Sidecar connect response",
     );
     if (response.capabilities !== undefined)
-      this.#capabilities = backendCapabilities(
+      {this.#capabilities = backendCapabilities(
         response.capabilities,
         "Connected runtime capabilities",
-      );
+      );}
     this.#connected = true;
   }
 
@@ -422,7 +422,7 @@ export class SidecarDebugBackend implements DebugBackend {
     const terminate = options.terminate ?? true;
     await client.request("disconnect", { terminate });
     this.#connected = false;
-    if (!terminate) return;
+    if (!terminate) {return;}
     this.#expectedClose.add(client);
     let shutdownError: unknown;
     try {
@@ -433,9 +433,9 @@ export class SidecarDebugBackend implements DebugBackend {
     await client.close();
     this.#releaseClient(client);
     if (shutdownError)
-      throw shutdownError instanceof Error
+      {throw shutdownError instanceof Error
         ? shutdownError
-        : new Error("Sidecar shutdown failed with a non-Error rejection.");
+        : new Error("Sidecar shutdown failed with a non-Error rejection.");}
   }
 
   /** @inheritdoc */
@@ -454,7 +454,7 @@ export class SidecarDebugBackend implements DebugBackend {
 
   /** @inheritdoc */
   async step(threadId: number, kind: DebugStepKind): Promise<void> {
-    if (!stepKinds.has(kind)) throw new Error(`Unsupported step kind '${String(kind)}'.`);
+    if (!stepKinds.has(kind)) {throw new Error(`Unsupported step kind '${String(kind)}'.`);}
     await this.#requireConnected().request("step", {
       threadId: positiveInteger(threadId, "Thread id"),
       kind,
@@ -482,7 +482,7 @@ export class SidecarDebugBackend implements DebugBackend {
       "Stack frames response",
     );
     if (frames.some((frame) => frame.threadId !== expectedThreadId))
-      throw new Error("Stack frames response contains a frame for another thread.");
+      {throw new Error("Stack frames response contains a frame for another thread.");}
     return frames;
   }
 
@@ -507,9 +507,9 @@ export class SidecarDebugBackend implements DebugBackend {
         (memorySpace) => memorySpace.addressSpace === checkedAddress.addressSpace,
       );
     if (!readable)
-      throw new Error(
+      {throw new Error(
         `Memory address space '${checkedAddress.architecture}/${checkedAddress.addressSpace}' is not readable.`,
-      );
+      );}
     const result = record(
       await this.#requireConnected().request("readMemory", {
         address: checkedAddress,
@@ -519,15 +519,15 @@ export class SidecarDebugBackend implements DebugBackend {
     );
     const returnedAddress = address(result.address, "Memory response.address");
     if (!addressesEqual(returnedAddress, checkedAddress))
-      throw new Error("Memory response address does not match the request.");
+      {throw new Error("Memory response address does not match the request.");}
     const bytes = base64Bytes(result.data, "Memory response.data");
     if (bytes.length !== checkedCount)
-      throw new Error(
+      {throw new Error(
         `Memory response returned ${bytes.length} byte(s), expected ${checkedCount}.`,
-      );
+      );}
     const unreadableBytes = integer(result.unreadableBytes, "Memory response.unreadableBytes");
     if (unreadableBytes > checkedCount)
-      throw new Error("Memory response unreadableBytes exceeds the requested count.");
+      {throw new Error("Memory response unreadableBytes exceeds the requested count.");}
     return { address: returnedAddress, bytes, unreadableBytes };
   }
 
@@ -543,7 +543,7 @@ export class SidecarDebugBackend implements DebugBackend {
       "Breakpoints response",
     );
     if (breakpoints.length !== checked.length)
-      throw new Error("Breakpoints response count does not match the request.");
+      {throw new Error("Breakpoints response count does not match the request.");}
     return breakpoints;
   }
 
@@ -562,7 +562,7 @@ export class SidecarDebugBackend implements DebugBackend {
       "Disassembly response",
     );
     if (result.length > checkedCount)
-      throw new Error("Disassembly response exceeds the requested instruction count.");
+      {throw new Error("Disassembly response exceeds the requested instruction count.");}
     return result.map((entry, index) => instruction(entry, `Disassembly response[${index}]`));
   }
 
@@ -579,9 +579,9 @@ export class SidecarDebugBackend implements DebugBackend {
       .find((candidate) => candidate.architecture === architecture)
       ?.trace?.addressSpaces.includes(addressSpace);
     if (!supported)
-      throw new Error(`Instruction trace '${architecture}/${addressSpace}' is not supported.`);
+      {throw new Error(`Instruction trace '${architecture}/${addressSpace}' is not supported.`);}
     if (options.detail !== undefined && !["pc", "full"].includes(options.detail))
-      throw new Error("Invalid trace detail mode.");
+      {throw new Error("Invalid trace detail mode.");}
     await this.#requireConnected().request("startTrace", {
       architecture,
       addressSpace,
@@ -600,11 +600,11 @@ export class SidecarDebugBackend implements DebugBackend {
       ({ architecture }) => architecture === result.architecture,
     )?.trace;
     if (!capabilities?.addressSpaces.includes(result.addressSpace))
-      throw new Error("Trace response uses an unsupported architecture/address space.");
+      {throw new Error("Trace response uses an unsupported architecture/address space.");}
     if (checkedMaxEvents > capabilities.maxBatchEvents)
-      throw new Error(`Trace batch size exceeds backend maximum ${capabilities.maxBatchEvents}.`);
+      {throw new Error(`Trace batch size exceeds backend maximum ${capabilities.maxBatchEvents}.`);}
     if (result.addresses.length > checkedMaxEvents)
-      throw new Error("Trace response exceeds the requested event count.");
+      {throw new Error("Trace response exceeds the requested event count.");}
     return result;
   }
 
@@ -621,11 +621,11 @@ export class SidecarDebugBackend implements DebugBackend {
 
   async #ensureClient(): Promise<DebugSidecarClient> {
     if (this.#client && !this.#client.closed) {
-      if (!this.#initialized) await this.#initialize(this.#client);
+      if (!this.#initialized) {await this.#initialize(this.#client);}
       return this.#client;
     }
     const client = await this.#createClient();
-    if (client.closed) throw new Error("Sidecar client factory returned a closed client.");
+    if (client.closed) {throw new Error("Sidecar client factory returned a closed client.");}
     this.#client = client;
     this.#clientSubscriptions = [
       client.onEvent((event) => this.#emit(backendEvent(event))),
@@ -651,48 +651,48 @@ export class SidecarDebugBackend implements DebugBackend {
       "Sidecar initialize response",
     );
     if (string(result.backend, "Sidecar initialize backend") !== this.#backend)
-      throw new Error("Sidecar initialize response named a different backend.");
+      {throw new Error("Sidecar initialize response named a different backend.");}
     if (
       integer(result.backendProtocolVersion, "Sidecar backend protocol version", 1) !==
       this.protocolVersion
     )
-      throw new Error(
+      {throw new Error(
         `Unsupported debug backend protocol '${String(result.backendProtocolVersion)}'.`,
-      );
+      );}
     const capabilities = backendCapabilities(
       result.capabilities,
       "Sidecar initialize capabilities",
     );
     if (capabilityIdentity(capabilities) !== capabilityIdentity(this.#configuredCapabilities))
-      throw new Error("Sidecar capabilities do not match the configured revision manifest.");
+      {throw new Error("Sidecar capabilities do not match the configured revision manifest.");}
     this.#initialized = true;
   }
 
   #requireConnected(): DebugSidecarClient {
     if (!this.#connected || !this.#client || this.#client.closed)
-      throw new Error("Debug backend is not connected.");
+      {throw new Error("Debug backend is not connected.");}
     return this.#client;
   }
 
   #clientClosed(client: DebugSidecarClient, error: Error): void {
-    if (this.#client !== client) return;
+    if (this.#client !== client) {return;}
     const expected = this.#expectedClose.has(client);
     this.#connected = false;
     this.#releaseClient(client);
-    if (!expected) this.#emit({ type: "terminated", restart: true });
-    if (!expected) this.#emit({ type: "output", category: "stderr", text: `${error.message}\n` });
+    if (!expected) {this.#emit({ type: "terminated", restart: true });}
+    if (!expected) {this.#emit({ type: "output", category: "stderr", text: `${error.message}\n` });}
   }
 
   #releaseClient(client: DebugSidecarClient): void {
-    if (this.#client !== client) return;
-    for (const subscription of this.#clientSubscriptions) subscription.dispose();
+    if (this.#client !== client) {return;}
+    for (const subscription of this.#clientSubscriptions) {subscription.dispose();}
     this.#clientSubscriptions = [];
     this.#client = undefined;
     this.#initialized = false;
   }
 
   #emit(event: DebugBackendEvent): void {
-    for (const listener of this.#listeners) listener(event);
+    for (const listener of this.#listeners) {listener(event);}
   }
 }
 import {

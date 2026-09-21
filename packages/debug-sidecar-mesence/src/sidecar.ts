@@ -42,17 +42,17 @@ export const parseMesenSidecarArguments = (
   const values = new Map<string, string>();
   for (let index = 0; index < arguments_.length; index++) {
     const argument = arguments_[index];
-    if (argument === undefined) throw new Error("Mesen sidecar arguments cannot contain holes.");
-    if (!optionNames.has(argument)) throw new Error(`Unknown Mesen sidecar option '${argument}'.`);
-    if (values.has(argument)) throw new Error(`Duplicate Mesen sidecar option '${argument}'.`);
+    if (argument === undefined) {throw new Error("Mesen sidecar arguments cannot contain holes.");}
+    if (!optionNames.has(argument)) {throw new Error(`Unknown Mesen sidecar option '${argument}'.`);}
+    if (values.has(argument)) {throw new Error(`Duplicate Mesen sidecar option '${argument}'.`);}
     const value = arguments_[++index];
     if (!value || value.startsWith("--"))
-      throw new Error(`Mesen sidecar option '${argument}' requires a value.`);
+      {throw new Error(`Mesen sidecar option '${argument}' requires a value.`);}
     values.set(argument, value);
   }
   const required = (name: string): string => {
     const value = values.get(name);
-    if (!value) throw new Error(`Missing required Mesen sidecar option '${name}'.`);
+    if (!value) {throw new Error(`Missing required Mesen sidecar option '${name}'.`);}
     return path.resolve(value);
   };
   return {
@@ -66,8 +66,8 @@ export const parseMesenSidecarArguments = (
 const write = (stream: NodeJS.WritableStream, data: string | Uint8Array): Promise<void> =>
   new Promise((resolve, reject) => {
     stream.write(data, (error?: Error | null) => {
-      if (error) reject(error);
-      else resolve();
+      if (error) {reject(error);}
+      else {resolve();}
     });
   });
 
@@ -99,10 +99,10 @@ export const runMesenSidecar = async (
   });
   let ending = false;
   const close = async (error?: Error): Promise<void> => {
-    if (ending) return;
+    if (ending) {return;}
     ending = true;
     if (error)
-      await write(process.stderr, `${error.stack ?? error.message}\n`).catch(() => undefined);
+      {await write(process.stderr, `${error.stack ?? error.message}\n`).catch(() => undefined);}
     process.stdin.pause();
     await host.terminate().catch(() => undefined);
     await new Promise<void>((resolve) => process.stdout.end(resolve));

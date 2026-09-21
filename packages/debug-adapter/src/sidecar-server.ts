@@ -38,13 +38,13 @@ const stepKinds = new Set<DebugStepKind>(["instruction", "over", "in", "out"]);
 
 const record = (value: unknown, context: string): UnknownRecord => {
   if (typeof value !== "object" || value === null || Array.isArray(value))
-    throw new Error(`${context} must be an object.`);
+    {throw new Error(`${context} must be an object.`);}
   return value as UnknownRecord;
 };
 
 const integer = (value: unknown, context: string, minimum = 0): number => {
   if (!Number.isSafeInteger(value) || (value as number) < minimum)
-    throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);
+    {throw new Error(`${context} must be a safe integer greater than or equal to ${minimum}.`);}
   return value as number;
 };
 
@@ -52,7 +52,7 @@ const positiveInteger = (value: unknown, context: string): number => integer(val
 
 const string = (value: unknown, context: string): string => {
   if (typeof value !== "string" || value.length === 0)
-    throw new Error(`${context} must be a non-empty string.`);
+    {throw new Error(`${context} must be a non-empty string.`);}
   return value;
 };
 
@@ -60,17 +60,17 @@ const optionalPositiveInteger = (value: unknown, context: string): number | unde
   value === undefined ? undefined : positiveInteger(value, context);
 
 const boolean = (value: unknown, context: string, defaultValue: boolean): boolean => {
-  if (value === undefined) return defaultValue;
-  if (typeof value !== "boolean") throw new Error(`${context} must be boolean.`);
+  if (value === undefined) {return defaultValue;}
+  if (typeof value !== "boolean") {throw new Error(`${context} must be boolean.`);}
   return value;
 };
 
 const address = (value: unknown, context: string): DebugAddress => {
   const candidate = record(value, context);
   if (typeof candidate.architecture !== "string" || candidate.architecture.length === 0)
-    throw new Error(`${context}.architecture must be a non-empty string.`);
+    {throw new Error(`${context}.architecture must be a non-empty string.`);}
   if (typeof candidate.addressSpace !== "string" || candidate.addressSpace.length === 0)
-    throw new Error(`${context}.addressSpace must be a non-empty string.`);
+    {throw new Error(`${context}.addressSpace must be a non-empty string.`);}
   const outputOffset =
     candidate.outputOffset === undefined
       ? undefined
@@ -84,7 +84,7 @@ const address = (value: unknown, context: string): DebugAddress => {
 };
 
 const addresses = (value: unknown, context: string): DebugAddress[] => {
-  if (!Array.isArray(value)) throw new Error(`${context} must be an array.`);
+  if (!Array.isArray(value)) {throw new Error(`${context} must be an array.`);}
   return value.map((entry, index) => address(entry, `${context}[${index}]`));
 };
 
@@ -113,7 +113,7 @@ export class DebugSidecarServer {
    */
   constructor(options: DebugSidecarServerOptions) {
     if (typeof options.backend !== "string" || options.backend.length === 0)
-      throw new Error("Sidecar backend name must be a non-empty string.");
+      {throw new Error("Sidecar backend name must be a non-empty string.");}
     assertDebugSidecarSessionToken(options.session);
     this.#backendName = options.backend;
     this.#implementation = options.implementation;
@@ -137,7 +137,7 @@ export class DebugSidecarServer {
    * @returns {Promise<void>} Completion after every request in this chunk has been dispatched.
    */
   receive(data: Uint8Array): Promise<void> {
-    if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+    if (this.#closed) {return Promise.reject(new Error("Sidecar server is closed."));}
     const receive = this.#receiveTail.then(() => this.#receive(data));
     this.#receiveTail = receive.catch(() => undefined);
     return receive.catch(async (error: unknown) => {
@@ -152,7 +152,7 @@ export class DebugSidecarServer {
    * @returns {Promise<void>} Completion of transport cleanup.
    */
   async close(error?: Error): Promise<void> {
-    if (this.#closed) return;
+    if (this.#closed) {return;}
     this.#closed = true;
     this.#eventSubscription.dispose();
     await this.#writeTail.catch(() => undefined);
@@ -162,9 +162,9 @@ export class DebugSidecarServer {
   async #receive(data: Uint8Array): Promise<void> {
     for (const message of this.#parser.push(data)) {
       if (message.session !== this.#session)
-        throw new Error("Sidecar request session does not match this connection.");
+        {throw new Error("Sidecar request session does not match this connection.");}
       if (message.type !== "request")
-        throw new Error("Sidecar client sent a non-request message on a server-only channel.");
+        {throw new Error("Sidecar client sent a non-request message on a server-only channel.");}
       await this.#handle(message);
     }
   }
@@ -190,16 +190,16 @@ export class DebugSidecarServer {
         ...(failure ? { error: failure.message } : { result }),
       }),
     );
-    for (const event of events) await this.#send(this.#eventEnvelope(event));
-    if (request.command === "shutdown" && !failure) await this.close();
+    for (const event of events) {await this.#send(this.#eventEnvelope(event));}
+    if (request.command === "shutdown" && !failure) {await this.close();}
   }
 
   async #dispatch(request: DebugSidecarRequest): Promise<unknown> {
     const args = record(request.arguments ?? {}, "Sidecar request arguments");
     if (request.command === "initialize") {
-      if (args.backend !== this.#backendName) throw new Error("Unexpected backend identity.");
+      if (args.backend !== this.#backendName) {throw new Error("Unexpected backend identity.");}
       if (args.backendProtocolVersion !== DEBUG_BACKEND_PROTOCOL_VERSION)
-        throw new Error("Unsupported backend protocol version.");
+        {throw new Error("Unsupported backend protocol version.");}
       return {
         backend: this.#backendName,
         backendProtocolVersion: DEBUG_BACKEND_PROTOCOL_VERSION,
@@ -230,20 +230,20 @@ export class DebugSidecarServer {
     }
     if (request.command === "step") {
       if (!stepKinds.has(args.kind as DebugStepKind))
-        throw new Error(`Unsupported step kind '${String(args.kind)}'.`);
+        {throw new Error(`Unsupported step kind '${String(args.kind)}'.`);}
       await this.#implementation.step(
         positiveInteger(args.threadId, "Step threadId"),
         args.kind as DebugStepKind,
       );
       return {};
     }
-    if (request.command === "threads") return this.#implementation.threads();
+    if (request.command === "threads") {return this.#implementation.threads();}
     if (request.command === "stackFrames")
-      return this.#implementation.stackFrames(
+      {return this.#implementation.stackFrames(
         positiveInteger(args.threadId, "Stack frames threadId"),
-      );
+      );}
     if (request.command === "registers")
-      return this.#implementation.registers(positiveInteger(args.frameId, "Registers frameId"));
+      {return this.#implementation.registers(positiveInteger(args.frameId, "Registers frameId"));}
     if (request.command === "readMemory") {
       const memory = await this.#implementation.readMemory(
         address(args.address, "Memory address"),
@@ -256,24 +256,24 @@ export class DebugSidecarServer {
       };
     }
     if (request.command === "setBreakpoints")
-      return this.#implementation.setBreakpoints(
+      {return this.#implementation.setBreakpoints(
         addresses(args.breakpoints, "Breakpoint addresses"),
-      );
+      );}
     if (request.command === "disassemble")
-      return this.#implementation.disassemble(
+      {return this.#implementation.disassemble(
         address(args.address, "Disassembly address"),
         integer(args.count, "Disassembly count"),
-      );
+      );}
     if (request.command === "capture") {
       const capture = args as CaptureRequestV2;
       validateCaptureRequest(capture);
       if (!this.#implementation.capture)
-        throw new Error("This backend does not support capture v2.");
+        {throw new Error("This backend does not support capture v2.");}
       return this.#implementation.capture(capture);
     }
     if (request.command === "startTrace") {
       if (args.detail !== undefined && args.detail !== "pc" && args.detail !== "full")
-        throw new Error("Trace detail must be pc or full.");
+        {throw new Error("Trace detail must be pc or full.");}
       await this.#implementation.startTrace({
         architecture: string(args.architecture, "Trace architecture"),
         addressSpace: string(args.addressSpace, "Trace address space"),
@@ -282,18 +282,18 @@ export class DebugSidecarServer {
       return {};
     }
     if (request.command === "readTrace")
-      return this.#implementation.readTrace(positiveInteger(args.maxEvents, "Trace batch size"));
+      {return this.#implementation.readTrace(positiveInteger(args.maxEvents, "Trace batch size"));}
     if (request.command === "stopTrace") {
       await this.#implementation.stopTrace();
       return {};
     }
-    if (request.command === "ping") return { pong: true };
-    if (request.command === "shutdown") return {};
+    if (request.command === "ping") {return { pong: true };}
+    if (request.command === "shutdown") {return {};}
     throw new Error(`Unsupported command '${String(request.command)}'.`);
   }
 
   #backendEvent(event: DebugBackendEvent): void {
-    if (this.#closed) return;
+    if (this.#closed) {return;}
     if (this.#capturedEvents) {
       this.#capturedEvents.push(event);
       return;
@@ -305,29 +305,29 @@ export class DebugSidecarServer {
 
   #eventEnvelope(event: DebugBackendEvent): DebugSidecarMessage {
     if (event.type === "stopped")
-      return this.#envelope({
+      {return this.#envelope({
         type: "event",
         event: "stopped",
         body: { reason: event.reason, threadId: event.threadId },
-      });
+      });}
     if (event.type === "continued")
-      return this.#envelope({
+      {return this.#envelope({
         type: "event",
         event: "continued",
         body: { threadId: event.threadId, allThreads: event.allThreads },
-      });
+      });}
     if (event.type === "terminated")
-      return this.#envelope({
+      {return this.#envelope({
         type: "event",
         event: "terminated",
         body: { restart: event.restart },
-      });
+      });}
     if (event.type === "breakpoint")
-      return this.#envelope({
+      {return this.#envelope({
         type: "event",
         event: "breakpoint",
         body: { breakpoint: event.breakpoint },
-      });
+      });}
     return this.#envelope({
       type: "event",
       event: "output",
@@ -337,7 +337,7 @@ export class DebugSidecarServer {
 
   #envelope(message: BareSidecarMessage): DebugSidecarMessage {
     if (!Number.isSafeInteger(this.#serverSequence) || this.#serverSequence <= 0)
-      throw new Error("Sidecar server sequence exhausted.");
+      {throw new Error("Sidecar server sequence exhausted.");}
     return {
       protocol: DEBUG_SIDECAR_PROTOCOL,
       version: DEBUG_SIDECAR_PROTOCOL_VERSION,
@@ -348,7 +348,7 @@ export class DebugSidecarServer {
   }
 
   #send(message: DebugSidecarMessage): Promise<void> {
-    if (this.#closed) return Promise.reject(new Error("Sidecar server is closed."));
+    if (this.#closed) {return Promise.reject(new Error("Sidecar server is closed."));}
     this.#outgoing.enqueue(message);
     const write = this.#writeTail.then(async () => {
       let frame = this.#outgoing.dequeue();

@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -226,6 +226,9 @@ test("ares process host verifies identity, isolates launch arguments, and reconn
 
 test("desktop ares uses GUI settings, awaits entry, and keeps execution running when VS Code has focus", async (t) => {
   const fixture = await setup(t);
+  const settingsFile = path.join(fixture.runtimeDirectory, "settings.bml");
+  const settings = "Paths\n  Saves: /existing/shared-saves/\n";
+  await writeFile(settingsFile, settings);
   const host = new AresProcessHost({
     ...fixture,
     manifest: { ...manifest(), frontend: "desktop" },
@@ -233,6 +236,12 @@ test("desktop ares uses GUI settings, awaits entry, and keeps execution running 
   const client = await host.createClient({ reset: true });
   t.is(host.manifest.frontend, "desktop");
   const args = fixture.runtime.launches[0]!.args;
+  // Runtime upgrades must keep ares's configured SRAM and numbered state slots
+  // visible, instead of injecting a fresh per-build save directory.
+  t.is(args[args.indexOf("--settings-file") + 1], settingsFile);
+  t.false(args.some((argument) => argument.startsWith("Paths/Saves=")));
+  t.is(await readFile(settingsFile, "utf8"), settings);
+  await t.throwsAsync(stat(path.join(fixture.runtimeDirectory, "saves")), { code: "ENOENT" });
   for (const setting of [
     "Boot/AwaitGDBClient=true",
     "Developer/DebugServerEnabled=true",

@@ -13,7 +13,6 @@ export * from "./coverage-map.js";
 export * from "./instruction-annotations.js";
 export * from "./interval-index.js";
 export * from "./sqlite-store.js";
-export * from "./sqlite-migration.js";
 export * from "./project-store.js";
 export * from "./project-transaction.js";
 export * from "./project-edit.js";

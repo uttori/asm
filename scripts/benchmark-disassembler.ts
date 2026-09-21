@@ -186,7 +186,9 @@ const parseNonNegativeInteger = (value: string | undefined, option: string): num
 
 const parseCommaList = (value: string | undefined, option: string): readonly string[] => {
   const values = value?.split(",").filter(Boolean);
-  if (!values?.length) throw new Error(`${option} requires a value.`);
+  if (!values?.length) {
+    throw new Error(`${option} requires a value.`);
+  }
   return values;
 };
 
@@ -201,7 +203,9 @@ const parseOptions = (args: readonly string[]): BenchmarkOptions => {
   let summaryOnly = false;
   for (let index = 0; index < args.length; index++) {
     const argument = args[index];
-    if (argument === "--fast") continue;
+    if (argument === "--fast") {
+      continue;
+    }
     if (argument === "--summary-only") {
       summaryOnly = true;
     } else if (argument === "--warmups") {
@@ -209,8 +213,9 @@ const parseOptions = (args: readonly string[]): BenchmarkOptions => {
     } else if (argument === "--repetitions") {
       repetitions = parseNonNegativeInteger(args[++index], argument);
     } else if (argument === "--fixture") {
-      for (const fixture of parseCommaList(args[++index], argument))
+      for (const fixture of parseCommaList(args[++index], argument)) {
         requestedFixtures.push(fixture);
+      }
     } else if (argument === "--operation") {
       for (const operation of parseCommaList(args[++index], argument)) {
         if (!operationSet.has(operation)) {
@@ -222,10 +227,14 @@ const parseOptions = (args: readonly string[]): BenchmarkOptions => {
       }
     } else if (argument === "--json") {
       jsonPath = args[++index];
-      if (!jsonPath) throw new Error("--json requires an output path.");
+      if (!jsonPath) {
+        throw new Error("--json requires an output path.");
+      }
     } else if (argument === "--budgets") {
       budgetsPath = args[++index];
-      if (!budgetsPath) throw new Error("--budgets requires an input path.");
+      if (!budgetsPath) {
+        throw new Error("--budgets requires an input path.");
+      }
     } else if (argument.startsWith("--max-") || argument.startsWith("--budget")) {
       throw new Error(
         `Unknown budget option '${argument}'. Pass a versioned budget file with --budgets.`,
@@ -234,11 +243,17 @@ const parseOptions = (args: readonly string[]): BenchmarkOptions => {
       throw new Error(`Unknown option '${argument}'.`);
     }
   }
-  if (repetitions === 0) throw new Error("--repetitions must be at least one.");
+  if (repetitions === 0) {
+    throw new Error("--repetitions must be at least one.");
+  }
   let fixtureIds: readonly string[];
-  if (requestedFixtures.length > 0) fixtureIds = [...new Set(requestedFixtures)];
-  else if (fast) fixtureIds = ["synthetic-512k"];
-  else fixtureIds = fixtures.filter(({ kind }) => kind === "synthetic").map(({ id }) => id);
+  if (requestedFixtures.length > 0) {
+    fixtureIds = [...new Set(requestedFixtures)];
+  } else if (fast) {
+    fixtureIds = ["synthetic-512k"];
+  } else {
+    fixtureIds = fixtures.filter(({ kind }) => kind === "synthetic").map(({ id }) => id);
+  }
   for (const fixtureId of fixtureIds) {
     if (!fixtureById.has(fixtureId)) {
       throw new Error(
@@ -272,7 +287,9 @@ const privateRomPath = (): string =>
   path.join(root, "Local Only", SECRET_OF_MANA_ANALYSIS_FIXTURE.filename);
 
 const loadRom = (fixture: Fixture): RomImage => {
-  if (fixture.kind === "synthetic") return syntheticRom(fixture);
+  if (fixture.kind === "synthetic") {
+    return syntheticRom(fixture);
+  }
   const file = privateRomPath();
   if (!fs.existsSync(file)) {
     throw new Error(
@@ -290,7 +307,9 @@ const loadRom = (fixture: Fixture): RomImage => {
 };
 
 const initialShards = (fixture: Fixture, rom: RomImage): AnalysisProjectShards => {
-  if (fixture.kind === "synthetic") return emptyShards();
+  if (fixture.kind === "synthetic") {
+    return emptyShards();
+  }
   const dizrawPath = path.join(root, SECRET_OF_MANA_ANALYSIS_FIXTURE.dizraw);
   if (!fs.existsSync(dizrawPath)) {
     throw new Error("The opt-in private .dizraw testing fixture is unavailable.");
@@ -322,12 +341,16 @@ const baseProject = (fixture: Fixture, rom: RomImage): AnalysisProject => ({
 });
 
 const syntheticEntryPoints = (fixture: Fixture): readonly { id: string; address: number }[] => {
-  if (fixture.kind !== "synthetic") return [];
+  if (fixture.kind !== "synthetic") {
+    return [];
+  }
   const context = createSnesAddressContext(fixture.mapper);
   const entries: { id: string; address: number }[] = [];
   for (let fileOffset = 0; fileOffset < fixture.contentBytes; fileOffset += 0x8000) {
     const address = snesRomAddressSpace.fromOutputOffset(fileOffset, context);
-    if (address < 0) throw new Error(`Synthetic file offset ${fileOffset} is not LoROM-mapped.`);
+    if (address < 0) {
+      throw new Error(`Synthetic file offset ${fileOffset} is not LoROM-mapped.`);
+    }
     entries.push({ id: `benchmark-${fileOffset.toString(16)}`, address });
   }
   return entries;
@@ -354,8 +377,9 @@ const analyzeProject = (
       (record): record is AnalysisTargetSetRecord => record.kind === "target-set",
     ),
   });
-  if (result.nodes.length === 0)
+  if (result.nodes.length === 0) {
     throw new Error(`${fixture.id} analysis produced no instructions.`);
+  }
   if (fixture.kind === "synthetic" && result.status !== "complete") {
     throw new Error(`${fixture.id} synthetic analysis was unexpectedly incomplete.`);
   }
@@ -410,7 +434,9 @@ const traceArtifact = (
   const addresses = project.shards.analysis
     .filter((record) => record.kind === "cfg-node")
     .map((record) => record.address);
-  if (addresses.length === 0) throw new Error("Trace benchmark requires analyzed CFG nodes.");
+  if (addresses.length === 0) {
+    throw new Error("Trace benchmark requires analyzed CFG nodes.");
+  }
   const eventCount = Math.min(262_144, Math.max(32_768, fixture.contentBytes >>> 4));
   const chunks = [];
   const chunkSize = 4_096;
@@ -522,7 +548,9 @@ const prepareDapEventFlow = (eventCount: number): (() => OperationValue) => {
           event = { type: "terminated", restart: false };
           break;
       }
-      for (const listener of listeners) listener(event);
+      for (const listener of listeners) {
+        listener(event);
+      }
     }
     if (delivered !== eventCount || lastSequence !== eventCount) {
       throw new Error(
@@ -732,7 +760,9 @@ const runWorker = (fixture: Fixture, operation: OperationId): WorkerResult => {
   try {
     const rom = loadRom(fixture);
     const execute = prepareOperation(fixture, operation, rom, temporary);
-    if (global.gc) global.gc();
+    if (global.gc) {
+      global.gc();
+    }
     const before = process.memoryUsage();
     const started = performance.now();
     value = execute();
@@ -776,7 +806,9 @@ const runIsolated = (fixture: Fixture, operation: OperationId): WorkerResult => 
     ["--expose-gc", "--import", "tsx", scriptPath, "--internal-worker", fixture.id, operation],
     { cwd: root, encoding: "utf8", maxBuffer: 10 * 1024 * 1024 },
   );
-  if (child.error) throw child.error;
+  if (child.error) {
+    throw child.error;
+  }
   if (child.status !== 0) {
     throw new Error(
       `Isolated ${fixture.id}/${operation} benchmark failed with status ${String(child.status)}: ${child.stderr.trim()}`,
@@ -917,16 +949,22 @@ const main = (): void => {
     console.log("\nJSON report:");
     console.log(json.trimEnd());
   }
-  if (budgetViolations.length > 0) process.exitCode = 1;
+  if (budgetViolations.length > 0) {
+    process.exitCode = 1;
+  }
 };
 
 const internalWorker = (args: readonly string[]): boolean => {
   const index = args.indexOf("--internal-worker");
-  if (index < 0) return false;
+  if (index < 0) {
+    return false;
+  }
   const fixtureId = args[index + 1];
   const operation = args[index + 2];
   const fixture = fixtureId ? fixtureById.get(fixtureId) : undefined;
-  if (!fixture) throw new Error(`Unknown internal fixture '${String(fixtureId)}'.`);
+  if (!fixture) {
+    throw new Error(`Unknown internal fixture '${String(fixtureId)}'.`);
+  }
   if (!operation || !operationSet.has(operation)) {
     throw new Error(`Unknown internal operation '${String(operation)}'.`);
   }
@@ -934,4 +972,6 @@ const internalWorker = (args: readonly string[]): boolean => {
   return true;
 };
 
-if (!internalWorker(process.argv.slice(2))) main();
+if (!internalWorker(process.argv.slice(2))) {
+  main();
+}

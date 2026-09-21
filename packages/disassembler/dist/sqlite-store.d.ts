@@ -9,7 +9,7 @@ import { type TraceIndexMetrics } from "./trace-cache.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
-export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 2;
+export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 3;
 /**
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
@@ -34,9 +34,8 @@ export declare class SqliteAnalysisStore {
      * Connections use a 5,000 ms busy timeout. Lock contention can still throw a SQLite error.
      * @param {string} file SQLite path. Parent directory must already exist.
      * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
-     * @param {boolean} [deferIndexes] Defaults to false. Migration-only bulk load, completed by finishMigration.
      */
-    constructor(file: string, createSchema?: boolean, deferIndexes?: boolean);
+    constructor(file: string, createSchema?: boolean);
     /**
      * Preserve the triggering error when SQLite has already aborted (for example SQLITE_FULL).
      * A cleanup error must never replace the original failure reported to the user.
@@ -74,13 +73,6 @@ export declare class SqliteAnalysisStore {
      * @param {Partial<AnalysisProjectShards>} shards Validated replacements for explicitly named tables.
      */
     replaceTables(shards: Partial<AnalysisProjectShards>): void;
-    /**
-     * Append validated migration rows without materializing a complete table. Runtime IDs are checked
-     * through the logical view because paired states share physical storage with an instruction.
-     * @param {ShardKind} kind Destination semantic table.
-     * @param {Iterable} records Bounded batch or lazy cursor. Uniqueness is enforced by SQLite.
-     */
-    appendRecords<K extends ShardKind>(kind: K, records: Iterable<AnalysisProjectShards[K][number]>): void;
     /**
      * Insert a content-addressed runtime fact once. An ID collision with different content is an
      * error, never a silent no-op. Count values are already aggregated within the source capture.
@@ -344,24 +336,6 @@ export declare class SqliteAnalysisStore {
      * @returns {AnalysisProjectShards["analysis"]} Location representatives. State variants need not be loaded to edit a comment.
      */
     annotationNodesAt(addressSpace: string, address: number, outputOffset?: number): AnalysisProjectShards["analysis"];
-    /**
-     * Stream decoded records in insertion order for migration digest verification.
-     * @param {ShardKind} kind Semantic table to traverse.
-     * @returns {IterableIterator} Cursor retaining only the current decoded record.
-     * @yields {object} Original semantic record.
-     */
-    records<K extends ShardKind>(kind: K): IterableIterator<AnalysisProjectShards[K][number]>;
-    /**
-     * Initialize a migrated project's unchanged logical identity once, inside its first publication.
-     * @param {AnalysisProjectManifest} manifest Validated authoritative source manifest and revision.
-     */
-    initializeMigratedManifest(manifest: AnalysisProjectManifest): void;
-    /**
-     * Build deferred indexes and check all physical structures before closing a staged migration file.
-     * Switching through DELETE verifies that no staging reader retains a WAL dependency. The closed
-     * file retains WAL mode for ordinary clients, with all committed pages checkpointed into main.
-     */
-    finishMigration(): void;
     /**
      * Materialize complete record arrays without semantic validation. Run inside a read transaction.
      * @param {boolean} [runtime] Defaults to true. False omits runtime and must not be treated as a complete replacement.

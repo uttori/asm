@@ -1,7 +1,9 @@
 import { test } from "../../../tests/ava-helper.js";
 import {
   canonicalSnesWramAddress,
+  emptySnesRamMap,
   renderSnesRamDefines,
+  renderSnesRamMapSchema,
   validateSnesRamMap,
 } from "../src/disassembler/ram-map.js";
 
@@ -87,6 +89,72 @@ test("SNES RAM maps reject ambiguous and unsafe records", (t) => {
       ),
     { message: /overlap/ },
   );
+});
+
+test("RAM definition source citations are opt-in without discarding descriptive notes", (t) => {
+  const variables = validateSnesRamMap(
+    map([
+      {
+        name: "RAM_SNOW_AMOUNT",
+        address: "$7ECFF7",
+        category: "Party",
+        description: "Snow amount",
+        notes: ["Secret of Mana information.txt:L401."],
+      },
+      {
+        name: "RAM_SNOW_MODE",
+        address: "$7ECFF8",
+        description: "Snow mode.",
+        size: 2,
+        notes: [
+          "Values are still under investigation.",
+          "See manual.txt:L12 for the provisional values.",
+          "research/weather.md",
+          "weather.asm:L20-L30.",
+        ],
+        sources: ["  Weather capture\nframe 42.  "],
+      },
+    ]),
+  );
+  const source = renderSnesRamDefines(variables);
+  t.regex(source, /^RAM_SNOW_AMOUNT = \$7ECFF7 ; Party — Snow amount\.$/m);
+  t.regex(
+    source,
+    /^RAM_SNOW_MODE = \$7ECFF8 ; Snow mode\. Size: 2 bytes\. Values are still under investigation\. See manual\.txt:L12 for the provisional values\.$/m,
+  );
+  t.is(renderSnesRamDefines(variables, { includeSourceInformation: false }), source);
+  const withSources = renderSnesRamDefines(variables, { includeSourceInformation: true });
+  t.regex(
+    withSources,
+    /^RAM_SNOW_AMOUNT = \$7ECFF7 ; Party — Snow amount Secret of Mana information\.txt:L401\.$/m,
+  );
+  t.true(
+    withSources.includes("research/weather.md weather.asm:L20-L30. Weather capture frame 42."),
+  );
+  // Presentation must never delete citations from the validated metadata.
+  t.deepEqual(variables[0].notes, ["Secret of Mana information.txt:L401."]);
+  t.deepEqual(variables[1].sources, ["Weather capture frame 42."]);
+});
+
+test("RAM-map comment configuration and explicit sources are validated and documented", (t) => {
+  const file = emptySnesRamMap();
+  t.false(file.includeSourceInformation);
+  const schema = JSON.parse(renderSnesRamMapSchema());
+  t.is(schema.properties.includeSourceInformation.type, "boolean");
+  t.false(schema.properties.includeSourceInformation.default);
+  t.is(schema.properties.variables.items.properties.sources.type, "array");
+  for (const includeSourceInformation of ["false", 1, null, []]) {
+    t.throws(() => validateSnesRamMap({ ...file, includeSourceInformation }), {
+      message: /includeSourceInformation must be a boolean/,
+    });
+  }
+  for (const sources of ["manual.txt", [42], ["  "], null]) {
+    t.throws(() =>
+      validateSnesRamMap(
+        map([{ name: "RAM_SNOW_AMOUNT", address: "$7ECFF7", description: "Snow amount", sources }]),
+      ),
+    );
+  }
 });
 
 test("CPU WRAM mirrors resolve to their canonical bank-7E addresses", (t) => {

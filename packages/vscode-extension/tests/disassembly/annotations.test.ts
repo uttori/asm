@@ -64,6 +64,15 @@ registerHooks({
           const host = globalThis.__uttoriAnnotationEditorTest;
           const uri = (file) => ({ scheme: "file", fsPath: file, toString: () => "file://" + file });
           export const ViewColumn = { Beside: 2 };
+          // ESM validates the named imports of the coverage-tree dependency at module load.
+          export class EventEmitter {
+            event = () => ({ dispose() {} });
+            fire() {}
+            dispose() {}
+          }
+          export class ThemeIcon { constructor(id) { this.id = id; } }
+          export class TreeItem { constructor(label) { this.label = label; } }
+          export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };
           export const Uri = {
             file: uri,
             joinPath: (root, ...parts) => {

@@ -27,25 +27,30 @@ export const parseAresSidecarArguments = (arguments_) => {
     let fastBoot = true;
     for (let index = 0; index < arguments_.length; index++) {
         const argument = arguments_[index];
-        if (argument === undefined)
+        if (argument === undefined) {
             throw new Error("Ares sidecar arguments cannot contain holes.");
+        }
         if (argument === "--no-fast-boot") {
             fastBoot = false;
             continue;
         }
-        if (!optionNames.has(argument))
+        if (!optionNames.has(argument)) {
             throw new Error(`Unknown ares sidecar option '${argument}'.`);
-        if (values.has(argument))
+        }
+        if (values.has(argument)) {
             throw new Error(`Duplicate ares sidecar option '${argument}'.`);
+        }
         const value = arguments_[++index];
-        if (!value || value.startsWith("--"))
+        if (!value || value.startsWith("--")) {
             throw new Error(`Ares sidecar option '${argument}' requires a value.`);
+        }
         values.set(argument, value);
     }
     const required = (name) => {
         const value = values.get(name);
-        if (!value)
+        if (!value) {
             throw new Error(`Missing required ares sidecar option '${name}'.`);
+        }
         return path.resolve(value);
     };
     const system = values.get("--system");
@@ -60,10 +65,12 @@ export const parseAresSidecarArguments = (arguments_) => {
 };
 const write = (stream, data) => new Promise((resolve, reject) => {
     stream.write(data, (error) => {
-        if (error)
+        if (error) {
             reject(error);
-        else
+        }
+        else {
             resolve();
+        }
     });
 });
 /**
@@ -96,11 +103,13 @@ export const runAresSidecar = async (arguments_, environment = process.env) => {
     });
     let ending = false;
     const close = async (error) => {
-        if (ending)
+        if (ending) {
             return;
+        }
         ending = true;
-        if (error)
+        if (error) {
             await write(process.stderr, `${error.stack ?? error.message}\n`).catch(() => undefined);
+        }
         process.stdin.pause();
         await host.terminate().catch(() => undefined);
         await new Promise((resolve) => process.stdout.end(resolve));

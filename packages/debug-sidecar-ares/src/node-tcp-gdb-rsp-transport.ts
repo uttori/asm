@@ -28,7 +28,7 @@ export class NodeTcpGdbRspTransport implements GdbRspTransport {
     this.#socket.setNoDelay(true);
     this.#socket.on("data", (data) => {
       const bytes = typeof data === "string" ? Buffer.from(data) : data;
-      for (const listener of this.#dataListeners) listener(bytes);
+      for (const listener of this.#dataListeners) {listener(bytes);}
     });
     this.#socket.on("error", (error) => {
       this.#terminalError = error;
@@ -44,9 +44,9 @@ export class NodeTcpGdbRspTransport implements GdbRspTransport {
   static async connect(options: NodeTcpGdbRspTransportOptions): Promise<NodeTcpGdbRspTransport> {
     const host = options.host ?? "127.0.0.1";
     if (host !== "127.0.0.1" && host !== "::1")
-      throw new Error("RSP transport host must be a numeric loopback address.");
+      {throw new Error("RSP transport host must be a numeric loopback address.");}
     if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65_535)
-      throw new Error("RSP transport port must be an integer between 1 and 65535.");
+      {throw new Error("RSP transport port must be an integer between 1 and 65535.");}
     const connectTimeoutMs = options.connectTimeoutMs ?? 3_000;
     const shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1_000;
     for (const [name, value] of [
@@ -54,7 +54,7 @@ export class NodeTcpGdbRspTransport implements GdbRspTransport {
       ["RSP shutdown timeout", shutdownTimeoutMs],
     ] as const) {
       if (!Number.isSafeInteger(value) || value <= 0)
-        throw new Error(`${name} must be a positive safe integer.`);
+        {throw new Error(`${name} must be a positive safe integer.`);}
     }
 
     const socket = new net.Socket();
@@ -87,11 +87,11 @@ export class NodeTcpGdbRspTransport implements GdbRspTransport {
 
   /** @inheritdoc */
   write(data: Uint8Array): Promise<void> {
-    if (this.#closed) return Promise.reject(new Error("RSP TCP transport is closed."));
+    if (this.#closed) {return Promise.reject(new Error("RSP TCP transport is closed."));}
     return new Promise((resolve, reject) => {
       this.#socket.write(data, (error) => {
-        if (error) reject(error);
-        else resolve();
+        if (error) {reject(error);}
+        else {resolve();}
       });
     });
   }
@@ -114,7 +114,7 @@ export class NodeTcpGdbRspTransport implements GdbRspTransport {
 
   /** @inheritdoc */
   async close(): Promise<void> {
-    if (this.#closed) return;
+    if (this.#closed) {return;}
     this.#closed = true;
     if (this.#socket.destroyed) {
       this.#notifyClosed(this.#terminalError);
@@ -134,10 +134,10 @@ export class NodeTcpGdbRspTransport implements GdbRspTransport {
   }
 
   #notifyClosed(error?: Error): void {
-    if (this.#notified) return;
+    if (this.#notified) {return;}
     this.#notified = true;
     this.#closed = true;
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {listener(error);}
     this.#closeListeners.clear();
     this.#dataListeners.clear();
   }

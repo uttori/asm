@@ -3,8 +3,9 @@ import { assertDebugSidecarSessionToken } from "./sidecar-protocol.js";
 /** Environment variable inherited by a native sidecar instead of exposing its token in argv. */
 export const DEBUG_SIDECAR_SESSION_ENV = "UTTORI_ASM_DEBUG_SESSION";
 const positiveInteger = (value, name) => {
-    if (!Number.isSafeInteger(value) || value <= 0)
+    if (!Number.isSafeInteger(value) || value <= 0) {
         throw new Error(`${name} must be a positive safe integer.`);
+    }
 };
 /** Owns one child process. Create a new instance to restart after close or process failure. */
 export class NodeStdioSidecarTransport {
@@ -27,8 +28,9 @@ export class NodeStdioSidecarTransport {
      * @param {NodeStdioSidecarTransportOptions} options Explicit executable and lifecycle bounds.
      */
     constructor(options) {
-        if (options.command.length === 0)
+        if (options.command.length === 0) {
             throw new Error("Sidecar command cannot be empty.");
+        }
         assertDebugSidecarSessionToken(options.session);
         this.#session = options.session;
         this.#shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1_000;
@@ -51,8 +53,9 @@ export class NodeStdioSidecarTransport {
             windowsHide: true,
         });
         this.#child.stdout.on("data", (data) => {
-            for (const listener of this.#dataListeners)
+            for (const listener of this.#dataListeners) {
                 listener(data);
+            }
         });
         this.#child.stderr.on("data", (data) => this.#captureStderr(data));
         this.#child.on("error", (error) => this.#notifyClosed(new Error(`Unable to run debug sidecar: ${error.message}`)));
@@ -72,15 +75,18 @@ export class NodeStdioSidecarTransport {
      * @returns {Promise<void>} Completion of the native pipe write.
      */
     write(data) {
-        if (this.#notified || this.#exited)
+        if (this.#notified || this.#exited) {
             return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));
+        }
         return new Promise((resolve, reject) => {
             try {
                 this.#child.stdin.write(Buffer.from(data), (error) => {
-                    if (error)
+                    if (error) {
                         reject(error);
-                    else
+                    }
+                    else {
                         resolve();
+                    }
                 });
             }
             catch (error) {
@@ -129,29 +135,35 @@ export class NodeStdioSidecarTransport {
         this.#notifyClosed(error);
     }
     #notifyClosed(error) {
-        if (this.#notified)
+        if (this.#notified) {
             return;
+        }
         this.#notified = true;
         this.#terminalError = error;
-        for (const listener of this.#closeListeners)
+        for (const listener of this.#closeListeners) {
             listener(error);
+        }
         this.#closeListeners.clear();
         this.#dataListeners.clear();
     }
     async #closeProcess() {
-        if (!this.#exited && !this.#child.stdin.destroyed)
+        if (!this.#exited && !this.#child.stdin.destroyed) {
             this.#child.stdin.end();
-        if (await this.#waitForExit(this.#shutdownTimeoutMs))
+        }
+        if (await this.#waitForExit(this.#shutdownTimeoutMs)) {
             return;
+        }
         this.#child.kill("SIGTERM");
-        if (await this.#waitForExit(this.#shutdownTimeoutMs))
+        if (await this.#waitForExit(this.#shutdownTimeoutMs)) {
             return;
+        }
         this.#child.kill("SIGKILL");
         await this.#exit;
     }
     async #waitForExit(timeoutMs) {
-        if (this.#exited)
+        if (this.#exited) {
             return true;
+        }
         return new Promise((resolve) => {
             const timer = setTimeout(() => resolve(false), timeoutMs);
             timer.unref();

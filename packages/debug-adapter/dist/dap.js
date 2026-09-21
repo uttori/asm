@@ -1208,7 +1208,10 @@ export class DebugAdapterSession {
             this.#executionEnded = true;
             this.#executionState = "unknown";
             this.#maintenanceResumeThreadId = undefined;
-            this.#cancelMaintenancePause(new Error("Debugger terminated while updating breakpoints."));
+            // Creating an Error captures a stack. Only pay that cost when a pending pause needs rejection.
+            if (this.#maintenancePause) {
+                this.#cancelMaintenancePause(new Error("Debugger terminated while updating breakpoints."));
+            }
         }
         const translated = backendEvent(event);
         const context = this.#eventContext.getStore();

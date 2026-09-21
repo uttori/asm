@@ -1,3 +1,8 @@
+/**
+ * Converts core analysis snapshots and current source text into LSP response payloads.
+ * File arguments are filesystem paths; protocol positions/ranges use zero-based UTF-16 columns.
+ * Providers repair normalized analysis spans against raw editor text without rebuilding the index.
+ */
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL, fileURLToPath } from "node:url";
@@ -74,9 +79,11 @@ export const semanticTokensLegend: SemanticTokensLegend = {
   tokenModifiers: [SemanticTokenModifiers.definition],
 };
 
+/** Legend offsets encoded in semantic tokens; changing legend order changes these wire values. */
 const tokenTypeIndex = new Map<string, number>(
   semanticTokensLegend.tokenTypes.map((type, index) => [type, index]),
 );
+/** Definition flag as a legend-indexed bitmask, not a modifier array index. */
 const definitionTokenModifier =
   1 << semanticTokensLegend.tokenModifiers.indexOf(SemanticTokenModifiers.definition);
 
@@ -160,7 +167,7 @@ function toSymbolKind(kind: AssemblySymbolKind): SymbolKind {
 /**
  * Returns a fallback range for an artifact lacking precise geometry.
  * @param {number} line The zero-based line number.
- * @returns {Range} A single-character range at the line start.
+ * @returns {Range} An empty range at the line start, using line zero for invalid line numbers.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#range
  */
 function lineFallbackRange(line: number): Range {
@@ -186,7 +193,7 @@ function splitLines(text: string): string[] {
  * @param {number} line The zero-based line number.
  * @param {string} name The token text to locate.
  * @param {Range} fallback The range to use when the token cannot be located.
- * @returns {Range} The precise raw range.
+ * @returns {Range} A new raw range on a match; otherwise the original fallback object by identity.
  */
 function preciseRange(
   index: WorkspaceIndex,
@@ -278,14 +285,15 @@ function namesMatch(stored: string, word: string): boolean {
 }
 
 /**
- * Locates `name` on a source line and extends the end column through any
- * trailing identifier characters. Used so a stale analysis of `unk1E` still
- * highlights the full `unk1E__WE` token after an in-flight rename.
+ * Locates `name` on a source line and extends the end column through a suffix
+ * left by an in-flight rename, such as `unk1E` becoming `unk1E__WE`.
+ * A single underscore ends the extension to preserve compound-label segments;
+ * a suffix starting with a double underscore is kept as part of the token.
  * @param {string} rawLine The raw source line.
  * @param {string} name The stored token text to locate.
  * @param {number} line The zero-based line number.
  * @param {Range} fallback The range to use when the token cannot be located.
- * @returns {Range} The precise range, extended to the identifier boundary.
+ * @returns {Range} A new range extended through identifier characters, or the original fallback object.
  */
 function rangeForTokenOnLine(rawLine: string, name: string, line: number, fallback: Range): Range {
   const column = findTokenColumn(rawLine, name);
@@ -315,7 +323,7 @@ function rangeForTokenOnLine(rawLine: string, name: string, line: number, fallba
  * are not inside a line comment.
  * @param {string} lineText The raw line text.
  * @param {string} name The token to locate.
- * @returns {number} The zero-based column, or -1 when not found.
+ * @returns {number} Whole-token column, otherwise the first non-comment substring match, or -1.
  */
 function findTokenColumn(lineText: string, name: string): number {
   if (!name) {
@@ -375,7 +383,8 @@ function findCompoundSuffixColumn(lineText: string, segment: string): number {
 }
 
 /**
- * Extracts the identifier-like word at a position from document text.
+ * Extracts a quoted string, unquoted include path, or identifier-like word at a position.
+ * Token ends are accepted so a cursor immediately after a token can still resolve it.
  * @param {string} text The document text.
  * @param {Position} position The cursor position.
  * @returns {string | undefined} The word, or undefined when none is present.
@@ -548,7 +557,7 @@ function splitHierarchicalSource(word: string): string[] {
  * @param {AssemblySymbolDefinition[]} symbols Every known symbol.
  * @param {string} word The compound identifier.
  * @param {string} file The file containing the cursor.
- * @returns {AssemblySymbolDefinition[]} Candidate leaves, longest first.
+ * @returns {AssemblySymbolDefinition[]} Candidate leaves ranked by same-file preference and name length.
  */
 function compoundLeafCandidates(
   symbols: AssemblySymbolDefinition[],
@@ -563,6 +572,11 @@ function compoundLeafCandidates(
         (symbol) => symbol.name.endsWith(suffix) && !exact.some((entry) => entry === symbol),
       )
     : [];
+  /**
+   * Biases matching locals toward the cursor's file, then toward more specific qualified names.
+   * @param {AssemblySymbolDefinition} symbol Candidate compound-label leaf.
+   * @returns {number} Descending sort score; same-file candidates receive a large fixed bonus.
+   */
   const rank = (symbol: AssemblySymbolDefinition): number => {
     const inFile = symbol.location.file === file ? 1 : 0;
     return inFile * 1_000_000 + symbol.name.length;
@@ -571,7 +585,7 @@ function compoundLeafCandidates(
 }
 
 /**
- * Walks `containerName` from a leaf to the root.
+ * Walks `containerName` from a leaf toward the root, stopping at a missing parent or repeated name.
  * @param {AssemblySymbolDefinition[]} symbols Every known symbol.
  * @param {AssemblySymbolDefinition} leaf The leaf symbol.
  * @returns {string[]} Names from root to leaf.
@@ -639,7 +653,16 @@ function alignedHierarchy(
   index: WorkspaceIndex,
   file: string,
   word: string | undefined,
-): { parts: string[]; chain: string[]; chainOffset: number } | undefined {
+):
+  | {
+      /** Source-spelled segments, retaining the leading dot/underscore on the first segment. */
+      parts: string[];
+      /** Fully qualified symbol names ordered from root to leaf. */
+      chain: string[];
+      /** Index in chain corresponding to parts[0], skipping parents omitted by local spelling. */
+      chainOffset: number;
+    }
+  | undefined {
   if (!word || !word.includes("_")) {
     return undefined;
   }
@@ -844,7 +867,8 @@ export function diagnosticsFor(index: WorkspaceIndex, file: string): Diagnostic[
 }
 
 /**
- * Builds document symbols for a file.
+ * Builds a nested document outline from container names, deduplicating children recorded twice
+ * by analysis and expanding parent ranges to include descendants while preserving selection ranges.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @returns {DocumentSymbol[]} The document symbols.
@@ -923,6 +947,11 @@ export function projectOutlineFor(index: WorkspaceIndex): ProjectOutlineNode[] {
   }
 
   const visited = new Set<string>();
+  /**
+   * Expands each reachable file once; later visits become include leaves to bound cycles and DAG reuse.
+   * @param {string} file Entry or include path, normalized before consulting the shared visited set.
+   * @returns {ProjectOutlineNode} A file subtree, or a non-expanding include link for a repeated file.
+   */
   const buildFile = (file: string): ProjectOutlineNode => {
     const resolved = path.resolve(file);
     if (visited.has(resolved)) {
@@ -1175,7 +1204,8 @@ export function hoverFor(
 }
 
 /**
- * Builds completion items for instructions, directives, and in-scope symbols.
+ * Builds completion items from active tooling and all indexed workspace symbols.
+ * Symbol entries are deduplicated by kind/name; this provider does not filter by cursor scope.
  * @param {WorkspaceIndex} index The workspace index.
  * @returns {CompletionItem[]} The completion items.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#completion-request-leftwards_arrow_with_hook
@@ -1279,7 +1309,7 @@ export function prepareRenameFor(
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The absolute file path.
  * @param {Position} position The cursor position.
- * @param {string} newName The replacement name.
+ * @param {string} newName Replacement identifier; a leading ! is removed for define renames only.
  * @returns {WorkspaceEdit | null} The workspace edit, or null when nothing to rename.
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#rename-request-leftwards_arrow_with_hook
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#workspaceedit
@@ -1299,6 +1329,11 @@ export function renameEditsFor(
   const effectiveName = kind === "define" && newName.startsWith("!") ? newName.slice(1) : newName;
 
   const editsByUri = new Map<string, TextEdit[]>();
+  /**
+   * Groups replacements by document for the LSP changes map, using the normalized replacement name.
+   * @param {string} uri Document URI owning the occurrence.
+   * @param {Range} range Bare identifier range that preserves any source sigil.
+   */
   const pushEdit = (uri: string, range: Range): void => {
     const edits = editsByUri.get(uri) ?? [];
     edits.push(TextEdit.replace(range, effectiveName));
@@ -1322,8 +1357,14 @@ export function renameEditsFor(
   return { changes: Object.fromEntries(editsByUri) };
 }
 
+/**
+ * Identity used to match rename occurrences by name, kind, and container scope.
+ * renameTargetAt populates exactly one branch; an ambiguous/unresolved reference stays a reference.
+ */
 type RenameTarget = {
+  /** Selected declaration, either under the cursor or uniquely resolved from a reference. */
   symbol?: AssemblySymbolDefinition;
+  /** Renameable reference retained when it does not resolve to exactly one declaration. */
   reference?: AssemblySymbolReference;
 };
 
@@ -1436,9 +1477,27 @@ function referenceMatchesRenameTarget(
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#semantic-tokens-leftwards_arrow_with_hook
  */
 export function semanticTokensFor(index: WorkspaceIndex, file: string): SemanticTokens {
-  type RawToken = { line: number; char: number; length: number; type: number; modifiers: number };
+  /** Absolute token coordinates collected before sorting and LSP delta encoding. */
+  type RawToken = {
+    /** Zero-based source line; tokens cannot cross line boundaries. */
+    line: number;
+    /** Zero-based UTF-16 column of the token start. */
+    char: number;
+    /** Positive token width in UTF-16 code units. */
+    length: number;
+    /** Index in semanticTokensLegend.tokenTypes. */
+    type: number;
+    /** Bitmask of indices in semanticTokensLegend.tokenModifiers; zero means no modifiers. */
+    modifiers: number;
+  };
   const tokens: RawToken[] = [];
 
+  /**
+   * Collects only nonempty single-line spans accepted by this server's semantic-token encoder.
+   * @param {Range} range Raw source geometry for one token.
+   * @param {number} type Index in the advertised token-type legend.
+   * @param {number} modifiers Legend-indexed flags; defaults to zero for references.
+   */
   const push = (range: Range, type: number, modifiers = 0): void => {
     if (range.start.line !== range.end.line) {
       return;
@@ -1471,7 +1530,8 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
   const builder = new SemanticTokensBuilder();
   let previous: RawToken | undefined;
   for (const token of tokens) {
-    // Skip duplicates that would produce a zero-delta overlapping token.
+    // Stable sorting leaves definitions first at the same position, preserving their modifier
+    // when analysis also records a reference there. Only identical starts are deduplicated.
     if (previous && previous.line === token.line && previous.char === token.char) {
       continue;
     }
@@ -1569,11 +1629,12 @@ function definitionToLocation(index: WorkspaceIndex, symbol: AssemblySymbolDefin
 }
 
 /**
- * Resolves the include target name to an included file path using the graph.
+ * Resolves an include using this file's graph edges, then probes disk beside the source and in
+ * include paths. Graph matches accept a basename fallback for analysis-normalized target names.
  * @param {WorkspaceIndex} index The workspace index.
  * @param {string} file The file issuing the include.
  * @param {string} target The include target token.
- * @returns {string | undefined} The resolved included file path.
+ * @returns {string | undefined} The first matching graph path or existing disk candidate, if any.
  */
 function resolveIncludeTarget(
   index: WorkspaceIndex,
@@ -1619,7 +1680,14 @@ function identifierAt(
   index: WorkspaceIndex,
   file: string,
   position: Position,
-): { name: string; containerName?: string } | undefined {
+):
+  | {
+      /** Indexed identity, or a cursor word with its leading define sigil removed as a fallback. */
+      name: string;
+      /** Indexed enclosing scope when known; absent for raw-word fallback lookups. */
+      containerName?: string;
+    }
+  | undefined {
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference) {
@@ -1752,7 +1820,7 @@ function outlineDetail(symbol: AssemblySymbolDefinition): string {
 
 /**
  * Keeps a single outline child per display name and definition line.
- * Prefers the node with more nested children.
+ * Prefers the node with more nested children, then a detail containing an address on ties.
  * @param {DocumentSymbol[]} children The child symbols.
  * @returns {DocumentSymbol[]} The deduplicated children.
  */
@@ -1780,8 +1848,8 @@ function dedupeOutlineChildren(children: DocumentSymbol[]): DocumentSymbol[] {
 }
 
 /**
- * Expands a parent outline range so it covers all nested children.
- * @param {DocumentSymbol} symbol The outline node.
+ * Mutates outline ranges recursively to cover descendants without changing selection ranges.
+ * @param {DocumentSymbol} symbol Root of the freshly built outline subtree to expand.
  */
 function expandRangeToChildren(symbol: DocumentSymbol): void {
   for (const child of symbol.children ?? []) {

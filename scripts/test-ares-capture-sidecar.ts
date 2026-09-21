@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -14,6 +14,7 @@ import {
   NativeCaptureFileRecorder,
   createDebugSidecarSessionToken,
   recoverCaptureFile,
+  verifyCaptureContext,
   type CaptureResultV2,
   type CaptureTransportV2,
   type CaptureScopeV2,
@@ -31,39 +32,50 @@ import { LiveBusAnalysis } from "../packages/vscode-extension/src/runtime/live-b
 
 // Exercise the editor's DAP request and its actual bundled stdio sidecar, with
 // an isolated runtime copy so the user's settings and saves are never touched.
-const source = path.resolve(process.argv[2] ?? "Local Only/ares-capture-v2-desktop-runtime");
+const source = path.resolve(process.argv[2] ?? "fixtures/external/ares/runtime");
 const evidence = process.argv[3];
 const ppu = process.argv.includes("--ppu");
 const transfers = ppu || process.argv.includes("--transfers");
 const bus = transfers || process.argv.includes("--bus");
 let scope: CaptureScopeV2 = "snes.65816.instructions";
-if (bus) scope = "snes.cpu-bus";
-if (transfers) scope = "snes.cpu-bus-transfers";
-if (ppu) scope = "snes.cpu-bus-ppu";
+if (bus) {
+  scope = "snes.cpu-bus";
+}
+if (transfers) {
+  scope = "snes.cpu-bus-transfers";
+}
+if (ppu) {
+  scope = "snes.cpu-bus-ppu";
+}
 const slow = process.argv.includes("--slow");
 const profile = process.argv.includes("--profile");
 const nativeFile = process.argv.includes("--native-file");
+const context = !process.argv.includes("--no-context");
 const liveAnalysis = process.argv.includes("--live");
 const framePaced = process.argv.includes("--frame-paced");
 // Driver selection belongs only to the disposable benchmark runtime. Verify
 // the saved setting after load so a failed Metal initialization cannot look like
 // a successful display benchmark that silently fell back to None.
 const hostVideo = process.argv.includes("--host-video") ? "Metal" : "None";
-if (liveAnalysis && (!nativeFile || !bus))
+if (liveAnalysis && (!nativeFile || !bus)) {
   throw new Error("--live requires --native-file and a bus scope.");
+}
 const durationIndex = process.argv.indexOf("--duration-ms");
 const defaultDurationMs = bus ? 4000 : 1000;
 const durationMs = durationIndex < 0 ? defaultDurationMs : Number(process.argv[durationIndex + 1]);
-if (!Number.isSafeInteger(durationMs) || durationMs < 100 || durationMs > 60000)
+if (!Number.isSafeInteger(durationMs) || durationMs < 100 || durationMs > 60000) {
   throw new Error("Capture duration must be 100–60000 ms.");
+}
 const lagIndex = process.argv.indexOf("--live-max-lag-mib");
 const liveMaxLagMiB = lagIndex < 0 ? 256 : Number(process.argv[lagIndex + 1]);
-if (!Number.isSafeInteger(liveMaxLagMiB) || liveMaxLagMiB < 16 || liveMaxLagMiB > 4096)
+if (!Number.isSafeInteger(liveMaxLagMiB) || liveMaxLagMiB < 16 || liveMaxLagMiB > 4096) {
   throw new Error("Live lag budget must be 16–4096 MiB.");
+}
 const keepIndex = process.argv.indexOf("--keep-archive");
 const keepArchive = keepIndex < 0 ? undefined : process.argv[keepIndex + 1];
-if (keepIndex >= 0 && (!keepArchive || keepArchive.startsWith("--")))
+if (keepIndex >= 0 && (!keepArchive || keepArchive.startsWith("--"))) {
   throw new Error("--keep-archive requires a new destination path.");
+}
 const recorderType = nativeFile ? NativeCaptureFileRecorder : LosslessCaptureFileRecorder;
 const temporary = await mkdtemp(path.join(os.tmpdir(), "ares-capture-sidecar-"));
 let live: LiveBusAnalysis | undefined;
@@ -107,13 +119,18 @@ if (bus) {
     [0x4324, 0],
     [0x4327, 0],
     [0x420c, 6],
-  ])
+  ]) {
     store(address, value);
+  }
   // A second workload transfers 256 bytes per NMI instead of saturating the bus.
   // It exercises sustained live catch-up without changing the dense stress case.
-  if (framePaced) store(0x4200, 0x80);
+  if (framePaced) {
+    store(0x4200, 0x80);
+  }
   const loop = code.length;
-  if (framePaced) code.push(0xcb); // WAI until the next frame's NMI.
+  if (framePaced) {
+    code.push(0xcb);
+  } // WAI until the next frame's NMI.
   store(0x4305, 0);
   store(0x4306, framePaced ? 1 : 0x80);
   code.push(0xa9, 1);
@@ -195,7 +212,9 @@ let recorder: LosslessCaptureFileRecorder | NativeCaptureFileRecorder | undefine
 // This is the adapter's real DAP/stdio/RSP path. Delay only the consumer to
 // exercise backpressure without changing the synthetic program or native timing.
 const captureTransport: CaptureTransportV2 = async (r) => {
-  if (slow && r.operation === "read") await delay(15);
+  if (slow && r.operation === "read") {
+    await delay(15);
+  }
   return (await request("uttori/capture", { ...r })) as CaptureResultV2;
 };
 /**
@@ -208,7 +227,9 @@ const stoppedAfter = async (action: () => Promise<unknown>): Promise<void> => {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   const stopped = new Promise<void>((resolve, reject) => {
     subscription = backend.onEvent((event) => {
-      if (event.type === "stopped") resolve();
+      if (event.type === "stopped") {
+        resolve();
+      }
     });
     timeout = setTimeout(() => reject(new Error("Bus capture debugger stop timed out.")), 15000);
   });
@@ -226,8 +247,12 @@ try {
   let inVideo = false;
   let savedVideo: string | undefined;
   for (const line of savedSettings.split(/\r?\n/)) {
-    if (line && !line.startsWith(" ")) inVideo = line === "Video";
-    if (inVideo && line.startsWith("  Driver: ")) savedVideo = line.slice(10);
+    if (line && !line.startsWith(" ")) {
+      inVideo = line === "Video";
+    }
+    if (inVideo && line.startsWith("  Driver: ")) {
+      savedVideo = line.slice(10);
+    }
   }
   assert.equal(
     savedVideo,
@@ -242,6 +267,7 @@ try {
     await stoppedAfter(() => request("continue", { threadId: 1 }));
     await backend.setBreakpoints([]);
     recorder = await recorderType.create({
+      context,
       file: path.join(temporary, "step.act2"),
       format: "act2",
       scope,
@@ -265,6 +291,7 @@ try {
     assert((await recoverCaptureFile(stepped.archive)).complete);
   }
   recorder = await recorderType.create({
+    context,
     file: path.join(temporary, bus || nativeFile ? "capture.act2" : "capture.json"),
     measureStages: profile,
     format: bus ? "act2" : "json",
@@ -341,9 +368,46 @@ try {
   const pauseStarted = performance.now();
   await stoppedAfter(() => request("pause", { threadId: 1 }));
   const pauseMs = performance.now() - pauseStarted;
+  if (context) {
+    await request("uttori/capture", {
+      operation: "context",
+      action: "mark",
+      session: recorder.position.session,
+      label: "end of synthetic action",
+    });
+  }
   const stopStarted = performance.now();
   const summary = await recorder.stop();
   const finalized = performance.now();
+  if (context) {
+    assert(summary.contextDirectory);
+    await verifyCaptureContext(summary.contextDirectory, {
+      romContentSha256: digest(rom),
+      producer: { id: "ares", revision: manifest.executableSha256 },
+    });
+    const expected = await backend.readMemory(
+      { architecture: "snes.65816", addressSpace: "snes.wram", address: 0 },
+      131072,
+    );
+    await request("uttori/capture", {
+      operation: "context",
+      action: "replay",
+      directory: summary.contextDirectory,
+      romContentSha256: digest(rom),
+      producer: { id: "ares", revision: manifest.executableSha256 },
+    });
+    await stoppedAfter(() => request("continue", { threadId: 1 }));
+    assert.deepEqual(await request("uttori/capture", { operation: "context", action: "status" }), {
+      contextState: "idle",
+    });
+    assert.deepEqual(
+      await backend.readMemory(
+        { architecture: "snes.65816", addressSpace: "snes.wram", address: 0 },
+        131072,
+      ),
+      expected,
+    );
+  }
   assert(summary.complete && summary.observedEvents > 3854);
   assert.equal(summary.droppedEvents, 0);
   const actors = { cpu: 0, dma: 0, hdma: 0 };
@@ -360,7 +424,9 @@ try {
         }
         const events = chunk.scope === "snes.cpu-bus" ? chunk.accesses : chunk.events;
         for (const access of events) {
-          if ("kind" in access) continue;
+          if ("kind" in access) {
+            continue;
+          }
           actors[access.actor]++;
           phases.add(access.phase);
           firstCycle ??= BigInt(access.cycle);
@@ -372,6 +438,44 @@ try {
   if (bus) {
     assert(actors.cpu > 0 && actors.dma > 0 && actors.hdma > 0);
     assert(phases.has("hdma-table") && phases.has("hdma-indirect") && phases.has("hdma-transfer"));
+  }
+  let graphicsSummary;
+  if (context && !bus) {
+    const directory = summary.contextDirectory!;
+    const contextManifest = JSON.parse(
+      await readFile(path.join(directory, "manifest.json"), "utf8"),
+    ) as {
+      graphics: { windowFrames: number | null };
+      boundaries: { end: { masterClock: string } };
+    };
+    assert.equal(contextManifest.graphics.windowFrames, null);
+    const graphicsFile = path.join(directory, "graphics.act2");
+    let graphicsFirst: bigint | undefined;
+    let graphicsLast = 0n;
+    const graphics = await recoverCaptureFile(graphicsFile, (chunk) => {
+      assert.equal(chunk.scope, "snes.cpu-bus-ppu");
+      if (chunk.scope !== "snes.cpu-bus-ppu") {
+        return;
+      }
+      for (const event of chunk.events) {
+        graphicsFirst ??= BigInt(event.cycle);
+        graphicsLast = BigInt(event.cycle);
+      }
+    });
+    // The dense synthetic loop performs a bus access in every instruction. Its
+    // final graphics event must reach the final primary instruction, even after
+    // multiple writer drains and the former two-frame cutoff.
+    assert(graphics.complete && graphicsFirst !== undefined);
+    assert(lastCycle - firstCycle! > 2n * 1364n * 262n);
+    assert(graphicsLast >= lastCycle);
+    assert(graphicsLast <= BigInt(contextManifest.boundaries.end.masterClock));
+    graphicsSummary = {
+      bytes: (await stat(graphicsFile)).size,
+      firstCycle: String(graphicsFirst),
+      lastCycle: String(graphicsLast),
+      complete: graphics.complete,
+      windowFrames: null,
+    };
   }
   let transferSummary;
   let ppuSummary;
@@ -434,6 +538,7 @@ try {
     executableSha256: manifest.executableSha256,
     bundledSidecarSha256: digest(await readFile(sidecar)),
     scope: summary.scope,
+    ...(graphicsSummary ? { graphics: graphicsSummary } : {}),
     consumer: slow ? "15ms-delay-per-read" : "unrestricted",
     checks: [
       "verified runtime launch",
@@ -441,6 +546,14 @@ try {
       "bundled stdio sidecar",
       "bounded ACT2 chunks up to 256 KiB",
       "durable writer and final drain",
+      ...(context
+        ? [
+            "full WRAM context snapshots",
+            "verified context artifact hashes",
+            "pre-action save-state and console-input replay",
+            "identical replay endpoint WRAM",
+          ]
+        : []),
       ...(bus
         ? [
             "DMA step drains while awaiting asynchronous stop",
@@ -474,8 +587,19 @@ try {
       : {}),
   };
   // Copy after timing capture and validation, so retaining evidence cannot inflate either span.
-  if (keepArchive) await cp(summary.archive, keepArchive, { force: false, errorOnExist: true });
-  if (evidence) await writeFile(evidence, JSON.stringify(result, undefined, 2) + "\n");
+  if (keepArchive) {
+    await cp(summary.archive, keepArchive, { force: false, errorOnExist: true });
+    if (summary.contextDirectory) {
+      await cp(summary.contextDirectory, `${keepArchive}.context`, {
+        recursive: true,
+        force: false,
+        errorOnExist: true,
+      });
+    }
+  }
+  if (evidence) {
+    await writeFile(evidence, JSON.stringify(result, undefined, 2) + "\n");
+  }
   console.log(JSON.stringify(result, undefined, 2));
 } finally {
   clearInterval(livePoll);

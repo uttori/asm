@@ -32,8 +32,9 @@ if (
   count > 4000 ||
   !Number.isSafeInteger(repetitions) ||
   repetitions < 1
-)
+) {
   throw new Error("Use --records 1..4000 and a positive --repetitions count.");
+}
 
 const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-struct-use-benchmark-"));
 const bytes = new Uint8Array(0x8000).fill(0xea);
@@ -110,13 +111,16 @@ const map = {
   ],
 };
 const instructionUses = sites.map(({ role, ...site }) => {
-  if (role === 0)
+  if (role === 0) {
     return {
       ...site,
       reason: "Target field offset.",
       operand: "Tint.target",
     };
-  if (role === 2) return { ...site, reason: "Command stride.", operand: "sizeof(Tint)" };
+  }
+  if (role === 2) {
+    return { ...site, reason: "Command stride.", operand: "sizeof(Tint)" };
+  }
   return {
     ...site,
     reason: "Shared indirect consumer.",
@@ -203,8 +207,9 @@ try {
       "Complete export including metadata validation, indexing, decoding, formatting and file writes. Setup/analysis and verification excluded from timing. One warmup per mode. Alternating order. Heap deltas are boundary measurements, not peak RSS. Baseline uses the same exporter and struct bindings with instructionUses omitted.",
   };
   console.log(JSON.stringify(report, null, 2));
-  if (values.output)
+  if (values.output) {
     fs.writeFileSync(path.resolve(values.output), `${JSON.stringify(report, null, 2)}\n`);
+  }
 } finally {
   fs.rmSync(root, { recursive: true, force: true });
 }

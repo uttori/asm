@@ -1,3 +1,4 @@
+import { type CaptureContextOptions } from "./capture-context.js";
 import { type CaptureChunkV2, type CapturePositionV2, type CaptureTransportV2, type CaptureScopeV2 } from "./capture-v2.js";
 /** Immutable ROM and producer identity shared by an archive and its optional JSON export. */
 export interface CaptureFileMetadata {
@@ -44,6 +45,8 @@ export interface CaptureFileSummary {
     /** Selected output: ACT2 directly, or legacy JSON when explicitly requested. */
     readonly file: string;
     readonly archive: string;
+    /** Sibling directory with a verified context manifest, when context is enabled. */
+    readonly contextDirectory?: string;
     readonly scope: CaptureScopeV2;
     readonly observedEvents: number;
     readonly droppedEvents: 0;
@@ -62,7 +65,7 @@ export declare class LosslessCaptureFileRecorder {
      * @param {object} options Output format, identity and serialized producer transport.
      * @returns {Promise<LosslessCaptureFileRecorder>} Active recorder. Stop() drains and syncs it.
      */
-    static create(options: CaptureFileMetadata & {
+    static create(options: CaptureFileMetadata & CaptureContextOptions & {
         readonly file: string;
         readonly transport: CaptureTransportV2;
         readonly bufferBytes?: number;
@@ -73,6 +76,10 @@ export declare class LosslessCaptureFileRecorder {
         /** Defaults to legacy JSON plus ACT2. Act2 skips all post-capture JSON conversion. */
         readonly format?: "json" | "act2";
     }): Promise<LosslessCaptureFileRecorder>;
+    /** Current producer session, for a paused user milestone.
+     * @returns {CapturePositionV2} Latest verified position; querying does not drain the archive.
+     */
+    get position(): CapturePositionV2;
     stop(): Promise<CaptureFileSummary>;
     finishIncomplete(): Promise<CaptureFileSummary>;
 }
@@ -173,7 +180,7 @@ export declare class NativeCaptureFileRecorder {
      * @param {object} options Destination, scope, verified identity and control transport.
      * @returns {Promise<NativeCaptureFileRecorder>} Armed recorder with a durable session header.
      */
-    static create(options: CaptureFileMetadata & {
+    static create(options: CaptureFileMetadata & CaptureContextOptions & {
         readonly file: string;
         readonly transport: CaptureTransportV2;
         readonly scope?: CaptureScopeV2;

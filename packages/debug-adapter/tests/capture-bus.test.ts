@@ -235,6 +235,7 @@ const recordBus = async (file: string, chunks: readonly Buffer[], failAck = fals
     );
   };
   const recorder = await LosslessCaptureFileRecorder.create({
+    context: false,
     ...captureFixtureHeader,
     scope: busScope,
     file,
@@ -336,14 +337,28 @@ test("bus setup rejects JSON and wrong-scope starts without leaving an active pr
     file: path.join(root, "bus.act2"),
     transport,
   } as const;
-  await t.throwsAsync(LosslessCaptureFileRecorder.create({ ...options, format: "json" }), {
-    message: /requires ACT2/,
-  });
+  await t.throwsAsync(
+    LosslessCaptureFileRecorder.create({
+      context: false,
+      ...options,
+      format: "json",
+    }),
+    {
+      message: /requires ACT2/,
+    },
+  );
   t.deepEqual(operations, []);
   t.deepEqual(await readdir(root), []);
-  await t.throwsAsync(LosslessCaptureFileRecorder.create({ ...options, format: "act2" }), {
-    message: /scope changed/,
-  });
+  await t.throwsAsync(
+    LosslessCaptureFileRecorder.create({
+      context: false,
+      ...options,
+      format: "act2",
+    }),
+    {
+      message: /scope changed/,
+    },
+  );
   t.deepEqual(operations, ["capabilities", "start", "abort"]);
 });
 

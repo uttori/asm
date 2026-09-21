@@ -28,7 +28,7 @@ For a complete SNES create/analyze/export workflow, use `@uttori/asm-cli` or the
 ## Project storage
 
 `analysis.sqlite` owns the manifest, records, and revision. `analysis.json` is a small watcher
-pointer. Current projects use semantic schema 3 and SQLite storage format 2. ROM images remain
+pointer. Current projects use semantic schema 3 and SQLite storage format 3. ROM images remain
 external. Records can retain bounded instruction observations from captures.
 
 Use revision-checked transaction APIs for edits and `SqliteAnalysisStore` queries for bounded views.

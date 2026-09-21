@@ -1,0 +1,24 @@
+{
+  "fixtureSha256": "01c142ddbab4e568e19e85ccf7387601a286806ec5c7cbe7d122092ca236c50b",
+  "executableSha256": "a20ed90fe535df92ac1d259ddc98783be8146c91ef993b1874c14122c8b0c198",
+  "scope": "snes.65816.instructions",
+  "consumer": "15ms-delay-per-read",
+  "checks": [
+    "empty capture",
+    "slow-consumer throttle",
+    "byte-identical retry",
+    "debugger pause while throttled",
+    "abort and explicit release",
+    "sync-before-ack writer",
+    "stop and final drain",
+    "legacy streaming importer",
+    "independent user pause retained"
+  ],
+  "observedEvents": 228960,
+  "droppedEvents": 0,
+  "allocatedBytes": 4718656,
+  "throttleCount": "60",
+  "elapsedMs": 2977.1903330000005,
+  "drainMs": 454.66870800000015,
+  "emulatedMasterClocks": "4717496"
+}

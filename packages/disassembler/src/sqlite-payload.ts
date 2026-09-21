@@ -1,6 +1,8 @@
 import { TextDecoder, types } from "node:util";
 import { deflateSync, inflateSync } from "node:zlib";
 
+import { decodePackedRuntimePayload, isPackedRuntimePayload } from "./sqlite-runtime-payload.js";
+
 /** Per-record decoded UTF-8 limit, enforced before decompression can allocate an oversized buffer. */
 export const MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
 
@@ -19,11 +21,20 @@ export const encodeSqlitePayload = (json: string): string | Buffer => {
   if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
     throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
   }
-  // Most runtime payloads are small. Avoid spending compression CPU on each captured register row.
-  if (bytes < 256) {
+  // Per-record zlib setup dominates save/load time for small CFG and runtime records. Keep values
+  // below 1 KiB as text. Previously compressed small records remain readable by the same decoder.
+  if (bytes < 1024) {
     return json;
   }
-  const compressed = deflateSync(json, { level: 1, chunkSize: Math.min(bytes, 16 * 1024) });
+  // Small metadata records do not need zlib's default 256 KiB working buffers. Bound their
+  // compression window and hash table, retaining the full window for large payloads.
+  const small = bytes < 16 * 1024;
+  const compressed = deflateSync(json, {
+    level: 1,
+    windowBits: small ? 12 : 15,
+    memLevel: small ? 3 : 8,
+    chunkSize: Math.min(bytes, 16 * 1024),
+  });
   if (compressed.length + HEADER_BYTES > bytes - Math.max(32, Math.ceil(bytes / 8))) {
     return json;
   }
@@ -36,8 +47,8 @@ export const encodeSqlitePayload = (json: string): string | Buffer => {
 
 /**
  * Decode one bounded payload, rejecting unknown codecs, corrupt checksums, and invalid UTF-8.
- * @param {unknown} value SQLite TEXT or a versioned compressed BLOB.
- * @returns {string} Original JSON text. Malformed storage throws without returning partial content.
+ * @param {unknown} value SQLite TEXT or a versioned compressed/packed BLOB.
+ * @returns {string} Lossless semantic JSON. Malformed storage throws without returning partial content.
  */
 export const decodeSqlitePayload = (value: unknown): string => {
   if (typeof value === "string") {
@@ -52,6 +63,9 @@ export const decodeSqlitePayload = (value: unknown): string => {
     throw new Error("Invalid SQLite payload representation.");
   }
   const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+  if (isPackedRuntimePayload(encoded)) {
+    return JSON.stringify(decodePackedRuntimePayload(encoded));
+  }
   if (encoded.length <= HEADER_BYTES || !encoded.subarray(0, 4).equals(HEADER)) {
     throw new Error("Unsupported or truncated SQLite payload codec.");
   }
@@ -73,6 +87,17 @@ export const decodeSqlitePayload = (value: unknown): string => {
   } catch (cause) {
     throw new Error("Corrupt SQLite compressed payload.", { cause });
   }
+};
+
+/** Parse owned semantic data, bypassing JSON serialization for packed runtime snapshots.
+ * @param {unknown} value Stored TEXT or a supported versioned BLOB.
+ * @returns {T} Decoded semantic data; callers still validate the requested record type.
+ */
+export const parseSqlitePayload = <T>(value: unknown): T => {
+  if (types.isUint8Array(value) && isPackedRuntimePayload(value)) {
+    return decodePackedRuntimePayload(value) as T;
+  }
+  return JSON.parse(decodeSqlitePayload(value)) as T;
 };
 
 /** Exact external ID split. BLOB suffixes represent only canonical lowercase SHA-256 text. */

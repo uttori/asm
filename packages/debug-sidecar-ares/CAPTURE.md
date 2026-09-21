@@ -5,6 +5,56 @@ Select it through the [runtime setup](RUNTIME.md). Capabilities are negotiated b
 Unsupported scopes or sinks fail instead of silently dropping requested evidence. Native candidates
 and prepared upstream contributions are separate. These features are not stock ares APIs.
 
+## Default research bundle
+
+Recording defaults to `lossless-instructions` with `asm.debug.captureContext: true`.
+Both streaming and native-file sinks create `<capture>.act2.context/` beside the archive:
+
+- `wram-start.bin` and `wram-end.bin`: all 131,072 bytes at `$7E0000–$7FFFFF`, copied
+  directly from physical WRAM while paused. `boundaries.json` ties them to the ACT2
+  session, completed event count, instruction ordinal, PC, and absolute/relative master clocks.
+- `start.bst`: a synchronized ares state immediately before recording. Synchronization
+  happens before either trace is armed; the starting snapshot follows it at the same CPU
+  boundary. The existing ares state format is unchanged. Capture clock epochs are separate.
+- `identity.txt`, `machine.json`, and `manifest.json`: exact ROM and emulator build identity,
+  region/PPU implementation, artifact sizes, and SHA-256 hashes. The complete manifest is
+  published only after the archive and companion files are synced. A directory without that
+  manifest is incomplete; keep it for diagnosis but do not treat it as a replayable bundle.
+- `inputs.bin`: every pair of controller serial bits actually consumed by CPU or auto-joypad
+  reads, with its master clock, instruction ordinal, and controller port. This records console
+  inputs rather than host key timing. Gamepad and Rumble Gamepad are supported; other
+  peripherals fail setup explicitly.
+- `screen-*.png` and `milestones.jsonl`: start/end milestones and a screenshot every 300
+  emulated frames (up to 24 automatic milestones). Each image is the last presented viewport;
+  its presentation clock/ordinal and the milestone's CPU position are separate. Before the
+  first presented frame, the image is explicitly unavailable; zero image markers mean the
+  earlier frame predates context recording.
+- `graphics.act2`: an independent `snes.cpu-bus-ppu` archive covering the entire capture,
+  sharing its start and stop CPU boundaries. It records CPU/DMA/HDMA accesses,
+  transfer boundaries and physical PPU effects. For an explicitly selected bus scope, the
+  primary archive supplies that scope instead; no second graphics archive is created.
+  The writer retains an 8 MiB capture allocation and applies backpressure as it streams to
+  disk; archive size grows with the scene. `graphics.windowFrames: null` and the native
+  `boundaries.graphicsWindowFrames: null` acknowledge that there is no frame cutoff.
+
+Use **Assembly: Add Capture Milestone** (`asm.trace.mark`) to pause and label a scene such
+as payment, refund, or recruitment. Continue resumes from that same position.
+**Assembly: Replay Capture Inputs** (`asm.trace.replay`) checks every artifact hash and
+requires the matching ROM/build and region/PPU, then restores the pre-action state. Continue
+replays the recorded console inputs and pauses at the saved endpoint. The native replay
+status detects input-clock/port divergence, unconsumed inputs, and a different final WRAM image.
+**Assembly: Restore Capture Pre-action State** (`asm.trace.restore`) restores the same starting
+state with live controls, allowing a new capture of refusal, insufficient money, or another branch.
+These commands select the companion directory. Do not separate it from its original ACT2 file.
+
+Context requires the maintained context-capable local runtime. Unsupported runtimes fail setup;
+there is no silent downgrade. `asm.debug.captureContext: false` explicitly selects bare ACT2 for
+benchmarks or another producer. Historical captures remain ordinary ACT2; no migration is needed.
+WRAM differences alone do not identify a writer. Full graphics coverage requires the current
+native runtime; finalization rejects a producer that does not acknowledge the complete window.
+Instruction captures with context now include graphics throughout later conversations and room
+changes. Select `lossless-bus-ppu` when only bus/graphics evidence is needed.
+
 ## Select a scope
 
 Set `asm.debug.traceMode` in VS Code:

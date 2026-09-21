@@ -1,5 +1,5 @@
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
-import { DEBUG_BACKEND_PROTOCOL_VERSION, validateCaptureRequest, validateCapturePosition, validateCaptureCapabilities, } from "@uttori/asm-debug-adapter";
+import { DEBUG_BACKEND_PROTOCOL_VERSION, validateCaptureRequest, verifyCaptureContext, validateCapturePosition, validateCaptureCapabilities, } from "@uttori/asm-debug-adapter";
 import { Cpu65816Decoder, formatCpu65816Instruction, } from "@uttori/asm-plugin-snes";
 import { ARES_65816_ADDRESS_SPACE, ARES_65816_ARCHITECTURE, ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE, ARES_65816_FRAME_ID, ARES_65816_THREAD_ID, ARES_65816_WRAM_ADDRESS_SPACE, ARES_RSP_CAPABILITIES, ARES_TRACE_BATCH_EVENTS, } from "./profile.js";
 import { parseAresTraceDetails } from "./trace-details.js";
@@ -7,43 +7,51 @@ export * from "./profile.js";
 const ARES_NAMED_MEMORY_READ_CHUNK_BYTES = 0x1000;
 const asError = (error) => error instanceof Error ? error : new Error(String(error));
 const checkedInteger = (value, context, maximum = Number.MAX_SAFE_INTEGER) => {
-    if (!Number.isSafeInteger(value) || value < 0 || value > maximum)
+    if (!Number.isSafeInteger(value) || value < 0 || value > maximum) {
         throw new Error(`${context} must be an integer between 0 and ${maximum}.`);
+    }
     return value;
 };
 const checkedAddress = (value, context) => {
-    if (value.architecture !== ARES_65816_ARCHITECTURE)
+    if (value.architecture !== ARES_65816_ARCHITECTURE) {
         throw new Error(`${context} uses unsupported architecture '${value.architecture}'.`);
-    if (value.addressSpace !== ARES_65816_ADDRESS_SPACE)
+    }
+    if (value.addressSpace !== ARES_65816_ADDRESS_SPACE) {
         throw new Error(`${context} uses unsupported address space '${value.addressSpace}'.`);
+    }
     checkedInteger(value.address, `${context} address`, 0xff_ffff);
     return { ...value, address: value.address & 0xff_ffff };
 };
 const checkedMemoryAddress = (value, context) => {
-    if (value.architecture !== ARES_65816_ARCHITECTURE)
+    if (value.architecture !== ARES_65816_ARCHITECTURE) {
         throw new Error(`${context} uses unsupported architecture '${value.architecture}'.`);
+    }
     if (value.addressSpace !== ARES_65816_WRAM_ADDRESS_SPACE &&
-        value.addressSpace !== ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE)
+        value.addressSpace !== ARES_65816_CARTRIDGE_ROM_ADDRESS_SPACE) {
         throw new Error(`${context} uses unsupported memory address space '${value.addressSpace}'.`);
+    }
     checkedInteger(value.address, `${context} address`, 0xff_ffff);
     return { ...value };
 };
 const isEvenHex = (value) => {
-    if (value.length % 2 !== 0)
+    if (value.length % 2 !== 0) {
         return false;
+    }
     for (const character of value) {
         const code = character.codePointAt(0) ?? -1;
         if (!((code >= 0x30 && code <= 0x39) ||
             (code >= 0x41 && code <= 0x46) ||
-            (code >= 0x61 && code <= 0x66)))
+            (code >= 0x61 && code <= 0x66))) {
             return false;
+        }
     }
     return true;
 };
 const littleEndian = (hex) => {
     const bytes = hex.match(/../g);
-    if (!bytes || bytes.join("") !== hex)
+    if (!bytes || bytes.join("") !== hex) {
         throw new Error("Malformed little-endian register data.");
+    }
     return Number.parseInt([...bytes].reverse().join(""), 16);
 };
 const registerHex = (value, bits) => value
@@ -51,8 +59,9 @@ const registerHex = (value, bits) => value
     .toUpperCase()
     .padStart(Math.ceil(bits / 4), "0");
 const parseRegisters = (payload) => {
-    if (!/^[\dA-Fa-f]{32}$/.test(payload))
+    if (!/^[\dA-Fa-f]{32}$/.test(payload)) {
         throw new Error(`Expected 16 bytes of ares 65816 registers, received ${payload.length / 2}.`);
+    }
     return {
         a: littleEndian(payload.slice(0, 4)),
         x: littleEndian(payload.slice(4, 8)),
@@ -68,20 +77,24 @@ const parseRegisters = (payload) => {
 };
 const logicalPc = (registers) => ((registers.pb << 16) | registers.pc) & 0xff_ffff;
 const stopSignal = (payload) => {
-    if (!/^[ST][\dA-Fa-f]{2}/.test(payload))
+    if (!/^[ST][\dA-Fa-f]{2}/.test(payload)) {
         throw new Error(`Expected an RSP stop packet, received '${payload}'.`);
+    }
     return Number.parseInt(payload.slice(1, 3), 16);
 };
 const expectOkay = (payload, context) => {
-    if (payload !== "OK")
+    if (payload !== "OK") {
         throw new Error(`${context} failed with RSP response '${payload}'.`);
+    }
 };
 const safeHexInteger = (value, context) => {
-    if (!/^[\dA-Fa-f]+$/.test(value))
+    if (!/^[\dA-Fa-f]+$/.test(value)) {
         throw new Error(`${context} is not hexadecimal.`);
+    }
     const parsed = Number(BigInt(`0x${value}`));
-    if (!Number.isSafeInteger(parsed))
+    if (!Number.isSafeInteger(parsed)) {
         throw new Error(`${context} exceeds JavaScript safe integer range.`);
+    }
     return parsed;
 };
 /** 65816 `DebugBackend` implemented over the maintained ares fork's private RSP channel. */
@@ -94,13 +107,16 @@ export class AresRspDebugBackend {
     #captureNative = false;
     #captureScope;
     #busCaptureSupported = false;
+    #contextBoundaryHeld = false;
+    #contextReplayPending = false;
     get capabilities() {
-        if (!this.#richTrace)
+        if (!this.#richTrace) {
             return ARES_RSP_CAPABILITIES;
+        }
         return {
             ...ARES_RSP_CAPABILITIES,
             architectures: ARES_RSP_CAPABILITIES.architectures.map((architecture) => {
-                if (architecture.architecture === "snes.65816")
+                if (architecture.architecture === "snes.65816") {
                     return {
                         ...architecture,
                         addressSpaces: [...architecture.addressSpaces, "snes.sram"],
@@ -110,13 +126,15 @@ export class AresRspDebugBackend {
                         ],
                         trace: { ...architecture.trace, instructionDetails: true },
                     };
-                if (architecture.architecture === "snes.spc700")
+                }
+                if (architecture.architecture === "snes.spc700") {
                     return {
                         ...architecture,
                         memory: true,
                         addressSpaces: [...architecture.addressSpaces, "snes.spc700.aram"],
                         memorySpaces: [{ addressSpace: "snes.spc700.aram", sideEffectFree: true }],
                     };
+                }
                 return architecture;
             }),
         };
@@ -143,13 +161,15 @@ export class AresRspDebugBackend {
         this.#terminate = options.terminate ?? (() => Promise.resolve());
         this.#stopTimeoutMs = options.stopTimeoutMs ?? 5_000;
         checkedInteger(this.#stopTimeoutMs, "Ares stop timeout");
-        if (this.#stopTimeoutMs === 0)
+        if (this.#stopTimeoutMs === 0) {
             throw new Error("Ares stop timeout must be positive.");
+        }
     }
     /** @inheritdoc */
     async connect(options = {}) {
-        if (this.#connected)
+        if (this.#connected) {
             throw new Error("ares RSP backend is already connected.");
+        }
         const reset = options.reset ?? true;
         if (!reset && this.#client && !this.#client.closed) {
             await this.#handshakeStop(this.#client, this.#instructionBoundaryStop);
@@ -166,8 +186,9 @@ export class AresRspDebugBackend {
         }
         this.#richTrace = false;
         const client = await this.#createClient({ reset: options.reset ?? true });
-        if (client.closed)
+        if (client.closed) {
             throw new Error("ares RSP client factory returned a closed client.");
+        }
         this.#client = client;
         this.#subscriptions = [
             client.onStop((event) => this.#stoppedEvent(event)),
@@ -181,12 +202,14 @@ export class AresRspDebugBackend {
             if (!supported.includes("qXfer:features:read+") ||
                 !supported.includes("xmlRegisters+") ||
                 !supported.includes("uttoriNamedMemory+") ||
-                !supported.includes("uttoriInstructionTrace+"))
+                !supported.includes("uttoriInstructionTrace+")) {
                 throw new Error("ares RSP server does not advertise the required debugger extensions.");
+            }
             const target = await this.#readTargetDescription(client);
             for (const register of ["a", "x", "y", "s", "d", "db", "pb", "pc", "p", "e"]) {
-                if (!target.includes(`name="${register}"`))
+                if (!target.includes(`name="${register}"`)) {
                     throw new Error(`ares RSP target description is missing register '${register}'.`);
+                }
             }
             this.#richTrace =
                 supported.includes("uttoriInstructionDetails+") &&
@@ -217,8 +240,9 @@ export class AresRspDebugBackend {
             this.#captureSession = undefined;
             this.#captureScope = undefined;
         }
-        if (this.#trace?.active)
+        if (this.#trace?.active) {
             await this.stopTrace();
+        }
         if (!terminate) {
             await this.setBreakpoints([]);
             this.#connected = false;
@@ -234,8 +258,9 @@ export class AresRspDebugBackend {
             // Ares may close its socket before its queued detach OK is transmitted.
             // That EOF fulfils this terminal request. Other errors remain visible.
             const failure = asError(error);
-            if (!client.closed || failure.message !== "RSP transport closed.")
+            if (!client.closed || failure.message !== "RSP transport closed.") {
                 detachError = failure;
+            }
         }
         await client.close().catch((error) => {
             detachError ??= asError(error);
@@ -247,14 +272,16 @@ export class AresRspDebugBackend {
         this.#trace = undefined;
         await this.#terminate();
         this.#emit({ type: "terminated", restart: false });
-        if (detachError)
+        if (detachError) {
             throw detachError;
+        }
     }
     /** @inheritdoc */
     async pause(threadId) {
         this.#assertThread(threadId);
-        if (this.#stopped)
+        if (this.#stopped) {
             return;
+        }
         this.#pendingStopReason = "pause";
         await this.#requireConnected().interrupt();
     }
@@ -262,6 +289,9 @@ export class AresRspDebugBackend {
     async continue(threadId) {
         this.#assertThread(threadId);
         const client = this.#requireStopped();
+        if (this.#contextBoundaryHeld) {
+            throw new Error("Capture context is fixing its execution boundary.");
+        }
         this.#stopped = false;
         this.#pendingStopReason = this.#breakpoints.size > 0 ? "breakpoint" : "exception";
         this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
@@ -270,9 +300,13 @@ export class AresRspDebugBackend {
     /** @inheritdoc */
     async step(threadId, kind) {
         this.#assertThread(threadId);
-        if (kind !== "instruction" && kind !== "in")
+        if (kind !== "instruction" && kind !== "in") {
             throw new Error(`ares does not support ${kind} stepping.`);
+        }
         const client = this.#requireStopped();
+        if (this.#contextBoundaryHeld) {
+            throw new Error("Capture context is fixing its execution boundary.");
+        }
         this.#stopped = false;
         this.#pendingStopReason = "step";
         this.#emit({ type: "continued", threadId: ARES_65816_THREAD_ID, allThreads: true });
@@ -308,8 +342,9 @@ export class AresRspDebugBackend {
     }
     /** @inheritdoc */
     async registers(frameId) {
-        if (frameId !== ARES_65816_FRAME_ID)
+        if (frameId !== ARES_65816_FRAME_ID) {
             throw new Error(`Unknown ares frame ${frameId}.`);
+        }
         const registers = await this.#registerSnapshot();
         return [
             { name: "A", value: registerHex(registers.a, 16), bits: 16, group: "CPU" },
@@ -332,23 +367,27 @@ export class AresRspDebugBackend {
         const checked = extra ? { ...address } : checkedMemoryAddress(address, "Memory request");
         checkedInteger(checked.address, "Memory address", 0xffffff);
         checkedInteger(count, "Memory count", 1_048_576);
-        if (count === 0)
+        if (count === 0) {
             return { address: checked, bytes: new Uint8Array(), unreadableBytes: 0 };
+        }
         const bytes = new Uint8Array(count);
         let offset = 0;
         const client = this.#requireStopped();
         while (offset < count) {
             const requested = Math.min(ARES_NAMED_MEMORY_READ_CHUNK_BYTES, count - offset);
             const response = await client.request(`qUttoriMemoryRead:${checked.addressSpace}:${(checked.address + offset).toString(16)},${requested.toString(16)}`);
-            if (response.startsWith("E"))
+            if (response.startsWith("E")) {
                 throw new Error(`ares RSP named memory read failed with response '${response}'.`);
-            if (!isEvenHex(response) || response.length > requested * 2)
+            }
+            if (!isEvenHex(response) || response.length > requested * 2) {
                 throw new Error("ares RSP named memory response is malformed or exceeds the requested count.");
+            }
             const available = Buffer.from(response, "hex");
             bytes.set(available, offset);
             offset += available.length;
-            if (available.length < requested)
+            if (available.length < requested) {
                 break;
+            }
         }
         return { address: checked, bytes, unreadableBytes: count - offset };
     }
@@ -356,12 +395,14 @@ export class AresRspDebugBackend {
     async setBreakpoints(addresses) {
         const client = this.#requireStopped();
         const requested = addresses.map((entry, index) => checkedAddress(entry, `Breakpoint ${index}`));
-        if (new Set(requested.map(({ address }) => address)).size !== requested.length)
+        if (new Set(requested.map(({ address }) => address)).size !== requested.length) {
             throw new Error("Duplicate ares execute breakpoint addresses are not allowed.");
+        }
         const wanted = new Set(requested.map(({ address }) => address));
         for (const address of this.#breakpoints.keys()) {
-            if (wanted.has(address))
+            if (wanted.has(address)) {
                 continue;
+            }
             expectOkay(await client.request(`z0,${address.toString(16)},1`), "Remove breakpoint");
             this.#breakpoints.delete(address);
         }
@@ -379,8 +420,9 @@ export class AresRspDebugBackend {
                 verified: response === "OK",
                 ...(response === "OK" ? {} : { message: `ares RSP response '${response}'.` }),
             };
-            if (breakpoint.verified)
+            if (breakpoint.verified) {
                 this.#breakpoints.set(value.address, breakpoint);
+            }
             results.push(breakpoint);
         }
         return results;
@@ -401,16 +443,18 @@ export class AresRspDebugBackend {
         const instructions = [];
         for (let index = 0; index < count; index++) {
             const memory = await this.#readCpuBus(current, 4);
-            if (!memory)
+            if (!memory) {
                 break;
+            }
             const decoded = this.#decoder.decode({
                 source: new Uint8ArrayDecoderSource(memory),
                 offset: 0,
                 logicalAddress: current,
                 state: { ...state, programBank: current >>> 16 },
             });
-            if (decoded.kind !== "instruction")
+            if (decoded.kind !== "instruction") {
                 throw new Error(decoded.kind === "ambiguous" ? decoded.reason : `65816 decode failed: ${decoded.message}`);
+            }
             instructions.push({
                 address: this.#address(current),
                 bytes: [...decoded.instruction.bytes],
@@ -424,8 +468,74 @@ export class AresRspDebugBackend {
     async capture(request) {
         validateCaptureRequest(request);
         const client = this.#requireConnected();
-        if (!this.#captureV2)
+        if (request.operation === "context") {
+            const identity = this.#nativeFileIdentity;
+            if (!identity) {
+                throw new Error("Capture context requires a verified local ares runtime.");
+            }
+            if (request.action === "stop" || request.action === "mark") {
+                if (!this.#stopped) {
+                    await this.#waitForStop(client, "capture context", () => this.pause());
+                }
+            }
+            this.#requireStopped();
+            const fields = ["qUttoriContext", request.action];
+            const encode = (value) => Buffer.from(value, "utf8").toString("hex");
+            if ("directory" in request) {
+                if (request.romContentSha256 !== identity.romSha256 ||
+                    request.producer.id !== "ares" ||
+                    (request.producer.revision !== identity.executableSha256 &&
+                        request.producer.revision !== identity.producerRevision)) {
+                    throw new Error("Capture context ROM/build does not match the verified runtime.");
+                }
+                if (request.action === "replay" || request.action === "restore") {
+                    await verifyCaptureContext(request.directory, request);
+                }
+                fields.push(encode(request.directory), encode(request.romContentSha256), encode(request.producer.id), encode(request.producer.revision));
+            }
+            if ("session" in request) {
+                fields.push(request.session);
+            }
+            if (request.action === "mark") {
+                fields.push(encode(request.label));
+            }
+            if (request.action === "prepare" || request.action === "stop") {
+                this.#contextBoundaryHeld = true;
+            }
+            try {
+                const response = await client.request(fields.join(":"));
+                const expected = {
+                    prepare: ["prepared"],
+                    start: ["recording"],
+                    stop: ["draining", "complete"],
+                    mark: ["recording"],
+                    abort: ["aborted"],
+                    restore: ["restored"],
+                    replay: ["replaying"],
+                    status: ["idle", "replaying", "replay-diverged"],
+                };
+                if (!expected[request.action].includes(response)) {
+                    throw new Error(`Capture context ${request.action} is unsupported or failed (${response.slice(0, 32)}). Rebuild the context-capable runtime.`);
+                }
+                if (request.action === "start" || request.action === "abort") {
+                    this.#contextBoundaryHeld = false;
+                }
+                if (request.action === "replay") {
+                    this.#contextReplayPending = true;
+                }
+                if (request.action === "restore" || request.action === "abort") {
+                    this.#contextReplayPending = false;
+                }
+                return { contextState: response };
+            }
+            catch (error) {
+                this.#contextBoundaryHeld = false;
+                throw error;
+            }
+        }
+        if (!this.#captureV2) {
             throw new Error("The active ares runtime does not support lossless capture v2. Install the capture-v2 runtime and restart debugging.");
+        }
         if (request.operation === "file-start" ||
             request.operation === "file-capabilities" ||
             request.operation === "file-status" ||
@@ -444,31 +554,38 @@ export class AresRspDebugBackend {
             if (request.operation === "file-start") {
                 this.#requireStopped();
                 const identity = this.#nativeFileIdentity;
-                if (!identity)
+                if (!identity) {
                     throw new Error("Native file capture requires a verified local runtime host.");
+                }
                 if (request.romContentSha256 !== identity.romSha256 ||
                     request.producer.id !== "ares" ||
                     (request.producer.revision !== identity.executableSha256 &&
-                        request.producer.revision !== identity.producerRevision))
+                        request.producer.revision !== identity.producerRevision)) {
                     throw new Error("Native capture identity does not match the verified ROM and executable.");
+                }
                 await this.capture({ operation: "file-capabilities", scope });
                 const encode = (value) => Buffer.from(value, "utf8").toString("hex");
                 fields.push(request.bufferBytes, scopes[scope], encode(request.file), request.romContentSha256, encode(request.producer.id), encode(request.producer.revision));
-                if (request.measureStages)
+                if (request.measureStages) {
                     fields.push("profile");
+                }
             }
-            else if (request.operation === "file-capabilities")
+            else if (request.operation === "file-capabilities") {
                 fields.push(scopes[scope]);
-            else
+            }
+            else {
                 fields.push(request.session);
+            }
             const response = await client.request(fields.join(":"));
-            if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
+            if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response)) {
                 throw new Error(`Native file capture ${request.operation} is unsupported or rejected (${response.slice(0, 32)}). Use the capture-file runtime.`);
+            }
             const value = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
             if (request.operation === "file-capabilities") {
                 const capabilities = validateCaptureCapabilities(value, scope);
-                if (!capabilities.nativeFile)
+                if (!capabilities.nativeFile) {
                     throw new Error("Runtime did not confirm native file ownership.");
+                }
                 return capabilities;
             }
             const position = validateCapturePosition(value, request.operation === "file-start" ? undefined : request.session);
@@ -489,6 +606,9 @@ export class AresRspDebugBackend {
                 this.#captureScope = undefined;
             }
             validateCapturePosition(position, undefined, scope);
+            if (request.operation === "file-stop" || request.operation === "file-abort") {
+                this.#contextBoundaryHeld = false;
+            }
             return position;
         }
         const negotiation = request.operation === "start" || request.operation === "capabilities";
@@ -498,27 +618,34 @@ export class AresRspDebugBackend {
         const transfers = requestedScope === "snes.cpu-bus-transfers";
         // uttoriCaptureV2+ predates the bus stream. Probe its distinct capability packet
         // before arming, including callers that bypass the file recorder's negotiation.
-        if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported))
+        if (request.operation === "start" && bus && (ppu || transfers || !this.#busCaptureSupported)) {
             await this.capture({ operation: "capabilities", scope: requestedScope });
+        }
         let operation = request.operation;
-        if (request.operation === "capabilities" && bus)
+        if (request.operation === "capabilities" && bus) {
             operation = transfers ? "transfer-capabilities" : "bus-capabilities";
-        if (request.operation === "capabilities" && ppu)
+        }
+        if (request.operation === "capabilities" && ppu) {
             operation = "ppu-capabilities";
+        }
         const fields = ["qUttoriCapture", operation];
         if (request.operation === "start") {
             fields.push(request.bufferBytes);
-            if (ppu)
+            if (ppu) {
                 fields.push("bus-ppu");
-            else if (bus)
+            }
+            else if (bus) {
                 fields.push(transfers ? "bus-transfers" : "bus");
+            }
         }
         else if (request.operation !== "capabilities") {
             fields.push(request.session);
-            if (request.operation === "read" || request.operation === "ack")
+            if (request.operation === "read" || request.operation === "ack") {
                 fields.push(request.chunk);
-            if (request.operation === "ack")
+            }
+            if (request.operation === "ack") {
                 fields.push(request.event);
+            }
         }
         const response = await client.request(fields.join(":"));
         if (request.operation === "capabilities" &&
@@ -532,20 +659,24 @@ export class AresRspDebugBackend {
             }
             throw new Error(`The active ares runtime does not support CPU/DMA/HDMA ${feature}. Use the ${runtime} runtime and restart debugging.`);
         }
-        if (/^e[\da-f]{2}$/i.test(response))
+        if (/^e[\da-f]{2}$/i.test(response)) {
             throw new Error(`Capture ${request.operation} rejected (${response}).`);
+        }
         if (request.operation === "read") {
-            if (response.length > 524288 || response.length % 2 || !/^[\da-f]*$/.test(response))
+            if (response.length > 524288 || response.length % 2 || !/^[\da-f]*$/.test(response)) {
                 throw new Error("Malformed capture chunk response.");
+            }
             return { hex: response };
         }
-        if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response))
+        if (response.length > 8193 || response.length % 2 !== 1 || !/^J[\da-f]+$/.test(response)) {
             throw new Error("Malformed capture control response.");
+        }
         const value = JSON.parse(Buffer.from(response.slice(1), "hex").toString("utf8"));
         if (request.operation === "capabilities") {
             const capabilities = validateCaptureCapabilities(value, requestedScope);
-            if (bus && !transfers && !ppu)
+            if (bus && !transfers && !ppu) {
                 this.#busCaptureSupported = true;
+            }
             return capabilities;
         }
         const position = validateCapturePosition(value, request.operation === "start" ? undefined : request.session);
@@ -570,26 +701,33 @@ export class AresRspDebugBackend {
             this.#captureSession = undefined;
             this.#captureScope = undefined;
         }
+        if (request.operation === "stop" || request.operation === "abort") {
+            this.#contextBoundaryHeld = false;
+        }
         return position;
     }
     async startTrace(options) {
         if (options.architecture !== ARES_65816_ARCHITECTURE ||
-            options.addressSpace !== ARES_65816_ADDRESS_SPACE)
+            options.addressSpace !== ARES_65816_ADDRESS_SPACE) {
             throw new Error(`Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`);
+        }
         const client = this.#requireStopped();
-        if (options.detail === "full" && !this.#richTrace)
+        if (options.detail === "full" && !this.#richTrace) {
             throw new Error("This runtime supports PC-only traces. Rebuild the maintained runtime for captured bytes/state and bus accesses.");
+        }
         expectOkay(await client.request(options.detail === "full" ? "QUttoriTrace:2" : "QUttoriTrace:1"), "Start instruction trace");
         this.#trace = { ...options, active: true };
     }
     /** @inheritdoc */
     async readTrace(maxEvents) {
         checkedInteger(maxEvents, "Trace batch size", ARES_TRACE_BATCH_EVENTS);
-        if (maxEvents === 0)
+        if (maxEvents === 0) {
             throw new Error(`Trace batch size must be between 1 and ${ARES_TRACE_BATCH_EVENTS}.`);
+        }
         const trace = this.#trace;
-        if (!trace)
+        if (!trace) {
             throw new Error("No ares instruction trace has been started.");
+        }
         if (trace.detail === "full") {
             const result = parseAresTraceDetails(await this.#requireConnected().request(`qUttoriTraceDetailRead:${maxEvents.toString(16)}`), maxEvents);
             trace.active = result.active;
@@ -597,11 +735,13 @@ export class AresRspDebugBackend {
         }
         const response = await this.#requireConnected().request(`qUttoriTraceRead:${maxEvents.toString(16)}`);
         const match = /^([01]):([\dA-Fa-f]+):([\dA-Fa-f]+):([\dA-Fa-f]*)$/.exec(response);
-        if (!match || match[4].length % 16 !== 0)
+        if (!match || match[4].length % 16 !== 0) {
             throw new Error("ares RSP instruction trace response is malformed.");
+        }
         const addresses = Array.from({ length: match[4].length / 16 }, (_, index) => safeHexInteger(match[4].slice(index * 16, index * 16 + 16), "Trace address"));
-        if (addresses.length > maxEvents || addresses.some((address) => address > 0xff_ffff))
+        if (addresses.length > maxEvents || addresses.some((address) => address > 0xff_ffff)) {
             throw new Error("ares RSP instruction trace response exceeds the requested bounds.");
+        }
         const active = match[1] === "1";
         trace.active = active;
         return {
@@ -616,8 +756,9 @@ export class AresRspDebugBackend {
     /** @inheritdoc */
     async stopTrace() {
         const trace = this.#trace;
-        if (!trace)
+        if (!trace) {
             throw new Error("No ares instruction trace has been started.");
+        }
         expectOkay(await this.#requireConnected().request("QUttoriTrace:0"), "Stop instruction trace");
         trace.active = false;
     }
@@ -628,13 +769,16 @@ export class AresRspDebugBackend {
     }
     async #readCpuBus(address, count) {
         const response = await this.#requireStopped().request(`m${address.toString(16)},${count.toString(16)}`);
-        if (response.startsWith("E"))
+        if (response.startsWith("E")) {
             throw new Error(`ares RSP CPU-bus disassembly read failed with response '${response}'.`);
-        if (!isEvenHex(response) || response.length > count * 2)
+        }
+        if (!isEvenHex(response) || response.length > count * 2) {
             throw new Error("ares RSP CPU-bus disassembly response is malformed or exceeds the requested count.");
+        }
         const available = Buffer.from(response, "hex");
-        if (available.length === 0)
+        if (available.length === 0) {
             return undefined;
+        }
         const bytes = new Uint8Array(count);
         bytes.set(available);
         return bytes;
@@ -644,14 +788,17 @@ export class AresRspDebugBackend {
         let target = "";
         for (let part = 0; part < 16; part++) {
             const response = await client.request(`qXfer:features:read:target.xml:${offset.toString(16)},1000`);
-            if (!response.startsWith("l") && !response.startsWith("m"))
+            if (!response.startsWith("l") && !response.startsWith("m")) {
                 throw new Error("ares RSP target description returned an invalid continuation marker.");
+            }
             const chunk = response.slice(1);
             target += chunk;
-            if (target.length > 65_536)
+            if (target.length > 65_536) {
                 throw new Error("ares RSP target description exceeds 64 KiB.");
-            if (response.startsWith("l"))
+            }
+            if (response.startsWith("l")) {
                 return target;
+            }
             offset += Buffer.byteLength(chunk, "ascii");
         }
         throw new Error("ares RSP target description did not terminate within 16 packets.");
@@ -697,50 +844,86 @@ export class AresRspDebugBackend {
         };
     }
     #assertThread(threadId) {
-        if (threadId !== undefined && threadId !== ARES_65816_THREAD_ID)
+        if (threadId !== undefined && threadId !== ARES_65816_THREAD_ID) {
             throw new Error(`Unknown ares thread ${threadId}.`);
+        }
     }
     #requireConnected() {
-        if (!this.#connected || !this.#client || this.#client.closed)
+        if (!this.#connected || !this.#client || this.#client.closed) {
             throw new Error("ares RSP backend is not connected.");
+        }
         return this.#client;
     }
     #requireStopped() {
         const client = this.#requireConnected();
-        if (!this.#stopped)
+        if (!this.#stopped) {
             throw new Error("ares RSP backend must be stopped for this operation.");
+        }
         return client;
     }
     #stoppedEvent(event) {
-        if (!this.#connected)
+        if (!this.#connected) {
             return;
+        }
         stopSignal(event.payload);
         this.#stopped = true;
         const reason = this.#pendingStopReason ?? "exception";
         this.#pendingStopReason = undefined;
+        if (this.#contextReplayPending && this.#client) {
+            // Inspect replay outcome before publishing the stop: normal DAP variable
+            // requests must not race this single-outstanding-request RSP operation.
+            void this.#client
+                .request("qUttoriContext:status")
+                .then((status) => {
+                this.#contextReplayPending = status === "replaying";
+                if (status === "idle" || status === "replay-diverged") {
+                    this.#emit({
+                        type: "output",
+                        category: status === "idle" ? "console" : "stderr",
+                        text: status === "idle"
+                            ? "Capture replay reached the recorded endpoint; WRAM and input consumption match.\n"
+                            : "Capture replay diverged from the retained input timing or final WRAM. Execution is paused.\n",
+                    });
+                }
+            }, (error) => {
+                this.#emit({
+                    type: "output",
+                    category: "stderr",
+                    text: `Could not verify capture replay outcome: ${String(error)}\n`,
+                });
+            })
+                .finally(() => this.#emit({ type: "stopped", reason, threadId: ARES_65816_THREAD_ID }));
+            return;
+        }
         this.#emit({ type: "stopped", reason, threadId: ARES_65816_THREAD_ID });
     }
     #clientClosed(client, error) {
-        if (this.#expectedClose.has(client) || this.#client !== client)
+        if (this.#expectedClose.has(client) || this.#client !== client) {
             return;
+        }
         this.#releaseClient(client);
         this.#emit({ type: "output", category: "stderr", text: `${error.message}\n` });
         this.#emit({ type: "terminated", restart: true });
     }
     #releaseClient(client) {
-        if (this.#client !== client)
+        if (this.#client !== client) {
             return;
-        for (const subscription of this.#subscriptions)
+        }
+        for (const subscription of this.#subscriptions) {
             subscription.dispose();
+        }
         this.#subscriptions = [];
         this.#client = undefined;
         this.#connected = false;
         this.#instructionBoundaryStop = false;
+        this.#contextBoundaryHeld = false;
+        this.#contextReplayPending = false;
         this.#trace = undefined;
     }
     #emit(event) {
-        for (const listener of this.#listeners)
+        for (const listener of this.#listeners) {
             listener(event);
+        }
     }
 }
 //# sourceMappingURL=ares-rsp-backend.js.map

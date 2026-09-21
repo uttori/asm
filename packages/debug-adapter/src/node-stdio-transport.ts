@@ -26,7 +26,7 @@ export interface NodeStdioSidecarTransportOptions {
 
 const positiveInteger = (value: number, name: string): void => {
   if (!Number.isSafeInteger(value) || value <= 0)
-    throw new Error(`${name} must be a positive safe integer.`);
+    {throw new Error(`${name} must be a positive safe integer.`);}
 };
 
 /** Owns one child process. Create a new instance to restart after close or process failure. */
@@ -51,7 +51,7 @@ export class NodeStdioSidecarTransport implements DebugSidecarTransport {
    * @param {NodeStdioSidecarTransportOptions} options Explicit executable and lifecycle bounds.
    */
   constructor(options: NodeStdioSidecarTransportOptions) {
-    if (options.command.length === 0) throw new Error("Sidecar command cannot be empty.");
+    if (options.command.length === 0) {throw new Error("Sidecar command cannot be empty.");}
     assertDebugSidecarSessionToken(options.session);
     this.#session = options.session;
     this.#shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1_000;
@@ -74,7 +74,7 @@ export class NodeStdioSidecarTransport implements DebugSidecarTransport {
       windowsHide: true,
     });
     this.#child.stdout.on("data", (data: Buffer) => {
-      for (const listener of this.#dataListeners) listener(data);
+      for (const listener of this.#dataListeners) {listener(data);}
     });
     this.#child.stderr.on("data", (data: Buffer) => this.#captureStderr(data));
     this.#child.on("error", (error) =>
@@ -100,12 +100,12 @@ export class NodeStdioSidecarTransport implements DebugSidecarTransport {
    */
   write(data: Uint8Array): Promise<void> {
     if (this.#notified || this.#exited)
-      return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));
+      {return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));}
     return new Promise((resolve, reject) => {
       try {
         this.#child.stdin.write(Buffer.from(data), (error) => {
-          if (error) reject(error);
-          else resolve();
+          if (error) {reject(error);}
+          else {resolve();}
         });
       } catch (error) {
         reject(error instanceof Error ? error : new Error(String(error)));
@@ -161,25 +161,25 @@ export class NodeStdioSidecarTransport implements DebugSidecarTransport {
   }
 
   #notifyClosed(error?: Error): void {
-    if (this.#notified) return;
+    if (this.#notified) {return;}
     this.#notified = true;
     this.#terminalError = error;
-    for (const listener of this.#closeListeners) listener(error);
+    for (const listener of this.#closeListeners) {listener(error);}
     this.#closeListeners.clear();
     this.#dataListeners.clear();
   }
 
   async #closeProcess(): Promise<void> {
-    if (!this.#exited && !this.#child.stdin.destroyed) this.#child.stdin.end();
-    if (await this.#waitForExit(this.#shutdownTimeoutMs)) return;
+    if (!this.#exited && !this.#child.stdin.destroyed) {this.#child.stdin.end();}
+    if (await this.#waitForExit(this.#shutdownTimeoutMs)) {return;}
     this.#child.kill("SIGTERM");
-    if (await this.#waitForExit(this.#shutdownTimeoutMs)) return;
+    if (await this.#waitForExit(this.#shutdownTimeoutMs)) {return;}
     this.#child.kill("SIGKILL");
     await this.#exit;
   }
 
   async #waitForExit(timeoutMs: number): Promise<boolean> {
-    if (this.#exited) return true;
+    if (this.#exited) {return true;}
     return new Promise((resolve) => {
       const timer = setTimeout(() => resolve(false), timeoutMs);
       timer.unref();

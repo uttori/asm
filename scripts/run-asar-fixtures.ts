@@ -1,144 +1,93 @@
-import { execSync } from "child_process";
-import { createHash } from "crypto";
-import * as fs from "fs";
-import * as path from "path";
+import { createHash } from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
-interface TestResult {
-  test: string;
-  commandRan: string;
-  runError?: string;
-  outputSize: number;
-  expectedSize: number;
-  fileSizeMismatch: boolean;
-  outputChecksum: string;
-  expectedChecksum: string;
-  checksumMismatch: boolean;
-  overallPassed: boolean;
+import { Assembler } from "@uttori/asm-core";
+import { createSnesAssemblerEnvironment, SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
+
+/** Full emitted-output comparison. Missing golden files represent fixtures with no emitted bytes. */
+interface FixtureResult {
+  readonly fixture: string;
+  readonly bytes: number;
+  readonly expectedBytes: number;
+  readonly sha256: string;
+  readonly expectedSha256: string;
+  readonly passed: boolean;
+  readonly error?: string;
 }
 
-// Directories and file paths
-const testsDir = path.join(process.cwd(), "./fixtures/asar/tests");
-const expectedDir = path.join(process.cwd(), "./fixtures/asar/expected");
-const targetRom = path.join(process.cwd(), "./fixtures/asar/dummy_rom.sfc");
+const root = path.join(process.cwd(), "fixtures/asar");
+const tests = path.join(root, "tests");
+const environment = await createSnesAssemblerEnvironment();
+const baseImage = new Uint8Array(fs.readFileSync(path.join(root, "dummy_rom.sfc")));
+const hash = (bytes: Uint8Array): string => createHash("sha256").update(bytes).digest("hex");
 
 /**
- * Get the size and checksum of a file.
- * @param {string} filePath The path to the file to get the stats of.
- * @returns {{size: number, checksum: string}} The size and checksum of the file.
+ * Compare the assembler's emitted bytes with one complete golden output.
+ * The dummy ROM supplies read directives only. CLI --base-image deliberately preserves an entire
+ * patched ROM, which has a different length and checksum contract from these emitted-byte fixtures.
+ * @param {string} fixture Discovered top-level .asm filename.
+ * @returns {FixtureResult} Byte length, hash, and any assembly error. No output files are written.
  */
-function getFileStats(filePath: string): { size: number; checksum: string } {
-  if (!fs.existsSync(filePath)) {
-    return {
-      size: 0,
-      checksum: createHash("sha256").update(Buffer.alloc(0)).digest("hex"),
-    };
-  }
-  const size = fs.statSync(filePath).size;
-  const checksum = createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
-  return { size, checksum };
-}
-
-/**
- * Run a test for a given base filename (without extension).
- * @param {string} baseName The base filename (without extension) to run the test for.
- * @returns {TestResult} The result of the test.
- */
-function runTest(baseName: string): TestResult {
-  const asmFile = path.join(testsDir, `${baseName}.asm`);
-  const outputFile = path.join(testsDir, `${baseName}.sfc`);
-  const expectedFile = path.join(expectedDir, `${baseName}.asm.sfc`);
-
-  // Remove stale output so failures cannot be masked by old binaries.
-  if (fs.existsSync(outputFile)) {
-    fs.rmSync(outputFile);
-  }
-
-  const command = `npm run cli -- ${asmFile} ${outputFile} --base-image ${targetRom}`;
-  console.log(`\nRunning: ${command}`);
-
-  let runError: string | undefined = undefined;
+function compare(fixture: string): FixtureResult {
+  const sourceFile = path.join(tests, fixture);
+  const expectedFile = path.join(root, "expected", `${fixture}.sfc`);
+  const expected = fs.existsSync(expectedFile) ? fs.readFileSync(expectedFile) : Buffer.alloc(0);
+  const assembler = new Assembler({
+    environment,
+    target: SNES_TARGET_ID,
+    baseImage,
+    collectSourceMetadata: false,
+  });
+  let output = Buffer.alloc(0);
+  let error: string | undefined;
   try {
-    execSync(command, { stdio: "inherit" });
-  } catch (error: unknown) {
-    runError = error instanceof Error ? error.message : JSON.stringify(error);
-    console.error(`Error running command for ${baseName}:`, runError);
+    assembler.setIncludePaths([process.cwd(), tests]);
+    assembler.setCurrentFile(sourceFile);
+    assembler.assembleProgram(
+      assembler.buildProgramModel(fs.readFileSync(sourceFile, "utf8"), sourceFile, 0),
+    );
+    output = Buffer.from(assembler.getBinaryOutput());
+  } catch (cause) {
+    error = cause instanceof Error ? cause.message : String(cause);
+  } finally {
+    assembler.dispose();
   }
-
-  const outputStats = getFileStats(outputFile);
-  const expectedStats = getFileStats(expectedFile);
-
-  const fileSizeMismatch = outputStats.size !== expectedStats.size;
-  const checksumMismatch = outputStats.checksum !== expectedStats.checksum;
-  const overallPassed = !fileSizeMismatch && !checksumMismatch;
-
+  const sha256 = hash(output);
+  const expectedSha256 = hash(expected);
   return {
-    test: baseName,
-    commandRan: command,
-    runError,
-    outputSize: outputStats.size,
-    expectedSize: expectedStats.size,
-    fileSizeMismatch,
-    outputChecksum: outputStats.checksum,
-    expectedChecksum: expectedStats.checksum,
-    checksumMismatch,
-    overallPassed,
+    fixture,
+    bytes: output.length,
+    expectedBytes: expected.length,
+    sha256,
+    expectedSha256,
+    passed: output.length === expected.length && sha256 === expectedSha256,
+    ...(error === undefined ? {} : { error }),
   };
 }
 
-/**
- * Main loop: iterate over .asm files in testsDir (or a single test if provided)
- */
-function main() {
-  const args = process.argv.slice(2);
-  let asmFiles: string[];
-
-  if (args.length > 0 && args[0].trim() !== "") {
-    // If a test name is provided, run that single test.
-    asmFiles = [`${args[0]}.asm`];
-  } else {
-    // Otherwise, run all tests, sorted ascending by filename.
-    asmFiles = fs
-      .readdirSync(testsDir)
-      .filter((f) => f.endsWith(".asm"))
-      .sort((a, b) => a.localeCompare(b));
-  }
-
-  const results: TestResult[] = [];
-  for (const file of asmFiles) {
-    const baseName = path.basename(file, ".asm");
-    console.log(`\n--- Testing ${baseName} ---`);
-    const result = runTest(baseName);
-    if (result.overallPassed) {
-      console.log(`${baseName}: PASS`);
-    } else {
-      console.error(`${baseName}: FAIL`);
-    }
-    results.push(result);
-  }
-
-  // Prepare summary table with separate columns for file size and checksum mismatches.
-  const summary = results
-    // .filter(r => r.expectedSize !== 0)
-    .map((r) => ({
-      Test: r.test,
-      "Output Size": r.outputSize,
-      "Expected Size": r.expectedSize,
-      "Size Mismatch": r.fileSizeMismatch ? "❌" : "✅",
-      "Output Checksum": r.outputChecksum.slice(0, 8) + "...",
-      "Expected Checksum": r.expectedChecksum.slice(0, 8) + "...",
-      "Checksum Mismatch": r.checksumMismatch ? "❌" : "✅",
-      Overall: r.overallPassed ? "✅" : "❌",
-    }));
-
-  console.log("\nTest Results Summary:");
-  console.table(summary);
-
-  const passCount = results.filter((r) => r.overallPassed).length;
-  const failCount = results.length - passCount;
-  console.log(`\nSummary: ${passCount} passed, ${failCount} failed.`);
-  if (failCount > 0) {
-    process.exit(1);
+const available = fs
+  .readdirSync(tests)
+  .filter((name) => name.endsWith(".asm"))
+  .sort();
+const requested = process.argv[2];
+const fixtures = requested ? [`${requested}.asm`] : available;
+for (const fixture of fixtures) {
+  if (!available.includes(fixture)) {
+    throw new Error(`Unknown Asar fixture '${fixture}'.`);
   }
 }
-
-main();
+const results = fixtures.map(compare);
+for (const result of results) {
+  console.log(
+    `${result.passed ? "PASS" : "FAIL"} ${result.fixture}: ${result.bytes} bytes, ${result.sha256}`,
+  );
+  if (!result.passed) {
+    console.error(
+      `Expected ${result.expectedBytes} bytes, ${result.expectedSha256}. ${result.error ?? ""}`,
+    );
+  }
+}
+const failed = results.filter((result) => !result.passed).length;
+console.log(`${results.length - failed} fixture byte comparisons passed, ${failed} failed.`);
+process.exitCode = failed ? 1 : 0;

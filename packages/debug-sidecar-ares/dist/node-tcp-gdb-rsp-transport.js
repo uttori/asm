@@ -14,8 +14,9 @@ export class NodeTcpGdbRspTransport {
         this.#socket.setNoDelay(true);
         this.#socket.on("data", (data) => {
             const bytes = typeof data === "string" ? Buffer.from(data) : data;
-            for (const listener of this.#dataListeners)
+            for (const listener of this.#dataListeners) {
                 listener(bytes);
+            }
         });
         this.#socket.on("error", (error) => {
             this.#terminalError = error;
@@ -29,18 +30,21 @@ export class NodeTcpGdbRspTransport {
      */
     static async connect(options) {
         const host = options.host ?? "127.0.0.1";
-        if (host !== "127.0.0.1" && host !== "::1")
+        if (host !== "127.0.0.1" && host !== "::1") {
             throw new Error("RSP transport host must be a numeric loopback address.");
-        if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65_535)
+        }
+        if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65_535) {
             throw new Error("RSP transport port must be an integer between 1 and 65535.");
+        }
         const connectTimeoutMs = options.connectTimeoutMs ?? 3_000;
         const shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1_000;
         for (const [name, value] of [
             ["RSP connect timeout", connectTimeoutMs],
             ["RSP shutdown timeout", shutdownTimeoutMs],
         ]) {
-            if (!Number.isSafeInteger(value) || value <= 0)
+            if (!Number.isSafeInteger(value) || value <= 0) {
                 throw new Error(`${name} must be a positive safe integer.`);
+            }
         }
         const socket = new net.Socket();
         await new Promise((resolve, reject) => {
@@ -71,14 +75,17 @@ export class NodeTcpGdbRspTransport {
     }
     /** @inheritdoc */
     write(data) {
-        if (this.#closed)
+        if (this.#closed) {
             return Promise.reject(new Error("RSP TCP transport is closed."));
+        }
         return new Promise((resolve, reject) => {
             this.#socket.write(data, (error) => {
-                if (error)
+                if (error) {
                     reject(error);
-                else
+                }
+                else {
                     resolve();
+                }
             });
         });
     }
@@ -98,8 +105,9 @@ export class NodeTcpGdbRspTransport {
     }
     /** @inheritdoc */
     async close() {
-        if (this.#closed)
+        if (this.#closed) {
             return;
+        }
         this.#closed = true;
         if (this.#socket.destroyed) {
             this.#notifyClosed(this.#terminalError);
@@ -118,12 +126,14 @@ export class NodeTcpGdbRspTransport {
         });
     }
     #notifyClosed(error) {
-        if (this.#notified)
+        if (this.#notified) {
             return;
+        }
         this.#notified = true;
         this.#closed = true;
-        for (const listener of this.#closeListeners)
+        for (const listener of this.#closeListeners) {
             listener(error);
+        }
         this.#closeListeners.clear();
         this.#dataListeners.clear();
     }

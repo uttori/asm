@@ -20,7 +20,6 @@ import {
   validateSourceExportInputs,
   compactAnalysisProject,
   type AnalysisStoragePolicy,
-  migrateAnalysisProjectStorage,
   commitRuntimeEvidenceBatch,
   analysisProjectRevision,
   type AnalysisProjectShards,
@@ -61,7 +60,6 @@ export type CliCommand =
   | "mesen-labels-export"
   | "project-compact"
   | "project-storage"
-  | "project-migrate"
   | "project-validate"
   | "verify-roundtrip";
 
@@ -96,7 +94,6 @@ export interface CliArguments {
   /** Positive integer MiB limit. Undefined delegates to the import default of 2048. */
   readonly traceMaxMiB?: number;
   readonly traceIndex?: "full" | "65816-disassembly" | "65816-analysis";
-  readonly convertRuntime?: boolean;
   readonly storagePolicy?: Partial<AnalysisStoragePolicy>;
   /** Repeatable 24-bit SNES CPU bus addresses, not ROM file offsets. */
   readonly entryPoints: readonly number[];
@@ -131,7 +128,6 @@ const commandOptions: Readonly<Record<CliCommand, readonly string[]>> = {
   "verify-roundtrip": ["--rom"],
   "project-validate": ["--rom"],
   "project-compact": [],
-  "project-migrate": ["--convert-runtime"],
   "project-storage": ["--cache-max-mib", "--storage-max-mib"],
   "evidence-import": [
     "--rom",
@@ -155,7 +151,6 @@ const booleanOptions = new Set([
   "--force",
   "--allow-code-regression",
   "--debug",
-  "--convert-runtime",
 ]);
 const commandsWithOutput = new Set<CliCommand>([
   "assemble",
@@ -177,7 +172,6 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
   uttori-asm project-compact <project-directory>
-  uttori-asm project-migrate <project-directory> [--convert-runtime]
   uttori-asm project-storage <project-directory> [storage-options]
 
 Creation options (disassemble):
@@ -209,7 +203,6 @@ Export options (export):
   Default destination: <project stem>.source
 
 Storage options (project-storage, budget options also accepted by evidence-import):
-  --convert-runtime           project-migrate only: convert trace detail. Retain backup
   --cache-max-mib <count>      Disposable projection budget (default 256)
   --storage-max-mib <count>    Project database publication ceiling (0 disables)
 
@@ -266,7 +259,6 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
   let instructionTrace: string | undefined;
   let traceMaxMiB: number | undefined;
   const storagePolicy: Partial<Record<keyof AnalysisStoragePolicy, number>> = {};
-  let convertRuntime = false;
   let traceIndex: "full" | "65816-disassembly" | "65816-analysis" | undefined;
   const entryPoints: number[] = [];
   let maxWorkItems: number | undefined;
@@ -314,10 +306,6 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
       throw new Error(`${flag} takes no value. Omit it to disable it.`);
     }
     suppliedOptions.add(flag);
-    if (flag === "--convert-runtime") {
-      convertRuntime = true;
-      continue;
-    }
     if (flag === "--help") {
       help = true;
       continue;
@@ -507,7 +495,6 @@ export const parseCliArguments = (argv: readonly string[]): CliArguments => {
     instructionTrace,
     traceMaxMiB,
     traceIndex,
-    ...(convertRuntime ? { convertRuntime } : {}),
     ...(Object.keys(storagePolicy).length ? { storagePolicy } : {}),
     entryPoints: Object.freeze(entryPoints),
     maxWorkItems,
@@ -1255,40 +1242,6 @@ const runCommand = async (parsed: CliArguments, cwd: string): Promise<number> =>
   }
   if (parsed.command === "project-validate") {
     return validateProject(parsed, cwd);
-  }
-
-  if (parsed.command === "project-migrate") {
-    try {
-      const result = await migrateAnalysisProjectStorage(path.resolve(cwd, parsed.input!), {
-        convertRuntime: parsed.convertRuntime,
-        onProgress: ({ phase, table, records }) => {
-          if (records === undefined || records % 100000 === 0) {
-            console.log(
-              `Storage migration: ${phase}${table ? ` ${table}` : ""}${records === undefined ? "" : ` (${records} records)`}.`,
-            );
-          }
-        },
-      });
-      console.log(
-        `Success: storage format ${result.storageVersion}. ${(result.beforeBytes / 1024 / 1024).toFixed(1)} → ${(result.afterBytes / 1024 / 1024).toFixed(1)} MiB.`,
-      );
-      for (const step of result.timings ?? []) {
-        console.log(`${step.step}: ${(step.durationMs / 1000).toFixed(3)} s`);
-      }
-      if (result.backupFile) {
-        console.log(`Verified original retained at '${result.backupFile}'.`);
-      }
-      for (const note of result.notes ?? []) {
-        console.log(note);
-      }
-      for (const warning of result.warnings) {
-        console.warn(warning);
-      }
-      return result.warnings.length ? 1 : 0;
-    } catch (error) {
-      console.error(`Project storage migration failed: ${formatFailure(error)}`);
-      return 1;
-    }
   }
 
   if (parsed.command === "project-storage") {

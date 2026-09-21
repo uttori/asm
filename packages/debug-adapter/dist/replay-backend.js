@@ -6,12 +6,15 @@ const REPLAY_STEP_KINDS = ["instruction", "over", "in", "out"];
 const replayArchitectureCapabilities = (script) => {
     const architectureNames = new Set();
     for (const snapshot of script.snapshots) {
-        for (const thread of snapshot.threads)
+        for (const thread of snapshot.threads) {
             architectureNames.add(thread.architecture);
-        for (const frame of snapshot.frames)
+        }
+        for (const frame of snapshot.frames) {
             architectureNames.add(frame.pc.architecture);
-        for (const instruction of snapshot.instructions ?? [])
+        }
+        for (const instruction of snapshot.instructions ?? []) {
             architectureNames.add(instruction.address.architecture);
+        }
     }
     return [...architectureNames].sort().map((architecture) => {
         const addressSpaces = new Set();
@@ -19,14 +22,16 @@ const replayArchitectureCapabilities = (script) => {
         let disassemble = false;
         for (const snapshot of script.snapshots) {
             for (const frame of snapshot.frames) {
-                if (frame.pc.architecture !== architecture)
+                if (frame.pc.architecture !== architecture) {
                     continue;
+                }
                 addressSpaces.add(frame.pc.addressSpace);
                 registers ||= (snapshot.registers[frame.id]?.length ?? 0) > 0;
             }
             for (const instruction of snapshot.instructions ?? []) {
-                if (instruction.address.architecture !== architecture)
+                if (instruction.address.architecture !== architecture) {
                     continue;
+                }
                 addressSpaces.add(instruction.address.addressSpace);
                 disassemble = true;
             }
@@ -65,8 +70,9 @@ const addressesEqual = (left, right) => left.architecture === right.architecture
     (left.address === right.address ||
         (left.outputOffset !== undefined && left.outputOffset === right.outputOffset));
 const assertCount = (count) => {
-    if (!Number.isSafeInteger(count) || count < 0)
+    if (!Number.isSafeInteger(count) || count < 0) {
         throw new Error("Count must be a non-negative integer.");
+    }
 };
 /** Deterministic in-memory backend used to prove protocol behavior without an emulator. */
 export class ReplayDebugBackend {
@@ -84,8 +90,9 @@ export class ReplayDebugBackend {
      * @param {ReplayScript} script Replay timeline.
      */
     constructor(script) {
-        if (script.snapshots.length === 0)
+        if (script.snapshots.length === 0) {
             throw new Error("Replay script requires at least one snapshot.");
+        }
         this.#script = script;
         const architectures = script.architectures
             ? script.architectures.map((capability) => ({
@@ -147,8 +154,9 @@ export class ReplayDebugBackend {
         this.#requireConnected();
         this.#trace?.stop();
         this.#connected = false;
-        if (options.terminate ?? true)
+        if (options.terminate ?? true) {
             this.#emit({ type: "terminated", restart: false });
+        }
         return Promise.resolve();
     }
     /**
@@ -237,8 +245,9 @@ export class ReplayDebugBackend {
         const spaceReadable = this.capabilities.architectures
             .find(({ architecture }) => architecture === address.architecture)
             ?.memorySpaces.some((memorySpace) => memorySpace.addressSpace === address.addressSpace);
-        if (!spaceReadable)
+        if (!spaceReadable) {
             throw new Error(`Memory address space '${address.architecture}/${address.addressSpace}' is not readable.`);
+        }
         const bytes = new Uint8Array(count);
         let readable = 0;
         for (let offset = 0; offset < count; offset++) {
@@ -246,8 +255,9 @@ export class ReplayDebugBackend {
             const region = this.#snapshot.memory.find((candidate) => candidate.addressSpace === address.addressSpace &&
                 candidate.start <= current &&
                 current < candidate.start + candidate.bytes.length);
-            if (!region)
+            if (!region) {
                 continue;
+            }
             bytes[offset] = region.bytes[current - region.start] ?? 0;
             readable++;
         }
@@ -300,15 +310,18 @@ export class ReplayDebugBackend {
     /** @inheritdoc */
     startTrace(options) {
         this.#requireConnected();
-        if (options.detail === "full")
+        if (options.detail === "full") {
             throw new Error("Replay supports PC-only instruction traces.");
+        }
         const architecture = this.capabilities.architectures.find((candidate) => candidate.architecture === options.architecture);
-        if (!architecture?.trace?.addressSpaces.includes(options.addressSpace))
+        if (!architecture?.trace?.addressSpaces.includes(options.addressSpace)) {
             throw new Error(`Instruction trace '${options.architecture}/${options.addressSpace}' is not supported.`);
+        }
         const frame = this.#snapshot.frames.find((candidate) => candidate.pc.architecture === options.architecture &&
             candidate.pc.addressSpace === options.addressSpace);
-        if (!frame)
+        if (!frame) {
             throw new Error("Current replay snapshot has no matching trace frame.");
+        }
         this.#trace = new DebugTraceBuffer({
             architecture: options.architecture,
             addressSpace: options.addressSpace,
@@ -322,19 +335,22 @@ export class ReplayDebugBackend {
     readTrace(maxEvents) {
         this.#requireConnected();
         const trace = this.#trace;
-        if (!trace)
+        if (!trace) {
             throw new Error("No replay instruction trace has been started.");
+        }
         const capabilities = this.capabilities.architectures.find(({ architecture }) => architecture === trace.architecture)?.trace;
         assertCount(maxEvents);
-        if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents)
+        if (maxEvents === 0 || !capabilities || maxEvents > capabilities.maxBatchEvents) {
             throw new Error(`Trace batch size must be between 1 and ${capabilities?.maxBatchEvents ?? 0}.`);
+        }
         return Promise.resolve(trace.read(maxEvents));
     }
     /** @inheritdoc */
     stopTrace() {
         this.#requireConnected();
-        if (!this.#trace)
+        if (!this.#trace) {
             throw new Error("No replay instruction trace has been started.");
+        }
         this.#trace.stop();
         return Promise.resolve();
     }
@@ -351,22 +367,26 @@ export class ReplayDebugBackend {
         return this.#script.snapshots[this.#index];
     }
     #requireConnected() {
-        if (!this.#connected)
+        if (!this.#connected) {
             throw new Error("Debug backend is not connected.");
+        }
     }
     #recordTraceAddress(threadId) {
         const trace = this.#trace;
-        if (!trace?.active)
+        if (!trace?.active) {
             return;
+        }
         const frame = this.#snapshot.frames.find((candidate) => candidate.threadId === threadId &&
             candidate.pc.architecture === trace.architecture &&
             candidate.pc.addressSpace === trace.addressSpace);
-        if (frame)
+        if (frame) {
             trace.append(frame.pc.address);
+        }
     }
     #emit(event) {
-        for (const listener of this.#listeners)
+        for (const listener of this.#listeners) {
             listener(event);
+        }
     }
 }
 //# sourceMappingURL=replay-backend.js.map

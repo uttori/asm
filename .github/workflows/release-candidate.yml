@@ -47,9 +47,19 @@ jobs:
 
       # Linux GitHub runners have no display server. Electron still needs a virtual X display even
       # though this smoke never shows UI or starts an emulator.
-      - name: Real VS Code Extension Host smoke (Linux)
+      - name: Installed VSIX smoke (minimum editor, Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a npm run vscode:smoke
-      - name: Real VS Code Extension Host smoke (macOS and Windows)
+        run: xvfb-run -a npm run vscode:smoke:installed
+      - name: Installed VSIX smoke (minimum editor, macOS and Windows)
         if: runner.os != 'Linux'
-        run: npm run vscode:smoke
+        run: npm run vscode:smoke:installed
+      - name: Installed VSIX smoke (current editor, Linux)
+        if: runner.os == 'Linux'
+        env:
+          UTTORI_VSCODE_TEST_VERSION: stable
+        run: xvfb-run -a npm run vscode:smoke:installed
+      - name: Installed VSIX smoke (current editor, macOS and Windows)
+        if: runner.os != 'Linux'
+        env:
+          UTTORI_VSCODE_TEST_VERSION: stable
+        run: npm run vscode:smoke:installed

@@ -74,7 +74,9 @@ export interface DisassemblerBenchmarkBudgetViolation {
 
 const nodeMajor = (version: string): number => {
   const match = /^v?(\d+)/.exec(version);
-  if (!match) throw new Error(`Cannot read the Node major version from '${version}'.`);
+  if (!match) {
+    throw new Error(`Cannot read the Node major version from '${version}'.`);
+  }
   return Number(match[1]);
 };
 

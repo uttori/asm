@@ -45,16 +45,18 @@ For supported SNES cartridge mappings, a source breakpoint covers every confirme
 
 Use `uttori-asm.config.json` for project plugins, target, architecture, and paths. VS Code's `asm.*` settings override project values. See Settings under **Uttori Assembly** for all defaults.
 
-Workspace plugins execute code and require Workspace Trust. Writes and live launch require a trusted local filesystem workspace. Virtual workspaces are unsupported. Remote native-emulator workflows have not been validated. Replay is a snapshot viewer, not an emulator. MesenCE live integration is experimental. Ares capabilities depend on its separately verified runtime.
+Built-in assembly works in Restricted Mode. Workspace plugins execute code and require Workspace Trust. Analysis edits and live emulator launch require a trusted local filesystem workspace. Virtual workspaces are unsupported. Remote native-emulator workflows have not been validated. Replay is a snapshot viewer, not an emulator. MesenCE live integration is experimental. Ares capabilities depend on its separately verified runtime.
 
 For build failures, check **Output → Uttori Assembly Language Server**. Analysis and emulator operations have **Uttori Analysis** and **Uttori Emulator** output channels. Rebuild stale debug maps or regenerate stale source before retrying navigation/debugging.
 
+Document formatting is unsupported in v1.0.0.
+
 ## Documentation & Support
 
-* [Changelog](https://github.com/uttori/asm/blob/master/packages/vscode-extension/CHANGELOG.md)
-* [User Guide](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md)
-* [Project Configuration](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md)
-* [SNES Manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md)
-* [65xx Manual](https://github.com/uttori/asm/blob/master/packages/plugin-65xx/MANUAL.md)
+- [Changelog](https://github.com/uttori/asm/blob/master/packages/vscode-extension/CHANGELOG.md)
+- [User Guide](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md)
+- [Project Configuration](https://github.com/uttori/asm/blob/master/packages/plugin-loader-node/CONFIGURATION.md)
+- [SNES Manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md)
+- [65xx Manual](https://github.com/uttori/asm/blob/master/packages/plugin-65xx/MANUAL.md)
 
 [Report an issue](https://github.com/uttori/asm/issues). Licensed under [MIT](https://github.com/uttori/asm/blob/master/LICENSE).

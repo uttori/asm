@@ -15,7 +15,9 @@ const macroPattern = /macro\s+Op(\d+)\(\)([\S\s]*?)endmacro/g;
 for (const match of source.matchAll(macroPattern)) {
   const opcode = Number(match[1]);
   const mnemonic = match[2]?.match(/print\s+"\s*([a-z]{2,4})(?:\.[blw])?/i)?.[1]?.toUpperCase();
-  if (Number.isInteger(opcode) && mnemonic) observed.set(opcode, mnemonic);
+  if (Number.isInteger(opcode) && mnemonic) {
+    observed.set(opcode, mnemonic);
+  }
 }
 
 const mismatches: string[] = [];

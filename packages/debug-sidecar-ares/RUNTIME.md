@@ -8,6 +8,11 @@ been performed on macOS. Linux and Windows native-runtime validation remains ope
 
 In VS Code, run **Assembly: Configure Emulator Runtime** and select the matching executable,
 runtime directory, and `ares-runtime-manifest.json`. Restart debugging after changing the runtime.
+
+Desktop launches honor `Paths/Saves` in the selected runtime's `settings.bml`; when unset,
+ares stores SRAM and numbered save states beside the ROM. When staging a replacement
+runtime, retain that setting so the same saves remain visible. The launcher does not
+override the desktop save path or relocate existing files.
 See the [editor guide](https://github.com/uttori/asm/blob/master/packages/vscode-extension/GUIDE.md#live-debugging)
 for launch settings and the [sidecar README](README.md#runtime-setup) for standalone invocation.
 

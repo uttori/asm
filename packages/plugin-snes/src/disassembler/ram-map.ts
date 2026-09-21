@@ -26,6 +26,8 @@ export interface SnesRamMapVariableInput {
   readonly category?: string;
   readonly description: string;
   readonly notes?: readonly string[];
+  /** Provenance citations, emitted only when includeSourceInformation is true. */
+  readonly sources?: readonly string[];
 }
 
 /** Versioned, user-owned RAM-map document. */
@@ -34,6 +36,8 @@ export interface SnesRamMapFile {
   readonly format: typeof SNES_RAM_MAP_FORMAT;
   readonly schemaVersion: typeof SNES_RAM_MAP_SCHEMA_VERSION;
   readonly source?: string;
+  /** Include provenance citations in generated definition comments. Defaults to false. */
+  readonly includeSourceInformation?: boolean;
   readonly variables: readonly SnesRamMapVariableInput[];
 }
 
@@ -47,6 +51,8 @@ export interface SnesRamMapVariable {
   readonly category?: string;
   readonly description: string;
   readonly notes: readonly string[];
+  /** Explicit citations kept separate from descriptive notes for optional source output. */
+  readonly sources?: readonly string[];
 }
 
 /** Validated RAM-map document plus the exact source bytes used for provenance. */
@@ -135,6 +141,12 @@ export const validateSnesRamMap = (value: unknown): readonly SnesRamMapVariable[
   if (!Array.isArray(file.variables)) {
     throw new Error("RAM map must contain a variables array.");
   }
+  if (
+    file.includeSourceInformation !== undefined &&
+    typeof file.includeSourceInformation !== "boolean"
+  ) {
+    throw new Error("RAM-map includeSourceInformation must be a boolean.");
+  }
 
   const names = new Set<string>();
   const addresses = new Set<number>();
@@ -197,6 +209,18 @@ export const validateSnesRamMap = (value: unknown): readonly SnesRamMapVariable[
       }
       return cleanText(note, `${name} note`);
     });
+    let sources: string[] | undefined;
+    if (record.sources !== undefined) {
+      if (!Array.isArray(record.sources)) {
+        throw new Error(`RAM-map sources for '${name}' must be an array.`);
+      }
+      sources = record.sources.map((source: unknown) => {
+        if (typeof source !== "string") {
+          throw new Error(`RAM-map sources for '${name}' must be strings.`);
+        }
+        return cleanText(source, `${name} source`);
+      });
+    }
     return {
       name,
       address,
@@ -205,6 +229,7 @@ export const validateSnesRamMap = (value: unknown): readonly SnesRamMapVariable[
       ...(category ? { category } : {}),
       description,
       notes,
+      ...(sources === undefined ? {} : { sources }),
     };
   });
   const sorted = variables.sort(
@@ -230,6 +255,7 @@ export const emptySnesRamMap = (): SnesRamMapFile => ({
   $schema: `./${SNES_RAM_MAP_SCHEMA_SOURCE}`,
   format: SNES_RAM_MAP_FORMAT,
   schemaVersion: SNES_RAM_MAP_SCHEMA_VERSION,
+  includeSourceInformation: false,
   variables: [],
 });
 
@@ -292,11 +318,35 @@ export const indexSnesRamMap = (
   );
 
 /**
+ * Recognizes standalone file citations used by older maps before the sources field existed.
+ * Embedded references in explanatory prose stay visible; new citations belong in sources.
+ * @param {string} note A normalized, single-line note.
+ * @returns {boolean} Whether the entire note has a supported file or file/line citation form.
+ */
+const isLegacySourceNote = (note: string): boolean => {
+  const citation = note.endsWith(".") ? note.slice(0, -1) : note;
+  const separator = citation.lastIndexOf(":");
+  if (separator >= 0) {
+    const file = citation.slice(0, separator);
+    const lines = citation.slice(separator + 1);
+    return (
+      /^[^!:;?]+\.(?:txt|md|asm|json)$/i.test(file) &&
+      (/^l\d+$/i.test(lines) || /^l\d+-l?\d+$/i.test(lines))
+    );
+  }
+  return /^[\w./-]+\.(?:txt|md|asm|json)$/i.test(citation);
+};
+
+/**
  * Renders a documented generated definition file from a validated RAM map.
  * @param {readonly SnesRamMapVariable[]} variables Validated RAM variables.
+ * @param {Pick<SnesRamMapFile, "includeSourceInformation">} options Source citations are omitted by default; descriptive notes remain visible.
  * @returns {string} Generated assembler definitions with hover-ready comments.
  */
-export const renderSnesRamDefines = (variables: readonly SnesRamMapVariable[]): string => {
+export const renderSnesRamDefines = (
+  variables: readonly SnesRamMapVariable[],
+  options: Pick<SnesRamMapFile, "includeSourceInformation"> = {},
+): string => {
   const lines = [
     `; Generated from ${SNES_RAM_MAP_SOURCE} by Uttori ASM.`,
     `; Edit ${SNES_RAM_MAP_SOURCE}, then run Assembly: Analyze and Regenerate Disassembly.`,
@@ -307,15 +357,20 @@ export const renderSnesRamDefines = (variables: readonly SnesRamMapVariable[]): 
         variable.category,
         variable.description,
         variable.size === 1 ? undefined : `Size: ${variable.size} bytes.`,
-        ...variable.notes,
+        ...variable.notes.filter(
+          (note) => options.includeSourceInformation || !isLegacySourceNote(note),
+        ),
+        ...(options.includeSourceInformation ? (variable.sources ?? []) : []),
       ].filter((entry): entry is string => Boolean(entry));
       const categorySeparator = variable.category ? " — " : "";
       const comment = variable.category
         ? `${details[0]}${categorySeparator}${details.slice(1).join(" ")}`
         : details.join(" ");
+      // Removing a citation can expose an unpunctuated description from an imported map.
+      const sentence = /[!.?]$/.test(comment) ? comment : `${comment}.`;
       return [
         ...(index > 0 && variables[index - 1]?.category !== variable.category ? [""] : []),
-        `${variable.name} = ${hex(variable.address)} ; ${comment}`,
+        `${variable.name} = ${hex(variable.address)} ; ${sentence}`,
       ];
     }),
     "",
@@ -339,6 +394,12 @@ export const renderSnesRamMapSchema = (): string =>
       format: { const: SNES_RAM_MAP_FORMAT },
       schemaVersion: { const: SNES_RAM_MAP_SCHEMA_VERSION },
       source: { type: "string", description: "Optional human-readable provenance." },
+      includeSourceInformation: {
+        type: "boolean",
+        default: false,
+        description:
+          "Include source citations in generated definition comments. Descriptive notes are always included.",
+      },
       variables: {
         type: "array",
         items: {
@@ -365,6 +426,12 @@ export const renderSnesRamMapSchema = (): string =>
             category: { type: "string", minLength: 1 },
             description: { type: "string", minLength: 1 },
             notes: { type: "array", items: { type: "string", minLength: 1 } },
+            sources: {
+              type: "array",
+              items: { type: "string", minLength: 1 },
+              description:
+                "Provenance citations, shown only when includeSourceInformation is true.",
+            },
           },
         },
       },

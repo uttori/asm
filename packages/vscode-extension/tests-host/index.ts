@@ -4,12 +4,13 @@ import { DatabaseSync } from "node:sqlite";
 
 import * as vscode from "vscode";
 
+import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
 import { AnalysisGraphProvider } from "../src/analysis/graph-tree.js";
 import { AnalysisSourcesProvider } from "../src/analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "../src/analysis/worker-client.js";
-import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
 import { renderWebviewTemplate } from "../src/webview-template.js";
 import { runLiveBreakpointSmoke } from "./live-breakpoints.js";
+import { runReleaseAcceptance } from "./release-acceptance.js";
 
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
@@ -354,6 +355,10 @@ export async function run(): Promise<void> {
   }
   await extension.activate();
   assert.equal(extension.isActive, true, "Extension did not activate.");
+  if (["reopen", "restricted"].includes(process.env.UTTORI_VSCODE_RELEASE_PHASE ?? "")) {
+    await runReleaseAcceptance(extension, folder);
+    return;
+  }
   if (process.env.UTTORI_VSCODE_LIVE_BREAKPOINTS === "1") {
     return runLiveBreakpointSmoke(folder);
   }
@@ -474,5 +479,8 @@ export async function run(): Promise<void> {
   assert.match(debugMap.fingerprint?.value ?? "", /^[\da-f]{64}$/);
   for (const languageId of ["uttori-snes", "uttori-65xx"]) {
     await verifyReplaySourceBreakpoint(folder, sourceUri, outputUri, debugMapUri, languageId);
+  }
+  if (process.env.UTTORI_VSCODE_RELEASE_PHASE === "installed") {
+    await runReleaseAcceptance(extension, folder);
   }
 }

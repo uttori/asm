@@ -257,7 +257,9 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         complete = !chunk.active;
         unattributed = chunk.unattributedMemoryAccesses ?? unattributed;
         for (const address of chunk.addresses) {
-            if (index.add(`pc:${hex(address)}`, () => ({ kind: "execution", address }))) {
+            // The temporary key only needs equality. Format stable hexadecimal IDs once per distinct
+            // address in finish(), rather than for every repeated execution in a long capture.
+            if (index.add(`pc:${address}`, () => ({ kind: "execution", address }))) {
                 reserve(1);
                 executionRecords++;
             }

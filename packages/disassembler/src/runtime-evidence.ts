@@ -232,6 +232,11 @@ const mergeRecords = <T extends { readonly id: string }>(
   updated: Record<keyof AnalysisProjectShards, number>,
   existing: Record<keyof AnalysisProjectShards, number>,
 ): readonly T[] => {
+  // A PC-only import usually leaves the much larger CFG and annotation collections untouched.
+  // Reuse their readonly arrays instead of indexing and copying every unrelated record.
+  if (incoming.length === 0) {
+    return prior;
+  }
   const records = new Map(prior.map((record) => [record.id, record]));
   for (const record of incoming) {
     const current = records.get(record.id);
@@ -278,7 +283,8 @@ const mergeRecords = <T extends { readonly id: string }>(
  * Reimporting an identical batch returns `changed: false`. Differing observations remain separate
  * and are surfaced through `conflicts`. Diagnostic getters are lazy. Reading or serializing
  * them can require substantially more memory than merging the facts alone.
- * @param {AnalysisProjectShards} shards Existing native project shards.
+ * Collections without incoming records retain their input arrays. Treat all shared records as readonly.
+ * @param {AnalysisProjectShards} shards Valid native project shards with unique IDs in each collection.
  * @param {RuntimeEvidenceBatch} batch Normalized imported and derived records.
  * @returns {RuntimeEvidenceMergeResult} New shards plus deterministic merge diagnostics.
  */
