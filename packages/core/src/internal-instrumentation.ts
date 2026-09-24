@@ -1,5 +1,3 @@
-import { performance } from "node:perf_hooks";
-
 export type InternalInstrumentationSnapshot = {
   counters: {
     passProgramCacheHits: number;

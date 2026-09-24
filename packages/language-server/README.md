@@ -20,7 +20,9 @@ The extension builds a separate bundle for VS Code's embedded runtime.
 
 The client supplies workspace roots and initialization options, then updates the `asm` configuration. Settings include `configFile`, `plugins`, `target`, `architecture`, `entryPoints`, `includePaths`, `buildOutput`, `baseImage`, and `workspaceTrusted`. The server uses the shared project loader and bundled SNES/65xx plugins. Workspace configuration and external plugins are disabled without trust. Builds with the bundled SNES target remain available.
 
-A connection owns its project environment and index, using the first workspace root for configuration. Send `shutdown`, then `exit`, to release it. Cancellation cannot preempt synchronous assembly/indexing. Use a separate connection per project root when independent configurations are needed. This server uses Node filesystem access and does not provide a browser or virtual-filesystem host.
+A connection owns its project environment and index, using the first workspace root for configuration. Send `shutdown`, then `exit`, to release it. Cancellation cannot preempt synchronous assembly/indexing. Asset path analysis is lightweight; `asm/assetPreview` runs bounded conversion in a cancellable worker and returns a result only for the current document version. Use a separate connection per project root when independent configurations are needed. This server uses Node filesystem access and does not provide a browser or virtual-filesystem host.
+
+The worker is bundled as `out/asset-preview-worker.mjs` beside `server.mjs`. SNES PNG/WAVE previews accept up to 2 MiB per input and 3 MiB combined, time out after five seconds, and reuse a bounded content-and-converter-version cache. Complex numeric expressions, custom formats without a portable preview contract, and final compressed emission sizes remain build-only. Binary and resource inputs invalidate root analysis without being parsed as source text.
 
 Document formatting is unsupported in v1.0.0.
 

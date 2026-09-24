@@ -12,6 +12,7 @@ import {
   snesHardwareDefineRecords,
 } from "../../plugin-snes/src/disassembler/hardware-registers.js";
 import {
+  assetCompletionsFor,
   completionsFor,
   definitionFor,
   documentSymbolsFor,
@@ -34,6 +35,42 @@ function createIndex(): WorkspaceIndex {
   index.openDocument(file, source);
   return index;
 }
+
+test("asset editor features track binary inputs without converting during reindex", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "asset-editor-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const sourceFile = path.join(directory, "main.asm");
+  const binary = path.join(directory, "data.bin");
+  const sourceText = 'org $008000\nData: includeAsset("data.bin", "raw")\nAfter:\n';
+  fs.writeFileSync(binary, Uint8Array.of(1, 2, 3));
+  fs.writeFileSync(sourceFile, sourceText);
+  const index = new WorkspaceIndex(snesWorkspaceIndexOptions({ entryPoints: [sourceFile] }));
+  index.reindex();
+  t.is(index.rootAnalyses.get(sourceFile)?.assetDependencies[binary], "binary");
+  const line = sourceText.split("\n")[1];
+  const definition = definitionFor(index, sourceFile, {
+    line: 1,
+    character: line.indexOf("data.bin") + 2,
+  });
+  t.is(definition[0]?.targetUri, pathToUri(binary));
+  t.regex(
+    JSON.stringify(
+      hoverFor(index, sourceFile, { line: 1, character: line.indexOf("data.bin") + 2 }, sourceText),
+    ),
+    /3 source bytes/,
+  );
+  t.true(
+    assetCompletionsFor(index, sourceText, { line: 1, character: line.indexOf("raw") + 1 })?.some(
+      (item) => item.label === "snes.tile.4bpp",
+    ),
+  );
+  t.truthy(signatureHelpFor('includeAsset("data.bin", ', index));
+  t.true(semanticTokensFor(index, sourceFile).data.length > 0);
+  fs.writeFileSync(binary, Uint8Array.of(4, 5));
+  index.invalidateFile(binary);
+  index.reindex();
+  t.is(index.lastReindexAnalyzedRoots, 1);
+});
 
 test("language-server providers expose navigation, docs, completion, and tokens", (t) => {
   const index = createIndex();

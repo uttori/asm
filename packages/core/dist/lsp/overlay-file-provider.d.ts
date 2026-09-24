@@ -10,6 +10,8 @@ export declare class OverlayFileProvider implements AssemblyFileProvider {
     readonly overlay: Map<string, string>;
     /** The backing provider used when a path is not in the overlay. */
     readonly base: AssemblyFileProvider;
+    /** Files consumed by this provider, including binary and definition-only dependencies. */
+    readonly readFiles: Set<string>;
     /**
      * Creates an overlay provider.
      * @param {Map<string, string>} [overlay] Initial overlay contents keyed by absolute path.

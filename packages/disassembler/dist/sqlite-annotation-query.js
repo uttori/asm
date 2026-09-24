@@ -152,23 +152,7 @@ export const readSqliteAnnotationView = (database, manifest, ranges) => {
     if (!annotationQueryIndexesReady(database)) {
         throw new Error("Analysis query indexes changed. Refresh the annotation view.");
     }
-    if (ranges.length > 2000) {
-        throw new Error("At most 2000 visible source ranges may be projected per request.");
-    }
-    for (const range of ranges) {
-        if (!range.addressSpace ||
-            !Number.isSafeInteger(range.start) ||
-            !Number.isSafeInteger(range.end) ||
-            range.start < 0 ||
-            range.end <= range.start ||
-            ((range.outputStart !== undefined || range.outputEnd !== undefined) &&
-                (!Number.isSafeInteger(range.outputStart) ||
-                    !Number.isSafeInteger(range.outputEnd) ||
-                    range.outputStart < 0 ||
-                    range.outputEnd <= range.outputStart))) {
-            throw new Error("Invalid instruction annotation range.");
-        }
-    }
+    validateAnnotationRanges(ranges);
     const fileSpaces = manifest.addressSpaces
         .filter((space) => space.kind === "file")
         .map((space) => space.id);
@@ -353,5 +337,104 @@ export const readSqliteAnnotationView = (database, manifest, ranges) => {
         executionCounts,
         limited,
     };
+};
+/**
+ * Validates bounded, half-open coordinates before any editor query.
+ * @param {readonly AnnotationQueryRange[]} ranges At most 2000 nonempty ranges; malformed input throws.
+ */
+const validateAnnotationRanges = (ranges) => {
+    if (ranges.length > 2000) {
+        throw new Error("At most 2000 visible source ranges may be projected per request.");
+    }
+    for (const range of ranges) {
+        if (!range.addressSpace ||
+            !Number.isSafeInteger(range.start) ||
+            !Number.isSafeInteger(range.end) ||
+            range.start < 0 ||
+            range.end <= range.start ||
+            ((range.outputStart !== undefined || range.outputEnd !== undefined) &&
+                (!Number.isSafeInteger(range.outputStart) ||
+                    !Number.isSafeInteger(range.outputEnd) ||
+                    range.outputStart < 0 ||
+                    range.outputEnd <= range.outputStart))) {
+            throw new Error("Invalid instruction annotation range.");
+        }
+    }
+};
+/**
+ * Read only indexed coordinates and aggregate execution counts. No state, CFG payloads, memory,
+ * or evidence records are decoded. Aliases retain separate counts instead of being summed.
+ * @param {DatabaseSync} database Prepared project connection in the caller's read transaction.
+ * @param {AnalysisProjectManifest} manifest Supplies file identities; no mapper inference is performed.
+ * @param {readonly AnnotationQueryRange[]} ranges At most 2000 current source spans.
+ * @returns {readonly InstructionExecutionSummaryRow[]} Exact counts with bounded, qualified locations.
+ */
+export const readInstructionExecutionSummary = (database, manifest, ranges) => {
+    validateAnnotationRanges(ranges);
+    const fileSpaces = manifest.addressSpaces.filter((space) => space.kind === "file");
+    const count = database.prepare(`SELECT COALESCE(SUM(o.count),0) AS n
+    FROM runtime_fact_locations f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+    WHERE f.kind='runtime-execution' AND f.address_space=? AND f.address=?
+      AND (? IS NULL OR f.architecture=?)`);
+    const aliases = database.prepare(`SELECT DISTINCT f.address_space,f.address,o.query_file_offset
+    FROM runtime_observations o CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+    WHERE o.query_file_offset>=? AND o.query_file_offset<? AND f.kind='runtime-execution'
+      AND (? IS NULL OR f.architecture=?) LIMIT 65`);
+    const logical = database.prepare(`SELECT DISTINCT address FROM runtime_fact_locations
+    WHERE kind='runtime-execution' AND address_space=? AND address>=? AND address<?
+      AND (? IS NULL OR architecture=?) LIMIT 65`);
+    const counts = new Map();
+    return ranges.map((range, rangeIndex) => {
+        const locations = new Map();
+        let limited = false;
+        const add = (addressSpace, address, offset) => {
+            const key = `${addressSpace}:${address}`;
+            let location = locations.get(key);
+            if (!location) {
+                if (locations.size >= 64) {
+                    limited = true;
+                    return;
+                }
+                location = { addressSpace, address, offsets: new Set() };
+                locations.set(key, location);
+            }
+            if (offset !== undefined) {
+                location.offsets.add(offset);
+            }
+        };
+        // The map proves both coordinates exist even when neither has recorded executions.
+        if (range.outputStart !== undefined) {
+            for (const space of fileSpaces) {
+                add(space.id, range.outputStart, range.outputStart);
+            }
+        }
+        add(range.addressSpace, range.start, range.outputStart);
+        const architecture = range.architecture ?? null;
+        for (const row of logical.iterate(range.addressSpace, range.start, range.end, architecture, architecture)) {
+            add(range.addressSpace, Number(row.address));
+        }
+        if (range.outputStart !== undefined && range.outputEnd !== undefined) {
+            for (const row of aliases.iterate(range.outputStart, range.outputEnd, architecture, architecture)) {
+                add(String(row.address_space), Number(row.address), Number(row.query_file_offset));
+            }
+        }
+        return {
+            rangeIndex,
+            limited,
+            locations: [...locations.values()].map(({ addressSpace, address, offsets }) => {
+                const key = `${architecture}:${addressSpace}:${address}`;
+                let executionCount = counts.get(key);
+                if (executionCount === undefined) {
+                    // File-domain evidence can omit an architecture; its qualified location is authoritative.
+                    const filter = fileSpaces.some((space) => space.id === addressSpace)
+                        ? null
+                        : architecture;
+                    executionCount = Number(count.get(addressSpace, address, filter, filter)?.n ?? 0);
+                    counts.set(key, executionCount);
+                }
+                return { addressSpace, address, outputOffsets: [...offsets], executionCount };
+            }),
+        };
+    });
 };
 //# sourceMappingURL=sqlite-annotation-query.js.map

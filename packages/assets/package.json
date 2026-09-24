@@ -1,0 +1,92 @@
+{
+  "name": "@uttori/asm-assets",
+  "version": "1.0.0",
+  "description": "Portable asset conversion and native SNES binary algorithms for Uttori ASM.",
+  "keywords": [
+    "assembler",
+    "assets",
+    "conversion",
+    "snes"
+  ],
+  "homepage": "https://github.com/uttori/asm/tree/master/packages/assets#readme",
+  "bugs": {
+    "url": "https://github.com/uttori/asm/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uttori/asm.git",
+    "directory": "packages/assets"
+  },
+  "files": [
+    "dist",
+    "src",
+    "examples",
+    "plugins",
+    "README.md",
+    "LICENSE"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "uttori-source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./snes": {
+      "uttori-source": "./src/snes.ts",
+      "types": "./dist/snes.d.ts",
+      "import": "./dist/snes.js"
+    },
+    "./data": {
+      "uttori-source": "./src/data.ts",
+      "types": "./dist/data.d.ts",
+      "import": "./dist/data.js"
+    },
+    "./compression": {
+      "uttori-source": "./src/compression.ts",
+      "types": "./dist/compression.d.ts",
+      "import": "./dist/compression.js"
+    },
+    "./preview": {
+      "uttori-source": "./src/preview.ts",
+      "types": "./dist/preview.d.ts",
+      "import": "./dist/preview.js"
+    },
+    "./image": {
+      "uttori-source": "./src/image.ts",
+      "types": "./dist/image.d.ts",
+      "import": "./dist/image.js"
+    },
+    "./audio": {
+      "uttori-source": "./src/audio.ts",
+      "types": "./dist/audio.d.ts",
+      "import": "./dist/audio.js"
+    },
+    "./node": {
+      "uttori-source": "./src/node.ts",
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "make-types": "tsc --project tsconfig.build.json",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "pack:check": "npm pack --dry-run",
+    "prepack": "node ../../scripts/clean-workspace-build.ts --workspace assets && npm run make-types"
+  },
+  "dependencies": {
+    "@uttori/data-tools": "4.1.0",
+    "pako": "3.0.2"
+  },
+  "engines": {
+    "node": ">=26"
+  }
+}

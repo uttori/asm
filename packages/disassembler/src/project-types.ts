@@ -1,4 +1,3 @@
-import type { AssetValue } from "./asset-codec.js";
 import type { RomIdentity } from "./rom-image.js";
 import type { RuntimeBusFact } from "./runtime-bus-types.js";
 
@@ -155,12 +154,21 @@ export interface ProjectCodecProvider {
   readonly pluginVersion: string;
 }
 
+/** JSON-safe declaration options retained verbatim in the project database. */
+export type ProjectCodecValue =
+  | null
+  | string
+  | number
+  | boolean
+  | readonly ProjectCodecValue[]
+  | { readonly [key: string]: ProjectCodecValue };
+
 /** Versioned codec reference stored without extracted or ROM byte payloads. */
 export interface ProjectCodecReference {
   readonly codecId: string;
   readonly codecVersion: string;
   readonly provider?: ProjectCodecProvider;
-  readonly options?: AssetValue;
+  readonly options?: ProjectCodecValue;
 }
 
 /** Optional recompression layer associated with a semantic asset annotation. */

@@ -1,5 +1,38 @@
-import fs from "node:fs";
-import path from "node:path";
+/**
+ * Node built-ins are resolved only when the Node provider is used. Browser
+ * sessions supply MemoryAssemblyFileProvider and never touch the host disk.
+ */
+const nodePath = typeof process === "undefined" ? undefined : process.getBuiltinModule("node:path");
+const nodeFs = typeof process === "undefined" ? undefined : process.getBuiltinModule("node:fs");
+
+const virtualPath = {
+  isAbsolute: (value: string) => value.startsWith("/"),
+  dirname: (value: string) => value.slice(0, value.lastIndexOf("/")) || ".",
+  resolve: (...parts: string[]) => {
+    const joined = parts.filter(Boolean).join("/");
+    const stack: string[] = [];
+    for (const part of joined.split("/")) {
+      if (part === "..") {
+        stack.pop();
+      } else if (part && part !== ".") {
+        stack.push(part);
+      }
+    }
+    return `/${stack.join("/")}`;
+  },
+};
+const path = nodePath ?? virtualPath;
+
+/**
+ * Fail explicitly if a host selects the Node provider in a browser runtime.
+ * @returns {typeof import("node:fs")} Node's synchronous filesystem API.
+ */
+const requireNodeFs = (): typeof import("node:fs") => {
+  if (!nodeFs) {
+    throw new Error("NodeAssemblyFileProvider requires Node.js.");
+  }
+  return nodeFs;
+};
 
 /** Search context supplied by includes and file-reading expressions. */
 export type AssemblyFileResolutionOptions = {
@@ -36,6 +69,9 @@ export interface AssemblyFileProvider {
  * Default Node.js-backed file provider used by the assembler runtime.
  */
 export class NodeAssemblyFileProvider implements AssemblyFileProvider {
+  /** Consumed paths for dependency snapshots; callers reusing a provider may clear this per build. */
+  readonly readFiles = new Set<string>();
+
   /**
    * Find the first existing path: macro directory, current source directory, include paths, then cwd.
    * @param {string} filename Include path token, optionally quoted.
@@ -43,6 +79,7 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
    * @returns {string | undefined} First existing file identity, or undefined.
    */
   resolvePath(filename: string, options: AssemblyFileResolutionOptions = {}): string | undefined {
+    const fs = requireNodeFs();
     if (!filename) {
       return undefined;
     }
@@ -74,7 +111,8 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
   }
 
   stat(filePath: string): AssemblyFileStat {
-    let st: fs.Stats;
+    const fs = requireNodeFs();
+    let st: import("node:fs").Stats;
     try {
       st = fs.statSync(filePath);
     } catch {
@@ -89,10 +127,14 @@ export class NodeAssemblyFileProvider implements AssemblyFileProvider {
   }
 
   readFile(filePath: string): Uint8Array {
+    const fs = requireNodeFs();
+    this.readFiles.add(filePath);
     return new Uint8Array(fs.readFileSync(filePath));
   }
 
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
+    const fs = requireNodeFs();
+    this.readFiles.add(filePath);
     return fs.readFileSync(filePath, encoding);
   }
 }
@@ -165,7 +207,7 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     return {
       exists: true,
       readable: true,
-      size: typeof entry === "string" ? Buffer.byteLength(entry, "utf8") : entry.length,
+      size: typeof entry === "string" ? new TextEncoder().encode(entry).length : entry.length,
     };
   }
 
@@ -174,9 +216,7 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     if (entry === undefined) {
       throw new Error(`Virtual file not found: ${filePath}`);
     }
-    return typeof entry === "string"
-      ? new Uint8Array(Buffer.from(entry, "utf8"))
-      : new Uint8Array(entry);
+    return typeof entry === "string" ? new TextEncoder().encode(entry) : new Uint8Array(entry);
   }
 
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
@@ -184,7 +224,13 @@ export class MemoryAssemblyFileProvider implements AssemblyFileProvider {
     if (entry === undefined) {
       throw new Error(`Virtual file not found: ${filePath}`);
     }
-    return typeof entry === "string" ? entry : Buffer.from(entry).toString(encoding);
+    if (typeof entry === "string") {
+      return entry;
+    }
+    if (typeof Buffer !== "undefined") {
+      return Buffer.from(entry).toString(encoding);
+    }
+    return new TextDecoder(encoding).decode(entry);
   }
 }
 

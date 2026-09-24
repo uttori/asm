@@ -14,6 +14,19 @@ export type PreprocessBlockCommandsResult = {
   commandBuffer: string;
 };
 
+/** A quote is escaped only by an odd run of preceding backslashes.
+ * @param {string} text Source line.
+ * @param {number} index Quote index.
+ * @returns {boolean} Whether the quote is escaped.
+ */
+const isEscapedAt = (text: string, index: number): boolean => {
+  let slashes = 0;
+  for (let at = index - 1; at >= 0 && text[at] === "\\"; at--) {
+    slashes++;
+  }
+  return slashes % 2 === 1;
+};
+
 /**
  * Removes inline comments from a command line while preserving semicolons
  * inside double-quoted text.
@@ -25,12 +38,16 @@ export const removeInlineComment = (
   line: string,
   syntaxProfile: SyntaxProfile = ASAR_SYNTAX_PROFILE,
 ): string => {
-  let inQuote = false;
+  let quote = "";
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
-    if (ch === '"') {
-      inQuote = !inQuote;
-    } else if (!inQuote && ch === ";") {
+    if ((ch === '"' || ch === "'") && !isEscapedAt(line, i)) {
+      if (quote === ch) {
+        quote = "";
+      } else if (quote === "") {
+        quote = ch;
+      }
+    } else if (quote === "" && ch === ";") {
       const uncommented = line.substring(0, i);
       return syntaxProfile.preserveLeadingWhitespace ? uncommented.trimEnd() : uncommented.trim();
     }
@@ -118,9 +135,10 @@ const splitOnInlineStatementSeparator = (command: string): string[] => {
   const parts: string[] = [];
   let current = "";
   let quote = "";
+  let depth = 0;
   for (let i = 0; i < command.length; i++) {
     const char = command[i];
-    if ((char === '"' || char === "'") && command[i - 1] !== "\\") {
+    if ((char === '"' || char === "'") && !isEscapedAt(command, i)) {
       if (quote === char) {
         quote = "";
       } else if (quote === "") {
@@ -129,9 +147,16 @@ const splitOnInlineStatementSeparator = (command: string): string[] => {
       current += char;
       continue;
     }
+    if (quote === "") {
+      if (char === "(" || char === "[" || char === "{") {
+        depth++;
+      } else if (char === ")" || char === "]" || char === "}") {
+        depth--;
+      }
+    }
     const next = command[i + 1];
     const after = command[i + 2];
-    if (quote === "" && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
+    if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
       const trimmed = current.trim();
       if (trimmed !== "") {
         parts.push(trimmed);
@@ -206,6 +231,15 @@ export const splitSourcedInlineCommands = (
  * @returns {string[]} Tokenized command words.
  */
 export const splitCommandIntoWords = (command: string): string[] => {
+  // A call is one directive even when parentheses touch the keyword. Keep its
+  // full payload for typed parsing, including spaces and nested object literals.
+  const trimmed = command.trim();
+  const label = /^([$.?A-Z_a-z][\w$.?]*:)\s+/.exec(trimmed);
+  const labelPrefix = label?.[0] ?? "";
+  const remainder = trimmed.slice(labelPrefix.length);
+  if (/^includeasset\s*\(/i.test(remainder)) {
+    return [...(label ? [label[1]] : []), "includeasset", remainder.slice("includeasset".length)];
+  }
   const words: string[] = [];
   let currentWord = "";
   let inQuotes = false;
@@ -214,7 +248,7 @@ export const splitCommandIntoWords = (command: string): string[] => {
 
   for (let i = 0; i < trimmedCommand.length; i++) {
     const char = trimmedCommand[i];
-    if ((char === '"' || char === "'") && (i === 0 || trimmedCommand[i - 1] !== "\\")) {
+    if ((char === '"' || char === "'") && !isEscapedAt(trimmedCommand, i)) {
       if (!inQuotes) {
         inQuotes = true;
         quoteChar = char;

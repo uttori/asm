@@ -91,6 +91,12 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
     conditions: ["uttori-source"],
     platform: "node",
     format: "cjs",
+    // Optional Data Tools debug imports use top-level await; the shipped worker
+    // disables those branches too, so this test must bundle the same code path.
+    define: {
+      "process.env.UTTORI_DATA_DEBUG": "false",
+      "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
+    },
     logLevel: "silent",
   });
   const client = new DisassemblyMaintenanceClient(processFile);

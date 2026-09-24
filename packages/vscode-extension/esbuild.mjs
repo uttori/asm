@@ -12,6 +12,12 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // VS Code 1.128 embeds Node 24. Standalone tools target Node 26. Every executable shipped
 // inside the VSIX is built separately for the editor's runtime, including forked workers.
 const editorRuntime = "node24";
+// Data Tools' optional debug branches use top-level await. Production workers keep logging
+// disabled, which lets their portable conversion code bundle into the required CJS hosts.
+const dataToolsDebugDisabled = {
+  "process.env.UTTORI_DATA_DEBUG": "false",
+  "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
+};
 // Worker sources live with their features; keep output names aligned with the process launchers.
 await build({
   entryPoints: [path.join(here, "src/runtime/live-bus-analysis-process.ts")],
@@ -31,6 +37,7 @@ await build({
   platform: "node",
   format: "cjs",
   target: editorRuntime,
+  define: dataToolsDebugDisabled,
   logLevel: "info",
 });
 mkdirSync(path.join(here, "schemas"), { recursive: true });
@@ -47,6 +54,7 @@ await build({
   platform: "node",
   format: "cjs",
   target: editorRuntime,
+  define: dataToolsDebugDisabled,
   logLevel: "info",
 });
 
@@ -60,6 +68,7 @@ await build({
   target: editorRuntime,
   // `vscode` is provided by the host at runtime and must not be bundled.
   external: ["vscode"],
+  define: dataToolsDebugDisabled,
   logLevel: "info",
 });
 
@@ -75,6 +84,7 @@ await build({
   format: "cjs",
   target: editorRuntime,
   external: ["vscode"],
+  define: dataToolsDebugDisabled,
   logLevel: "info",
 });
 
@@ -113,3 +123,19 @@ for (const [source, destination, needsRequireShim] of embeddedExecutables) {
   });
   chmodSync(outfile, 0o755);
 }
+
+// The LSP preview request spawns this sibling worker by URL; it must be packaged
+// beside the embedded server for both local and remote Extension Hosts.
+await build({
+  entryPoints: [path.resolve(here, "../language-server/src/asset-preview-worker.ts")],
+  outfile: path.join(here, "server/asset-preview-worker.mjs"),
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "esm",
+  target: editorRuntime,
+  banner: {
+    js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
+  },
+  logLevel: "info",
+});

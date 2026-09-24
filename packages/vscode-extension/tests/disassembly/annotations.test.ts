@@ -147,6 +147,10 @@ await build({
   conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
+  define: {
+    "process.env.UTTORI_DATA_DEBUG": "false",
+    "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
+  },
   logLevel: "silent",
 });
 const { AnalysisProjectEditor } = await import("../../src/analysis/project-editor.js");

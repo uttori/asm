@@ -1,5 +1,6 @@
 import { incrementInternalCounter } from "../internal-instrumentation.js";
 import { createLineSpan, deriveTokenSpans } from "../source-location.js";
+import { parseAssetCall } from "./asset-call.js";
 import { parseExpressionNode, } from "./expression-node.js";
 const EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
 const EMPTY_TOKEN_SPANS = Object.freeze([]);
@@ -56,7 +57,7 @@ export function createNormalizedCommand(raw, normalized, words, file, line, coll
         keyword,
         labelName: deriveLabelName(keyword),
         assignmentTarget: deriveAssignmentTarget(words),
-        parsed: deriveCommandSemantics(command, words),
+        parsed: deriveCommandSemantics(command, words, line, raw),
     };
 }
 /**
@@ -99,7 +100,7 @@ export function setCommandWords(command, words, normalized) {
     }
     command.labelName = deriveLabelName(command.keyword);
     command.assignmentTarget = deriveAssignmentTarget(words);
-    command.parsed = deriveCommandSemantics(command.command, words);
+    command.parsed = deriveCommandSemantics(command.command, words, command.source.line, command.source.raw);
     command.kind = classifyCommand(command.command, words);
     return command;
 }
@@ -197,12 +198,17 @@ function deriveAssignmentTarget(words) {
  * Derives semantic payloads from a normalized command's stable syntax.
  * @param {string} command The normalized command text.
  * @param {string[]} words The tokenized command words.
+ * @param {number} [line] Source line for argument spans.
+ * @param {string} [raw] Original source line for same-line label offsets.
  * @returns {CommandSemantics} Parsed semantic payloads keyed by construct type.
  */
-function deriveCommandSemantics(command, words) {
+function deriveCommandSemantics(command, words, line, raw = command) {
     const keyword = (words[0] ?? "").toLowerCase();
     const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
     const semantics = {};
+    if (keyword === "includeasset") {
+        semantics.includeAsset = parseAssetCall(raw, line);
+    }
     if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
         semantics.condition = {
             expression: parseExpressionNode(words.slice(1).join(" ")),

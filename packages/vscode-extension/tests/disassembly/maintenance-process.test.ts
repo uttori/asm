@@ -33,6 +33,10 @@ await build({
   conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
+  define: {
+    "process.env.UTTORI_DATA_DEBUG": "false",
+    "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
+  },
   logLevel: "silent",
 });
 await build({
@@ -42,6 +46,10 @@ await build({
   conditions: ["uttori-source"],
   platform: "node",
   format: "cjs",
+  define: {
+    "process.env.UTTORI_DATA_DEBUG": "false",
+    "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
+  },
   logLevel: "silent",
 });
 test.after.always(() => fs.rmSync(bundleRoot, { recursive: true, force: true }));
@@ -297,6 +305,134 @@ test("maintenance processes import, analyze, export and verify without returning
   t.true(after.codeBytes >= prepared.before.codeBytes);
 });
 
+test("worker reanalysis preserves captured code across a legacy operand entry and a later disjoint capture", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-legacy-entry-"));
+  const client = new DisassemblyMaintenanceClient(processFile);
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const bytes = fixtureRom();
+  bytes.set([0x20, 0x10, 0x80, 0xdb]);
+  bytes.set([0x60, 0xea, 0xdb], 0x10);
+  const romFile = path.join(directory, "rom.sfc");
+  const sourceDirectory = path.join(directory, "source");
+  fs.writeFileSync(romFile, bytes);
+  await initializeSnesDisassemblyWorkspace({
+    romFile,
+    outputDirectory: sourceDirectory,
+    mapper: "lorom",
+  });
+  let target = {
+    romFile,
+    sourceDirectory,
+    projectDirectory: path.join(sourceDirectory, "analysis"),
+    sourceManifest: loadSourceExportManifest(sourceDirectory),
+  };
+  const legacyEntry = {
+    id: "dizraw:metadata:operand-entry",
+    addressSpace: "rom.file",
+    start: 1,
+    end: 2,
+    architecture: "snes.65816",
+    classification: "operand" as const,
+    points: ["in" as const],
+    state: { m: true, x: false },
+    evidence: ["legacy"],
+  };
+  const store = openAnalysisProjectStore(target.projectDirectory);
+  try {
+    store.transaction(() => {
+      store.replaceTables({
+        annotations: [...store.loadTable("annotations"), legacyEntry],
+        evidence: [
+          ...store.loadTable("evidence"),
+          {
+            id: "legacy",
+            source: "import",
+            sourceId: "dizraw",
+            confidence: "high",
+          },
+        ],
+      });
+      store.publishManifest(store.manifest());
+    });
+    store.writePointer(target.projectDirectory);
+  } finally {
+    store.close();
+  }
+
+  // The second capture never visits the JSR. Regeneration must retain the first capture's
+  // complete instruction instead of resurrecting the old operand entry as a source boundary.
+  for (const [name, addresses, fetchedBytes] of [
+    ["first", [0x008000, 0x008010, 0x008003], [[0x20, 0x10, 0x80], [0x60], [0xdb]]],
+    ["later", [0x008011, 0x008012], [[0xea], [0xdb]]],
+  ] as const) {
+    const traceFile = path.join(directory, `${name}.json`);
+    fs.writeFileSync(
+      traceFile,
+      JSON.stringify({
+        format: "uttori-asm-instruction-trace",
+        schemaVersion: 1,
+        architecture: "snes.65816",
+        addressSpace: "snes.cpu",
+        romContentSha256: target.sourceManifest.rom.contentSha256,
+        producer: { id: "test", revision: name },
+        chunks: [
+          {
+            sequenceStart: 1,
+            addresses,
+            details: fetchedBytes.map((instruction) => ({
+              bytes: instruction,
+              state: { p: 0x30, e: 0, db: 0, d: 0 },
+            })),
+            droppedEvents: 0,
+            active: false,
+          },
+        ],
+      }),
+    );
+    const imported = await client.run(
+      "import",
+      {
+        target,
+        traceFile,
+        maxBytes: 1024 * 1024,
+        architecture: "snes.65816",
+        addressSpace: "snes.cpu",
+        indexMode: "65816-disassembly",
+      },
+      budget,
+    );
+    const prepared = await client.run("prepare", { target, seeds: imported.seeds }, budget);
+    const analyzed = await client.run(
+      "analyze",
+      {
+        target,
+        entryPoints: prepared.entryPoints,
+        maxWorkItems: 100_000,
+      },
+      budget,
+    );
+    t.is(analyzed.status, "complete");
+    const exported = await client.run("export", target, budget);
+    const call = exported.manifest.spans.find((span) => span.start === 0);
+    t.is(call?.role, "code");
+    t.is(call?.end, 3);
+    const source = fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8");
+    t.regex(source, /JSR\.w \(Fn_008010 & \$FFFF\)/);
+    t.notRegex(source, /Fn_[08]08001:/);
+    t.true((await client.run("verify", target, budget)).comparison.equal);
+    const snapshot = loadAnalysisProjectSnapshot(target.projectDirectory);
+    t.deepEqual(
+      snapshot.shards.annotations.find((row) => row.id === legacyEntry.id),
+      legacyEntry,
+    );
+    target = { ...target, sourceManifest: exported.manifest };
+  }
+  t.is(target.sourceManifest.spans.find((span) => span.start === 0x11)?.role, "code");
+});
+
 test("maintenance workers import ACT2 directly and reject a bad tail without changing the project", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-act2-"));
   const logs: string[] = [];
@@ -351,6 +487,8 @@ test("maintenance workers import ACT2 directly and reject a bad tail without cha
 test.serial(
   "import and regeneration preserve runtime history larger than the child heap",
   async (t) => {
+    // This checks memory bounds, not throughput; large disk-backed fixtures vary with concurrent I/O.
+    t.timeout(300_000);
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-large-history-"));
     const client = new DisassemblyMaintenanceClient(processFile);
     t.teardown(() => {
@@ -518,19 +656,23 @@ fs.writeFileSync(
 );
 const fakeInput = { projectDirectory: "normal" } as ResolvedProjectSource;
 
-test("CPU-heavy maintenance keeps the host responsive and exits before resolving each phase", async (t) => {
-  const client = new DisassemblyMaintenanceClient(fakeFile);
-  t.teardown(() => client.dispose());
-  let ticks = 0;
-  const heartbeat = setInterval(() => ticks++, 10);
-  t.teardown(() => clearInterval(heartbeat));
-  const first = await client.run("coverage", fakeInput, budget);
-  t.true(ticks >= 5);
-  t.not(Number(first.manifestSha256), process.pid);
-  t.throws(() => process.kill(Number(first.manifestSha256), 0), { code: "ESRCH" });
-  const second = await client.run("coverage", fakeInput, budget);
-  t.not(first.manifestSha256, second.manifestSha256);
-});
+// Other tests synchronously construct large captures; isolate the heartbeat from that fixture work.
+test.serial(
+  "CPU-heavy maintenance keeps the host responsive and exits before resolving each phase",
+  async (t) => {
+    const client = new DisassemblyMaintenanceClient(fakeFile);
+    t.teardown(() => client.dispose());
+    let ticks = 0;
+    const heartbeat = setInterval(() => ticks++, 10);
+    t.teardown(() => clearInterval(heartbeat));
+    const first = await client.run("coverage", fakeInput, budget);
+    t.true(ticks >= 5);
+    t.not(Number(first.manifestSha256), process.pid);
+    t.throws(() => process.kill(Number(first.manifestSha256), 0), { code: "ESRCH" });
+    const second = await client.run("coverage", fakeInput, budget);
+    t.not(first.manifestSha256, second.manifestSha256);
+  },
+);
 
 test("abnormal child exit reports diagnostics and a fresh process can retry", async (t) => {
   const client = new DisassemblyMaintenanceClient(fakeFile);

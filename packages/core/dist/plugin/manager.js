@@ -189,6 +189,8 @@ export class PluginManager {
     #addressSpaces = [];
     #outputFormats = [];
     #directiveSets = [];
+    #assetFormats = [];
+    #assetTransforms = [];
     #expressionSets = [];
     #lifecycles = [];
     #targets = [];
@@ -369,6 +371,8 @@ export class PluginManager {
             addressSpaces: [],
             outputFormats: [],
             directiveSets: [],
+            assetFormats: [],
+            assetTransforms: [],
             expressionSets: [],
             lifecycles: [],
             targets: [],
@@ -397,6 +401,8 @@ export class PluginManager {
             registerAddressSpace: (contribution) => add(transaction.addressSpaces, contribution),
             registerOutputFormat: (contribution) => add(transaction.outputFormats, contribution),
             registerDirectiveSet: (contribution) => add(transaction.directiveSets, contribution),
+            registerAssetFormat: (contribution) => add(transaction.assetFormats, contribution),
+            registerAssetTransform: (contribution) => add(transaction.assetTransforms, contribution),
             registerExpressionSet: (contribution) => add(transaction.expressionSets, contribution),
             registerLifecycle: (contribution) => add(transaction.lifecycles, contribution),
             registerTarget: (contribution) => add(transaction.targets, contribution),
@@ -419,6 +425,8 @@ export class PluginManager {
             ...transaction.addressSpaces,
             ...transaction.outputFormats,
             ...transaction.directiveSets,
+            ...transaction.assetFormats,
+            ...transaction.assetTransforms,
             ...transaction.expressionSets,
             ...transaction.lifecycles,
             ...transaction.targets,
@@ -514,6 +522,56 @@ export class PluginManager {
                 }
             }
         }
+        for (const record of transaction.assetFormats) {
+            validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+            const optionSchema = record.value.optionSchema;
+            const invalidOptionSchema = optionSchema !== undefined &&
+                (!isRecord(optionSchema) ||
+                    Object.values(optionSchema).some((field) => !isRecord(field) ||
+                        typeof field.summary !== "string" ||
+                        (field.valueSyntax !== undefined && typeof field.valueSyntax !== "string")));
+            if (!semver.valid(record.value.version) ||
+                typeof record.value.convert !== "function" ||
+                invalidOptionSchema ||
+                (record.value.resourcePaths !== undefined &&
+                    typeof record.value.resourcePaths !== "function") ||
+                (record.value.targets !== undefined &&
+                    (!isArray(record.value.targets) ||
+                        record.value.targets.some((target) => typeof target !== "string")))) {
+                this.#malformed(transaction, record);
+            }
+        }
+        for (const record of transaction.assetTransforms) {
+            validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+            // Reject malformed schemas at activation so resource discovery cannot depend on a broken field.
+            const schema = record.value.optionSchema;
+            const invalidSchema = schema !== undefined &&
+                (!isRecord(schema) ||
+                    Object.values(schema).some((field) => !isRecord(field) ||
+                        !["string", "integer", "boolean", "enum"].includes(String(field.type)) ||
+                        (field.type === "enum" && !Array.isArray(field.enum)) ||
+                        (field.required !== undefined && typeof field.required !== "boolean") ||
+                        (field.resource !== undefined &&
+                            (field.resource !== true || field.type !== "string")) ||
+                        (field.minimum !== undefined &&
+                            (typeof field.minimum !== "number" || !Number.isFinite(field.minimum))) ||
+                        (field.maximum !== undefined &&
+                            (typeof field.maximum !== "number" || !Number.isFinite(field.maximum))) ||
+                        (field.enum !== undefined && !Array.isArray(field.enum))));
+            if (!semver.valid(record.value.version) ||
+                typeof record.value.encode !== "function" ||
+                typeof record.value.decode !== "function" ||
+                invalidSchema ||
+                (record.value.validateOptions !== undefined &&
+                    typeof record.value.validateOptions !== "function") ||
+                (record.value.resourcePaths !== undefined &&
+                    typeof record.value.resourcePaths !== "function") ||
+                (record.value.targets !== undefined &&
+                    (!isArray(record.value.targets) ||
+                        record.value.targets.some((target) => typeof target !== "string")))) {
+                this.#malformed(transaction, record);
+            }
+        }
         for (const record of transaction.lifecycles) {
             if (typeof record.value.create !== "function") {
                 this.#malformed(transaction, record);
@@ -560,6 +618,8 @@ export class PluginManager {
             transaction.addressSpaces,
             transaction.outputFormats,
             transaction.directiveSets,
+            transaction.assetFormats,
+            transaction.assetTransforms,
             transaction.expressionSets,
             transaction.lifecycles,
             transaction.targets,
@@ -593,6 +653,12 @@ export class PluginManager {
         for (const record of transaction.directiveSets) {
             this.#directiveSets.push(record);
         }
+        for (const record of transaction.assetFormats) {
+            this.#assetFormats.push(record);
+        }
+        for (const record of transaction.assetTransforms) {
+            this.#assetTransforms.push(record);
+        }
         for (const record of transaction.expressionSets) {
             this.#expressionSets.push(record);
         }
@@ -624,6 +690,8 @@ export class PluginManager {
             addressSpaces: Object.freeze([...this.#addressSpaces]),
             outputFormats: Object.freeze([...this.#outputFormats]),
             directiveSets: Object.freeze([...this.#directiveSets]),
+            assetFormats: Object.freeze([...this.#assetFormats]),
+            assetTransforms: Object.freeze([...this.#assetTransforms]),
             expressionSets: Object.freeze([...this.#expressionSets]),
             lifecycles: Object.freeze([...this.#lifecycles]),
             targets: Object.freeze([...this.#targets]),

@@ -296,7 +296,9 @@ export function describeSnesStructAccess(
     }
     const candidate = structure.fields[low - 1];
     const field = candidate && offset < candidate.offset + candidate.size ? candidate : undefined;
-    const record = `${binding.name}${index === 0 ? "" : `[${index}]`}`;
+    // Match generated operands: only scalar bindings use an unindexed physical record.
+    const suffix = binding.count === 1 && index === 0 ? "" : `[${index}]`;
+    const record = `${binding.name}${suffix}`;
     let expression = record;
     let partOffset = offset;
     let end = structure.fields[low]?.offset ?? structure.size;

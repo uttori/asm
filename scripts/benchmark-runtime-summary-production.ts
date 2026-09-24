@@ -10,6 +10,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { parseSqlitePayload } from "../packages/disassembler/src/sqlite-payload.js";
+import { registerRuntimeHistory } from "../packages/disassembler/src/sqlite-runtime-history.js";
 import { SqliteAnalysisStore } from "../packages/disassembler/src/sqlite-store.js";
 
 const file = path.resolve(process.argv[2] ?? "secret-of-mana/disassembly/analysis/analysis.sqlite");
@@ -18,6 +19,7 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-summary-producti
 const copyFile = path.join(directory, "analysis.sqlite");
 const store = new SqliteAnalysisStore(file, false);
 const db = new DatabaseSync(file, { readOnly: true });
+registerRuntimeHistory(db);
 const fields = ["p", "P", "e", "E", "db", "DB", "d", "D"];
 const masks = { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } };
 const timings: Record<string, number> = {};
@@ -97,6 +99,7 @@ try {
   measure("vacuumInto", () => db.prepare("VACUUM INTO ?").run(copyFile));
   const copy = new SqliteAnalysisStore(copyFile, false);
   const sql = new DatabaseSync(copyFile);
+  registerRuntimeHistory(sql);
   try {
     report.repacked = copy.storageSnapshot();
     report.afterRepackAllocation = measure("allocationAfterRepack", () => allocations(sql));

@@ -1,4 +1,3 @@
-import { performance } from "node:perf_hooks";
 let activeInstrumentation;
 function sampleMemory(metrics) {
     const memory = process.memoryUsage();

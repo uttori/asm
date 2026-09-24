@@ -134,6 +134,10 @@ export class AssemblerEnvironment {
     #addressSpaces;
     #outputFormats;
     #directiveSets;
+    #assetFormats;
+    #assetTransforms;
+    #assetFormatAliases;
+    #assetTransformAliases;
     #expressionSets;
     #lifecycles;
     #targets;
@@ -154,6 +158,8 @@ export class AssemblerEnvironment {
         this.#addressSpaces = toMap(contributions.addressSpaces);
         this.#outputFormats = toMap(contributions.outputFormats);
         this.#directiveSets = toMap(contributions.directiveSets);
+        this.#assetFormats = toMap(contributions.assetFormats ?? []);
+        this.#assetTransforms = toMap(contributions.assetTransforms ?? []);
         this.#expressionSets = toMap(contributions.expressionSets);
         this.#lifecycles = toMap(contributions.lifecycles);
         this.#targets = toMap(contributions.targets);
@@ -176,12 +182,104 @@ export class AssemblerEnvironment {
             }
         }
         this.#targetAliases = targetAliases;
+        // Short aliases are per target. A plugin can add a format to an existing
+        // target without replacing that target's contribution.
+        const assetAliases = (records) => {
+            const byTarget = new Map();
+            for (const target of contributions.targets) {
+                const aliases = new Map();
+                for (const record of records) {
+                    for (const targetId of record.value.targets ?? []) {
+                        if (!this.#targets.has(canonical(targetId))) {
+                            targetInvalid(target, `asset contribution '${record.contributionId}' names unknown target '${targetId}'`);
+                        }
+                    }
+                    if (record.value.targets &&
+                        !record.value.targets.some((id) => canonical(id) === canonical(target.contributionId))) {
+                        continue;
+                    }
+                    for (const alias of record.value.aliases ?? []) {
+                        const key = canonical(alias);
+                        const previous = aliases.get(key);
+                        if (previous && previous !== record.contributionId) {
+                            throw new PluginError(`Asset alias '${alias}' is ambiguous on '${target.contributionId}'.`, {
+                                code: "PLUGIN_ALIAS_DUPLICATE",
+                                pluginId: record.pluginId,
+                                contributionId: record.contributionId,
+                                targetId: target.contributionId,
+                            });
+                        }
+                        aliases.set(key, record.contributionId);
+                    }
+                }
+                byTarget.set(target.contributionId, aliases);
+            }
+            return byTarget;
+        };
+        this.#assetFormatAliases = assetAliases(contributions.assetFormats ?? []);
+        this.#assetTransformAliases = assetAliases(contributions.assetTransforms ?? []);
         const aliasesByTarget = new Map();
         for (const target of contributions.targets) {
             aliasesByTarget.set(target.contributionId, this.#validateTarget(target));
         }
         this.#architectureAliasesByTarget = aliasesByTarget;
         Object.freeze(this);
+    }
+    /** Resolve a globally named or target-scoped short format ID.
+     * @param {string} id Full ID or short alias.
+     * @param {string} targetId Selected target.
+     * @returns {Readonly<AssetFormatContribution> | undefined} Compatible format.
+     */
+    getAssetFormat(id, targetId) {
+        const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
+        const full = this.#assetFormats.has(canonical(id))
+            ? id
+            : (this.#assetFormatAliases.get(canonicalTarget)?.get(canonical(id)) ?? id);
+        const value = this.#assetFormats.get(canonical(full))?.value;
+        if (value?.targets &&
+            !value.targets.some((target) => canonical(target) === canonical(canonicalTarget))) {
+            return undefined;
+        }
+        return value;
+    }
+    /** List formats compatible with a target for editor completion and discovery.
+     * @param {string} targetId Selected target.
+     * @returns {readonly Readonly<AssetFormatContribution>[]} Canonical registrations.
+     */
+    getAssetFormats(targetId) {
+        const target = this.getTarget(targetId)?.id ?? targetId;
+        return [...this.#assetFormats.values()]
+            .map((record) => record.value)
+            .filter((format) => !format.targets ||
+            format.targets.some((supported) => canonical(supported) === canonical(target)));
+    }
+    /** Resolve a globally named or target-scoped short transform ID.
+     * @param {string} id Full ID or short alias.
+     * @param {string} targetId Selected target.
+     * @returns {Readonly<AssetTransformContribution> | undefined} Compatible transform.
+     */
+    getAssetTransform(id, targetId) {
+        const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
+        const full = this.#assetTransforms.has(canonical(id))
+            ? id
+            : (this.#assetTransformAliases.get(canonicalTarget)?.get(canonical(id)) ?? id);
+        const value = this.#assetTransforms.get(canonical(full))?.value;
+        if (value?.targets &&
+            !value.targets.some((target) => canonical(target) === canonical(canonicalTarget))) {
+            return undefined;
+        }
+        return value;
+    }
+    /** List reversible transforms compatible with a target for editor completion.
+     * @param {string} targetId Selected target.
+     * @returns {readonly Readonly<AssetTransformContribution>[]} Canonical registrations.
+     */
+    getAssetTransforms(targetId) {
+        const target = this.getTarget(targetId)?.id ?? targetId;
+        return [...this.#assetTransforms.values()]
+            .map((record) => record.value)
+            .filter((transform) => !transform.targets ||
+            transform.targets.some((supported) => canonical(supported) === canonical(target)));
     }
     /**
      * Ensures a target's referenced contributions exist and that aliases, directive

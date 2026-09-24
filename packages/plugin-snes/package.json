@@ -22,6 +22,7 @@
   "files": [
     "dist",
     "src",
+    "examples",
     "*.md"
   ],
   "type": "module",
@@ -31,6 +32,7 @@
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "browser": "./src/browser.ts",
       "uttori-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
@@ -46,6 +48,7 @@
     "prepack": "node ../../scripts/clean-workspace-build.ts --workspace plugin-snes && npm run make-types"
   },
   "dependencies": {
+    "@uttori/asm-assets": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0"
   },

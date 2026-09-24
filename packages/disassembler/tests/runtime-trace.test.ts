@@ -9,6 +9,11 @@ import {
   type AnalysisProjectShards,
   type RuntimeInstructionTraceArtifact,
 } from "../src/index.js";
+import {
+  runtimeTraceIndexRecordLimit,
+  type RuntimeTraceFactIndex,
+  type RuntimeTraceIndexMode,
+} from "../src/runtime-trace.js";
 
 const romContentSha256 = "a".repeat(64);
 
@@ -34,6 +39,59 @@ const emptyShards = (): AnalysisProjectShards => ({
   runtime: [],
   evidence: [],
   imports: [],
+});
+
+test("instruction budgets lift the memory ceiling only with a disk index and record sink", (t) => {
+  // Budget selection must not inspect or consume the index. Actual SQLite publication is
+  // covered by runtime-trace-project tests, including rollback at an explicit small budget.
+  const index: RuntimeTraceFactIndex = {
+    diskBacked: true,
+    add: () => t.fail("Budget selection consumed a fact"),
+    values: () => {
+      throw new Error("Budget selection read facts");
+    },
+    clear: () => t.fail("Budget selection cleared facts"),
+  };
+  const onRecord = () => t.fail("Budget selection emitted a record");
+  for (const mode of ["full", "65816-disassembly", "65816-analysis"] as RuntimeTraceIndexMode[]) {
+    const memoryLimit = mode === "full" ? 8_000_000 : 2_000_000;
+    t.is(runtimeTraceIndexRecordLimit(mode, undefined), memoryLimit);
+    t.is(runtimeTraceIndexRecordLimit(mode, undefined, { index }), memoryLimit);
+    t.is(
+      runtimeTraceIndexRecordLimit(mode, undefined, {
+        index: { ...index, diskBacked: false },
+        onRecord,
+      }),
+      memoryLimit,
+    );
+    t.is(
+      runtimeTraceIndexRecordLimit(mode, undefined, {
+        index: { ...index, diskBacked: undefined },
+        onRecord,
+      }),
+      memoryLimit,
+    );
+    t.is(
+      runtimeTraceIndexRecordLimit(mode, undefined, { index, onRecord }),
+      Number.MAX_SAFE_INTEGER,
+    );
+    t.is(runtimeTraceIndexRecordLimit(mode, 8_000_001, { index, onRecord }), 8_000_001);
+    t.is(runtimeTraceIndexRecordLimit(mode, 1, { index, onRecord }), 1);
+    for (const storage of [
+      undefined,
+      { index },
+      { index: { ...index, diskBacked: false }, onRecord },
+    ]) {
+      t.throws(() => runtimeTraceIndexRecordLimit(mode, 8_000_001, storage), {
+        message: "Trace index record limit must not exceed 8000000.",
+      });
+    }
+    for (const limit of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+      t.throws(() => runtimeTraceIndexRecordLimit(mode, limit, { index, onRecord }), {
+        message: /safe integer/,
+      });
+    }
+  }
 });
 
 test("disassembly index folds changing general registers while preserving code, decoding state, counts and source identity", (t) => {

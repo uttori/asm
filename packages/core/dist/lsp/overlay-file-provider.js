@@ -11,6 +11,8 @@ export class OverlayFileProvider {
     overlay;
     /** The backing provider used when a path is not in the overlay. */
     base;
+    /** Files consumed by this provider, including binary and definition-only dependencies. */
+    readFiles = new Set();
     /**
      * Creates an overlay provider.
      * @param {Map<string, string>} [overlay] Initial overlay contents keyed by absolute path.
@@ -70,6 +72,7 @@ export class OverlayFileProvider {
      * @returns {Uint8Array} The file bytes.
      */
     readFile(filePath) {
+        this.readFiles.add(filePath);
         const entry = this.overlay.get(filePath);
         if (entry !== undefined) {
             return new Uint8Array(Buffer.from(entry, "utf8"));
@@ -83,6 +86,7 @@ export class OverlayFileProvider {
      * @returns {string} The file text.
      */
     readTextFile(filePath, encoding = "utf8") {
+        this.readFiles.add(filePath);
         const entry = this.overlay.get(filePath);
         if (entry !== undefined) {
             return entry;

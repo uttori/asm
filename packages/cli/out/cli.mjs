@@ -5,6 +5,12 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
+  get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
+}) : x)(function(x) {
+  if (typeof require !== "undefined") return require.apply(this, arguments);
+  throw Error('Dynamic require of "' + x + '" is not supported');
+});
 var __esm = (fn, res, err) => function __init() {
   if (err) throw err[0];
   try {
@@ -13,7 +19,7 @@ var __esm = (fn, res, err) => function __init() {
     throw err = [e], e;
   }
 };
-var __commonJS = (cb, mod) => function __require() {
+var __commonJS = (cb, mod) => function __require2() {
   try {
     return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
   } catch (e) {
@@ -22,9 +28,9 @@ var __commonJS = (cb, mod) => function __require() {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key2 of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key2) && key2 !== except)
-        __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
+    for (let key3 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key3) && key3 !== except)
+        __defProp(to, key3, { get: () => from[key3], enumerable: !(desc = __getOwnPropDesc(from, key3)) || desc.enumerable });
   }
   return to;
 };
@@ -97,20 +103,23 @@ var init_crc32 = __esm({
 });
 
 // packages/core/src/addressToLine.ts
-import { createHash } from "node:crypto";
-import * as fs from "node:fs";
 var sourceIdentity, AddressToLineMapping;
 var init_addressToLine = __esm({
   "packages/core/src/addressToLine.ts"() {
     "use strict";
     init_crc32();
-    sourceIdentity = (filename) => {
+    sourceIdentity = (filename, supplied) => {
       try {
-        const data = fs.readFileSync(filename);
+        const fs15 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+        const crypto = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:crypto");
+        if (!fs15 || !crypto) {
+          return { crc: 0, size: 0, sha256: "" };
+        }
+        const data = supplied ?? fs15.readFileSync(filename);
         return {
           crc: CRC32.compute(data),
           size: data.length,
-          sha256: createHash("sha256").update(data).digest("hex")
+          sha256: crypto.createHash("sha256").update(data).digest("hex")
         };
       } catch {
         return { crc: 0, size: 0, sha256: "" };
@@ -121,12 +130,27 @@ var init_addressToLine = __esm({
       filenameCrcs = [];
       addrToLineInfo = [];
       ranges = [];
+      /** Final encoder evaluations, collected without evaluating expressions a second time. */
+      instructions = [];
+      /** Successful final-pass asset emissions; binary files have no source lines. */
+      assets = [];
       /** Clears all stored mappings and file information. */
       reset() {
         this.fileList = [];
         this.filenameCrcs = [];
         this.addrToLineInfo = [];
         this.ranges = [];
+        this.instructions = [];
+        this.assets = [];
+      }
+      /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
+       * @param {string} filename Provider path.
+       * @param {Uint8Array} bytes Build snapshot.
+       */
+      registerDependencySnapshot(filename, bytes) {
+        const index = this.getFileIndex(filename);
+        const identity = sourceIdentity(filename, bytes);
+        this.fileList[index] = { name: filename, ...identity };
       }
       /**
        * Adds a legacy point mapping. New debugger consumers should use ranges.
@@ -205,7 +229,7 @@ var init_addressToLine = __esm({
        * @returns {number} Stable file-table index.
        */
       getFileIndex(filename) {
-        const filenameCrc = CRC32.compute(Buffer.from(filename, "utf8"));
+        const filenameCrc = CRC32.compute(new TextEncoder().encode(filename));
         for (let i = 0; i < this.filenameCrcs.length; i++) {
           if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
             return i;
@@ -232,11 +256,11 @@ var init_architecture_registry = __esm({
        * @param {ArchitectureDefinition} definition The definition.
        * @param {string[]} [aliases] The aliases.
        */
-      register(definition, aliases = []) {
+      register(definition, aliases2 = []) {
         const canonical2 = definition.name.toLowerCase();
         this.definitions.set(canonical2, { ...definition, name: canonical2 });
         this.aliases.set(canonical2, canonical2);
-        for (const alias of aliases) {
+        for (const alias of aliases2) {
           this.aliases.set(alias.toLowerCase(), canonical2);
         }
       }
@@ -415,8 +439,8 @@ var init_data = __esm({
     handleDataDirective = ({ runtime }, words) => {
       runtime.handleDataDirective(words[0], words.slice(1));
     };
-    registerDataDirectives = (registry, context) => {
-      registry.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
+    registerDataDirectives = (registry2, context) => {
+      registry2.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
     };
   }
 });
@@ -506,19 +530,19 @@ var init_fill_pad = __esm({
         session.write1(session.padbyte[i % session.padUnit]);
       }
     };
-    registerFillPadDirectives = (registry, context) => {
-      registry.registerLowered(
+    registerFillPadDirectives = (registry2, context) => {
+      registry2.registerLowered(
         ["fillbyte", "fillword", "filllong", "filldword"],
         context,
         handleFillPattern
       );
-      registry.registerLowered("fill", context, handleFill);
-      registry.registerLowered(
+      registry2.registerLowered("fill", context, handleFill);
+      registry2.registerLowered(
         ["padbyte", "padword", "padlong", "paddword"],
         context,
         handlePadPattern
       );
-      registry.registerLowered("pad", context, handlePad);
+      registry2.registerLowered("pad", context, handlePad);
     };
   }
 });
@@ -531,8 +555,8 @@ var init_flow_control = __esm({
     handleRelativeLabel = ({ session }, _words, raw) => {
       session.symbolScope.handleRelativeLabel(raw);
     };
-    registerFlowControlDirectives = (registry, context) => {
-      registry.register(["+", "-"], context, handleRelativeLabel);
+    registerFlowControlDirectives = (registry2, context) => {
+      registry2.register(["+", "-"], context, handleRelativeLabel);
     };
   }
 });
@@ -1407,13 +1431,13 @@ var init_include_source = __esm({
         resolveIncludeTarget(words, command, "include", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
       );
     };
-    registerIncludeSourceDirectives = (registry, context) => {
-      registry.registerLowered("incsrc", context, handleIncsrc);
-      registry.registerLowered("include", context, handleInclude);
-      registry.registerLowered("includeonce", context, ({ includeSource }) => {
+    registerIncludeSourceDirectives = (registry2, context) => {
+      registry2.registerLowered("incsrc", context, handleIncsrc);
+      registry2.registerLowered("include", context, handleInclude);
+      registry2.registerLowered("includeonce", context, ({ includeSource }) => {
         includeSource.guardCurrentFile();
       });
-      registry.registerLowered("incbin", context, handleIncbin);
+      registry2.registerLowered("incbin", context, handleIncbin);
     };
   }
 });
@@ -1457,8 +1481,8 @@ var init_layout = __esm({
         session.arch = canonical2;
       }
     };
-    registerGenericLayoutDirectives = (registry, context) => {
-      registry.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
+    registerGenericLayoutDirectives = (registry2, context) => {
+      registry2.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
         if (words.length !== 2) {
           throw new Error("BASE directive requires exactly one parameter.");
         }
@@ -1479,21 +1503,21 @@ var init_layout = __esm({
         session.currentTargetAddress = value;
         session.currentTargetStartAddress = value;
       });
-      registry.registerLowered("org", context.org, ({ runtime }, words) => {
+      registry2.registerLowered("org", context.org, ({ runtime }, words) => {
         runtime.handleOrg(words.slice(1));
       });
-      registry.registerLowered("pushbase", context.addressStack, handlePushBase);
-      registry.registerLowered("pullbase", context.addressStack, handlePullBase);
-      registry.registerLowered("pushpc", context.runtime, ({ runtime }) => {
+      registry2.registerLowered("pushbase", context.addressStack, handlePushBase);
+      registry2.registerLowered("pullbase", context.addressStack, handlePullBase);
+      registry2.registerLowered("pushpc", context.runtime, ({ runtime }) => {
         runtime.handlePushPC();
       });
-      registry.registerLowered("pullpc", context.runtime, ({ runtime }) => {
+      registry2.registerLowered("pullpc", context.runtime, ({ runtime }) => {
         runtime.handlePullPC();
       });
-      registry.registerLowered("arch", context.architecture, handleArch);
+      registry2.registerLowered("arch", context.architecture, handleArch);
     };
-    registerLayoutDirectives = (registry, context) => {
-      registerGenericLayoutDirectives(registry, context);
+    registerLayoutDirectives = (registry2, context) => {
+      registerGenericLayoutDirectives(registry2, context);
     };
   }
 });
@@ -1704,19 +1728,30 @@ function isBareLabelReference(input) {
   }
   return index === input.length;
 }
-var removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
+var isEscapedAt, removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
 var init_command_text_service = __esm({
   "packages/core/src/services/command-text-service.ts"() {
     "use strict";
     init_struct_initializer();
     init_syntax_profile();
+    isEscapedAt = (text2, index) => {
+      let slashes = 0;
+      for (let at = index - 1; at >= 0 && text2[at] === "\\"; at--) {
+        slashes++;
+      }
+      return slashes % 2 === 1;
+    };
     removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
-      let inQuote = false;
+      let quote = "";
       for (let i = 0; i < line.length; i++) {
         const ch = line[i];
-        if (ch === '"') {
-          inQuote = !inQuote;
-        } else if (!inQuote && ch === ";") {
+        if ((ch === '"' || ch === "'") && !isEscapedAt(line, i)) {
+          if (quote === ch) {
+            quote = "";
+          } else if (quote === "") {
+            quote = ch;
+          }
+        } else if (quote === "" && ch === ";") {
           const uncommented = line.substring(0, i);
           return syntaxProfile.preserveLeadingWhitespace ? uncommented.trimEnd() : uncommented.trim();
         }
@@ -1776,9 +1811,10 @@ var init_command_text_service = __esm({
       const parts = [];
       let current = "";
       let quote = "";
+      let depth = 0;
       for (let i = 0; i < command.length; i++) {
         const char = command[i];
-        if ((char === '"' || char === "'") && command[i - 1] !== "\\") {
+        if ((char === '"' || char === "'") && !isEscapedAt(command, i)) {
           if (quote === char) {
             quote = "";
           } else if (quote === "") {
@@ -1787,9 +1823,16 @@ var init_command_text_service = __esm({
           current += char;
           continue;
         }
+        if (quote === "") {
+          if (char === "(" || char === "[" || char === "{") {
+            depth++;
+          } else if (char === ")" || char === "]" || char === "}") {
+            depth--;
+          }
+        }
         const next = command[i + 1];
         const after = command[i + 2];
-        if (quote === "" && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
+        if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
           const trimmed2 = current.trim();
           if (trimmed2 !== "") {
             parts.push(trimmed2);
@@ -1834,6 +1877,13 @@ var init_command_text_service = __esm({
       return output;
     };
     splitCommandIntoWords = (command) => {
+      const trimmed = command.trim();
+      const label = /^([$.?A-Z_a-z][\w$.?]*:)\s+/.exec(trimmed);
+      const labelPrefix = label?.[0] ?? "";
+      const remainder = trimmed.slice(labelPrefix.length);
+      if (/^includeasset\s*\(/i.test(remainder)) {
+        return [...label ? [label[1]] : [], "includeasset", remainder.slice("includeasset".length)];
+      }
       const words = [];
       let currentWord = "";
       let inQuotes = false;
@@ -1841,7 +1891,7 @@ var init_command_text_service = __esm({
       const trimmedCommand = command.trim();
       for (let i = 0; i < trimmedCommand.length; i++) {
         const char = trimmedCommand[i];
-        if ((char === '"' || char === "'") && (i === 0 || trimmedCommand[i - 1] !== "\\")) {
+        if ((char === '"' || char === "'") && !isEscapedAt(trimmedCommand, i)) {
           if (!inQuotes) {
             inQuotes = true;
             quoteChar = char;
@@ -2057,17 +2107,17 @@ var init_misc = __esm({
         );
       }
     };
-    registerMiscDirectives = (registry, context, enabledGroups = /* @__PURE__ */ new Set(["table", "diagnostic"])) => {
+    registerMiscDirectives = (registry2, context, enabledGroups = /* @__PURE__ */ new Set(["table", "diagnostic"])) => {
       if (enabledGroups.has("table")) {
-        registry.registerLowered("pulltable", context.table, handlePullTable);
-        registry.registerLowered("pushtable", context.table, handlePushTable);
-        registry.registerLowered("cleartable", context.table, handleClearTable);
-        registry.registerLowered("table", context.table, handleTable);
+        registry2.registerLowered("pulltable", context.table, handlePullTable);
+        registry2.registerLowered("pushtable", context.table, handlePushTable);
+        registry2.registerLowered("cleartable", context.table, handleClearTable);
+        registry2.registerLowered("table", context.table, handleTable);
       }
       if (enabledGroups.has("diagnostic")) {
-        registry.registerLowered("assert", context.diagnostic, handleAssert);
-        registry.registerLowered("error", context.diagnostic, handleError);
-        registry.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+        registry2.registerLowered("assert", context.diagnostic, handleAssert);
+        registry2.registerLowered("error", context.diagnostic, handleError);
+        registry2.registerLowered("warnpc", context.diagnostic, handleWarnpc);
       }
     };
   }
@@ -2152,10 +2202,10 @@ var init_namespace = __esm({
         enterNamespace(session, params[0]);
       }
     };
-    registerNamespaceDirectives = (registry, context) => {
-      registry.registerLowered("namespace", context, handleNamespace);
-      registry.registerLowered("pushns", context, handlePushNamespace);
-      registry.registerLowered("pullns", context, handlePullNamespace);
+    registerNamespaceDirectives = (registry2, context) => {
+      registry2.registerLowered("namespace", context, handleNamespace);
+      registry2.registerLowered("pushns", context, handlePushNamespace);
+      registry2.registerLowered("pullns", context, handlePullNamespace);
     };
   }
 });
@@ -2165,20 +2215,20 @@ var registerStructBinaryDirectives;
 var init_struct_binary = __esm({
   "packages/core/src/directives/struct-binary.ts"() {
     "use strict";
-    registerStructBinaryDirectives = (registry, context) => {
-      registry.register("struct", context, ({ session }, words) => {
+    registerStructBinaryDirectives = (registry2, context) => {
+      registry2.register("struct", context, ({ session }, words) => {
         session.structEngine.handleStruct(words);
       });
-      registry.register("endstruct", context, ({ session }, words) => {
+      registry2.register("endstruct", context, ({ session }, words) => {
         session.structEngine.handleEndStruct(words);
       });
-      registry.register("datastruct", context, ({ session }, words) => {
+      registry2.register("datastruct", context, ({ session }, words) => {
         session.structEngine.data.emit(words);
       });
-      registry.register("datastructs", context, ({ session }, words) => {
+      registry2.register("datastructs", context, ({ session }, words) => {
         session.structEngine.data.begin(words);
       });
-      registry.register("enddatastructs", context, ({ session }, words) => {
+      registry2.register("enddatastructs", context, ({ session }, words) => {
         session.structEngine.data.end(words);
       });
     };
@@ -2276,32 +2326,32 @@ var init_registry = __esm({
       }
     };
     createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
-      const registry = new DirectiveRegistry(directivePrefixes);
+      const registry2 = new DirectiveRegistry(directivePrefixes);
       const enabled = new Set(enabledGroups);
       if (enabled.has("include")) {
-        registerIncludeSourceDirectives(registry, contexts.includeSource);
+        registerIncludeSourceDirectives(registry2, contexts.includeSource);
       }
       if (enabled.has("memory")) {
-        registerFillPadDirectives(registry, contexts.fillPad);
+        registerFillPadDirectives(registry2, contexts.fillPad);
       }
       if (enabled.has("control")) {
-        registerFlowControlDirectives(registry, contexts.flowControl);
+        registerFlowControlDirectives(registry2, contexts.flowControl);
       }
       if (enabled.has("namespace")) {
-        registerNamespaceDirectives(registry, contexts.namespace);
+        registerNamespaceDirectives(registry2, contexts.namespace);
       }
       if (enabled.has("layout")) {
-        registerLayoutDirectives(registry, contexts.layout);
+        registerLayoutDirectives(registry2, contexts.layout);
       }
       if (enabled.has("data")) {
-        registerDataDirectives(registry, contexts.data);
+        registerDataDirectives(registry2, contexts.data);
       }
       if (enabled.has("struct")) {
-        registerStructBinaryDirectives(registry, contexts.struct);
+        registerStructBinaryDirectives(registry2, contexts.struct);
       }
       if (enabled.has("table") || enabled.has("diagnostic")) {
         registerMiscDirectives(
-          registry,
+          registry2,
           {
             table: contexts.table,
             diagnostic: contexts.diagnostic
@@ -2309,25 +2359,50 @@ var init_registry = __esm({
           enabled
         );
       }
-      return registry;
+      return registry2;
     };
   }
 });
 
 // packages/core/src/file-provider.ts
-import fs2 from "node:fs";
-import path from "node:path";
 function stripWrappingQuotes(filename) {
   if (filename.startsWith('"') && filename.endsWith('"') || filename.startsWith("'") && filename.endsWith("'") || filename.startsWith("`") && filename.endsWith("`")) {
     return filename.slice(1, -1);
   }
   return filename;
 }
-var NodeAssemblyFileProvider;
+var nodePath, nodeFs, virtualPath, path, requireNodeFs, NodeAssemblyFileProvider;
 var init_file_provider = __esm({
   "packages/core/src/file-provider.ts"() {
     "use strict";
+    nodePath = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:path");
+    nodeFs = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+    virtualPath = {
+      isAbsolute: (value) => value.startsWith("/"),
+      dirname: (value) => value.slice(0, value.lastIndexOf("/")) || ".",
+      resolve: (...parts) => {
+        const joined = parts.filter(Boolean).join("/");
+        const stack = [];
+        for (const part of joined.split("/")) {
+          if (part === "..") {
+            stack.pop();
+          } else if (part && part !== ".") {
+            stack.push(part);
+          }
+        }
+        return `/${stack.join("/")}`;
+      }
+    };
+    path = nodePath ?? virtualPath;
+    requireNodeFs = () => {
+      if (!nodeFs) {
+        throw new Error("NodeAssemblyFileProvider requires Node.js.");
+      }
+      return nodeFs;
+    };
     NodeAssemblyFileProvider = class {
+      /** Consumed paths for dependency snapshots; callers reusing a provider may clear this per build. */
+      readFiles = /* @__PURE__ */ new Set();
       /**
        * Find the first existing path: macro directory, current source directory, include paths, then cwd.
        * @param {string} filename Include path token, optionally quoted.
@@ -2335,12 +2410,13 @@ var init_file_provider = __esm({
        * @returns {string | undefined} First existing file identity, or undefined.
        */
       resolvePath(filename, options = {}) {
+        const fs15 = requireNodeFs();
         if (!filename) {
           return void 0;
         }
         const normalized = stripWrappingQuotes(filename);
         if (path.isAbsolute(normalized)) {
-          return fs2.existsSync(normalized) ? normalized : void 0;
+          return fs15.existsSync(normalized) ? normalized : void 0;
         }
         const candidates = /* @__PURE__ */ new Set();
         const baseDirectories = [
@@ -2353,38 +2429,42 @@ var init_file_provider = __esm({
           candidates.add(path.resolve(baseDirectory, normalized));
         }
         for (const candidate of candidates) {
-          if (fs2.existsSync(candidate)) {
+          if (fs15.existsSync(candidate)) {
             return candidate;
           }
         }
         return void 0;
       }
       stat(filePath) {
+        const fs15 = requireNodeFs();
         let st;
         try {
-          st = fs2.statSync(filePath);
+          st = fs15.statSync(filePath);
         } catch {
           return { exists: false, readable: false };
         }
         try {
-          fs2.accessSync(filePath, fs2.constants.R_OK);
+          fs15.accessSync(filePath, fs15.constants.R_OK);
           return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
         } catch {
           return { exists: true, readable: false, mtimeMs: st.mtimeMs };
         }
       }
       readFile(filePath) {
-        return new Uint8Array(fs2.readFileSync(filePath));
+        const fs15 = requireNodeFs();
+        this.readFiles.add(filePath);
+        return new Uint8Array(fs15.readFileSync(filePath));
       }
       readTextFile(filePath, encoding = "utf8") {
-        return fs2.readFileSync(filePath, encoding);
+        const fs15 = requireNodeFs();
+        this.readFiles.add(filePath);
+        return fs15.readFileSync(filePath, encoding);
       }
     };
   }
 });
 
 // packages/core/src/internal-instrumentation.ts
-import { performance as performance2 } from "node:perf_hooks";
 function sampleMemory(metrics) {
   const memory = process.memoryUsage();
   metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
@@ -2410,11 +2490,11 @@ function measureInternalPhase(name, callback) {
   if (!metrics) {
     return callback();
   }
-  const start = performance2.now();
+  const start = performance.now();
   try {
     return callback();
   } finally {
-    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance2.now() - start;
+    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance.now() - start;
     sampleMemory(metrics);
   }
 }
@@ -2422,6 +2502,207 @@ var activeInstrumentation;
 var init_internal_instrumentation = __esm({
   "packages/core/src/internal-instrumentation.ts"() {
     "use strict";
+  }
+});
+
+// packages/core/src/ir/asset-call.ts
+function parseAssetCall(command, line) {
+  const leading = command.length - command.trimStart().length;
+  const trimmed = command.slice(leading);
+  const label = /^[\w$.?]+:/.exec(trimmed);
+  let callStart = leading;
+  if (label && /\s/.test(trimmed[label[0].length] ?? "")) {
+    callStart += label[0].length;
+    while (/\s/.test(command[callStart] ?? "")) {
+      callStart++;
+    }
+  }
+  const prefix = /^includeasset\s*\(/i.exec(command.slice(callStart));
+  if (!prefix) {
+    return void 0;
+  }
+  let at = callStart + prefix[0].length;
+  const span = (start, end) => createSourceSpan(start, end, line);
+  const fail = (message) => {
+    throw new Error(`includeAsset at column ${at + 1}: ${message}`);
+  };
+  const skip = () => {
+    while (/\s/.test(command[at] ?? "") && at < command.length) {
+      at++;
+    }
+  };
+  const string2 = () => {
+    const start = at;
+    const quote = command[at++];
+    let value2 = "";
+    while (at < command.length) {
+      const character = command[at++];
+      if (character === quote) {
+        return { kind: "string", value: value2, span: span(start, at) };
+      }
+      if (character === "\\") {
+        const escaped = command[at++];
+        if (escaped === void 0) {
+          fail("unterminated string escape");
+        }
+        if (escaped === quote || escaped === "\\") {
+          value2 += escaped;
+        } else if (escaped === "n") {
+          value2 += "\n";
+        } else if (escaped === "t") {
+          value2 += "	";
+        } else {
+          value2 += `\\${escaped}`;
+        }
+      } else {
+        value2 += character;
+      }
+    }
+    return fail("unterminated string");
+  };
+  const value = () => {
+    skip();
+    const start = at;
+    const character = command[at];
+    if (character === '"' || character === "'") {
+      return string2();
+    }
+    if (character === "[") {
+      at++;
+      const items = [];
+      skip();
+      while (command[at] !== "]") {
+        items.push(value());
+        skip();
+        if (command[at] === "]") {
+          break;
+        }
+        if (command[at++] !== ",") {
+          fail("expected ',' in array");
+        }
+        skip();
+      }
+      if (command[at++] !== "]") {
+        fail("unterminated array");
+      }
+      return { kind: "array", items, span: span(start, at) };
+    }
+    if (character === "{") {
+      at++;
+      const entries3 = {};
+      skip();
+      while (command[at] !== "}") {
+        let key3;
+        if (command[at] === '"' || command[at] === "'") {
+          key3 = string2().value;
+        } else {
+          const match = /^[A-Z_a-z][\w-]*/.exec(command.slice(at));
+          if (!match) {
+            return fail("expected object key");
+          }
+          key3 = match[0];
+          at += key3.length;
+        }
+        skip();
+        if (command[at++] !== ":") {
+          fail("expected ':' after object key");
+        }
+        if (Object.hasOwn(entries3, key3)) {
+          fail(`duplicate object key '${key3}'`);
+        }
+        entries3[key3] = value();
+        skip();
+        if (command[at] === "}") {
+          break;
+        }
+        if (command[at++] !== ",") {
+          fail("expected ',' in object");
+        }
+        skip();
+      }
+      if (command[at++] !== "}") {
+        fail("unterminated object");
+      }
+      return { kind: "object", entries: entries3, span: span(start, at) };
+    }
+    let parens = 0;
+    while (at < command.length) {
+      const next = command[at];
+      if (next === "(") {
+        parens++;
+      } else if (next === ")") {
+        if (parens === 0) {
+          break;
+        }
+        parens--;
+      } else if (parens === 0 && (next === "," || next === "]" || next === "}")) {
+        break;
+      }
+      at++;
+    }
+    if (parens !== 0) {
+      fail("unbalanced numeric expression");
+    }
+    const expression = command.slice(start, at).trim();
+    if (expression === "true" || expression === "false") {
+      return { kind: "boolean", value: expression === "true", span: span(start, at) };
+    }
+    if (!expression) {
+      fail("expected value");
+    }
+    return { kind: "number", expression, span: span(start, at) };
+  };
+  const positional = [];
+  const options = {};
+  let named = false;
+  while (true) {
+    skip();
+    if (command[at] === ")") {
+      break;
+    }
+    const namedMatch = /^([A-Z_a-z][\w-]*)\s*:/.exec(command.slice(at));
+    if (namedMatch) {
+      named = true;
+      at += namedMatch[0].length;
+      if (Object.hasOwn(options, namedMatch[1])) {
+        fail(`duplicate option '${namedMatch[1]}'`);
+      }
+      options[namedMatch[1]] = value();
+    } else {
+      if (named) {
+        fail("positional argument after named argument");
+      }
+      positional.push(value());
+    }
+    skip();
+    if (command[at] === ")") {
+      break;
+    }
+    if (command[at++] !== ",") {
+      fail("expected ',' between arguments");
+    }
+  }
+  if (command[at++] !== ")") {
+    fail("unterminated call");
+  }
+  skip();
+  if (at !== command.length) {
+    fail("unexpected text after call");
+  }
+  if (positional.length !== 2 || positional[0].kind !== "string" || positional[1].kind !== "string") {
+    fail("expected exactly two leading string arguments");
+  }
+  return {
+    path: positional[0],
+    format: positional[1],
+    options,
+    span: span(callStart, at)
+  };
+}
+var init_asset_call = __esm({
+  "packages/core/src/ir/asset-call.ts"() {
+    "use strict";
+    init_source_location();
   }
 });
 
@@ -2459,7 +2740,7 @@ function createNormalizedCommand(raw, normalized, words, file, line, collectSour
     keyword,
     labelName: deriveLabelName(keyword),
     assignmentTarget: deriveAssignmentTarget(words),
-    parsed: deriveCommandSemantics(command, words)
+    parsed: deriveCommandSemantics(command, words, line, raw)
   };
 }
 function cloneNormalizedCommand(command) {
@@ -2488,7 +2769,12 @@ function setCommandWords(command, words, normalized) {
   }
   command.labelName = deriveLabelName(command.keyword);
   command.assignmentTarget = deriveAssignmentTarget(words);
-  command.parsed = deriveCommandSemantics(command.command, words);
+  command.parsed = deriveCommandSemantics(
+    command.command,
+    words,
+    command.source.line,
+    command.source.raw
+  );
   command.kind = classifyCommand(command.command, words);
   return command;
 }
@@ -2552,10 +2838,13 @@ function deriveAssignmentTarget(words) {
   }
   return void 0;
 }
-function deriveCommandSemantics(command, words) {
+function deriveCommandSemantics(command, words, line, raw = command) {
   const keyword = (words[0] ?? "").toLowerCase();
   const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
   const semantics = {};
+  if (keyword === "includeasset") {
+    semantics.includeAsset = parseAssetCall(raw, line);
+  }
   if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
     semantics.condition = {
       expression: parseExpressionNode(words.slice(1).join(" "))
@@ -2719,6 +3008,7 @@ var init_normalized_command = __esm({
     "use strict";
     init_internal_instrumentation();
     init_source_location();
+    init_asset_call();
     init_expression_node();
     EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
     EMPTY_TOKEN_SPANS = Object.freeze([]);
@@ -4654,6 +4944,10 @@ var init_environment = __esm({
       #addressSpaces;
       #outputFormats;
       #directiveSets;
+      #assetFormats;
+      #assetTransforms;
+      #assetFormatAliases;
+      #assetTransformAliases;
       #expressionSets;
       #lifecycles;
       #targets;
@@ -4674,6 +4968,8 @@ var init_environment = __esm({
         this.#addressSpaces = toMap(contributions.addressSpaces);
         this.#outputFormats = toMap(contributions.outputFormats);
         this.#directiveSets = toMap(contributions.directiveSets);
+        this.#assetFormats = toMap(contributions.assetFormats ?? []);
+        this.#assetTransforms = toMap(contributions.assetTransforms ?? []);
         this.#expressionSets = toMap(contributions.expressionSets);
         this.#lifecycles = toMap(contributions.lifecycles);
         this.#targets = toMap(contributions.targets);
@@ -4681,8 +4977,8 @@ var init_environment = __esm({
         const targetAliases = /* @__PURE__ */ new Map();
         for (const target of contributions.targets) {
           for (const alias of [target.contributionId, ...target.value.aliases ?? []]) {
-            const key2 = canonical(alias);
-            const previous = targetAliases.get(key2);
+            const key3 = canonical(alias);
+            const previous = targetAliases.get(key3);
             if (previous && previous !== target.contributionId) {
               const previousOwner = this.#targets.get(canonical(previous))?.pluginId;
               throw new PluginError(
@@ -4695,16 +4991,103 @@ var init_environment = __esm({
                 }
               );
             }
-            targetAliases.set(key2, target.contributionId);
+            targetAliases.set(key3, target.contributionId);
           }
         }
         this.#targetAliases = targetAliases;
+        const assetAliases = (records) => {
+          const byTarget = /* @__PURE__ */ new Map();
+          for (const target of contributions.targets) {
+            const aliases2 = /* @__PURE__ */ new Map();
+            for (const record3 of records) {
+              for (const targetId of record3.value.targets ?? []) {
+                if (!this.#targets.has(canonical(targetId))) {
+                  targetInvalid(
+                    target,
+                    `asset contribution '${record3.contributionId}' names unknown target '${targetId}'`
+                  );
+                }
+              }
+              if (record3.value.targets && !record3.value.targets.some((id) => canonical(id) === canonical(target.contributionId))) {
+                continue;
+              }
+              for (const alias of record3.value.aliases ?? []) {
+                const key3 = canonical(alias);
+                const previous = aliases2.get(key3);
+                if (previous && previous !== record3.contributionId) {
+                  throw new PluginError(
+                    `Asset alias '${alias}' is ambiguous on '${target.contributionId}'.`,
+                    {
+                      code: "PLUGIN_ALIAS_DUPLICATE",
+                      pluginId: record3.pluginId,
+                      contributionId: record3.contributionId,
+                      targetId: target.contributionId
+                    }
+                  );
+                }
+                aliases2.set(key3, record3.contributionId);
+              }
+            }
+            byTarget.set(target.contributionId, aliases2);
+          }
+          return byTarget;
+        };
+        this.#assetFormatAliases = assetAliases(contributions.assetFormats ?? []);
+        this.#assetTransformAliases = assetAliases(contributions.assetTransforms ?? []);
         const aliasesByTarget = /* @__PURE__ */ new Map();
         for (const target of contributions.targets) {
           aliasesByTarget.set(target.contributionId, this.#validateTarget(target));
         }
         this.#architectureAliasesByTarget = aliasesByTarget;
         Object.freeze(this);
+      }
+      /** Resolve a globally named or target-scoped short format ID.
+       * @param {string} id Full ID or short alias.
+       * @param {string} targetId Selected target.
+       * @returns {Readonly<AssetFormatContribution> | undefined} Compatible format.
+       */
+      getAssetFormat(id, targetId) {
+        const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
+        const full = this.#assetFormats.has(canonical(id)) ? id : this.#assetFormatAliases.get(canonicalTarget)?.get(canonical(id)) ?? id;
+        const value = this.#assetFormats.get(canonical(full))?.value;
+        if (value?.targets && !value.targets.some((target) => canonical(target) === canonical(canonicalTarget))) {
+          return void 0;
+        }
+        return value;
+      }
+      /** List formats compatible with a target for editor completion and discovery.
+       * @param {string} targetId Selected target.
+       * @returns {readonly Readonly<AssetFormatContribution>[]} Canonical registrations.
+       */
+      getAssetFormats(targetId) {
+        const target = this.getTarget(targetId)?.id ?? targetId;
+        return [...this.#assetFormats.values()].map((record3) => record3.value).filter(
+          (format) => !format.targets || format.targets.some((supported) => canonical(supported) === canonical(target))
+        );
+      }
+      /** Resolve a globally named or target-scoped short transform ID.
+       * @param {string} id Full ID or short alias.
+       * @param {string} targetId Selected target.
+       * @returns {Readonly<AssetTransformContribution> | undefined} Compatible transform.
+       */
+      getAssetTransform(id, targetId) {
+        const canonicalTarget = this.getTarget(targetId)?.id ?? targetId;
+        const full = this.#assetTransforms.has(canonical(id)) ? id : this.#assetTransformAliases.get(canonicalTarget)?.get(canonical(id)) ?? id;
+        const value = this.#assetTransforms.get(canonical(full))?.value;
+        if (value?.targets && !value.targets.some((target) => canonical(target) === canonical(canonicalTarget))) {
+          return void 0;
+        }
+        return value;
+      }
+      /** List reversible transforms compatible with a target for editor completion.
+       * @param {string} targetId Selected target.
+       * @returns {readonly Readonly<AssetTransformContribution>[]} Canonical registrations.
+       */
+      getAssetTransforms(targetId) {
+        const target = this.getTarget(targetId)?.id ?? targetId;
+        return [...this.#assetTransforms.values()].map((record3) => record3.value).filter(
+          (transform) => !transform.targets || transform.targets.some((supported) => canonical(supported) === canonical(target))
+        );
       }
       /**
        * Ensures a target's referenced contributions exist and that aliases, directive
@@ -4725,15 +5108,15 @@ var init_environment = __esm({
           targetInvalid(targetRecord, "defaultOutputExtension must begin with '.'.");
         }
         const architectureIds = new Set(target.architectures.map(canonical));
-        const aliases = /* @__PURE__ */ new Map();
+        const aliases2 = /* @__PURE__ */ new Map();
         for (const architectureId of architectureIds) {
           const record3 = this.#architectures.get(architectureId);
           if (!record3) {
             targetInvalid(targetRecord, `missing architecture contribution '${architectureId}'.`);
           }
           for (const alias of [record3.value.id, ...record3.value.aliases ?? []]) {
-            const key2 = canonical(alias);
-            const previous = aliases.get(key2);
+            const key3 = canonical(alias);
+            const previous = aliases2.get(key3);
             if (previous && previous !== architectureId) {
               const previousOwner = this.#architectures.get(previous)?.pluginId;
               throw new PluginError(
@@ -4746,10 +5129,10 @@ var init_environment = __esm({
                 }
               );
             }
-            aliases.set(key2, architectureId);
+            aliases2.set(key3, architectureId);
           }
         }
-        const defaultArchitecture = aliases.get(canonical(target.defaultArchitecture));
+        const defaultArchitecture = aliases2.get(canonical(target.defaultArchitecture));
         if (!defaultArchitecture || !architectureIds.has(defaultArchitecture)) {
           targetInvalid(
             targetRecord,
@@ -4764,15 +5147,15 @@ var init_environment = __esm({
           }
           for (const directive2 of set.value.directives) {
             for (const keyword of directive2.keywords) {
-              const key2 = canonical(keyword);
-              const previous = directiveKeywords.get(key2);
+              const key3 = canonical(keyword);
+              const previous = directiveKeywords.get(key3);
               if (previous) {
                 targetInvalid(
                   targetRecord,
                   `directive keyword '${keyword}' is supplied by '${previous.id}' (${previous.pluginId}) and '${directive2.id}' (${set.pluginId}).`
                 );
               }
-              directiveKeywords.set(key2, { id: directive2.id, pluginId: set.pluginId });
+              directiveKeywords.set(key3, { id: directive2.id, pluginId: set.pluginId });
             }
           }
         }
@@ -4784,15 +5167,15 @@ var init_environment = __esm({
           }
           for (const expression of set.value.functions) {
             for (const name of [expression.name, ...expression.aliases ?? []]) {
-              const key2 = canonical(name);
-              const previous = expressionNames.get(key2);
+              const key3 = canonical(name);
+              const previous = expressionNames.get(key3);
               if (previous) {
                 targetInvalid(
                   targetRecord,
                   `expression function '${name}' is supplied by '${previous.name}' (${previous.pluginId}) and '${expression.name}' (${set.pluginId}).`
                 );
               }
-              expressionNames.set(key2, { name: expression.name, pluginId: set.pluginId });
+              expressionNames.set(key3, { name: expression.name, pluginId: set.pluginId });
             }
           }
         }
@@ -4801,7 +5184,7 @@ var init_environment = __esm({
             targetInvalid(targetRecord, `missing lifecycle contribution '${lifecycleId}'.`);
           }
         }
-        return aliases;
+        return aliases2;
       }
       /**
        * Resolves a target contribution id or alias to the canonical target id.
@@ -4901,8 +5284,8 @@ var init_environment = __esm({
        * @returns {string | undefined} Owning plugin id, or `undefined` if unknown.
        */
       getContributionOwner(id) {
-        const key2 = canonical(id);
-        return this.#architectures.get(key2)?.pluginId ?? this.#addressSpaces.get(key2)?.pluginId ?? this.#outputFormats.get(key2)?.pluginId ?? this.#directiveSets.get(key2)?.pluginId ?? this.#expressionSets.get(key2)?.pluginId ?? this.#lifecycles.get(key2)?.pluginId ?? this.#targets.get(key2)?.pluginId;
+        const key3 = canonical(id);
+        return this.#architectures.get(key3)?.pluginId ?? this.#addressSpaces.get(key3)?.pluginId ?? this.#outputFormats.get(key3)?.pluginId ?? this.#directiveSets.get(key3)?.pluginId ?? this.#expressionSets.get(key3)?.pluginId ?? this.#lifecycles.get(key3)?.pluginId ?? this.#targets.get(key3)?.pluginId;
       }
       /**
        * Lifecycle contributions wired to a target, sorted by registration order.
@@ -4991,9 +5374,9 @@ var require_constants = __commonJS({
 var require_debug = __commonJS({
   "node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
-    var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
+    var debug5 = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
-    module.exports = debug;
+    module.exports = debug5;
   }
 });
 
@@ -5006,7 +5389,7 @@ var require_re = __commonJS({
       MAX_SAFE_BUILD_LENGTH,
       MAX_LENGTH
     } = require_constants();
-    var debug = require_debug();
+    var debug5 = require_debug();
     exports = module.exports = {};
     var re = exports.re = [];
     var safeRe = exports.safeRe = [];
@@ -5029,7 +5412,7 @@ var require_re = __commonJS({
     var createToken = (name, value, isGlobal) => {
       const safe = makeSafeRegex(value);
       const index = R++;
-      debug(name, index, value);
+      debug5(name, index, value);
       t[name] = index;
       src[index] = value;
       safeSrc[index] = safe;
@@ -5133,7 +5516,7 @@ var require_identifiers = __commonJS({
 var require_semver = __commonJS({
   "node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
-    var debug = require_debug();
+    var debug5 = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
     var { safeRe: re, t } = require_re();
     var parseOptions = require_parse_options();
@@ -5167,7 +5550,7 @@ var require_semver = __commonJS({
             `version is longer than ${MAX_LENGTH} characters`
           );
         }
-        debug("SemVer", version, options);
+        debug5("SemVer", version, options);
         this.options = options;
         this.loose = !!options.loose;
         this.includePrerelease = !!options.includePrerelease;
@@ -5215,7 +5598,7 @@ var require_semver = __commonJS({
         return this.version;
       }
       compare(other) {
-        debug("SemVer.compare", this.version, this.options, other);
+        debug5("SemVer.compare", this.version, this.options, other);
         if (!(other instanceof _SemVer)) {
           if (typeof other === "string" && other === this.version) {
             return 0;
@@ -5266,7 +5649,7 @@ var require_semver = __commonJS({
         do {
           const a = this.prerelease[i];
           const b = other.prerelease[i];
-          debug("prerelease compare", i, a, b);
+          debug5("prerelease compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -5288,7 +5671,7 @@ var require_semver = __commonJS({
         do {
           const a = this.build[i];
           const b = other.build[i];
-          debug("build compare", i, a, b);
+          debug5("build compare", i, a, b);
           if (a === void 0 && b === void 0) {
             return 0;
           } else if (b === void 0) {
@@ -5498,7 +5881,7 @@ var require_diff = __commonJS({
   "node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
-    var diff = (version1, version2) => {
+    var diff2 = (version1, version2) => {
       const v1 = parse(version1, null, true);
       const v2 = parse(version2, null, true);
       const comparison = v1.compare(v2);
@@ -5533,7 +5916,7 @@ var require_diff = __commonJS({
       }
       return "prerelease";
     };
-    module.exports = diff;
+    module.exports = diff2;
   }
 });
 
@@ -5850,27 +6233,27 @@ var require_lrucache = __commonJS({
         this.max = 1e3;
         this.map = /* @__PURE__ */ new Map();
       }
-      get(key2) {
-        const value = this.map.get(key2);
+      get(key3) {
+        const value = this.map.get(key3);
         if (value === void 0) {
           return void 0;
         } else {
-          this.map.delete(key2);
-          this.map.set(key2, value);
+          this.map.delete(key3);
+          this.map.set(key3, value);
           return value;
         }
       }
-      delete(key2) {
-        return this.map.delete(key2);
+      delete(key3) {
+        return this.map.delete(key3);
       }
-      set(key2, value) {
-        const deleted = this.delete(key2);
+      set(key3, value) {
+        const deleted = this.delete(key3);
         if (!deleted && value !== void 0) {
           if (this.map.size >= this.max) {
             const firstKey = this.map.keys().next().value;
             this.delete(firstKey);
           }
-          this.map.set(key2, value);
+          this.map.set(key3, value);
         }
         return this;
       }
@@ -5959,21 +6342,21 @@ var require_range = __commonJS({
         const loose = this.options.loose;
         const hr = loose ? re[t.HYPHENRANGELOOSE] : re[t.HYPHENRANGE];
         range = range.replace(hr, hyphenReplace(this.options.includePrerelease));
-        debug("hyphen replace", range);
+        debug5("hyphen replace", range);
         range = range.replace(re[t.COMPARATORTRIM], comparatorTrimReplace);
-        debug("comparator trim", range);
+        debug5("comparator trim", range);
         range = range.replace(re[t.TILDETRIM], tildeTrimReplace);
-        debug("tilde trim", range);
+        debug5("tilde trim", range);
         range = range.replace(re[t.CARETTRIM], caretTrimReplace);
-        debug("caret trim", range);
+        debug5("caret trim", range);
         let rangeList = range.split(" ").map((comp) => parseComparator(comp, this.options)).join(" ").split(/\s+/).map((comp) => replaceGTE0(comp, this.options));
         if (loose) {
           rangeList = rangeList.filter((comp) => {
-            debug("loose invalid filter", comp, this.options);
+            debug5("loose invalid filter", comp, this.options);
             return !!comp.match(re[t.COMPARATORLOOSE]);
           });
         }
-        debug("range list", rangeList);
+        debug5("range list", rangeList);
         const rangeMap = /* @__PURE__ */ new Map();
         const comparators = rangeList.map((comp) => new Comparator(comp, this.options));
         for (const comp of comparators) {
@@ -6028,7 +6411,7 @@ var require_range = __commonJS({
     var cache = new LRU();
     var parseOptions = require_parse_options();
     var Comparator = require_comparator();
-    var debug = require_debug();
+    var debug5 = require_debug();
     var SemVer = require_semver();
     var {
       safeRe: re,
@@ -6056,15 +6439,15 @@ var require_range = __commonJS({
     };
     var parseComparator = (comp, options) => {
       comp = comp.replace(re[t.BUILD], "");
-      debug("comp", comp, options);
+      debug5("comp", comp, options);
       comp = replaceCarets(comp, options);
-      debug("caret", comp);
+      debug5("caret", comp);
       comp = replaceTildes(comp, options);
-      debug("tildes", comp);
+      debug5("tildes", comp);
       comp = replaceXRanges(comp, options);
-      debug("xrange", comp);
+      debug5("xrange", comp);
       comp = replaceStars(comp, options);
-      debug("stars", comp);
+      debug5("stars", comp);
       return comp;
     };
     var isX = (id) => !id || id.toLowerCase() === "x" || id === "*";
@@ -6076,7 +6459,7 @@ var require_range = __commonJS({
       const r = options.loose ? re[t.TILDELOOSE] : re[t.TILDE];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug("tilde", comp, _, M, m, p, pr);
+        debug5("tilde", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -6085,12 +6468,12 @@ var require_range = __commonJS({
         } else if (isX(p)) {
           ret = `>=${M}.${m}.0${z} <${M}.${+m + 1}.0-0`;
         } else if (pr) {
-          debug("replaceTilde pr", pr);
+          debug5("replaceTilde pr", pr);
           ret = `>=${M}.${m}.${p}-${pr} <${M}.${+m + 1}.0-0`;
         } else {
           ret = `>=${M}.${m}.${p} <${M}.${+m + 1}.0-0`;
         }
-        debug("tilde return", ret);
+        debug5("tilde return", ret);
         return ret;
       });
     };
@@ -6098,11 +6481,11 @@ var require_range = __commonJS({
       return comp.trim().split(/\s+/).map((c) => replaceCaret(c, options)).join(" ");
     };
     var replaceCaret = (comp, options) => {
-      debug("caret", comp, options);
+      debug5("caret", comp, options);
       const r = options.loose ? re[t.CARETLOOSE] : re[t.CARET];
       const z = options.includePrerelease ? "-0" : "";
       return comp.replace(r, (_, M, m, p, pr) => {
-        debug("caret", comp, _, M, m, p, pr);
+        debug5("caret", comp, _, M, m, p, pr);
         let ret;
         if (isX(M)) {
           ret = "";
@@ -6115,7 +6498,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.0${z} <${+M + 1}.0.0-0`;
           }
         } else if (pr) {
-          debug("replaceCaret pr", pr);
+          debug5("replaceCaret pr", pr);
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p}-${pr} <${M}.${m}.${+p + 1}-0`;
@@ -6126,7 +6509,7 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p}-${pr} <${+M + 1}.0.0-0`;
           }
         } else {
-          debug("no pr");
+          debug5("no pr");
           if (M === "0") {
             if (m === "0") {
               ret = `>=${M}.${m}.${p} <${M}.${m}.${+p + 1}-0`;
@@ -6137,19 +6520,19 @@ var require_range = __commonJS({
             ret = `>=${M}.${m}.${p} <${+M + 1}.0.0-0`;
           }
         }
-        debug("caret return", ret);
+        debug5("caret return", ret);
         return ret;
       });
     };
     var replaceXRanges = (comp, options) => {
-      debug("replaceXRanges", comp, options);
+      debug5("replaceXRanges", comp, options);
       return comp.split(/\s+/).map((c) => replaceXRange(c, options)).join(" ");
     };
     var replaceXRange = (comp, options) => {
       comp = comp.trim();
       const r = options.loose ? re[t.XRANGELOOSE] : re[t.XRANGE];
       return comp.replace(r, (ret, gtlt, M, m, p, pr) => {
-        debug("xRange", comp, ret, gtlt, M, m, p, pr);
+        debug5("xRange", comp, ret, gtlt, M, m, p, pr);
         if (invalidXRangeOrder(M, m, p)) {
           return comp;
         }
@@ -6199,16 +6582,16 @@ var require_range = __commonJS({
         } else if (xp) {
           ret = `>=${M}.${m}.0${pr} <${M}.${+m + 1}.0-0`;
         }
-        debug("xRange return", ret);
+        debug5("xRange return", ret);
         return ret;
       });
     };
     var replaceStars = (comp, options) => {
-      debug("replaceStars", comp, options);
+      debug5("replaceStars", comp, options);
       return comp.trim().replace(re[t.STAR], "");
     };
     var replaceGTE0 = (comp, options) => {
-      debug("replaceGTE0", comp, options);
+      debug5("replaceGTE0", comp, options);
       return comp.trim().replace(re[options.includePrerelease ? t.GTE0PRE : t.GTE0], "");
     };
     var hyphenReplace = (incPr) => ($0, from, fM, fm, fp, fpr, fb, to, tM, tm, tp, tpr) => {
@@ -6246,7 +6629,7 @@ var require_range = __commonJS({
       }
       if (version.prerelease.length && !options.includePrerelease) {
         for (let i = 0; i < set.length; i++) {
-          debug(set[i].semver);
+          debug5(set[i].semver);
           if (set[i].semver === Comparator.ANY) {
             continue;
           }
@@ -6283,7 +6666,7 @@ var require_comparator = __commonJS({
           }
         }
         comp = comp.trim().split(/\s+/).join(" ");
-        debug("comparator", comp, options);
+        debug5("comparator", comp, options);
         this.options = options;
         this.loose = !!options.loose;
         this.parse(comp);
@@ -6292,7 +6675,7 @@ var require_comparator = __commonJS({
         } else {
           this.value = this.operator + this.semver.version;
         }
-        debug("comp", this);
+        debug5("comp", this);
       }
       parse(comp) {
         const r = this.options.loose ? re[t.COMPARATORLOOSE] : re[t.COMPARATOR];
@@ -6314,7 +6697,7 @@ var require_comparator = __commonJS({
         return this.value;
       }
       test(version) {
-        debug("Comparator.test", version, this.options.loose);
+        debug5("Comparator.test", version, this.options.loose);
         if (this.semver === ANY || version === ANY) {
           return true;
         }
@@ -6371,7 +6754,7 @@ var require_comparator = __commonJS({
     var parseOptions = require_parse_options();
     var { safeRe: re, t } = require_re();
     var cmp = require_cmp();
-    var debug = require_debug();
+    var debug5 = require_debug();
     var SemVer = require_semver();
     var Range = require_range();
   }
@@ -6864,7 +7247,7 @@ var require_semver2 = __commonJS({
     var valid = require_valid();
     var clean = require_clean();
     var inc = require_inc();
-    var diff = require_diff();
+    var diff2 = require_diff();
     var major = require_major();
     var minor = require_minor();
     var patch = require_patch();
@@ -6903,7 +7286,7 @@ var require_semver2 = __commonJS({
       valid,
       clean,
       inc,
-      diff,
+      diff: diff2,
       major,
       minor,
       patch,
@@ -7122,11 +7505,11 @@ var init_manager = __esm({
       }
       return id;
     };
-    validateAliases = (aliases, pluginId, contributionId) => {
-      if (aliases === void 0) {
+    validateAliases = (aliases2, pluginId, contributionId) => {
+      if (aliases2 === void 0) {
         return;
       }
-      if (!Array.isArray(aliases) || aliases.some((alias) => typeof alias !== "string" || alias === "")) {
+      if (!Array.isArray(aliases2) || aliases2.some((alias) => typeof alias !== "string" || alias === "")) {
         throw new PluginError(`Contribution '${contributionId}' has invalid aliases.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
           pluginId,
@@ -7144,6 +7527,8 @@ var init_manager = __esm({
       #addressSpaces = [];
       #outputFormats = [];
       #directiveSets = [];
+      #assetFormats = [];
+      #assetTransforms = [];
       #expressionSets = [];
       #lifecycles = [];
       #targets = [];
@@ -7329,6 +7714,8 @@ var init_manager = __esm({
           addressSpaces: [],
           outputFormats: [],
           directiveSets: [],
+          assetFormats: [],
+          assetTransforms: [],
           expressionSets: [],
           lifecycles: [],
           targets: []
@@ -7360,6 +7747,8 @@ var init_manager = __esm({
           registerAddressSpace: (contribution) => add(transaction.addressSpaces, contribution),
           registerOutputFormat: (contribution) => add(transaction.outputFormats, contribution),
           registerDirectiveSet: (contribution) => add(transaction.directiveSets, contribution),
+          registerAssetFormat: (contribution) => add(transaction.assetFormats, contribution),
+          registerAssetTransform: (contribution) => add(transaction.assetTransforms, contribution),
           registerExpressionSet: (contribution) => add(transaction.expressionSets, contribution),
           registerLifecycle: (contribution) => add(transaction.lifecycles, contribution),
           registerTarget: (contribution) => add(transaction.targets, contribution)
@@ -7382,6 +7771,8 @@ var init_manager = __esm({
           ...transaction.addressSpaces,
           ...transaction.outputFormats,
           ...transaction.directiveSets,
+          ...transaction.assetFormats,
+          ...transaction.assetTransforms,
           ...transaction.expressionSets,
           ...transaction.lifecycles,
           ...transaction.targets
@@ -7463,6 +7854,26 @@ var init_manager = __esm({
             }
           }
         }
+        for (const record3 of transaction.assetFormats) {
+          validateAliases(record3.value.aliases, transaction.manifest.id, record3.contributionId);
+          const optionSchema = record3.value.optionSchema;
+          const invalidOptionSchema = optionSchema !== void 0 && (!isRecord(optionSchema) || Object.values(optionSchema).some(
+            (field) => !isRecord(field) || typeof field.summary !== "string" || field.valueSyntax !== void 0 && typeof field.valueSyntax !== "string"
+          ));
+          if (!import_semver.default.valid(record3.value.version) || typeof record3.value.convert !== "function" || invalidOptionSchema || record3.value.resourcePaths !== void 0 && typeof record3.value.resourcePaths !== "function" || record3.value.targets !== void 0 && (!isArray(record3.value.targets) || record3.value.targets.some((target) => typeof target !== "string"))) {
+            this.#malformed(transaction, record3);
+          }
+        }
+        for (const record3 of transaction.assetTransforms) {
+          validateAliases(record3.value.aliases, transaction.manifest.id, record3.contributionId);
+          const schema = record3.value.optionSchema;
+          const invalidSchema = schema !== void 0 && (!isRecord(schema) || Object.values(schema).some(
+            (field) => !isRecord(field) || !["string", "integer", "boolean", "enum"].includes(String(field.type)) || field.type === "enum" && !Array.isArray(field.enum) || field.required !== void 0 && typeof field.required !== "boolean" || field.resource !== void 0 && (field.resource !== true || field.type !== "string") || field.minimum !== void 0 && (typeof field.minimum !== "number" || !Number.isFinite(field.minimum)) || field.maximum !== void 0 && (typeof field.maximum !== "number" || !Number.isFinite(field.maximum)) || field.enum !== void 0 && !Array.isArray(field.enum)
+          ));
+          if (!import_semver.default.valid(record3.value.version) || typeof record3.value.encode !== "function" || typeof record3.value.decode !== "function" || invalidSchema || record3.value.validateOptions !== void 0 && typeof record3.value.validateOptions !== "function" || record3.value.resourcePaths !== void 0 && typeof record3.value.resourcePaths !== "function" || record3.value.targets !== void 0 && (!isArray(record3.value.targets) || record3.value.targets.some((target) => typeof target !== "string"))) {
+            this.#malformed(transaction, record3);
+          }
+        }
         for (const record3 of transaction.lifecycles) {
           if (typeof record3.value.create !== "function") {
             this.#malformed(transaction, record3);
@@ -7492,6 +7903,8 @@ var init_manager = __esm({
           transaction.addressSpaces,
           transaction.outputFormats,
           transaction.directiveSets,
+          transaction.assetFormats,
+          transaction.assetTransforms,
           transaction.expressionSets,
           transaction.lifecycles,
           transaction.targets
@@ -7522,6 +7935,12 @@ var init_manager = __esm({
         }
         for (const record3 of transaction.directiveSets) {
           this.#directiveSets.push(record3);
+        }
+        for (const record3 of transaction.assetFormats) {
+          this.#assetFormats.push(record3);
+        }
+        for (const record3 of transaction.assetTransforms) {
+          this.#assetTransforms.push(record3);
         }
         for (const record3 of transaction.expressionSets) {
           this.#expressionSets.push(record3);
@@ -7554,6 +7973,8 @@ var init_manager = __esm({
           addressSpaces: Object.freeze([...this.#addressSpaces]),
           outputFormats: Object.freeze([...this.#outputFormats]),
           directiveSets: Object.freeze([...this.#directiveSets]),
+          assetFormats: Object.freeze([...this.#assetFormats]),
+          assetTransforms: Object.freeze([...this.#assetTransforms]),
           expressionSets: Object.freeze([...this.#expressionSets]),
           lifecycles: Object.freeze([...this.#lifecycles]),
           targets: Object.freeze([...this.#targets])
@@ -8172,6 +8593,453 @@ var init_assembly_front_end_service = __esm({
           sourceLine,
           this.host.collectSourceMetadata
         );
+      }
+    };
+  }
+});
+
+// packages/core/src/services/asset-assembly-service.ts
+var AssetAssemblyService;
+var init_asset_assembly_service = __esm({
+  "packages/core/src/services/asset-assembly-service.ts"() {
+    "use strict";
+    AssetAssemblyService = class _AssetAssemblyService {
+      constructor(session) {
+        this.session = session;
+      }
+      session;
+      /** A single asset stage may not allocate or emit more than this many bytes. */
+      static MAX_STAGE_BYTES = 16 * 1024 * 1024;
+      dependencies = /* @__PURE__ */ new Map();
+      #files = /* @__PURE__ */ new Map();
+      #conversions = /* @__PURE__ */ new Map();
+      #emissions = /* @__PURE__ */ new Map();
+      /** Descriptor of the most recent successful statement, consumed immediately by emission metadata. */
+      lastEmission;
+      /** Drop all snapshots before the next build; disk changes then become visible. */
+      beginBuild() {
+        this.dependencies.clear();
+        this.#files.clear();
+        this.#conversions.clear();
+        this.#emissions.clear();
+        this.lastEmission = void 0;
+      }
+      /** Return the exact bytes consumed by this build for dependency fingerprints.
+       * @param {string} path Provider identity.
+       * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
+       */
+      snapshot(path16) {
+        return this.#files.get(path16)?.slice();
+      }
+      /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
+       * @param {AssetValueNode} node Typed source value.
+       * @returns {unknown} Plain value passed to a format or transform.
+       */
+      #value(node) {
+        if (node.kind === "string") {
+          return this.session.defineEngine.resolveDefinesInStringLiteral(node.value);
+        }
+        if (node.kind === "boolean") {
+          return node.value;
+        }
+        if (node.kind === "array") {
+          return node.items.map((item) => this.#value(item));
+        }
+        if (node.kind === "object") {
+          return Object.fromEntries(
+            Object.entries(node.entries).map(([key3, item]) => [key3, this.#value(item)])
+          );
+        }
+        let expanded = node.expression;
+        for (let depth = 0; depth < 32; depth++) {
+          const next = this.session.defineEngine.resolveRegularDefines(expanded);
+          if (next === expanded) {
+            break;
+          }
+          expanded = next;
+          if (depth === 31) {
+            throw new Error("includeAsset numeric define expansion is recursive.");
+          }
+        }
+        const withoutLiterals = expanded.replace(/\$[\da-f]+|0x[\da-f]+|%[01]+/gi, "0");
+        if (/[!?A-Z_a-z]/.test(withoutLiterals)) {
+          throw new Error(
+            `includeAsset numeric option '${node.expression}' must be layout-independent.`
+          );
+        }
+        const value = this.session.mathCore.math(expanded);
+        if (!Number.isFinite(value)) {
+          throw new Error(`includeAsset numeric option '${node.expression}' is not finite.`);
+        }
+        return value;
+      }
+      /** Resolve a provider path using the current source, macro and include search order.
+       * @param {string} path Source-relative path.
+       * @returns {string} Stable provider identity.
+       */
+      #resolve(path16) {
+        const resolved = this.session.fileProvider.resolvePath(
+          path16,
+          this.session.includeSource.resolutionOptions
+        );
+        if (!resolved) {
+          throw new Error(`includeAsset cannot find '${path16}'.`);
+        }
+        return resolved;
+      }
+      /** Snapshot each dependency once, even if a provider changes during later passes.
+       * @param {string} path Provider identity.
+       * @param {"binary" | "resource"} kind Dependency role.
+       * @returns {Uint8Array} Build-owned bytes.
+       */
+      #read(path16, kind) {
+        const cached = this.#files.get(path16);
+        if (cached) {
+          return cached;
+        }
+        const bytes = this.session.fileProvider.readFile(path16).slice();
+        this.#files.set(path16, bytes);
+        this.dependencies.set(path16, kind);
+        return bytes;
+      }
+      /** Media type is inferred only from a declared, supported input extension.
+       * @param {string} path Provider identity.
+       * @returns {string} Portable media type.
+       */
+      #mediaType(path16) {
+        const extension = path16.toLowerCase().split(".").pop();
+        if (extension === "png") {
+          return "image/png";
+        }
+        if (extension === "wav" || extension === "wave") {
+          return "audio/wav";
+        }
+        if (extension === "json") {
+          return "application/json";
+        }
+        return "application/octet-stream";
+      }
+      /** Canonical serialization makes equivalent option objects share one conversion.
+       * @param {unknown} value JSON-compatible request value.
+       * @returns {string} Stable identity fragment.
+       */
+      #stable(value) {
+        if (Array.isArray(value)) {
+          return `[${value.map((item) => this.#stable(item)).join(",")}]`;
+        }
+        if (value && typeof value === "object") {
+          return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key3, item]) => `${JSON.stringify(key3)}:${this.#stable(item)}`).join(",")}}`;
+        }
+        return JSON.stringify(value);
+      }
+      /** Apply a transform's closed scalar schema before it can read resources.
+       * @param {AssetTransformContribution} provider Registered transform.
+       * @param {Readonly<Record<string, unknown>>} options Source options.
+       * @returns {string[]} Resource-valued option paths.
+       */
+      #validateTransformOptions(provider, options) {
+        const schema = provider.optionSchema;
+        if (!schema) {
+          return [];
+        }
+        for (const key3 of Object.keys(options)) {
+          if (!Object.hasOwn(schema, key3)) {
+            throw new Error(`Asset transform '${provider.id}' has unknown option '${key3}'.`);
+          }
+        }
+        const resources = [];
+        for (const [key3, field] of Object.entries(schema)) {
+          const value = options[key3];
+          if (value === void 0) {
+            if (field.required) {
+              throw new Error(`Asset transform '${provider.id}' requires option '${key3}'.`);
+            }
+            continue;
+          }
+          let validType = false;
+          if (field.type === "integer") {
+            validType = Number.isSafeInteger(value);
+          } else if (field.type === "enum") {
+            validType = Array.isArray(field.enum) && field.enum.some((item) => item === value);
+          } else {
+            validType = typeof value === field.type;
+          }
+          const matchesEnum = !field.enum || field.enum.some((item) => item === value);
+          const withinRange = typeof value !== "number" || (field.minimum === void 0 || value >= field.minimum) && (field.maximum === void 0 || value <= field.maximum);
+          if (!validType || !matchesEnum || !withinRange) {
+            throw new Error(`Asset transform '${provider.id}' has invalid option '${key3}'.`);
+          }
+          if (field.resource) {
+            if (typeof value !== "string" || !value) {
+              throw new Error(`Asset transform '${provider.id}' requires a resource path in '${key3}'.`);
+            }
+            resources.push(value);
+          }
+        }
+        return resources;
+      }
+      /** Resolve input and declared resource paths for tooling without reading or converting bytes.
+       * @param {ParsedAssetCall} call Typed source directive.
+       */
+      discoverDependencies(call) {
+        const options = Object.fromEntries(
+          Object.entries(call.options).map(([key3, node]) => [key3, this.#value(node)])
+        );
+        const sourcePath = this.#resolve(this.#value(call.path));
+        const formatName = this.#value(call.format);
+        const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
+        if (!format) {
+          throw new Error(
+            `includeAsset format '${formatName}' is unavailable on '${this.session.targetId}'.`
+          );
+        }
+        this.dependencies.set(sourcePath, "binary");
+        const transformSpec = options.compress;
+        delete options.output;
+        delete options.compress;
+        delete options.compressOptions;
+        delete options.maxSize;
+        for (const resourceName of format.resourcePaths?.(options) ?? []) {
+          this.dependencies.set(this.#resolve(resourceName), "resource");
+        }
+        let transforms = [];
+        if (typeof transformSpec === "string") {
+          const compressOptions = call.options.compressOptions;
+          transforms = [
+            { id: transformSpec, options: compressOptions ? this.#value(compressOptions) : {} }
+          ];
+        } else if (Array.isArray(transformSpec)) {
+          transforms = transformSpec;
+        }
+        for (const item of transforms) {
+          if (!item || typeof item !== "object" || !("id" in item) || typeof item.id !== "string") {
+            continue;
+          }
+          const transform = this.session.environment.getAssetTransform(item.id, this.session.targetId);
+          if (!transform) {
+            continue;
+          }
+          const suppliedOptions = "options" in item ? item.options : void 0;
+          const transformOptions = suppliedOptions && typeof suppliedOptions === "object" ? suppliedOptions : {};
+          const names = [
+            ...this.#validateTransformOptions(transform, transformOptions),
+            ...transform.resourcePaths?.(transformOptions) ?? []
+          ];
+          for (const name of new Set(names)) {
+            this.dependencies.set(this.#resolve(name), "resource");
+          }
+        }
+      }
+      /** Convert and select one complete byte stream before touching output state.
+       * @param {ParsedAssetCall} call Typed source directive.
+       * @returns {Uint8Array} Snapshot-owned bytes shared across assembly passes.
+       */
+      materialize(call) {
+        const options = Object.fromEntries(
+          Object.entries(call.options).map(([key3, node]) => [key3, this.#value(node)])
+        );
+        const sourcePath = this.#resolve(this.#value(call.path));
+        const formatName = this.#value(call.format);
+        const format = this.session.environment.getAssetFormat(formatName, this.session.targetId);
+        if (!format) {
+          throw new Error(
+            `includeAsset format '${formatName}' is unavailable on '${this.session.targetId}'.`
+          );
+        }
+        const output = options.output;
+        const compress = options.compress;
+        const compressOptions = options.compressOptions;
+        const maxSize = options.maxSize;
+        delete options.output;
+        delete options.compress;
+        delete options.compressOptions;
+        delete options.maxSize;
+        if (output !== void 0 && typeof output !== "string") {
+          throw new Error("includeAsset output must be a string.");
+        }
+        if (maxSize !== void 0 && (!Number.isSafeInteger(maxSize) || maxSize < 0)) {
+          throw new Error("includeAsset maxSize must be a non-negative integer.");
+        }
+        const resources = {};
+        const resourceIdentities = [];
+        const declaredResources = format.resourcePaths?.(options) ?? [];
+        if (!Array.isArray(declaredResources) || declaredResources.some((path16) => typeof path16 !== "string" || !path16)) {
+          throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
+        }
+        for (const resourceName of declaredResources) {
+          const resourcePath = this.#resolve(resourceName);
+          resources[resourceName] = {
+            bytes: this.#read(resourcePath, "resource"),
+            mediaType: this.#mediaType(resourcePath)
+          };
+          resourceIdentities.push(`${resourceName}\0${resourcePath}`);
+        }
+        const source = {
+          bytes: this.#read(sourcePath, "binary"),
+          mediaType: this.#mediaType(sourcePath)
+        };
+        const conversionKey = this.#stable([
+          sourcePath,
+          format.id,
+          format.version,
+          options,
+          resourceIdentities
+        ]);
+        let converted = this.#conversions.get(conversionKey);
+        if (!converted) {
+          const borrowedResources = Object.fromEntries(
+            Object.entries(resources).map(([name, item]) => [
+              name,
+              { ...item, bytes: item.bytes.slice() }
+            ])
+          );
+          converted = format.convert(
+            { ...source, bytes: source.bytes.slice() },
+            options,
+            borrowedResources
+          );
+          if (!converted.primaryOutput || !Object.hasOwn(converted.outputs, converted.primaryOutput)) {
+            throw new Error(`Asset format '${format.id}' omitted its primary output.`);
+          }
+          const owned = Object.fromEntries(
+            Object.entries(converted.outputs).map(([name, part2]) => {
+              if (!(part2.bytes instanceof Uint8Array)) {
+                throw new Error(`Asset output '${name}' is not bytes.`);
+              }
+              return [name, { bytes: part2.bytes.slice() }];
+            })
+          );
+          converted = { primaryOutput: converted.primaryOutput, outputs: owned };
+          this.#conversions.set(conversionKey, converted);
+        }
+        const selected = output ?? converted.primaryOutput;
+        if (!Object.hasOwn(converted.outputs, selected)) {
+          throw new Error(`Asset format '${format.id}' has no output '${selected}'.`);
+        }
+        const part = converted.outputs[selected];
+        let transformSpecs = [];
+        if (typeof compress === "string") {
+          transformSpecs = [{ id: compress, options: compressOptions ?? {} }];
+        } else if (compress !== void 0) {
+          transformSpecs = compress;
+        }
+        if (!Array.isArray(transformSpecs)) {
+          throw new Error("includeAsset compress must be an ID or array of { id, options }.");
+        }
+        if (typeof compress !== "string" && compressOptions !== void 0) {
+          throw new Error("includeAsset compressOptions requires a single compress ID.");
+        }
+        const transforms = [];
+        for (const unknownItem of transformSpecs) {
+          if (!unknownItem || typeof unknownItem !== "object" || !("id" in unknownItem) || typeof unknownItem.id !== "string") {
+            throw new Error("includeAsset transform entries require an id.");
+          }
+          const item = unknownItem;
+          const transform = this.session.environment.getAssetTransform(item.id, this.session.targetId);
+          if (!transform) {
+            throw new Error(
+              `includeAsset transform '${item.id}' is unavailable on '${this.session.targetId}'.`
+            );
+          }
+          const transformOptions = item.options ?? {};
+          if (!transformOptions || typeof transformOptions !== "object" || Array.isArray(transformOptions)) {
+            throw new Error(`includeAsset transform '${item.id}' options must be an object.`);
+          }
+          const validatedOptions = transformOptions;
+          const schemaResources = this.#validateTransformOptions(transform, validatedOptions);
+          transform.validateOptions?.(validatedOptions);
+          const transformResources = {};
+          const transformResourceIdentities = [];
+          const declared = transform.resourcePaths?.(validatedOptions) ?? [];
+          const resourcePaths = declared;
+          if (!Array.isArray(declared) || declared.some((name) => typeof name !== "string" || !name)) {
+            throw new Error(`Asset transform '${transform.id}' returned invalid resource paths.`);
+          }
+          const names = [.../* @__PURE__ */ new Set([...schemaResources, ...resourcePaths])];
+          for (const name of names) {
+            const path16 = this.#resolve(name);
+            transformResources[name] = {
+              bytes: this.#read(path16, "resource"),
+              mediaType: this.#mediaType(path16)
+            };
+            transformResourceIdentities.push(`${name}\0${path16}`);
+          }
+          transforms.push({
+            provider: transform,
+            options: validatedOptions,
+            resources: transformResources,
+            resourceIdentities: transformResourceIdentities
+          });
+        }
+        const emissionKey = this.#stable([
+          conversionKey,
+          selected,
+          transforms.map(({ provider, options: transformOptions, resourceIdentities: identities }) => [
+            provider.id,
+            provider.version,
+            transformOptions,
+            identities
+          ])
+        ]);
+        let bytes = this.#emissions.get(emissionKey);
+        if (!bytes) {
+          bytes = part.bytes.slice();
+          for (const {
+            provider,
+            options: transformOptions,
+            resources: transformResources
+          } of transforms) {
+            const previousBytes = bytes;
+            if (previousBytes.length > _AssetAssemblyService.MAX_STAGE_BYTES) {
+              throw new Error(`Asset '${sourcePath}' exceeds the transform stage byte limit.`);
+            }
+            const borrowedResources = Object.fromEntries(
+              Object.entries(transformResources).map(([name, item]) => [
+                name,
+                { ...item, bytes: item.bytes.slice() }
+              ])
+            );
+            try {
+              const encoded = provider.encode(
+                previousBytes.slice(),
+                transformOptions,
+                borrowedResources
+              );
+              if (!(encoded instanceof Uint8Array) || encoded.length > _AssetAssemblyService.MAX_STAGE_BYTES) {
+                throw new Error("produced invalid or oversized bytes");
+              }
+              const decoded = provider.decode(
+                encoded.slice(),
+                transformOptions,
+                previousBytes.length,
+                borrowedResources
+              );
+              if (!(decoded instanceof Uint8Array) || decoded.length !== previousBytes.length || !decoded.every((value, index) => value === previousBytes[index])) {
+                throw new Error("failed exact decode verification");
+              }
+              bytes = encoded.slice();
+            } catch (error) {
+              const message = error instanceof Error ? error.message : String(error);
+              throw new Error(
+                `Asset '${sourcePath}' transform '${provider.id}' with options ${this.#stable(transformOptions)}: ${message}`
+              );
+            }
+          }
+          this.#emissions.set(emissionKey, bytes);
+        }
+        if (maxSize !== void 0 && bytes.length > maxSize) {
+          throw new Error(
+            `includeAsset output is ${bytes.length} bytes, above maxSize ${maxSize}.`
+          );
+        }
+        this.lastEmission = {
+          sourcePath,
+          format: format.id,
+          part: selected,
+          size: bytes.length,
+          transforms: transforms.map((item) => item.provider.id)
+        };
+        return bytes;
       }
     };
   }
@@ -9308,20 +10176,20 @@ var init_include_source_service = __esm({
        */
       resolvePath(filePath) {
         const options = this.resolutionOptions;
-        const key2 = [
+        const key3 = [
           options.currentFile,
           options.macroSourceFile ?? "",
           options.includePaths.join("\0"),
           filePath
         ].join("");
-        const cached = this.resolvedPathCache.get(key2);
+        const cached = this.resolvedPathCache.get(key3);
         if (cached !== void 0) {
           incrementInternalCounter("includeResolutionCacheHits");
           return cached;
         }
         const resolved = this.host.fileProvider.resolvePath(filePath, options);
         if (resolved !== void 0) {
-          this.resolvedPathCache.set(key2, resolved);
+          this.resolvedPathCache.set(key3, resolved);
         }
         return resolved;
       }
@@ -9332,8 +10200,8 @@ var init_include_source_service = __esm({
        * @returns {string} The cached or newly read text.
        */
       readTextFile(resolvedPath, encoding) {
-        const key2 = `${encoding}\0${resolvedPath}`;
-        const cached = this.textCache.get(key2);
+        const key3 = `${encoding}\0${resolvedPath}`;
+        const cached = this.textCache.get(key3);
         if (cached !== void 0) {
           incrementInternalCounter("includeTextCacheHits");
           return cached;
@@ -9344,7 +10212,7 @@ var init_include_source_service = __esm({
           () => this.host.fileProvider.readTextFile(resolvedPath, encoding)
         );
         incrementInternalCounter("includeBytesRead", content.length);
-        this.textCache.set(key2, content);
+        this.textCache.set(key3, content);
         return content;
       }
     };
@@ -9573,8 +10441,8 @@ var init_macro_engine = __esm({
             const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
             let nextAddr = null;
             if (!modifiedCommand.trim().startsWith("?+:")) {
-              for (const [key2, info] of this.host.labelTable.entries()) {
-                if (key2.startsWith(macroLabelPrefix) && (key2 === `${macroLabelPrefix}+` || key2.endsWith("_+") || key2 === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
+              for (const [key3, info] of this.host.labelTable.entries()) {
+                if (key3.startsWith(macroLabelPrefix) && (key3 === `${macroLabelPrefix}+` || key3.endsWith("_+") || key3 === `:pos_${currentMacroInstance}_1`) && info.value > this.host.currentTargetAddress) {
                   if (nextAddr === null || info.value < nextAddr) {
                     nextAddr = info.value;
                   }
@@ -9591,8 +10459,8 @@ var init_macro_engine = __esm({
             const macroLabelPrefix = `:macro_${currentMacroInstance}_`;
             let prevAddr = null;
             if (!modifiedCommand.trim().startsWith("?-:")) {
-              for (const [key2, info] of this.host.labelTable.entries()) {
-                if (key2.startsWith(macroLabelPrefix) && (key2 === `${macroLabelPrefix}-` || key2.endsWith("_-") || key2 === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
+              for (const [key3, info] of this.host.labelTable.entries()) {
+                if (key3.startsWith(macroLabelPrefix) && (key3 === `${macroLabelPrefix}-` || key3.endsWith("_-") || key3 === `:neg_${currentMacroInstance}_1`) && info.value < this.host.currentTargetAddress) {
                   if (prevAddr === null || info.value > prevAddr) {
                     prevAddr = info.value;
                   }
@@ -11076,9 +11944,9 @@ var init_symbol_scope_service = __esm({
           if (prefix === "?") {
             if (labelName.startsWith(".")) {
               let recentMainLabel = "";
-              for (const [key2, entry] of this.host.labelTable.entries()) {
-                if (entry.isMacroLabel && key2.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key2.includes("_SubLabel_")) {
-                  const labelPart = key2.substring(`:macro_${this.host.macroLabelInstance}_`.length);
+              for (const [key3, entry] of this.host.labelTable.entries()) {
+                if (entry.isMacroLabel && key3.startsWith(`:macro_${this.host.macroLabelInstance}_`) && !key3.includes("_SubLabel_")) {
+                  const labelPart = key3.substring(`:macro_${this.host.macroLabelInstance}_`.length);
                   if (!labelPart.startsWith(".")) {
                     recentMainLabel = labelPart;
                   }
@@ -11624,12 +12492,14 @@ var init_assembler = __esm({
     init_registry();
     init_file_provider();
     init_internal_instrumentation();
+    init_asset_call();
     init_expression_node();
     init_normalized_command();
     init_mathcore();
     init_operand_resolver();
     init_plugin();
     init_assembly_front_end_service();
+    init_asset_assembly_service();
     init_command_lowering_service();
     init_command_text_service();
     init_define_engine();
@@ -11675,6 +12545,8 @@ var init_assembler = __esm({
       mathCore;
       operandResolver;
       addressToLineMapping = new AddressToLineMapping();
+      /** Only live during final instruction encoding; never captures speculative layout values. */
+      #encodingOperands;
       currentFile = "";
       currentLine = 0;
       /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
@@ -11740,6 +12612,10 @@ var init_assembler = __esm({
       activeLifecycles;
       cursorAddress;
       fileProvider;
+      /** Binary/resource dependencies and converted bytes owned by the active build. */
+      assetAssembly = new AssetAssemblyService(this);
+      /** Tooling-only path discovery avoids conversion on edit bursts. */
+      deferAssetConversion = false;
       frontEndService;
       programModelBuilder;
       commandLoweringService;
@@ -12291,6 +13167,7 @@ var init_assembler = __esm({
         this.clearAnalysisArtifacts();
         this.analysisErrorRecoveryEnabled = true;
         const stages = options.stages ?? TOOLING_ANALYSIS_STAGES;
+        this.deferAssetConversion = options.deferAssetConversion ?? false;
         if (options.followIncludes !== void 0) {
           this.followIncludes = options.followIncludes;
         }
@@ -12307,7 +13184,8 @@ var init_assembler = __esm({
           diagnostics: [...this.diagnostics],
           symbols: [...this.symbolDefinitions],
           references: [...this.symbolReferences],
-          includeEdges: [...this.includeEdges]
+          includeEdges: [...this.includeEdges],
+          assetDependencies: Object.fromEntries(this.assetAssembly.dependencies)
         };
       }
       /**
@@ -12350,7 +13228,7 @@ var init_assembler = __esm({
       cloneDirectiveRegistryForSession(session) {
         const operandResolver = session.operandResolver;
         const runtime = session.directiveRuntime;
-        const registry = createDirectiveRegistry(
+        const registry2 = createDirectiveRegistry(
           {
             data: { runtime },
             fillPad: { session, operandResolver },
@@ -12377,6 +13255,38 @@ var init_assembler = __esm({
           session.coreDirectiveGroups,
           session.syntaxProfile.directivePrefixes
         );
+        registry2.registerLowered("includeasset", session, (active, _words, raw, command) => {
+          const call = command?.parsed.includeAsset ?? parseAssetCall(raw);
+          if (!call) {
+            throw new Error("includeAsset requires call syntax: includeAsset(path, format, ...).");
+          }
+          if (active.deferAssetConversion) {
+            active.assetAssembly.discoverDependencies(call);
+            return;
+          }
+          const bytes = active.assetAssembly.materialize(call);
+          const startAddress = active.currentAddress;
+          const startOutput = active.outputWriter.toOutputOffset(startAddress);
+          active.outputWriter.validateWrite(bytes.length);
+          for (const byte of bytes) {
+            active.write1(byte);
+          }
+          const asset = active.assetAssembly.lastEmission;
+          if (active.traceStage === "emitProgram" && active.collectSourceMetadata && asset) {
+            active.addressToLineMapping.assets.push({
+              fileIdx: active.addressToLineMapping.getFileIndex(active.currentFile),
+              assetFileIdx: active.addressToLineMapping.getFileIndex(asset.sourcePath),
+              line: active.currentLine + 1,
+              format: asset.format,
+              part: asset.part,
+              size: asset.size,
+              transforms: asset.transforms,
+              address: startAddress,
+              ...startOutput >= 0 ? { outputOffset: startOutput } : {}
+            });
+          }
+          active.recordCurrentAddress();
+        });
         const target = session.environment.getTarget(session.targetId);
         for (const setId of target?.directiveSets ?? []) {
           const set = session.environment.getDirectiveSet(setId);
@@ -12401,7 +13311,7 @@ var init_assembler = __esm({
                 cause
               });
             }
-            registry.register(
+            registry2.register(
               [...directive2.keywords],
               void 0,
               (_context, words, raw) => {
@@ -12422,15 +13332,15 @@ var init_assembler = __esm({
             );
           }
         }
-        for (const [keyword, handler] of registry.handlers) {
-          registry.handlers.set(keyword, (words, raw, command) => {
+        for (const [keyword, handler] of registry2.handlers) {
+          registry2.handlers.set(keyword, (words, raw, command) => {
             if (session.runBeforeDirective(keyword, words, raw) === "handled") {
               return;
             }
             handler(words, raw, command);
           });
         }
-        return registry;
+        return registry2;
       }
       analyzeProgram(program) {
         const session = this.createToolingSession();
@@ -12465,17 +13375,17 @@ var init_assembler = __esm({
       }
       analyzeWorkspace(documents, options = {}) {
         const results = [];
-        for (const document of documents) {
+        for (const document2 of documents) {
           const session = this.createToolingSession();
           try {
             const program = session.buildProgramModel(
-              document.source,
-              document.sourceFile,
-              document.startLine ?? 0
+              document2.source,
+              document2.sourceFile,
+              document2.startLine ?? 0
             );
             const result = session.collectProgramAnalysis(program, options);
             results.push({
-              sourceFile: document.sourceFile,
+              sourceFile: document2.sourceFile,
               program,
               ...result
             });
@@ -12706,7 +13616,16 @@ var init_assembler = __esm({
           try {
             const architectureOperands = {
               expandOperand: (operand) => this.operandResolver.expandOperand(operand),
-              getnum: (expression) => this.operandResolver.getnum(expression),
+              getnum: (expression) => {
+                const value = this.operandResolver.getnum(expression);
+                if (this.#encodingOperands && typeof expression === "string" && Number.isFinite(value)) {
+                  const values = this.#encodingOperands;
+                  if (!values.some((entry) => entry.expression === expression && entry.value === value)) {
+                    values.push({ expression, value });
+                  }
+                }
+                return value;
+              },
               getCurrentAddress: () => this.operandResolver.getCurrentAddress(),
               lowerOperand: (operand) => contribution.classifyOperand({ operands: this.operandResolver }, operand)
             };
@@ -13256,6 +14175,11 @@ var init_assembler = __esm({
         this.step(size);
         return true;
       }
+      /**
+       * Encode through the active architecture, observing numeric operands only during final emission.
+       * @param {string[] | LoweredInstruction} input Instruction in the current source/expansion context.
+       * @returns {boolean} Whether the architecture handled it; unsupported mnemonics follow its policy.
+       */
       emitInstruction(input) {
         const words = Array.isArray(input) ? input : input.words;
         if (words.length === 0) {
@@ -13265,7 +14189,29 @@ var init_assembler = __esm({
         if (!architecture.definition) {
           return true;
         }
-        const encoded = Array.isArray(input) ? architecture.definition.encoder.encode(words) : architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words);
+        const capture = this.collectSourceMetadata && this.canEmitBytes;
+        const address3 = this.currentTargetAddress;
+        const outputOffset = capture ? this.outputWriter.toOutputOffset(address3) : -1;
+        const operands = capture ? [] : void 0;
+        this.#encodingOperands = operands;
+        let encoded;
+        try {
+          encoded = Array.isArray(input) ? architecture.definition.encoder.encode(words) : architecture.definition.encoder.encodeInstruction?.(input) ?? architecture.definition.encoder.encode(words);
+        } finally {
+          this.#encodingOperands = void 0;
+        }
+        if (encoded && operands) {
+          const command = this.traceCommandStack.at(-1);
+          this.addressToLineMapping.instructions.push({
+            fileIdx: this.addressToLineMapping.getFileIndex(command?.file ?? this.currentFile),
+            line: (command?.line ?? this.currentLine) + 1,
+            architecture: this.arch,
+            addressSpace: this.environment.getTarget(this.targetId)?.addressSpace ?? "target.logical",
+            address: address3,
+            ...outputOffset >= 0 ? { outputOffset } : {},
+            operands
+          });
+        }
         if (!encoded) {
           if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
             return false;
@@ -14251,7 +15197,7 @@ var init_assembler = __esm({
           cursor: { ...cursorSeed },
           symbols: {
             labelTable: new Map(
-              Array.from(symbolSeed.labelTable.entries()).map(([key2, value]) => [key2, { ...value }])
+              Array.from(symbolSeed.labelTable.entries()).map(([key3, value]) => [key3, { ...value }])
             ),
             forwardLabels: this.cloneRelativeLabels(symbolSeed.forwardLabels),
             backwardLabels: this.cloneRelativeLabels(symbolSeed.backwardLabels),
@@ -14350,6 +15296,7 @@ var init_assembler = __esm({
       runStage(stage, program) {
         return measureInternalPhase(stage, () => {
           if (stage === "collectDefinitions") {
+            this.assetAssembly.beginBuild();
             this.includeSource.beginAssemblySnapshot();
             this.mathCore.beginAssemblySnapshot();
             this.stageExecutionStates.clear();
@@ -14772,7 +15719,7 @@ var init_decoder_types = __esm({
 });
 
 // packages/core/src/debug-map.ts
-import { createHash as createHash2 } from "node:crypto";
+import { createHash } from "node:crypto";
 import path2 from "node:path";
 var DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue, canonicalDebugMapJson, sha256, createDebugMap;
 var init_debug_map = __esm({
@@ -14786,14 +15733,14 @@ var init_debug_map = __esm({
       }
       if (value !== null && typeof value === "object") {
         return Object.fromEntries(
-          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key2, entry]) => [key2, canonicalValue(entry)])
+          Object.entries(value).filter(([, entry]) => entry !== void 0).sort(([left], [right]) => left.localeCompare(right)).map(([key3, entry]) => [key3, canonicalValue(entry)])
         );
       }
       return value;
     };
     canonicalDebugMapJson = (value) => `${JSON.stringify(canonicalValue(value), null, 2)}
 `;
-    sha256 = (value) => createHash2("sha256").update(value).digest("hex");
+    sha256 = (value) => createHash("sha256").update(value).digest("hex");
     createDebugMap = (options) => {
       const sourceRoot = path2.resolve(options.sourceRoot ?? process.cwd());
       const entries3 = options.mapping.fileList.map((entry, originalId) => {
@@ -14805,7 +15752,15 @@ var init_debug_map = __esm({
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
-        return { id, path: portable, size: entry.size, crc32: entry.crc, sha256: entry.sha256 };
+        const kind = options.dependencyKinds?.get(entry.name);
+        return {
+          id,
+          path: portable,
+          size: entry.size,
+          crc32: entry.crc,
+          sha256: entry.sha256,
+          ...kind ? { kind } : {}
+        };
       });
       const ranges = options.mapping.ranges.map(({ fileIdx, ...range }) => ({ ...range, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 })).filter((range) => range.sourceId >= 0).sort(
         (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.sourceId - right.sourceId || left.line - right.line
@@ -14816,7 +15771,20 @@ var init_debug_map = __esm({
         target: options.target,
         output: { size: options.output.length, sha256: sha256(options.output) },
         sources,
-        ranges
+        ranges,
+        ...options.mapping.instructions.length ? {
+          instructions: options.mapping.instructions.map(({ fileIdx, ...entry }) => ({
+            ...entry,
+            sourceId: sourceIdByOriginal.get(fileIdx) ?? -1
+          })).filter((entry) => entry.sourceId >= 0)
+        } : {},
+        ...options.mapping.assets.length ? {
+          assets: options.mapping.assets.map(({ fileIdx, assetFileIdx, ...entry }) => ({
+            ...entry,
+            sourceId: sourceIdByOriginal.get(fileIdx) ?? -1,
+            assetSourceId: sourceIdByOriginal.get(assetFileIdx) ?? -1
+          })).filter((entry) => entry.sourceId >= 0 && entry.assetSourceId >= 0)
+        } : {}
       };
       return {
         ...payload,
@@ -14919,6 +15887,7 @@ var init_src = __esm({
     init_assembly_tree();
     init_expression_node();
     init_normalized_command();
+    init_asset_call();
     init_assembly_front_end_service();
     init_command_lowering_service();
     init_lsp();
@@ -14927,919 +15896,9 @@ var init_src = __esm({
   }
 });
 
-// packages/disassembler/src/asset-codec.ts
-var init_asset_codec = __esm({
-  "packages/disassembler/src/asset-codec.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/asset-codecs/common.ts
-var objectValue, optionsFor, stringOption, booleanOption, integerOption, byteOrderOption, readExactAssetBytes, readAssetBytes, resolveCountAndSize, readInteger, writeInteger, decodedObject, numberArray, byteArray, defaultAssetPath, jsonFile;
-var init_common = __esm({
-  "packages/disassembler/src/asset-codecs/common.ts"() {
-    "use strict";
-    objectValue = (value, label) => {
-      if (value === void 0 || value === null || Array.isArray(value) || typeof value !== "object") {
-        if (value === void 0) {
-          return {};
-        }
-        throw new Error(`${label} must be an object.`);
-      }
-      return value;
-    };
-    optionsFor = (context) => objectValue(context.request.options, `Asset '${context.request.id}' options`);
-    stringOption = (options, key2, fallback) => {
-      const value = options[key2];
-      if (value === void 0) {
-        return fallback;
-      }
-      if (typeof value !== "string") {
-        throw new Error(`Asset option '${key2}' must be a string.`);
-      }
-      return value;
-    };
-    booleanOption = (options, key2, fallback = false) => {
-      const value = options[key2];
-      if (value === void 0) {
-        return fallback;
-      }
-      if (typeof value !== "boolean") {
-        throw new Error(`Asset option '${key2}' must be boolean.`);
-      }
-      return value;
-    };
-    integerOption = (options, key2, settings6 = {}) => {
-      const value = options[key2] ?? settings6.fallback;
-      if (value === void 0) {
-        return void 0;
-      }
-      if (typeof value !== "number" || !Number.isSafeInteger(value) || settings6.minimum !== void 0 && value < settings6.minimum || settings6.maximum !== void 0 && value > settings6.maximum) {
-        throw new Error(`Asset option '${key2}' is outside its integer bounds.`);
-      }
-      return value;
-    };
-    byteOrderOption = (options) => {
-      const value = stringOption(options, "endian", "little");
-      if (value !== "little" && value !== "big") {
-        throw new Error("Asset option 'endian' must be 'little' or 'big'.");
-      }
-      return value;
-    };
-    readExactAssetBytes = (context, size = context.inspection.size) => {
-      return readAssetBytes(context, size);
-    };
-    readAssetBytes = (context, size) => {
-      const bytes = context.source.read(context.request.sourceOffset, size);
-      if (!bytes) {
-        throw new Error(`Asset '${context.request.id}' source range is unreadable.`);
-      }
-      return bytes;
-    };
-    resolveCountAndSize = (context, unitSize, options = optionsFor(context)) => {
-      if (!Number.isSafeInteger(unitSize) || unitSize <= 0) {
-        throw new Error("Asset unit size must be a positive safe integer.");
-      }
-      const configuredCount = integerOption(options, "count", { minimum: 1 });
-      const requestedLength = context.request.length;
-      if (configuredCount === void 0 && requestedLength === void 0) {
-        throw new Error(`Asset '${context.request.id}' requires either length or option 'count'.`);
-      }
-      if (requestedLength !== void 0 && requestedLength % unitSize !== 0) {
-        throw new Error(
-          `Asset '${context.request.id}' length ${requestedLength} is not divisible by ${unitSize}.`
-        );
-      }
-      const count = configuredCount ?? requestedLength / unitSize;
-      const size = count * unitSize;
-      if (!Number.isSafeInteger(size)) {
-        throw new Error(`Asset '${context.request.id}' size overflowed.`);
-      }
-      if (requestedLength !== void 0 && requestedLength !== size) {
-        throw new Error(
-          `Asset '${context.request.id}' count ${count} requires ${size} bytes, not ${requestedLength}.`
-        );
-      }
-      return { count, size };
-    };
-    readInteger = (bytes, offset, width2, endian, signed2 = false) => {
-      let value = 0;
-      for (let index = 0; index < width2; index++) {
-        const byteIndex = endian === "little" ? offset + index : offset + width2 - index - 1;
-        value += (bytes[byteIndex] ?? 0) * 2 ** (index * 8);
-      }
-      const modulus = 2 ** (width2 * 8);
-      return signed2 && value >= modulus / 2 ? value - modulus : value;
-    };
-    writeInteger = (bytes, offset, width2, endian, value, signed2 = false) => {
-      const modulus = 2 ** (width2 * 8);
-      const minimum = signed2 ? -modulus / 2 : 0;
-      const maximum = signed2 ? modulus / 2 - 1 : modulus - 1;
-      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-        throw new Error(
-          `Integer ${String(value)} does not fit ${signed2 ? "signed" : "unsigned"} ${width2}-byte storage.`
-        );
-      }
-      let remaining = value < 0 ? value + modulus : value;
-      for (let index = 0; index < width2; index++) {
-        const byteIndex = endian === "little" ? offset + index : offset + width2 - index - 1;
-        bytes[byteIndex] = remaining % 256;
-        remaining = Math.floor(remaining / 256);
-      }
-    };
-    decodedObject = (value, owner) => objectValue(value, `Decoded asset '${owner}'`);
-    numberArray = (value, label) => {
-      if (!Array.isArray(value)) {
-        throw new Error(`${label} must be an array.`);
-      }
-      return value.map((entry) => {
-        if (typeof entry !== "number" || !Number.isSafeInteger(entry)) {
-          throw new Error(`${label} must contain only safe integers.`);
-        }
-        return entry;
-      });
-    };
-    byteArray = (value, label) => {
-      const values = numberArray(value, label);
-      if (values.some((entry) => entry < 0 || entry > 255)) {
-        throw new Error(`${label} must contain only bytes in the range 0..255.`);
-      }
-      return values;
-    };
-    defaultAssetPath = (assetId, extension) => `assets/${encodeURIComponent(assetId)}.${extension}`;
-    jsonFile = (path16, value) => ({
-      path: path16,
-      mediaType: "application/json",
-      bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
-`)
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/index-table.ts
-var INDEX_TABLE_ASSET_CODEC_ID, settings, indexesFor, referencesFor, indexTableAssetCodec;
-var init_index_table = __esm({
-  "packages/disassembler/src/asset-codecs/index-table.ts"() {
-    "use strict";
-    init_common();
-    INDEX_TABLE_ASSET_CODEC_ID = "uttori.asset.index-table";
-    settings = (context) => {
-      const options = optionsFor(context);
-      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
-      const endian = byteOrderOption(options);
-      const baseIndex = integerOption(options, "baseIndex", { fallback: 0 });
-      const nullValue = integerOption(options, "nullValue", {
-        minimum: 0,
-        maximum: 2 ** (width2 * 8) - 1
-      });
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      if (!Array.isArray(options.targets)) {
-        throw new Error("Index-table option 'targets' must be an array.");
-      }
-      const indexes = /* @__PURE__ */ new Set();
-      const targets = options.targets.map((value, position) => {
-        const target = objectValue(value, `Index target ${position}`);
-        const index = integerOption(target, "index", { minimum: 0 });
-        const id = stringOption(target, "id");
-        const addressSpace = stringOption(target, "addressSpace");
-        const address3 = integerOption(target, "address", { minimum: 0 });
-        if (index === void 0 || !id || !addressSpace || address3 === void 0) {
-          throw new Error(`Index target ${position} is incomplete.`);
-        }
-        if (indexes.has(index)) {
-          throw new Error(`Index target ${index} is duplicated.`);
-        }
-        indexes.add(index);
-        return { index, id, addressSpace, address: address3 };
-      });
-      return { options, width: width2, endian, baseIndex, nullValue, count, size, targets };
-    };
-    indexesFor = (context) => {
-      const resolved = settings(context);
-      const bytes = readAssetBytes(context, resolved.size);
-      const indexes = Array.from({ length: resolved.count }, (_, index) => {
-        const raw = readInteger(bytes, index * resolved.width, resolved.width, resolved.endian);
-        return resolved.nullValue !== void 0 && raw === resolved.nullValue ? null : raw + resolved.baseIndex;
-      });
-      return { settings: resolved, indexes };
-    };
-    referencesFor = (entries3) => {
-      const targets = new Map(entries3.settings.targets.map((target) => [target.index, target]));
-      return entries3.indexes.flatMap((index, position) => {
-        if (index === null) {
-          return [];
-        }
-        const target = targets.get(index);
-        return target ? [
-          {
-            id: `entry-${position.toString().padStart(4, "0")}`,
-            kind: "index",
-            addressSpace: target.addressSpace,
-            address: target.address,
-            width: entries3.settings.width,
-            targetAssetId: target.id,
-            detail: `Index ${index}`
-          }
-        ] : [];
-      });
-    };
-    indexTableAssetCodec = Object.freeze({
-      id: INDEX_TABLE_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const entries3 = indexesFor(context);
-        return {
-          size: entries3.settings.size,
-          references: referencesFor(entries3),
-          metadata: {
-            count: entries3.settings.count,
-            width: entries3.settings.width,
-            endian: entries3.settings.endian,
-            baseIndex: entries3.settings.baseIndex,
-            unresolvedIndexes: entries3.indexes.filter(
-              (index) => index !== null && !entries3.settings.targets.some((target) => target.index === index)
-            )
-          }
-        };
-      },
-      decode: (context) => {
-        const entries3 = indexesFor(context);
-        const value = { kind: "index-table", indexes: entries3.indexes };
-        const path16 = stringOption(
-          entries3.settings.options,
-          "path",
-          defaultAssetPath(context.request.id, "json")
-        );
-        return { value, files: [jsonFile(path16, value)] };
-      },
-      encode: (context) => {
-        const resolved = settings(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        if (!Array.isArray(value.indexes) || value.indexes.length !== resolved.count) {
-          throw new Error(`Index asset '${context.request.id}' requires ${resolved.count} indexes.`);
-        }
-        const bytes = new Uint8Array(resolved.size);
-        value.indexes.forEach((index, position) => {
-          let raw;
-          if (index === null) {
-            if (resolved.nullValue === void 0) {
-              throw new Error(`Index asset '${context.request.id}' has null without a nullValue.`);
-            }
-            raw = resolved.nullValue;
-          } else {
-            if (typeof index !== "number" || !Number.isSafeInteger(index)) {
-              throw new Error(`Index asset '${context.request.id}' indexes must be integers or null.`);
-            }
-            raw = index - resolved.baseIndex;
-          }
-          writeInteger(bytes, position * resolved.width, resolved.width, resolved.endian, raw);
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/pointer-table.ts
-var POINTER_TABLE_ASSET_CODEC_ID, settings2, entriesFor, referencesFor2, pointerTableAssetCodec;
-var init_pointer_table = __esm({
-  "packages/disassembler/src/asset-codecs/pointer-table.ts"() {
-    "use strict";
-    init_common();
-    POINTER_TABLE_ASSET_CODEC_ID = "uttori.asset.pointer-table";
-    settings2 = (context) => {
-      const options = optionsFor(context);
-      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 2 });
-      const endian = byteOrderOption(options);
-      const base = integerOption(options, "base", { fallback: 0 });
-      const scale = integerOption(options, "scale", { minimum: 1, fallback: 1 });
-      const nullValue = integerOption(options, "nullValue", {
-        minimum: 0,
-        maximum: 2 ** (width2 * 8) - 1
-      });
-      const addressSpace = stringOption(options, "addressSpace", context.request.addressSpace);
-      if (addressSpace === "") {
-        throw new Error("Pointer target address space cannot be empty.");
-      }
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      const targetIdsValue = options.targetAssetIds;
-      let targetAssetIds = [];
-      if (targetIdsValue !== void 0) {
-        if (!Array.isArray(targetIdsValue) || targetIdsValue.length !== count) {
-          throw new Error("Pointer option 'targetAssetIds' must match the pointer count.");
-        }
-        targetAssetIds = targetIdsValue.map((value) => {
-          if (value !== null && typeof value !== "string") {
-            throw new Error("Pointer target asset ids must be strings or null.");
-          }
-          return value;
-        });
-      }
-      return {
-        options,
-        width: width2,
-        endian,
-        base,
-        scale,
-        nullValue,
-        addressSpace,
-        count,
-        size,
-        targetAssetIds
-      };
-    };
-    entriesFor = (context) => {
-      const resolved = settings2(context);
-      const bytes = readAssetBytes(context, resolved.size);
-      const rawValues = Array.from(
-        { length: resolved.count },
-        (_, index) => readInteger(bytes, index * resolved.width, resolved.width, resolved.endian)
-      );
-      const addresses2 = rawValues.map((raw) => {
-        if (resolved.nullValue !== void 0 && raw === resolved.nullValue) {
-          return null;
-        }
-        const address3 = resolved.base + raw * resolved.scale;
-        if (!Number.isSafeInteger(address3) || address3 < 0) {
-          throw new Error(`Pointer asset '${context.request.id}' produced an invalid address.`);
-        }
-        return address3;
-      });
-      return { settings: resolved, rawValues, addresses: addresses2 };
-    };
-    referencesFor2 = (entries3) => entries3.addresses.flatMap(
-      (address3, index) => address3 === null ? [] : [
-        {
-          id: `entry-${index.toString().padStart(4, "0")}`,
-          kind: "pointer",
-          addressSpace: entries3.settings.addressSpace,
-          address: address3,
-          width: entries3.settings.width,
-          ...entries3.settings.targetAssetIds[index] ? { targetAssetId: entries3.settings.targetAssetIds[index] } : {}
-        }
-      ]
-    );
-    pointerTableAssetCodec = Object.freeze({
-      id: POINTER_TABLE_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const entries3 = entriesFor(context);
-        return {
-          size: entries3.settings.size,
-          references: referencesFor2(entries3),
-          metadata: {
-            count: entries3.settings.count,
-            width: entries3.settings.width,
-            endian: entries3.settings.endian,
-            base: entries3.settings.base,
-            scale: entries3.settings.scale,
-            ...entries3.settings.nullValue === void 0 ? {} : { nullValue: entries3.settings.nullValue }
-          }
-        };
-      },
-      decode: (context) => {
-        const entries3 = entriesFor(context);
-        const value = {
-          kind: "pointer-table",
-          addresses: entries3.addresses,
-          rawValues: entries3.rawValues
-        };
-        const path16 = stringOption(
-          entries3.settings.options,
-          "path",
-          defaultAssetPath(context.request.id, "json")
-        );
-        return { value, files: [jsonFile(path16, value)] };
-      },
-      encode: (context) => {
-        const resolved = settings2(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        if (!Array.isArray(value.addresses) || value.addresses.length !== resolved.count) {
-          throw new Error(
-            `Pointer asset '${context.request.id}' requires ${resolved.count} addresses.`
-          );
-        }
-        const bytes = new Uint8Array(resolved.size);
-        value.addresses.forEach((address3, index) => {
-          let raw;
-          if (address3 === null) {
-            if (resolved.nullValue === void 0) {
-              throw new Error(`Pointer asset '${context.request.id}' has null without a nullValue.`);
-            }
-            raw = resolved.nullValue;
-          } else {
-            if (typeof address3 !== "number" || !Number.isSafeInteger(address3)) {
-              throw new Error(
-                `Pointer asset '${context.request.id}' addresses must be integers or null.`
-              );
-            }
-            const relative2 = address3 - resolved.base;
-            if (relative2 < 0 || relative2 % resolved.scale !== 0) {
-              throw new Error(`Pointer address ${address3} is not representable by its base and scale.`);
-            }
-            raw = relative2 / resolved.scale;
-          }
-          writeInteger(bytes, index * resolved.width, resolved.width, resolved.endian, raw);
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/raw.ts
-import { createHash as createHash3 } from "node:crypto";
-var RAW_ASSET_CODEC_ID, rawAssetCodec;
-var init_raw = __esm({
-  "packages/disassembler/src/asset-codecs/raw.ts"() {
-    "use strict";
-    init_common();
-    RAW_ASSET_CODEC_ID = "uttori.asset.raw";
-    rawAssetCodec = Object.freeze({
-      id: RAW_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: ({ request }) => {
-        if (request.length === void 0) {
-          throw new Error(`Raw asset '${request.id}' requires an exact length.`);
-        }
-        return { size: request.length, metadata: { sourceForm: "incbin" } };
-      },
-      decode: (context) => {
-        const bytes = readExactAssetBytes(context);
-        const options = optionsFor(context);
-        const path16 = stringOption(options, "path", defaultAssetPath(context.request.id, "bin"));
-        const mediaType = stringOption(options, "mediaType", "application/octet-stream");
-        return {
-          value: {
-            kind: "raw",
-            bytes: [...bytes],
-            sha256: createHash3("sha256").update(bytes).digest("hex")
-          },
-          files: [{ path: path16, mediaType, bytes }]
-        };
-      },
-      encode: ({ decoded, request }) => {
-        const value = decodedObject(decoded.value, request.id);
-        return Uint8Array.from(byteArray(value.bytes, `Raw asset '${request.id}' bytes`));
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/scalar-array.ts
-var SCALAR_ARRAY_ASSET_CODEC_ID, settings3, scalarArrayAssetCodec;
-var init_scalar_array = __esm({
-  "packages/disassembler/src/asset-codecs/scalar-array.ts"() {
-    "use strict";
-    init_common();
-    SCALAR_ARRAY_ASSET_CODEC_ID = "uttori.asset.scalar-array";
-    settings3 = (context) => {
-      const options = optionsFor(context);
-      const width2 = integerOption(options, "width", { minimum: 1, maximum: 4, fallback: 1 });
-      const endian = byteOrderOption(options);
-      const signed2 = booleanOption(options, "signed");
-      const { count, size } = resolveCountAndSize(context, width2, options);
-      return { options, width: width2, endian, signed: signed2, count, size };
-    };
-    scalarArrayAssetCodec = Object.freeze({
-      id: SCALAR_ARRAY_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const { width: width2, endian, signed: signed2, count, size } = settings3(context);
-        return { size, metadata: { width: width2, endian, signed: signed2, count } };
-      },
-      decode: (context) => {
-        const { options, width: width2, endian, signed: signed2, count } = settings3(context);
-        const bytes = readExactAssetBytes(context);
-        const values = Array.from(
-          { length: count },
-          (_, index) => readInteger(bytes, index * width2, width2, endian, signed2)
-        );
-        const value = { kind: "scalar-array", width: width2, endian, signed: signed2, values };
-        const path16 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path16, value)] };
-      },
-      encode: (context) => {
-        const { width: width2, endian, signed: signed2, count, size } = settings3(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        const values = numberArray(value.values, `Scalar asset '${context.request.id}' values`);
-        if (values.length !== count) {
-          throw new Error(`Scalar asset '${context.request.id}' requires exactly ${count} values.`);
-        }
-        const bytes = new Uint8Array(size);
-        values.forEach(
-          (entry, index) => writeInteger(bytes, index * width2, width2, endian, entry, signed2)
-        );
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/struct-array.ts
-var STRUCT_ARRAY_ASSET_CODEC_ID, parseFields, settings4, readBits, writeBits, structArrayAssetCodec;
-var init_struct_array = __esm({
-  "packages/disassembler/src/asset-codecs/struct-array.ts"() {
-    "use strict";
-    init_common();
-    STRUCT_ARRAY_ASSET_CODEC_ID = "uttori.asset.struct-array";
-    parseFields = (options) => {
-      const input = options.fields;
-      if (!Array.isArray(input) || input.length === 0) {
-        throw new Error("Struct asset option 'fields' must be a non-empty array.");
-      }
-      const defaultEndian = byteOrderOption(options);
-      const names = /* @__PURE__ */ new Set();
-      const fields = input.map((entry, index) => {
-        const definition = objectValue(entry, `Struct field ${index}`);
-        const name = stringOption(definition, "name");
-        if (!name) {
-          throw new Error(`Struct field ${index} requires a non-empty name.`);
-        }
-        if (names.has(name)) {
-          throw new Error(`Struct field name '${name}' is duplicated.`);
-        }
-        names.add(name);
-        const signed2 = booleanOption(definition, "signed");
-        const bitOffset = integerOption(definition, "bitOffset", { minimum: 0 });
-        const bits = integerOption(definition, "bits", { minimum: 1, maximum: 32 });
-        if (bitOffset !== void 0 || bits !== void 0) {
-          if (bitOffset === void 0 || bits === void 0) {
-            throw new Error(`Bitfield '${name}' requires both 'bitOffset' and 'bits'.`);
-          }
-          return { kind: "bitfield", name, bitStart: bitOffset, bitLength: bits, signed: signed2 };
-        }
-        const byteOffset = integerOption(definition, "offset", { minimum: 0 });
-        if (byteOffset === void 0) {
-          throw new Error(`Scalar field '${name}' requires 'offset'.`);
-        }
-        const width2 = integerOption(definition, "width", { minimum: 1, maximum: 4, fallback: 1 });
-        const endianValue = stringOption(definition, "endian", defaultEndian);
-        if (endianValue !== "little" && endianValue !== "big") {
-          throw new Error(`Scalar field '${name}' has an invalid byte order.`);
-        }
-        return {
-          kind: "scalar",
-          name,
-          bitStart: byteOffset * 8,
-          bitLength: width2 * 8,
-          byteOffset,
-          width: width2,
-          endian: endianValue,
-          signed: signed2
-        };
-      });
-      for (let left = 0; left < fields.length; left++) {
-        const leftEnd = fields[left].bitStart + fields[left].bitLength;
-        for (let right = left + 1; right < fields.length; right++) {
-          const rightEnd = fields[right].bitStart + fields[right].bitLength;
-          if (fields[left].bitStart < rightEnd && fields[right].bitStart < leftEnd) {
-            throw new Error(
-              `Struct fields '${fields[left].name}' and '${fields[right].name}' overlap.`
-            );
-          }
-        }
-      }
-      const requiredBits = fields.reduce(
-        (maximum, field) => Math.max(maximum, field.bitStart + field.bitLength),
-        -Infinity
-      );
-      const requiredStride = Math.ceil(requiredBits / 8);
-      const stride = integerOption(options, "stride", { minimum: requiredStride }) ?? requiredStride;
-      return { fields, stride };
-    };
-    settings4 = (context) => {
-      const options = optionsFor(context);
-      const { fields, stride } = parseFields(options);
-      const { count, size } = resolveCountAndSize(context, stride, options);
-      return { options, fields, stride, count, size };
-    };
-    readBits = (bytes, base, field) => {
-      let value = 0;
-      for (let index = 0; index < field.bitLength; index++) {
-        const bit2 = field.bitStart + index;
-        if (((bytes[base + Math.floor(bit2 / 8)] ?? 0) & 1 << bit2 % 8) !== 0) {
-          value += 2 ** index;
-        }
-      }
-      const modulus = 2 ** field.bitLength;
-      return field.signed && value >= modulus / 2 ? value - modulus : value;
-    };
-    writeBits = (bytes, base, field, value) => {
-      const modulus = 2 ** field.bitLength;
-      const minimum = field.signed ? -modulus / 2 : 0;
-      const maximum = field.signed ? modulus / 2 - 1 : modulus - 1;
-      if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
-        throw new Error(`Field '${field.name}' value does not fit ${field.bitLength} bits.`);
-      }
-      const encoded = value < 0 ? value + modulus : value;
-      for (let index = 0; index < field.bitLength; index++) {
-        const bit2 = field.bitStart + index;
-        const byteIndex = base + Math.floor(bit2 / 8);
-        const mask = 1 << bit2 % 8;
-        bytes[byteIndex] = (encoded & 2 ** index) === 0 ? bytes[byteIndex] & ~mask : bytes[byteIndex] | mask;
-      }
-    };
-    structArrayAssetCodec = Object.freeze({
-      id: STRUCT_ARRAY_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const { fields, stride, count, size } = settings4(context);
-        return {
-          size,
-          metadata: {
-            count,
-            stride,
-            bitOrder: "lsb0",
-            fields: fields.map((field) => ({ ...field }))
-          }
-        };
-      },
-      decode: (context) => {
-        const { options, fields, stride, count } = settings4(context);
-        const bytes = readExactAssetBytes(context);
-        const records = Array.from({ length: count }, (_, recordIndex) => {
-          const base = recordIndex * stride;
-          return Object.fromEntries(
-            fields.map((field) => [
-              field.name,
-              field.kind === "scalar" ? readInteger(bytes, base + field.byteOffset, field.width, field.endian, field.signed) : readBits(bytes, base, field)
-            ])
-          );
-        });
-        const value = {
-          kind: "struct-array",
-          raw: [...bytes],
-          records
-        };
-        const path16 = stringOption(options, "path", defaultAssetPath(context.request.id, "json"));
-        return { value, files: [jsonFile(path16, value)] };
-      },
-      encode: (context) => {
-        const { fields, stride, count, size } = settings4(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        const raw = byteArray(value.raw, `Struct asset '${context.request.id}' raw bytes`);
-        if (raw.length !== size) {
-          throw new Error(
-            `Struct asset '${context.request.id}' raw backing must remain ${size} bytes.`
-          );
-        }
-        if (!Array.isArray(value.records) || value.records.length !== count) {
-          throw new Error(`Struct asset '${context.request.id}' requires exactly ${count} records.`);
-        }
-        const bytes = Uint8Array.from(raw);
-        value.records.forEach((recordValue, recordIndex) => {
-          const record3 = objectValue(recordValue, `Struct record ${recordIndex}`);
-          const base = recordIndex * stride;
-          for (const field of fields) {
-            const fieldValue = record3[field.name];
-            if (typeof fieldValue !== "number") {
-              throw new Error(`Struct field '${field.name}' requires an integer value.`);
-            }
-            if (field.kind === "scalar") {
-              writeInteger(
-                bytes,
-                base + field.byteOffset,
-                field.width,
-                field.endian,
-                fieldValue,
-                field.signed
-              );
-            } else {
-              writeBits(bytes, base, field, fieldValue);
-            }
-          }
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/text.ts
-var TEXT_ASSET_CODEC_ID, parseByteKey, settings5, inspectedSize, textValue, encodeText, textAssetCodec;
-var init_text = __esm({
-  "packages/disassembler/src/asset-codecs/text.ts"() {
-    "use strict";
-    init_common();
-    TEXT_ASSET_CODEC_ID = "uttori.asset.text";
-    parseByteKey = (key2) => {
-      const normalized = key2.startsWith("$") ? `0x${key2.slice(1)}` : key2;
-      let value = Number.NaN;
-      if (/^0x[\da-f]+$/i.test(normalized)) {
-        value = Number.parseInt(normalized.slice(2), 16);
-      } else if (/^\d+$/.test(normalized)) {
-        value = Number.parseInt(normalized, 10);
-      }
-      if (!Number.isSafeInteger(value) || value < 0 || value > 255) {
-        throw new Error(`Text table byte '${key2}' must be in the range 0..255.`);
-      }
-      return value;
-    };
-    settings5 = (context) => {
-      const options = optionsFor(context);
-      const byteToToken = /* @__PURE__ */ new Map();
-      if (booleanOption(options, "ascii", true)) {
-        byteToToken.set(9, "	");
-        byteToToken.set(10, "\n");
-        byteToToken.set(13, "\r");
-        for (let byte = 32; byte <= 126; byte++) {
-          if (byte !== 92) {
-            byteToToken.set(byte, String.fromCharCode(byte));
-          }
-        }
-      }
-      const table = objectValue(options.table, "Text asset option 'table'");
-      for (const [key2, tokenValue] of Object.entries(table)) {
-        if (typeof tokenValue !== "string" || tokenValue.length === 0 || tokenValue.includes("\\")) {
-          throw new Error(`Text table entry '${key2}' must be a non-empty string without backslashes.`);
-        }
-        byteToToken.set(parseByteKey(key2), tokenValue);
-      }
-      const tokenToByte = [...byteToToken.entries()].map(([byte, token]) => [token, byte]);
-      const tokens = /* @__PURE__ */ new Set();
-      for (const [token] of tokenToByte) {
-        if (tokens.has(token)) {
-          throw new Error(`Text table token '${token}' is duplicated.`);
-        }
-        tokens.add(token);
-      }
-      for (const [left] of tokenToByte) {
-        const ambiguous = tokenToByte.find(
-          ([right]) => left !== right && (left.startsWith(right) || right.startsWith(left))
-        );
-        if (ambiguous) {
-          throw new Error(`Text table tokens '${left}' and '${ambiguous[0]}' are not prefix-free.`);
-        }
-      }
-      tokenToByte.sort(([left], [right]) => right.length - left.length || left.localeCompare(right));
-      const terminator = integerOption(options, "terminator", { minimum: 0, maximum: 255 });
-      return { options, byteToToken, tokenToByte, terminator };
-    };
-    inspectedSize = (context, resolved) => {
-      if (context.request.length !== void 0) {
-        return context.request.length;
-      }
-      if (resolved.terminator === void 0) {
-        throw new Error(`Text asset '${context.request.id}' requires a length or terminator.`);
-      }
-      const maxLength = integerOption(resolved.options, "maxLength", { minimum: 1 });
-      if (maxLength === void 0) {
-        throw new Error(
-          `Text asset '${context.request.id}' requires 'maxLength' for terminator search.`
-        );
-      }
-      for (let size = 1; size <= maxLength; size++) {
-        const bytes = context.source.read(context.request.sourceOffset + size - 1, 1);
-        if (!bytes) {
-          break;
-        }
-        if (bytes[0] === resolved.terminator) {
-          return size;
-        }
-      }
-      throw new Error(
-        `Text asset '${context.request.id}' has no terminator within ${maxLength} bytes.`
-      );
-    };
-    textValue = (bytes, resolved) => [...bytes].map(
-      (byte) => resolved.byteToToken.get(byte) ?? `\\x${byte.toString(16).padStart(2, "0").toUpperCase()}`
-    ).join("");
-    encodeText = (text2, resolved, owner) => {
-      const bytes = [];
-      for (let offset = 0; offset < text2.length; ) {
-        if (text2[offset] === "\\" && /^\\x[\da-f]{2}/i.test(text2.slice(offset, offset + 4))) {
-          bytes.push(Number.parseInt(text2.slice(offset + 2, offset + 4), 16));
-          offset += 4;
-          continue;
-        }
-        const match = resolved.tokenToByte.find(([token]) => text2.startsWith(token, offset));
-        if (!match) {
-          throw new Error(`Text asset '${owner}' cannot encode text at character ${offset}.`);
-        }
-        bytes.push(match[1]);
-        offset += match[0].length;
-      }
-      return Uint8Array.from(bytes);
-    };
-    textAssetCodec = Object.freeze({
-      id: TEXT_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const resolved = settings5(context);
-        const size = inspectedSize(context, resolved);
-        return {
-          size,
-          metadata: {
-            encoding: "single-byte-translation-table",
-            terminated: resolved.terminator !== void 0,
-            ...resolved.terminator === void 0 ? {} : { terminator: resolved.terminator }
-          }
-        };
-      },
-      decode: (context) => {
-        const resolved = settings5(context);
-        const bytes = readAssetBytes(context, context.inspection.size);
-        const terminated = resolved.terminator !== void 0 && bytes.at(-1) === resolved.terminator;
-        const payload = terminated ? bytes.subarray(0, -1) : bytes;
-        const value = { kind: "text", text: textValue(payload, resolved), terminated };
-        const path16 = stringOption(
-          resolved.options,
-          "path",
-          defaultAssetPath(context.request.id, "txt")
-        );
-        return {
-          value,
-          files: [
-            {
-              path: path16,
-              mediaType: "text/plain; charset=utf-8",
-              bytes: new TextEncoder().encode(value.text)
-            }
-          ]
-        };
-      },
-      encode: (context) => {
-        const resolved = settings5(context);
-        const value = decodedObject(context.decoded.value, context.request.id);
-        const text2 = value.text;
-        const terminated = value.terminated;
-        if (typeof text2 !== "string" || typeof terminated !== "boolean") {
-          throw new Error(
-            `Text asset '${context.request.id}' requires string text and terminated flag.`
-          );
-        }
-        const payload = encodeText(text2, resolved, context.request.id);
-        if (!terminated) {
-          return payload;
-        }
-        if (resolved.terminator === void 0) {
-          throw new Error(
-            `Text asset '${context.request.id}' cannot append an unconfigured terminator.`
-          );
-        }
-        const bytes = new Uint8Array(payload.length + 1);
-        bytes.set(payload);
-        bytes[bytes.length - 1] = resolved.terminator;
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/disassembler/src/asset-codecs/index.ts
-var builtinAssetCodecs;
-var init_asset_codecs = __esm({
-  "packages/disassembler/src/asset-codecs/index.ts"() {
-    "use strict";
-    init_index_table();
-    init_pointer_table();
-    init_raw();
-    init_scalar_array();
-    init_struct_array();
-    init_text();
-    init_index_table();
-    init_pointer_table();
-    init_raw();
-    init_scalar_array();
-    init_struct_array();
-    init_text();
-    builtinAssetCodecs = Object.freeze(
-      [
-        indexTableAssetCodec,
-        pointerTableAssetCodec,
-        rawAssetCodec,
-        scalarArrayAssetCodec,
-        structArrayAssetCodec,
-        textAssetCodec
-      ].sort((left, right) => left.id.localeCompare(right.id))
-    );
-  }
-});
-
-// packages/disassembler/src/asset-preview.ts
-var init_asset_preview = __esm({
-  "packages/disassembler/src/asset-preview.ts"() {
-    "use strict";
-  }
-});
-
 // packages/disassembler/src/analysis-graph.ts
 var init_analysis_graph = __esm({
   "packages/disassembler/src/analysis-graph.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/compression-codec.ts
-var init_compression_codec = __esm({
-  "packages/disassembler/src/compression-codec.ts"() {
     "use strict";
   }
 });
@@ -15863,21 +15922,21 @@ var init_canonical_json = __esm({
       if (value !== null && typeof value === "object") {
         const input = value;
         const result = {};
-        for (const key2 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
-          const entry = input[key2];
+        for (const key3 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
+          const entry = input[key3];
           if (entry === void 0) {
             continue;
           }
           const normalized = canonicalValue2(entry);
-          if (key2 === "__proto__") {
-            Object.defineProperty(result, key2, {
+          if (key3 === "__proto__") {
+            Object.defineProperty(result, key3, {
               value: normalized,
               enumerable: true,
               writable: true,
               configurable: true
             });
           } else {
-            result[key2] = normalized;
+            result[key3] = normalized;
           }
         }
         return result;
@@ -16088,7 +16147,7 @@ var init_project_types = __esm({
 });
 
 // packages/disassembler/src/record-id-set.ts
-import fs3 from "node:fs";
+import fs from "node:fs";
 import os from "node:os";
 import path3 from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -16122,7 +16181,7 @@ var init_record_id_set = __esm({
         return true;
       }
       #spill() {
-        this.#directory = fs3.mkdtempSync(path3.join(os.tmpdir(), "uttori-record-ids-"));
+        this.#directory = fs.mkdtempSync(path3.join(os.tmpdir(), "uttori-record-ids-"));
         try {
           this.#database = new DatabaseSync(path3.join(this.#directory, "ids.sqlite"));
           this.#database.exec(
@@ -16147,7 +16206,7 @@ var init_record_id_set = __esm({
           this.#insert = void 0;
           this.#ids.clear();
           if (this.#directory) {
-            fs3.rmSync(this.#directory, { recursive: true, force: true });
+            fs.rmSync(this.#directory, { recursive: true, force: true });
           }
           this.#directory = void 0;
         }
@@ -16259,7 +16318,7 @@ var init_trace_detail = __esm({
           throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
         }
         if (!detail.state || typeof detail.state !== "object" || isArray2(detail.state) || Object.entries(detail.state).some(
-          ([key2, entry]) => !key2 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
+          ([key3, entry]) => !key3 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
         )) {
           throw new Error("Trace instruction state contains an invalid register value.");
         }
@@ -16348,16 +16407,16 @@ var init_project_validation = __esm({
         return;
       }
       const record3 = value;
-      for (const key2 in record3) {
-        if (!Object.hasOwn(record3, key2)) {
+      for (const key3 in record3) {
+        if (!Object.hasOwn(record3, key3)) {
           continue;
         }
-        if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
-          throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
+        if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
+          throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
         }
-        const entry = record3[key2];
+        const entry = record3[key3];
         if (entry && typeof entry === "object") {
-          assertNoRomPayload(entry, `${location}.${key2}`);
+          assertNoRomPayload(entry, `${location}.${key3}`);
         }
       }
     };
@@ -16401,7 +16460,7 @@ var init_project_validation = __esm({
           return;
         }
         if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-          Object.entries(value).forEach(([key2, entry]) => visitJson(entry, `${current}.${key2}`));
+          Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
           return;
         }
         throw new Error(`${current} is not a JSON-safe codec option.`);
@@ -16735,8 +16794,8 @@ var init_project_validation = __esm({
 });
 
 // packages/disassembler/src/project-transaction.ts
-import { createHash as createHash4 } from "node:crypto";
-import * as fs4 from "node:fs";
+import { createHash as createHash2 } from "node:crypto";
+import * as fs2 from "node:fs";
 import path4 from "node:path";
 var ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, prepareAnalysisProjectTransaction, committed, publish, commitAnalysisProjectViewUpdate, publishAnalysisProject, compactAnalysisProject;
 var init_project_transaction = __esm({
@@ -16764,7 +16823,7 @@ var init_project_transaction = __esm({
     analysisProjectRevision = (manifest) => ({
       format: ANALYSIS_PROJECT_REVISION_FORMAT,
       version: ANALYSIS_PROJECT_REVISION_VERSION,
-      manifestSha256: createHash4("sha256").update(canonicalJson(manifest)).digest("hex")
+      manifestSha256: createHash2("sha256").update(canonicalJson(manifest)).digest("hex")
     });
     assertAnalysisProjectRevision = (store, expected) => {
       const actual = analysisProjectRevision(store.manifest());
@@ -16784,8 +16843,8 @@ var init_project_transaction = __esm({
     });
     publish = (directory, project, expected, updates = project.shards) => {
       prepareAnalysisProjectTransaction(directory, project);
-      fs4.mkdirSync(directory, { recursive: true });
-      const exists = fs4.existsSync(path4.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      fs2.mkdirSync(directory, { recursive: true });
+      const exists = fs2.existsSync(path4.join(directory, ANALYSIS_PROJECT_MANIFEST));
       const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(path4.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
       try {
         const manifest = store.transaction(() => {
@@ -16820,7 +16879,7 @@ var init_project_transaction = __esm({
     };
     publishAnalysisProject = (directory, project) => {
       let expected;
-      if (fs4.existsSync(path4.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
+      if (fs2.existsSync(path4.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
         const store = openAnalysisProjectStore(directory);
         try {
           expected = store.transaction(() => analysisProjectRevision(store.manifest()), false);
@@ -16833,12 +16892,12 @@ var init_project_transaction = __esm({
     compactAnalysisProject = (directory) => {
       const store = openAnalysisProjectStore(directory);
       try {
-        const before = fs4.statSync(store.file).size;
+        const before = fs2.statSync(store.file).size;
         store.compact();
         return {
           ...committed(store.manifest()),
           maintenance: {
-            removedBytes: Math.max(0, before - fs4.statSync(store.file).size),
+            removedBytes: Math.max(0, before - fs2.statSync(store.file).size),
             warnings: []
           }
         };
@@ -16868,11 +16927,11 @@ var init_sqlite_runtime_payload = __esm({
       ["x", 2],
       ["y", 2]
     ];
-    FIELD_NAMES = new Set(FIELDS.map(([key2]) => key2));
+    FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
     HEADER_BYTES = 7;
     CHECKSUM_BYTES = 4;
     encodePackedRuntimePayload = (record3) => {
-      if (Object.keys(record3.state).some((key2) => !FIELD_NAMES.has(key2))) {
+      if (Object.keys(record3.state).some((key3) => !FIELD_NAMES.has(key3))) {
         return void 0;
       }
       const bytes = record3.bytes;
@@ -16888,12 +16947,12 @@ var init_sqlite_runtime_payload = __esm({
       }
       let mask = 0;
       let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
-      for (const [index, [key2, width2]] of FIELDS.entries()) {
-        if (!Object.hasOwn(record3.state, key2)) {
+      for (const [index, [key3, width2]] of FIELDS.entries()) {
+        if (!Object.hasOwn(record3.state, key3)) {
           continue;
         }
-        const value = record3.state[key2];
-        const max = key2 === "e" ? 1 : 2 ** (width2 * 8) - 1;
+        const value = record3.state[key3];
+        const max = key3 === "e" ? 1 : 2 ** (width2 * 8) - 1;
         if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
           return void 0;
         }
@@ -16908,9 +16967,9 @@ var init_sqlite_runtime_payload = __esm({
       for (const byte of bytes ?? []) {
         encoded[offset++] = byte;
       }
-      for (const [index, [key2, width2]] of FIELDS.entries()) {
+      for (const [index, [key3, width2]] of FIELDS.entries()) {
         if (mask & 1 << index) {
-          encoded.writeUIntLE(record3.state[key2], offset, width2);
+          encoded.writeUIntLE(record3.state[key3], offset, width2);
           offset += width2;
         }
       }
@@ -16940,13 +16999,13 @@ var init_sqlite_runtime_payload = __esm({
       }
       const state = {};
       let offset = HEADER_BYTES + byteCount;
-      for (const [index, [key2, width2]] of FIELDS.entries()) {
+      for (const [index, [key3, width2]] of FIELDS.entries()) {
         if (mask & 1 << index) {
           const value = encoded.readUIntLE(offset, width2);
-          if (key2 === "e" && value > 1) {
+          if (key3 === "e" && value > 1) {
             throw new Error("Invalid packed emulation register.");
           }
-          state[key2] = value;
+          state[key3] = value;
           offset += width2;
         }
       }
@@ -16959,7 +17018,7 @@ var init_sqlite_runtime_payload = __esm({
 });
 
 // packages/disassembler/src/sqlite-payload.ts
-import { TextDecoder, types } from "node:util";
+import { TextDecoder as TextDecoder2, types } from "node:util";
 import { deflateSync, inflateSync } from "node:zlib";
 var MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES2, utf8, encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
 var init_sqlite_payload = __esm({
@@ -16969,7 +17028,7 @@ var init_sqlite_payload = __esm({
     MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
     HEADER = Buffer.from([85, 65, 80, 1]);
     HEADER_BYTES2 = 8;
-    utf8 = new TextDecoder("utf-8", { fatal: true });
+    utf8 = new TextDecoder2("utf-8", { fatal: true });
     encodeSqlitePayload = (json) => {
       const bytes = Buffer.byteLength(json);
       if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
@@ -17345,7 +17404,7 @@ var init_sqlite_records = __esm({
 });
 
 // packages/disassembler/src/project-store.ts
-import * as fs5 from "node:fs";
+import * as fs3 from "node:fs";
 import path5 from "node:path";
 var parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
 var init_project_store = __esm({
@@ -17375,7 +17434,7 @@ var init_project_store = __esm({
     };
     openAnalysisProjectStore = (directory) => {
       const manifest = parseAnalysisProjectManifest(
-        JSON.parse(fs5.readFileSync(path5.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+        JSON.parse(fs3.readFileSync(path5.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
       );
       return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
     };
@@ -17542,21 +17601,21 @@ var init_runtime_evidence = __esm({
       }
       const groups = /* @__PURE__ */ new Map();
       for (const observation of observations) {
-        const key2 = [
+        const key3 = [
           observation.architecture,
           observation.addressSpace,
           observation.address,
           observation.field
         ].join(":");
-        const group = groups.get(key2);
+        const group = groups.get(key3);
         if (group) {
           group.push(observation);
         } else {
-          groups.set(key2, [observation]);
+          groups.set(key3, [observation]);
         }
       }
       const conflicts = [];
-      for (const [key2, group] of groups) {
+      for (const [key3, group] of groups) {
         const byValue = /* @__PURE__ */ new Map();
         for (const observation of group) {
           const valueKey = stateValueKey(observation.value);
@@ -17572,7 +17631,7 @@ var init_runtime_evidence = __esm({
         }
         const first = group[0];
         conflicts.push({
-          id: `runtime-conflict:${key2}`,
+          id: `runtime-conflict:${key3}`,
           kind: first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
           architecture: first.architecture,
           addressSpace: first.addressSpace,
@@ -17735,7 +17794,7 @@ var init_runtime_evidence = __esm({
 });
 
 // packages/disassembler/src/sqlite-annotation-query.ts
-var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView;
+var QUERY_LAYOUT, decode, runtimeSelect, PENDING_EXECUTIONS, annotationQueryIndexesReady, ensureAnnotationQueryIndexes, readSqliteAnnotationView, validateAnnotationRanges, readInstructionExecutionSummary;
 var init_sqlite_annotation_query = __esm({
   "packages/disassembler/src/sqlite-annotation-query.ts"() {
     "use strict";
@@ -17777,7 +17836,7 @@ var init_sqlite_annotation_query = __esm({
           }
         }
         for (const table of ["analysis", "runtime_observations"]) {
-          const columns = new Set(
+          const columns2 = new Set(
             database.prepare(`PRAGMA table_info(${table})`).all().map((row) => String(row.name))
           );
           for (const [name, type] of [
@@ -17786,7 +17845,7 @@ var init_sqlite_annotation_query = __esm({
             ["query_data", "TEXT"],
             ["query_ready", "INTEGER NOT NULL DEFAULT 0"]
           ]) {
-            if (!columns.has(name)) {
+            if (!columns2.has(name)) {
               database.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
             }
           }
@@ -17868,23 +17927,16 @@ var init_sqlite_annotation_query = __esm({
       if (!annotationQueryIndexesReady(database)) {
         throw new Error("Analysis query indexes changed. Refresh the annotation view.");
       }
-      if (ranges.length > 2e3) {
-        throw new Error("At most 2000 visible source ranges may be projected per request.");
-      }
-      for (const range of ranges) {
-        if (!range.addressSpace || !Number.isSafeInteger(range.start) || !Number.isSafeInteger(range.end) || range.start < 0 || range.end <= range.start || (range.outputStart !== void 0 || range.outputEnd !== void 0) && (!Number.isSafeInteger(range.outputStart) || !Number.isSafeInteger(range.outputEnd) || range.outputStart < 0 || range.outputEnd <= range.outputStart)) {
-          throw new Error("Invalid instruction annotation range.");
-        }
-      }
+      validateAnnotationRanges(ranges);
       const fileSpaces = manifest.addressSpaces.filter((space) => space.kind === "file").map((space) => space.id);
       const analysis = /* @__PURE__ */ new Map();
       const locations = /* @__PURE__ */ new Map();
       const offsets = /* @__PURE__ */ new Set();
       let limited = false;
       const locate = (space, address3) => {
-        const key2 = `${space}:${address3}`;
-        if (locations.size < 2e3 || locations.has(key2)) {
-          locations.set(key2, { space, address: address3 });
+        const key3 = `${space}:${address3}`;
+        if (locations.size < 2e3 || locations.has(key3)) {
+          locations.set(key3, { space, address: address3 });
         } else {
           limited = true;
         }
@@ -18012,8 +18064,8 @@ var init_sqlite_annotation_query = __esm({
           }
         }
       };
-      for (const [key2, { space, address: address3 }] of locations) {
-        executionCounts.set(key2, Number(executionCount.get(space, address3)?.n ?? 0));
+      for (const [key3, { space, address: address3 }] of locations) {
+        executionCounts.set(key3, Number(executionCount.get(space, address3)?.n ?? 0));
         for (const kind of ["runtime-execution", "runtime-cpu-state"]) {
           const minimum = kind === "runtime-execution" ? 1 : 0;
           const budget2 = Math.min(64, Math.max(minimum, 8192 - runtime.size));
@@ -18081,6 +18133,91 @@ var init_sqlite_annotation_query = __esm({
         limited
       };
     };
+    validateAnnotationRanges = (ranges) => {
+      if (ranges.length > 2e3) {
+        throw new Error("At most 2000 visible source ranges may be projected per request.");
+      }
+      for (const range of ranges) {
+        if (!range.addressSpace || !Number.isSafeInteger(range.start) || !Number.isSafeInteger(range.end) || range.start < 0 || range.end <= range.start || (range.outputStart !== void 0 || range.outputEnd !== void 0) && (!Number.isSafeInteger(range.outputStart) || !Number.isSafeInteger(range.outputEnd) || range.outputStart < 0 || range.outputEnd <= range.outputStart)) {
+          throw new Error("Invalid instruction annotation range.");
+        }
+      }
+    };
+    readInstructionExecutionSummary = (database, manifest, ranges) => {
+      validateAnnotationRanges(ranges);
+      const fileSpaces = manifest.addressSpaces.filter((space) => space.kind === "file");
+      const count = database.prepare(`SELECT COALESCE(SUM(o.count),0) AS n
+    FROM runtime_fact_locations f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+    WHERE f.kind='runtime-execution' AND f.address_space=? AND f.address=?
+      AND (? IS NULL OR f.architecture=?)`);
+      const aliases2 = database.prepare(`SELECT DISTINCT f.address_space,f.address,o.query_file_offset
+    FROM runtime_observations o CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+    WHERE o.query_file_offset>=? AND o.query_file_offset<? AND f.kind='runtime-execution'
+      AND (? IS NULL OR f.architecture=?) LIMIT 65`);
+      const logical = database.prepare(`SELECT DISTINCT address FROM runtime_fact_locations
+    WHERE kind='runtime-execution' AND address_space=? AND address>=? AND address<?
+      AND (? IS NULL OR architecture=?) LIMIT 65`);
+      const counts = /* @__PURE__ */ new Map();
+      return ranges.map((range, rangeIndex) => {
+        const locations = /* @__PURE__ */ new Map();
+        let limited = false;
+        const add = (addressSpace, address3, offset) => {
+          const key3 = `${addressSpace}:${address3}`;
+          let location = locations.get(key3);
+          if (!location) {
+            if (locations.size >= 64) {
+              limited = true;
+              return;
+            }
+            location = { addressSpace, address: address3, offsets: /* @__PURE__ */ new Set() };
+            locations.set(key3, location);
+          }
+          if (offset !== void 0) {
+            location.offsets.add(offset);
+          }
+        };
+        if (range.outputStart !== void 0) {
+          for (const space of fileSpaces) {
+            add(space.id, range.outputStart, range.outputStart);
+          }
+        }
+        add(range.addressSpace, range.start, range.outputStart);
+        const architecture = range.architecture ?? null;
+        for (const row of logical.iterate(
+          range.addressSpace,
+          range.start,
+          range.end,
+          architecture,
+          architecture
+        )) {
+          add(range.addressSpace, Number(row.address));
+        }
+        if (range.outputStart !== void 0 && range.outputEnd !== void 0) {
+          for (const row of aliases2.iterate(
+            range.outputStart,
+            range.outputEnd,
+            architecture,
+            architecture
+          )) {
+            add(String(row.address_space), Number(row.address), Number(row.query_file_offset));
+          }
+        }
+        return {
+          rangeIndex,
+          limited,
+          locations: [...locations.values()].map(({ addressSpace, address: address3, offsets }) => {
+            const key3 = `${architecture}:${addressSpace}:${address3}`;
+            let executionCount = counts.get(key3);
+            if (executionCount === void 0) {
+              const filter = fileSpaces.some((space) => space.id === addressSpace) ? null : architecture;
+              executionCount = Number(count.get(addressSpace, address3, filter, filter)?.n ?? 0);
+              counts.set(key3, executionCount);
+            }
+            return { addressSpace, address: address3, outputOffsets: [...offsets], executionCount };
+          })
+        };
+      });
+    };
   }
 });
 
@@ -18090,8 +18227,8 @@ var init_sqlite_query_cache = __esm({
   "packages/disassembler/src/sqlite-query-cache.ts"() {
     "use strict";
     QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-    installQueryCache = (db, key2, dependencies) => {
-      if (!/^[\d_a-z]+$/.test(key2)) {
+    installQueryCache = (db, key3, dependencies) => {
+      if (!/^[\d_a-z]+$/.test(key3)) {
         throw new Error("Invalid internal query cache key.");
       }
       if (dependencies.some(
@@ -18110,25 +18247,26 @@ var init_sqlite_query_cache = __esm({
       }
       db.exec(QUERY_CACHE_SCHEMA);
       for (const table of dependencies.flatMap(
-        (name) => name === "runtime" ? ["runtime_facts", "runtime_observations", "runtime_identities"] : [name]
+        (name) => name === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name]
       )) {
         for (const event of ["INSERT", "UPDATE", "DELETE"]) {
           const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
-          db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key2}_${table}_${event} AFTER ${update} ON ${table} BEGIN
-      DELETE FROM query_cache WHERE name='${key2}'; END`);
+          const condition = table === "runtime_fact_rows" && event === "UPDATE" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
+          db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key3}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
+      DELETE FROM query_cache WHERE name='${key3}'; END`);
         }
       }
     };
-    readQueryCache = (db, key2, signature) => {
+    readQueryCache = (db, key3, signature) => {
       if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
         return void 0;
       }
-      const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key2, signature);
+      const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
       return row ? JSON.parse(String(row.payload)) : void 0;
     };
-    writeQueryCache = (db, key2, signature, value) => {
+    writeQueryCache = (db, key3, signature, value) => {
       db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
-        key2,
+        key3,
         signature,
         JSON.stringify(value)
       );
@@ -18395,13 +18533,13 @@ var init_sqlite_coverage_query = __esm({
             regionIds: ids("regionIds")
           };
           const { start: _start, end: _end, ...identity2 } = segment;
-          const key2 = JSON.stringify(identity2);
-          if (pending && key2 === pendingKey) {
+          const key3 = JSON.stringify(identity2);
+          if (pending && key3 === pendingKey) {
             pending = { ...pending, end };
           } else {
             savePending();
             pending = segment;
-            pendingKey = key2;
+            pendingKey = key3;
           }
           const bytes = end - previous;
           for (const c of segment.classifications) {
@@ -18667,8 +18805,283 @@ var init_sqlite_graph_query = __esm({
   }
 });
 
+// packages/disassembler/src/sqlite-runtime-facts.ts
+var RUNTIME_DESCRIPTOR_COLUMNS, runtimeIdentityKey, columns, inserted, key2, descriptorInsert, descriptorId, RUNTIME_FACT_SCHEMA, RUNTIME_IDENTITY_SCHEMA;
+var init_sqlite_runtime_facts = __esm({
+  "packages/disassembler/src/sqlite-runtime-facts.ts"() {
+    "use strict";
+    RUNTIME_DESCRIPTOR_COLUMNS = [
+      "kind",
+      "architecture",
+      "address_space",
+      "address",
+      "start",
+      "end",
+      "from_address_space",
+      "from_address",
+      "to_address_space",
+      "to_address",
+      "instruction_address_space",
+      "instruction_address",
+      "accessed_address_space",
+      "accessed_address",
+      "coverage"
+    ];
+    runtimeIdentityKey = (column) => `CASE WHEN typeof(${column})='blob' THEN substr(${column},1,8) ELSE ${column} END`;
+    columns = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",");
+    inserted = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `NEW."${column}"`).join(",");
+    key2 = `json_array(${inserted})`;
+    descriptorInsert = `INSERT OR IGNORE INTO runtime_descriptors(key,${columns}) VALUES(${key2},${inserted});`;
+    descriptorId = `(SELECT did FROM runtime_descriptors WHERE key=${key2})`;
+    RUNTIME_FACT_SCHEMA = `
+CREATE TABLE runtime_descriptors (
+  did INTEGER PRIMARY KEY, key TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL, architecture TEXT NOT NULL,
+  address_space TEXT, address INTEGER, start INTEGER, "end" INTEGER,
+  from_address_space TEXT, from_address INTEGER, to_address_space TEXT, to_address INTEGER,
+  instruction_address_space TEXT, instruction_address INTEGER,
+  accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT
+);
+CREATE INDEX runtime_lookup ON runtime_descriptors(kind,address_space,address,start);
+CREATE INDEX runtime_memory ON runtime_descriptors(instruction_address_space,instruction_address) WHERE kind='runtime-memory-access';
+CREATE TABLE runtime_fact_rows (
+  fid INTEGER PRIMARY KEY, fingerprint BLOB,
+  descriptor_id INTEGER NOT NULL REFERENCES runtime_descriptors(did),
+  payload BLOB, history_id INTEGER REFERENCES runtime_history(id), history_slot INTEGER,
+  CHECK ((history_id IS NULL AND history_slot IS NULL) OR
+    (history_id IS NOT NULL AND history_slot>=0 AND payload IS NULL))
+);
+CREATE INDEX runtime_fact_fingerprint ON runtime_fact_rows(substr(fingerprint,1,8));
+CREATE INDEX runtime_fact_descriptor ON runtime_fact_rows(descriptor_id);
+CREATE INDEX runtime_history_pending ON runtime_fact_rows(fid) WHERE history_id IS NULL;
+CREATE TRIGGER runtime_fact_unique_insert BEFORE INSERT ON runtime_fact_rows
+WHEN NEW.fingerprint IS NOT NULL AND EXISTS(
+  SELECT 1 FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8) AND fingerprint=NEW.fingerprint AND fid IS NOT NEW.fid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime fact fingerprint'); END;
+CREATE TRIGGER runtime_fact_unique_update BEFORE UPDATE OF fingerprint ON runtime_fact_rows
+WHEN NEW.fingerprint IS NOT NULL AND EXISTS(
+  SELECT 1 FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8)
+    AND fingerprint=NEW.fingerprint AND fid!=OLD.fid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime fact fingerprint'); END;
+CREATE VIEW runtime_fact_locations AS SELECT f.fid,
+  ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `d."${column}"`).join(",")}
+FROM runtime_fact_rows f LEFT JOIN runtime_descriptors d ON d.did=f.descriptor_id;
+CREATE VIEW runtime_facts AS SELECT f.fid,f.fingerprint,
+  ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `d."${column}"`).join(",")},
+  CASE WHEN f.history_id IS NULL THEN f.payload
+    ELSE analysis_history_payload(f.history_id,f.history_slot) END AS payload
+FROM runtime_fact_rows f LEFT JOIN runtime_descriptors d ON d.did=f.descriptor_id;
+CREATE TRIGGER runtime_fact_insert INSTEAD OF INSERT ON runtime_facts BEGIN
+  ${descriptorInsert}
+  INSERT INTO runtime_fact_rows(fid,fingerprint,descriptor_id,payload)
+    VALUES(NEW.fid,NEW.fingerprint,${descriptorId},NEW.payload);
+END;
+CREATE TRIGGER runtime_fact_update INSTEAD OF UPDATE ON runtime_facts BEGIN
+  ${descriptorInsert}
+  UPDATE runtime_fact_rows SET fid=NEW.fid,fingerprint=NEW.fingerprint,
+    descriptor_id=${descriptorId},payload=NEW.payload,history_id=NULL,history_slot=NULL WHERE fid=OLD.fid;
+END;
+CREATE TRIGGER runtime_fact_delete INSTEAD OF DELETE ON runtime_facts BEGIN
+  DELETE FROM runtime_fact_rows WHERE fid=OLD.fid;
+END;
+`;
+    RUNTIME_IDENTITY_SCHEMA = `
+CREATE TABLE runtime_identities(iid INTEGER PRIMARY KEY,value BLOB NOT NULL);
+CREATE INDEX runtime_identity_key ON runtime_identities(${runtimeIdentityKey("value")});
+CREATE TRIGGER runtime_identity_unique_insert BEFORE INSERT ON runtime_identities
+WHEN EXISTS(SELECT 1 FROM runtime_identities
+  WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND value=NEW.value)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
+CREATE TRIGGER runtime_identity_unique_update BEFORE UPDATE OF value ON runtime_identities
+WHEN EXISTS(SELECT 1 FROM runtime_identities
+  WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND value=NEW.value AND iid!=OLD.iid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
+`;
+  }
+});
+
+// packages/disassembler/src/sqlite-runtime-history.ts
+import { TextDecoder as TextDecoder3, types as types2 } from "node:util";
+import { crc32 as crc322, deflateSync as deflateSync2, inflateSync as inflateSync2 } from "node:zlib";
+var MAGIC2, MAX_ROWS, MAX_BYTES, TARGET_BYTES, CACHE_BYTES, utf82, RUNTIME_HISTORY_SCHEMA, encodeRuntimeHistory, decodeHistoryBlock, historyValue, registerRuntimeHistory, packRuntimeHistory, collectRuntimeHistory;
+var init_sqlite_runtime_history = __esm({
+  "packages/disassembler/src/sqlite-runtime-history.ts"() {
+    "use strict";
+    MAGIC2 = Buffer.from([85, 72, 66, 1]);
+    MAX_ROWS = 1024;
+    MAX_BYTES = 32 * 1024 * 1024;
+    TARGET_BYTES = 256 * 1024;
+    CACHE_BYTES = 4 * 1024 * 1024;
+    utf82 = new TextDecoder3("utf-8", { fatal: true });
+    RUNTIME_HISTORY_SCHEMA = `CREATE TABLE runtime_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, first_fid INTEGER NOT NULL, last_fid INTEGER NOT NULL,
+  payload BLOB NOT NULL
+);
+CREATE TRIGGER runtime_history_immutable BEFORE UPDATE ON runtime_history BEGIN
+  SELECT RAISE(ABORT,'Runtime history blocks are immutable');
+END;`;
+    encodeRuntimeHistory = (values) => {
+      if (!values.length || values.length > MAX_ROWS) {
+        throw new Error("Invalid runtime history record count.");
+      }
+      const records = values.map((value) => {
+        if (value === null) {
+          return Buffer.from([0]);
+        }
+        const bytes = typeof value === "string" ? Buffer.from(value, "utf8") : Buffer.from(value);
+        return Buffer.concat([Buffer.from([typeof value === "string" ? 1 : 2]), bytes]);
+      });
+      const directoryBytes = (values.length + 1) * 4;
+      const size = directoryBytes + records.reduce((n, record3) => n + record3.length, 0);
+      if (size > MAX_BYTES) {
+        throw new Error("Runtime history block exceeds its decoded byte limit.");
+      }
+      const body = Buffer.allocUnsafe(size);
+      let offset = directoryBytes;
+      for (const [index, record3] of records.entries()) {
+        body.writeUInt32LE(offset, index * 4);
+        record3.copy(body, offset);
+        offset += record3.length;
+      }
+      body.writeUInt32LE(offset, values.length * 4);
+      const header = Buffer.allocUnsafe(16);
+      MAGIC2.copy(header);
+      header.writeUInt32LE(values.length, 4);
+      header.writeUInt32LE(size, 8);
+      header.writeUInt32LE(crc322(body), 12);
+      return Buffer.concat([header, deflateSync2(body, { level: 6 })]);
+    };
+    decodeHistoryBlock = (encoded) => {
+      const bytes = Buffer.from(encoded.buffer, encoded.byteOffset, encoded.byteLength);
+      if (bytes.length < 17 || !bytes.subarray(0, 4).equals(MAGIC2)) {
+        throw new Error("Unsupported runtime history block.");
+      }
+      const count = bytes.readUInt32LE(4);
+      const size = bytes.readUInt32LE(8);
+      if (!count || count > MAX_ROWS || size < (count + 1) * 4 + count || size > MAX_BYTES) {
+        throw new Error("Invalid runtime history block bounds.");
+      }
+      const body = inflateSync2(bytes.subarray(16), { maxOutputLength: size });
+      if (body.length !== size || crc322(body) !== bytes.readUInt32LE(12)) {
+        throw new Error("Corrupt runtime history block.");
+      }
+      let start = body.readUInt32LE(0);
+      if (start !== (count + 1) * 4) {
+        throw new Error("Invalid runtime history offset directory.");
+      }
+      for (let index = 0; index < count; index++) {
+        const end = body.readUInt32LE((index + 1) * 4);
+        if (end <= start || end > size) {
+          throw new Error("Invalid runtime history record extent.");
+        }
+        const type = body[start];
+        if (type === 0 && end !== start + 1 || type !== 0 && type !== 1 && type !== 2) {
+          throw new Error("Invalid runtime history storage type.");
+        }
+        start = end;
+      }
+      if (start !== size) {
+        throw new Error("Trailing runtime history bytes.");
+      }
+      return { body, count };
+    };
+    historyValue = (block, slot) => {
+      const start = block.body.readUInt32LE(slot * 4);
+      const end = block.body.readUInt32LE((slot + 1) * 4);
+      const type = block.body[start];
+      if (type === 0) {
+        return null;
+      }
+      const value = block.body.subarray(start + 1, end);
+      return type === 1 ? utf82.decode(value) : value;
+    };
+    registerRuntimeHistory = (db) => {
+      const cache = /* @__PURE__ */ new Map();
+      let used = 0;
+      let read;
+      db.function("analysis_history_payload", (id, slot) => {
+        if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0 || typeof slot !== "number" || !Number.isSafeInteger(slot) || slot < 0) {
+          throw new Error("Invalid runtime history reference.");
+        }
+        let block = cache.get(id);
+        if (!block) {
+          read ??= db.prepare("SELECT payload FROM runtime_history WHERE id=?");
+          const encoded = read.get(id)?.payload;
+          if (!types2.isUint8Array(encoded)) {
+            throw new Error("Missing runtime history block.");
+          }
+          block = decodeHistoryBlock(encoded);
+          const size = block.body.byteLength + 128;
+          if (size <= CACHE_BYTES) {
+            while (used + size > CACHE_BYTES) {
+              const first = cache.keys().next().value;
+              used -= cache.get(first).body.byteLength + 128;
+              cache.delete(first);
+            }
+            cache.set(id, block);
+            used += size;
+          }
+        }
+        if (slot >= block.count) {
+          throw new Error("Runtime history slot is out of bounds.");
+        }
+        return historyValue(block, slot);
+      });
+      return () => {
+        cache.clear();
+        used = 0;
+      };
+    };
+    packRuntimeHistory = (db, onProgress) => {
+      if (!db.isTransaction) {
+        throw new Error("Runtime history packing requires a transaction.");
+      }
+      const pending = db.prepare(
+        "SELECT fid,payload FROM runtime_fact_rows WHERE history_id IS NULL ORDER BY fid LIMIT ?"
+      );
+      const insert = db.prepare(
+        "INSERT INTO runtime_history(first_fid,last_fid,payload) VALUES(?,?,?)"
+      );
+      const update = db.prepare(
+        "UPDATE runtime_fact_rows SET payload=NULL,history_id=?,history_slot=? WHERE fid=?"
+      );
+      let packed = 0;
+      for (; ; ) {
+        const rows = [];
+        let size = 0;
+        for (const row of pending.iterate(MAX_ROWS)) {
+          const value = row.payload;
+          const bytes = typeof value === "string" ? Buffer.byteLength(value) : value?.byteLength ?? 0;
+          if (rows.length && size + bytes > TARGET_BYTES) {
+            break;
+          }
+          rows.push(row);
+          size += bytes;
+        }
+        if (!rows.length) {
+          return packed;
+        }
+        const encoded = encodeRuntimeHistory(rows.map((row) => row.payload));
+        const id = insert.run(rows[0].fid, rows[rows.length - 1].fid, encoded).lastInsertRowid;
+        for (const [slot, row] of rows.entries()) {
+          update.run(id, slot, row.fid);
+        }
+        packed += rows.length;
+        onProgress?.(packed);
+      }
+    };
+    collectRuntimeHistory = (db) => {
+      db.exec(`DELETE FROM runtime_history WHERE NOT EXISTS(
+    SELECT 1 FROM runtime_fact_rows f WHERE f.fid>=runtime_history.first_fid
+      AND f.fid<=runtime_history.last_fid AND f.history_id=runtime_history.id);
+    DELETE FROM runtime_descriptors WHERE NOT EXISTS(
+      SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
+    };
+  }
+});
+
 // packages/disassembler/src/sqlite-runtime-storage.ts
-import { createHash as createHash5 } from "node:crypto";
+import { createHash as createHash3 } from "node:crypto";
 var RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
   "packages/disassembler/src/sqlite-runtime-storage.ts"() {
@@ -18676,6 +19089,8 @@ var init_sqlite_runtime_storage = __esm({
     init_canonical_json();
     init_sqlite_payload();
     init_sqlite_records();
+    init_sqlite_runtime_facts();
+    init_sqlite_runtime_history();
     init_sqlite_runtime_payload();
     RUNTIME_RECORD_STREAM_SQL = [true, false].map(
       (paired) => `
@@ -18693,19 +19108,11 @@ var init_sqlite_runtime_storage = __esm({
   ORDER BY o.oid ${paired ? "DESC" : "ASC"}`
     );
     RUNTIME_STORAGE_SCHEMA = `
-CREATE TABLE runtime_facts (
-  fid INTEGER PRIMARY KEY, fingerprint BLOB UNIQUE,
-  kind TEXT NOT NULL, architecture TEXT NOT NULL,
-  address_space TEXT, address INTEGER, start INTEGER, "end" INTEGER,
-  from_address_space TEXT, from_address INTEGER, to_address_space TEXT, to_address INTEGER,
-  instruction_address_space TEXT, instruction_address INTEGER,
-  accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT, payload BLOB
-);
-CREATE TABLE runtime_identities (
-  iid INTEGER PRIMARY KEY, value BLOB NOT NULL UNIQUE
-);
+${RUNTIME_HISTORY_SCHEMA}
+${RUNTIME_FACT_SCHEMA}
+${RUNTIME_IDENTITY_SCHEMA}
 CREATE TABLE runtime_observations (
-  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_facts(fid),
+  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_fact_rows(fid),
   prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
   identity_id INTEGER NOT NULL REFERENCES runtime_identities(iid),
   evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id), count INTEGER NOT NULL,
@@ -18714,7 +19121,9 @@ CREATE TABLE runtime_observations (
   UNIQUE(prefix_id,identity_id), UNIQUE(state_prefix_id,identity_id)
 );
 CREATE INDEX runtime_observation_fact ON runtime_observations(fact_id);
-CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id);
+-- Native fact and identity IDs commonly coincide. The fact index already covers that case;
+-- index only exceptions, and check both cases before collecting an identity below.
+CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id) WHERE identity_id!=fact_id;
 CREATE VIEW runtime AS
  SELECT o.oid AS rowid,o.prefix_id,i.value AS id,f.kind,f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
@@ -18733,8 +19142,11 @@ CREATE VIEW runtime AS
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
  LEFT JOIN runtime_identities i ON i.iid=o.identity_id WHERE o.state_prefix_id IS NOT NULL;
 CREATE TRIGGER runtime_collect_fact AFTER DELETE ON runtime_observations BEGIN
- DELETE FROM runtime_facts WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
- DELETE FROM runtime_identities WHERE iid=OLD.identity_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id);
+ -- Reclaim the physical owner directly: deleting a fact does not require decoding its payload.
+ DELETE FROM runtime_fact_rows WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
+ DELETE FROM runtime_identities WHERE iid=OLD.identity_id
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.identity_id AND identity_id=OLD.identity_id)
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id AND identity_id!=fact_id);
 END;
 CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query_size,query_data,query_ready ON runtime BEGIN
  UPDATE runtime_observations SET query_file_offset=NEW.query_file_offset,query_size=NEW.query_size,
@@ -18742,14 +19154,15 @@ CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query
 END;
 -- Compatibility mutations detach one logical record. They must never change another capture's shared fact.
 CREATE TRIGGER runtime_insert INSTEAD OF INSERT ON runtime BEGIN
- INSERT OR IGNORE INTO runtime_identities(value) VALUES(NEW.id);
+ INSERT INTO runtime_identities(value) SELECT NEW.id WHERE NOT EXISTS(SELECT 1 FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id);
  INSERT INTO runtime_facts(kind,architecture,address_space,address,start,"end",from_address_space,from_address,
  to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,payload)
  VALUES(NEW.kind,NEW.architecture,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,
  CASE WHEN json_valid(NEW.payload) THEN jsonb(NEW.payload) ELSE NEW.payload END);
+ -- Nested view inserts restore last_insert_rowid(). The single writer owns the new maximum fid.
  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
- VALUES(last_insert_rowid(),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
+ VALUES((SELECT MAX(fid) FROM runtime_fact_rows),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
  CASE WHEN NEW.kind='runtime-execution' THEN 0 ELSE 1 END);
 END;
 CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
@@ -18758,10 +19171,10 @@ CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
  SELECT 'runtime-cpu-state',f.architecture,f.address_space,f.address,f.payload
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_prefix_id IS NOT NULL;
  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_ready)
- SELECT last_insert_rowid(),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
+ SELECT (SELECT MAX(fid) FROM runtime_fact_rows),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
  UPDATE runtime_observations SET state_prefix_id=NULL WHERE oid=-OLD.rowid;
  -- A preceding instruction deletion may have detached this virtual state; stable identity still finds it.
- DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE value=OLD.id);
+ DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("OLD.id")}) AND value=OLD.id);
 END;
 CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,architecture,count,address_space,address,start,"end",
  from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
@@ -18783,7 +19196,9 @@ END;
       #findIdentity;
       #insertIdentity;
       constructor(db) {
-        this.#findFact = db.prepare("SELECT fid FROM runtime_facts WHERE fingerprint=?");
+        this.#findFact = db.prepare(
+          "SELECT fid FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(?1,1,8) AND fingerprint=?1"
+        );
         this.#insertFact = db.prepare(`INSERT INTO runtime_facts(fingerprint,kind,architecture,address_space,address,start,"end",
       from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
       accessed_address_space,accessed_address,coverage,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CASE WHEN typeof(?)='text' THEN jsonb(?) ELSE ? END)`);
@@ -18794,9 +19209,11 @@ END;
         this.#findPair = db.prepare(`SELECT o.*,f.kind,f.architecture,f.address_space,f.address,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
       FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
       WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE value=?)`);
+      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)`);
         this.#removeObservation = db.prepare("DELETE FROM runtime_observations WHERE oid=?");
-        this.#findIdentity = db.prepare("SELECT iid FROM runtime_identities WHERE value=?");
+        this.#findIdentity = db.prepare(
+          `SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?1")}) AND value=?1`
+        );
         this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
       }
       /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
@@ -18807,7 +19224,7 @@ END;
         const identity = sqliteRuntimeIdentity(record3.id);
         const prefix = intern("runtime_prefixes", identity.prefix);
         const evidence = intern("runtime_evidence", JSON.stringify(record3.evidence));
-        const columns = runtimeColumns(record3);
+        const columns2 = runtimeColumns(record3);
         let statePrefix = null;
         const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
           record3.id
@@ -18828,30 +19245,30 @@ END;
             this.#removeObservation.run(other.oid);
           }
         }
-        const payload = columns.payload;
-        const fingerprint = createHash5("sha256").update(
+        const payload = columns2.payload;
+        const fingerprint = createHash3("sha256").update(
           // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
           // per row. Nulls, two-space indentation and the trailing newline preserve
           // persisted fact fingerprints. Changing the layout would duplicate retained facts.
           // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
           JSON.stringify(
             {
-              accessedAddress: columns.accessedAddress,
-              accessedAddressSpace: columns.accessedAddressSpace,
-              address: columns.address,
-              addressSpace: columns.addressSpace,
+              accessedAddress: columns2.accessedAddress,
+              accessedAddressSpace: columns2.accessedAddressSpace,
+              address: columns2.address,
+              addressSpace: columns2.addressSpace,
               architecture: record3.architecture,
-              coverage: columns.coverage,
-              end: columns.end,
-              fromAddress: columns.fromAddress,
-              fromAddressSpace: columns.fromAddressSpace,
-              instructionAddress: columns.instructionAddress,
-              instructionAddressSpace: columns.instructionAddressSpace,
+              coverage: columns2.coverage,
+              end: columns2.end,
+              fromAddress: columns2.fromAddress,
+              fromAddressSpace: columns2.fromAddressSpace,
+              instructionAddress: columns2.instructionAddress,
+              instructionAddressSpace: columns2.instructionAddressSpace,
               kind: record3.kind,
               payload,
-              start: columns.start,
-              toAddress: columns.toAddress,
-              toAddressSpace: columns.toAddressSpace
+              start: columns2.start,
+              toAddress: columns2.toAddress,
+              toAddressSpace: columns2.toAddressSpace
             },
             void 0,
             2
@@ -18869,27 +19286,28 @@ END;
               encoded = encodeSqlitePayload(payload);
             }
           }
-          fid = this.#insertFact.run(
+          this.#insertFact.run(
             fingerprint,
             record3.kind,
             record3.architecture,
-            columns.addressSpace,
-            columns.address,
-            columns.start,
-            columns.end,
-            columns.fromAddressSpace,
-            columns.fromAddress,
-            columns.toAddressSpace,
-            columns.toAddress,
-            columns.instructionAddressSpace,
-            columns.instructionAddress,
-            columns.accessedAddressSpace,
-            columns.accessedAddress,
-            columns.coverage,
+            columns2.addressSpace,
+            columns2.address,
+            columns2.start,
+            columns2.end,
+            columns2.fromAddressSpace,
+            columns2.fromAddress,
+            columns2.toAddressSpace,
+            columns2.toAddress,
+            columns2.instructionAddressSpace,
+            columns2.instructionAddress,
+            columns2.accessedAddressSpace,
+            columns2.accessedAddress,
+            columns2.coverage,
             encoded,
             encoded,
             encoded
-          ).lastInsertRowid;
+          );
+          fid = this.#findFact.get(fingerprint).fid;
         }
         const foundIdentity = this.#findIdentity.get(identity.suffix);
         const identityId = foundIdentity?.iid ?? this.#insertIdentity.run(identity.suffix).lastInsertRowid;
@@ -18916,6 +19334,7 @@ var init_sqlite_runtime_summary = __esm({
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
+    init_sqlite_runtime_facts();
     KEY = "instruction_variants";
     BUILD = "instruction_variants_build";
     INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
@@ -18944,7 +19363,7 @@ var init_sqlite_runtime_summary = __esm({
       DELETE FROM query_cache WHERE name='${BUILD}';
       INSERT OR IGNORE INTO query_runtime_variant_pending
         SELECT NEW.oid WHERE EXISTS(SELECT 1 FROM query_cache WHERE name='${KEY}')
-        AND EXISTS(SELECT 1 FROM runtime_facts WHERE fid=NEW.fact_id AND kind='runtime-instruction');
+        AND EXISTS(SELECT 1 FROM runtime_fact_locations WHERE fid=NEW.fact_id AND kind='runtime-instruction');
     END;
     CREATE TRIGGER summary_observation_update AFTER UPDATE OF
       oid,fact_id,prefix_id,identity_id,evidence_id,count ON runtime_observations
@@ -18961,17 +19380,24 @@ var init_sqlite_runtime_summary = __esm({
         EXISTS(SELECT 1 FROM runtime_observations WHERE state_prefix_id=NEW.state_prefix_id AND identity_id=NEW.identity_id))
       BEGIN ${INVALIDATE} END;`);
       for (const [table, primary, unique2] of [
-        ["runtime_facts", "fid", "fingerprint"],
+        ["runtime_fact_rows", "fid", "fingerprint"],
         ["runtime_identities", "iid", "value"],
         ["runtime_prefixes", "id", "value"],
         ["runtime_evidence", "id", "value"]
       ]) {
+        const condition = table === "runtime_fact_rows" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
+        let uniqueMatch = `${unique2}=NEW.${unique2}`;
+        if (table === "runtime_fact_rows") {
+          uniqueMatch = `substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8) AND ${uniqueMatch}`;
+        } else if (table === "runtime_identities") {
+          uniqueMatch = `(${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND ${uniqueMatch}`;
+        }
         db.exec(`CREATE TRIGGER summary_${table}_replace BEFORE INSERT ON ${table}
       WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
         EXISTS(SELECT 1 FROM ${table} WHERE ${primary}=NEW.${primary}) OR
-        EXISTS(SELECT 1 FROM ${table} WHERE ${unique2}=NEW.${unique2}))
+        EXISTS(SELECT 1 FROM ${table} WHERE ${uniqueMatch}))
       BEGIN ${INVALIDATE} END;
-      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} ${condition} BEGIN ${INVALIDATE} END;
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
       }
     };
@@ -18992,13 +19418,13 @@ var init_sqlite_runtime_summary = __esm({
           payload
         );
         const state = {};
-        for (const key2 of fields) {
-          const value = record3.state[key2];
-          const mask = masks[key2];
+        for (const key3 of fields) {
+          const value = record3.state[key3];
+          const mask = masks[key3];
           if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
-            state[key2] = value & mask.mask;
+            state[key3] = value & mask.mask;
           } else if (value !== void 0) {
-            state[key2] = value;
+            state[key3] = value;
           }
         }
         return JSON.stringify([record3.bytes, state]);
@@ -19089,7 +19515,7 @@ var init_sqlite_runtime_summary = __esm({
           yield {
             ...record3,
             state: Object.fromEntries(
-              Object.entries(record3.state).filter(([key2]) => fields.includes(key2))
+              Object.entries(record3.state).filter(([key3]) => fields.includes(key3))
             )
           };
         }
@@ -19249,7 +19675,7 @@ var init_sqlite_source_query = __esm({
 });
 
 // packages/disassembler/src/sqlite-storage-policy.ts
-import fs6 from "node:fs";
+import fs4 from "node:fs";
 var DEFAULT_ANALYSIS_STORAGE_POLICY, CAPTURE_CATALOG_SCHEMA, readStoragePolicy, validateStoragePolicy, storageSnapshot, enforceDatabaseBudget, CACHES, cacheTableBytes, optionalCacheBytes, maintainStorageCaches;
 var init_sqlite_storage_policy = __esm({
   "packages/disassembler/src/sqlite-storage-policy.ts"() {
@@ -19274,9 +19700,9 @@ var init_sqlite_storage_policy = __esm({
         throw new Error("Storage policy must be an object containing explicit limits.");
       }
       const policy = { ...DEFAULT_ANALYSIS_STORAGE_POLICY, ...value };
-      for (const [key2, count] of Object.entries(policy)) {
-        if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key2) || !Number.isSafeInteger(count) || count < 0) {
-          throw new Error(`Invalid storage limit '${key2}'. Use nonnegative integer byte limits.`);
+      for (const [key3, count] of Object.entries(policy)) {
+        if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key3) || !Number.isSafeInteger(count) || count < 0) {
+          throw new Error(`Invalid storage limit '${key3}'. Use nonnegative integer byte limits.`);
         }
       }
       return policy;
@@ -19289,18 +19715,19 @@ var init_sqlite_storage_policy = __esm({
       const captures = db.prepare("SELECT COUNT(*) AS n FROM capture_catalog").get();
       let walBytes = 0;
       try {
-        walBytes = fs6.statSync(`${file}-wal`).size;
+        walBytes = fs4.statSync(`${file}-wal`).size;
       } catch (error) {
         if (error.code !== "ENOENT") {
           throw error;
         }
       }
       return {
-        databaseBytes: fs6.statSync(file).size,
+        databaseBytes: fs4.statSync(file).size,
         walBytes,
         livePageBytes: (pages - free) * size,
         freePageBytes: free * size,
-        facts: Number(db.prepare("SELECT COUNT(*) AS n FROM runtime_facts").get().n),
+        // Count the owning rows directly; the logical view would join every shared descriptor.
+        facts: Number(db.prepare("SELECT COUNT(*) AS n FROM runtime_fact_rows").get().n),
         observations: Number(rows.n),
         pairedStates: Number(rows.paired),
         captures: Number(captures.n)
@@ -19398,8 +19825,8 @@ var init_trace_cache = __esm({
        * @param {string} key Complete semantic key, never a lossy coordinate projection.
        * @returns {T | undefined} Retained value, or a cache miss.
        */
-      get(key2) {
-        const value = this.#entries.get(key2);
+      get(key3) {
+        const value = this.#entries.get(key3);
         if (this.#metrics) {
           if (value === void 0) {
             this.#metrics.misses++;
@@ -19415,7 +19842,7 @@ var init_trace_cache = __esm({
        * @param {T} value Defined value whose ownership stays with the caller.
        * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
        */
-      insert(key2, value) {
+      insert(key3, value) {
         let displaced;
         if (this.#keys.length === 4096) {
           let random = this.#random;
@@ -19427,17 +19854,17 @@ var init_trace_cache = __esm({
           const victim = this.#keys[slot];
           displaced = { key: victim, value: this.#entries.get(victim) };
           this.#entries.delete(victim);
-          this.#keys[slot] = key2;
+          this.#keys[slot] = key3;
           if (this.#metrics) {
             this.#metrics.evictions++;
           }
         } else {
-          this.#keys.push(key2);
+          this.#keys.push(key3);
           if (this.#metrics) {
             this.#metrics.peakEntries = Math.max(this.#metrics.peakEntries, this.#keys.length);
           }
         }
-        this.#entries.set(key2, value);
+        this.#entries.set(key3, value);
         return displaced;
       }
       /** Iterate the retained working set, for a final durable delta flush.
@@ -19458,7 +19885,7 @@ var init_trace_cache = __esm({
 
 // packages/disassembler/src/sqlite-store.ts
 import { randomUUID as randomUUID2 } from "node:crypto";
-import fs7 from "node:fs";
+import fs5 from "node:fs";
 import path6 from "node:path";
 import { DatabaseSync as DatabaseSync2 } from "node:sqlite";
 var ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
@@ -19477,13 +19904,15 @@ var init_sqlite_store = __esm({
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
+    init_sqlite_runtime_facts();
+    init_sqlite_runtime_history();
     init_sqlite_runtime_storage();
     init_sqlite_runtime_summary();
     init_sqlite_source_query();
     init_sqlite_storage_policy();
     init_trace_cache();
     ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
-    ANALYSIS_SQLITE_STORAGE_VERSION = 3;
+    ANALYSIS_SQLITE_STORAGE_VERSION = 4;
     SCHEMA = `
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
@@ -19546,7 +19975,7 @@ CREATE TABLE IF NOT EXISTS runtime_evidence (
 );
 ${RUNTIME_STORAGE_SCHEMA}
 ${CAPTURE_CATALOG_SCHEMA}
-PRAGMA user_version=3;
+PRAGMA user_version=4;
 `;
     SCHEMA_INDEX_STATEMENTS = [
       "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
@@ -19554,9 +19983,7 @@ PRAGMA user_version=3;
       'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
       'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
       // Point lookups through the virtual-state branch need an index on its exposed negative ID.
-      "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL",
-      "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
-      "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'"
+      "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL"
     ];
     RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
@@ -19570,12 +19997,14 @@ PRAGMA user_version=3;
     };
     parseRecord = (payload) => parseSqlitePayload(payload);
     sqliteFileIdentity = (file) => {
-      const stat2 = fs7.statSync(file, { bigint: true });
+      const stat2 = fs5.statSync(file, { bigint: true });
       return `${stat2.dev}:${stat2.ino}`;
     };
     SqliteAnalysisStore = class {
       #database;
       #fileIdentity;
+      /** Block cache is owned by this connection and reset on commit, rollback, and snapshot entry. */
+      #clearHistory;
       /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
       file;
       #insertEvidence;
@@ -19599,11 +20028,12 @@ PRAGMA user_version=3;
        * @param {boolean} [createSchema] Defaults to true. Permit initialization of an empty database, never upgrade an existing one.
        */
       constructor(file, createSchema = true) {
-        if (!createSchema && !fs7.existsSync(file)) {
+        if (!createSchema && !fs5.existsSync(file)) {
           throw new Error(`Analysis database does not exist: ${file}`);
         }
         this.file = file;
         this.#database = new DatabaseSync2(file, { open: true });
+        this.#clearHistory = registerRuntimeHistory(this.#database);
         this.#database.function(
           "analysis_json",
           { deterministic: true },
@@ -19658,7 +20088,7 @@ PRAGMA user_version=3;
             });
           }
           this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
+        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
           this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
         } catch (error) {
           this.#database.close();
@@ -19681,6 +20111,7 @@ PRAGMA user_version=3;
       }
       /** Forget all transaction-owned dictionary references and their bounded text allocation. */
       #clearDictionaryCache() {
+        this.#clearHistory();
         this.#dictionaryIds.clear();
         this.#dictionaryCacheBytes = 0;
       }
@@ -19691,20 +20122,20 @@ PRAGMA user_version=3;
        * @returns {number} Transactionally created or existing dictionary rowid.
        */
       #intern(table, value) {
-        const key2 = `${table}:${value}`;
-        const cached = this.#dictionaryIds.get(key2);
+        const key3 = `${table}:${value}`;
+        const cached = this.#dictionaryIds.get(key3);
         if (cached !== void 0) {
           return cached;
         }
         const statements = this.#dictionaryStatements.get(table);
         const found = statements.find.get(value);
         const id = found ? Number(found.id) : Number(statements.insert.run(value).lastInsertRowid);
-        const bytes = Buffer.byteLength(key2);
+        const bytes = Buffer.byteLength(key3);
         if (this.#dictionaryIds.size >= 256 || this.#dictionaryCacheBytes + bytes > 512 * 1024) {
           this.#clearDictionaryCache();
         }
         if (bytes <= 512 * 1024) {
-          this.#dictionaryIds.set(key2, id);
+          this.#dictionaryIds.set(key3, id);
           this.#dictionaryCacheBytes += bytes;
         }
         return id;
@@ -19805,6 +20236,9 @@ PRAGMA user_version=3;
             void Promise.resolve(result).catch(() => void 0);
             throw new TypeError("Analysis transactions require a synchronous callback, not a Promise.");
           }
+          if (write) {
+            packRuntimeHistory(this.#database);
+          }
           if (write && this.revision() !== revision) {
             enforceDatabaseBudget(this.#database);
           }
@@ -19836,24 +20270,25 @@ PRAGMA user_version=3;
           "UPDATE temp.trace_facts SET count=count+? WHERE id=?"
         );
         const pending = new TraceCache(metrics);
-        const flushEntry = (key2, count) => {
+        const flushEntry = (key3, count) => {
           if (!count) {
             return;
           }
-          incrementMany.run(count, key2);
+          incrementMany.run(count, key3);
           if (metrics) {
             metrics.sqlStatements++;
           }
         };
         const flush = () => {
-          for (const [key2, entry] of pending.entries()) {
-            flushEntry(key2, entry.count);
+          for (const [key3, entry] of pending.entries()) {
+            flushEntry(key3, entry.count);
           }
           pending.clear();
         };
         const index = {
-          add: (key2, create) => {
-            const entry = pending.get(key2);
+          diskBacked: true,
+          add: (key3, create) => {
+            const entry = pending.get(key3);
             if (entry !== void 0) {
               if (!Number.isSafeInteger(entry.count + 1)) {
                 throw new Error("Trace count exceeds exact integer range.");
@@ -19861,17 +20296,17 @@ PRAGMA user_version=3;
               entry.count++;
               return false;
             }
-            const displaced = pending.insert(key2, { count: 0 });
+            const displaced = pending.insert(key3, { count: 0 });
             if (displaced) {
               flushEntry(displaced.key, displaced.value.count);
             }
             if (metrics) {
               metrics.sqlStatements++;
             }
-            if (increment.run(key2).changes !== 0) {
+            if (increment.run(key3).changes !== 0) {
               return false;
             }
-            insert.run(key2, JSON.stringify(create()));
+            insert.run(key3, JSON.stringify(create()));
             if (metrics) {
               metrics.sqlStatements++;
               metrics.payloads++;
@@ -20312,7 +20747,8 @@ PRAGMA user_version=3;
           if (kind === "runtime") {
             if (ids) {
               const find = this.#database.prepare(
-                `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`
+                `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
+              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`
               );
               for (const id of ids.slice(0, 200)) {
                 const identity = sqliteRuntimeIdentity(id);
@@ -20472,21 +20908,21 @@ PRAGMA user_version=3;
        * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
        * @returns {T} Current projected value.
        */
-      cachedProjection(key2, signature, dependencies, compute, publish2) {
-        const cached = readQueryCache(this.#database, key2, signature);
+      cachedProjection(key3, signature, dependencies, compute, publish2) {
+        const cached = readQueryCache(this.#database, key3, signature);
         if (cached !== void 0) {
           return cached;
         }
         const pending = `pending:${randomUUID2()}`;
         this.transaction(() => {
-          installQueryCache(this.#database, key2, dependencies);
-          writeQueryCache(this.#database, key2, pending, null);
+          installQueryCache(this.#database, key3, dependencies);
+          writeQueryCache(this.#database, key3, pending, null);
         });
         const result = this.transaction(compute, false);
         this.transaction(() => {
-          if (this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key2)?.signature === pending) {
+          if (this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key3)?.signature === pending) {
             publish2?.();
-            writeQueryCache(this.#database, key2, signature, result);
+            writeQueryCache(this.#database, key3, signature, result);
           }
         });
         return result;
@@ -20749,6 +21185,14 @@ PRAGMA user_version=3;
         return result;
       }
       /**
+       * Exact viewport counts without materializing the detailed instruction projection.
+       * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
+       * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+       */
+      instructionExecutionSummary(ranges) {
+        return readInstructionExecutionSummary(this.#database, this.manifest(), ranges);
+      }
+      /**
        * Read selected metadata kinds through the address index instead of loading the complete CFG.
        * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
        * @returns {AnalysisRecord[]} Matching rows in stable ID order.
@@ -20849,8 +21293,8 @@ PRAGMA user_version=3;
         const temporary = path6.join(directory, `.analysis.json.${randomUUID2()}.tmp`);
         try {
           this.transaction(() => {
-            fs7.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-            fs7.renameSync(temporary, path6.join(directory, ANALYSIS_PROJECT_MANIFEST));
+            fs5.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
+            fs5.renameSync(temporary, path6.join(directory, ANALYSIS_PROJECT_MANIFEST));
           });
         } catch (error) {
           process.emitWarning(
@@ -20858,14 +21302,14 @@ PRAGMA user_version=3;
           );
         } finally {
           try {
-            fs7.rmSync(temporary, { force: true });
+            fs5.rmSync(temporary, { force: true });
           } catch {
           }
         }
       }
       /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
       compact() {
-        const disk = fs7.statfsSync(path6.dirname(this.file));
+        const disk = fs5.statfsSync(path6.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
@@ -20874,6 +21318,7 @@ PRAGMA user_version=3;
           );
         }
         this.transaction(() => {
+          collectRuntimeHistory(this.#database);
           this.#database.exec(`
         DELETE FROM runtime_prefixes WHERE id NOT IN (SELECT DISTINCT prefix_id FROM runtime);
         DELETE FROM runtime_evidence WHERE id NOT IN (SELECT DISTINCT evidence_id FROM runtime);
@@ -20964,14 +21409,21 @@ PRAGMA user_version=3;
   }
 });
 
+// packages/disassembler/src/project-asset-ids.ts
+var init_project_asset_ids = __esm({
+  "packages/disassembler/src/project-asset-ids.ts"() {
+    "use strict";
+  }
+});
+
 // packages/disassembler/src/rom-image.ts
-import { createHash as createHash6 } from "node:crypto";
-import * as fs8 from "node:fs";
+import { createHash as createHash4 } from "node:crypto";
+import * as fs6 from "node:fs";
 var sha2562, detectCopierHeaderSize, RomImage;
 var init_rom_image = __esm({
   "packages/disassembler/src/rom-image.ts"() {
     "use strict";
-    sha2562 = (bytes) => createHash6("sha256").update(bytes).digest("hex");
+    sha2562 = (bytes) => createHash4("sha256").update(bytes).digest("hex");
     detectCopierHeaderSize = (fileSize) => {
       if (fileSize < 0) {
         throw new Error("ROM size cannot be negative.");
@@ -21021,7 +21473,7 @@ var init_rom_image = __esm({
        * @returns {RomImage} Loaded image.
        */
       static load(file, options = {}) {
-        return new _RomImage(fs8.readFileSync(file), { ...options, sourcePath: file });
+        return new _RomImage(fs6.readFileSync(file), { ...options, sourcePath: file });
       }
       /**
        * Headerless cartridge length in bytes.
@@ -21080,8 +21532,8 @@ var init_runtime_trace_profile = __esm({
     "use strict";
     RUNTIME_ANALYSIS_PROFILE = "65816-analysis-v2";
     project65816AnalysisState = (state) => {
-      const value = (key2, max) => {
-        const entry = state[key2] ?? state[key2.toUpperCase()];
+      const value = (key3, max) => {
+        const entry = state[key3] ?? state[key3.toUpperCase()];
         return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
       };
       const result = {};
@@ -21109,8 +21561,8 @@ var init_runtime_trace_profile = __esm({
 });
 
 // packages/disassembler/src/runtime-trace.ts
-import { createHash as createHash7 } from "node:crypto";
-var RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2563, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
+import { createHash as createHash5 } from "node:crypto";
+var RUNTIME_INSTRUCTION_TRACE_FORMAT, RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION, DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS, MAX_RUNTIME_TRACE_INDEX_RECORDS, DISASSEMBLY_STATE_FIELDS, record, string, integer, sha2563, sha256Identity, hex2, validateRuntimeInstructionTraceMetadata, createRuntimeTraceChunkValidator, runtimeTraceIndexRecordLimit, createMemoryFactIndex, createRuntimeInstructionTraceImporter;
 var init_runtime_trace = __esm({
   "packages/disassembler/src/runtime-trace.ts"() {
     "use strict";
@@ -21140,7 +21592,7 @@ var init_runtime_trace = __esm({
       }
       return value;
     };
-    sha2563 = (value) => createHash7("sha256").update(value).digest("hex");
+    sha2563 = (value) => createHash5("sha256").update(value).digest("hex");
     sha256Identity = (value, context) => {
       const identity = string(value, context);
       if (!/^[\da-f]{64}$/.test(identity)) {
@@ -21230,16 +21682,32 @@ var init_runtime_trace = __esm({
         return chunk;
       };
     };
+    runtimeTraceIndexRecordLimit = (mode3, requested, storage) => {
+      let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
+      let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
+      if (mode3 === "full") {
+        defaultLimit = MAX_RUNTIME_TRACE_INDEX_RECORDS;
+      }
+      if (storage?.index.diskBacked && storage.onRecord) {
+        defaultLimit = Number.MAX_SAFE_INTEGER;
+        maximum = Number.MAX_SAFE_INTEGER;
+      }
+      const limit = integer(requested ?? defaultLimit, "Trace index record limit", 1);
+      if (limit > maximum) {
+        throw new Error(`Trace index record limit must not exceed ${maximum}.`);
+      }
+      return limit;
+    };
     createMemoryFactIndex = () => {
       const records = /* @__PURE__ */ new Map();
       return {
-        add: (key2, create) => {
-          const prior = records.get(key2);
+        add: (key3, create) => {
+          const prior = records.get(key3);
           if (prior) {
             prior.count++;
             return false;
           }
-          records.set(key2, { fact: create(), count: 1 });
+          records.set(key3, { fact: create(), count: 1 });
           return true;
         },
         values: () => records.values(),
@@ -21274,17 +21742,10 @@ var init_runtime_trace = __esm({
       if (indexMode !== "full" && (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")) {
         throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
       }
-      const maxIndexRecords = integer(
-        context.maxIndexRecords ?? (indexMode === "full" ? MAX_RUNTIME_TRACE_INDEX_RECORDS : DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS),
-        "Trace index record limit",
-        1
-      );
-      if (maxIndexRecords > MAX_RUNTIME_TRACE_INDEX_RECORDS) {
-        throw new Error(`Trace index record limit must not exceed ${MAX_RUNTIME_TRACE_INDEX_RECORDS}.`);
-      }
+      const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
       const envelope = canonicalJson({ ...artifact, chunks: [] });
       const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
-      const hash = createHash7("sha256").update(envelope.slice(0, split));
+      const hash = createHash5("sha256").update(envelope.slice(0, split));
       const suffix = envelope.slice(split + 2);
       const validateChunk = createRuntimeTraceChunkValidator();
       const index = storage?.index ?? createMemoryFactIndex();
@@ -21292,9 +21753,9 @@ var init_runtime_trace = __esm({
       let memoryRecords = 0;
       let indexRecords = 0;
       const reserve = (count) => {
-        if (indexRecords + count > maxIndexRecords) {
+        if (count > maxIndexRecords - indexRecords) {
           let hint = "The capture has too many distinct code/state/bus variants for this index budget. ";
-          if (indexMode === "full") {
+          if (indexMode === "full" && native65816) {
             hint = "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
           }
           throw new Error(
@@ -21345,10 +21806,10 @@ var init_runtime_trace = __esm({
             );
           }
           const content = canonicalJson({ address: address3, bytes: detail.bytes, state });
-          const key2 = indexMode === "full" ? sha2563(content) : content;
-          if (index.add(`code:${key2}`, () => ({
+          const key3 = indexMode === "full" ? sha2563(content) : content;
+          if (index.add(`code:${key3}`, () => ({
             kind: "instruction",
-            identity: indexMode === "full" ? key2 : sha2563(key2),
+            identity: indexMode === "full" ? key3 : sha2563(key3),
             address: address3,
             bytes: detail.bytes,
             state
@@ -21557,7 +22018,7 @@ async function* traceEntries(file, options) {
   checkSize(before.size);
   let mode3 = "start";
   let tokenKind = "key";
-  let key2 = "";
+  let key3 = "";
   const keys = /* @__PURE__ */ new Set();
   let allowEnd = true;
   let inString = false;
@@ -21625,15 +22086,15 @@ async function* traceEntries(file, options) {
             if (typeof value !== "string" || keys.has(value)) {
               fail();
             }
-            key2 = value;
-            keys.add(key2);
+            key3 = value;
+            keys.add(key3);
             mode3 = "colon";
           } else if (tokenKind === "chunk") {
             mode3 = "chunk-end";
             yield { kind: "chunk", value };
           } else {
             mode3 = "property-end";
-            yield { kind: "property", key: key2, value };
+            yield { kind: "property", key: key3, value };
           }
           if (delimiter) {
             index--;
@@ -21682,7 +22143,7 @@ async function* traceEntries(file, options) {
           mode3 = "property-end";
           continue;
         }
-        if (mode3 === "value" && key2 === "chunks") {
+        if (mode3 === "value" && key3 === "chunks") {
           if (char !== "[") {
             fail();
           }
@@ -21768,7 +22229,7 @@ var init_runtime_trace_file = __esm({
           "addressSpace",
           "romContentSha256",
           "producer"
-        ].every((key2) => Object.hasOwn(metadata, key2))) {
+        ].every((key3) => Object.hasOwn(metadata, key3))) {
           return validateRuntimeInstructionTraceMetadata(metadata);
         }
       }
@@ -21795,8 +22256,8 @@ var init_runtime_trace_file = __esm({
 });
 
 // packages/disassembler/src/source-export.ts
-import { createHash as createHash8 } from "node:crypto";
-import * as fs9 from "node:fs";
+import { createHash as createHash6 } from "node:crypto";
+import * as fs7 from "node:fs";
 import path7 from "node:path";
 var SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
@@ -21806,7 +22267,7 @@ var init_source_export = __esm({
     SOURCE_EXPORT_FORMAT = "uttori-asm-source-export";
     SOURCE_EXPORT_SCHEMA_VERSION = 1;
     SOURCE_EXPORT_MANIFEST = "generated-files.json";
-    sourceExportSha256 = (value) => createHash8("sha256").update(value).digest("hex");
+    sourceExportSha256 = (value) => createHash6("sha256").update(value).digest("hex");
     canonicalSourceExportJson = (value) => canonicalJson(value);
     assertSafePath = (relative2) => {
       if (relative2 === "" || path7.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === ".." || part === "")) {
@@ -21815,7 +22276,7 @@ var init_source_export = __esm({
     };
     loadSourceExportManifest = (directory) => {
       const manifest = JSON.parse(
-        fs9.readFileSync(path7.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
+        fs7.readFileSync(path7.join(directory, SOURCE_EXPORT_MANIFEST), "utf8")
       );
       if (manifest.format !== SOURCE_EXPORT_FORMAT) {
         throw new Error("Invalid source-export format.");
@@ -21871,10 +22332,10 @@ var init_source_export = __esm({
     validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
       for (const file of manifest.files) {
         const absolute = path7.join(directory, file.path);
-        if (!fs9.existsSync(absolute)) {
+        if (!fs7.existsSync(absolute)) {
           throw new Error(`Generated file '${file.path}' is missing.`);
         }
-        const bytes = fs9.readFileSync(absolute);
+        const bytes = fs7.readFileSync(absolute);
         if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
           throw new Error(`Generated file '${file.path}' was modified after export.`);
         }
@@ -21883,10 +22344,10 @@ var init_source_export = __esm({
     validateSourceExportInputs = (directory, manifest = loadSourceExportManifest(directory)) => {
       for (const input of manifest.inputs ?? []) {
         const absolute = path7.join(directory, input.path);
-        if (!fs9.existsSync(absolute)) {
+        if (!fs7.existsSync(absolute)) {
           throw new Error(`Source input '${input.path}' is missing.`);
         }
-        const bytes = fs9.readFileSync(absolute);
+        const bytes = fs7.readFileSync(absolute);
         if (bytes.length !== input.size || sourceExportSha256(bytes) !== input.sha256) {
           throw new Error(`Source input '${input.path}' changed after the last export.`);
         }
@@ -22567,11 +23028,7 @@ var init_runtime_bus_project = __esm({
 var init_src2 = __esm({
   "packages/disassembler/src/index.ts"() {
     "use strict";
-    init_asset_codec();
-    init_asset_codecs();
-    init_asset_preview();
     init_analysis_graph();
-    init_compression_codec();
     init_coverage_map();
     init_instruction_annotations();
     init_interval_index();
@@ -22579,6 +23036,7 @@ var init_src2 = __esm({
     init_project_store();
     init_project_transaction();
     init_project_edit();
+    init_project_asset_ids();
     init_project_labels();
     init_project_types();
     init_rom_image();
@@ -22996,7 +23454,7 @@ function formatCpu65816Instruction(instruction) {
   }
   return text2 ? `${instruction.mnemonic} ${text2}` : instruction.mnemonic;
 }
-var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor3, effectsFor, buildInstruction, Cpu65816Decoder, hex3;
+var flagValue, resolvedWidthFlag, readLittleEndian, signed, bankLocalTarget, addressOperand, operandsFor, targetFor, referencesFor, effectsFor, buildInstruction, Cpu65816Decoder, hex3;
 var init_decoder = __esm({
   "packages/plugin-snes/src/architectures/65816-decoder.ts"() {
     "use strict";
@@ -23137,7 +23595,7 @@ var init_decoder = __esm({
       }
       return void 0;
     };
-    referencesFor3 = (specification2, operands, state, logicalAddress) => {
+    referencesFor = (specification2, operands, state, logicalAddress) => {
       const { mnemonic, mode: mode3 } = specification2;
       const isBranch = conditionalBranches.has(mnemonic) || mnemonic === "BRA" || mnemonic === "BRL";
       const isCall = mnemonic === "JSR" || mnemonic === "JSL";
@@ -23214,7 +23672,7 @@ var init_decoder = __esm({
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor3(specification2, operands, state, context.logicalAddress),
+        references: referencesFor(specification2, operands, state, context.logicalAddress),
         flow: specification2.flow,
         effects: effectsFor(specification2, operands)
       };
@@ -26349,7 +26807,7 @@ var init__ = __esm({
 });
 
 // packages/plugin-snes/src/architectures/spc700-decoder.ts
-var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor4, buildInstruction2, Spc700Decoder;
+var readLittleEndian2, signedByte, register2, address, immediate, bit, relative, bitAddress, fixedRegisters, operandsFor2, referencesFor2, buildInstruction2, Spc700Decoder;
 var init_spc700_decoder = __esm({
   "packages/plugin-snes/src/architectures/spc700-decoder.ts"() {
     "use strict";
@@ -26509,7 +26967,7 @@ var init_spc700_decoder = __esm({
           throw new Error(`Unhandled SPC700 decode mode '${specification2.mode}'.`);
       }
     };
-    referencesFor4 = (specification2, operands, state) => {
+    referencesFor2 = (specification2, operands, state) => {
       const references = [];
       const branchIndex = operands.findIndex((operand) => operand.targetAddress !== void 0);
       if (branchIndex >= 0) {
@@ -26576,7 +27034,7 @@ var init_spc700_decoder = __esm({
         bytes,
         size: bytes.length,
         operands,
-        references: referencesFor4(specification2, operands, context.state ?? {}),
+        references: referencesFor2(specification2, operands, context.state ?? {}),
         flow: specification2.flow,
         effects: specification2.effects
       };
@@ -26765,7 +27223,7 @@ var init_spc700 = __esm({
       const lowered = resolver.lowerOperand(operand);
       return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
     };
-    hasOwn = (obj, key2) => Object.hasOwn(obj, key2);
+    hasOwn = (obj, key3) => Object.hasOwn(obj, key3);
     IMPLIED_SPC_OPCODES = {
       NOP: true,
       BRK: true,
@@ -27912,16 +28370,16 @@ var init_spc700 = __esm({
           Y: 238
         };
         if (opcode.toUpperCase() === "PUSH") {
-          const key2 = (loweredOperand?.registerName ?? operand).toUpperCase();
-          if (hasOwn(pushMap, key2)) {
-            this.assembler.write1(pushMap[key2]);
+          const key3 = (loweredOperand?.registerName ?? operand).toUpperCase();
+          if (hasOwn(pushMap, key3)) {
+            this.assembler.write1(pushMap[key3]);
             return true;
           }
         }
         if (opcode.toUpperCase() === "POP") {
-          const key2 = (loweredOperand?.registerName ?? operand).toUpperCase();
-          if (hasOwn(popMap, key2)) {
-            this.assembler.write1(popMap[key2]);
+          const key3 = (loweredOperand?.registerName ?? operand).toUpperCase();
+          if (hasOwn(popMap, key3)) {
+            this.assembler.write1(popMap[key3]);
             return true;
           }
         }
@@ -28139,24 +28597,24 @@ var init_spc700 = __esm({
           "$,X": { byte: 216, word: 201 },
           "$,Y": { byte: 203, word: 204 }
         };
-        let key2 = null;
+        let key3 = null;
         if (/^\$[\da-f]+$/i.test(left)) {
-          key2 = `$,${right.toUpperCase()}`;
+          key3 = `$,${right.toUpperCase()}`;
         } else if (/^\$[\da-f]+\+x$/i.test(left)) {
-          key2 = `$+X,${right.toUpperCase()}`;
+          key3 = `$+X,${right.toUpperCase()}`;
         } else if (/^\$[\da-f]+$/i.test(right)) {
-          key2 = `${left.toUpperCase()},$`;
+          key3 = `${left.toUpperCase()},$`;
         } else if (/^\$[\da-f]+\+x$/i.test(right)) {
-          key2 = `${left.toUpperCase()},$+X`;
+          key3 = `${left.toUpperCase()},$+X`;
         }
-        if (key2 && hasOwn(memoryMoves, key2)) {
+        if (key3 && hasOwn(memoryMoves, key3)) {
           const operandWithAddr = /\$([^+]+)/.exec(left) ? left : right;
           const match = /\$([^+]+)/.exec(operandWithAddr);
           if (!match) {
             return false;
           }
           const val = parseInt(match[1], 16);
-          const mode3 = memoryMoves[key2];
+          const mode3 = memoryMoves[key3];
           const inferredLength = getAddressSize(`$${match[1]}`);
           const selectedLength = explicitlen ? forcedLen : inferredLength;
           const opcode = selectedLength === 1 ? mode3.byte : mode3.word;
@@ -29049,7 +29507,7 @@ var init_superfx = __esm({
       const lowered = resolver.lowerOperand(operand);
       return lowered.mode !== "unknown" ? lowered : classifyGenericOperand(lowered);
     };
-    hasOwn2 = (obj, key2) => Object.hasOwn(obj, key2);
+    hasOwn2 = (obj, key3) => Object.hasOwn(obj, key3);
     ALT1 = 61;
     ALT2 = 62;
     ALT3 = 63;
@@ -29821,6 +30279,12011 @@ var init_superfx = __esm({
         }
       }
     };
+  }
+});
+
+// packages/assets/src/validation.ts
+function integer2(value, label, minimum, maximum) {
+  if (!Number.isSafeInteger(value) || value < minimum || value > maximum) {
+    throw new RangeError(`${label} must be an integer in ${minimum}..${maximum}.`);
+  }
+  return value;
+}
+function unitCount(bytes, size, label) {
+  if (bytes.length % size !== 0) {
+    throw new RangeError(`${label} length ${bytes.length} is not divisible by ${size}.`);
+  }
+  return bytes.length / size;
+}
+function isNamespacedId(id) {
+  const parts = id.split(".");
+  return parts.length > 1 && /^[a-z][\da-z-]*$/.test(parts[0]) && parts.slice(1).every((part) => /^[\da-z][\da-z-]*$/.test(part));
+}
+var init_validation = __esm({
+  "packages/assets/src/validation.ts"() {
+    "use strict";
+  }
+});
+
+// packages/assets/src/registry.ts
+function convertAsset(registry2, request) {
+  const importer = registry2.importerFor(request.source.mediaType);
+  const encoder = registry2.encoderFor(request.format);
+  const source = { ...request.source, bytes: request.source.bytes.slice() };
+  const resources = Object.fromEntries(
+    Object.entries(request.resources ?? {}).map(([name, input]) => [
+      name,
+      { ...input, bytes: input.bytes.slice() }
+    ])
+  );
+  const document2 = importer.import(source);
+  if (!encoder.inputKinds.includes(document2.kind)) {
+    throw new Error(`Encoder '${encoder.id}' cannot consume '${document2.kind}'.`);
+  }
+  const encoded = encoder.encode(document2, request.options ?? {}, resources);
+  if (encoded.fidelity.kind === "lossy-audio" && (encoder.id !== "snes.brr" || document2.kind !== "pcm-audio")) {
+    throw new Error(
+      `Encoder '${encoder.id}' cannot declare lossy fidelity for '${document2.kind}'.`
+    );
+  }
+  if (!Object.hasOwn(encoded.outputs, encoder.primaryOutput)) {
+    throw new Error(`Encoder '${encoder.id}' omitted primary output '${encoder.primaryOutput}'.`);
+  }
+  const outputs = {};
+  for (const [name, output] of Object.entries(encoded.outputs)) {
+    if (!(output.bytes instanceof Uint8Array)) {
+      throw new Error(`Output '${name}' is not bytes.`);
+    }
+    outputs[name] = { ...output, bytes: output.bytes.slice() };
+  }
+  return {
+    outputs,
+    primaryOutput: encoder.primaryOutput,
+    fidelity: encoded.fidelity,
+    importer: { id: importer.id, version: importer.version },
+    encoder: { id: encoder.id, version: encoder.version },
+    options: encoded.normalizedOptions,
+    document: document2
+  };
+}
+var AssetRegistry;
+var init_registry2 = __esm({
+  "packages/assets/src/registry.ts"() {
+    "use strict";
+    init_validation();
+    AssetRegistry = class {
+      #importers = /* @__PURE__ */ new Map();
+      #encoders = /* @__PURE__ */ new Map();
+      #mediaTypes = /* @__PURE__ */ new Map();
+      registerImporter(importer) {
+        if (!isNamespacedId(importer.id) || !importer.version || importer.mediaTypes.length === 0 || this.#importers.has(importer.id)) {
+          throw new Error(`Invalid or duplicate asset importer '${importer.id}'.`);
+        }
+        for (const mediaType of importer.mediaTypes) {
+          if (this.#mediaTypes.has(mediaType)) {
+            throw new Error(`Duplicate asset media type '${mediaType}'.`);
+          }
+        }
+        this.#importers.set(importer.id, importer);
+        importer.mediaTypes.forEach((type) => this.#mediaTypes.set(type, importer));
+        return this;
+      }
+      registerEncoder(encoder) {
+        if (!isNamespacedId(encoder.id) || !encoder.version || !encoder.primaryOutput || encoder.inputKinds.length === 0 || this.#encoders.has(encoder.id)) {
+          throw new Error(`Invalid or duplicate asset encoder '${encoder.id}'.`);
+        }
+        this.#encoders.set(encoder.id, encoder);
+        return this;
+      }
+      importerFor(mediaType) {
+        const importer = this.#mediaTypes.get(mediaType);
+        if (!importer) {
+          throw new Error(`No asset importer for '${mediaType}'.`);
+        }
+        return importer;
+      }
+      encoderFor(id) {
+        const encoder = this.#encoders.get(id);
+        if (!encoder) {
+          throw new Error(`No asset encoder '${id}'.`);
+        }
+        return encoder;
+      }
+    };
+  }
+});
+
+// packages/assets/src/index.ts
+var init_src3 = __esm({
+  "packages/assets/src/index.ts"() {
+    "use strict";
+    init_registry2();
+  }
+});
+
+// node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs
+function zero$1(buf) {
+  let len = buf.length;
+  while (--len >= 0) buf[len] = 0;
+}
+function inflate_fast(strm, start) {
+  let _in;
+  let last;
+  let _out;
+  let beg;
+  let end;
+  let dmax;
+  let wsize;
+  let whave;
+  let wnext;
+  let s_window;
+  let hold;
+  let bits;
+  let lcode;
+  let dcode;
+  let lmask;
+  let dmask;
+  let here;
+  let op2;
+  let len;
+  let dist;
+  let from;
+  let from_source;
+  let input, output;
+  const state = strm.state;
+  _in = strm.next_in;
+  input = strm.input;
+  last = _in + (strm.avail_in - 5);
+  _out = strm.next_out;
+  output = strm.output;
+  beg = _out - (start - strm.avail_out);
+  end = _out + (strm.avail_out - 257);
+  dmax = state.dmax;
+  wsize = state.wsize;
+  whave = state.whave;
+  wnext = state.wnext;
+  s_window = state.window;
+  hold = state.hold;
+  bits = state.bits;
+  lcode = state.lencode;
+  dcode = state.distcode;
+  lmask = (1 << state.lenbits) - 1;
+  dmask = (1 << state.distbits) - 1;
+  top: do {
+    if (bits < 15) {
+      hold += input[_in++] << bits;
+      bits += 8;
+      hold += input[_in++] << bits;
+      bits += 8;
+    }
+    here = lcode[hold & lmask];
+    dolen: for (; ; ) {
+      op2 = here >>> 24;
+      hold >>>= op2;
+      bits -= op2;
+      op2 = here >>> 16 & 255;
+      if (op2 === 0) output[_out++] = here & 65535;
+      else if (op2 & 16) {
+        len = here & 65535;
+        op2 &= 15;
+        if (op2) {
+          if (bits < op2) {
+            hold += input[_in++] << bits;
+            bits += 8;
+          }
+          len += hold & (1 << op2) - 1;
+          hold >>>= op2;
+          bits -= op2;
+        }
+        if (bits < 15) {
+          hold += input[_in++] << bits;
+          bits += 8;
+          hold += input[_in++] << bits;
+          bits += 8;
+        }
+        here = dcode[hold & dmask];
+        dodist: for (; ; ) {
+          op2 = here >>> 24;
+          hold >>>= op2;
+          bits -= op2;
+          op2 = here >>> 16 & 255;
+          if (op2 & 16) {
+            dist = here & 65535;
+            op2 &= 15;
+            if (bits < op2) {
+              hold += input[_in++] << bits;
+              bits += 8;
+              if (bits < op2) {
+                hold += input[_in++] << bits;
+                bits += 8;
+              }
+            }
+            dist += hold & (1 << op2) - 1;
+            if (dist > dmax) {
+              strm.msg = "invalid distance too far back";
+              state.mode = BAD$1;
+              break top;
+            }
+            hold >>>= op2;
+            bits -= op2;
+            op2 = _out - beg;
+            if (dist > op2) {
+              op2 = dist - op2;
+              if (op2 > whave) {
+                if (state.sane) {
+                  strm.msg = "invalid distance too far back";
+                  state.mode = BAD$1;
+                  break top;
+                }
+              }
+              from = 0;
+              from_source = s_window;
+              if (wnext === 0) {
+                from += wsize - op2;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              } else if (wnext < op2) {
+                from += wsize + wnext - op2;
+                op2 -= wnext;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = 0;
+                  if (wnext < len) {
+                    op2 = wnext;
+                    len -= op2;
+                    do
+                      output[_out++] = s_window[from++];
+                    while (--op2);
+                    from = _out - dist;
+                    from_source = output;
+                  }
+                }
+              } else {
+                from += wnext - op2;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              }
+              while (len > 2) {
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                len -= 3;
+              }
+              if (len) {
+                output[_out++] = from_source[from++];
+                if (len > 1) output[_out++] = from_source[from++];
+              }
+            } else {
+              from = _out - dist;
+              do {
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                len -= 3;
+              } while (len > 2);
+              if (len) {
+                output[_out++] = output[from++];
+                if (len > 1) output[_out++] = output[from++];
+              }
+            }
+          } else if ((op2 & 64) === 0) {
+            here = dcode[(here & 65535) + (hold & (1 << op2) - 1)];
+            continue dodist;
+          } else {
+            strm.msg = "invalid distance code";
+            state.mode = BAD$1;
+            break top;
+          }
+          break;
+        }
+      } else if ((op2 & 64) === 0) {
+        here = lcode[(here & 65535) + (hold & (1 << op2) - 1)];
+        continue dolen;
+      } else if (op2 & 32) {
+        state.mode = TYPE$1;
+        break top;
+      } else {
+        strm.msg = "invalid literal/length code";
+        state.mode = BAD$1;
+        break top;
+      }
+      break;
+    }
+  } while (_in < last && _out < end);
+  len = bits >> 3;
+  _in -= len;
+  bits -= len << 3;
+  hold &= (1 << bits) - 1;
+  strm.next_in = _in;
+  strm.next_out = _out;
+  strm.avail_in = _in < last ? 5 + (last - _in) : 5 - (_in - last);
+  strm.avail_out = _out < end ? 257 + (end - _out) : 257 - (_out - end);
+  state.hold = hold;
+  state.bits = bits;
+}
+function inflate(input, options = {}) {
+  const inflator = new Inflate(options);
+  inflator.push(input, true);
+  if (inflator.err) throw new Error(inflator.msg);
+  const result = inflator.result;
+  return options.toText ? new TextDecoder().decode(result) : result;
+}
+var Z_FIXED, Z_BINARY, Z_TEXT, Z_UNKNOWN, STORED_BLOCK, STATIC_TREES, DYN_TREES, LENGTH_CODES, LITERALS, L_CODES, D_CODES, BL_CODES, HEAP_SIZE$1, MAX_BITS, Buf_size, END_BLOCK, REP_3_6, REPZ_3_10, REPZ_11_138, extra_lbits, extra_dbits, extra_blbits, bl_order, DIST_CODE_LEN, static_ltree, static_dtree, _dist_code, _length_code, base_length, base_dist, d_code, put_short, send_bits, send_code, bi_reverse, gen_bitlen, gen_codes, init_block, bi_windup, smaller, pqdownheap, compress_block, build_tree, scan_tree, send_tree, build_bl_tree, send_all_trees, detect_data_type, _tr_stored_block, _tr_flush_block, _tr_tally, adler32, makeTable, crcTable, crc323, messages_default, MIN_MATCH, MAX_MATCH, MIN_LOOKAHEAD, BS_NEED_MORE, BS_BLOCK_DONE, BS_FINISH_STARTED, BS_FINISH_DONE, slide_hash, HASH, INSERT_STRING, flush_pending, flush_block_only, read_buf, longest_match, fill_window, deflate_stored, deflate_fast, deflate_slow, Config, configuration_table, BAD$1, TYPE$1, MAXBITS, ENOUGH_LENS$1, ENOUGH_DISTS$1, CODES$1, LENS$1, DISTS$1, lbase, lext, dbase, dext, inflate_table, CODES, LENS, DISTS, HEAD, FLAGS, TIME, OS, EXLEN, EXTRA, NAME, COMMENT, HCRC, DICTID, DICT, TYPE, TYPEDO, STORED, COPY_, COPY, TABLE, LENLENS, CODELENS, LEN_, LEN, LENEXT, DIST, DISTEXT, MATCH, LIT, CHECK, LENGTH, DONE, BAD, MEM, SYNC, ENOUGH_LENS, ENOUGH_DISTS, zswap32, InflateState, inflateStateCheck, inflateResetKeep, inflateReset, inflateReset2, inflateInit2, virgin, lenfix, distfix, fixedtables, updatewindow, inflate$1, inflateEnd, inflateSetDictionary, ZStream, flattenChunks, toString, defaultOptions, Inflate;
+var init_pako = __esm({
+  "node_modules/@uttori/data-tools/node_modules/pako/dist/pako.mjs"() {
+    Z_FIXED = 4;
+    Z_BINARY = 0;
+    Z_TEXT = 1;
+    Z_UNKNOWN = 2;
+    STORED_BLOCK = 0;
+    STATIC_TREES = 1;
+    DYN_TREES = 2;
+    LENGTH_CODES = 29;
+    LITERALS = 256;
+    L_CODES = 286;
+    D_CODES = 30;
+    BL_CODES = 19;
+    HEAP_SIZE$1 = 573;
+    MAX_BITS = 15;
+    Buf_size = 16;
+    END_BLOCK = 256;
+    REP_3_6 = 16;
+    REPZ_3_10 = 17;
+    REPZ_11_138 = 18;
+    extra_lbits = new Uint8Array([
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      3,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5,
+      0
+    ]);
+    extra_dbits = new Uint8Array([
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      2,
+      2,
+      3,
+      3,
+      4,
+      4,
+      5,
+      5,
+      6,
+      6,
+      7,
+      7,
+      8,
+      8,
+      9,
+      9,
+      10,
+      10,
+      11,
+      11,
+      12,
+      12,
+      13,
+      13
+    ]);
+    extra_blbits = new Uint8Array([
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      3,
+      7
+    ]);
+    bl_order = new Uint8Array([
+      16,
+      17,
+      18,
+      0,
+      8,
+      7,
+      9,
+      6,
+      10,
+      5,
+      11,
+      4,
+      12,
+      3,
+      13,
+      2,
+      14,
+      1,
+      15
+    ]);
+    DIST_CODE_LEN = 512;
+    static_ltree = new Array(288 * 2);
+    zero$1(static_ltree);
+    static_dtree = new Array(D_CODES * 2);
+    zero$1(static_dtree);
+    _dist_code = new Array(DIST_CODE_LEN);
+    zero$1(_dist_code);
+    _length_code = new Array(256);
+    zero$1(_length_code);
+    base_length = new Array(LENGTH_CODES);
+    zero$1(base_length);
+    base_dist = new Array(D_CODES);
+    zero$1(base_dist);
+    d_code = (dist) => {
+      return dist < 256 ? _dist_code[dist] : _dist_code[256 + (dist >>> 7)];
+    };
+    put_short = (s, w) => {
+      s.pending_buf[s.pending++] = w & 255;
+      s.pending_buf[s.pending++] = w >>> 8 & 255;
+    };
+    send_bits = (s, value, length) => {
+      if (s.bi_valid > Buf_size - length) {
+        s.bi_buf |= value << s.bi_valid & 65535;
+        put_short(s, s.bi_buf);
+        s.bi_buf = value >> Buf_size - s.bi_valid;
+        s.bi_valid += length - Buf_size;
+      } else {
+        s.bi_buf |= value << s.bi_valid & 65535;
+        s.bi_valid += length;
+      }
+    };
+    send_code = (s, c, tree) => {
+      send_bits(s, tree[c * 2], tree[c * 2 + 1]);
+    };
+    bi_reverse = (code, len) => {
+      let res = 0;
+      do {
+        res |= code & 1;
+        code >>>= 1;
+        res <<= 1;
+      } while (--len > 0);
+      return res >>> 1;
+    };
+    gen_bitlen = (s, desc) => {
+      const tree = desc.dyn_tree;
+      const max_code = desc.max_code;
+      const stree = desc.stat_desc.static_tree;
+      const has_stree = desc.stat_desc.has_stree;
+      const extra = desc.stat_desc.extra_bits;
+      const base = desc.stat_desc.extra_base;
+      const max_length = desc.stat_desc.max_length;
+      let h;
+      let n, m;
+      let bits;
+      let xbits;
+      let f;
+      let overflow = 0;
+      for (bits = 0; bits <= MAX_BITS; bits++) s.bl_count[bits] = 0;
+      tree[s.heap[s.heap_max] * 2 + 1] = 0;
+      for (h = s.heap_max + 1; h < HEAP_SIZE$1; h++) {
+        n = s.heap[h];
+        bits = tree[tree[n * 2 + 1] * 2 + 1] + 1;
+        if (bits > max_length) {
+          bits = max_length;
+          overflow++;
+        }
+        tree[n * 2 + 1] = bits;
+        if (n > max_code) continue;
+        s.bl_count[bits]++;
+        xbits = 0;
+        if (n >= base) xbits = extra[n - base];
+        f = tree[n * 2];
+        s.opt_len += f * (bits + xbits);
+        if (has_stree) s.static_len += f * (stree[n * 2 + 1] + xbits);
+      }
+      if (overflow === 0) return;
+      do {
+        bits = max_length - 1;
+        while (s.bl_count[bits] === 0) bits--;
+        s.bl_count[bits]--;
+        s.bl_count[bits + 1] += 2;
+        s.bl_count[max_length]--;
+        overflow -= 2;
+      } while (overflow > 0);
+      for (bits = max_length; bits !== 0; bits--) {
+        n = s.bl_count[bits];
+        while (n !== 0) {
+          m = s.heap[--h];
+          if (m > max_code) continue;
+          if (tree[m * 2 + 1] !== bits) {
+            s.opt_len += (bits - tree[m * 2 + 1]) * tree[m * 2];
+            tree[m * 2 + 1] = bits;
+          }
+          n--;
+        }
+      }
+    };
+    gen_codes = (tree, max_code, bl_count) => {
+      const next_code = new Array(16);
+      let code = 0;
+      let bits;
+      let n;
+      for (bits = 1; bits <= MAX_BITS; bits++) {
+        code = code + bl_count[bits - 1] << 1;
+        next_code[bits] = code;
+      }
+      for (n = 0; n <= max_code; n++) {
+        let len = tree[n * 2 + 1];
+        if (len === 0) continue;
+        tree[n * 2] = bi_reverse(next_code[len]++, len);
+      }
+    };
+    init_block = (s) => {
+      let n;
+      for (n = 0; n < L_CODES; n++) s.dyn_ltree[n * 2] = 0;
+      for (n = 0; n < D_CODES; n++) s.dyn_dtree[n * 2] = 0;
+      for (n = 0; n < BL_CODES; n++) s.bl_tree[n * 2] = 0;
+      s.dyn_ltree[END_BLOCK * 2] = 1;
+      s.opt_len = s.static_len = 0;
+      s.sym_next = s.matches = 0;
+    };
+    bi_windup = (s) => {
+      if (s.bi_valid > 8) put_short(s, s.bi_buf);
+      else if (s.bi_valid > 0) s.pending_buf[s.pending++] = s.bi_buf;
+      s.bi_buf = 0;
+      s.bi_valid = 0;
+    };
+    smaller = (tree, n, m, depth) => {
+      const _n2 = n * 2;
+      const _m2 = m * 2;
+      return tree[_n2] < tree[_m2] || tree[_n2] === tree[_m2] && depth[n] <= depth[m];
+    };
+    pqdownheap = (s, tree, k) => {
+      const v = s.heap[k];
+      let j = k << 1;
+      while (j <= s.heap_len) {
+        if (j < s.heap_len && smaller(tree, s.heap[j + 1], s.heap[j], s.depth)) j++;
+        if (smaller(tree, v, s.heap[j], s.depth)) break;
+        s.heap[k] = s.heap[j];
+        k = j;
+        j <<= 1;
+      }
+      s.heap[k] = v;
+    };
+    compress_block = (s, ltree, dtree) => {
+      let dist;
+      let lc;
+      let sx = 0;
+      let code;
+      let extra;
+      if (s.sym_next !== 0) do {
+        dist = s.pending_buf[s.sym_buf + sx++] & 255;
+        dist += (s.pending_buf[s.sym_buf + sx++] & 255) << 8;
+        lc = s.pending_buf[s.sym_buf + sx++];
+        if (dist === 0) send_code(s, lc, ltree);
+        else {
+          code = _length_code[lc];
+          send_code(s, code + LITERALS + 1, ltree);
+          extra = extra_lbits[code];
+          if (extra !== 0) {
+            lc -= base_length[code];
+            send_bits(s, lc, extra);
+          }
+          dist--;
+          code = d_code(dist);
+          send_code(s, code, dtree);
+          extra = extra_dbits[code];
+          if (extra !== 0) {
+            dist -= base_dist[code];
+            send_bits(s, dist, extra);
+          }
+        }
+      } while (sx < s.sym_next);
+      send_code(s, END_BLOCK, ltree);
+    };
+    build_tree = (s, desc) => {
+      const tree = desc.dyn_tree;
+      const stree = desc.stat_desc.static_tree;
+      const has_stree = desc.stat_desc.has_stree;
+      const elems = desc.stat_desc.elems;
+      let n, m;
+      let max_code = -1;
+      let node;
+      s.heap_len = 0;
+      s.heap_max = HEAP_SIZE$1;
+      for (n = 0; n < elems; n++) if (tree[n * 2] !== 0) {
+        s.heap[++s.heap_len] = max_code = n;
+        s.depth[n] = 0;
+      } else tree[n * 2 + 1] = 0;
+      while (s.heap_len < 2) {
+        node = s.heap[++s.heap_len] = max_code < 2 ? ++max_code : 0;
+        tree[node * 2] = 1;
+        s.depth[node] = 0;
+        s.opt_len--;
+        if (has_stree) s.static_len -= stree[node * 2 + 1];
+      }
+      desc.max_code = max_code;
+      for (n = s.heap_len >> 1; n >= 1; n--) pqdownheap(s, tree, n);
+      node = elems;
+      do {
+        n = s.heap[1];
+        s.heap[1] = s.heap[s.heap_len--];
+        pqdownheap(s, tree, 1);
+        m = s.heap[1];
+        s.heap[--s.heap_max] = n;
+        s.heap[--s.heap_max] = m;
+        tree[node * 2] = tree[n * 2] + tree[m * 2];
+        s.depth[node] = (s.depth[n] >= s.depth[m] ? s.depth[n] : s.depth[m]) + 1;
+        tree[n * 2 + 1] = tree[m * 2 + 1] = node;
+        s.heap[1] = node++;
+        pqdownheap(s, tree, 1);
+      } while (s.heap_len >= 2);
+      s.heap[--s.heap_max] = s.heap[1];
+      gen_bitlen(s, desc);
+      gen_codes(tree, max_code, s.bl_count);
+    };
+    scan_tree = (s, tree, max_code) => {
+      let n;
+      let prevlen = -1;
+      let curlen;
+      let nextlen = tree[1];
+      let count = 0;
+      let max_count = 7;
+      let min_count = 4;
+      if (nextlen === 0) {
+        max_count = 138;
+        min_count = 3;
+      }
+      tree[(max_code + 1) * 2 + 1] = 65535;
+      for (n = 0; n <= max_code; n++) {
+        curlen = nextlen;
+        nextlen = tree[(n + 1) * 2 + 1];
+        if (++count < max_count && curlen === nextlen) continue;
+        else if (count < min_count) s.bl_tree[curlen * 2] += count;
+        else if (curlen !== 0) {
+          if (curlen !== prevlen) s.bl_tree[curlen * 2]++;
+          s.bl_tree[REP_3_6 * 2]++;
+        } else if (count <= 10) s.bl_tree[REPZ_3_10 * 2]++;
+        else s.bl_tree[REPZ_11_138 * 2]++;
+        count = 0;
+        prevlen = curlen;
+        if (nextlen === 0) {
+          max_count = 138;
+          min_count = 3;
+        } else if (curlen === nextlen) {
+          max_count = 6;
+          min_count = 3;
+        } else {
+          max_count = 7;
+          min_count = 4;
+        }
+      }
+    };
+    send_tree = (s, tree, max_code) => {
+      let n;
+      let prevlen = -1;
+      let curlen;
+      let nextlen = tree[1];
+      let count = 0;
+      let max_count = 7;
+      let min_count = 4;
+      if (nextlen === 0) {
+        max_count = 138;
+        min_count = 3;
+      }
+      for (n = 0; n <= max_code; n++) {
+        curlen = nextlen;
+        nextlen = tree[(n + 1) * 2 + 1];
+        if (++count < max_count && curlen === nextlen) continue;
+        else if (count < min_count) do
+          send_code(s, curlen, s.bl_tree);
+        while (--count !== 0);
+        else if (curlen !== 0) {
+          if (curlen !== prevlen) {
+            send_code(s, curlen, s.bl_tree);
+            count--;
+          }
+          send_code(s, REP_3_6, s.bl_tree);
+          send_bits(s, count - 3, 2);
+        } else if (count <= 10) {
+          send_code(s, REPZ_3_10, s.bl_tree);
+          send_bits(s, count - 3, 3);
+        } else {
+          send_code(s, REPZ_11_138, s.bl_tree);
+          send_bits(s, count - 11, 7);
+        }
+        count = 0;
+        prevlen = curlen;
+        if (nextlen === 0) {
+          max_count = 138;
+          min_count = 3;
+        } else if (curlen === nextlen) {
+          max_count = 6;
+          min_count = 3;
+        } else {
+          max_count = 7;
+          min_count = 4;
+        }
+      }
+    };
+    build_bl_tree = (s) => {
+      let max_blindex;
+      scan_tree(s, s.dyn_ltree, s.l_desc.max_code);
+      scan_tree(s, s.dyn_dtree, s.d_desc.max_code);
+      build_tree(s, s.bl_desc);
+      for (max_blindex = BL_CODES - 1; max_blindex >= 3; max_blindex--) if (s.bl_tree[bl_order[max_blindex] * 2 + 1] !== 0) break;
+      s.opt_len += 3 * (max_blindex + 1) + 5 + 5 + 4;
+      return max_blindex;
+    };
+    send_all_trees = (s, lcodes, dcodes, blcodes) => {
+      let rank2;
+      send_bits(s, lcodes - 257, 5);
+      send_bits(s, dcodes - 1, 5);
+      send_bits(s, blcodes - 4, 4);
+      for (rank2 = 0; rank2 < blcodes; rank2++) send_bits(s, s.bl_tree[bl_order[rank2] * 2 + 1], 3);
+      send_tree(s, s.dyn_ltree, lcodes - 1);
+      send_tree(s, s.dyn_dtree, dcodes - 1);
+    };
+    detect_data_type = (s) => {
+      let block_mask = 4093624447;
+      let n;
+      for (n = 0; n <= 31; n++, block_mask >>>= 1) if (block_mask & 1 && s.dyn_ltree[n * 2] !== 0) return Z_BINARY;
+      if (s.dyn_ltree[18] !== 0 || s.dyn_ltree[20] !== 0 || s.dyn_ltree[26] !== 0) return Z_TEXT;
+      for (n = 32; n < LITERALS; n++) if (s.dyn_ltree[n * 2] !== 0) return Z_TEXT;
+      return Z_BINARY;
+    };
+    _tr_stored_block = (s, buf, stored_len, last) => {
+      send_bits(s, (STORED_BLOCK << 1) + (last ? 1 : 0), 3);
+      bi_windup(s);
+      put_short(s, stored_len);
+      put_short(s, ~stored_len);
+      if (stored_len) s.pending_buf.set(s.window.subarray(buf, buf + stored_len), s.pending);
+      s.pending += stored_len;
+    };
+    _tr_flush_block = (s, buf, stored_len, last) => {
+      let opt_lenb, static_lenb;
+      let max_blindex = 0;
+      if (s.level > 0) {
+        if (s.strm.data_type === Z_UNKNOWN) s.strm.data_type = detect_data_type(s);
+        build_tree(s, s.l_desc);
+        build_tree(s, s.d_desc);
+        max_blindex = build_bl_tree(s);
+        opt_lenb = s.opt_len + 3 + 7 >>> 3;
+        static_lenb = s.static_len + 3 + 7 >>> 3;
+        if (static_lenb <= opt_lenb || s.strategy === Z_FIXED) opt_lenb = static_lenb;
+      } else opt_lenb = static_lenb = stored_len + 5;
+      if (stored_len + 4 <= opt_lenb && buf !== -1) _tr_stored_block(s, buf, stored_len, last);
+      else if (s.strategy === Z_FIXED || static_lenb === opt_lenb) {
+        send_bits(s, (STATIC_TREES << 1) + (last ? 1 : 0), 3);
+        compress_block(s, static_ltree, static_dtree);
+      } else {
+        send_bits(s, (DYN_TREES << 1) + (last ? 1 : 0), 3);
+        send_all_trees(s, s.l_desc.max_code + 1, s.d_desc.max_code + 1, max_blindex + 1);
+        compress_block(s, s.dyn_ltree, s.dyn_dtree);
+      }
+      init_block(s);
+      if (last) bi_windup(s);
+    };
+    _tr_tally = (s, dist, lc) => {
+      s.pending_buf[s.sym_buf + s.sym_next++] = dist;
+      s.pending_buf[s.sym_buf + s.sym_next++] = dist >> 8;
+      s.pending_buf[s.sym_buf + s.sym_next++] = lc;
+      if (dist === 0) s.dyn_ltree[lc * 2]++;
+      else {
+        s.matches++;
+        dist--;
+        s.dyn_ltree[(_length_code[lc] + LITERALS + 1) * 2]++;
+        s.dyn_dtree[d_code(dist) * 2]++;
+      }
+      return s.sym_next === s.sym_end;
+    };
+    adler32 = (adler, buf, len, pos) => {
+      let s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
+      while (len !== 0) {
+        n = len > 2e3 ? 2e3 : len;
+        len -= n;
+        do {
+          s1 = s1 + buf[pos++] | 0;
+          s2 = s2 + s1 | 0;
+        } while (--n);
+        s1 %= 65521;
+        s2 %= 65521;
+      }
+      return s1 | s2 << 16 | 0;
+    };
+    makeTable = () => {
+      let c, table = [];
+      for (var n = 0; n < 256; n++) {
+        c = n;
+        for (var k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+        table[n] = c;
+      }
+      return table;
+    };
+    crcTable = new Uint32Array(makeTable());
+    crc323 = (crc, buf, len, pos) => {
+      const t = crcTable;
+      const end = pos + len;
+      crc ^= -1;
+      for (let i = pos; i < end; i++) crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
+      return crc ^ -1;
+    };
+    messages_default = {
+      2: "need dictionary",
+      1: "stream end",
+      0: "",
+      "-1": "file error",
+      "-2": "stream error",
+      "-3": "data error",
+      "-4": "insufficient memory",
+      "-5": "buffer error",
+      "-6": "incompatible version"
+    };
+    MIN_MATCH = 3;
+    MAX_MATCH = 258;
+    MIN_LOOKAHEAD = 262;
+    BS_NEED_MORE = 1;
+    BS_BLOCK_DONE = 2;
+    BS_FINISH_STARTED = 3;
+    BS_FINISH_DONE = 4;
+    slide_hash = (s) => {
+      let n, m;
+      let p;
+      let wsize = s.w_size;
+      n = s.hash_size;
+      p = n;
+      do {
+        m = s.head[--p];
+        s.head[p] = m >= wsize ? m - wsize : 0;
+      } while (--n);
+      n = wsize;
+      p = n;
+      do {
+        m = s.prev[--p];
+        s.prev[p] = m >= wsize ? m - wsize : 0;
+      } while (--n);
+    };
+    HASH = (s, prev, data) => (prev << s.hash_shift ^ data) & s.hash_mask;
+    INSERT_STRING = (s, str) => {
+      let h;
+      if (s.legacy_hash) h = s.ins_h = HASH(s, s.ins_h, s.window[str + MIN_MATCH - 1]);
+      else {
+        const w = s.window;
+        const value = w[str] | w[str + 1] << 8 | w[str + 2] << 16 | w[str + 3] << 24;
+        h = s.ins_h = Math.imul(value, 66521) + 66521 >>> 16 & s.hash_mask;
+      }
+      const hash_head = s.prev[str & s.w_mask] = s.head[h];
+      s.head[h] = str;
+      return hash_head;
+    };
+    flush_pending = (strm) => {
+      const s = strm.state;
+      let len = s.pending;
+      if (len > strm.avail_out) len = strm.avail_out;
+      if (len === 0) return;
+      strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len), strm.next_out);
+      strm.next_out += len;
+      s.pending_out += len;
+      strm.total_out += len;
+      strm.avail_out -= len;
+      s.pending -= len;
+      if (s.pending === 0) s.pending_out = 0;
+    };
+    flush_block_only = (s, last) => {
+      _tr_flush_block(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
+      s.block_start = s.strstart;
+      flush_pending(s.strm);
+    };
+    read_buf = (strm, buf, start, size) => {
+      let len = strm.avail_in;
+      if (len > size) len = size;
+      if (len === 0) return 0;
+      strm.avail_in -= len;
+      buf.set(strm.input.subarray(strm.next_in, strm.next_in + len), start);
+      if (strm.state.wrap === 1) strm.adler = adler32(strm.adler, buf, len, start);
+      else if (strm.state.wrap === 2) strm.adler = crc323(strm.adler, buf, len, start);
+      strm.next_in += len;
+      strm.total_in += len;
+      return len;
+    };
+    longest_match = (s, cur_match) => {
+      let chain_length = s.max_chain_length;
+      let scan = s.strstart;
+      let match;
+      let len;
+      let best_len = s.prev_length;
+      let nice_match = s.nice_match;
+      const limit = s.strstart > s.w_size - MIN_LOOKAHEAD ? s.strstart - (s.w_size - MIN_LOOKAHEAD) : 0;
+      const _win = s.window;
+      const wmask = s.w_mask;
+      const prev = s.prev;
+      const strend = s.strstart + MAX_MATCH;
+      let scan_end1 = _win[scan + best_len - 1];
+      let scan_end = _win[scan + best_len];
+      if (s.prev_length >= s.good_match) chain_length >>= 2;
+      if (nice_match > s.lookahead) nice_match = s.lookahead;
+      do {
+        match = cur_match;
+        if (_win[match + best_len] !== scan_end || _win[match + best_len - 1] !== scan_end1 || _win[match] !== _win[scan] || _win[++match] !== _win[scan + 1]) continue;
+        scan += 2;
+        match++;
+        do
+          ;
+        while (_win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && scan < strend);
+        len = MAX_MATCH - (strend - scan);
+        scan = strend - MAX_MATCH;
+        if (len > best_len) {
+          s.match_start = cur_match;
+          best_len = len;
+          if (len >= nice_match) break;
+          scan_end1 = _win[scan + best_len - 1];
+          scan_end = _win[scan + best_len];
+        }
+      } while ((cur_match = prev[cur_match & wmask]) > limit && --chain_length !== 0);
+      if (best_len <= s.lookahead) return best_len;
+      return s.lookahead;
+    };
+    fill_window = (s) => {
+      const _w_size = s.w_size;
+      let n, more, str;
+      do {
+        more = s.window_size - s.lookahead - s.strstart;
+        if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD)) {
+          s.window.set(s.window.subarray(_w_size, _w_size + _w_size - more), 0);
+          s.match_start -= _w_size;
+          s.strstart -= _w_size;
+          s.block_start -= _w_size;
+          if (s.insert > s.strstart) s.insert = s.strstart;
+          slide_hash(s);
+          more += _w_size;
+        }
+        if (s.strm.avail_in === 0) break;
+        n = read_buf(s.strm, s.window, s.strstart + s.lookahead, more);
+        s.lookahead += n;
+        if (!s.legacy_hash) {
+          if (s.lookahead + s.insert > MIN_MATCH) {
+            str = s.strstart - s.insert;
+            while (s.insert) {
+              INSERT_STRING(s, str);
+              str++;
+              s.insert--;
+              if (s.lookahead + s.insert <= MIN_MATCH) break;
+            }
+          }
+        } else if (s.lookahead + s.insert >= MIN_MATCH) {
+          str = s.strstart - s.insert;
+          s.ins_h = s.window[str];
+          s.ins_h = HASH(s, s.ins_h, s.window[str + 1]);
+          while (s.insert) {
+            INSERT_STRING(s, str);
+            str++;
+            s.insert--;
+            if (s.lookahead + s.insert < MIN_MATCH) break;
+          }
+        }
+      } while (s.lookahead < MIN_LOOKAHEAD && s.strm.avail_in !== 0);
+    };
+    deflate_stored = (s, flush) => {
+      let min_block = s.pending_buf_size - 5 > s.w_size ? s.w_size : s.pending_buf_size - 5;
+      let len, left, have, last = 0;
+      let used = s.strm.avail_in;
+      do {
+        len = 65535;
+        have = s.bi_valid + 42 >> 3;
+        if (s.strm.avail_out < have) break;
+        have = s.strm.avail_out - have;
+        left = s.strstart - s.block_start;
+        if (len > left + s.strm.avail_in) len = left + s.strm.avail_in;
+        if (len > have) len = have;
+        if (len < min_block && (len === 0 && flush !== 4 || flush === 0 || len !== left + s.strm.avail_in)) break;
+        last = flush === 4 && len === left + s.strm.avail_in ? 1 : 0;
+        _tr_stored_block(s, 0, 0, last);
+        s.pending_buf[s.pending - 4] = len;
+        s.pending_buf[s.pending - 3] = len >> 8;
+        s.pending_buf[s.pending - 2] = ~len;
+        s.pending_buf[s.pending - 1] = ~len >> 8;
+        flush_pending(s.strm);
+        if (left) {
+          if (left > len) left = len;
+          s.strm.output.set(s.window.subarray(s.block_start, s.block_start + left), s.strm.next_out);
+          s.strm.next_out += left;
+          s.strm.avail_out -= left;
+          s.strm.total_out += left;
+          s.block_start += left;
+          len -= left;
+        }
+        if (len) {
+          read_buf(s.strm, s.strm.output, s.strm.next_out, len);
+          s.strm.next_out += len;
+          s.strm.avail_out -= len;
+          s.strm.total_out += len;
+        }
+      } while (last === 0);
+      used -= s.strm.avail_in;
+      if (used) {
+        if (used >= s.w_size) {
+          s.matches = 2;
+          s.window.set(s.strm.input.subarray(s.strm.next_in - s.w_size, s.strm.next_in), 0);
+          s.strstart = s.w_size;
+          s.insert = s.strstart;
+        } else {
+          if (s.window_size - s.strstart <= used) {
+            s.strstart -= s.w_size;
+            s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+            if (s.matches < 2) s.matches++;
+            if (s.insert > s.strstart) s.insert = s.strstart;
+          }
+          s.window.set(s.strm.input.subarray(s.strm.next_in - used, s.strm.next_in), s.strstart);
+          s.strstart += used;
+          s.insert += used > s.w_size - s.insert ? s.w_size - s.insert : used;
+        }
+        s.block_start = s.strstart;
+      }
+      if (s.high_water < s.strstart) s.high_water = s.strstart;
+      if (last) return BS_FINISH_DONE;
+      if (flush !== 0 && flush !== 4 && s.strm.avail_in === 0 && s.strstart === s.block_start) return BS_BLOCK_DONE;
+      have = s.window_size - s.strstart;
+      if (s.strm.avail_in > have && s.block_start >= s.w_size) {
+        s.block_start -= s.w_size;
+        s.strstart -= s.w_size;
+        s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+        if (s.matches < 2) s.matches++;
+        have += s.w_size;
+        if (s.insert > s.strstart) s.insert = s.strstart;
+      }
+      if (have > s.strm.avail_in) have = s.strm.avail_in;
+      if (have) {
+        read_buf(s.strm, s.window, s.strstart, have);
+        s.strstart += have;
+        s.insert += have > s.w_size - s.insert ? s.w_size - s.insert : have;
+      }
+      if (s.high_water < s.strstart) s.high_water = s.strstart;
+      have = s.bi_valid + 42 >> 3;
+      have = s.pending_buf_size - have > 65535 ? 65535 : s.pending_buf_size - have;
+      min_block = have > s.w_size ? s.w_size : have;
+      left = s.strstart - s.block_start;
+      if (left >= min_block || (left || flush === 4) && flush !== 0 && s.strm.avail_in === 0 && left <= have) {
+        len = left > have ? have : left;
+        last = flush === 4 && s.strm.avail_in === 0 && len === left ? 1 : 0;
+        _tr_stored_block(s, s.block_start, len, last);
+        s.block_start += len;
+        flush_pending(s.strm);
+      }
+      return last ? BS_FINISH_STARTED : BS_NEED_MORE;
+    };
+    deflate_fast = (s, flush) => {
+      let hash_head;
+      let bflush;
+      for (; ; ) {
+        if (s.lookahead < MIN_LOOKAHEAD) {
+          fill_window(s);
+          if (s.lookahead < MIN_LOOKAHEAD && flush === 0) return BS_NEED_MORE;
+          if (s.lookahead === 0) break;
+        }
+        hash_head = 0;
+        if (s.lookahead >= MIN_MATCH) hash_head = INSERT_STRING(s, s.strstart);
+        if (hash_head !== 0 && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD) s.match_length = longest_match(s, hash_head);
+        if (s.match_length >= MIN_MATCH) {
+          bflush = _tr_tally(s, s.strstart - s.match_start, s.match_length - MIN_MATCH);
+          s.lookahead -= s.match_length;
+          if (s.match_length <= s.max_lazy_match && s.lookahead >= MIN_MATCH) {
+            s.match_length--;
+            do {
+              s.strstart++;
+              hash_head = INSERT_STRING(s, s.strstart);
+            } while (--s.match_length !== 0);
+            s.strstart++;
+          } else {
+            s.strstart += s.match_length;
+            s.match_length = 0;
+            if (s.legacy_hash) {
+              s.ins_h = s.window[s.strstart];
+              s.ins_h = HASH(s, s.ins_h, s.window[s.strstart + 1]);
+            }
+          }
+        } else {
+          bflush = _tr_tally(s, 0, s.window[s.strstart]);
+          s.lookahead--;
+          s.strstart++;
+        }
+        if (bflush) {
+          flush_block_only(s, false);
+          if (s.strm.avail_out === 0) return BS_NEED_MORE;
+        }
+      }
+      s.insert = s.strstart < MIN_MATCH - 1 ? s.strstart : MIN_MATCH - 1;
+      if (flush === 4) {
+        flush_block_only(s, true);
+        if (s.strm.avail_out === 0) return BS_FINISH_STARTED;
+        return BS_FINISH_DONE;
+      }
+      if (s.sym_next) {
+        flush_block_only(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE;
+      }
+      return BS_BLOCK_DONE;
+    };
+    deflate_slow = (s, flush) => {
+      let hash_head;
+      let bflush;
+      let max_insert;
+      for (; ; ) {
+        if (s.lookahead < MIN_LOOKAHEAD) {
+          fill_window(s);
+          if (s.lookahead < MIN_LOOKAHEAD && flush === 0) return BS_NEED_MORE;
+          if (s.lookahead === 0) break;
+        }
+        hash_head = 0;
+        if (s.lookahead >= MIN_MATCH) hash_head = INSERT_STRING(s, s.strstart);
+        s.prev_length = s.match_length;
+        s.prev_match = s.match_start;
+        s.match_length = MIN_MATCH - 1;
+        if (hash_head !== 0 && s.prev_length < s.max_lazy_match && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD) {
+          s.match_length = longest_match(s, hash_head);
+          if (s.match_length <= 5 && (s.strategy === 1 || s.match_length === MIN_MATCH && s.strstart - s.match_start > 4096)) s.match_length = MIN_MATCH - 1;
+        }
+        if (s.prev_length >= MIN_MATCH && s.match_length <= s.prev_length) {
+          max_insert = s.strstart + s.lookahead - MIN_MATCH;
+          bflush = _tr_tally(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH);
+          s.lookahead -= s.prev_length - 1;
+          s.prev_length -= 2;
+          do
+            if (++s.strstart <= max_insert) hash_head = INSERT_STRING(s, s.strstart);
+          while (--s.prev_length !== 0);
+          s.match_available = 0;
+          s.match_length = MIN_MATCH - 1;
+          s.strstart++;
+          if (bflush) {
+            flush_block_only(s, false);
+            if (s.strm.avail_out === 0) return BS_NEED_MORE;
+          }
+        } else if (s.match_available) {
+          bflush = _tr_tally(s, 0, s.window[s.strstart - 1]);
+          if (bflush)
+            flush_block_only(s, false);
+          s.strstart++;
+          s.lookahead--;
+          if (s.strm.avail_out === 0) return BS_NEED_MORE;
+        } else {
+          s.match_available = 1;
+          s.strstart++;
+          s.lookahead--;
+        }
+      }
+      if (s.match_available) {
+        bflush = _tr_tally(s, 0, s.window[s.strstart - 1]);
+        s.match_available = 0;
+      }
+      s.insert = s.strstart < MIN_MATCH - 1 ? s.strstart : MIN_MATCH - 1;
+      if (flush === 4) {
+        flush_block_only(s, true);
+        if (s.strm.avail_out === 0) return BS_FINISH_STARTED;
+        return BS_FINISH_DONE;
+      }
+      if (s.sym_next) {
+        flush_block_only(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE;
+      }
+      return BS_BLOCK_DONE;
+    };
+    Config = class {
+      constructor(good_length, max_lazy, nice_length, max_chain, func) {
+        this.good_length = good_length;
+        this.max_lazy = max_lazy;
+        this.nice_length = nice_length;
+        this.max_chain = max_chain;
+        this.func = func;
+      }
+    };
+    configuration_table = [
+      new Config(0, 0, 0, 0, deflate_stored),
+      new Config(4, 4, 8, 4, deflate_fast),
+      new Config(4, 5, 16, 8, deflate_fast),
+      new Config(4, 6, 32, 32, deflate_fast),
+      new Config(4, 4, 16, 16, deflate_slow),
+      new Config(8, 16, 32, 32, deflate_slow),
+      new Config(8, 16, 128, 128, deflate_slow),
+      new Config(8, 32, 128, 256, deflate_slow),
+      new Config(32, 128, 258, 1024, deflate_slow),
+      new Config(32, 258, 258, 4096, deflate_slow)
+    ];
+    BAD$1 = 16209;
+    TYPE$1 = 16191;
+    MAXBITS = 15;
+    ENOUGH_LENS$1 = 852;
+    ENOUGH_DISTS$1 = 592;
+    CODES$1 = 0;
+    LENS$1 = 1;
+    DISTS$1 = 2;
+    lbase = new Uint16Array([
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      15,
+      17,
+      19,
+      23,
+      27,
+      31,
+      35,
+      43,
+      51,
+      59,
+      67,
+      83,
+      99,
+      115,
+      131,
+      163,
+      195,
+      227,
+      258,
+      0,
+      0
+    ]);
+    lext = new Uint8Array([
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      17,
+      17,
+      17,
+      17,
+      18,
+      18,
+      18,
+      18,
+      19,
+      19,
+      19,
+      19,
+      20,
+      20,
+      20,
+      20,
+      21,
+      21,
+      21,
+      21,
+      16,
+      199,
+      75
+    ]);
+    dbase = new Uint16Array([
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      9,
+      13,
+      17,
+      25,
+      33,
+      49,
+      65,
+      97,
+      129,
+      193,
+      257,
+      385,
+      513,
+      769,
+      1025,
+      1537,
+      2049,
+      3073,
+      4097,
+      6145,
+      8193,
+      12289,
+      16385,
+      24577,
+      0,
+      0
+    ]);
+    dext = new Uint8Array([
+      16,
+      16,
+      16,
+      16,
+      17,
+      17,
+      18,
+      18,
+      19,
+      19,
+      20,
+      20,
+      21,
+      21,
+      22,
+      22,
+      23,
+      23,
+      24,
+      24,
+      25,
+      25,
+      26,
+      26,
+      27,
+      27,
+      28,
+      28,
+      29,
+      29,
+      64,
+      64
+    ]);
+    inflate_table = (type, lens, lens_index, codes, table, table_index, work, opts) => {
+      const bits = opts.bits;
+      let len = 0;
+      let sym = 0;
+      let min = 0, max = 0;
+      let root = 0;
+      let curr = 0;
+      let drop = 0;
+      let left = 0;
+      let used = 0;
+      let huff = 0;
+      let incr;
+      let fill;
+      let low;
+      let mask;
+      let next;
+      let base = null;
+      let match;
+      const count = /* @__PURE__ */ new Uint16Array(16);
+      const offs = /* @__PURE__ */ new Uint16Array(16);
+      let extra = null;
+      let here_bits, here_op, here_val;
+      for (len = 0; len <= MAXBITS; len++) count[len] = 0;
+      for (sym = 0; sym < codes; sym++) count[lens[lens_index + sym]]++;
+      root = bits;
+      for (max = MAXBITS; max >= 1; max--) if (count[max] !== 0) break;
+      if (root > max) root = max;
+      if (max === 0) {
+        table[table_index++] = 20971520;
+        table[table_index++] = 20971520;
+        opts.bits = 1;
+        return 0;
+      }
+      for (min = 1; min < max; min++) if (count[min] !== 0) break;
+      if (root < min) root = min;
+      left = 1;
+      for (len = 1; len <= MAXBITS; len++) {
+        left <<= 1;
+        left -= count[len];
+        if (left < 0) return -1;
+      }
+      if (left > 0 && (type === CODES$1 || max !== 1)) return -1;
+      offs[1] = 0;
+      for (len = 1; len < MAXBITS; len++) offs[len + 1] = offs[len] + count[len];
+      for (sym = 0; sym < codes; sym++) if (lens[lens_index + sym] !== 0) work[offs[lens[lens_index + sym]]++] = sym;
+      if (type === CODES$1) {
+        base = extra = work;
+        match = 20;
+      } else if (type === LENS$1) {
+        base = lbase;
+        extra = lext;
+        match = 257;
+      } else {
+        base = dbase;
+        extra = dext;
+        match = 0;
+      }
+      huff = 0;
+      sym = 0;
+      len = min;
+      next = table_index;
+      curr = root;
+      drop = 0;
+      low = -1;
+      used = 1 << root;
+      mask = used - 1;
+      if (type === LENS$1 && used > ENOUGH_LENS$1 || type === DISTS$1 && used > ENOUGH_DISTS$1) return 1;
+      for (; ; ) {
+        here_bits = len - drop;
+        if (work[sym] + 1 < match) {
+          here_op = 0;
+          here_val = work[sym];
+        } else if (work[sym] >= match) {
+          here_op = extra[work[sym] - match];
+          here_val = base[work[sym] - match];
+        } else {
+          here_op = 96;
+          here_val = 0;
+        }
+        incr = 1 << len - drop;
+        fill = 1 << curr;
+        min = fill;
+        do {
+          fill -= incr;
+          table[next + (huff >> drop) + fill] = here_bits << 24 | here_op << 16 | here_val | 0;
+        } while (fill !== 0);
+        incr = 1 << len - 1;
+        while (huff & incr) incr >>= 1;
+        if (incr !== 0) {
+          huff &= incr - 1;
+          huff += incr;
+        } else huff = 0;
+        sym++;
+        if (--count[len] === 0) {
+          if (len === max) break;
+          len = lens[lens_index + work[sym]];
+        }
+        if (len > root && (huff & mask) !== low) {
+          if (drop === 0) drop = root;
+          next += min;
+          curr = len - drop;
+          left = 1 << curr;
+          while (curr + drop < max) {
+            left -= count[curr + drop];
+            if (left <= 0) break;
+            curr++;
+            left <<= 1;
+          }
+          used += 1 << curr;
+          if (type === LENS$1 && used > ENOUGH_LENS$1 || type === DISTS$1 && used > ENOUGH_DISTS$1) return 1;
+          low = huff & mask;
+          table[low] = root << 24 | curr << 16 | next - table_index | 0;
+        }
+      }
+      if (huff !== 0) table[next + huff] = len - drop << 24 | 4194304;
+      opts.bits = root;
+      return 0;
+    };
+    CODES = 0;
+    LENS = 1;
+    DISTS = 2;
+    HEAD = 16180;
+    FLAGS = 16181;
+    TIME = 16182;
+    OS = 16183;
+    EXLEN = 16184;
+    EXTRA = 16185;
+    NAME = 16186;
+    COMMENT = 16187;
+    HCRC = 16188;
+    DICTID = 16189;
+    DICT = 16190;
+    TYPE = 16191;
+    TYPEDO = 16192;
+    STORED = 16193;
+    COPY_ = 16194;
+    COPY = 16195;
+    TABLE = 16196;
+    LENLENS = 16197;
+    CODELENS = 16198;
+    LEN_ = 16199;
+    LEN = 16200;
+    LENEXT = 16201;
+    DIST = 16202;
+    DISTEXT = 16203;
+    MATCH = 16204;
+    LIT = 16205;
+    CHECK = 16206;
+    LENGTH = 16207;
+    DONE = 16208;
+    BAD = 16209;
+    MEM = 16210;
+    SYNC = 16211;
+    ENOUGH_LENS = 852;
+    ENOUGH_DISTS = 592;
+    zswap32 = (q) => {
+      return (q >>> 24 & 255) + (q >>> 8 & 65280) + ((q & 65280) << 8) + ((q & 255) << 24);
+    };
+    InflateState = class {
+      constructor() {
+        this.strm = null;
+        this.mode = 0;
+        this.last = false;
+        this.wrap = 0;
+        this.havedict = false;
+        this.flags = 0;
+        this.dmax = 0;
+        this.check = 0;
+        this.total = 0;
+        this.head = null;
+        this.wbits = 0;
+        this.wsize = 0;
+        this.whave = 0;
+        this.wnext = 0;
+        this.window = null;
+        this.hold = 0;
+        this.bits = 0;
+        this.length = 0;
+        this.offset = 0;
+        this.extra = 0;
+        this.lencode = null;
+        this.distcode = null;
+        this.lenbits = 0;
+        this.distbits = 0;
+        this.ncode = 0;
+        this.nlen = 0;
+        this.ndist = 0;
+        this.have = 0;
+        this.next = null;
+        this.lens = /* @__PURE__ */ new Uint16Array(320);
+        this.work = /* @__PURE__ */ new Uint16Array(288);
+        this.lendyn = null;
+        this.distdyn = null;
+        this.sane = 0;
+        this.back = 0;
+        this.was = 0;
+      }
+    };
+    inflateStateCheck = (strm) => {
+      if (!strm) return 1;
+      const state = strm.state;
+      if (!state || state.strm !== strm || state.mode < HEAD || state.mode > SYNC) return 1;
+      return 0;
+    };
+    inflateResetKeep = (strm) => {
+      if (inflateStateCheck(strm)) return -2;
+      const state = strm.state;
+      strm.total_in = strm.total_out = state.total = 0;
+      strm.msg = "";
+      if (state.wrap) strm.adler = state.wrap & 1;
+      state.mode = HEAD;
+      state.last = 0;
+      state.havedict = 0;
+      state.flags = -1;
+      state.dmax = 32768;
+      state.head = null;
+      state.hold = 0;
+      state.bits = 0;
+      state.lencode = state.lendyn = new Int32Array(ENOUGH_LENS);
+      state.distcode = state.distdyn = new Int32Array(ENOUGH_DISTS);
+      state.sane = 1;
+      state.back = -1;
+      return 0;
+    };
+    inflateReset = (strm) => {
+      if (inflateStateCheck(strm)) return -2;
+      const state = strm.state;
+      state.wsize = 0;
+      state.whave = 0;
+      state.wnext = 0;
+      return inflateResetKeep(strm);
+    };
+    inflateReset2 = (strm, windowBits) => {
+      let wrap;
+      if (inflateStateCheck(strm)) return -2;
+      const state = strm.state;
+      if (windowBits < 0) {
+        wrap = 0;
+        windowBits = -windowBits;
+      } else {
+        wrap = (windowBits >> 4) + 5;
+        if (windowBits < 48) windowBits &= 15;
+      }
+      if (windowBits && (windowBits < 8 || windowBits > 15)) return -2;
+      if (state.window !== null && state.wbits !== windowBits) state.window = null;
+      state.wrap = wrap;
+      state.wbits = windowBits;
+      return inflateReset(strm);
+    };
+    inflateInit2 = (strm, windowBits) => {
+      if (!strm) return -2;
+      const state = new InflateState();
+      strm.state = state;
+      state.strm = strm;
+      state.window = null;
+      state.mode = HEAD;
+      const ret = inflateReset2(strm, windowBits);
+      if (ret !== 0) strm.state = null;
+      return ret;
+    };
+    virgin = true;
+    fixedtables = (state) => {
+      if (virgin) {
+        lenfix = /* @__PURE__ */ new Int32Array(512);
+        distfix = /* @__PURE__ */ new Int32Array(32);
+        let sym = 0;
+        while (sym < 144) state.lens[sym++] = 8;
+        while (sym < 256) state.lens[sym++] = 9;
+        while (sym < 280) state.lens[sym++] = 7;
+        while (sym < 288) state.lens[sym++] = 8;
+        inflate_table(LENS, state.lens, 0, 288, lenfix, 0, state.work, { bits: 9 });
+        sym = 0;
+        while (sym < 32) state.lens[sym++] = 5;
+        inflate_table(DISTS, state.lens, 0, 32, distfix, 0, state.work, { bits: 5 });
+        virgin = false;
+      }
+      state.lencode = lenfix;
+      state.lenbits = 9;
+      state.distcode = distfix;
+      state.distbits = 5;
+    };
+    updatewindow = (strm, src, end, copy) => {
+      let dist;
+      const state = strm.state;
+      if (state.window === null) state.window = new Uint8Array(1 << state.wbits);
+      if (state.wsize === 0) {
+        state.wsize = 1 << state.wbits;
+        state.wnext = 0;
+        state.whave = 0;
+      }
+      if (copy >= state.wsize) {
+        state.window.set(src.subarray(end - state.wsize, end), 0);
+        state.wnext = 0;
+        state.whave = state.wsize;
+      } else {
+        dist = state.wsize - state.wnext;
+        if (dist > copy) dist = copy;
+        state.window.set(src.subarray(end - copy, end - copy + dist), state.wnext);
+        copy -= dist;
+        if (copy) {
+          state.window.set(src.subarray(end - copy, end), 0);
+          state.wnext = copy;
+          state.whave = state.wsize;
+        } else {
+          state.wnext += dist;
+          if (state.wnext === state.wsize) state.wnext = 0;
+          if (state.whave < state.wsize) state.whave += dist;
+        }
+      }
+      return 0;
+    };
+    inflate$1 = (strm, flush) => {
+      let state;
+      let input, output;
+      let next;
+      let put;
+      let have, left;
+      let hold;
+      let bits;
+      let _in, _out;
+      let copy;
+      let from;
+      let from_source;
+      let here = 0;
+      let here_bits, here_op, here_val;
+      let last_bits, last_op, last_val;
+      let len;
+      let ret;
+      const hbuf = /* @__PURE__ */ new Uint8Array(4);
+      let opts;
+      let n;
+      const order = new Uint8Array([
+        16,
+        17,
+        18,
+        0,
+        8,
+        7,
+        9,
+        6,
+        10,
+        5,
+        11,
+        4,
+        12,
+        3,
+        13,
+        2,
+        14,
+        1,
+        15
+      ]);
+      if (inflateStateCheck(strm) || !strm.output || !strm.input && strm.avail_in !== 0) return -2;
+      state = strm.state;
+      if (state.mode === TYPE) state.mode = TYPEDO;
+      put = strm.next_out;
+      output = strm.output;
+      left = strm.avail_out;
+      next = strm.next_in;
+      input = strm.input;
+      have = strm.avail_in;
+      hold = state.hold;
+      bits = state.bits;
+      _in = have;
+      _out = left;
+      ret = 0;
+      inf_leave: for (; ; ) switch (state.mode) {
+        case HEAD:
+          if (state.wrap === 0) {
+            state.mode = TYPEDO;
+            break;
+          }
+          while (bits < 16) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (state.wrap & 2 && hold === 35615) {
+            if (state.wbits === 0) state.wbits = 15;
+            state.check = 0;
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            state.check = crc323(state.check, hbuf, 2, 0);
+            hold = 0;
+            bits = 0;
+            state.mode = FLAGS;
+            break;
+          }
+          if (state.head) state.head.done = false;
+          if (!(state.wrap & 1) || (((hold & 255) << 8) + (hold >> 8)) % 31) {
+            strm.msg = "incorrect header check";
+            state.mode = BAD;
+            break;
+          }
+          if ((hold & 15) !== 8) {
+            strm.msg = "unknown compression method";
+            state.mode = BAD;
+            break;
+          }
+          hold >>>= 4;
+          bits -= 4;
+          len = (hold & 15) + 8;
+          if (state.wbits === 0) state.wbits = len;
+          if (len > 15 || len > state.wbits) {
+            strm.msg = "invalid window size";
+            state.mode = BAD;
+            break;
+          }
+          state.dmax = 1 << state.wbits;
+          state.flags = 0;
+          strm.adler = state.check = 1;
+          state.mode = hold & 512 ? DICTID : TYPE;
+          hold = 0;
+          bits = 0;
+          break;
+        case FLAGS:
+          while (bits < 16) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          state.flags = hold;
+          if ((state.flags & 255) !== 8) {
+            strm.msg = "unknown compression method";
+            state.mode = BAD;
+            break;
+          }
+          if (state.flags & 57344) {
+            strm.msg = "unknown header flags set";
+            state.mode = BAD;
+            break;
+          }
+          if (state.head) state.head.text = hold >> 8 & 1;
+          if (state.flags & 512 && state.wrap & 4) {
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            state.check = crc323(state.check, hbuf, 2, 0);
+          }
+          hold = 0;
+          bits = 0;
+          state.mode = TIME;
+        case TIME:
+          while (bits < 32) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (state.head) state.head.time = hold >>> 0;
+          if (state.flags & 512 && state.wrap & 4) {
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            hbuf[2] = hold >>> 16 & 255;
+            hbuf[3] = hold >>> 24 & 255;
+            state.check = crc323(state.check, hbuf, 4, 0);
+          }
+          hold = 0;
+          bits = 0;
+          state.mode = OS;
+        case OS:
+          while (bits < 16) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (state.head) {
+            state.head.xflags = hold & 255;
+            state.head.os = hold >> 8;
+          }
+          if (state.flags & 512 && state.wrap & 4) {
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            state.check = crc323(state.check, hbuf, 2, 0);
+          }
+          hold = 0;
+          bits = 0;
+          state.mode = EXLEN;
+        case EXLEN:
+          if (state.flags & 1024) {
+            while (bits < 16) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.length = hold;
+            if (state.head) state.head.extra_len = hold;
+            if (state.flags & 512 && state.wrap & 4) {
+              hbuf[0] = hold & 255;
+              hbuf[1] = hold >>> 8 & 255;
+              state.check = crc323(state.check, hbuf, 2, 0);
+            }
+            hold = 0;
+            bits = 0;
+          } else if (state.head) state.head.extra = null;
+          state.mode = EXTRA;
+        case EXTRA:
+          if (state.flags & 1024) {
+            copy = state.length;
+            if (copy > have) copy = have;
+            if (copy) {
+              if (state.head) {
+                len = state.head.extra_len - state.length;
+                if (!state.head.extra) state.head.extra = new Uint8Array(state.head.extra_len);
+                state.head.extra.set(input.subarray(next, next + copy), len);
+              }
+              if (state.flags & 512 && state.wrap & 4) state.check = crc323(state.check, input, copy, next);
+              have -= copy;
+              next += copy;
+              state.length -= copy;
+            }
+            if (state.length) break inf_leave;
+          }
+          state.length = 0;
+          state.mode = NAME;
+        case NAME:
+          if (state.flags & 2048) {
+            if (have === 0) break inf_leave;
+            copy = 0;
+            do {
+              len = input[next + copy++];
+              if (state.head && len && state.length < 65536) state.head.name += String.fromCharCode(len);
+            } while (len && copy < have);
+            if (state.flags & 512 && state.wrap & 4) state.check = crc323(state.check, input, copy, next);
+            have -= copy;
+            next += copy;
+            if (len) break inf_leave;
+          } else if (state.head) state.head.name = null;
+          state.length = 0;
+          state.mode = COMMENT;
+        case COMMENT:
+          if (state.flags & 4096) {
+            if (have === 0) break inf_leave;
+            copy = 0;
+            do {
+              len = input[next + copy++];
+              if (state.head && len && state.length < 65536) state.head.comment += String.fromCharCode(len);
+            } while (len && copy < have);
+            if (state.flags & 512 && state.wrap & 4) state.check = crc323(state.check, input, copy, next);
+            have -= copy;
+            next += copy;
+            if (len) break inf_leave;
+          } else if (state.head) state.head.comment = null;
+          state.mode = HCRC;
+        case HCRC:
+          if (state.flags & 512) {
+            while (bits < 16) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            if (state.wrap & 4 && hold !== (state.check & 65535)) {
+              strm.msg = "header crc mismatch";
+              state.mode = BAD;
+              break;
+            }
+            hold = 0;
+            bits = 0;
+          }
+          if (state.head) {
+            state.head.hcrc = state.flags >> 9 & 1;
+            state.head.done = true;
+          }
+          strm.adler = state.check = 0;
+          state.mode = TYPE;
+          break;
+        case DICTID:
+          while (bits < 32) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          strm.adler = state.check = zswap32(hold);
+          hold = 0;
+          bits = 0;
+          state.mode = DICT;
+        case DICT:
+          if (state.havedict === 0) {
+            strm.next_out = put;
+            strm.avail_out = left;
+            strm.next_in = next;
+            strm.avail_in = have;
+            state.hold = hold;
+            state.bits = bits;
+            return 2;
+          }
+          strm.adler = state.check = 1;
+          state.mode = TYPE;
+        case TYPE:
+          if (flush === 5 || flush === 6) break inf_leave;
+        case TYPEDO:
+          if (state.last) {
+            hold >>>= bits & 7;
+            bits -= bits & 7;
+            state.mode = CHECK;
+            break;
+          }
+          while (bits < 3) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          state.last = hold & 1;
+          hold >>>= 1;
+          bits -= 1;
+          switch (hold & 3) {
+            case 0:
+              state.mode = STORED;
+              break;
+            case 1:
+              fixedtables(state);
+              state.mode = LEN_;
+              if (flush === 6) {
+                hold >>>= 2;
+                bits -= 2;
+                break inf_leave;
+              }
+              break;
+            case 2:
+              state.mode = TABLE;
+              break;
+            case 3:
+              strm.msg = "invalid block type";
+              state.mode = BAD;
+          }
+          hold >>>= 2;
+          bits -= 2;
+          break;
+        case STORED:
+          hold >>>= bits & 7;
+          bits -= bits & 7;
+          while (bits < 32) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if ((hold & 65535) !== (hold >>> 16 ^ 65535)) {
+            strm.msg = "invalid stored block lengths";
+            state.mode = BAD;
+            break;
+          }
+          state.length = hold & 65535;
+          hold = 0;
+          bits = 0;
+          state.mode = COPY_;
+          if (flush === 6) break inf_leave;
+        case COPY_:
+          state.mode = COPY;
+        case COPY:
+          copy = state.length;
+          if (copy) {
+            if (copy > have) copy = have;
+            if (copy > left) copy = left;
+            if (copy === 0) break inf_leave;
+            output.set(input.subarray(next, next + copy), put);
+            have -= copy;
+            next += copy;
+            left -= copy;
+            put += copy;
+            state.length -= copy;
+            break;
+          }
+          state.mode = TYPE;
+          break;
+        case TABLE:
+          while (bits < 14) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          state.nlen = (hold & 31) + 257;
+          hold >>>= 5;
+          bits -= 5;
+          state.ndist = (hold & 31) + 1;
+          hold >>>= 5;
+          bits -= 5;
+          state.ncode = (hold & 15) + 4;
+          hold >>>= 4;
+          bits -= 4;
+          if (state.nlen > 286 || state.ndist > 30) {
+            strm.msg = "too many length or distance symbols";
+            state.mode = BAD;
+            break;
+          }
+          state.have = 0;
+          state.mode = LENLENS;
+        case LENLENS:
+          while (state.have < state.ncode) {
+            while (bits < 3) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.lens[order[state.have++]] = hold & 7;
+            hold >>>= 3;
+            bits -= 3;
+          }
+          while (state.have < 19) state.lens[order[state.have++]] = 0;
+          state.lencode = state.lendyn;
+          state.lenbits = 7;
+          opts = { bits: state.lenbits };
+          ret = inflate_table(CODES, state.lens, 0, 19, state.lencode, 0, state.work, opts);
+          state.lenbits = opts.bits;
+          if (ret) {
+            strm.msg = "invalid code lengths set";
+            state.mode = BAD;
+            break;
+          }
+          state.have = 0;
+          state.mode = CODELENS;
+        case CODELENS:
+          while (state.have < state.nlen + state.ndist) {
+            for (; ; ) {
+              here = state.lencode[hold & (1 << state.lenbits) - 1];
+              here_bits = here >>> 24;
+              here_op = here >>> 16 & 255;
+              here_val = here & 65535;
+              if (here_bits <= bits) break;
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            if (here_val < 16) {
+              hold >>>= here_bits;
+              bits -= here_bits;
+              state.lens[state.have++] = here_val;
+            } else {
+              if (here_val === 16) {
+                n = here_bits + 2;
+                while (bits < n) {
+                  if (have === 0) break inf_leave;
+                  have--;
+                  hold += input[next++] << bits;
+                  bits += 8;
+                }
+                hold >>>= here_bits;
+                bits -= here_bits;
+                if (state.have === 0) {
+                  strm.msg = "invalid bit length repeat";
+                  state.mode = BAD;
+                  break;
+                }
+                len = state.lens[state.have - 1];
+                copy = 3 + (hold & 3);
+                hold >>>= 2;
+                bits -= 2;
+              } else if (here_val === 17) {
+                n = here_bits + 3;
+                while (bits < n) {
+                  if (have === 0) break inf_leave;
+                  have--;
+                  hold += input[next++] << bits;
+                  bits += 8;
+                }
+                hold >>>= here_bits;
+                bits -= here_bits;
+                len = 0;
+                copy = 3 + (hold & 7);
+                hold >>>= 3;
+                bits -= 3;
+              } else {
+                n = here_bits + 7;
+                while (bits < n) {
+                  if (have === 0) break inf_leave;
+                  have--;
+                  hold += input[next++] << bits;
+                  bits += 8;
+                }
+                hold >>>= here_bits;
+                bits -= here_bits;
+                len = 0;
+                copy = 11 + (hold & 127);
+                hold >>>= 7;
+                bits -= 7;
+              }
+              if (state.have + copy > state.nlen + state.ndist) {
+                strm.msg = "invalid bit length repeat";
+                state.mode = BAD;
+                break;
+              }
+              while (copy--) state.lens[state.have++] = len;
+            }
+          }
+          if (state.mode === BAD) break;
+          if (state.lens[256] === 0) {
+            strm.msg = "invalid code -- missing end-of-block";
+            state.mode = BAD;
+            break;
+          }
+          state.lenbits = 9;
+          opts = { bits: state.lenbits };
+          ret = inflate_table(LENS, state.lens, 0, state.nlen, state.lencode, 0, state.work, opts);
+          state.lenbits = opts.bits;
+          if (ret) {
+            strm.msg = "invalid literal/lengths set";
+            state.mode = BAD;
+            break;
+          }
+          state.distbits = 6;
+          state.distcode = state.distdyn;
+          opts = { bits: state.distbits };
+          ret = inflate_table(DISTS, state.lens, state.nlen, state.ndist, state.distcode, 0, state.work, opts);
+          state.distbits = opts.bits;
+          if (ret) {
+            strm.msg = "invalid distances set";
+            state.mode = BAD;
+            break;
+          }
+          state.mode = LEN_;
+          if (flush === 6) break inf_leave;
+        case LEN_:
+          state.mode = LEN;
+        case LEN:
+          if (have >= 6 && left >= 258) {
+            strm.next_out = put;
+            strm.avail_out = left;
+            strm.next_in = next;
+            strm.avail_in = have;
+            state.hold = hold;
+            state.bits = bits;
+            inflate_fast(strm, _out);
+            put = strm.next_out;
+            output = strm.output;
+            left = strm.avail_out;
+            next = strm.next_in;
+            input = strm.input;
+            have = strm.avail_in;
+            hold = state.hold;
+            bits = state.bits;
+            if (state.mode === TYPE) state.back = -1;
+            break;
+          }
+          state.back = 0;
+          for (; ; ) {
+            here = state.lencode[hold & (1 << state.lenbits) - 1];
+            here_bits = here >>> 24;
+            here_op = here >>> 16 & 255;
+            here_val = here & 65535;
+            if (here_bits <= bits) break;
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (here_op && (here_op & 240) === 0) {
+            last_bits = here_bits;
+            last_op = here_op;
+            last_val = here_val;
+            for (; ; ) {
+              here = state.lencode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+              here_bits = here >>> 24;
+              here_op = here >>> 16 & 255;
+              here_val = here & 65535;
+              if (last_bits + here_bits <= bits) break;
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= last_bits;
+            bits -= last_bits;
+            state.back += last_bits;
+          }
+          hold >>>= here_bits;
+          bits -= here_bits;
+          state.back += here_bits;
+          state.length = here_val;
+          if (here_op === 0) {
+            state.mode = LIT;
+            break;
+          }
+          if (here_op & 32) {
+            state.back = -1;
+            state.mode = TYPE;
+            break;
+          }
+          if (here_op & 64) {
+            strm.msg = "invalid literal/length code";
+            state.mode = BAD;
+            break;
+          }
+          state.extra = here_op & 15;
+          state.mode = LENEXT;
+        case LENEXT:
+          if (state.extra) {
+            n = state.extra;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.length += hold & (1 << state.extra) - 1;
+            hold >>>= state.extra;
+            bits -= state.extra;
+            state.back += state.extra;
+          }
+          state.was = state.length;
+          state.mode = DIST;
+        case DIST:
+          for (; ; ) {
+            here = state.distcode[hold & (1 << state.distbits) - 1];
+            here_bits = here >>> 24;
+            here_op = here >>> 16 & 255;
+            here_val = here & 65535;
+            if (here_bits <= bits) break;
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if ((here_op & 240) === 0) {
+            last_bits = here_bits;
+            last_op = here_op;
+            last_val = here_val;
+            for (; ; ) {
+              here = state.distcode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+              here_bits = here >>> 24;
+              here_op = here >>> 16 & 255;
+              here_val = here & 65535;
+              if (last_bits + here_bits <= bits) break;
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= last_bits;
+            bits -= last_bits;
+            state.back += last_bits;
+          }
+          hold >>>= here_bits;
+          bits -= here_bits;
+          state.back += here_bits;
+          if (here_op & 64) {
+            strm.msg = "invalid distance code";
+            state.mode = BAD;
+            break;
+          }
+          state.offset = here_val;
+          state.extra = here_op & 15;
+          state.mode = DISTEXT;
+        case DISTEXT:
+          if (state.extra) {
+            n = state.extra;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.offset += hold & (1 << state.extra) - 1;
+            hold >>>= state.extra;
+            bits -= state.extra;
+            state.back += state.extra;
+          }
+          if (state.offset > state.dmax) {
+            strm.msg = "invalid distance too far back";
+            state.mode = BAD;
+            break;
+          }
+          state.mode = MATCH;
+        case MATCH:
+          if (left === 0) break inf_leave;
+          copy = _out - left;
+          if (state.offset > copy) {
+            copy = state.offset - copy;
+            if (copy > state.whave) {
+              if (state.sane) {
+                strm.msg = "invalid distance too far back";
+                state.mode = BAD;
+                break;
+              }
+            }
+            if (copy > state.wnext) {
+              copy -= state.wnext;
+              from = state.wsize - copy;
+            } else from = state.wnext - copy;
+            if (copy > state.length) copy = state.length;
+            from_source = state.window;
+          } else {
+            from_source = output;
+            from = put - state.offset;
+            copy = state.length;
+          }
+          if (copy > left) copy = left;
+          left -= copy;
+          state.length -= copy;
+          do
+            output[put++] = from_source[from++];
+          while (--copy);
+          if (state.length === 0) state.mode = LEN;
+          break;
+        case LIT:
+          if (left === 0) break inf_leave;
+          output[put++] = state.length;
+          left--;
+          state.mode = LEN;
+          break;
+        case CHECK:
+          if (state.wrap) {
+            while (bits < 32) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold |= input[next++] << bits;
+              bits += 8;
+            }
+            _out -= left;
+            strm.total_out += _out;
+            state.total += _out;
+            if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc323(state.check, output, _out, put - _out) : adler32(state.check, output, _out, put - _out);
+            _out = left;
+            if (state.wrap & 4 && (state.flags ? hold : zswap32(hold)) !== state.check) {
+              strm.msg = "incorrect data check";
+              state.mode = BAD;
+              break;
+            }
+            hold = 0;
+            bits = 0;
+          }
+          state.mode = LENGTH;
+        case LENGTH:
+          if (state.wrap && state.flags) {
+            while (bits < 32) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            if (state.wrap & 4 && hold !== (state.total & 4294967295)) {
+              strm.msg = "incorrect length check";
+              state.mode = BAD;
+              break;
+            }
+            hold = 0;
+            bits = 0;
+          }
+          state.mode = DONE;
+        case DONE:
+          ret = 1;
+          break inf_leave;
+        case BAD:
+          ret = -3;
+          break inf_leave;
+        case MEM:
+          return -4;
+        case SYNC:
+        default:
+          return -2;
+      }
+      strm.next_out = put;
+      strm.avail_out = left;
+      strm.next_in = next;
+      strm.avail_in = have;
+      state.hold = hold;
+      state.bits = bits;
+      if (state.wsize || _out !== strm.avail_out && state.mode < BAD && (state.mode < CHECK || flush !== 4)) {
+        if (updatewindow(strm, strm.output, strm.next_out, _out - strm.avail_out)) {
+          state.mode = MEM;
+          return -4;
+        }
+      }
+      _in -= strm.avail_in;
+      _out -= strm.avail_out;
+      strm.total_in += _in;
+      strm.total_out += _out;
+      state.total += _out;
+      if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc323(state.check, output, _out, strm.next_out - _out) : adler32(state.check, output, _out, strm.next_out - _out);
+      strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE ? 128 : 0) + (state.mode === LEN_ || state.mode === COPY_ ? 256 : 0);
+      if ((_in === 0 && _out === 0 || flush === 4) && ret === 0) ret = -5;
+      return ret;
+    };
+    inflateEnd = (strm) => {
+      if (inflateStateCheck(strm)) return -2;
+      let state = strm.state;
+      if (state.window) state.window = null;
+      strm.state = null;
+      return 0;
+    };
+    inflateSetDictionary = (strm, dictionary) => {
+      const dictLength = dictionary.length;
+      let state;
+      let dictid;
+      let ret;
+      if (inflateStateCheck(strm)) return -2;
+      state = strm.state;
+      if (state.wrap !== 0 && state.mode !== DICT) return -2;
+      if (state.mode === DICT) {
+        dictid = 1;
+        dictid = adler32(dictid, dictionary, dictLength, 0);
+        if (dictid !== state.check) return -3;
+      }
+      ret = updatewindow(strm, dictionary, dictLength, dictLength);
+      if (ret) {
+        state.mode = MEM;
+        return -4;
+      }
+      state.havedict = 1;
+      return 0;
+    };
+    ZStream = class {
+      constructor() {
+        this.input = null;
+        this.next_in = 0;
+        this.avail_in = 0;
+        this.total_in = 0;
+        this.output = null;
+        this.next_out = 0;
+        this.avail_out = 0;
+        this.total_out = 0;
+        this.msg = "";
+        this.state = null;
+        this.data_type = 2;
+        this.adler = 0;
+      }
+    };
+    flattenChunks = (chunks) => {
+      const result = new Uint8Array(chunks.reduce((len, chunk) => len + chunk.length, 0));
+      let pos = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, pos);
+        pos += chunk.length;
+      }
+      return result;
+    };
+    toString = Object.prototype.toString;
+    defaultOptions = {
+      chunkSize: 1024 * 64,
+      windowBits: 15,
+      raw: false,
+      dictionary: /* @__PURE__ */ new Uint8Array(0)
+    };
+    Inflate = class {
+      options;
+      /**
+      * Error code after inflate finishes. {@link Z_OK} on success.
+      * Should be checked when broken data is possible.
+      */
+      err;
+      /** Error message, if {@link Inflate.err} is not {@link Z_OK}. */
+      msg;
+      /**
+      * `true` once the compressed stream has ended. A stream may end before the
+      * caller's data does (trailing bytes), so check this to know when to stop
+      * pushing - further {@link Inflate.push} calls are no-ops.
+      */
+      ended;
+      started;
+      /**
+      * Chunks of output data, if {@link Inflate.onData} not overridden.
+      * @internal
+      */
+      chunks;
+      strm;
+      /**
+      * Uncompressed result, generated by default {@link Inflate.onData}
+      * and {@link Inflate.onEnd} handlers. Filled after you push last chunk
+      * (call {@link Inflate.push} with {@link Z_FINISH} / `true` param).
+      */
+      result;
+      /**
+      * Creates a new inflator instance with the specified params. Throws an
+      * exception on bad params. See {@link InflateOptions} for the list of
+      * supported options.
+      *
+      * By default, when no options are set, the deflate/gzip data format is
+      * autodetected via the wrapper header.
+      *
+      * @example
+      * ```javascript
+      * import { Inflate } from 'pako'
+      *
+      * const chunk1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+      * const chunk2 = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+      *
+      * const inflate = new Inflate({ level: 3 })
+      *
+      * inflate.push(chunk1, false)
+      * inflate.push(chunk2, true)  // true -> last chunk
+      *
+      * if (inflate.err) throw new Error(inflate.err)
+      *
+      * console.log(inflate.result)
+      * ```
+      */
+      constructor(options = {}) {
+        this.options = Object.assign({}, defaultOptions, options);
+        const opt = this.options;
+        if (opt.raw && opt.windowBits >= 0 && opt.windowBits < 16) {
+          opt.windowBits = -opt.windowBits;
+          if (opt.windowBits === 0) opt.windowBits = -15;
+        }
+        if (opt.windowBits >= 0 && opt.windowBits < 16 && !options.windowBits) opt.windowBits += 32;
+        if (opt.windowBits > 15 && opt.windowBits < 48) {
+          if ((opt.windowBits & 15) === 0) opt.windowBits |= 15;
+        }
+        this.err = 0;
+        this.msg = "";
+        this.ended = false;
+        this.started = false;
+        this.chunks = [];
+        this.result = /* @__PURE__ */ new Uint8Array(0);
+        this.strm = new ZStream();
+        this.strm.avail_out = 0;
+        let status = inflateInit2(this.strm, opt.windowBits);
+        if (status !== 0) throw new Error(messages_default[status]);
+        if (toString.call(opt.dictionary) === "[object ArrayBuffer]") opt.dictionary = new Uint8Array(opt.dictionary);
+        const dictionary = opt.dictionary;
+        if (opt.raw && dictionary.length) {
+          status = inflateSetDictionary(this.strm, dictionary);
+          if (status !== 0) throw new Error(messages_default[status]);
+        }
+      }
+      /**
+      * Sends input data to the inflate pipe, generating {@link Inflate.onData} calls
+      * with new output chunks. Returns `true` on success. If end of stream is
+      * detected, {@link Inflate.onEnd} will be called.
+      *
+      * `flush_mode` is not needed for normal operation, because end of stream
+      * is detected automatically. Pass {@link Z_SYNC_FLUSH} to force the decoder
+      * to emit all currently available output — handy when you need to decode
+      * data frame-by-frame from a long-running stream.
+      *
+      * On failure, calls {@link Inflate.onEnd} with the error code and returns false.
+      *
+      * Once the stream has ended (a compressed stream may end before your data
+      * does), further `push` calls are no-ops and return whether the decode
+      * finished successfully. The final outcome is in {@link Inflate.result},
+      * {@link Inflate.err} and {@link Inflate.msg}.
+      *
+      * @param flush_mode 0..6 for corresponding {@link Z_NO_FLUSH}..{@link Z_TREES}
+      *   flush modes. See constants. Skipped or `false` means {@link Z_NO_FLUSH},
+      *   `true` means {@link Z_FINISH}.
+      *
+      * @example
+      * ```javascript
+      * push(chunk, false) // push one of data chunks
+      * ...
+      * push(chunk, true)  // push last chunk
+      * ```
+      */
+      push(data, flush_mode = false) {
+        const strm = this.strm;
+        const chunkSize = this.options.chunkSize;
+        let status;
+        let _flush_mode;
+        let last_avail_out;
+        if (this.ended) return this.err === 0;
+        if (typeof flush_mode === "number") _flush_mode = flush_mode;
+        else _flush_mode = flush_mode === true ? 4 : 0;
+        if (toString.call(data) === "[object ArrayBuffer]") strm.input = new Uint8Array(data);
+        else strm.input = data;
+        strm.next_in = 0;
+        strm.avail_in = strm.input.length;
+        if (!this.started) {
+          this.started = true;
+          this.onStart(strm);
+        }
+        for (; ; ) {
+          if (strm.avail_out === 0) {
+            strm.output = new Uint8Array(chunkSize);
+            strm.next_out = 0;
+            strm.avail_out = chunkSize;
+          }
+          status = inflate$1(strm, _flush_mode);
+          if (status === 2) {
+            const dictionary = this.options.dictionary;
+            if (dictionary.length) {
+              status = inflateSetDictionary(strm, dictionary);
+              if (status === 0) status = inflate$1(strm, _flush_mode);
+              else if (status === -3) status = 2;
+            }
+          }
+          while (strm.avail_in > 0 && status === 1 && strm.state.wrap & 2 && strm.state.flags !== 0 && strm.input[strm.next_in] !== 0) {
+            inflateReset(strm);
+            status = inflate$1(strm, _flush_mode);
+          }
+          if (status === -2 || status === -3 || status === 2 || status === -4) break;
+          last_avail_out = strm.avail_out;
+          if (strm.next_out) {
+            if (strm.avail_out === 0 || status === 1 || _flush_mode > 0) {
+              this.onData(strm.output.length === strm.next_out ? strm.output : strm.output.subarray(0, strm.next_out));
+              strm.avail_out = 0;
+              strm.next_out = 0;
+            }
+          }
+          if ((status === 0 || status === -5) && last_avail_out === 0) continue;
+          if (status === 1) {
+            status = inflateEnd(this.strm);
+            break;
+          }
+          if (strm.avail_in === 0) {
+            if (_flush_mode === 4) {
+              status = inflateEnd(this.strm);
+              if (status === 0) status = -5;
+              break;
+            }
+            return true;
+          }
+        }
+        this.err = status;
+        this.msg = strm.msg || messages_default[status];
+        this.ended = true;
+        this.onEnd(status);
+        return status === 0;
+      }
+      /**
+      * Called once before the first low-level inflate call.
+      *
+      * Override this handler to attach low-level inflate state, for example to read
+      * gzip header metadata:
+      *
+      * ```javascript
+      * import { Inflate, GZheader, zlibInflateGetHeader } from 'pako'
+      *
+      * const inflator = new Inflate()
+      *
+      * inflator.onStart = function (strm) {
+      *   this.header = new GZheader()
+      *   zlibInflateGetHeader(strm, this.header)
+      * }
+      *
+      * inflator.push(data, true)
+      * console.log(inflator.header.name)
+      * ```
+      */
+      onStart(strm) {
+      }
+      /**
+      * By default, stores data blocks in the {@link Inflate.chunks} property and glues
+      * them in {@link Inflate.onEnd}. Override this handler if you need another behaviour.
+      *
+      * @param chunk output data.
+      */
+      onData(chunk) {
+        this.chunks.push(chunk);
+      }
+      /**
+      * Called after you tell inflate that the input stream is
+      * complete ({@link Z_FINISH}). By default, joins the collected {@link Inflate.chunks},
+      * frees memory and fills the {@link Inflate.result} property.
+      *
+      * @param status inflate status. {@link Z_OK} on success, other if not.
+      */
+      onEnd(status) {
+        if (status === 0) this.result = flattenChunks(this.chunks);
+        this.chunks = [];
+      }
+    };
+  }
+});
+
+// node_modules/@uttori/data-tools/src/underflow-error.js
+var UnderflowError, underflow_error_default;
+var init_underflow_error = __esm({
+  "node_modules/@uttori/data-tools/src/underflow-error.js"() {
+    UnderflowError = class extends Error {
+      /**
+       * Creates a new UnderflowError.
+       * @param {string} message Message to show when the error is thrown.
+       * @class
+       */
+      constructor(message) {
+        super(message);
+        this.name = "UnderflowError";
+        this.stack = new Error(message).stack;
+        if (typeof Error.captureStackTrace === "function") {
+          Error.captureStackTrace(this, this.constructor);
+        }
+      }
+    };
+    underflow_error_default = UnderflowError;
+  }
+});
+
+// node_modules/@uttori/data-tools/src/data-helpers.js
+var float48, float80, convertFromIeeeExtended;
+var init_data_helpers = __esm({
+  "node_modules/@uttori/data-tools/src/data-helpers.js"() {
+    float48 = (uint8) => {
+      let mantissa = 0;
+      let exponent = uint8[0];
+      if (exponent === 0) {
+        return 0;
+      }
+      exponent = uint8[0] - 129;
+      for (let i = 1; i <= 4; i++) {
+        mantissa += uint8[i];
+        mantissa /= 256;
+      }
+      mantissa += uint8[5] & 127;
+      mantissa /= 128;
+      mantissa += 1;
+      if (uint8[5] & 128) {
+        mantissa = -mantissa;
+      }
+      const output = mantissa * 2 ** exponent;
+      return Number.parseFloat(output.toFixed(4));
+    };
+    float80 = (uint8) => {
+      const uint32 = new Uint32Array(uint8.buffer, uint8.byteOffset, uint8.byteLength / 4);
+      const [high, low] = [...uint32];
+      const a0 = uint8[9];
+      const a1 = uint8[8];
+      const sign = 1 - (a0 >>> 7) * 2;
+      let exponent = (a0 & 127) << 8 | a1;
+      if (exponent === 0 && low === 0 && high === 0) {
+        return 0;
+      }
+      if (exponent === 32767) {
+        if (low === 0 && high === 0) {
+          return sign * Number.POSITIVE_INFINITY;
+        }
+        return Number.NaN;
+      }
+      exponent -= 16383;
+      let out = low * 2 ** (exponent - 31);
+      out += high * 2 ** (exponent - 63);
+      return sign * out;
+    };
+    convertFromIeeeExtended = (uint8) => {
+      const sign = uint8[0] & 128 ? -1 : 1;
+      const exponent = (uint8[0] & 127) << 8 | uint8[1];
+      const hiMant = (uint8[2] << 24 | uint8[3] << 16 | uint8[4] << 8 | uint8[5]) >>> 0;
+      const loMant = (uint8[6] << 24 | uint8[7] << 16 | uint8[8] << 8 | uint8[9]) >>> 0;
+      if (exponent === 0 && hiMant === 0 && loMant === 0) {
+        return sign * 0;
+      }
+      if (exponent === 32767) {
+        return sign * Infinity;
+      }
+      const adjustedExponent = exponent - 16383;
+      return sign * (hiMant * 2 ** (adjustedExponent - 31) + loMant * 2 ** (adjustedExponent - 63));
+    };
+  }
+});
+
+// node_modules/@uttori/data-tools/src/diff/myers.js
+var Myers, myers_default;
+var init_myers = __esm({
+  "node_modules/@uttori/data-tools/src/diff/myers.js"() {
+    Myers = class {
+      // Inputs to compare.
+      /** @type {string[] | number[] | Uint8Array[]} */
+      x = [];
+      /** @type {string[] | number[] | Uint8Array[]} */
+      y = [];
+      // Arrays for forwards and backwards iteration respectively.
+      // An array stores the furthest reaching endpoint of a d-path in diagonal k in v[v0+k] where v0 is the offset that translates k in [-d, d] to k0 = v0+k in [0, 2*d].
+      // The endpoints only store the s-coordinate since t = s - k.
+      /** @type {number[]} */
+      vf = [];
+      /** @type {number[]} */
+      vb = [];
+      /** @type {number} */
+      v0 = 0;
+      // Mapping of s, t indices to the location in the result vectors.
+      /** @type {number[]} */
+      xidx = [];
+      /** @type {number[]} */
+      yidx = [];
+      // Result vectors.
+      /** @type {boolean[]} */
+      resultVectorX = [];
+      /** @type {boolean[]} */
+      resultVectorY = [];
+      // Equality function
+      /** @type {import('./diff.js').EqualityFunction} */
+      equal;
+      // Bounds after stripping common prefix/suffix
+      /** @type {number} */
+      smin = 0;
+      /** @type {number} */
+      smax = 0;
+      /** @type {number} */
+      tmin = 0;
+      /** @type {number} */
+      tmax = 0;
+      /**
+       * @param {number[]} xidx Mapping of s indices to result vector positions
+       * @param {number[]} yidx Mapping of t indices to result vector positions
+       * @param {string[] | number[] | Uint8Array[]} x0 The first array to compare
+       * @param {string[] | number[] | Uint8Array[]} y0 The second array to compare
+       * @param {import('./diff.js').EqualityFunction} equal Equality function to compare elements
+       */
+      constructor(xidx, yidx, x0, y0, equal) {
+        this.xidx = xidx;
+        this.yidx = yidx;
+        this.equal = equal;
+        this.resultVectorX = Array.from({ length: x0.length + 1 }, () => false);
+        this.resultVectorY = Array.from({ length: y0.length + 1 }, () => false);
+        let smin = 0;
+        let tmin = 0;
+        let smax = x0.length;
+        let tmax = y0.length;
+        while (smin < smax && tmin < tmax && equal(x0[smin], y0[tmin])) {
+          smin++;
+          tmin++;
+        }
+        while (smax > smin && tmax > tmin && equal(x0[smax - 1], y0[tmax - 1])) {
+          smax--;
+          tmax--;
+        }
+        this.smin = smin;
+        this.smax = smax;
+        this.tmin = tmin;
+        this.tmax = tmax;
+        const N = smax - smin;
+        const M = tmax - tmin;
+        const diagonals = N + M;
+        const vlen = 2 * diagonals + 3;
+        const buf = Array.from({ length: 2 * vlen }, () => 0);
+        this.x = x0;
+        this.y = y0;
+        this.vf = buf.slice(0, vlen);
+        this.vb = buf.slice(vlen);
+        this.v0 = diagonals + 1;
+      }
+      /**
+       * Find an optimal d-path from (smin, tmin) to (smax, tmax).
+       * @param {number} smin The start index of the first array
+       * @param {number} smax The end index of the first array
+       * @param {number} tmin The start index of the second array
+       * @param {number} tmax The end index of the second array
+       */
+      compare(smin, smax, tmin, tmax) {
+        if (smin === smax) {
+          for (let t = tmin; t < tmax; t++) {
+            this.resultVectorY[this.yidx[t]] = true;
+          }
+        } else if (tmin === tmax) {
+          for (let s = smin; s < smax; s++) {
+            this.resultVectorX[this.xidx[s]] = true;
+          }
+        } else {
+          const { s0, s1, t0, t1 } = this.split(smin, smax, tmin, tmax);
+          this.compare(smin, s0, tmin, t0);
+          this.compare(s1, smax, t1, tmax);
+        }
+      }
+      /**
+       * Find the endpoints of sequence of diagonals in the middle of an optimal path from (smin, tmin) to (smax, tmax).
+       * @param {number} smin The start index of the first array
+       * @param {number} smax The end index of the first array
+       * @param {number} tmin The start index of the second array
+       * @param {number} tmax The end index of the second array
+       * @returns {SplitResult} The endpoints of the sequence of diagonals
+       */
+      split(smin, smax, tmin, tmax) {
+        const N = smax - smin;
+        const M = tmax - tmin;
+        const x = this.x;
+        const y = this.y;
+        const vf = this.vf;
+        const vb = this.vb;
+        const v0 = this.v0;
+        const kmin = smin - tmax;
+        const kmax = smax - tmin;
+        const fmid = smin - tmin;
+        const bmid = smax - tmax;
+        let fmin = fmid;
+        let fmax = fmid;
+        let bmin = bmid;
+        let bmax = bmid;
+        const odd = (N - M) % 2 !== 0;
+        vf[v0 + fmid] = smin;
+        vb[v0 + bmid] = smax;
+        for (let d = 1; ; d++) {
+          if (fmin > kmin) {
+            fmin--;
+            vf[v0 + fmin - 1] = Number.MIN_SAFE_INTEGER;
+          } else {
+            fmin++;
+          }
+          if (fmax < kmax) {
+            fmax++;
+            vf[v0 + fmax + 1] = Number.MIN_SAFE_INTEGER;
+          } else {
+            fmax--;
+          }
+          for (let k = fmin; k <= fmax; k += 2) {
+            const k0 = k + v0;
+            let s;
+            if (vf[k0 - 1] < vf[k0 + 1]) {
+              s = vf[k0 + 1];
+            } else {
+              s = vf[k0 - 1] + 1;
+            }
+            let t = s - k;
+            const s0 = s;
+            const t0 = t;
+            while (s < smax && t < tmax && this.equal(x[s], y[t])) {
+              s++;
+              t++;
+            }
+            vf[k0] = s;
+            if (odd && bmin <= k && k <= bmax && s >= vb[k0]) {
+              return {
+                s0,
+                s1: s,
+                t0,
+                t1: t
+              };
+            }
+          }
+          if (bmin > kmin) {
+            bmin--;
+            vb[v0 + bmin - 1] = Number.MAX_SAFE_INTEGER;
+          } else {
+            bmin++;
+          }
+          if (bmax < kmax) {
+            bmax++;
+            vb[v0 + bmax + 1] = Number.MAX_SAFE_INTEGER;
+          } else {
+            bmax--;
+          }
+          for (let k = bmin; k <= bmax; k += 2) {
+            const k0 = k + v0;
+            let s;
+            if (vb[k0 - 1] < vb[k0 + 1]) {
+              s = vb[k0 - 1];
+            } else {
+              s = vb[k0 + 1] - 1;
+            }
+            let t = s - k;
+            const s0 = s, t0 = t;
+            while (s > smin && t > tmin && this.equal(x[s - 1], y[t - 1])) {
+              s--;
+              t--;
+            }
+            vb[k0] = s;
+            if (!odd && fmin <= k && k <= fmax && s <= vf[v0 + k]) {
+              return {
+                s0: s,
+                s1: s0,
+                t0: t,
+                t1: t0
+              };
+            }
+          }
+        }
+      }
+    };
+    myers_default = Myers;
+  }
+});
+
+// node_modules/@uttori/data-tools/src/diff/diff.js
+function edits(x, y, eq = (a, b) => a === b) {
+  const { rx, ry } = diff(x, y, eq);
+  return createEdits(x, y, rx, ry);
+}
+function createEdits(x, y, rx, ry) {
+  const edits2 = [];
+  const n = rx.length - 1;
+  const m = ry.length - 1;
+  let s = 0, t = 0;
+  while (s < n || t < m) {
+    while (s < n && rx[s]) {
+      edits2.push({
+        op: Op.Delete,
+        x: x[s],
+        y: x[s]
+        // This should be zero value
+      });
+      s++;
+    }
+    while (t < m && ry[t]) {
+      edits2.push({
+        op: Op.Insert,
+        x: y[t],
+        // This should be zero value
+        y: y[t]
+      });
+      t++;
+    }
+    while (s < n && t < m && !rx[s] && !ry[t]) {
+      edits2.push({
+        op: Op.Match,
+        x: x[s],
+        y: y[t]
+      });
+      s++;
+      t++;
+    }
+  }
+  return edits2;
+}
+function diff(x, y, eq = (a, b) => a === b) {
+  const x0 = [];
+  const y0 = [];
+  const xidx = [];
+  const yidx = [];
+  const counts = [];
+  const elements = [];
+  const findId = (e) => {
+    for (let i = 0; i < elements.length; i++) {
+      if (eq(elements[i], e)) {
+        return i;
+      }
+    }
+    const id = elements.length;
+    elements.push(e);
+    counts.push(0);
+    return id;
+  };
+  for (let i = 0; i < x.length; i++) {
+    const e = x[i];
+    const id = findId(e);
+    counts[id] = (counts[id] || 0) + 1;
+    x0.push(id);
+    xidx.push(i);
+  }
+  for (let i = 0; i < y.length; i++) {
+    const e = y[i];
+    const id = findId(e);
+    counts[id] = (counts[id] || 0) + 1;
+    y0.push(id);
+    yidx.push(i);
+  }
+  const m = new myers_default(xidx, yidx, x0, y0, (a, b) => a === b);
+  m.compare(m.smin, m.smax, m.tmin, m.tmax);
+  return { rx: m.resultVectorX, ry: m.resultVectorY };
+}
+var Op;
+var init_diff = __esm({
+  "node_modules/@uttori/data-tools/src/diff/diff.js"() {
+    init_myers();
+    Op = {
+      Match: 0,
+      // Two slice elements match
+      Delete: 1,
+      // A deletion from an element on the left slice
+      Insert: 2
+      // An insertion of an element from the right side
+    };
+  }
+});
+
+// node_modules/ms/index.js
+var require_ms = __commonJS({
+  "node_modules/ms/index.js"(exports, module) {
+    var s = 1e3;
+    var m = s * 60;
+    var h = m * 60;
+    var d = h * 24;
+    var w = d * 7;
+    var y = d * 365.25;
+    module.exports = function(val, options) {
+      options = options || {};
+      var type = typeof val;
+      if (type === "string" && val.length > 0) {
+        return parse(val);
+      } else if (type === "number" && isFinite(val)) {
+        return options.long ? fmtLong(val) : fmtShort(val);
+      }
+      throw new Error(
+        "val is not a non-empty string or a valid number. val=" + JSON.stringify(val)
+      );
+    };
+    function parse(str) {
+      str = String(str);
+      if (str.length > 100) {
+        return;
+      }
+      var match = /^(-?(?:\d+)?\.?\d+) *(milliseconds?|msecs?|ms|seconds?|secs?|s|minutes?|mins?|m|hours?|hrs?|h|days?|d|weeks?|w|years?|yrs?|y)?$/i.exec(
+        str
+      );
+      if (!match) {
+        return;
+      }
+      var n = parseFloat(match[1]);
+      var type = (match[2] || "ms").toLowerCase();
+      switch (type) {
+        case "years":
+        case "year":
+        case "yrs":
+        case "yr":
+        case "y":
+          return n * y;
+        case "weeks":
+        case "week":
+        case "w":
+          return n * w;
+        case "days":
+        case "day":
+        case "d":
+          return n * d;
+        case "hours":
+        case "hour":
+        case "hrs":
+        case "hr":
+        case "h":
+          return n * h;
+        case "minutes":
+        case "minute":
+        case "mins":
+        case "min":
+        case "m":
+          return n * m;
+        case "seconds":
+        case "second":
+        case "secs":
+        case "sec":
+        case "s":
+          return n * s;
+        case "milliseconds":
+        case "millisecond":
+        case "msecs":
+        case "msec":
+        case "ms":
+          return n;
+        default:
+          return void 0;
+      }
+    }
+    function fmtShort(ms) {
+      var msAbs = Math.abs(ms);
+      if (msAbs >= d) {
+        return Math.round(ms / d) + "d";
+      }
+      if (msAbs >= h) {
+        return Math.round(ms / h) + "h";
+      }
+      if (msAbs >= m) {
+        return Math.round(ms / m) + "m";
+      }
+      if (msAbs >= s) {
+        return Math.round(ms / s) + "s";
+      }
+      return ms + "ms";
+    }
+    function fmtLong(ms) {
+      var msAbs = Math.abs(ms);
+      if (msAbs >= d) {
+        return plural(ms, msAbs, d, "day");
+      }
+      if (msAbs >= h) {
+        return plural(ms, msAbs, h, "hour");
+      }
+      if (msAbs >= m) {
+        return plural(ms, msAbs, m, "minute");
+      }
+      if (msAbs >= s) {
+        return plural(ms, msAbs, s, "second");
+      }
+      return ms + " ms";
+    }
+    function plural(ms, msAbs, n, name) {
+      var isPlural = msAbs >= n * 1.5;
+      return Math.round(ms / n) + " " + name + (isPlural ? "s" : "");
+    }
+  }
+});
+
+// node_modules/debug/src/common.js
+var require_common = __commonJS({
+  "node_modules/debug/src/common.js"(exports, module) {
+    function setup(env) {
+      createDebug.debug = createDebug;
+      createDebug.default = createDebug;
+      createDebug.coerce = coerce;
+      createDebug.disable = disable;
+      createDebug.enable = enable;
+      createDebug.enabled = enabled;
+      createDebug.humanize = require_ms();
+      createDebug.destroy = destroy;
+      Object.keys(env).forEach((key3) => {
+        createDebug[key3] = env[key3];
+      });
+      createDebug.names = [];
+      createDebug.skips = [];
+      createDebug.formatters = {};
+      function selectColor(namespace) {
+        let hash = 0;
+        for (let i = 0; i < namespace.length; i++) {
+          hash = (hash << 5) - hash + namespace.charCodeAt(i);
+          hash |= 0;
+        }
+        return createDebug.colors[Math.abs(hash) % createDebug.colors.length];
+      }
+      createDebug.selectColor = selectColor;
+      function createDebug(namespace) {
+        let prevTime;
+        let enableOverride = null;
+        let namespacesCache;
+        let enabledCache;
+        function debug5(...args) {
+          if (!debug5.enabled) {
+            return;
+          }
+          const self = debug5;
+          const curr = Number(/* @__PURE__ */ new Date());
+          const ms = curr - (prevTime || curr);
+          self.diff = ms;
+          self.prev = prevTime;
+          self.curr = curr;
+          prevTime = curr;
+          args[0] = createDebug.coerce(args[0]);
+          if (typeof args[0] !== "string") {
+            args.unshift("%O");
+          }
+          let index = 0;
+          args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+            if (match === "%%") {
+              return "%";
+            }
+            index++;
+            const formatter = createDebug.formatters[format];
+            if (typeof formatter === "function") {
+              const val = args[index];
+              match = formatter.call(self, val);
+              args.splice(index, 1);
+              index--;
+            }
+            return match;
+          });
+          createDebug.formatArgs.call(self, args);
+          const logFn = self.log || createDebug.log;
+          logFn.apply(self, args);
+        }
+        debug5.namespace = namespace;
+        debug5.useColors = createDebug.useColors();
+        debug5.color = createDebug.selectColor(namespace);
+        debug5.extend = extend;
+        debug5.destroy = createDebug.destroy;
+        Object.defineProperty(debug5, "enabled", {
+          enumerable: true,
+          configurable: false,
+          get: () => {
+            if (enableOverride !== null) {
+              return enableOverride;
+            }
+            if (namespacesCache !== createDebug.namespaces) {
+              namespacesCache = createDebug.namespaces;
+              enabledCache = createDebug.enabled(namespace);
+            }
+            return enabledCache;
+          },
+          set: (v) => {
+            enableOverride = v;
+          }
+        });
+        if (typeof createDebug.init === "function") {
+          createDebug.init(debug5);
+        }
+        return debug5;
+      }
+      function extend(namespace, delimiter) {
+        const newDebug = createDebug(this.namespace + (typeof delimiter === "undefined" ? ":" : delimiter) + namespace);
+        newDebug.log = this.log;
+        return newDebug;
+      }
+      function enable(namespaces) {
+        createDebug.save(namespaces);
+        createDebug.namespaces = namespaces;
+        createDebug.names = [];
+        createDebug.skips = [];
+        const split = (typeof namespaces === "string" ? namespaces : "").trim().replace(/\s+/g, ",").split(",").filter(Boolean);
+        for (const ns of split) {
+          if (ns[0] === "-") {
+            createDebug.skips.push(ns.slice(1));
+          } else {
+            createDebug.names.push(ns);
+          }
+        }
+      }
+      function matchesTemplate(search, template) {
+        let searchIndex = 0;
+        let templateIndex = 0;
+        let starIndex = -1;
+        let matchIndex = 0;
+        while (searchIndex < search.length) {
+          if (templateIndex < template.length && (template[templateIndex] === search[searchIndex] || template[templateIndex] === "*")) {
+            if (template[templateIndex] === "*") {
+              starIndex = templateIndex;
+              matchIndex = searchIndex;
+              templateIndex++;
+            } else {
+              searchIndex++;
+              templateIndex++;
+            }
+          } else if (starIndex !== -1) {
+            templateIndex = starIndex + 1;
+            matchIndex++;
+            searchIndex = matchIndex;
+          } else {
+            return false;
+          }
+        }
+        while (templateIndex < template.length && template[templateIndex] === "*") {
+          templateIndex++;
+        }
+        return templateIndex === template.length;
+      }
+      function disable() {
+        const namespaces = [
+          ...createDebug.names,
+          ...createDebug.skips.map((namespace) => "-" + namespace)
+        ].join(",");
+        createDebug.enable("");
+        return namespaces;
+      }
+      function enabled(name) {
+        for (const skip of createDebug.skips) {
+          if (matchesTemplate(name, skip)) {
+            return false;
+          }
+        }
+        for (const ns of createDebug.names) {
+          if (matchesTemplate(name, ns)) {
+            return true;
+          }
+        }
+        return false;
+      }
+      function coerce(val) {
+        if (val instanceof Error) {
+          return val.stack || val.message;
+        }
+        return val;
+      }
+      function destroy() {
+        console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
+      }
+      createDebug.enable(createDebug.load());
+      return createDebug;
+    }
+    module.exports = setup;
+  }
+});
+
+// node_modules/debug/src/browser.js
+var require_browser = __commonJS({
+  "node_modules/debug/src/browser.js"(exports, module) {
+    exports.formatArgs = formatArgs;
+    exports.save = save;
+    exports.load = load;
+    exports.useColors = useColors;
+    exports.storage = localstorage();
+    exports.destroy = /* @__PURE__ */ (() => {
+      let warned = false;
+      return () => {
+        if (!warned) {
+          warned = true;
+          console.warn("Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.");
+        }
+      };
+    })();
+    exports.colors = [
+      "#0000CC",
+      "#0000FF",
+      "#0033CC",
+      "#0033FF",
+      "#0066CC",
+      "#0066FF",
+      "#0099CC",
+      "#0099FF",
+      "#00CC00",
+      "#00CC33",
+      "#00CC66",
+      "#00CC99",
+      "#00CCCC",
+      "#00CCFF",
+      "#3300CC",
+      "#3300FF",
+      "#3333CC",
+      "#3333FF",
+      "#3366CC",
+      "#3366FF",
+      "#3399CC",
+      "#3399FF",
+      "#33CC00",
+      "#33CC33",
+      "#33CC66",
+      "#33CC99",
+      "#33CCCC",
+      "#33CCFF",
+      "#6600CC",
+      "#6600FF",
+      "#6633CC",
+      "#6633FF",
+      "#66CC00",
+      "#66CC33",
+      "#9900CC",
+      "#9900FF",
+      "#9933CC",
+      "#9933FF",
+      "#99CC00",
+      "#99CC33",
+      "#CC0000",
+      "#CC0033",
+      "#CC0066",
+      "#CC0099",
+      "#CC00CC",
+      "#CC00FF",
+      "#CC3300",
+      "#CC3333",
+      "#CC3366",
+      "#CC3399",
+      "#CC33CC",
+      "#CC33FF",
+      "#CC6600",
+      "#CC6633",
+      "#CC9900",
+      "#CC9933",
+      "#CCCC00",
+      "#CCCC33",
+      "#FF0000",
+      "#FF0033",
+      "#FF0066",
+      "#FF0099",
+      "#FF00CC",
+      "#FF00FF",
+      "#FF3300",
+      "#FF3333",
+      "#FF3366",
+      "#FF3399",
+      "#FF33CC",
+      "#FF33FF",
+      "#FF6600",
+      "#FF6633",
+      "#FF9900",
+      "#FF9933",
+      "#FFCC00",
+      "#FFCC33"
+    ];
+    function useColors() {
+      if (typeof window !== "undefined" && window.process && (window.process.type === "renderer" || window.process.__nwjs)) {
+        return true;
+      }
+      if (typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
+        return false;
+      }
+      let m;
+      return typeof document !== "undefined" && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance || // Is firebug? http://stackoverflow.com/a/398120/376773
+      typeof window !== "undefined" && window.console && (window.console.firebug || window.console.exception && window.console.table) || // Is firefox >= v31?
+      // https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
+      typeof navigator !== "undefined" && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31 || // Double check webkit in userAgent just in case we are in a worker
+      typeof navigator !== "undefined" && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/);
+    }
+    function formatArgs(args) {
+      args[0] = (this.useColors ? "%c" : "") + this.namespace + (this.useColors ? " %c" : " ") + args[0] + (this.useColors ? "%c " : " ") + "+" + module.exports.humanize(this.diff);
+      if (!this.useColors) {
+        return;
+      }
+      const c = "color: " + this.color;
+      args.splice(1, 0, c, "color: inherit");
+      let index = 0;
+      let lastC = 0;
+      args[0].replace(/%[a-zA-Z%]/g, (match) => {
+        if (match === "%%") {
+          return;
+        }
+        index++;
+        if (match === "%c") {
+          lastC = index;
+        }
+      });
+      args.splice(lastC, 0, c);
+    }
+    exports.log = console.debug || console.log || (() => {
+    });
+    function save(namespaces) {
+      try {
+        if (namespaces) {
+          exports.storage.setItem("debug", namespaces);
+        } else {
+          exports.storage.removeItem("debug");
+        }
+      } catch (error) {
+      }
+    }
+    function load() {
+      let r;
+      try {
+        r = exports.storage.getItem("debug") || exports.storage.getItem("DEBUG");
+      } catch (error) {
+      }
+      if (!r && typeof process !== "undefined" && "env" in process) {
+        r = process.env.DEBUG;
+      }
+      return r;
+    }
+    function localstorage() {
+      try {
+        return localStorage;
+      } catch (error) {
+      }
+    }
+    module.exports = require_common()(exports);
+    var { formatters } = module.exports;
+    formatters.j = function(v) {
+      try {
+        return JSON.stringify(v);
+      } catch (error) {
+        return "[UnexpectedJSONParseError]: " + error.message;
+      }
+    };
+  }
+});
+
+// node_modules/has-flag/index.js
+var require_has_flag = __commonJS({
+  "node_modules/has-flag/index.js"(exports, module) {
+    "use strict";
+    module.exports = (flag, argv = process.argv) => {
+      const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
+      const position = argv.indexOf(prefix + flag);
+      const terminatorPosition = argv.indexOf("--");
+      return position !== -1 && (terminatorPosition === -1 || position < terminatorPosition);
+    };
+  }
+});
+
+// node_modules/supports-color/index.js
+var require_supports_color = __commonJS({
+  "node_modules/supports-color/index.js"(exports, module) {
+    "use strict";
+    var os2 = __require("os");
+    var tty = __require("tty");
+    var hasFlag = require_has_flag();
+    var { env } = process;
+    var forceColor;
+    if (hasFlag("no-color") || hasFlag("no-colors") || hasFlag("color=false") || hasFlag("color=never")) {
+      forceColor = 0;
+    } else if (hasFlag("color") || hasFlag("colors") || hasFlag("color=true") || hasFlag("color=always")) {
+      forceColor = 1;
+    }
+    if ("FORCE_COLOR" in env) {
+      if (env.FORCE_COLOR === "true") {
+        forceColor = 1;
+      } else if (env.FORCE_COLOR === "false") {
+        forceColor = 0;
+      } else {
+        forceColor = env.FORCE_COLOR.length === 0 ? 1 : Math.min(parseInt(env.FORCE_COLOR, 10), 3);
+      }
+    }
+    function translateLevel(level) {
+      if (level === 0) {
+        return false;
+      }
+      return {
+        level,
+        hasBasic: true,
+        has256: level >= 2,
+        has16m: level >= 3
+      };
+    }
+    function supportsColor(haveStream, streamIsTTY) {
+      if (forceColor === 0) {
+        return 0;
+      }
+      if (hasFlag("color=16m") || hasFlag("color=full") || hasFlag("color=truecolor")) {
+        return 3;
+      }
+      if (hasFlag("color=256")) {
+        return 2;
+      }
+      if (haveStream && !streamIsTTY && forceColor === void 0) {
+        return 0;
+      }
+      const min = forceColor || 0;
+      if (env.TERM === "dumb") {
+        return min;
+      }
+      if (process.platform === "win32") {
+        const osRelease = os2.release().split(".");
+        if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
+          return Number(osRelease[2]) >= 14931 ? 3 : 2;
+        }
+        return 1;
+      }
+      if ("CI" in env) {
+        if (["TRAVIS", "CIRCLECI", "APPVEYOR", "GITLAB_CI", "GITHUB_ACTIONS", "BUILDKITE"].some((sign) => sign in env) || env.CI_NAME === "codeship") {
+          return 1;
+        }
+        return min;
+      }
+      if ("TEAMCITY_VERSION" in env) {
+        return /^(9\.(0*[1-9]\d*)\.|\d{2,}\.)/.test(env.TEAMCITY_VERSION) ? 1 : 0;
+      }
+      if (env.COLORTERM === "truecolor") {
+        return 3;
+      }
+      if ("TERM_PROGRAM" in env) {
+        const version = parseInt((env.TERM_PROGRAM_VERSION || "").split(".")[0], 10);
+        switch (env.TERM_PROGRAM) {
+          case "iTerm.app":
+            return version >= 3 ? 3 : 2;
+          case "Apple_Terminal":
+            return 2;
+        }
+      }
+      if (/-256(color)?$/i.test(env.TERM)) {
+        return 2;
+      }
+      if (/^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux/i.test(env.TERM)) {
+        return 1;
+      }
+      if ("COLORTERM" in env) {
+        return 1;
+      }
+      return min;
+    }
+    function getSupportLevel(stream) {
+      const level = supportsColor(stream, stream && stream.isTTY);
+      return translateLevel(level);
+    }
+    module.exports = {
+      supportsColor: getSupportLevel,
+      stdout: translateLevel(supportsColor(true, tty.isatty(1))),
+      stderr: translateLevel(supportsColor(true, tty.isatty(2)))
+    };
+  }
+});
+
+// node_modules/debug/src/node.js
+var require_node = __commonJS({
+  "node_modules/debug/src/node.js"(exports, module) {
+    var tty = __require("tty");
+    var util = __require("util");
+    exports.init = init;
+    exports.log = log;
+    exports.formatArgs = formatArgs;
+    exports.save = save;
+    exports.load = load;
+    exports.useColors = useColors;
+    exports.destroy = util.deprecate(
+      () => {
+      },
+      "Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`."
+    );
+    exports.colors = [6, 2, 3, 4, 5, 1];
+    try {
+      const supportsColor = require_supports_color();
+      if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
+        exports.colors = [
+          20,
+          21,
+          26,
+          27,
+          32,
+          33,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          56,
+          57,
+          62,
+          63,
+          68,
+          69,
+          74,
+          75,
+          76,
+          77,
+          78,
+          79,
+          80,
+          81,
+          92,
+          93,
+          98,
+          99,
+          112,
+          113,
+          128,
+          129,
+          134,
+          135,
+          148,
+          149,
+          160,
+          161,
+          162,
+          163,
+          164,
+          165,
+          166,
+          167,
+          168,
+          169,
+          170,
+          171,
+          172,
+          173,
+          178,
+          179,
+          184,
+          185,
+          196,
+          197,
+          198,
+          199,
+          200,
+          201,
+          202,
+          203,
+          204,
+          205,
+          206,
+          207,
+          208,
+          209,
+          214,
+          215,
+          220,
+          221
+        ];
+      }
+    } catch (error) {
+    }
+    exports.inspectOpts = Object.keys(process.env).filter((key3) => {
+      return /^debug_/i.test(key3);
+    }).reduce((obj, key3) => {
+      const prop = key3.substring(6).toLowerCase().replace(/_([a-z])/g, (_, k) => {
+        return k.toUpperCase();
+      });
+      let val = process.env[key3];
+      if (/^(yes|on|true|enabled)$/i.test(val)) {
+        val = true;
+      } else if (/^(no|off|false|disabled)$/i.test(val)) {
+        val = false;
+      } else if (val === "null") {
+        val = null;
+      } else {
+        val = Number(val);
+      }
+      obj[prop] = val;
+      return obj;
+    }, {});
+    function useColors() {
+      return "colors" in exports.inspectOpts ? Boolean(exports.inspectOpts.colors) : tty.isatty(process.stderr.fd);
+    }
+    function formatArgs(args) {
+      const { namespace: name, useColors: useColors2 } = this;
+      if (useColors2) {
+        const c = this.color;
+        const colorCode = "\x1B[3" + (c < 8 ? c : "8;5;" + c);
+        const prefix = `  ${colorCode};1m${name} \x1B[0m`;
+        args[0] = prefix + args[0].split("\n").join("\n" + prefix);
+        args.push(colorCode + "m+" + module.exports.humanize(this.diff) + "\x1B[0m");
+      } else {
+        args[0] = getDate() + name + " " + args[0];
+      }
+    }
+    function getDate() {
+      if (exports.inspectOpts.hideDate) {
+        return "";
+      }
+      return (/* @__PURE__ */ new Date()).toISOString() + " ";
+    }
+    function log(...args) {
+      return process.stderr.write(util.formatWithOptions(exports.inspectOpts, ...args) + "\n");
+    }
+    function save(namespaces) {
+      if (namespaces) {
+        process.env.DEBUG = namespaces;
+      } else {
+        delete process.env.DEBUG;
+      }
+    }
+    function load() {
+      return process.env.DEBUG;
+    }
+    function init(debug5) {
+      debug5.inspectOpts = {};
+      const keys = Object.keys(exports.inspectOpts);
+      for (let i = 0; i < keys.length; i++) {
+        debug5.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
+      }
+    }
+    module.exports = require_common()(exports);
+    var { formatters } = module.exports;
+    formatters.o = function(v) {
+      this.inspectOpts.colors = this.useColors;
+      return util.inspect(v, this.inspectOpts).split("\n").map((str) => str.trim()).join(" ");
+    };
+    formatters.O = function(v) {
+      this.inspectOpts.colors = this.useColors;
+      return util.inspect(v, this.inspectOpts);
+    };
+  }
+});
+
+// node_modules/debug/src/index.js
+var require_src = __commonJS({
+  "node_modules/debug/src/index.js"(exports, module) {
+    if (typeof process === "undefined" || process.type === "renderer" || process.browser === true || process.__nwjs) {
+      module.exports = require_browser();
+    } else {
+      module.exports = require_node();
+    }
+  }
+});
+
+// node_modules/@uttori/data-tools/src/data-buffer.js
+var debug, DataBuffer, data_buffer_default;
+var init_data_buffer = __esm({
+  async "node_modules/@uttori/data-tools/src/data-buffer.js"() {
+    init_underflow_error();
+    init_data_helpers();
+    init_diff();
+    debug = () => {
+    };
+    if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
+      try {
+        const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
+        debug = d("DataBuffer");
+      } catch {
+      }
+    }
+    DataBuffer = class _DataBuffer {
+      /** @type {Buffer|Uint8Array} Bytes owned or borrowed by this view. */
+      data = new Uint8Array(0);
+      /**
+      * Creates an instance of DataBuffer.
+      * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} [input] The data to process.
+      * @throws {TypeError} Missing input data.
+      * @throws {TypeError} Unknown type of input for DataBuffer: ${typeof input}
+      */
+      constructor(input) {
+        this.writing = false;
+        if (typeof Buffer !== "undefined" && Buffer.isBuffer(input)) {
+          debug("constructor: from Buffer");
+          this.data = Buffer.from(input);
+        } else if (typeof input === "string") {
+          debug("constructor: from string");
+          this.data = new TextEncoder().encode(input);
+        } else if (input instanceof Uint8Array) {
+          debug("constructor: from Uint8Array");
+          this.data = input;
+        } else if (input instanceof ArrayBuffer) {
+          debug("constructor: from ArrayBuffer");
+          this.data = new Uint8Array(input);
+        } else if (Array.isArray(input)) {
+          debug("constructor: Normal Array");
+          this.data = new Uint8Array(input);
+        } else if (typeof input === "number") {
+          debug("constructor: Number (i.e. length)");
+          this.data = new Uint8Array(input);
+        } else if (input instanceof _DataBuffer) {
+          debug("constructor: from DataBuffer, a shallow copy");
+          this.data = input.data;
+        } else if (input && input.buffer && input.buffer instanceof ArrayBuffer) {
+          debug("constructor: from typed arrays other than Uint8Array");
+          this.data = new Uint8Array(input.buffer, input.byteOffset, input.length * input.BYTES_PER_ELEMENT);
+        } else if (typeof input === "undefined") {
+          debug("constructor: empty, creating a new file from scratch");
+          this.writing = true;
+          this.data = new Uint8Array();
+        } else {
+          const error = `Unknown type of input for DataBuffer: ${typeof input}`;
+          debug(error);
+          throw new TypeError(error);
+        }
+        this.lengthInBytes = this.data.length;
+        this.next = null;
+        this.prev = null;
+        this.nativeEndian = new Uint16Array(new Uint8Array([18, 52]).buffer)[0] === 13330;
+        this.offset = 0;
+        this._buffer = this.writing ? [] : null;
+      }
+      /**
+       * Buffer for creating new files. Lazy-inits from a copy of data on first write when instance was created read-only.
+       * @type {number[]}
+       */
+      get buffer() {
+        if (this._buffer === null) {
+          this._buffer = this.data.length ? Array.from(this.data) : [];
+        }
+        return this._buffer;
+      }
+      /**
+       * Creates an instance of DataBuffer with given size.
+       * @param {number} size The size of the requested DataBuffer.
+       * @returns {DataBuffer} The new DataBuffer.
+       */
+      static allocate(size) {
+        debug("DataBuffer.allocate:", size);
+        return new _DataBuffer(size);
+      }
+      /**
+       * Helper to match arrays by returning the data length.
+       * @returns {number} The data length of the DataBuffer.
+       */
+      get length() {
+        return this.data.length;
+      }
+      /**
+       * Compares another DataBuffer against the current data buffer at a specified offset.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array|undefined} input The size of the requested DataBuffer.
+       * @param {number} [offset] The size of the requested DataBuffer, default is 0.
+       * @returns {boolean} Returns true when both DataBuffers are equal, false if there is any difference.
+       */
+      compare(input, offset = 0) {
+        const buffer = new _DataBuffer(input);
+        const { length } = buffer;
+        if (!length) {
+          debug("compare: no input provided");
+          return false;
+        }
+        const { data } = buffer;
+        for (let i = 0; i < length; i++) {
+          if (this.data[offset + i] !== data[i]) {
+            debug("compare: first failed match at", i);
+            return false;
+          }
+        }
+        debug("compare: data is the same");
+        return true;
+      }
+      /**
+       * Diffs another DataBuffer against the current data buffer at a specified offset and returns the edits.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array|undefined} input The DataBuffer to compare against.
+       * @param {number} [offset] The offset to start the comparison from, default is 0.
+       * @returns {import('./diff/diff.js').Edit[]} Returns an array of edits describing the differences.
+       */
+      diff(input, offset = 0) {
+        const buffer = new _DataBuffer(input);
+        const x = Array.from(this.data.slice(offset));
+        const y = Array.from(buffer.data);
+        debug("diff: comparing", x.length, "bytes against", y.length, "bytes");
+        return edits(x, y, (a, b) => a === b);
+      }
+      /**
+       * Compares input data against the upcoming data, byte by byte.
+       * @param {number[] | Buffer | Uint8Array} input The data to check for in upcoming bytes.
+       * @returns {boolean} `true` if the data is the upcoming data, `false` if it is not or there is not enough buffer remaining.
+       */
+      isNextBytes(input) {
+        debug("isNextBytes:", input);
+        if (!input || typeof input.length !== "number" || input.length === 0) {
+          debug("isNextBytes: no input provided");
+          return false;
+        }
+        if (!this.available(input.length)) {
+          debug(`isNextBytes: Insufficient Bytes: ${input.length} <= ${this.remainingBytes()}`);
+          return false;
+        }
+        debug("isNextBytes: this.offset =", this.offset);
+        const off = this.offset;
+        for (let i = 0; i < input.length; i++) {
+          if (input[i] !== this.data[off + i]) {
+            debug("isNextBytes: first failed match at", i, ", where:", input[i], "!==", this.data[off + i]);
+            return false;
+          }
+        }
+        return true;
+      }
+      /**
+       * Creates a copy of the current DataBuffer.
+       * @returns {DataBuffer} A new copy of the current DataBuffer.
+       */
+      copy() {
+        debug("copy");
+        return new _DataBuffer(new Uint8Array(this.data.slice(0)));
+      }
+      /**
+       * Creates a copy of the current DataBuffer from a specified offset and a specified length.
+       * @param {number} position The starting offset to begin the copy of the new DataBuffer.
+       * @param {number} [length] The size of the new DataBuffer, defaults to the current length.
+       * @returns {DataBuffer} The new DataBuffer
+       */
+      slice(position, length = this.length) {
+        debug("slice:", position, length);
+        if (position === 0 && length >= this.length) {
+          return new _DataBuffer(this.data);
+        }
+        return new _DataBuffer(this.data.slice(position, position + length));
+      }
+      /**
+       * Returns the remaining bytes to be read in the DataBuffer.
+       * @returns {number} The remaining bytes to bre read in the DataBuffer.
+       */
+      remainingBytes() {
+        return this.length - this.offset;
+      }
+      /**
+       * Checks if a given number of bytes are avaliable in the DataBuffer.
+       * If writing mode is enabled, this is always true.
+       * @param {number} bytes The number of bytes to check for.
+       * @returns {boolean} True if there are the requested amount, or more, of bytes left in the DataBuffer.
+       */
+      available(bytes) {
+        return this.writing || bytes <= this.remainingBytes();
+      }
+      /**
+       * Checks if a given number of bytes are avaliable after a given offset in the buffer.
+       * If writing mode is enabled, this is always true.
+       * @param {number} bytes The number of bytes to check for.
+       * @param {number} offset The offset to start from.
+       * @returns {boolean} True if there are the requested amount, or more, of bytes left in the stream.
+       */
+      availableAt(bytes, offset) {
+        return this.writing || bytes <= this.length - offset;
+      }
+      /**
+       * Advance the offset by a given number of bytes.
+       * @param {number} bytes The number of bytes to advance.
+       * @throws {UnderflowError} Insufficient Bytes in the DataBuffer.
+       */
+      advance(bytes) {
+        debug("advance:", bytes);
+        if (!this.available(bytes)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${bytes} <= ${this.remainingBytes()}`);
+        }
+        this.offset += bytes;
+        debug("advance: offset", this.offset);
+      }
+      /**
+       * Rewind the offset by a given number of bytes.
+       * @param {number} bytes The number of bytes to go back.
+       * @throws {UnderflowError} Insufficient Bytes in the DataBuffer.
+       */
+      rewind(bytes) {
+        debug("rewind:", bytes);
+        if (bytes > this.offset) {
+          throw new underflow_error_default(`Insufficient Bytes: ${bytes} > ${this.offset}`);
+        }
+        this.offset -= bytes;
+        debug("rewind: offset", this.offset);
+      }
+      /**
+       * Go to a specified offset in the stream.
+       * @param {number} position The offset to go to.
+       */
+      seek(position) {
+        debug(`seek: from ${this.offset} to ${position}`);
+        if (position > this.offset) {
+          this.advance(position - this.offset);
+        }
+        if (position < this.offset) {
+          this.rewind(this.offset - position);
+        }
+        debug(`seek: offset is ${this.offset}`);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @returns {number} The UInt8 value at the current offset.
+       * @throws {UnderflowError} Insufficient Bytes in the stream.
+       */
+      readUInt8() {
+        if (!this.available(1)) {
+          throw new underflow_error_default("Insufficient Bytes: 1");
+        }
+        const output = this.data[this.offset];
+        this.offset += 1;
+        return output;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @returns {number} The UInt8 value at the current offset.
+       * @throws {UnderflowError} Insufficient Bytes in the stream.
+       */
+      peekUInt8(offset = 0) {
+        if (!this.availableAt(1, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 1`);
+        }
+        return this.data[offset];
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {number} bytes The number of bytes to read.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {Uint8Array} The UInt8 value at the current offset.
+       */
+      read(bytes, littleEndian = false) {
+        if (!this.available(bytes)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${bytes}`);
+        }
+        const start = this.offset;
+        this.offset += bytes;
+        if (littleEndian && bytes > 1) {
+          const uint8 = new Uint8Array(bytes);
+          for (let i = 0; i < bytes; i++) {
+            uint8[i] = this.data[start + bytes - 1 - i];
+          }
+          return uint8;
+        }
+        return this.data.slice(start, start + bytes);
+      }
+      /**
+       * Read from the provided offset and return the value.
+       * @param {number} bytes The number of bytes to read.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {Uint8Array} The UInt8 value at the current offset.
+       */
+      peek(bytes, offset = 0, littleEndian = false) {
+        if (!this.availableAt(bytes, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + ${bytes}`);
+        }
+        if (littleEndian && bytes > 1) {
+          const uint8 = new Uint8Array(bytes);
+          for (let i = 0; i < bytes; i++) {
+            uint8[i] = this.data[offset + bytes - 1 - i];
+          }
+          return uint8;
+        }
+        return this.data.slice(offset, offset + bytes);
+      }
+      /**
+       * Read the bits from the bytes from the provided offset and return the value.
+       * @param {number} position The bit position to read, 0 to 7.
+       * @param {number} [length] The number of bits to read, 1 to 8, default is 1.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @returns {number} The value at the provided bit position of a provided length at the provided offset.
+       * @throws {Error} peekBit position is invalid: ${position}, must be an Integer between 0 and 7
+       * @throws {Error} `peekBit length is invalid: ${length}, must be an Integer between 1 and 8
+       */
+      peekBit(position, length = 1, offset = 0) {
+        if (Number.isNaN(position) || !Number.isInteger(position) || position < 0 || position > 7) {
+          throw new Error(`peekBit position is invalid: ${position}, must be an Integer between 0 and 7`);
+        }
+        if (Number.isNaN(length) || !Number.isInteger(length) || length < 1 || length > 8) {
+          throw new Error(`peekBit length is invalid: ${length}, must be an Integer between 1 and 8`);
+        }
+        const value = this.peekUInt8(offset);
+        return (value << position & 255) >>> 8 - length;
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @returns {number} The Int8 value at the current offset.
+       */
+      readInt8() {
+        if (!this.available(1)) {
+          throw new underflow_error_default("Insufficient Bytes: 1");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 1);
+        const v = view.getInt8(0);
+        this.offset += 1;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @returns {number} The Int8 value at the current offset.
+       */
+      peekInt8(offset = 0) {
+        if (!this.availableAt(1, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 1`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 1).getInt8(0);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The UInt16 value at the current offset.
+       */
+      readUInt16(littleEndian) {
+        if (!this.available(2)) {
+          throw new underflow_error_default("Insufficient Bytes: 2");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 2);
+        const v = view.getUint16(0, littleEndian);
+        this.offset += 2;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int8 value at the current offset.
+       */
+      peekUInt16(offset = 0, littleEndian = false) {
+        if (!this.availableAt(2, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 2`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 2).getUint16(0, littleEndian);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int16 value at the current offset.
+       */
+      readInt16(littleEndian = false) {
+        if (!this.available(2)) {
+          throw new underflow_error_default("Insufficient Bytes: 2");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 2);
+        const v = view.getInt16(0, littleEndian);
+        this.offset += 2;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int16 value at the current offset.
+       */
+      peekInt16(offset = 0, littleEndian = false) {
+        if (!this.availableAt(2, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 2`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 2).getInt16(0, littleEndian);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The UInt24 value at the current offset.
+       */
+      readUInt24(littleEndian = false) {
+        if (littleEndian) {
+          return this.readUInt16(true) + (this.readUInt8() << 16);
+        }
+        return (this.readUInt16() << 8) + this.readUInt8();
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The UInt24 value at the current offset.
+       */
+      peekUInt24(offset = 0, littleEndian = false) {
+        if (littleEndian) {
+          return this.peekUInt16(offset, true) + (this.peekUInt8(offset + 2) << 16);
+        }
+        return (this.peekUInt16(offset) << 8) + this.peekUInt8(offset + 2);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int24 value at the current offset.
+       */
+      readInt24(littleEndian = false) {
+        if (littleEndian) {
+          return this.readUInt16(true) + (this.readInt8() << 16);
+        }
+        return (this.readInt16() << 8) + this.readUInt8();
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int24 value at the current offset.
+       */
+      peekInt24(offset = 0, littleEndian = false) {
+        if (littleEndian) {
+          return this.peekUInt16(offset, true) + (this.peekInt8(offset + 2) << 16);
+        }
+        return (this.peekInt16(offset) << 8) + this.peekUInt8(offset + 2);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The UInt32 value at the current offset.
+       */
+      readUInt32(littleEndian = false) {
+        if (!this.available(4)) {
+          throw new underflow_error_default("Insufficient Bytes: 4");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 4);
+        const v = view.getUint32(0, littleEndian);
+        this.offset += 4;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The UInt32 value at the current offset.
+       */
+      peekUInt32(offset = 0, littleEndian = false) {
+        if (!this.availableAt(4, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 4`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 4).getUint32(0, littleEndian);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int32 value at the current offset.
+       */
+      readInt32(littleEndian = false) {
+        if (!this.available(4)) {
+          throw new underflow_error_default("Insufficient Bytes: 4");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 4);
+        const v = view.getInt32(0, littleEndian);
+        this.offset += 4;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Int32 value at the current offset.
+       */
+      peekInt32(offset = 0, littleEndian = false) {
+        if (!this.availableAt(4, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 4`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 4).getInt32(0, littleEndian);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Float32 value at the current offset.
+       */
+      readFloat32(littleEndian = false) {
+        if (!this.available(4)) {
+          throw new underflow_error_default("Insufficient Bytes: 4");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 4);
+        const v = view.getFloat32(0, littleEndian);
+        this.offset += 4;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Float32 value at the current offset.
+       */
+      peekFloat32(offset = 0, littleEndian = false) {
+        if (!this.availableAt(4, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 4`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 4).getFloat32(0, littleEndian);
+      }
+      /**
+       * Read from the current offset and return the Turbo Pascal 48 bit extended float value.
+       * May be faulty with large numbers due to float percision.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Float48 value at the current offset.
+       */
+      readFloat48(littleEndian = false) {
+        const uint8 = this.read(6, littleEndian || this.nativeEndian);
+        return float48(uint8);
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the Turbo Pascal 48 bit extended float value.
+       * May be faulty with large numbers due to float percision.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Float48 value at the specified offset.
+       */
+      peekFloat48(offset = 0, littleEndian = false) {
+        const uint8 = this.peek(6, offset, littleEndian || this.nativeEndian);
+        return float48(uint8);
+      }
+      /**
+       * Read from the current offset and return the value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Float64 value at the current offset.
+       */
+      readFloat64(littleEndian = false) {
+        if (!this.available(8)) {
+          throw new underflow_error_default("Insufficient Bytes: 8");
+        }
+        const view = new DataView(this.data.buffer, this.data.byteOffset + this.offset, 8);
+        const v = view.getFloat64(0, littleEndian);
+        this.offset += 8;
+        return v;
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The Float64 value at the current offset.
+       */
+      peekFloat64(offset = 0, littleEndian = false) {
+        if (!this.availableAt(8, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + 8`);
+        }
+        return new DataView(this.data.buffer, this.data.byteOffset + offset, 8).getFloat64(0, littleEndian);
+      }
+      /**
+       * Read from the current offset and return the IEEE 80 bit extended float value.
+       * @param {boolean} [littleEndian] Read in Little Endian format, defaults to system value, default is the current nativeEndian value.
+       * @returns {number} The Float80 value at the current offset.
+       */
+      readFloat80(littleEndian = this.nativeEndian) {
+        const uint8 = this.read(10, littleEndian);
+        return float80(uint8);
+      }
+      /**
+       * Read from the specified offset without advancing the offsets and return the IEEE 80 bit extended float value.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, defaults to system value, default is the current nativeEndian value.
+       * @returns {number} The Float80 value at the current offset.
+       */
+      peekFloat80(offset = 0, littleEndian = this.nativeEndian) {
+        const uint8 = this.peek(10, offset, littleEndian);
+        return float80(uint8);
+      }
+      /**
+       * Read from the current offset and return the IEEE 754 extended float value.
+       * May be faulty with large numbers due to float percision.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The IEEE 754 extended float value at the current offset.
+       */
+      readFloatIEEE754(littleEndian = false) {
+        const uint8 = this.read(10, littleEndian);
+        return convertFromIeeeExtended(uint8);
+      }
+      /**
+       * Peek from the specified offset without advancing the offsets and return the IEEE 754 extended float value.
+       * May be faulty with large numbers due to float percision.
+       * @param {number} [offset] The offset to read from, default is 0.
+       * @param {boolean} [littleEndian] Read in Little Endian format, default is false.
+       * @returns {number} The IEEE 754 extended float value at the specified offset.
+       */
+      peekFloatIEEE754(offset = 0, littleEndian = false) {
+        const uint8 = this.peek(10, offset, littleEndian);
+        return convertFromIeeeExtended(uint8);
+      }
+      /**
+       * Read from the current offset and return the value as a DataBuffer.
+       * @param {number} length The number of bytes to read.
+       * @returns {DataBuffer} The requested number of bytes as a DataBuffer.
+       */
+      readBuffer(length) {
+        if (!this.available(length)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${length}`);
+        }
+        const chunk = this.data.slice(this.offset, this.offset + length);
+        this.offset += length;
+        return new _DataBuffer(chunk);
+      }
+      /**
+       * Read from the specified offset and return the value as a DataBuffer.
+       * @param {number} offset The offset to read from.
+       * @param {number} length The number of bytes to read.
+       * @returns {DataBuffer} The requested number of bytes as a DataBuffer.
+       */
+      peekBuffer(offset, length) {
+        if (!this.availableAt(length, offset)) {
+          throw new underflow_error_default(`Insufficient Bytes: ${offset} + ${length}`);
+        }
+        return new _DataBuffer(this.data.slice(offset, offset + length));
+      }
+      /**
+       * Read from the current offset for a given length and return the value as a string.
+       * @param {number} length The number of bytes to read.
+       * @param {string} [encoding] The encoding of the string, default is `ascii`.
+       * @returns {string} The read value as a string.
+       */
+      readString(length, encoding = "ascii") {
+        debug("readString:", { length, encoding });
+        return this.decodeString(this.offset, length, encoding, true);
+      }
+      /**
+       * Read from the specified offset for a given length and return the value as a string.
+       * @param {number} offset The offset to read from.
+       * @param {number} length The number of bytes to read.
+       * @param {string} [encoding] The encoding of the string, default is `ascii`.
+       * @returns {string} The read value as a string.
+       */
+      peekString(offset, length, encoding = "ascii") {
+        debug("peekString:", { offset, length, encoding });
+        return this.decodeString(offset, length, encoding, false);
+      }
+      /**
+       * Read from the specified offset for a given length and return the value as a string in a specified encoding, and optionally advance the offsets.
+       * Supported Encodings: ascii / latin1, utf8 / utf-8, utf16-be, utf16be, utf16le, utf16-le, utf16bom, utf16-bom
+       * @private
+       * @param {number} offset The offset to read from.
+       * @param {number|null} length The number of bytes to read, if not defined it is the remaining bytes in the buffer. If NULL a null terminated string will be read.
+       * @param {string} encoding The encoding of the string.
+       * @param {boolean} advance Flag to optionally advance the offsets.
+       * @returns {string} The read value as a string.
+       */
+      decodeString(offset, length, encoding, advance) {
+        debug("decodeString:", { offset, length, encoding, advance });
+        encoding = encoding.toLowerCase();
+        const nullEnd = length === null ? 0 : -1;
+        if (!length) {
+          length = this.remainingBytes();
+        }
+        const end = offset + length;
+        const codes = [];
+        switch (encoding) {
+          case "ascii":
+          case "latin1": {
+            while (offset < end) {
+              const character = this.peekUInt8(offset++);
+              if (character === nullEnd) {
+                break;
+              }
+              codes.push(character);
+            }
+            break;
+          }
+          case "utf8":
+          case "utf-8": {
+            while (offset < end) {
+              const b1 = this.peekUInt8(offset++);
+              if (b1 === nullEnd) {
+                break;
+              }
+              let b2;
+              let b3;
+              if ((b1 & 128) === 0) {
+                codes.push(b1);
+              } else if ((b1 & 224) === 192) {
+                b2 = this.peekUInt8(offset++) & 63;
+                codes.push((b1 & 31) << 6 | b2);
+              } else if ((b1 & 240) === 224) {
+                b2 = this.peekUInt8(offset++) & 63;
+                b3 = this.peekUInt8(offset++) & 63;
+                codes.push((b1 & 15) << 12 | b2 << 6 | b3);
+              } else if ((b1 & 248) === 240) {
+                b2 = this.peekUInt8(offset++) & 63;
+                b3 = this.peekUInt8(offset++) & 63;
+                const b4 = this.peekUInt8(offset++) & 63;
+                const pt = ((b1 & 15) << 18 | b2 << 12 | b3 << 6 | b4) - 65536;
+                codes.push(55296 + (pt >> 10), 56320 + (pt & 1023));
+              }
+            }
+            break;
+          }
+          case "utf16-be":
+          case "utf16be":
+          case "utf16le":
+          case "utf16-le":
+          case "utf16bom":
+          case "utf16-bom": {
+            let littleEndian;
+            switch (encoding) {
+              case "utf16be":
+              case "utf16-be": {
+                littleEndian = false;
+                break;
+              }
+              case "utf16le":
+              case "utf16-le": {
+                littleEndian = true;
+                break;
+              }
+              case "utf16bom":
+              case "utf16-bom":
+              default: {
+                const bom = this.peekUInt16(offset);
+                if (length < 2 || bom === nullEnd) {
+                  if (advance) {
+                    this.advance(offset += 2);
+                  }
+                  return String.fromCharCode(...codes);
+                }
+                littleEndian = bom === 65534;
+                offset += 2;
+                break;
+              }
+            }
+            let w1 = 0;
+            while (offset < end && (w1 = this.peekUInt16(offset, littleEndian)) !== nullEnd) {
+              offset += 2;
+              if (w1 < 55296 || w1 > 57343) {
+                codes.push(w1);
+              } else {
+                const w2 = this.peekUInt16(offset, littleEndian);
+                if (w2 < 56320 || w2 > 57343) {
+                  throw new Error("Invalid utf16 sequence.");
+                }
+                codes.push(w1, w2);
+                offset += 2;
+              }
+            }
+            if (w1 === nullEnd) {
+              offset += 2;
+            }
+            break;
+          }
+          default: {
+            throw new Error(`Unknown Encoding: ${encoding}`);
+          }
+        }
+        const result = String.fromCharCode(...codes);
+        if (advance) {
+          this.advance(length);
+        }
+        return result;
+      }
+      /**
+       * Read a null-terminated string from the current offset and advance the offset.
+       * A null-terminated string is a sequence of bytes ending with a null byte (0x00).
+       * @param {string} [encoding] The encoding of the string, default is `ascii`.
+       * @param {number} [nullValue] The byte value that terminates the string, default is 0x00.
+       * @returns {string} The read value as a string (without the null terminator).
+       */
+      readNullTerminatedString(encoding = "ascii", nullValue = 0) {
+        debug("readNullTerminatedString:", { encoding, nullValue });
+        const result = this.decodeNullTerminatedString(this.offset, encoding, true, nullValue);
+        return result;
+      }
+      /**
+       * Read a null-terminated string from the specified offset without advancing the offset.
+       * A null-terminated string is a sequence of bytes ending with a null byte (0x00).
+       * @param {number} offset The offset to read from.
+       * @param {string} [encoding] The encoding of the string, default is `ascii`.
+       * @param {number} [nullValue] The byte value that terminates the string, default is 0x00.
+       * @returns {string} The read value as a string (without the null terminator).
+       */
+      peekNullTerminatedString(offset, encoding = "ascii", nullValue = 0) {
+        debug("peekNullTerminatedString:", { offset, encoding, nullValue });
+        const result = this.decodeNullTerminatedString(offset, encoding, false, nullValue);
+        return result;
+      }
+      /**
+       * Decode a null-terminated string from the specified offset.
+       * Reads bytes until a null byte (0x00) is encountered.
+       * @private
+       * @param {number} offset The offset to read from.
+       * @param {string} encoding The encoding of the string.
+       * @param {boolean} advance Flag to optionally advance the offsets.
+       * @param {number} [nullValue] The byte value that terminates the string, default is 0x00.
+       * @returns {string} The read value as a string (without the null terminator).
+       */
+      decodeNullTerminatedString(offset, encoding, advance, nullValue = 0) {
+        debug("decodeNullTerminatedString:", { offset, encoding, advance, nullValue });
+        encoding = encoding.toLowerCase();
+        const codes = [];
+        switch (encoding) {
+          case "utf8":
+          case "utf-8": {
+            while (offset < this.length) {
+              const b1 = this.peekUInt8(offset++);
+              if (b1 === nullValue) {
+                break;
+              }
+              let b2;
+              let b3;
+              if ((b1 & 128) === 0) {
+                codes.push(b1);
+              } else if ((b1 & 224) === 192) {
+                if (offset >= this.length) break;
+                b2 = this.peekUInt8(offset++);
+                if (b2 === nullValue) break;
+                codes.push((b1 & 31) << 6 | b2 & 63);
+              } else if ((b1 & 240) === 224) {
+                if (offset >= this.length) break;
+                b2 = this.peekUInt8(offset++);
+                if (b2 === nullValue) break;
+                if (offset >= this.length) break;
+                b3 = this.peekUInt8(offset++);
+                if (b3 === nullValue) break;
+                codes.push((b1 & 15) << 12 | (b2 & 63) << 6 | b3 & 63);
+              } else if ((b1 & 248) === 240) {
+                if (offset >= this.length) break;
+                b2 = this.peekUInt8(offset++);
+                if (b2 === nullValue) break;
+                if (offset >= this.length) break;
+                b3 = this.peekUInt8(offset++);
+                if (b3 === nullValue) break;
+                if (offset >= this.length) break;
+                const b4 = this.peekUInt8(offset++);
+                if (b4 === nullValue) break;
+                const pt = ((b1 & 15) << 18 | (b2 & 63) << 12 | (b3 & 63) << 6 | b4 & 63) - 65536;
+                codes.push(55296 + (pt >> 10), 56320 + (pt & 1023));
+              }
+            }
+            break;
+          }
+          case "utf16-be":
+          case "utf16be": {
+            while (offset < this.length - 1) {
+              const b1 = this.peekUInt8(offset);
+              const b2 = this.peekUInt8(offset + 1);
+              if (b1 === nullValue && b2 === nullValue) {
+                offset += 2;
+                break;
+              }
+              codes.push(b1 << 8 | b2);
+              offset += 2;
+            }
+            break;
+          }
+          case "utf16-le":
+          case "utf16le": {
+            while (offset < this.length - 1) {
+              const b1 = this.peekUInt8(offset);
+              const b2 = this.peekUInt8(offset + 1);
+              if (b1 === nullValue && b2 === nullValue) {
+                offset += 2;
+                break;
+              }
+              codes.push(b2 << 8 | b1);
+              offset += 2;
+            }
+            break;
+          }
+          case "ascii":
+          case "latin1":
+          default: {
+            while (offset < this.length) {
+              const byte = this.peekUInt8(offset++);
+              if (byte === nullValue) {
+                break;
+              }
+              codes.push(byte);
+            }
+            break;
+          }
+        }
+        const result = String.fromCharCode(...codes);
+        if (advance) {
+          this.offset = offset;
+        }
+        return result;
+      }
+      /**
+       * Resets the instance offsets to 0.
+       */
+      reset() {
+        debug("reset");
+        this.offset = 0;
+      }
+      /**
+       * Writes a single 8 bit byte.
+       * @param {number} data The data to write.
+       * @param {number} [offset] The offset to write the data to, default is current offset.
+       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       */
+      writeUInt8(data, offset = this.offset, advance = true) {
+        debug("writeUInt8:", { data, offset, advance });
+        this.buffer[offset] = data;
+        if (advance) {
+          this.offset++;
+        }
+      }
+      /**
+       * Writes an unsigned 16 bit value, 2 bytes.
+       * @param {number} data The data to write.
+       * @param {number} [offset] The offset to write the data to, default is current offset.
+       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [littleEndian] Endianness of the write order, little Endian when `true`, default is big Endian `false`.
+       */
+      writeUInt16(data, offset = this.offset, advance = true, littleEndian = false) {
+        debug("writeUInt16:", { data, offset, advance, littleEndian });
+        if (littleEndian) {
+          this.buffer[offset] = data & 255;
+          this.buffer[offset + 1] = (data & 65280) >> 8;
+        } else {
+          this.buffer[offset] = (data & 65280) >> 8;
+          this.buffer[offset + 1] = data & 255;
+        }
+        if (advance) {
+          this.offset += 2;
+        }
+      }
+      /**
+       * Writes an unsigned 24 bit value, 3 bytes.
+       * @param {number} data The data to write.
+       * @param {number} [offset] The offset to write the data to, default is current offset.
+       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [littleEndian] Endianness of the write order, little Endian when `true`, default is big Endian `false`.
+       */
+      writeUInt24(data, offset = this.offset, advance = true, littleEndian = false) {
+        debug("writeUInt24:", { data, offset, advance, littleEndian });
+        if (littleEndian) {
+          this.buffer[offset] = data & 255;
+          this.buffer[offset + 1] = (data & 65280) >> 8;
+          this.buffer[offset + 2] = (data & 16711680) >> 16;
+        } else {
+          this.buffer[offset] = (data & 16711680) >> 16;
+          this.buffer[offset + 1] = (data & 65280) >> 8;
+          this.buffer[offset + 2] = data & 255;
+        }
+        if (advance) {
+          this.offset += 3;
+        }
+      }
+      /**
+       * Writes an unsigned 32 bit value, 4 bytes.
+       * @param {number} data The data to write.
+       * @param {number} [offset] The offset to write the data to, default is current offset.
+       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       * @param {boolean} [littleEndian] Endianness of the write order, little Endian when `true`, default is big Endian `false`.
+       */
+      writeUInt32(data, offset = this.offset, advance = true, littleEndian = false) {
+        debug("writeUInt32:", { data, offset, advance, littleEndian });
+        if (littleEndian) {
+          this.buffer[offset] = data & 255;
+          this.buffer[offset + 1] = (data & 65280) >> 8;
+          this.buffer[offset + 2] = (data & 16711680) >> 16;
+          this.buffer[offset + 3] = (data & 4278190080) >> 24;
+        } else {
+          this.buffer[offset] = (data & 4278190080) >> 24;
+          this.buffer[offset + 1] = (data & 16711680) >> 16;
+          this.buffer[offset + 2] = (data & 65280) >> 8;
+          this.buffer[offset + 3] = data & 255;
+        }
+        if (advance) {
+          this.offset += 4;
+        }
+      }
+      /**
+       * Write a series of bytes.
+       * @param {number[]|Int8Array|Int16Array|Int32Array|Uint8Array|Uint16Array|Uint32Array} data The data to write.
+       * @param {number} [offset] The offset to write the data to, default is current offset.
+       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       */
+      writeBytes(data, offset = this.offset, advance = true) {
+        debug("writeBytes:", { data, offset, advance });
+        for (let i = 0; i < data.length; i++) {
+          this.buffer[offset + i] = data[i];
+        }
+        if (advance) {
+          this.offset += data.length;
+        }
+      }
+      /**
+       * Write a string as a given encoding.
+       *
+       * Valid encodings are: 'ascii' aka 'latin1', 'utf8' / 'utf8', 'utf16be', 'utf16le'.
+       *
+       * For UTF-8:
+       * Up to 4 bytes per character can be used. The fewest number of bytes possible is used.
+       * Characters up to U+007F are encoded with a single byte.
+       * For multibyte sequences, the number of leading 1 bits in the first byte gives the number of bytes for the character. The rest of the bits of the first byte can be used to encode bits of the character.
+       * The continuation bytes begin with 10, and the other 6 bits encode bits of the character.
+       *
+       * UTF-8 conversion interpreted from https://stackoverflow.com/posts/18729931/revisions
+       * @param {string} string The data to write.
+       * @param {number} [offset] The offset to write the data to, default is current offset.
+       * @param {string} [encoding] The encoding of the string, defailt is `ascii`.
+       * @param {boolean} [advance] Flag to increment the offset to the next position, default is true.
+       */
+      writeString(string2, offset = this.offset, encoding = "ascii", advance = true) {
+        debug("writeString:", { string: string2, offset, encoding, advance });
+        const data = [];
+        switch (encoding) {
+          case "ascii":
+          case "latin1": {
+            for (let i = 0; i < string2.length; i++) {
+              data.push(string2.charCodeAt(i) & 255);
+            }
+            break;
+          }
+          case "utf8":
+          case "utf-8": {
+            for (let i = 0; i < string2.length; i++) {
+              let charcode = string2.charCodeAt(i);
+              if (charcode < 128) {
+                data.push(charcode);
+              } else if (charcode < 2048) {
+                data.push(
+                  192 | charcode >> 6,
+                  128 | charcode & 63
+                );
+              } else if (charcode < 55296 || charcode >= 57344) {
+                data.push(
+                  224 | charcode >> 12,
+                  128 | charcode >> 6 & 63,
+                  128 | charcode & 63
+                );
+              } else {
+                i++;
+                charcode = 65536 + ((charcode & 1023) << 10 | string2.charCodeAt(i) & 1023);
+                data.push(
+                  240 | charcode >> 18,
+                  128 | charcode >> 12 & 63,
+                  128 | charcode >> 6 & 63,
+                  128 | charcode & 63
+                );
+              }
+            }
+            break;
+          }
+          case "utf16be":
+          case "utf16le":
+          case "utf16bom": {
+            const littleEndian = encoding === "utf16le";
+            for (let i = 0; i < string2.length; i++) {
+              const charcode = string2.charCodeAt(i);
+              if (littleEndian) {
+                data.push(charcode & 255, charcode / 256 >>> 0);
+              } else {
+                data.push(charcode / 256 >>> 0, charcode & 255);
+              }
+            }
+            break;
+          }
+          default: {
+            throw new Error(`Unknown Encoding: ${encoding}`);
+          }
+        }
+        debug("writeString: data", data);
+        this.writeBytes(data, offset, advance);
+      }
+      /**
+       * Convert a write mode file into a read mode file.
+       */
+      commit() {
+        debug("commit: converting to read mode file");
+        this.data = new Uint8Array(this.buffer);
+        this._buffer = null;
+        this.writing = false;
+      }
+    };
+    data_buffer_default = DataBuffer;
+  }
+});
+
+// node_modules/@uttori/data-tools/src/data-buffer-list.js
+var debug2, DataBufferList, data_buffer_list_default;
+var init_data_buffer_list = __esm({
+  async "node_modules/@uttori/data-tools/src/data-buffer-list.js"() {
+    debug2 = () => {
+    };
+    if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
+      try {
+        const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
+        debug2 = d("DataBufferList");
+      } catch {
+      }
+    }
+    DataBufferList = class _DataBufferList {
+      /**
+       * Creates an instance of DataBufferList.
+       * @param {import('./data-buffer.js').default[]} [buffers] DataBuffers to initialize with.
+       */
+      constructor(buffers) {
+        debug2("constructor");
+        this.first = null;
+        this.last = null;
+        this.totalBuffers = 0;
+        this.availableBytes = 0;
+        this.availableBuffers = 0;
+        if (buffers && Array.isArray(buffers)) {
+          for (const buffer of buffers) {
+            this.append(buffer);
+          }
+        }
+      }
+      /**
+       * Creates a copy of the DataBufferList.
+       * @returns {DataBufferList} The copied DataBufferList.
+       */
+      copy() {
+        debug2("copy");
+        const result = new _DataBufferList();
+        result.first = this.first;
+        result.last = this.last;
+        result.totalBuffers = this.totalBuffers;
+        result.availableBytes = this.availableBytes;
+        result.availableBuffers = this.availableBuffers;
+        return result;
+      }
+      /**
+       * Appends a DataBuffer to the DataBufferList.
+       * @param {import('./data-buffer.js').default} buffer The DataBuffer to add to the list.
+       * @returns {number} The new number of buffers in the DataBufferList.
+       */
+      append(buffer) {
+        debug2("append");
+        buffer.prev = this.last;
+        if (this.last) {
+          this.last.next = buffer;
+        }
+        this.last = buffer;
+        if (this.first == null) {
+          this.first = buffer;
+        }
+        this.availableBytes += buffer.length;
+        this.availableBuffers++;
+        this.totalBuffers++;
+        debug2("append:", this.totalBuffers);
+        return this.totalBuffers;
+      }
+      /**
+       * Checks if we are on the last buffer in the list.
+       * @returns {boolean} Returns false if there are more buffers in the list, returns true when we are on the last buffer.
+       */
+      moreAvailable() {
+        if (this.first && this.first.next != null) {
+          debug2("moreAvailable: true");
+          return true;
+        }
+        debug2("moreAvailable: false");
+        return false;
+      }
+      /**
+       * Advance the buffer list to the next DataBuffer or to `null` when at the end of avaliable DataBuffers.
+       *
+       * If there is no next buffer, the current buffer is set to null.
+       * @returns {boolean} Returns false if there is no more buffers, returns true when the next buffer is set.
+       */
+      advance() {
+        debug2("advance");
+        if (this.first) {
+          this.availableBytes -= this.first.length;
+          this.availableBuffers--;
+        }
+        if (this.first && this.first.next) {
+          debug2("advance: advancing");
+          this.first = this.first.next;
+          return true;
+        }
+        debug2("advance: nothing to advance to");
+        this.first = null;
+        return false;
+      }
+      /**
+       * Rewind the buffer list to the previous buffer.
+       * @returns {boolean} Returns false if there is no previous buffer, returns true when the previous buffer is set.
+       */
+      rewind() {
+        debug2("rewind");
+        if (this.first && !this.first.prev) {
+          return false;
+        }
+        this.first = this.first ? this.first.prev : this.last;
+        if (this.first) {
+          this.availableBytes += this.first.length;
+          this.availableBuffers++;
+        }
+        return this.first != null;
+      }
+      /**
+       * Reset the list to the beginning.
+       */
+      reset() {
+        debug2("reset");
+        while (this.rewind()) {
+          continue;
+        }
+      }
+    };
+    data_buffer_list_default = DataBufferList;
+  }
+});
+
+// node_modules/@uttori/data-tools/src/audio/audio-wav.js
+var debug3, WAVE_FORMAT_TAGS, WAVE_CHANNEL_MASK_LABELS, ROLAND_SP404SX_PADS, AudioWAV, audio_wav_default;
+var init_audio_wav = __esm({
+  async "node_modules/@uttori/data-tools/src/audio/audio-wav.js"() {
+    init_pako();
+    await init_data_buffer();
+    await init_data_buffer_list();
+    debug3 = () => {
+    };
+    if (typeof process !== "undefined" && process.env.UTTORI_AUDIOWAV_DEBUG) {
+      try {
+        const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
+        debug3 = d("Uttori.AudioWAV");
+      } catch {
+      }
+    }
+    WAVE_FORMAT_TAGS = {
+      1: "Microsoft Pulse Code Modulation (PCM) / Uncompressed",
+      2: "Microsoft ADPCM",
+      3: "Microsoft IEEE Float LPCM",
+      4: "Compaq VSELP",
+      5: "IBM CVSD",
+      6: "Microsoft ITU G.711 a-law",
+      7: "Microsoft ITU G.711 \xB5-law",
+      8: "Microsoft DTS",
+      9: "DRM",
+      10: "WMA 9 Speech",
+      11: "Microsoft Windows Media RT Voice",
+      16: "OKI-ADPCM",
+      17: "Intel IMA / DVI-ADPCM",
+      18: "Videologic Mediaspace ADPCM",
+      19: "Sierra ADPCM",
+      20: "Antex G.723 ADPCM",
+      21: "DSP Solutions DIGISTD",
+      22: "DSP Solutions DIGIFIX / ITU G.723 ADPCM (Yamaha)",
+      23: "Dialoic OKI ADPCM",
+      24: "Media Vision ADPCM",
+      25: "HP CU",
+      26: "HP Dynamic Voice",
+      32: "Yamaha ADPCM",
+      33: "SONARC Speech Compression",
+      34: "DSP Group True Speech",
+      35: "Echo Speech Corp.",
+      36: "Virtual Music Audiofile AF36",
+      37: "Audio Processing Tech.",
+      38: "Virtual Music Audiofile AF10",
+      39: "Aculab Prosody 1612",
+      40: "Merging Tech. LRC",
+      48: "Dolby AC2",
+      49: "Microsoft 6.10",
+      50: "MSN Audio",
+      51: "Antex ADPCME",
+      52: "Control Resources VQLPC",
+      53: "DSP Solutions DIGIREAL",
+      54: "DSP Solutions DIGIADPCM",
+      55: "Control Resources CR10",
+      56: "Natural MicroSystems VBX ADPCM",
+      57: "Crystal Semiconductor IMA ADPCM",
+      58: "Echo Speech ECHOSC3",
+      59: "Rockwell ADPCM",
+      60: "Rockwell DIGITALK",
+      61: "Xebec Multimedia",
+      64: "Antex ITU G.721 ADPCM",
+      65: "Antex G.728 CELP",
+      66: "Microsoft MSG723",
+      67: "IBM AVC ADPCM",
+      69: "ITU-T G.726",
+      80: "Microsoft MPEG",
+      81: "RT23 or PAC",
+      82: "InSoft RT24",
+      83: "InSoft PAC",
+      85: "MP3",
+      89: "Cirrus",
+      96: "Cirrus Logic",
+      97: "ESS Tech. PCM",
+      98: "Voxware Inc.",
+      99: "Canopus ATRAC",
+      100: "APICOM G.726 ADPCM",
+      101: "APICOM G.722 ADPCM",
+      102: "Microsoft DSAT",
+      103: "Microsoft DSAT DISPLAY",
+      105: "Voxware Byte Aligned",
+      112: "Voxware AC8",
+      113: "Voxware AC10",
+      114: "Voxware AC16",
+      115: "Voxware AC20",
+      116: "Voxware MetaVoice",
+      117: "Voxware MetaSound",
+      118: "Voxware RT29HW",
+      119: "Voxware VR12",
+      120: "Voxware VR18",
+      121: "Voxware TQ40",
+      122: "Voxware SC3",
+      123: "Voxware SC3",
+      128: "Soundsoft",
+      129: "Voxware TQ60",
+      130: "Microsoft MSRT24",
+      131: "AT&T G.729A",
+      132: "Motion Pixels MVI MV12",
+      133: "DataFusion G.726",
+      134: "DataFusion GSM610",
+      136: "Iterated Systems Audio",
+      137: "Onlive",
+      138: "Multitude, Inc. FT SX20",
+      139: "Infocom ITS A/S G.721 ADPCM",
+      140: "Convedia G729",
+      141: "Not specified congruency, Inc.",
+      145: "Siemens SBC24",
+      146: "Sonic Foundry Dolby AC3 APDIF",
+      147: "MediaSonic G.723",
+      148: "Aculab Prosody 8kbps",
+      151: "ZyXEL ADPCM",
+      152: "Philips LPCBB",
+      153: "Studer Professional Audio Packed",
+      160: "Malden PhonyTalk",
+      161: "Racal Recorder GSM",
+      162: "Racal Recorder G720.a",
+      163: "Racal G723.1",
+      164: "Racal Tetra ACELP",
+      176: "NEC AAC NEC Corporation",
+      255: "AAC",
+      256: "Rhetorex ADPCM",
+      257: "IBM u-Law",
+      258: "IBM a-Law",
+      259: "IBM ADPCM",
+      273: "Vivo G.723",
+      274: "Vivo Siren",
+      288: "Philips Speech Processing CELP",
+      289: "Philips Speech Processing GRUNDIG",
+      291: "Digital G.723",
+      293: "Sanyo LD ADPCM",
+      304: "Sipro Lab ACEPLNET",
+      305: "Sipro Lab ACELP4800",
+      306: "Sipro Lab ACELP8V3",
+      307: "Sipro Lab G.729",
+      308: "Sipro Lab G.729A",
+      309: "Sipro Lab Kelvin",
+      310: "VoiceAge AMR",
+      320: "Dictaphone G.726 ADPCM",
+      336: "Qualcomm PureVoice",
+      337: "Qualcomm HalfRate",
+      341: "Ring Zero Systems TUBGSM",
+      352: "Microsoft Audio1",
+      353: "Windows Media Audio V2 V7 V8 V9 / DivX audio (WMA) / Alex AC3 Audio",
+      354: "Windows Media Audio Professional V9",
+      355: "Windows Media Audio Lossless V9",
+      356: "WMA Pro over S/PDIF",
+      368: "UNISYS NAP ADPCM",
+      369: "UNISYS NAP ULAW",
+      370: "UNISYS NAP ALAW",
+      371: "UNISYS NAP 16K",
+      372: "MM SYCOM ACM SYC008 SyCom Technologies",
+      373: "MM SYCOM ACM SYC701 G726L SyCom Technologies",
+      374: "MM SYCOM ACM SYC701 CELP54 SyCom Technologies",
+      375: "MM SYCOM ACM SYC701 CELP68 SyCom Technologies",
+      376: "Knowledge Adventure ADPCM",
+      384: "Fraunhofer IIS MPEG2AAC",
+      400: "Digital Theater Systems DTS DS",
+      512: "Creative Labs ADPCM",
+      514: "Creative Labs FASTSPEECH8",
+      515: "Creative Labs FASTSPEECH10",
+      528: "UHER ADPCM",
+      533: "Ulead DV ACM",
+      534: "Ulead DV ACM",
+      544: "Quarterdeck Corp.",
+      560: "I-Link VC",
+      576: "Aureal Semiconductor Raw Sport",
+      577: "ESST AC3",
+      592: "Interactive Products HSX",
+      593: "Interactive Products RPELP",
+      608: "Consistent CS2",
+      624: "Sony SCX",
+      625: "Sony SCY",
+      626: "Sony ATRAC3",
+      627: "Sony SPC",
+      640: "TELUM Telum Inc.",
+      641: "TELUMIA Telum Inc.",
+      645: "Norcom Voice Systems ADPCM",
+      768: "Fujitsu FM TOWNS SND",
+      769: "Fujitsu (not specified)",
+      770: "Fujitsu (not specified)",
+      771: "Fujitsu (not specified)",
+      772: "Fujitsu (not specified)",
+      773: "Fujitsu (not specified)",
+      774: "Fujitsu (not specified)",
+      775: "Fujitsu (not specified)",
+      776: "Fujitsu (not specified)",
+      848: "Micronas Semiconductors, Inc. Development",
+      849: "Micronas Semiconductors, Inc. CELP833",
+      1024: "Brooktree Digital",
+      1025: "Intel Music Coder (IMC)",
+      1026: "Ligos Indeo Audio",
+      1104: "QDesign Music",
+      1280: "On2 VP7 On2 Technologies",
+      1281: "On2 VP6 On2 Technologies",
+      1664: "AT&T VME VMPCM",
+      1665: "AT&T TCP",
+      1792: "YMPEG Alpha (dummy for MPEG-2 compressor)",
+      2222: "ClearJump LiteWave (lossless)",
+      4096: "Olivetti GSM",
+      4097: "Olivetti ADPCM",
+      4098: "Olivetti CELP",
+      4099: "Olivetti SBC",
+      4100: "Olivetti OPR",
+      4352: "Lernout & Hauspie",
+      4353: "Lernout & Hauspie CELP codec",
+      4354: "Lernout & Hauspie SBC codec",
+      4355: "Lernout & Hauspie SBC codec",
+      4356: "Lernout & Hauspie SBC codec",
+      5120: "Norris Comm. Inc.",
+      5121: "ISIAudio",
+      5376: "AT&T Soundspace Music Compression",
+      6172: "VoxWare RT24 speech codec",
+      6174: "Lucent elemedia AX24000P Music codec",
+      6513: "Sonic Foundry LOSSLESS",
+      6521: "Innings Telecom Inc. ADPCM",
+      7175: "Lucent SX8300P speech codec",
+      7180: "Lucent SX5363S G.723 compliant codec",
+      7939: "CUseeMe DigiTalk (ex-Rocwell)",
+      8132: "NCT Soft ALF2CD ACM",
+      8192: "FAST Multimedia DVM",
+      8193: "Dolby DTS (Digital Theater System)",
+      8194: "RealAudio 1 / 2 14.4",
+      8195: "RealAudio 1 / 2 28.8",
+      8196: "RealAudio G2 / 8 Cook (low bitrate)",
+      8197: "RealAudio 3 / 4 / 5 Music (DNET)",
+      8198: "RealAudio 10 AAC (RAAC)",
+      8199: "RealAudio 10 AAC+ (RACP)",
+      9472: "Reserved range to 0x2600 Microsoft",
+      13075: "makeAVIS (ffvfw fake AVI sound from AviSynth scripts)",
+      16707: "Divio MPEG-4 AAC audio",
+      16897: "Nokia adaptive multirate",
+      16963: "Divio G726 Divio, Inc.",
+      17228: "LEAD Speech",
+      22092: "LEAD Vorbis",
+      22358: "WavPack Audio",
+      26447: "Ogg Vorbis (mode 1)",
+      26448: "Ogg Vorbis (mode 2)",
+      26449: "Ogg Vorbis (mode 3)",
+      26479: "Ogg Vorbis (mode 1+)",
+      26480: "Ogg Vorbis (mode 2+)",
+      26481: "Ogg Vorbis (mode 3+)",
+      28672: "3COM NBX 3Com Corporation",
+      28781: "FAAD AAC",
+      31265: "GSM-AMR (CBR, no SID)",
+      31266: "GSM-AMR (VBR, including SID)",
+      41216: "Comverse Infosys Ltd. G723 1",
+      41217: "Comverse Infosys Ltd. AVQSBC",
+      41218: "Comverse Infosys Ltd. OLDSBC",
+      41219: "Symbol Technologies G729A",
+      41220: "VoiceAge AMR WB VoiceAge Corporation",
+      41221: "Ingenient Technologies Inc. G726",
+      41222: "ISO/MPEG-4 advanced audio Coding",
+      41223: "Encore Software Ltd G726",
+      41225: "Speex ACM Codec xiph.org",
+      57260: "DebugMode SonicFoundry Vegas FrameServer ACM Codec",
+      61868: "Free Lossless Audio Codec FLAC",
+      65534: "Extensible",
+      65535: "Development"
+    };
+    WAVE_CHANNEL_MASK_LABELS = {
+      1: "speaker_front_left",
+      2: "speaker_front_right",
+      4: "speaker_front_center",
+      8: "speaker_low_frequency",
+      16: "speaker_back_left",
+      32: "speaker_back_right",
+      64: "speaker_front_left_of_center",
+      128: "speaker_front_right_of_center",
+      256: "speaker_back_center",
+      512: "speaker_side_left",
+      1024: "speaker_side_right",
+      2048: "speaker_top_center",
+      4096: "speaker_top_front_left",
+      8192: "speaker_top_front_center",
+      16384: "speaker_top_front_right",
+      32768: "speaker_top_back_left",
+      65536: "speaker_top_back_center",
+      131072: "speaker_top_back_right",
+      2147483648: "speaker_all"
+    };
+    ROLAND_SP404SX_PADS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].flatMap((bank) => Array.from({ length: 12 }, (_value, pad) => `${bank}${pad + 1}`));
+    AudioWAV = class _AudioWAV extends data_buffer_default {
+      /**
+       * Creates a new AudioWAV.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} input The data to process.
+       * @param {object} [opts] Options for this AudioWAV instance.
+       * @class
+       */
+      constructor(input, opts = {}) {
+        super(input);
+        this.container = "";
+        this.type = "";
+        this.chunks = [];
+        this.options = {
+          // This keeps in spec, some files fail with this.
+          roundOddChunks: true,
+          ...opts
+        };
+        this.parse();
+      }
+      /**
+       * Creates a new AudioWAV from file data.
+       * @param {Buffer} data The data of the file to process.
+       * @param {object} [options] Options for returned AudioWAV instance.
+       * @returns {AudioWAV} the new AudioWAV instance for the provided file data
+       * @static
+       */
+      static fromFile(data, options) {
+        debug3("fromFile:", data.length, data.byteLength);
+        const buffer = new data_buffer_default(data);
+        const list = new data_buffer_list_default();
+        list.append(buffer);
+        return new _AudioWAV(data, options);
+      }
+      /**
+       * Creates a new AudioWAV from a DataBuffer.
+       * @param {DataBuffer} buffer The DataBuffer of the file to process.
+       * @param {object} [options] Options for returned AudioWAV instance.
+       * @returns {AudioWAV} the new AudioWAV instance for the provided DataBuffer
+       * @static
+       */
+      static fromBuffer(buffer, options) {
+        debug3("fromBuffer:", buffer.length);
+        const list = new data_buffer_list_default();
+        list.append(buffer);
+        return new _AudioWAV(buffer, options);
+      }
+      /**
+       * Parse the WAV file, decoding the supported chunks.
+       */
+      parse() {
+        debug3("parse");
+        const chunk = this.read(12, false);
+        const value = _AudioWAV.decodeHeader(chunk);
+        this.chunks.push({ type: "header", value });
+        this.type = value.type;
+        while (this.remainingBytes()) {
+          try {
+            this.decodeChunk();
+          } catch (error) {
+            debug3("Error Parsing:", error);
+            console.error(error);
+          }
+        }
+      }
+      /**
+       * Decodes and validates WAV Header.
+       * Checks for `RIFF` / `RF64` / `BW64` header, reads the size, and then checks for the `WAVE` header.
+       *
+       * Signature (Decimal): [82, 73, 70, 70, ..., ..., ..., ..., 87, 65, 86, 69]
+       * Signature (Hexadecimal): [52, 49, 46, 46, ..., ..., ..., ..., 57, 41, 56, 45]
+       * Signature (ASCII): [R, I, F, F, ..., ..., ..., ..., W, A, V, E]
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} chunk The data to process.
+       * @static
+       * @returns {WavHeader} The decoded values.
+       * @throws {Error} Invalid WAV header
+       */
+      static decodeHeader(chunk) {
+        debug3("decodeHeader");
+        const header = new data_buffer_default(chunk);
+        const chunkID = header.readString(4);
+        let type = "";
+        if (["RIFF", "RF64", "BW64"].includes(chunkID)) {
+          type = "WAVE";
+        } else if (["FORM", "AIFF", "AIFC"].includes(chunkID)) {
+          type = "AIFF";
+        }
+        if (!type) {
+          throw new Error(`Invalid or unrecorgnized file header: '${chunkID}'`);
+        }
+        const size = header.readUInt32(type !== "AIFF");
+        const format = header.readString(4);
+        if (type === "WAVE" && format !== "WAVE") {
+          throw new Error(`Invalid WAVE header, expected 'WAVE' and got '${format}'`);
+        }
+        if (type === "AIFF" && !["AIFF", "AIFC"].includes(format)) {
+          throw new Error(`Invalid AIFF header, expected 'AIFF' or 'AIFC' and got '${format}'`);
+        }
+        return {
+          chunkID,
+          size,
+          format,
+          type
+        };
+      }
+      /**
+       * Enocdes JSON values to a valid Wave Header chunk Buffer.
+       * @param {object} data - The values to encode to the header chunk chunk.
+       * @param {string} [data.riff] - RIFF Header, should contains the string `RIFF`, `RF64`, or `BW64` in ASCII form.
+       * @param {number} data.size - This is the size of the entire file in bytes minus 8 bytes for the 2 fields not included in this count. RF64 sets this to -1 = 0xFFFFFFFF as it doesn't use this to support larger sizes in the DS64 chunk.
+       * @param {string} [data.format] - WAVE Header, the string `WAVE` in ASCII form.
+       * @returns {Buffer} The newley encoded header chunk.
+       * @static
+       */
+      static encodeHeader({ riff = "RIFF", size, format = "WAVE" }) {
+        debug3("encodeHeader:", { riff, size, format });
+        const header = Buffer.alloc(12);
+        header.write(riff, 0);
+        header.writeUInt32LE(size, 4);
+        header.write(format, 8);
+        return header;
+      }
+      /**
+       * Decodes the chunk type, and attempts to parse that chunk if supported.
+       * Supported Chunk Types: `fmt `, `fact`, `inst`, `DISP`, `smpl`, `tlst`, `data`, `LIST`, `RLND`, `JUNK`, `acid`, `cue `, `bext`, `ResU`, `ds64`, `cart`
+       *
+       * Chunk Structure:
+       * Length: 4 bytes (integer)
+       * Type:   4 bytes (string)
+       * Chunk:  {length} bytes
+       * @returns {string} Chunk Type
+       * @throws {Error} Invalid Chunk Length when less than 0
+       */
+      decodeChunk() {
+        debug3("decodeChunk at offset", this.offset, "with", this.remainingBytes(), "remaining bytes");
+        let type = this.readString(4);
+        debug3("decodeChunk type", type);
+        let size = this.readUInt32(this.type !== "AIFF");
+        debug3("decodeChunk size", size);
+        if (size < 0) {
+          throw new Error(`Invalid SubChunk Size: ${4294967295 & size}`);
+        }
+        if (this.options.roundOddChunks && size % 2 !== 0) {
+          size += 1;
+        }
+        if (size > this.remainingBytes()) {
+          debug3("decodeChunk size", size, "too large, using remaining bytes", this.remainingBytes());
+          size = this.remainingBytes();
+        }
+        if (!type || size === 0) {
+          debug3("decodeChunk something is wrong, ending");
+          type = "(broken)";
+          size = this.remainingBytes();
+        }
+        switch (type) {
+          case "fmt ": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeFMT(chunk);
+            this.chunks.push({ type: "format", value, chunk });
+            break;
+          }
+          case "fact": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeFACT(chunk);
+            this.chunks.push({ type: "fact", value, chunk });
+            break;
+          }
+          case "inst": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeINST(chunk);
+            this.chunks.push({ type: "instrument", value, chunk });
+            break;
+          }
+          case "DISP": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeDISP(chunk);
+            this.chunks.push({ type: "display", value, chunk });
+            break;
+          }
+          case "smpl": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeSMPL(chunk);
+            this.chunks.push({ type: "sample", value, chunk });
+            break;
+          }
+          case "tlst": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeTLST(chunk);
+            this.chunks.push({ type: "trigger_list", value, chunk });
+            break;
+          }
+          case "data": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            _AudioWAV.decodeDATA(chunk);
+            const format = this.chunks.find((c) => c.type === "format");
+            const formatValue = (
+              /** @type {WavFormat} */
+              format?.value
+            );
+            const duration = size / formatValue.byteRate;
+            this.chunks.push({ type: "data", chunk, value: { duration } });
+            break;
+          }
+          case "LIST": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeLIST(chunk);
+            this.chunks.push({ type: "list", value, chunk });
+            break;
+          }
+          case "RLND": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeRLND(chunk);
+            this.chunks.push({ type: "roland", value, chunk });
+            break;
+          }
+          case "JUNK": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            _AudioWAV.decodeJUNK(chunk, this.options);
+            this.chunks.push({ type: "junk", chunk });
+            break;
+          }
+          case "PAD ": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            _AudioWAV.decodePAD(chunk);
+            this.chunks.push({ type: "padding", chunk });
+            break;
+          }
+          case "PEAK": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodePEAK(chunk);
+            this.chunks.push({ type: "peak", value, chunk });
+            break;
+          }
+          case "acid": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeACID(chunk);
+            this.chunks.push({ type: "acid", value, chunk });
+            break;
+          }
+          case "strc": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeSTRC(chunk);
+            this.chunks.push({ type: "strc", value, chunk });
+            break;
+          }
+          case "cue ": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeCue(chunk);
+            this.chunks.push({ type: "cue_points", value, chunk });
+            break;
+          }
+          case "bext": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeBEXT(chunk, this.options);
+            this.chunks.push({ type: "broadcast_extension", value, chunk });
+            break;
+          }
+          case "ResU": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeResU(chunk);
+            this.chunks.push({ type: "logic_resu", value, chunk });
+            break;
+          }
+          case "ds64": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeDS64(chunk);
+            this.chunks.push({ type: "data_size_64", value, chunk });
+            break;
+          }
+          case "cart": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            this.chunks.push({ type: "cart", chunk, unknown: true });
+            break;
+          }
+          case "AFAn":
+          case "AFmd": {
+            debug3(`macOS Special Binary Chunk: '${type}' with ${size} bytes`);
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            this.chunks.push({ type, chunk, description: "macOS Special Binary Chunk" });
+            break;
+          }
+          case "minf":
+          case "elm1":
+          case "regn":
+          case "ovwf":
+          case "umid": {
+            debug3(`ProTools Special Chunk: '${type}' with ${size} bytes`);
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            this.chunks.push({ type, chunk, description: "ProTools Special Chunk" });
+            break;
+          }
+          case "COMM": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeCOMM(chunk);
+            this.chunks.push({ type: "common", value, chunk });
+            break;
+          }
+          case "SSND": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeSSND(chunk);
+            this.chunks.push({ type: "common", value, chunk });
+            break;
+          }
+          case "FVER": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const value = _AudioWAV.decodeFVER(chunk);
+            this.chunks.push({ type: "common", value, chunk });
+            break;
+          }
+          case "ANNO":
+          case "AUTH":
+          case "NAME": {
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            const stream = new data_buffer_default(chunk);
+            const chunkID = stream.readString(4);
+            const nameSize = stream.readUInt32();
+            const name = stream.readString(nameSize);
+            const value = { chunkID, size: nameSize, name };
+            debug3("decodeGenericText =", JSON.stringify(value, null, 2));
+            this.chunks.push({ type: chunkID.toLowerCase(), value, chunk });
+            break;
+          }
+          default: {
+            debug3(`Unsupported Chunk: '${type}' with ${size} bytes`);
+            this.rewind(8);
+            const chunk = this.read(8 + size, false);
+            this.chunks.push({ type, chunk, unknown: true });
+            break;
+          }
+        }
+        return type;
+      }
+      /**
+       * Decode the FMT (Format) chunk.
+       * Should be the first chunk in the data stream.
+       *
+       * Audio Format:       2 bytes
+       * Channels:           2 bytes
+       * Sample Rate:        4 bytes
+       * Byte Rate:          4 bytes
+       * Block Align:        2 bytes
+       * Bits per Sample     2 bytes
+       * [Extra Param Size]  2 bytes
+       * [Extra Params]      n bytes
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavFormat} The decoded values.
+       * @static
+       */
+      static decodeFMT(chunk) {
+        debug3("decodeFMT");
+        const format = new data_buffer_default(chunk);
+        const chunkID = format.readString(4);
+        const size = format.readUInt32(true);
+        const audioFormatValue = format.readUInt16(true);
+        const audioFormat = WAVE_FORMAT_TAGS[audioFormatValue] ?? `Unknown: ${audioFormatValue.toString(16)}`;
+        const channels = format.readUInt16(true);
+        const sampleRate = format.readUInt32(true);
+        const byteRate = format.readUInt32(true);
+        const blockAlign = format.readUInt16(true);
+        const bitsPerSample = format.readUInt16(true);
+        const value = {
+          chunkID,
+          size,
+          audioFormatValue,
+          audioFormat,
+          channels,
+          sampleRate,
+          byteRate,
+          blockAlign,
+          bitsPerSample
+        };
+        if (format.remainingBytes()) {
+          value.extraParamSize = format.readUInt16(true);
+          if (audioFormatValue === 65534) {
+            value.validBitsPerSample = format.readUInt16(true);
+            value.channelMask = format.readUInt32(true);
+            value.channelMaskLabel = WAVE_CHANNEL_MASK_LABELS[value.channelMask];
+            if (value.channelMaskLabel === void 0) {
+              debug3("Unknown Channel Mask:", value.channelMask);
+              value.channelMaskLabel = `unknown_${value.channelMask}`;
+            }
+            value.subFormat_1 = format.readUInt32(true);
+            value.subFormat_2 = format.readUInt16(true);
+            value.subFormat_3 = format.readUInt16(true);
+            value.subFormat_4 = format.readUInt32(true);
+            value.subFormat_5 = format.readUInt32(true);
+          } else if (value.extraParamSize > 0) {
+            value.extraParams = format.read(value.extraParamSize, false);
+          } else {
+            value.extraParams = new Uint8Array();
+          }
+        }
+        debug3("decodeFMT =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Enocdes JSON values to a valid `fmt ` chunk Buffer.
+       *
+       * Defaults are set to Red Book Compact Disc Digital Audio (CDDA or CD-DA) / Audio CD standards.
+       *
+       * RF64 specific fields are currently unsupported.
+       * @param {object} [data] The values to encode to the `fmt ` chunk.
+       * @param {number} [data.audioFormatValue] Format of the audio data, 1 is PCM and values other than 1 indicate some form of compression. See `decodeFMT` for a listing
+       * @param {number} [data.channels] Mono = 1, Stereo = 2, etc.
+       * @param {number} [data.sampleRate] 8000, 44100, 96000, etc.
+       * @param {number} [data.byteRate] Sample Rate * Channels * Bits per Sample / 8
+       * @param {number} [data.blockAlign] The number of bytes for one sample including all channels. Channels * Bits per Sample / 8
+       * @param {number} [data.bitsPerSample] 8 bits = 8, 16 bits = 16, etc.
+       * @param {number} [data.extraParamSize] The size of the extra paramteres to follow, or 0.
+       * @param {number} [data.extraParams] Any extra data to encode.
+       * @returns {Buffer} The newley encoded `fmt ` chunk.
+       * @static
+       */
+      static encodeFMT(data = {}) {
+        debug3("encodeFMT:", data);
+        const {
+          audioFormatValue = 1,
+          channels = 2,
+          sampleRate = 44100,
+          byteRate = 176400,
+          blockAlign = 4,
+          bitsPerSample = 16,
+          extraParamSize = 0,
+          extraParams = 0
+        } = data;
+        const buffer = Buffer.alloc(26 + extraParamSize, 0);
+        buffer.write("fmt ", 0);
+        buffer.writeUInt32LE(26 - 8 + extraParamSize, 4);
+        buffer.writeUInt16LE(audioFormatValue, 8);
+        buffer.writeUInt16LE(channels, 10);
+        buffer.writeUInt32LE(sampleRate, 12);
+        buffer.writeUInt32LE(byteRate, 16);
+        buffer.writeUInt16LE(blockAlign, 20);
+        buffer.writeUInt16LE(bitsPerSample, 22);
+        buffer.writeUInt16LE(extraParamSize, 24);
+        if (extraParamSize > 0 && extraParams) {
+          buffer.fill(0, 26, 26 + extraParamSize);
+          buffer.write(String(extraParams), 26);
+        }
+        debug3("Buffer:", buffer.toString("hex"));
+        return buffer;
+      }
+      /**
+       * Decode the LIST (LIST Information) chunk.
+       *
+       * A LIST chunk defines a list of sub-chunks and has the following format.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavList} The decoded values.
+       * @static
+       */
+      static decodeLIST(chunk) {
+        debug3("decodeLIST");
+        const list = new data_buffer_default(chunk);
+        const chunkID = list.readString(4);
+        const size = list.readUInt32(true);
+        const type = list.readString(4);
+        const value = {
+          chunkID,
+          size,
+          type
+        };
+        switch (type) {
+          case "INFO": {
+            value.data = _AudioWAV.decodeLISTINFO(list);
+            break;
+          }
+          case "adtl": {
+            value.data = _AudioWAV.decodeLISTadtl(list);
+            break;
+          }
+          default: {
+            debug3(`Unknown LIST Type: ${type}`);
+          }
+        }
+        debug3("decodeLIST =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the LIST INFO chunks.
+       * @param {DataBuffer} buffer List DataBuffer
+       * @returns {WavListInfo[]} The parsed list.
+       */
+      static decodeLISTINFO(buffer) {
+        debug3("decodeLISTINFO");
+        const value = [];
+        while (buffer.remainingBytes()) {
+          const info = (
+            /** @type {WavListInfo} */
+            {}
+          );
+          info.id = buffer.readString(4);
+          debug3("decodeLISTINFO chunk id:", info.id);
+          info.size = buffer.readUInt32(true);
+          debug3("decodeLISTINFO chunk size:", info.size);
+          info.text = buffer.readString(info.size);
+          debug3("decodeLISTINFO chunk text:", info.text);
+          if (info.size % 2 !== 0) {
+            buffer.advance(1);
+          }
+          value.push(info);
+        }
+        return value;
+      }
+      /**
+       * Decode the LIST adtl chunks.
+       * @param {DataBuffer} buffer List DataBuffer
+       * @returns {WavListAdtl[]} The parsed list.
+       */
+      static decodeLISTadtl(buffer) {
+        debug3("decodeLISTadtl");
+        const value = [];
+        while (buffer.remainingBytes()) {
+          const adtl = (
+            /** @type {WavListAdtl} */
+            {}
+          );
+          adtl.id = buffer.readString(4);
+          adtl.size = buffer.readUInt32(true);
+          switch (adtl.id) {
+            case "labl": {
+              adtl.label = buffer.readString(adtl.size).trim();
+              break;
+            }
+            case "ltxt": {
+              adtl.ltxt = buffer.readString(adtl.size).trim();
+              break;
+            }
+            default: {
+              debug3(`Unknown ID: ${adtl.id}`);
+              buffer.advance(adtl.size);
+            }
+          }
+          value.push(adtl);
+        }
+        return value;
+      }
+      /**
+       * Decode the data (Audio Data) chunk.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @static
+       */
+      static decodeDATA(chunk) {
+        debug3(`decodeDATA: ${chunk.length} data bytes`);
+      }
+      /**
+       * Decode the `tlst` (Trigger List) chunk.
+       *
+       * Used in Sound Forge by Sonic Foundry
+       *
+       * Specifies a list of triggers which can be used to trigger playback of a series of cue points or Playlist entries.
+       *
+       * There's a historical bug in dwName (which is in fact an index, and the bug is that it's actually Index-1).
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavTriggerList} The decoded values.
+       * @static
+       */
+      static decodeTLST(chunk) {
+        debug3("decodeTLST");
+        const tlst = new data_buffer_default(chunk);
+        const _chunkID = tlst.readString(4);
+        const size = tlst.readUInt32(true);
+        debug3("decodeTLST size", size);
+        const list = tlst.readUInt32(true);
+        const name = tlst.readString(4);
+        const type = tlst.readUInt32(true);
+        const triggerOn1 = tlst.readUInt8();
+        const triggerOn2 = tlst.readUInt8();
+        const triggerOn3 = tlst.readUInt8();
+        const triggerOn4 = tlst.readUInt8();
+        const func = tlst.readUInt32(true);
+        const extra = tlst.readUInt32(true);
+        const extraData = tlst.readUInt32(true);
+        const value = {
+          list,
+          name,
+          type,
+          triggerOn1,
+          triggerOn2,
+          triggerOn3,
+          triggerOn4,
+          extra,
+          extraData,
+          function: func
+        };
+        debug3("decodeTLST =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the fact chunk.
+       *
+       * Fact chunks exist in all wave files that are compressed or that have a wave list chunk.
+       * A fact chunk is not required in an uncompressed PCM file that does not have a wave list chunk.
+       *
+       * According to the fact chunk's initial specification, the data portion of the fact chunk will contain only one 4-byte number that specifies the number of samples in the data chunk of the Wave file.
+       * This number, when combined with the samples per second value in the format chunk of the Wave file, can be used to compute the length of the audio data in seconds.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavFact} The decoded values.
+       * @static
+       * @see {@link https://www.recordingblogs.com/wiki/fact-chunk-of-a-wave-file | Fact chunk (of a Wave file)}
+       * @see {@link http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html | Audio File Format Specifications}
+       */
+      static decodeFACT(chunk) {
+        debug3("decodeFACT");
+        const fact = new data_buffer_default(chunk);
+        const _chunkID = fact.readString(4);
+        const size = fact.readUInt32(true);
+        debug3("decodeFACT size", size);
+        const numberOfSamples = fact.readUInt32(true);
+        const value = { numberOfSamples };
+        debug3("decodeFACT =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      // TODO: Should have more entries by number of channels, https://github.com/libsndfile/libsndfile/blob/08d802a3d18fa19c74f38ed910d9e33f80248187/src/aiff.c#L110
+      /**
+       * Decode the PEAK chunk.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavPeak} The decoded values.
+       * @static
+       * @see {@link https://code.google.com/archive/p/awesome-wav/wikis/WAVFormat.wiki|awesome-wav - WAVFormat.wiki}
+       */
+      static decodePEAK(chunk) {
+        debug3("decodePEAK");
+        const peak = new data_buffer_default(chunk);
+        const _chunkID = peak.readString(4);
+        const size = peak.readUInt32(true);
+        debug3("decodePEAK size", size);
+        const version = peak.readUInt32(true);
+        const timestamp = peak.readUInt32(true);
+        const ppeakPointer = peak.readUInt32(true);
+        const bitAlign = peak.readUInt32(true);
+        const value = {
+          version,
+          timestamp,
+          ppeakPointer,
+          bitAlign
+        };
+        debug3("decodePEAK =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the DISP (Display) chunk.
+       *
+       * The DISP chunk should be used as a direct child of the RIFF chunk so that any RIFF aware application can find it.
+       * There can be multiple DISP chunks with each containing different types of displayable data, but all representative of the same object.
+       * The DISP chunks should be stored in the file in order of preference (just as in the clipboard).
+       *
+       * The DISP chunk is especially beneficial when representing OLE data within an application.
+       * For example, when pasting a wave file into Excel, the creating application can use the DISP chunk to associate an icon and a text description to represent the embedded wave file.
+       * This text should be short so that it can be easily displayed in menu bars and under icons.
+       * Note: do not use a CF_TEXT for a description of the data.
+       * Bibliographic data chunks will be added to support the standard MARC (Machine Readable Cataloging) data.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavDisplay} The decoded values.
+       * @static
+       * @see {@link http://netghost.narod.ru/gff/vendspec/micriff/ms_riff.txt|New Multimedia Data Types and Data Techniques}
+       * @see {@link https://docs.microsoft.com/en-us/windows/win32/dataxchg/standard-clipboard-formats|Standard Clipboard Formats}
+       */
+      static decodeDISP(chunk) {
+        debug3("decodeDISP");
+        const disp = new data_buffer_default(chunk);
+        const _chunkID = disp.readString(4);
+        const size = disp.readUInt32(true);
+        debug3("decodeDISP size", size);
+        const type = disp.readUInt32(true);
+        const data = disp.readUInt16(true);
+        const value = { type, data };
+        debug3("decodeDISP =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       *  ACID Loop File Format
+       *
+       *  They were originally created for use with Acid, the loop-based, music-sequencing software, created by Sonic Foundry in 1998.
+       *
+       *  "Acidized" loops contain tempo and key information, so that Acid and other programs that can read the "acidization" can properly time stretch and pitch shift them.
+       *
+       *  Although the phrase "ACID loops" technically only refers to loops which have been "acidized", some people use the term to refer to loops in general, even when used with other software packages.
+       * @static
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavAcid} The decoded values.
+       * @memberof AudioWAV
+       */
+      static decodeACID(chunk) {
+        debug3("decodeACID");
+        const acid = new data_buffer_default(chunk);
+        const _chunkID = acid.readString(4);
+        const size = acid.readUInt32(true);
+        debug3("decodeACID size", size);
+        const type = acid.readUInt32(true);
+        const rootNote = acid.readUInt16(true);
+        const unknown1 = acid.readUInt16(true);
+        const unknown2 = acid.readUInt32(true);
+        const beats = acid.readUInt32(true);
+        const meterDenominator = acid.readUInt16(true);
+        const meterNumerator = acid.readUInt16(true);
+        const tempo = acid.readUInt32(true);
+        const value = {
+          type,
+          rootNote,
+          unknown1,
+          unknown2,
+          beats,
+          meterDenominator,
+          meterNumerator,
+          tempo
+        };
+        debug3("decodeACID =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the inst (Instrumet) chunk.
+       *
+       * When a wave file is used as wave samples in a MIDI synthesizer,
+       * the instrument chunk helps the MIDI synthesizer define the sample pitch & relative volume of the samples.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavInstrument} The decoded values.
+       * @static
+       */
+      static decodeINST(chunk) {
+        debug3("decodeINST");
+        const inst = new data_buffer_default(chunk);
+        const _chunkID = inst.readString(4);
+        const size = inst.readUInt32(true);
+        debug3("decodeINST size", size);
+        const unshiftedNote = inst.readUInt8();
+        const fineTuning = inst.readUInt8();
+        const gain = inst.readUInt8();
+        const lowNote = inst.readUInt8();
+        const highNote = inst.readUInt8();
+        const lowVelocity = inst.readUInt8();
+        const highVelocity = inst.readUInt8();
+        const value = {
+          unshiftedNote,
+          fineTuning,
+          gain,
+          lowNote,
+          highNote,
+          lowVelocity,
+          highVelocity
+        };
+        debug3("decodeINST =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the smpl (Sample) chunk.
+       *
+       * The sample chunk allows a MIDI sampler to use the Wave file as a collection of samples.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavSample} The decoded values.
+       * @static
+       */
+      static decodeSMPL(chunk) {
+        debug3("decodeSMPL");
+        const smpl = new data_buffer_default(chunk);
+        const _chunkID = smpl.readString(4);
+        const size = smpl.readUInt32(true);
+        debug3("decodeSMPL size", size);
+        const manufacturer1 = smpl.readUInt8();
+        const manufacturer2 = smpl.readUInt8();
+        const manufacturer3 = smpl.readUInt8();
+        const manufacturer4 = smpl.readUInt8();
+        const product = smpl.readUInt32(true);
+        const samplePeriod = smpl.readUInt32(true);
+        const midiUnityNote = smpl.readUInt32(true);
+        const midiPitchFraction = smpl.readUInt32(true);
+        const SMPTEFormat = smpl.readUInt32(true);
+        const SMPTEOffset1 = smpl.readUInt8();
+        const SMPTEOffset2 = smpl.readUInt8();
+        const SMPTEOffset3 = smpl.readUInt8();
+        const SMPTEOffset4 = smpl.readUInt8();
+        const sampleLoopsCount = smpl.readUInt32(true);
+        const sampleDataSize = smpl.readUInt32(true);
+        const sampleLoops = [];
+        if (sampleLoopsCount > 0) {
+          debug3("decodeSMPL sampleLoopsCount", sampleLoopsCount);
+          for (let i = 0; i < sampleLoopsCount; i++) {
+            const ID = smpl.readUInt32(true);
+            const type = smpl.readUInt32(true);
+            const start = smpl.readUInt32(true);
+            const end = smpl.readUInt32(true);
+            const fraction = smpl.readUInt32(true);
+            const count = smpl.readUInt32(true);
+            sampleLoops.push({
+              ID,
+              type,
+              start,
+              end,
+              fraction,
+              count
+            });
+          }
+        }
+        let sampleData;
+        if (sampleDataSize > 0) {
+          sampleData = smpl.read(sampleDataSize, false);
+        }
+        const value = {
+          manufacturer1,
+          manufacturer2,
+          manufacturer3,
+          manufacturer4,
+          product,
+          samplePeriod,
+          midiUnityNote,
+          midiPitchFraction,
+          SMPTEFormat,
+          SMPTEOffset1,
+          SMPTEOffset2,
+          SMPTEOffset3,
+          SMPTEOffset4,
+          sampleLoopsCount,
+          sampleDataSize,
+          sampleLoops,
+          sampleData
+        };
+        debug3("decodeSMPL =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the RLND (Roland) chunk.
+       *
+       * Useful for use on SP-404 / SP-404SX / SP-404A samplers, perhaps others.
+       *
+       * This chunk is sized and padded with zeros to ensure that the the sample data starts exactly at offset 512.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavRoland} The decoded values.
+       * @static
+       */
+      static decodeRLND(chunk) {
+        debug3("decodeRLND");
+        const roland = new data_buffer_default(chunk);
+        const chunkID = roland.readString(4);
+        const size = roland.readUInt32(true);
+        const device = roland.readString(8);
+        const unknown1 = roland.readUInt8();
+        const unknown2 = roland.readUInt8();
+        const unknown3 = roland.readUInt8();
+        const unknown4 = roland.readUInt8();
+        const sampleIndex = roland.readUInt8();
+        let sampleLabel = "";
+        if (device === "roifspsx") {
+          const label = ROLAND_SP404SX_PADS[sampleIndex];
+          if (label === void 0) {
+            debug3("Unknown Pad:", sampleIndex);
+          } else {
+            sampleLabel = label;
+          }
+        }
+        const value = {
+          chunkID,
+          size,
+          device,
+          unknown1,
+          unknown2,
+          unknown3,
+          unknown4,
+          sampleIndex,
+          sampleLabel
+        };
+        debug3("decodeRLND =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Enocdes JSON values to a valid `RLND` (Roland) chunk Buffer.
+       *
+       * Useful for use on SP-404 / SP-404SX / SP-404A samplers, perhaps others.
+       *
+       * The unknown value may be an unsigned 32bit integer.
+       *
+       * This chunk is sized and padded with zeros to ensure that the the sample data starts exactly at offset 512.
+       * @static
+       * @param {object} data The JSON values to set in the RLND chunk.
+       * @param {string} data.device An 8 character string representing the device label. SP-404SX Wave Converter v1.01 on macOS sets this value to `roifspsx`.
+       * @param {number} [data.unknown1] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x04`.
+       * @param {number} [data.unknown2] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
+       * @param {number} [data.unknown3] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
+       * @param {number} [data.unknown4] Unknown, SP-404SX Wave Converter v1.01 on macOS sets this value to `0x00`.
+       * @param {number|string} data.sampleIndex The pad the sample plays on, between `0` and `119` as a number or the pad label, `A1` - `J12`. Only the SP404SX (device === `roifspsx`) provided values can be converted from string corrently, and if it is not found it will defailt to `0` / `A1`.
+       * @returns {Buffer<ArrayBuffer>} The new RLND chunk.
+       * @static
+       * @see {@link https://www.roland.com/global/support/by_product/sp-404sx/updates_drivers/|SP-404SX Support Page}
+       */
+      static encodeRLND(data) {
+        const {
+          device,
+          unknown1 = 4,
+          unknown2 = 0,
+          unknown3 = 0,
+          unknown4 = 0
+        } = data;
+        let { sampleIndex } = data;
+        debug3("encodeRLND:", device, unknown1, unknown2, unknown3, unknown4, sampleIndex);
+        const buffer = Buffer.alloc(466, 0);
+        buffer.write("RLND", 0);
+        buffer.writeUInt32LE(458, 4);
+        buffer.write(device, 8);
+        buffer.writeUInt8(unknown1, 16);
+        buffer.writeUInt8(unknown2, 17);
+        buffer.writeUInt8(unknown3, 18);
+        buffer.writeUInt8(unknown4, 19);
+        if (device === "roifspsx" && typeof sampleIndex === "string") {
+          const index = ROLAND_SP404SX_PADS.indexOf(sampleIndex.toUpperCase());
+          if (index === -1) {
+            debug3("Unknown Pad:", sampleIndex);
+            sampleIndex = 0;
+          } else {
+            sampleIndex = index;
+          }
+        }
+        buffer.writeUInt8(Number(sampleIndex), 20);
+        debug3("Buffer:", buffer.toString("hex"));
+        return buffer;
+      }
+      /**
+       * Decode the JUNK (Padding) chunk.
+       *
+       * To align RIFF chunks to certain boundaries (i.e. 2048 bytes for CD-ROMs) the RIFF specification includes a JUNK chunk.
+       * The contents are to be skipped when reading.
+       * When writing RIFFs, JUNK chunks should not have an odd Size.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @param {object} options Decoding options.
+       * @param {boolean} options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
+       * @static
+       */
+      static decodeJUNK(chunk, options) {
+        const junk = new data_buffer_default(chunk);
+        const chunkID = junk.readString(4);
+        let size = junk.readUInt32(true);
+        if (options.roundOddChunks && size % 2 !== 0) {
+          size += 1;
+        }
+        debug3(`decodeJUNK: ${chunk.length} bytes, chunkID: ${chunkID}, junk size: ${size}`);
+      }
+      /**
+       * Decode the `PAD ` (Padding) chunk.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @static
+       */
+      static decodePAD(chunk) {
+        const pad = new data_buffer_default(chunk);
+        const chunkID = pad.readString(4);
+        const size = pad.readUInt32(true);
+        debug3(`decodePAD: ${chunk.length} bytes, chunkID: ${chunkID}, pad size: ${size}`);
+      }
+      /**
+       * Decode the bext (Broadcast Wave Format (BWF) Broadcast Extension) chunk.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @param {object} options Decoding options.
+       * @param {boolean} options.roundOddChunks When true we will round odd chunk sizes up to keep in spec.
+       * @returns {WavBext} The decoded values.
+       * @static
+       * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
+       * @see {@link https://tech.ebu.ch/docs/tech/tech3285.pdf|Spec}
+       */
+      static decodeBEXT(chunk, options) {
+        debug3("decodeBEXT");
+        const bext = new data_buffer_default(chunk);
+        const chunkID = bext.readString(4);
+        let size = bext.readUInt32(true);
+        if (options.roundOddChunks && size % 2 !== 0) {
+          size += 1;
+        }
+        const value = {
+          chunkID,
+          size
+        };
+        value.description = bext.readString(256);
+        value.originator = bext.readString(32);
+        value.originatorReference = bext.readString(32);
+        value.originationDate = bext.readString(10);
+        value.originationTime = bext.readString(8);
+        value.timeReferenceLow = bext.readUInt32(true);
+        value.timeReferenceHigh = bext.readUInt32(true);
+        value.version = bext.readUInt16(true);
+        value.umid = bext.read(64, false);
+        value.loudnessValue = bext.readUInt16(true);
+        value.loudnessRange = bext.readUInt16(true);
+        value.maxTruePeakLevel = bext.readUInt16(true);
+        value.maxMomentaryLoudness = bext.readUInt16(true);
+        value.maxShortTermLoudness = bext.readUInt16(true);
+        value.reserved = bext.read(180, false);
+        value.codingHistory = bext.read(bext.remainingBytes(), true);
+        debug3("decodeBEXT =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the 'cue ' (Cue Points) chunk.
+       *
+       * A cue chunk specifies one or more sample offsets which are often used to mark noteworthy sections of audio.
+       * For example, the beginning and end of a verse in a song may have cue points to make them easier to find.
+       * The cue chunk is optional and if included, a single cue chunk should specify all cue points for the "WAVE" chunk.
+       * No more than one cue chunk is allowed in a "WAVE" chunk.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavCue} The decoded values.
+       * @static
+       * @see {@link https://sites.google.com/site/musicgapi/technical-documents/wav-file-format#cue|Cue Chunk}
+       */
+      static decodeCue(chunk) {
+        debug3("decodeCue");
+        const cue = new data_buffer_default(chunk);
+        const chunkID = cue.readString(4);
+        const size = cue.readUInt32(true);
+        debug3("decodeCue size", size);
+        const numberCuePoints = cue.readUInt32(true);
+        debug3("decodeCue numberCuePoints", numberCuePoints);
+        const value = (
+          /** @type {WavCue} */
+          {
+            chunkID,
+            size,
+            numberCuePoints,
+            data: []
+          }
+        );
+        for (let i = 0; i < numberCuePoints; i++) {
+          const point = (
+            /** @type {WavCuePoint} */
+            {}
+          );
+          point.id = cue.readUInt32(true);
+          point.position = cue.readUInt32(true);
+          point.chunkID = cue.readString(4);
+          point.chunkStart = cue.readUInt32(true);
+          point.blockStart = cue.readUInt32(true);
+          point.sampleOffset = cue.readUInt32(true);
+          value.data.push(point);
+        }
+        if (cue.remainingBytes() > 0) {
+          debug3(`Unexpected ${cue.remainingBytes()} bytes remaining`);
+        }
+        debug3("decodeCue =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the 'ResU' chunk, a ZIP compressed JSON Data containg Time Signature, Tempo and other data for Logic Pro X.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavResU} The decoded values.
+       * @static
+       */
+      static decodeResU(chunk) {
+        debug3("decodeResU");
+        const resu = new data_buffer_default(chunk);
+        const chunkID = resu.readString(4);
+        const size = resu.readUInt32(true);
+        const data = resu.read(size, false);
+        let decompressed = "";
+        try {
+          decompressed = new TextDecoder().decode(inflate(data));
+          debug3("Inflated Size:", decompressed.length);
+        } catch (error) {
+          debug3("Error Inflating ResU:", error);
+        }
+        const value = {
+          chunkID,
+          size
+        };
+        try {
+          value.data = /** @type {unknown} */
+          JSON.parse(decompressed);
+        } catch (error) {
+          debug3("Error Parsing ResU JSON:", error);
+        }
+        debug3("decodeResU =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * DataSize 64 Parsing
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavDS64} The decoded values.
+       * @see {@link https://tech.ebu.ch/docs/tech/tech3306v1_0.pdf|RF64: An extended File Format for Audio}
+       * @static
+       */
+      static decodeDS64(chunk) {
+        const ds64 = new data_buffer_default(chunk);
+        const chunkID = ds64.readString(4);
+        const size = ds64.readUInt32(true);
+        const riffSizeLow = ds64.readUInt32(true);
+        const riffSizeHigh = ds64.readUInt32(true);
+        const dataSizeLow = ds64.readUInt32(true);
+        const dataSizeHigh = ds64.readUInt32(true);
+        const sampleCountLow = ds64.readUInt32(true);
+        const sampleCountHigh = ds64.readUInt32(true);
+        const tableLength = ds64.readUInt32(true);
+        const table = [];
+        if (tableLength > 0) {
+          while (ds64.remainingBytes() > 0) {
+            table.push({
+              chunkID: ds64.readString(4),
+              chunkSizeLow: ds64.readUInt32(true),
+              chunkSizeHigh: ds64.readUInt32(true)
+            });
+          }
+        }
+        const value = {
+          chunkID,
+          size,
+          riffSizeLow,
+          riffSizeHigh,
+          dataSizeLow,
+          dataSizeHigh,
+          sampleCountLow,
+          sampleCountHigh,
+          tableLength,
+          table
+        };
+        debug3("decodeDS64 =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the STRC (ACID Related) chunk.
+       *
+       * When a wave file is used as wave samples in a MIDI synthesizer,
+       * the instrument chunk helps the MIDI synthesizer define the sample pitch & relative volume of the samples.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {WavStrc} The decoded values.
+       * @static
+       */
+      static decodeSTRC(chunk) {
+        debug3("decodeSTRC");
+        const strc = new data_buffer_default(chunk);
+        const _chunkID = strc.readString(4);
+        const size = strc.readUInt32(true);
+        debug3("decodeSTRC size:", size);
+        const unknown1 = strc.readUInt32(true);
+        const numberOfSlices = strc.readUInt32(true);
+        const unknown2 = strc.readUInt32(true);
+        const unknown3 = strc.readUInt32(true);
+        const unknown4 = strc.readUInt32(true);
+        const unknown5 = strc.readUInt32(true);
+        const unknown6 = strc.readUInt32(true);
+        const slices = [];
+        debug3("decodeSTRC numberOfSlices:", numberOfSlices);
+        for (let i = 0; i < numberOfSlices - 1; i++) {
+          const header = strc.readUInt32(true);
+          const ID1 = strc.readUInt32(true);
+          const samplePositionUpper = strc.readUInt32(true);
+          const samplePositionLower = strc.readUInt32(true);
+          const samplePosition2Upper = strc.readUInt32(true);
+          const samplePosition2Lower = strc.readUInt32(true);
+          const data3 = strc.readUInt32(true);
+          const ID2 = strc.readUInt32(true);
+          const slice = {
+            header,
+            ID1,
+            samplePositionUpper,
+            samplePositionLower,
+            samplePosition2Upper,
+            samplePosition2Lower,
+            data3,
+            ID2
+          };
+          debug3("decodeSTRC slice:", i, slice);
+          debug3("remaining", strc.remainingBytes());
+          slices.push(slice);
+        }
+        debug3("decodeSTRC remaining", strc.remainingBytes());
+        const value = {
+          unknown1,
+          numberOfSlices,
+          unknown2,
+          unknown3,
+          unknown4,
+          unknown5,
+          unknown6,
+          slices
+        };
+        debug3("decodeSTRC =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the COMM (Common) chunk.
+       * The Common Chunk describes fundamental parameters of the sampled sound.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {AiffCommon} The decoded values.
+       * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
+       * @static
+       */
+      static decodeCOMM(chunk) {
+        debug3("decodeCOMM");
+        const commonChunk = new data_buffer_default(chunk);
+        const chunkID = commonChunk.readString(4);
+        const size = commonChunk.readUInt32();
+        const channels = commonChunk.readUInt16();
+        const sampleFrames = commonChunk.readUInt32();
+        const sampleSize = commonChunk.readUInt16();
+        const sampleRate = commonChunk.readFloatIEEE754(false);
+        let compressionType = "";
+        let compressionTypeName = "";
+        if (size !== 18) {
+          compressionType = commonChunk.readString(4);
+          const nameLength = commonChunk.readUInt8();
+          compressionTypeName = commonChunk.readString(nameLength);
+        }
+        const value = {
+          chunkID,
+          size,
+          channels,
+          sampleFrames,
+          sampleSize,
+          sampleRate,
+          compressionType,
+          compressionTypeName
+        };
+        debug3("decodeCOMM =", JSON.stringify(value, null, 2));
+        return value;
+      }
+      /**
+       * Decode the SSND (Sound Data) chunk.
+       *
+       * Offset:     4 bytes
+       * Block Size: 4 bytes
+       * Sound Data: n bytes
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {AiffSoundData} The decoded values.
+       * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
+       * @static
+       */
+      static decodeSSND(chunk) {
+        debug3("decodeSSND");
+        const ssndChunk = new data_buffer_default(chunk);
+        const chunkID = ssndChunk.readString(4);
+        const size = ssndChunk.readUInt32();
+        const offset = ssndChunk.readUInt32();
+        const blockSize = ssndChunk.readUInt32();
+        const soundData = ssndChunk.read(ssndChunk.remainingBytes());
+        const value = {
+          chunkID,
+          size,
+          offset,
+          blockSize,
+          soundData
+        };
+        debug3("decodeSSND =", JSON.stringify({ chunkID, size, offset, blockSize }, null, 2));
+        return value;
+      }
+      /**
+       * Decode the FVER (Format Vers) chunk.
+       *
+       * The Format Version Chunk contains a date field to indicate the format rules for an AIFF-C specification.
+       * The timestamp holds the number of seconds since January 1, 1904.
+       * The FVER chunk appears only in AIFF-C files.
+       * @param {string|Buffer|Uint8Array} chunk Data Blob
+       * @returns {AiffFormatVersion} The decoded values.
+       * @see {@link https://www.mmsp.ece.mcgill.ca/Documents/AudioFormats/AIFF/AIFF.html|Audio File Format Specifications}
+       * @static
+       */
+      static decodeFVER(chunk) {
+        debug3("decodeFVER");
+        const formatVersionChunk = new data_buffer_default(chunk);
+        const chunkID = formatVersionChunk.readString(4);
+        const size = formatVersionChunk.readUInt32();
+        const timestamp = formatVersionChunk.readUInt32();
+        const versionName = timestamp === 2726318400 ? "AIFCVersion1" : `Unknown: ${timestamp}`;
+        const value = {
+          chunkID,
+          size,
+          timestamp,
+          versionName
+        };
+        debug3("decodeFVER =", JSON.stringify(value, null, 2));
+        return value;
+      }
+    };
+    audio_wav_default = AudioWAV;
+  }
+});
+
+// packages/assets/src/snes.ts
+function decodePlanarTiles(bytes, depth) {
+  const size = depth * 8;
+  const count = unitCount(bytes, size, "Planar tile stream");
+  return Array.from(
+    { length: count },
+    (_, tileIndex) => Array.from(
+      { length: 8 },
+      (_2, row) => Array.from({ length: 8 }, (_3, column) => {
+        let pixel = 0;
+        for (let plane = 0; plane < depth; plane++) {
+          const byte = bytes[tileIndex * size + planeOffset(depth, plane, row)];
+          pixel |= (byte >> 7 - column & 1) << plane;
+        }
+        return pixel;
+      })
+    )
+  );
+}
+function encodePlanarTiles(tiles, depth) {
+  const size = depth * 8;
+  const bytes = new Uint8Array(tiles.length * size);
+  tiles.forEach((tile, tileIndex) => {
+    validateTile(tile, `Tile ${tileIndex}`, 2 ** depth - 1);
+    tile.forEach(
+      (row, y) => row.forEach((pixel, x) => {
+        for (let plane = 0; plane < depth; plane++) {
+          if ((pixel & 1 << plane) !== 0) {
+            bytes[tileIndex * size + planeOffset(depth, plane, y)] |= 1 << 7 - x;
+          }
+        }
+      })
+    );
+  });
+  return bytes;
+}
+function decodeMode7Tiles(bytes) {
+  const count = unitCount(bytes, 64, "Mode 7 tile stream");
+  return Array.from(
+    { length: count },
+    (_, tileIndex) => Array.from(
+      { length: 8 },
+      (_2, row) => Array.from({ length: 8 }, (_3, column) => bytes[tileIndex * 64 + row * 8 + column])
+    )
+  );
+}
+function encodeMode7Tiles(tiles) {
+  const bytes = new Uint8Array(tiles.length * 64);
+  tiles.forEach((tile, tileIndex) => {
+    validateTile(tile, `Mode 7 tile ${tileIndex}`, 255);
+    tile.forEach(
+      (row, y) => row.forEach((pixel, x) => {
+        bytes[tileIndex * 64 + y * 8 + x] = pixel;
+      })
+    );
+  });
+  return bytes;
+}
+function decodeBgr555(bytes) {
+  const count = unitCount(bytes, 2, "BGR555 palette");
+  return Array.from({ length: count }, (_, index) => {
+    const word2 = bytes[index * 2] | bytes[index * 2 + 1] << 8;
+    return {
+      red: word2 & 31,
+      green: word2 >> 5 & 31,
+      blue: word2 >> 10 & 31,
+      unusedHighBit: word2 >> 15 & 1
+    };
+  });
+}
+function encodeBgr555(colors) {
+  const bytes = new Uint8Array(colors.length * 2);
+  colors.forEach((color, index) => {
+    const word2 = integer2(color.red, `Color ${index} red`, 0, 31) | integer2(color.green, `Color ${index} green`, 0, 31) << 5 | integer2(color.blue, `Color ${index} blue`, 0, 31) << 10 | integer2(color.unusedHighBit, `Color ${index} unusedHighBit`, 0, 1) << 15;
+    bytes[index * 2] = word2 & 255;
+    bytes[index * 2 + 1] = word2 >> 8;
+  });
+  return bytes;
+}
+function decodeBgMap(bytes) {
+  const count = unitCount(bytes, 2, "BG tilemap");
+  return Array.from({ length: count }, (_, index) => {
+    const word2 = bytes[index * 2] | bytes[index * 2 + 1] << 8;
+    return {
+      tile: word2 & 1023,
+      palette: word2 >> 10 & 7,
+      priority: word2 >> 13 & 1,
+      horizontalFlip: word2 >> 14 & 1,
+      verticalFlip: word2 >> 15 & 1
+    };
+  });
+}
+function encodeBgMap(entries3) {
+  const bytes = new Uint8Array(entries3.length * 2);
+  entries3.forEach((entry, index) => {
+    const word2 = integer2(entry.tile, `Entry ${index} tile`, 0, 1023) | integer2(entry.palette, `Entry ${index} palette`, 0, 7) << 10 | integer2(entry.priority, `Entry ${index} priority`, 0, 1) << 13 | integer2(entry.horizontalFlip, `Entry ${index} horizontalFlip`, 0, 1) << 14 | integer2(entry.verticalFlip, `Entry ${index} verticalFlip`, 0, 1) << 15;
+    bytes[index * 2] = word2 & 255;
+    bytes[index * 2 + 1] = word2 >> 8;
+  });
+  return bytes;
+}
+function decodeMode7Map(bytes) {
+  return [...bytes];
+}
+function encodeMode7Map(indexes) {
+  return Uint8Array.from(indexes.map((value, index) => integer2(value, `Index ${index}`, 0, 255)));
+}
+function decodeBrrBlocks(bytes) {
+  const count = unitCount(bytes, 9, "BRR stream");
+  return Array.from({ length: count }, (_, blockIndex) => {
+    const offset = blockIndex * 9;
+    const header = bytes[offset];
+    const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
+      const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
+      const nibble2 = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
+      return nibble2 >= 8 ? nibble2 - 16 : nibble2;
+    });
+    return {
+      range: header >> 4,
+      filter: header >> 2 & 3,
+      loop: header >> 1 & 1,
+      end: header & 1,
+      nibbles
+    };
+  });
+}
+function encodeBrrBlocks(blocks) {
+  const bytes = new Uint8Array(blocks.length * 9);
+  blocks.forEach((block, index) => {
+    if (block.nibbles.length !== 16) {
+      throw new RangeError(`BRR block ${index} requires exactly 16 nibbles.`);
+    }
+    const offset = index * 9;
+    bytes[offset] = integer2(block.range, `BRR block ${index} range`, 0, 15) << 4 | integer2(block.filter, `BRR block ${index} filter`, 0, 3) << 2 | integer2(block.loop, `BRR block ${index} loop`, 0, 1) << 1 | integer2(block.end, `BRR block ${index} end`, 0, 1);
+    for (let sampleIndex = 0; sampleIndex < 16; sampleIndex += 2) {
+      const high = integer2(block.nibbles[sampleIndex], `BRR nibble ${sampleIndex}`, -8, 7) & 15;
+      const low = integer2(block.nibbles[sampleIndex + 1], `BRR nibble ${sampleIndex + 1}`, -8, 7) & 15;
+      bytes[offset + 1 + sampleIndex / 2] = high << 4 | low;
+    }
+  });
+  return bytes;
+}
+var planeOffset, validateTile, sameModelValue, nativeEncoder, snesNativeEncoders;
+var init_snes = __esm({
+  "packages/assets/src/snes.ts"() {
+    "use strict";
+    init_validation();
+    planeOffset = (depth, plane, row) => {
+      if (depth === 3 && plane === 2) {
+        return 16 + row;
+      }
+      return Math.floor(plane / 2) * 16 + row * 2 + plane % 2;
+    };
+    validateTile = (tile, label, maximum) => {
+      if (tile.length !== 8) {
+        throw new RangeError(`${label} must contain exactly 8 rows.`);
+      }
+      tile.forEach((row, y) => {
+        if (row.length !== 8) {
+          throw new RangeError(`${label} row ${y} must contain exactly 8 pixels.`);
+        }
+        row.forEach((pixel, x) => integer2(pixel, `${label} pixel ${x},${y}`, 0, maximum));
+      });
+    };
+    sameModelValue = (left, right) => {
+      if (Object.is(left, right)) {
+        return true;
+      }
+      if (Array.isArray(left) && Array.isArray(right)) {
+        return left.length === right.length && left.every((entry, index) => sameModelValue(entry, right[index]));
+      }
+      if (!left || !right || typeof left !== "object" || typeof right !== "object" || Array.isArray(left) || Array.isArray(right)) {
+        return false;
+      }
+      const leftRecord = left;
+      const rightRecord = right;
+      const keys = Object.keys(leftRecord);
+      return keys.length === Object.keys(rightRecord).length && keys.every(
+        (key3) => Object.hasOwn(rightRecord, key3) && sameModelValue(leftRecord[key3], rightRecord[key3])
+      );
+    };
+    nativeEncoder = (id, kind, output, modelField, encode, decode4) => Object.freeze({
+      id,
+      version: "1.0.0",
+      inputKinds: [kind],
+      primaryOutput: output,
+      encode: (document2, options) => {
+        if (Object.keys(options).length !== 0) {
+          throw new Error(`Native encoder '${id}' accepts no options.`);
+        }
+        if (!document2.value || typeof document2.value !== "object" || Array.isArray(document2.value)) {
+          throw new Error(`Native encoder '${id}' requires an object model.`);
+        }
+        const value = document2.value;
+        const bytes = encode(value);
+        if (!sameModelValue(decode4(bytes), value[modelField])) {
+          throw new Error(`Native encoder '${id}' did not preserve '${modelField}'.`);
+        }
+        return {
+          outputs: { [output]: { bytes, mediaType: "application/octet-stream" } },
+          fidelity: { kind: "exact", verification: "native model round trip" },
+          normalizedOptions: {}
+        };
+      }
+    });
+    snesNativeEncoders = Object.freeze(
+      [
+        ...[2, 3, 4, 8].map(
+          (depth) => nativeEncoder(
+            `snes.tile.${depth}bpp`,
+            "snes-planar-tiles",
+            "tiles",
+            "tiles",
+            (value) => encodePlanarTiles(value.tiles, depth),
+            (bytes) => decodePlanarTiles(bytes, depth)
+          )
+        ),
+        nativeEncoder(
+          "snes.tile.mode7",
+          "snes-mode7-tiles",
+          "tiles",
+          "tiles",
+          (value) => encodeMode7Tiles(value.tiles),
+          decodeMode7Tiles
+        ),
+        nativeEncoder(
+          "snes.palette.bgr555",
+          "snes-palette-bgr555",
+          "palette",
+          "colors",
+          (value) => encodeBgr555(value.colors),
+          decodeBgr555
+        ),
+        nativeEncoder(
+          "snes.tilemap.bg",
+          "snes-bg-tilemap",
+          "tilemap",
+          "entries",
+          (value) => encodeBgMap(value.entries),
+          decodeBgMap
+        ),
+        nativeEncoder(
+          "snes.tilemap.mode7",
+          "snes-mode7-tilemap",
+          "tilemap",
+          "indexes",
+          (value) => encodeMode7Map(value.indexes),
+          decodeMode7Map
+        ),
+        nativeEncoder(
+          "snes.brr",
+          "snes-brr",
+          "brr",
+          "blocks",
+          (value) => encodeBrrBlocks(value.blocks),
+          decodeBrrBlocks
+        )
+      ].sort((left, right) => left.id.localeCompare(right.id))
+    );
+  }
+});
+
+// packages/assets/src/brr-codec.ts
+function decodeNibble(nibble2, range, filter, state) {
+  let value = range <= 12 ? nibble2 << range >> 1 : nibble2 & ~2047;
+  const previous = state.previous;
+  const halfPrevious2 = state.previous2 >> 1;
+  if (filter === 1) {
+    value += (previous >> 1) + (-previous >> 5);
+  }
+  if (filter === 2) {
+    value += previous - halfPrevious2 + (halfPrevious2 >> 4) + (previous * -3 >> 6);
+  }
+  if (filter === 3) {
+    value += previous - halfPrevious2 + (previous * -13 >> 7) + (halfPrevious2 * 3 >> 4);
+  }
+  value = Math.max(-32768, Math.min(32767, value));
+  return value << 17 >> 16;
+}
+function decodeBrrPcm(bytes, loopOffset, repeatCount = 0) {
+  if (bytes.length === 0 || bytes.length % 9 !== 0) {
+    throw new Error("BRR stream requires complete nine-byte blocks.");
+  }
+  if (!Number.isSafeInteger(repeatCount) || repeatCount < 0 || repeatCount > 16) {
+    throw new RangeError("BRR repeat count must be 0..16.");
+  }
+  const blocks = decodeBrrBlocks(bytes);
+  if (blocks.some((block, index) => block.end !== Number(index === blocks.length - 1))) {
+    throw new Error("BRR END flag must occur on the final block only.");
+  }
+  if (loopOffset !== void 0 && (!Number.isSafeInteger(loopOffset) || loopOffset < 0 || loopOffset >= bytes.length || loopOffset % 9 !== 0 || blocks.at(-1)?.loop !== 1)) {
+    throw new Error("BRR loop offset or LOOP flag is invalid.");
+  }
+  if (loopOffset === void 0 && repeatCount > 0) {
+    throw new Error("BRR replay requires a loop offset.");
+  }
+  const output = [];
+  let state = { previous: 0, previous2: 0 };
+  const play = (startBlock) => {
+    for (let index = startBlock; index < blocks.length; index++) {
+      const block = blocks[index];
+      for (const nibble2 of block.nibbles) {
+        const sample = decodeNibble(nibble2, block.range, block.filter, state);
+        output.push(sample);
+        state = { previous: sample, previous2: state.previous };
+      }
+    }
+  };
+  play(0);
+  if (loopOffset !== void 0) {
+    for (let repeat = 0; repeat < repeatCount; repeat++) {
+      play(loopOffset / 9);
+    }
+  }
+  return Int16Array.from(output);
+}
+function candidateBlock(source, start, range, filter, initial) {
+  let state = initial;
+  let squaredError = 0;
+  const nibbles = [];
+  for (let sampleIndex = 0; sampleIndex < 16; sampleIndex++) {
+    const target = source[start + sampleIndex];
+    let bestNibble = -8;
+    let bestSample = 0;
+    let bestError = Number.POSITIVE_INFINITY;
+    for (let nibble2 = -8; nibble2 <= 7; nibble2++) {
+      const decoded = decodeNibble(nibble2, range, filter, state);
+      const error = (target - decoded) ** 2;
+      if (error < bestError || error === bestError && Math.abs(nibble2) < Math.abs(bestNibble)) {
+        bestNibble = nibble2;
+        bestSample = decoded;
+        bestError = error;
+      }
+    }
+    nibbles.push(bestNibble);
+    squaredError += bestError;
+    state = { previous: bestSample, previous2: state.previous };
+  }
+  return { range, filter, nibbles, state, squaredError };
+}
+function encodeBrrPcm(samples, loop) {
+  if (samples.length === 0 || samples.length % 16 !== 0) {
+    throw new Error("BRR encoding requires at least one whole 16-sample block.");
+  }
+  const bytes = new Uint8Array(samples.length / 16 * 9);
+  let state = { previous: 0, previous2: 0 };
+  for (let start = 0; start < samples.length; start += 16) {
+    let best;
+    for (let filter = 0; filter < 4; filter++) {
+      for (let range = 0; range <= 12; range++) {
+        const candidate = candidateBlock(samples, start, range, filter, state);
+        if (!best || candidate.squaredError < best.squaredError) {
+          best = candidate;
+        }
+      }
+    }
+    if (!best) {
+      throw new Error("BRR encoder could not select a block.");
+    }
+    const offset = start / 16 * 9;
+    const final = start + 16 === samples.length;
+    bytes[offset] = best.range << 4 | best.filter << 2 | Number(final && loop) << 1 | Number(final);
+    for (let index = 0; index < 16; index += 2) {
+      bytes[offset + 1 + index / 2] = (best.nibbles[index] & 15) << 4 | best.nibbles[index + 1] & 15;
+    }
+    state = best.state;
+  }
+  return bytes;
+}
+var init_brr_codec = __esm({
+  "packages/assets/src/brr-codec.ts"() {
+    "use strict";
+    init_snes();
+  }
+});
+
+// packages/assets/src/audio.ts
+function scanWave(bytes) {
+  if (bytes.length < 12 || bytes.length > MAX_WAVE_BYTES || ascii(bytes, 0, 4) !== "RIFF" || ascii(bytes, 8, 4) !== "WAVE" || u32le(bytes, 4) + 8 !== bytes.length) {
+    throw new Error("Expected a bounded little-endian RIFF/WAVE file with an exact declared size.");
+  }
+  audio_wav_default.decodeHeader(bytes.subarray(0, 12));
+  const chunks = /* @__PURE__ */ new Map();
+  let offset = 12;
+  while (offset < bytes.length) {
+    if (offset + 8 > bytes.length) {
+      throw new Error("Truncated WAVE chunk header.");
+    }
+    const name = ascii(bytes, offset, 4);
+    const size = u32le(bytes, offset + 4);
+    const end = offset + 8 + size;
+    const next = end + (size & 1);
+    if (!Number.isSafeInteger(next) || next > bytes.length) {
+      throw new Error(`Truncated WAVE ${name} chunk or RIFF pad byte.`);
+    }
+    if (["fmt ", "data", "smpl"].includes(name)) {
+      if (chunks.has(name)) {
+        throw new Error(`Duplicate WAVE ${name} chunk.`);
+      }
+      chunks.set(name, { bytes: bytes.subarray(offset, end), size });
+    }
+    offset = next;
+  }
+  if (!chunks.has("fmt ") || !chunks.has("data")) {
+    throw new Error("WAVE requires one fmt and one data chunk.");
+  }
+  return chunks;
+}
+function writePcmWave(samples, sampleRate) {
+  if (!Number.isSafeInteger(sampleRate) || sampleRate < 1 || sampleRate > 384e3 || samples.length > MAX_SAMPLES) {
+    throw new RangeError("Invalid review WAVE sample rate or length.");
+  }
+  const bytes = new Uint8Array(44 + samples.length * 2);
+  const view = new DataView(bytes.buffer);
+  const writeAscii = (offset, value) => {
+    for (let index = 0; index < value.length; index++) {
+      bytes[offset + index] = value.charCodeAt(index);
+    }
+  };
+  writeAscii(0, "RIFF");
+  view.setUint32(4, bytes.length - 8, true);
+  writeAscii(8, "WAVEfmt ");
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeAscii(36, "data");
+  view.setUint32(40, samples.length * 2, true);
+  samples.forEach((sample, index) => view.setInt16(44 + index * 2, sample, true));
+  return bytes;
+}
+function withAudioEncoder(native) {
+  return native.map((encoder) => {
+    if (encoder.id !== "snes.brr") {
+      return encoder;
+    }
+    return Object.freeze({
+      ...encoder,
+      inputKinds: [...encoder.inputKinds, "pcm-audio"],
+      encode: (document2, rawOptions, resources) => {
+        if (document2.kind !== "pcm-audio") {
+          return encoder.encode(document2, rawOptions, resources);
+        }
+        if (!document2.value || typeof document2.value !== "object" || !("samples" in document2.value) || !(document2.value.samples instanceof Int16Array) || !("sampleRate" in document2.value) || typeof document2.value.sampleRate !== "number" || !Number.isSafeInteger(document2.value.sampleRate) || document2.value.sampleRate < 1 || document2.value.sampleRate > 384e3 || !("sourceBitDepth" in document2.value) || document2.value.sourceBitDepth !== 8 && document2.value.sourceBitDepth !== 16) {
+          throw new Error(
+            "PCM model requires bounded mono PCM16 samples and an explicit source rate/depth."
+          );
+        }
+        const audio = document2.value;
+        const options = audioOptions(rawOptions, audio);
+        const originalCount = audio.samples.length;
+        if (originalCount === 0) {
+          throw new Error("WAVE has no PCM samples.");
+        }
+        const paddingCount = (16 - originalCount % 16) % 16;
+        if (paddingCount > 0 && options.padding === "reject") {
+          throw new Error(
+            `WAVE has ${originalCount} samples; BRR requires complete 16-sample blocks.`
+          );
+        }
+        const padded = new Int16Array(originalCount + paddingCount);
+        padded.set(audio.samples);
+        const loop = options.loop === "source" ? audio.loop : options.loop;
+        if (loop) {
+          if (!Number.isSafeInteger(loop.start) || !Number.isSafeInteger(loop.end) || loop.start < 0 || loop.start >= loop.end || loop.end !== originalCount || loop.start % 16 !== 0 || loop.end % 16 !== 0) {
+            throw new Error(
+              "BRR loop must start on a 16-sample boundary and end at the unpadded tail."
+            );
+          }
+        }
+        const brr = encodeBrrPcm(padded, Boolean(loop));
+        const loopOffset = loop ? loop.start / 16 * 9 : void 0;
+        const decoded = decodeBrrPcm(brr, loopOffset);
+        let squared = 0;
+        let signal = 0;
+        let peakError = 0;
+        for (let index = 0; index < originalCount; index++) {
+          const error = audio.samples[index] - decoded[index];
+          squared += error * error;
+          signal += audio.samples[index] * audio.samples[index];
+          peakError = Math.max(peakError, Math.abs(error));
+        }
+        const rmsError = Math.sqrt(squared / originalCount);
+        const snrDb = squared > 0 && signal > 0 ? 10 * Math.log10(signal / squared) : void 0;
+        let loopPeakError;
+        if (loop) {
+          const repeated = decodeBrrPcm(brr, loopOffset, 1);
+          loopPeakError = 0;
+          for (let index = 0; index < loop.end - loop.start; index++) {
+            const replay = repeated[padded.length + index];
+            loopPeakError = Math.max(
+              loopPeakError,
+              Math.abs(replay - audio.samples[loop.start + index])
+            );
+          }
+        }
+        const metadata = {
+          sampleRate: audio.sampleRate,
+          sourceBitDepth: audio.sourceBitDepth,
+          sourceSamples: originalCount,
+          paddedSamples: padded.length,
+          paddingSamples: paddingCount,
+          sourceLoop: audio.loop,
+          loop,
+          loopOffset,
+          peakError,
+          rmsError,
+          snrDb,
+          loopPeakError,
+          encoderPolicy: "greedy-integer-sse-v1"
+        };
+        return {
+          outputs: {
+            brr: { bytes: brr, mediaType: "application/octet-stream", metadata },
+            reviewWav: {
+              bytes: writePcmWave(decoded, audio.sampleRate),
+              mediaType: "audio/wav",
+              metadata
+            }
+          },
+          fidelity: {
+            kind: "lossy-audio",
+            sampleRate: audio.sampleRate,
+            sourceSamples: originalCount,
+            paddedSamples: padded.length,
+            paddingSamples: paddingCount,
+            decodedSamples: decoded.length,
+            peakError,
+            rmsError,
+            snrDb,
+            loopPeakError
+          },
+          normalizedOptions: { padding: options.padding, loop: loop ?? false }
+        };
+      }
+    });
+  });
+}
+var MAX_WAVE_BYTES, MAX_SAMPLES, u16le, u32le, ascii, waveImporter, audioOptions;
+var init_audio = __esm({
+  async "packages/assets/src/audio.ts"() {
+    "use strict";
+    await init_audio_wav();
+    init_brr_codec();
+    MAX_WAVE_BYTES = 16 * 1024 * 1024;
+    MAX_SAMPLES = 1024 * 1024;
+    u16le = (bytes, offset) => bytes[offset] | bytes[offset + 1] << 8;
+    u32le = (bytes, offset) => bytes[offset] + bytes[offset + 1] * 256 + bytes[offset + 2] * 65536 + bytes[offset + 3] * 16777216 >>> 0;
+    ascii = (bytes, offset, length) => String.fromCharCode(...bytes.subarray(offset, offset + length));
+    waveImporter = Object.freeze({
+      id: "uttori.import.wave",
+      version: "1.0.0",
+      mediaTypes: ["audio/wav", "audio/wave", "audio/x-wav"],
+      import: (input) => {
+        const chunks = scanWave(input.bytes);
+        const formatChunk = chunks.get("fmt ");
+        const dataChunk = chunks.get("data");
+        if (formatChunk.size !== 16 && !(formatChunk.size === 18 && u16le(formatChunk.bytes, 24) === 0)) {
+          throw new Error("WAVE PCM fmt requires 16 bytes or an empty two-byte extension.");
+        }
+        const format = audio_wav_default.decodeFMT(formatChunk.bytes);
+        if (format.audioFormatValue !== 1 || format.channels !== 1 || format.bitsPerSample !== 8 && format.bitsPerSample !== 16) {
+          throw new Error(
+            `Unsupported WAVE format: code ${format.audioFormatValue}, ${format.channels} channels, ${format.bitsPerSample} bits; expected mono PCM8/PCM16.`
+          );
+        }
+        const bytesPerSample = format.bitsPerSample / 8;
+        if (!Number.isSafeInteger(format.sampleRate) || format.sampleRate < 1 || format.sampleRate > 384e3 || format.blockAlign !== bytesPerSample || format.byteRate !== format.sampleRate * bytesPerSample || dataChunk.size % bytesPerSample !== 0 || dataChunk.size / bytesPerSample > MAX_SAMPLES) {
+          throw new Error("WAVE sample rate, alignment, byte rate, or data length is invalid.");
+        }
+        const sampleCount = dataChunk.size / bytesPerSample;
+        const samples = new Int16Array(sampleCount);
+        const data = dataChunk.bytes.subarray(8);
+        for (let index = 0; index < sampleCount; index++) {
+          if (format.bitsPerSample === 8) {
+            samples[index] = data[index] - 128 << 8;
+          } else {
+            const unsigned = u16le(data, index * 2);
+            samples[index] = unsigned >= 32768 ? unsigned - 65536 : unsigned;
+          }
+        }
+        let loop;
+        const sampleChunk = chunks.get("smpl");
+        if (sampleChunk) {
+          if (sampleChunk.size < 36) {
+            throw new Error("WAVE smpl chunk is truncated.");
+          }
+          const loopCount = u32le(sampleChunk.bytes, 8 + 28);
+          const extraBytes = u32le(sampleChunk.bytes, 8 + 32);
+          if (loopCount > 1 || 36 + loopCount * 24 + extraBytes !== sampleChunk.size) {
+            throw new Error("WAVE smpl requires at most one complete forward loop.");
+          }
+          const smpl = audio_wav_default.decodeSMPL(sampleChunk.bytes);
+          if (smpl.sampleLoopsCount !== loopCount) {
+            throw new Error("WAVE smpl loop count mismatch.");
+          }
+          if (loopCount === 1) {
+            const sourceLoop = smpl.sampleLoops[0];
+            if (sourceLoop.type !== 0 || sourceLoop.count !== 0 || sourceLoop.start >= sampleCount || sourceLoop.end < sourceLoop.start || sourceLoop.end >= sampleCount) {
+              throw new Error("Unsupported or out-of-range WAVE smpl loop.");
+            }
+            loop = { start: sourceLoop.start, end: sourceLoop.end + 1 };
+          }
+        }
+        const value = {
+          kind: "pcm-audio",
+          sampleRate: format.sampleRate,
+          sourceBitDepth: format.bitsPerSample,
+          samples,
+          loop
+        };
+        return {
+          kind: value.kind,
+          value,
+          metadata: {
+            sampleRate: value.sampleRate,
+            sourceBitDepth: value.sourceBitDepth,
+            sourceLoop: loop
+          }
+        };
+      }
+    });
+    audioOptions = (raw, source) => {
+      if (Object.keys(raw).some((key3) => key3 !== "padding" && key3 !== "loop")) {
+        throw new Error("Unknown WAVE-to-BRR option.");
+      }
+      const padding = raw.padding === void 0 ? "reject" : raw.padding;
+      if (padding !== "reject" && padding !== "zero") {
+        throw new Error("padding must be 'reject' or 'zero'.");
+      }
+      let requested = raw.loop;
+      if (requested === void 0) {
+        requested = source.loop ? "source" : false;
+      }
+      if (requested === false) {
+        return { padding, loop: false };
+      }
+      if (requested === "source") {
+        if (!source.loop) {
+          throw new Error("WAVE has no source loop.");
+        }
+        return { padding, loop: "source" };
+      }
+      if (!requested || typeof requested !== "object" || Array.isArray(requested) || !("start" in requested) || !("end" in requested) || typeof requested.start !== "number" || typeof requested.end !== "number" || Object.keys(requested).some((key3) => key3 !== "start" && key3 !== "end")) {
+        throw new Error("loop must be false, 'source', or { start, end } in sample frames.");
+      }
+      return { padding, loop: { start: requested.start, end: requested.end } };
+    };
+  }
+});
+
+// packages/assets/src/data-structured.ts
+var init_data_structured = __esm({
+  "packages/assets/src/data-structured.ts"() {
+    "use strict";
+  }
+});
+
+// packages/assets/src/data-text.ts
+var init_data_text = __esm({
+  "packages/assets/src/data-text.ts"() {
+    "use strict";
+  }
+});
+
+// packages/assets/src/data.ts
+var rawImporter, rawEncoder, jsonImporter;
+var init_data2 = __esm({
+  "packages/assets/src/data.ts"() {
+    "use strict";
+    init_data_structured();
+    init_data_text();
+    rawImporter = Object.freeze({
+      id: "uttori.import.raw",
+      version: "1.0.0",
+      mediaTypes: ["application/octet-stream"],
+      import: (input) => ({
+        kind: "raw",
+        value: input.bytes.slice()
+      })
+    });
+    rawEncoder = Object.freeze({
+      id: "uttori.data.raw",
+      version: "1.0.0",
+      inputKinds: ["raw"],
+      primaryOutput: "data",
+      encode: (document2, options) => {
+        if (Object.keys(options).length !== 0) {
+          throw new Error("Raw encoding accepts no options.");
+        }
+        if (!(document2.value instanceof Uint8Array)) {
+          throw new Error("Raw document requires bytes.");
+        }
+        return {
+          outputs: { data: { bytes: document2.value.slice(), mediaType: "application/octet-stream" } },
+          fidelity: { kind: "exact", verification: "byte equality" },
+          normalizedOptions: {}
+        };
+      }
+    });
+    jsonImporter = Object.freeze({
+      id: "uttori.import.json",
+      version: "1.0.0",
+      mediaTypes: ["application/json"],
+      import: (input) => {
+        const value = JSON.parse(
+          new TextDecoder("utf-8", { fatal: true }).decode(input.bytes)
+        );
+        if (value === null || typeof value !== "object" || Array.isArray(value) || !("kind" in value) || typeof value.kind !== "string") {
+          throw new Error("Asset JSON requires an object with a kind string.");
+        }
+        return { kind: value.kind, value };
+      }
+    });
+  }
+});
+
+// node_modules/@uttori/data-tools/src/data-hash-crc32.js
+var CRC32_TABLE, calculate, data_hash_crc32_default;
+var init_data_hash_crc32 = __esm({
+  async "node_modules/@uttori/data-tools/src/data-hash-crc32.js"() {
+    await init_data_buffer();
+    CRC32_TABLE = [
+      0,
+      1996959894,
+      3993919788,
+      2567524794,
+      124634137,
+      1886057615,
+      3915621685,
+      2657392035,
+      249268274,
+      2044508324,
+      3772115230,
+      2547177864,
+      162941995,
+      2125561021,
+      3887607047,
+      2428444049,
+      498536548,
+      1789927666,
+      4089016648,
+      2227061214,
+      450548861,
+      1843258603,
+      4107580753,
+      2211677639,
+      325883990,
+      1684777152,
+      4251122042,
+      2321926636,
+      335633487,
+      1661365465,
+      4195302755,
+      2366115317,
+      997073096,
+      1281953886,
+      3579855332,
+      2724688242,
+      1006888145,
+      1258607687,
+      3524101629,
+      2768942443,
+      901097722,
+      1119000684,
+      3686517206,
+      2898065728,
+      853044451,
+      1172266101,
+      3705015759,
+      2882616665,
+      651767980,
+      1373503546,
+      3369554304,
+      3218104598,
+      565507253,
+      1454621731,
+      3485111705,
+      3099436303,
+      671266974,
+      1594198024,
+      3322730930,
+      2970347812,
+      795835527,
+      1483230225,
+      3244367275,
+      3060149565,
+      1994146192,
+      31158534,
+      2563907772,
+      4023717930,
+      1907459465,
+      112637215,
+      2680153253,
+      3904427059,
+      2013776290,
+      251722036,
+      2517215374,
+      3775830040,
+      2137656763,
+      141376813,
+      2439277719,
+      3865271297,
+      1802195444,
+      476864866,
+      2238001368,
+      4066508878,
+      1812370925,
+      453092731,
+      2181625025,
+      4111451223,
+      1706088902,
+      314042704,
+      2344532202,
+      4240017532,
+      1658658271,
+      366619977,
+      2362670323,
+      4224994405,
+      1303535960,
+      984961486,
+      2747007092,
+      3569037538,
+      1256170817,
+      1037604311,
+      2765210733,
+      3554079995,
+      1131014506,
+      879679996,
+      2909243462,
+      3663771856,
+      1141124467,
+      855842277,
+      2852801631,
+      3708648649,
+      1342533948,
+      654459306,
+      3188396048,
+      3373015174,
+      1466479909,
+      544179635,
+      3110523913,
+      3462522015,
+      1591671054,
+      702138776,
+      2966460450,
+      3352799412,
+      1504918807,
+      783551873,
+      3082640443,
+      3233442989,
+      3988292384,
+      2596254646,
+      62317068,
+      1957810842,
+      3939845945,
+      2647816111,
+      81470997,
+      1943803523,
+      3814918930,
+      2489596804,
+      225274430,
+      2053790376,
+      3826175755,
+      2466906013,
+      167816743,
+      2097651377,
+      4027552580,
+      2265490386,
+      503444072,
+      1762050814,
+      4150417245,
+      2154129355,
+      426522225,
+      1852507879,
+      4275313526,
+      2312317920,
+      282753626,
+      1742555852,
+      4189708143,
+      2394877945,
+      397917763,
+      1622183637,
+      3604390888,
+      2714866558,
+      953729732,
+      1340076626,
+      3518719985,
+      2797360999,
+      1068828381,
+      1219638859,
+      3624741850,
+      2936675148,
+      906185462,
+      1090812512,
+      3747672003,
+      2825379669,
+      829329135,
+      1181335161,
+      3412177804,
+      3160834842,
+      628085408,
+      1382605366,
+      3423369109,
+      3138078467,
+      570562233,
+      1426400815,
+      3317316542,
+      2998733608,
+      733239954,
+      1555261956,
+      3268935591,
+      3050360625,
+      752459403,
+      1541320221,
+      2607071920,
+      3965973030,
+      1969922972,
+      40735498,
+      2617837225,
+      3943577151,
+      1913087877,
+      83908371,
+      2512341634,
+      3803740692,
+      2075208622,
+      213261112,
+      2463272603,
+      3855990285,
+      2094854071,
+      198958881,
+      2262029012,
+      4057260610,
+      1759359992,
+      534414190,
+      2176718541,
+      4139329115,
+      1873836001,
+      414664567,
+      2282248934,
+      4279200368,
+      1711684554,
+      285281116,
+      2405801727,
+      4167216745,
+      1634467795,
+      376229701,
+      2685067896,
+      3608007406,
+      1308918612,
+      956543938,
+      2808555105,
+      3495958263,
+      1231636301,
+      1047427035,
+      2932959818,
+      3654703836,
+      1088359270,
+      936918e3,
+      2847714899,
+      3736837829,
+      1202900863,
+      817233897,
+      3183342108,
+      3401237130,
+      1404277552,
+      615818150,
+      3134207493,
+      3453421203,
+      1423857449,
+      601450431,
+      3009837614,
+      3294710456,
+      1567103746,
+      711928724,
+      3020668471,
+      3272380065,
+      1510334235,
+      755167117
+    ];
+    calculate = (data) => {
+      const buffer = new data_buffer_default(data);
+      let crc = -1;
+      for (const byte of buffer.data) {
+        crc = crc >>> 8 ^ CRC32_TABLE[(crc ^ byte) & 255];
+      }
+      return (~crc >>> 0).toString(16).toUpperCase();
+    };
+    data_hash_crc32_default = {
+      of: calculate
+    };
+  }
+});
+
+// node_modules/@uttori/data-tools/src/image/data-image-png.js
+var debug4, ImagePNG, data_image_png_default;
+var init_data_image_png = __esm({
+  async "node_modules/@uttori/data-tools/src/image/data-image-png.js"() {
+    init_pako();
+    await init_data_buffer();
+    debug4 = () => {
+    };
+    if (typeof process !== "undefined" && process.env.UTTORI_DATA_DEBUG) {
+      try {
+        const { default: d } = await Promise.resolve().then(() => __toESM(require_src(), 1));
+        debug4 = d("Uttori.ImagePNG");
+      } catch {
+      }
+    }
+    ImagePNG = class _ImagePNG extends data_buffer_default {
+      /**
+       * Creates a new ImagePNG.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} input The data to process.
+       */
+      constructor(input) {
+        super(input);
+        this.width = 0;
+        this.height = 0;
+        this.bitDepth = 0;
+        this.colorType = 0;
+        this.compressionMethod = 0;
+        this.filterMethod = 0;
+        this.interlaceMethod = 0;
+        this.colors = 0;
+        this.alpha = false;
+        this.palette = [];
+        this.pixels = new Uint8Array();
+        this.transparency = new Uint8Array();
+        this.physical = {
+          /** @type {number} Physical Dimension Width */
+          width: 0,
+          /** @type {number} Physical Dimension Height */
+          height: 0,
+          /** @type {number} Physical Dimension Units, with 0 being unknown and 1 being Meters */
+          unit: 0
+        };
+        this.dataChunks = [];
+        this.header = [];
+        this.parse();
+      }
+      /**
+       * Creates a new ImagePNG from file data.
+       * @param {number[]|ArrayBuffer|Buffer|DataBuffer|Int8Array|Int16Array|Int32Array|number|string|Uint8Array|Uint16Array|Uint32Array} data The data of the image to process.
+       * @returns {ImagePNG} the new ImagePNG instance for the provided file data
+       * @static
+       */
+      static fromFile(data) {
+        debug4("fromFile:", data);
+        return new _ImagePNG(data);
+      }
+      /**
+       * Creates a new ImagePNG from a DataBuffer.
+       * @param {DataBuffer} buffer The DataBuffer of the image to process.
+       * @returns {ImagePNG} the new ImagePNG instance for the provided DataBuffer
+       * @static
+       */
+      static fromBuffer(buffer) {
+        debug4("fromBuffer:", buffer.length);
+        return new _ImagePNG(buffer);
+      }
+      /**
+       * Sets the bitDepth on the ImagePNG instance.
+       * @param {number} bitDepth The bitDepth to set, one of: 1, 2, 4, 8, 16
+       */
+      setBitDepth(bitDepth) {
+        debug4("setBitDepth:", bitDepth);
+        if (![1, 2, 4, 8, 16].includes(bitDepth)) {
+          throw new Error(`Invalid Bit Depth: ${bitDepth}, can be one of: 1, 2, 4, 8, 16`);
+        }
+        this.bitDepth = bitDepth;
+      }
+      /**
+       * Sets the colorType on the ImagePNG instance.
+       * Both color and alpha properties are inferred from the colorType.
+       *
+       * | Color Type | Allowed Bit Depths | Interpretation |
+       * |------------|--------------------|----------------|
+       * | 0          | 1, 2, 4, 8, 16     | Each pixel is a grayscale sample.
+       * | 2          | 8, 16              | Each pixel is an R, G, B triple.
+       * | 3          | 1, 2, 4, 8         | Each pixel is a palette index; a `PLTE` chunk must appear.
+       * | 4          | 8, 16              | Each pixel is a grayscale sample, followed by an alpha sample.
+       * | 6          | 8, 16              | Each pixel is an R, G, B triple, followed by an alpha sample.
+       * @param {number} colorType - The colorType to set, one of: 0, 2, 3, 4, 6
+       * @throws {Error} Invalid Color Type, anything other than 0, 2, 3, 4, 6
+       */
+      setColorType(colorType) {
+        debug4("setColorType:", colorType);
+        let colors = 0;
+        let alpha = false;
+        switch (colorType) {
+          case 0:
+            colors = 1;
+            break;
+          case 2:
+            colors = 3;
+            break;
+          case 3:
+            colors = 1;
+            break;
+          case 4:
+            colors = 2;
+            alpha = true;
+            break;
+          case 6:
+            colors = 4;
+            alpha = true;
+            break;
+          default:
+            throw new Error(`Invalid Color Type: ${colorType}, can be one of: 0, 2, 3, 4, 6`);
+        }
+        this.colors = colors;
+        this.alpha = alpha;
+        this.colorType = colorType;
+      }
+      /**
+       * Sets the compressionMethod on the ImagePNG instance.
+       * The compressionMethod should always be 0.
+       * @param {number} compressionMethod - The compressionMethod to set, always 0
+       * @throws {Error} Unsupported Compression Method, anything other than 0
+       */
+      setCompressionMethod(compressionMethod) {
+        debug4("setCompressionMethod:", compressionMethod);
+        if (compressionMethod !== 0) {
+          throw new Error(`Unsupported Compression Method: ${compressionMethod}, should be 0`);
+        }
+        this.compressionMethod = compressionMethod;
+      }
+      /**
+       * Sets the filterMethod on the ImagePNG instance.
+       * The filterMethod should always be 0.
+       * @param {number} filterMethod - The filterMethod to set, always 0
+       * @throws {Error} Unsupported Filter Method, anything other than 0
+       */
+      setFilterMethod(filterMethod) {
+        debug4("setFilterMethod:", filterMethod);
+        if (filterMethod !== 0) {
+          throw new Error(`Unsupported Filter Method: ${filterMethod}, should be 0`);
+        }
+        this.filterMethod = filterMethod;
+      }
+      /**
+       * Sets the interlaceMethod on the ImagePNG instance.
+       * The interlaceMethod should always be 0 or 1.
+       * @param {number} interlaceMethod The interlaceMethod to set, always 0 or 1
+       * @throws {Error} Unsupported Interlace Method, anything other than 0 or 1
+       */
+      setInterlaceMethod(interlaceMethod) {
+        debug4("setInterlaceMethod:", interlaceMethod);
+        if (interlaceMethod !== 0 && interlaceMethod !== 1) {
+          throw new Error(`Unsupported Interlace Method: ${interlaceMethod}`);
+        }
+        this.interlaceMethod = interlaceMethod;
+      }
+      /**
+       * Sets the palette on the ImagePNG instance.
+       * @param {number[] | Uint8Array} palette The palette to set
+       * @throws {Error} No colors in the palette
+       * @throws {Error} Too many colors for the current bit depth
+       */
+      setPalette(palette) {
+        debug4("setPalette:", palette);
+        if (!Array.isArray(palette) && !ArrayBuffer.isView(palette)) {
+          debug4("Invalid palette provided.");
+          return;
+        }
+        if (palette.length === 0) {
+          throw new Error("Palette contains no colors");
+        }
+        if (palette.length > 2 ** this.bitDepth * 3) {
+          throw new Error(`Palette contains more colors than ${2 ** this.bitDepth * 3} ((2 ^ ${this.bitDepth}) * 3)`);
+        }
+        this.palette = palette;
+      }
+      /**
+       * Get the pixel color at a specified x, y location.
+       * @param {number} x The hoizontal offset to read.
+       * @param {number} y The vertical offset to read.
+       * @returns {Array<number>} the color as [red, green, blue, alpha]
+       * @throws {Error} x is out of bound for the image
+       * @throws {Error} y is out of bound for the image
+       * @throws {Error} Unknown color types
+       */
+      getPixel(x, y) {
+        if (!this.pixels) {
+          throw new Error("Pixel data has not been decoded.");
+        }
+        if (!Number.isInteger(x) || x >= this.width || x < 0) {
+          throw new Error(`x position out of bounds or invalid: ${x}`);
+        }
+        if (!Number.isInteger(y) || y >= this.height || y < 0) {
+          throw new Error(`y position out of bounds or invalid: ${y}`);
+        }
+        debug4("getPixel x:", x, "y:", y, "colorType:", this.colorType, "colors:", this.colors, "bitDepth:", this.bitDepth);
+        const i = this.colors * this.bitDepth / 8 * (y * this.width + x);
+        debug4("index:", i);
+        switch (this.colorType) {
+          case 0: {
+            return [this.pixels[i], this.pixels[i], this.pixels[i], 255];
+          }
+          case 2: {
+            return [this.pixels[i], this.pixels[i + 1], this.pixels[i + 2], 255];
+          }
+          case 3: {
+            let alpha = 255;
+            if (this.transparency != null && this.transparency[this.pixels[i]] != null) {
+              alpha = this.transparency[this.pixels[i]];
+            }
+            return [
+              this.palette[this.pixels[i] * 3 + 0],
+              this.palette[this.pixels[i] * 3 + 1],
+              this.palette[this.pixels[i] * 3 + 2],
+              alpha
+            ];
+          }
+          case 4: {
+            if (this.bitDepth === 8) {
+              return [this.pixels[i], this.pixels[i], this.pixels[i], this.pixels[i + 1]];
+            }
+            return [this.pixels[i + 1], this.pixels[i + 1], this.pixels[i + 1], this.pixels[i + 3]];
+          }
+          case 6: {
+            if (this.bitDepth === 8) {
+              return [this.pixels[i], this.pixels[i + 1], this.pixels[i + 2], this.pixels[i + 3]];
+            }
+            return [this.pixels[i + 1], this.pixels[i + 3], this.pixels[i + 5], this.pixels[i + 7]];
+          }
+          default: {
+            throw new Error(`Unknown Color Type: ${this.colorType}`);
+          }
+        }
+      }
+      /**
+       * Parse the PNG file, decoding the supported chunks.
+       */
+      parse() {
+        debug4("parse");
+        this.decodeHeader();
+        while (this.remainingBytes()) {
+          const type = this.decodeChunk();
+          if (type === "IEND") {
+            const leftover = this.remainingBytes();
+            if (leftover > 0) {
+              debug4("ending with data left:", leftover, "bytes left");
+            }
+            break;
+          }
+        }
+      }
+      /**
+       * Decodes and validates PNG Header.
+       * Signature (Decimal): [137, 80, 78, 71, 13, 10, 26, 10]
+       * Signature (Hexadecimal): [89, 50, 4E, 47, 0D, 0A, 1A, 0A]
+       * Signature (ASCII): [\211, P, N, G, \r, \n, \032, \n]
+       * @throws {Error} Missing or invalid PNG header
+       * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#5PNG-file-signature|PNG Signature}
+       */
+      decodeHeader() {
+        debug4("decodeHeader: offset =", this.offset);
+        if (this.offset !== 0) {
+          debug4("Offset should be at 0 to read the header.");
+        }
+        const header = this.read(8);
+        debug4("header:", header);
+        const header_buffer = new data_buffer_default(header);
+        if (!header_buffer.compare([137, 80, 78, 71, 13, 10, 26, 10])) {
+          throw new Error("Missing or invalid PNG header.");
+        }
+        this.header = header;
+      }
+      /**
+       * Decodes the chunk type, and attempts to parse that chunk if supported.
+       * Supported Chunk Types: IHDR, PLTE, IDAT, IEND, tRNS, pHYs
+       *
+       * Chunk Structure:
+       * Length: 4 bytes
+       * Type:   4 bytes (IHDR, PLTE, IDAT, IEND, etc.)
+       * Chunk:  {length} bytes
+       * CRC:    4 bytes
+       * @returns {string} Chunk Type
+       * @throws {Error} Invalid Chunk Length when less than 0
+       * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#5Chunk-layout|Chunk Layout}
+       */
+      decodeChunk() {
+        debug4("decodeChunk");
+        const length = this.readUInt32();
+        if (length < 0) {
+          throw new Error(`Invalid Chunk Length: ${4294967295 & length}`);
+        }
+        const type = this.readString(4);
+        const chunk = this.read(length);
+        const crc = this.readUInt32();
+        debug4("decodeChunk type", type, "chunk size", length, "crc", crc.toString(16).toUpperCase());
+        switch (type) {
+          case "IHDR":
+            this.decodeIHDR(chunk);
+            break;
+          case "PLTE":
+            this.decodePLTE(chunk);
+            break;
+          case "IDAT":
+            this.decodeIDAT(chunk);
+            break;
+          case "IEND":
+            this.decodeIEND(chunk);
+            break;
+          case "tRNS":
+            this.decodeTRNS(chunk);
+            break;
+          case "pHYs":
+            this.decodePHYS(chunk);
+            break;
+          // case 'cHRM': decodeCHRM(chunk); break;
+          // case 'gAMA': decodeGAMA(chunk); break;
+          // case 'bKGD': decodeBKGD(chunk); break;
+          // case 'tIME': decodeTIME(chunk); break;
+          // case 'tEXt': decodeTEXT(chunk); break;
+          // case 'iTXt': decodeITXT(chunk); break;
+          // case 'sRGB': decodeSRGB(chunk); break;
+          // case 'sBIT': decodeSBIT(chunk); break;
+          default:
+            debug4(`Unsupported Chunk: '${type}'`);
+            break;
+        }
+        return type;
+      }
+      /**
+       * Decode the IHDR (Image header) chunk.
+       * Should be the first chunk in the data stream.
+       *
+       * Width:              4 bytes
+       * Height:             4 bytes
+       * Bit Depth:          1 byte
+       * Colour Type:        1 byte
+       * Compression Method: 1 byte
+       * Filter Method:      1 byte
+       * Interlace Method:   1 byte
+       * @param {Uint8Array} chunk - Data Blob
+       * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IHDR|Image Header}
+       * @see {@link http://www.libpng.org/pub/png/spec/1.2/png-1.2-pdg.html#C.IHDR|Image Header}
+       */
+      decodeIHDR(chunk) {
+        debug4("decodeIHDR");
+        const header = new data_buffer_default(chunk);
+        const width2 = header.readUInt32();
+        const height = header.readUInt32();
+        const bit_depth = header.readUInt8();
+        const color_type = header.readUInt8();
+        const compression_method = header.readUInt8();
+        const filter_method = header.readUInt8();
+        const interlace_method = header.readUInt8();
+        this.width = width2;
+        this.height = height;
+        this.setBitDepth(bit_depth);
+        this.setColorType(color_type);
+        this.setCompressionMethod(compression_method);
+        this.setFilterMethod(filter_method);
+        this.setInterlaceMethod(interlace_method);
+        debug4("decodeIHDR =", JSON.stringify({
+          width: width2,
+          height,
+          bit_depth,
+          color_type,
+          compression_method,
+          filter_method,
+          interlace_method
+        }));
+      }
+      /**
+       * Decode the PLTE (Palette) chunk.
+       * The PLTE chunk contains from 1 to 256 palette entries, each a three-byte series of the form.
+       * The number of entries is determined from the chunk length. A chunk length not divisible by 3 is an error.
+       * @param {Uint8Array} chunk - Data Blob
+       * @see {@link http://www.w3.org/TR/PNG/#11PLTE|Palette}
+       */
+      decodePLTE(chunk) {
+        debug4("decodePLTE");
+        this.setPalette(chunk);
+      }
+      /**
+       * Decode the IDAT (Image Data) chunk.
+       * The IDAT chunk contains the actual image data which is the output stream of the compression algorithm.
+       * @param {Uint8Array} chunk - Data Blob
+       * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IDAT|Image Data}
+       */
+      decodeIDAT(chunk) {
+        debug4("decodeIDAT:", chunk.length, "bytes");
+        this.dataChunks.push(chunk);
+      }
+      /**
+       * Decode the tRNS (Transparency) chunk.
+       * The tRNS chunk specifies that the image uses simple transparency: either alpha values associated with palette entries (for indexed-color images) or a single transparent color (for grayscale and truecolor images). Although simple transparency is not as elegant as the full alpha channel, it requires less storage space and is sufficient for many common cases.
+       * @param {Uint8Array} chunk - Data Blob
+       * @see {@link https://www.w3.org/TR/PNG/#11tRNS|Transparency}
+       */
+      decodeTRNS(chunk) {
+        debug4("decodeTRNS");
+        this.transparency = chunk;
+      }
+      /**
+       * Decode the pHYs (Pixel Dimensions) chunk.
+       * The pHYs chunk specifies the intended pixel size or aspect ratio for display of the image.
+       * When the unit specifier is 0, the pHYs chunk defines pixel aspect ratio only; the actual size of the pixels remains unspecified.
+       * If the pHYs chunk is not present, pixels are assumed to be square, and the physical size of each pixel is unspecified.
+       *
+       * Structure:
+       * Pixels per unit, X axis: 4 bytes (unsigned integer)
+       * Pixels per unit, Y axis: 4 bytes (unsigned integer)
+       * Unit specifier:          1 byte
+       * 0: unit is unknown
+       * 1: unit is the meter
+       * @param {Uint8Array} chunk - Data Blob
+       * @see {@link https://www.w3.org/TR/PNG/#11pHYs|Pixel Dimensions}
+       */
+      decodePHYS(chunk) {
+        const INCH_TO_METERS = 0.0254;
+        const buffer = new data_buffer_default(chunk);
+        let width2 = buffer.readUInt32();
+        let height = buffer.readUInt32();
+        const unit = buffer.readUInt8();
+        if (unit === 1) {
+          width2 = Math.floor(width2 * INCH_TO_METERS);
+          height = Math.floor(height * INCH_TO_METERS);
+        }
+        this.physical = { width: width2, height, unit };
+      }
+      /**
+       * Decode the IEND (Image trailer) chunk.
+       * The IEND chunk marks the end of the PNG DataBuffer. The chunk's data field is empty.
+       * @param {Uint8Array} _chunk - Unused.
+       * @see {@link http://www.w3.org/TR/2003/REC-PNG-20031110/#11IEND|Image Trailer}
+       */
+      decodeIEND(_chunk) {
+        debug4("decodeIEND");
+      }
+      /**
+       * Uncompress IDAT chunks.
+       * @throws {Error} No IDAT chunks to decode
+       * @throws {Error} Deinterlacing Error
+       * @throws {Error} Inflating Error
+       * @throws {Error} Adam7 interlaced format is unsupported
+       */
+      decodePixels() {
+        debug4("decodePixels");
+        if (this.dataChunks.length === 0) {
+          throw new Error("No IDAT chunks to decode.");
+        }
+        const length = this.dataChunks.reduce((accumulator, chunk) => accumulator + chunk.length, 0);
+        debug4("Data Chunks Total Size:", length);
+        const data = new Uint8Array(length);
+        let k = 0;
+        for (const chunk of this.dataChunks) {
+          for (const j of chunk) {
+            data[k++] = j;
+          }
+        }
+        let out;
+        try {
+          out = inflate(data);
+        } catch (err) {
+          debug4("Error Inflating:", err);
+          throw err;
+        }
+        debug4("Inflated Size:", out.length);
+        try {
+          if (this.interlaceMethod === 0) {
+            this.interlaceNone(out);
+          } else {
+            this.interlaceAdam7(out);
+          }
+        } catch (e) {
+          debug4("Error Deinterlacing:", e);
+          throw e;
+        }
+      }
+      /**
+       * Deinterlace with no interlacing.
+       * @param {Buffer|Uint8Array} data Data to deinterlace.
+       * @see {@link https://www.w3.org/TR/PNG-Filters.html|PNG Filters}
+       */
+      interlaceNone(data) {
+        const bytes_per_pixel = Math.max(1, this.colors * this.bitDepth / 8);
+        const color_bytes_per_row = bytes_per_pixel * this.width;
+        this.pixels = new Uint8Array(bytes_per_pixel * this.width * this.height);
+        const chunk = new data_buffer_default(data);
+        debug4("interlaceNone: bytes:", chunk.remainingBytes(), "bytes_per_pixel:", bytes_per_pixel, "color_bytes_per_row:", color_bytes_per_row);
+        let offset = 0;
+        while (chunk.remainingBytes() > 0) {
+          const type = chunk.readUInt8();
+          const scanline = chunk.read(chunk.remainingBytes() < color_bytes_per_row ? chunk.remainingBytes() : color_bytes_per_row);
+          switch (type) {
+            case 0: {
+              this.pixels = _ImagePNG.unFilterNone(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+              break;
+            }
+            case 1: {
+              this.pixels = _ImagePNG.unFilterSub(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+              break;
+            }
+            case 2: {
+              this.pixels = _ImagePNG.unFilterUp(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+              break;
+            }
+            case 3: {
+              this.pixels = _ImagePNG.unFilterAverage(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+              break;
+            }
+            case 4: {
+              this.pixels = _ImagePNG.unFilterPaeth(this.pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+              break;
+            }
+            default: {
+              debug4(`Unknown filtered scanline type: '${type}', at offset`, offset);
+            }
+          }
+          offset += chunk.offset;
+        }
+      }
+      /**
+       * Deinterlace with Adam7 interlacing.
+       * Adam7 divides the image into 7 passes with different starting positions and step sizes.
+       * @param {Buffer|Uint8Array} data Data to deinterlace.
+       * @see {@link https://www.w3.org/TR/PNG/#8Interlace|PNG Adam7 Interlacing}
+       * @see {@link https://github.com/em2046/lens/blob/master/assets/js/interlace.js}
+       * @see {@link https://github.com/em2046/aperture/tree/master/lib/png/chunks}
+       * @see {@link https://github.com/beejjorgensen/jsmandel/blob/master/src/js/adam7.js}
+       * @see {@link http://diyhpl.us/~yenatch/pokecrystal/src/pypng/code/png.py}
+       * @see {@link https://github.com/SixLabors/ImageSharp/blob/master/src/ImageSharp/Formats/Png/Adam7.cs}
+       */
+      interlaceAdam7(data) {
+        const bytes_per_pixel = Math.max(1, this.colors * this.bitDepth / 8);
+        const xoffset = [0, 4, 0, 2, 0, 1, 0];
+        const yoffset = [0, 0, 4, 0, 2, 0, 1];
+        const xstep = [8, 8, 4, 4, 2, 2, 1];
+        const ystep = [8, 8, 8, 4, 4, 2, 2];
+        this.pixels = new Uint8Array(bytes_per_pixel * this.width * this.height);
+        const chunk = new data_buffer_default(data);
+        debug4("interlaceAdam7: bytes:", chunk.remainingBytes(), "bytes_per_pixel:", bytes_per_pixel);
+        for (let pass = 0; pass < 7; pass++) {
+          const pass_width = Math.ceil((this.width - xoffset[pass]) / xstep[pass]);
+          const pass_height = Math.ceil((this.height - yoffset[pass]) / ystep[pass]);
+          debug4(`Adam7 pass ${pass + 1}: width=${pass_width}, height=${pass_height}`);
+          if (pass_width > 0 && pass_height > 0) {
+            const color_bytes_per_row = bytes_per_pixel * pass_width;
+            let pass_pixels = new Uint8Array(bytes_per_pixel * pass_width * pass_height);
+            for (let row = 0; row < pass_height; row++) {
+              if (chunk.remainingBytes() === 0) {
+                break;
+              }
+              const type = chunk.readUInt8();
+              const scanline = chunk.read(chunk.remainingBytes() < color_bytes_per_row ? chunk.remainingBytes() : color_bytes_per_row);
+              const offset = row * color_bytes_per_row;
+              switch (type) {
+                case 0: {
+                  pass_pixels = _ImagePNG.unFilterNone(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+                  break;
+                }
+                case 1: {
+                  pass_pixels = _ImagePNG.unFilterSub(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+                  break;
+                }
+                case 2: {
+                  pass_pixels = _ImagePNG.unFilterUp(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+                  break;
+                }
+                case 3: {
+                  pass_pixels = _ImagePNG.unFilterAverage(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+                  break;
+                }
+                case 4: {
+                  pass_pixels = _ImagePNG.unFilterPaeth(pass_pixels, scanline, bytes_per_pixel, offset, color_bytes_per_row);
+                  break;
+                }
+                default: {
+                  debug4(`Unknown filtered scanline type: '${type}', at pass ${pass + 1}, row ${row}`);
+                }
+              }
+            }
+            for (let row = 0; row < pass_height; row++) {
+              const y = yoffset[pass] + row * ystep[pass];
+              for (let col = 0; col < pass_width; col++) {
+                const x = xoffset[pass] + col * xstep[pass];
+                const pass_index = (row * pass_width + col) * bytes_per_pixel;
+                const image_index = (y * this.width + x) * bytes_per_pixel;
+                for (let b = 0; b < bytes_per_pixel; b++) {
+                  this.pixels[image_index + b] = pass_pixels[pass_index + b];
+                }
+              }
+            }
+          }
+        }
+      }
+      // TODO Make these static so we can use them in Adam7 as well.
+      // Unfiltering
+      /**
+       * No filtering, direct copy.
+       * @param {number[]|Uint8Array} pixels Pixels to update.
+       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
+       * @param {number} bpp Bytes Per Pixel
+       * @param {number} offset Offset
+       * @param {number} length Length
+       * @returns {number[]|Uint8Array} Pixels
+       */
+      static unFilterNone(pixels, scanline, bpp, offset, length) {
+        debug4("unFilterNone:", "bpp:", bpp, "offset:", offset, "length:", length);
+        for (let i = 0, to = length; i < to; i++) {
+          pixels[offset + i] = scanline[i];
+        }
+        return pixels;
+      }
+      /**
+       * The Sub() filter transmits the difference between each byte and the value of the corresponding byte of the prior pixel.
+       * Sub(x) = Raw(x) + Raw(x - bpp)
+       * @param {number[]|Uint8Array} pixels Pixels to update.
+       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
+       * @param {number} bpp - Bytes Per Pixel
+       * @param {number} offset Offset
+       * @param {number} length Length
+       * @returns {number[]|Uint8Array} Pixels
+       */
+      static unFilterSub(pixels, scanline, bpp, offset, length) {
+        debug4("unFilterSub:", "bpp:", bpp, "offset:", offset, "length:", length);
+        let i = 0;
+        for (; i < bpp; i++) {
+          pixels[offset + i] = scanline[i];
+        }
+        for (; i < length; i++) {
+          pixels[offset + i] = scanline[i] + pixels[offset + i - bpp] & 255;
+        }
+        return pixels;
+      }
+      /**
+       * The Up() filter is just like the Sub() filter except that the pixel immediately above the current pixel, rather than just to its left, is used as the predictor.
+       * Up(x) = Raw(x) + Prior(x)
+       * @param {number[]|Uint8Array} pixels Pixels to update.
+       * @param {number[]|Uint8Array} scanline - Scanline to search for pixels in.
+       * @param {number} _bpp Bytes Per Pixel, Unused
+       * @param {number} offset Offset
+       * @param {number} length Length
+       * @returns {number[]|Uint8Array} Pixels
+       */
+      static unFilterUp(pixels, scanline, _bpp, offset, length) {
+        debug4("unFilterUp:", "offset:", offset, "length:", length);
+        let i = 0;
+        let byte;
+        let prev;
+        if (offset - length < 0) {
+          for (; i < length; i++) {
+            pixels[offset + i] = scanline[i];
+          }
+        } else {
+          for (; i < length; i++) {
+            byte = scanline[i];
+            prev = pixels[offset + i - length];
+            pixels[offset + i] = byte + prev & 255;
+          }
+        }
+        return pixels;
+      }
+      /**
+       * The Average() filter uses the average of the two neighboring pixels (left and above) to predict the value of a pixel.
+       * Average(x) = Raw(x) + floor((Raw(x-bpp)+Prior(x))/2)
+       * @param {number[]|Uint8Array} pixels Pixels to update.
+       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
+       * @param {number} bpp Bytes Per Pixel
+       * @param {number} offset Offset
+       * @param {number} length Length
+       * @returns {number[]|Uint8Array} Pixels
+       */
+      static unFilterAverage(pixels, scanline, bpp, offset, length) {
+        debug4("unFilterAverage:", "bpp:", bpp, "offset:", offset, "length:", length);
+        let i = 0;
+        let byte;
+        let prev;
+        let prior;
+        if (offset - length < 0) {
+          for (; i < bpp; i++) {
+            pixels[offset + i] = scanline[i];
+          }
+          for (; i < length; i++) {
+            pixels[offset + i] = scanline[i] + (pixels[offset + i - bpp] >> 1) & 255;
+          }
+        } else {
+          for (; i < bpp; i++) {
+            pixels[offset + i] = scanline[i] + (pixels[offset - length + i] >> 1) & 255;
+          }
+          for (; i < length; i++) {
+            byte = scanline[i];
+            prev = pixels[offset + i - bpp];
+            prior = pixels[offset + i - length];
+            pixels[offset + i] = byte + (prev + prior >> 1) & 255;
+          }
+        }
+        return pixels;
+      }
+      /**
+       * The Paeth() filter computes a simple linear function of the three neighboring pixels (left, above, upper left), then chooses as predictor the neighboring pixel closest to the computed value.
+       * This technique was developed by Alan W. Paeth.
+       * Paeth(x) = Raw(x) + PaethPredictor(Raw(x-bpp), Prior(x), Prior(x-bpp))
+       * function PaethPredictor (a, b, c)
+       * begin
+       * ; a = left, b = above, c = upper left
+       * p := a + b - c        ; initial estimate
+       * pa := abs(p - a)      ; distances to a, b, c
+       * pb := abs(p - b)
+       * pc := abs(p - c)
+       * ; return nearest of a,b,c,
+       * ; breaking ties in order a,b,c.
+       * if pa <= pb AND pa <= pc then return a
+       * else if pb <= pc then return b
+       * else return c
+       * end
+       * @param {number[]|Uint8Array} pixels Pixels to update.
+       * @param {number[]|Uint8Array} scanline Scanline to search for pixels in.
+       * @param {number} bpp Bytes Per Pixel
+       * @param {number} offset Offset
+       * @param {number} length Length
+       * @returns {number[]|Uint8Array} Pixels
+       */
+      static unFilterPaeth(pixels, scanline, bpp, offset, length) {
+        debug4("unFilterPaeth:", "bpp:", bpp, "offset:", offset, "length:", length);
+        let i = 0;
+        let raw;
+        let a = 0;
+        let b = 0;
+        let c = 0;
+        let p;
+        let pa = 0;
+        let pb = 0;
+        let pc = 0;
+        let pr = 0;
+        if (offset - length < 0) {
+          for (; i < bpp; i++) {
+            pixels[offset + i] = scanline[i];
+          }
+          for (; i < length; i++) {
+            pixels[offset + i] = scanline[i] + pixels[offset + i - bpp] & 255;
+          }
+        } else {
+          for (; i < bpp; i++) {
+            pixels[offset + i] = scanline[i] + pixels[offset + i - length] & 255;
+          }
+          for (; i < length; i++) {
+            raw = scanline[i];
+            a = pixels[offset + i - bpp];
+            b = pixels[offset + i - length];
+            c = pixels[offset + i - length - bpp];
+            p = a + b - c;
+            pa = Math.abs(p - a);
+            pb = Math.abs(p - b);
+            pc = Math.abs(p - c);
+            if (pa <= pb && pa <= pc) pr = a;
+            else if (pb <= pc) pr = b;
+            else pr = c;
+            pixels[offset + i] = raw + pr & 255;
+          }
+        }
+        return pixels;
+      }
+    };
+    data_image_png_default = ImagePNG;
+  }
+});
+
+// packages/assets/node_modules/pako/dist/pako.mjs
+function zero$12(buf) {
+  let len = buf.length;
+  while (--len >= 0) buf[len] = 0;
+}
+function inflate_fast2(strm, start) {
+  let _in;
+  let last;
+  let _out;
+  let beg;
+  let end;
+  let dmax;
+  let wsize;
+  let whave;
+  let wnext;
+  let s_window;
+  let hold;
+  let bits;
+  let lcode;
+  let dcode;
+  let lmask;
+  let dmask;
+  let here;
+  let op2;
+  let len;
+  let dist;
+  let from;
+  let from_source;
+  let input, output;
+  const state = strm.state;
+  _in = strm.next_in;
+  input = strm.input;
+  last = _in + (strm.avail_in - 5);
+  _out = strm.next_out;
+  output = strm.output;
+  beg = _out - (start - strm.avail_out);
+  end = _out + (strm.avail_out - 257);
+  dmax = state.dmax;
+  wsize = state.wsize;
+  whave = state.whave;
+  wnext = state.wnext;
+  s_window = state.window;
+  hold = state.hold;
+  bits = state.bits;
+  lcode = state.lencode;
+  dcode = state.distcode;
+  lmask = (1 << state.lenbits) - 1;
+  dmask = (1 << state.distbits) - 1;
+  top: do {
+    if (bits < 15) {
+      hold += input[_in++] << bits;
+      bits += 8;
+      hold += input[_in++] << bits;
+      bits += 8;
+    }
+    here = lcode[hold & lmask];
+    dolen: for (; ; ) {
+      op2 = here >>> 24;
+      hold >>>= op2;
+      bits -= op2;
+      op2 = here >>> 16 & 255;
+      if (op2 === 0) output[_out++] = here & 65535;
+      else if (op2 & 16) {
+        len = here & 65535;
+        op2 &= 15;
+        if (op2) {
+          if (bits < op2) {
+            hold += input[_in++] << bits;
+            bits += 8;
+          }
+          len += hold & (1 << op2) - 1;
+          hold >>>= op2;
+          bits -= op2;
+        }
+        if (bits < 15) {
+          hold += input[_in++] << bits;
+          bits += 8;
+          hold += input[_in++] << bits;
+          bits += 8;
+        }
+        here = dcode[hold & dmask];
+        dodist: for (; ; ) {
+          op2 = here >>> 24;
+          hold >>>= op2;
+          bits -= op2;
+          op2 = here >>> 16 & 255;
+          if (op2 & 16) {
+            dist = here & 65535;
+            op2 &= 15;
+            if (bits < op2) {
+              hold += input[_in++] << bits;
+              bits += 8;
+              if (bits < op2) {
+                hold += input[_in++] << bits;
+                bits += 8;
+              }
+            }
+            dist += hold & (1 << op2) - 1;
+            if (dist > dmax) {
+              strm.msg = "invalid distance too far back";
+              state.mode = BAD$12;
+              break top;
+            }
+            hold >>>= op2;
+            bits -= op2;
+            op2 = _out - beg;
+            if (dist > op2) {
+              op2 = dist - op2;
+              if (op2 > whave) {
+                if (state.sane) {
+                  strm.msg = "invalid distance too far back";
+                  state.mode = BAD$12;
+                  break top;
+                }
+              }
+              from = 0;
+              from_source = s_window;
+              if (wnext === 0) {
+                from += wsize - op2;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              } else if (wnext < op2) {
+                from += wsize + wnext - op2;
+                op2 -= wnext;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = 0;
+                  if (wnext < len) {
+                    op2 = wnext;
+                    len -= op2;
+                    do
+                      output[_out++] = s_window[from++];
+                    while (--op2);
+                    from = _out - dist;
+                    from_source = output;
+                  }
+                }
+              } else {
+                from += wnext - op2;
+                if (op2 < len) {
+                  len -= op2;
+                  do
+                    output[_out++] = s_window[from++];
+                  while (--op2);
+                  from = _out - dist;
+                  from_source = output;
+                }
+              }
+              while (len > 2) {
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                output[_out++] = from_source[from++];
+                len -= 3;
+              }
+              if (len) {
+                output[_out++] = from_source[from++];
+                if (len > 1) output[_out++] = from_source[from++];
+              }
+            } else {
+              from = _out - dist;
+              do {
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                output[_out++] = output[from++];
+                len -= 3;
+              } while (len > 2);
+              if (len) {
+                output[_out++] = output[from++];
+                if (len > 1) output[_out++] = output[from++];
+              }
+            }
+          } else if ((op2 & 64) === 0) {
+            here = dcode[(here & 65535) + (hold & (1 << op2) - 1)];
+            continue dodist;
+          } else {
+            strm.msg = "invalid distance code";
+            state.mode = BAD$12;
+            break top;
+          }
+          break;
+        }
+      } else if ((op2 & 64) === 0) {
+        here = lcode[(here & 65535) + (hold & (1 << op2) - 1)];
+        continue dolen;
+      } else if (op2 & 32) {
+        state.mode = TYPE$12;
+        break top;
+      } else {
+        strm.msg = "invalid literal/length code";
+        state.mode = BAD$12;
+        break top;
+      }
+      break;
+    }
+  } while (_in < last && _out < end);
+  len = bits >> 3;
+  _in -= len;
+  bits -= len << 3;
+  hold &= (1 << bits) - 1;
+  strm.next_in = _in;
+  strm.next_out = _out;
+  strm.avail_in = _in < last ? 5 + (last - _in) : 5 - (_in - last);
+  strm.avail_out = _out < end ? 257 + (end - _out) : 257 - (_out - end);
+  state.hold = hold;
+  state.bits = bits;
+}
+var Z_FIXED2, Z_BINARY2, Z_TEXT2, Z_UNKNOWN2, STORED_BLOCK2, STATIC_TREES2, DYN_TREES2, LENGTH_CODES2, LITERALS2, L_CODES2, D_CODES2, BL_CODES2, HEAP_SIZE$12, MAX_BITS2, Buf_size2, END_BLOCK2, REP_3_62, REPZ_3_102, REPZ_11_1382, extra_lbits2, extra_dbits2, extra_blbits2, bl_order2, DIST_CODE_LEN2, static_ltree2, static_dtree2, _dist_code2, _length_code2, base_length2, base_dist2, d_code2, put_short2, send_bits2, send_code2, bi_reverse2, gen_bitlen2, gen_codes2, init_block2, bi_windup2, smaller2, pqdownheap2, compress_block2, build_tree2, scan_tree2, send_tree2, build_bl_tree2, send_all_trees2, detect_data_type2, _tr_stored_block2, _tr_flush_block2, _tr_tally2, adler322, makeTable2, crcTable2, crc324, messages_default2, MIN_MATCH2, MAX_MATCH2, MIN_LOOKAHEAD2, BS_NEED_MORE2, BS_BLOCK_DONE2, BS_FINISH_STARTED2, BS_FINISH_DONE2, slide_hash2, HASH2, INSERT_STRING2, flush_pending2, flush_block_only2, read_buf2, longest_match2, fill_window2, deflate_stored2, deflate_fast2, deflate_slow2, Config2, configuration_table2, BAD$12, TYPE$12, MAXBITS2, ENOUGH_LENS$12, ENOUGH_DISTS$12, CODES$12, LENS$12, DISTS$12, lbase2, lext2, dbase2, dext2, inflate_table2, CODES2, LENS2, DISTS2, HEAD2, FLAGS2, TIME2, OS2, EXLEN2, EXTRA2, NAME2, COMMENT2, HCRC2, DICTID2, DICT2, TYPE2, TYPEDO2, STORED2, COPY_2, COPY2, TABLE2, LENLENS2, CODELENS2, LEN_2, LEN2, LENEXT2, DIST2, DISTEXT2, MATCH2, LIT2, CHECK2, LENGTH2, DONE2, BAD2, MEM2, SYNC2, ENOUGH_LENS2, ENOUGH_DISTS2, zswap322, InflateState2, inflateStateCheck2, inflateResetKeep2, inflateReset3, inflateReset22, inflateInit22, virgin2, lenfix2, distfix2, fixedtables2, updatewindow2, inflate$12, inflateEnd2, inflateSetDictionary2, ZStream2, flattenChunks2, toString2, defaultOptions2, Inflate2;
+var init_pako2 = __esm({
+  "packages/assets/node_modules/pako/dist/pako.mjs"() {
+    Z_FIXED2 = 4;
+    Z_BINARY2 = 0;
+    Z_TEXT2 = 1;
+    Z_UNKNOWN2 = 2;
+    STORED_BLOCK2 = 0;
+    STATIC_TREES2 = 1;
+    DYN_TREES2 = 2;
+    LENGTH_CODES2 = 29;
+    LITERALS2 = 256;
+    L_CODES2 = 286;
+    D_CODES2 = 30;
+    BL_CODES2 = 19;
+    HEAP_SIZE$12 = 573;
+    MAX_BITS2 = 15;
+    Buf_size2 = 16;
+    END_BLOCK2 = 256;
+    REP_3_62 = 16;
+    REPZ_3_102 = 17;
+    REPZ_11_1382 = 18;
+    extra_lbits2 = new Uint8Array([
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      3,
+      3,
+      3,
+      3,
+      4,
+      4,
+      4,
+      4,
+      5,
+      5,
+      5,
+      5,
+      0
+    ]);
+    extra_dbits2 = new Uint8Array([
+      0,
+      0,
+      0,
+      0,
+      1,
+      1,
+      2,
+      2,
+      3,
+      3,
+      4,
+      4,
+      5,
+      5,
+      6,
+      6,
+      7,
+      7,
+      8,
+      8,
+      9,
+      9,
+      10,
+      10,
+      11,
+      11,
+      12,
+      12,
+      13,
+      13
+    ]);
+    extra_blbits2 = new Uint8Array([
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      2,
+      3,
+      7
+    ]);
+    bl_order2 = new Uint8Array([
+      16,
+      17,
+      18,
+      0,
+      8,
+      7,
+      9,
+      6,
+      10,
+      5,
+      11,
+      4,
+      12,
+      3,
+      13,
+      2,
+      14,
+      1,
+      15
+    ]);
+    DIST_CODE_LEN2 = 512;
+    static_ltree2 = new Array(288 * 2);
+    zero$12(static_ltree2);
+    static_dtree2 = new Array(D_CODES2 * 2);
+    zero$12(static_dtree2);
+    _dist_code2 = new Array(DIST_CODE_LEN2);
+    zero$12(_dist_code2);
+    _length_code2 = new Array(256);
+    zero$12(_length_code2);
+    base_length2 = new Array(LENGTH_CODES2);
+    zero$12(base_length2);
+    base_dist2 = new Array(D_CODES2);
+    zero$12(base_dist2);
+    d_code2 = (dist) => {
+      return dist < 256 ? _dist_code2[dist] : _dist_code2[256 + (dist >>> 7)];
+    };
+    put_short2 = (s, w) => {
+      s.pending_buf[s.pending++] = w & 255;
+      s.pending_buf[s.pending++] = w >>> 8 & 255;
+    };
+    send_bits2 = (s, value, length) => {
+      if (s.bi_valid > Buf_size2 - length) {
+        s.bi_buf |= value << s.bi_valid & 65535;
+        put_short2(s, s.bi_buf);
+        s.bi_buf = value >> Buf_size2 - s.bi_valid;
+        s.bi_valid += length - Buf_size2;
+      } else {
+        s.bi_buf |= value << s.bi_valid & 65535;
+        s.bi_valid += length;
+      }
+    };
+    send_code2 = (s, c, tree) => {
+      send_bits2(s, tree[c * 2], tree[c * 2 + 1]);
+    };
+    bi_reverse2 = (code, len) => {
+      let res = 0;
+      do {
+        res |= code & 1;
+        code >>>= 1;
+        res <<= 1;
+      } while (--len > 0);
+      return res >>> 1;
+    };
+    gen_bitlen2 = (s, desc) => {
+      const tree = desc.dyn_tree;
+      const max_code = desc.max_code;
+      const stree = desc.stat_desc.static_tree;
+      const has_stree = desc.stat_desc.has_stree;
+      const extra = desc.stat_desc.extra_bits;
+      const base = desc.stat_desc.extra_base;
+      const max_length = desc.stat_desc.max_length;
+      let h;
+      let n, m;
+      let bits;
+      let xbits;
+      let f;
+      let overflow = 0;
+      for (bits = 0; bits <= MAX_BITS2; bits++) s.bl_count[bits] = 0;
+      tree[s.heap[s.heap_max] * 2 + 1] = 0;
+      for (h = s.heap_max + 1; h < HEAP_SIZE$12; h++) {
+        n = s.heap[h];
+        bits = tree[tree[n * 2 + 1] * 2 + 1] + 1;
+        if (bits > max_length) {
+          bits = max_length;
+          overflow++;
+        }
+        tree[n * 2 + 1] = bits;
+        if (n > max_code) continue;
+        s.bl_count[bits]++;
+        xbits = 0;
+        if (n >= base) xbits = extra[n - base];
+        f = tree[n * 2];
+        s.opt_len += f * (bits + xbits);
+        if (has_stree) s.static_len += f * (stree[n * 2 + 1] + xbits);
+      }
+      if (overflow === 0) return;
+      do {
+        bits = max_length - 1;
+        while (s.bl_count[bits] === 0) bits--;
+        s.bl_count[bits]--;
+        s.bl_count[bits + 1] += 2;
+        s.bl_count[max_length]--;
+        overflow -= 2;
+      } while (overflow > 0);
+      for (bits = max_length; bits !== 0; bits--) {
+        n = s.bl_count[bits];
+        while (n !== 0) {
+          m = s.heap[--h];
+          if (m > max_code) continue;
+          if (tree[m * 2 + 1] !== bits) {
+            s.opt_len += (bits - tree[m * 2 + 1]) * tree[m * 2];
+            tree[m * 2 + 1] = bits;
+          }
+          n--;
+        }
+      }
+    };
+    gen_codes2 = (tree, max_code, bl_count) => {
+      const next_code = new Array(16);
+      let code = 0;
+      let bits;
+      let n;
+      for (bits = 1; bits <= MAX_BITS2; bits++) {
+        code = code + bl_count[bits - 1] << 1;
+        next_code[bits] = code;
+      }
+      for (n = 0; n <= max_code; n++) {
+        let len = tree[n * 2 + 1];
+        if (len === 0) continue;
+        tree[n * 2] = bi_reverse2(next_code[len]++, len);
+      }
+    };
+    init_block2 = (s) => {
+      let n;
+      for (n = 0; n < L_CODES2; n++) s.dyn_ltree[n * 2] = 0;
+      for (n = 0; n < D_CODES2; n++) s.dyn_dtree[n * 2] = 0;
+      for (n = 0; n < BL_CODES2; n++) s.bl_tree[n * 2] = 0;
+      s.dyn_ltree[END_BLOCK2 * 2] = 1;
+      s.opt_len = s.static_len = 0;
+      s.sym_next = s.matches = 0;
+    };
+    bi_windup2 = (s) => {
+      if (s.bi_valid > 8) put_short2(s, s.bi_buf);
+      else if (s.bi_valid > 0) s.pending_buf[s.pending++] = s.bi_buf;
+      s.bi_buf = 0;
+      s.bi_valid = 0;
+    };
+    smaller2 = (tree, n, m, depth) => {
+      const _n2 = n * 2;
+      const _m2 = m * 2;
+      return tree[_n2] < tree[_m2] || tree[_n2] === tree[_m2] && depth[n] <= depth[m];
+    };
+    pqdownheap2 = (s, tree, k) => {
+      const v = s.heap[k];
+      let j = k << 1;
+      while (j <= s.heap_len) {
+        if (j < s.heap_len && smaller2(tree, s.heap[j + 1], s.heap[j], s.depth)) j++;
+        if (smaller2(tree, v, s.heap[j], s.depth)) break;
+        s.heap[k] = s.heap[j];
+        k = j;
+        j <<= 1;
+      }
+      s.heap[k] = v;
+    };
+    compress_block2 = (s, ltree, dtree) => {
+      let dist;
+      let lc;
+      let sx = 0;
+      let code;
+      let extra;
+      if (s.sym_next !== 0) do {
+        dist = s.pending_buf[s.sym_buf + sx++] & 255;
+        dist += (s.pending_buf[s.sym_buf + sx++] & 255) << 8;
+        lc = s.pending_buf[s.sym_buf + sx++];
+        if (dist === 0) send_code2(s, lc, ltree);
+        else {
+          code = _length_code2[lc];
+          send_code2(s, code + LITERALS2 + 1, ltree);
+          extra = extra_lbits2[code];
+          if (extra !== 0) {
+            lc -= base_length2[code];
+            send_bits2(s, lc, extra);
+          }
+          dist--;
+          code = d_code2(dist);
+          send_code2(s, code, dtree);
+          extra = extra_dbits2[code];
+          if (extra !== 0) {
+            dist -= base_dist2[code];
+            send_bits2(s, dist, extra);
+          }
+        }
+      } while (sx < s.sym_next);
+      send_code2(s, END_BLOCK2, ltree);
+    };
+    build_tree2 = (s, desc) => {
+      const tree = desc.dyn_tree;
+      const stree = desc.stat_desc.static_tree;
+      const has_stree = desc.stat_desc.has_stree;
+      const elems = desc.stat_desc.elems;
+      let n, m;
+      let max_code = -1;
+      let node;
+      s.heap_len = 0;
+      s.heap_max = HEAP_SIZE$12;
+      for (n = 0; n < elems; n++) if (tree[n * 2] !== 0) {
+        s.heap[++s.heap_len] = max_code = n;
+        s.depth[n] = 0;
+      } else tree[n * 2 + 1] = 0;
+      while (s.heap_len < 2) {
+        node = s.heap[++s.heap_len] = max_code < 2 ? ++max_code : 0;
+        tree[node * 2] = 1;
+        s.depth[node] = 0;
+        s.opt_len--;
+        if (has_stree) s.static_len -= stree[node * 2 + 1];
+      }
+      desc.max_code = max_code;
+      for (n = s.heap_len >> 1; n >= 1; n--) pqdownheap2(s, tree, n);
+      node = elems;
+      do {
+        n = s.heap[1];
+        s.heap[1] = s.heap[s.heap_len--];
+        pqdownheap2(s, tree, 1);
+        m = s.heap[1];
+        s.heap[--s.heap_max] = n;
+        s.heap[--s.heap_max] = m;
+        tree[node * 2] = tree[n * 2] + tree[m * 2];
+        s.depth[node] = (s.depth[n] >= s.depth[m] ? s.depth[n] : s.depth[m]) + 1;
+        tree[n * 2 + 1] = tree[m * 2 + 1] = node;
+        s.heap[1] = node++;
+        pqdownheap2(s, tree, 1);
+      } while (s.heap_len >= 2);
+      s.heap[--s.heap_max] = s.heap[1];
+      gen_bitlen2(s, desc);
+      gen_codes2(tree, max_code, s.bl_count);
+    };
+    scan_tree2 = (s, tree, max_code) => {
+      let n;
+      let prevlen = -1;
+      let curlen;
+      let nextlen = tree[1];
+      let count = 0;
+      let max_count = 7;
+      let min_count = 4;
+      if (nextlen === 0) {
+        max_count = 138;
+        min_count = 3;
+      }
+      tree[(max_code + 1) * 2 + 1] = 65535;
+      for (n = 0; n <= max_code; n++) {
+        curlen = nextlen;
+        nextlen = tree[(n + 1) * 2 + 1];
+        if (++count < max_count && curlen === nextlen) continue;
+        else if (count < min_count) s.bl_tree[curlen * 2] += count;
+        else if (curlen !== 0) {
+          if (curlen !== prevlen) s.bl_tree[curlen * 2]++;
+          s.bl_tree[REP_3_62 * 2]++;
+        } else if (count <= 10) s.bl_tree[REPZ_3_102 * 2]++;
+        else s.bl_tree[REPZ_11_1382 * 2]++;
+        count = 0;
+        prevlen = curlen;
+        if (nextlen === 0) {
+          max_count = 138;
+          min_count = 3;
+        } else if (curlen === nextlen) {
+          max_count = 6;
+          min_count = 3;
+        } else {
+          max_count = 7;
+          min_count = 4;
+        }
+      }
+    };
+    send_tree2 = (s, tree, max_code) => {
+      let n;
+      let prevlen = -1;
+      let curlen;
+      let nextlen = tree[1];
+      let count = 0;
+      let max_count = 7;
+      let min_count = 4;
+      if (nextlen === 0) {
+        max_count = 138;
+        min_count = 3;
+      }
+      for (n = 0; n <= max_code; n++) {
+        curlen = nextlen;
+        nextlen = tree[(n + 1) * 2 + 1];
+        if (++count < max_count && curlen === nextlen) continue;
+        else if (count < min_count) do
+          send_code2(s, curlen, s.bl_tree);
+        while (--count !== 0);
+        else if (curlen !== 0) {
+          if (curlen !== prevlen) {
+            send_code2(s, curlen, s.bl_tree);
+            count--;
+          }
+          send_code2(s, REP_3_62, s.bl_tree);
+          send_bits2(s, count - 3, 2);
+        } else if (count <= 10) {
+          send_code2(s, REPZ_3_102, s.bl_tree);
+          send_bits2(s, count - 3, 3);
+        } else {
+          send_code2(s, REPZ_11_1382, s.bl_tree);
+          send_bits2(s, count - 11, 7);
+        }
+        count = 0;
+        prevlen = curlen;
+        if (nextlen === 0) {
+          max_count = 138;
+          min_count = 3;
+        } else if (curlen === nextlen) {
+          max_count = 6;
+          min_count = 3;
+        } else {
+          max_count = 7;
+          min_count = 4;
+        }
+      }
+    };
+    build_bl_tree2 = (s) => {
+      let max_blindex;
+      scan_tree2(s, s.dyn_ltree, s.l_desc.max_code);
+      scan_tree2(s, s.dyn_dtree, s.d_desc.max_code);
+      build_tree2(s, s.bl_desc);
+      for (max_blindex = BL_CODES2 - 1; max_blindex >= 3; max_blindex--) if (s.bl_tree[bl_order2[max_blindex] * 2 + 1] !== 0) break;
+      s.opt_len += 3 * (max_blindex + 1) + 5 + 5 + 4;
+      return max_blindex;
+    };
+    send_all_trees2 = (s, lcodes, dcodes, blcodes) => {
+      let rank2;
+      send_bits2(s, lcodes - 257, 5);
+      send_bits2(s, dcodes - 1, 5);
+      send_bits2(s, blcodes - 4, 4);
+      for (rank2 = 0; rank2 < blcodes; rank2++) send_bits2(s, s.bl_tree[bl_order2[rank2] * 2 + 1], 3);
+      send_tree2(s, s.dyn_ltree, lcodes - 1);
+      send_tree2(s, s.dyn_dtree, dcodes - 1);
+    };
+    detect_data_type2 = (s) => {
+      let block_mask = 4093624447;
+      let n;
+      for (n = 0; n <= 31; n++, block_mask >>>= 1) if (block_mask & 1 && s.dyn_ltree[n * 2] !== 0) return Z_BINARY2;
+      if (s.dyn_ltree[18] !== 0 || s.dyn_ltree[20] !== 0 || s.dyn_ltree[26] !== 0) return Z_TEXT2;
+      for (n = 32; n < LITERALS2; n++) if (s.dyn_ltree[n * 2] !== 0) return Z_TEXT2;
+      return Z_BINARY2;
+    };
+    _tr_stored_block2 = (s, buf, stored_len, last) => {
+      send_bits2(s, (STORED_BLOCK2 << 1) + (last ? 1 : 0), 3);
+      bi_windup2(s);
+      put_short2(s, stored_len);
+      put_short2(s, ~stored_len);
+      if (stored_len) s.pending_buf.set(s.window.subarray(buf, buf + stored_len), s.pending);
+      s.pending += stored_len;
+    };
+    _tr_flush_block2 = (s, buf, stored_len, last) => {
+      let opt_lenb, static_lenb;
+      let max_blindex = 0;
+      if (s.level > 0) {
+        if (s.strm.data_type === Z_UNKNOWN2) s.strm.data_type = detect_data_type2(s);
+        build_tree2(s, s.l_desc);
+        build_tree2(s, s.d_desc);
+        max_blindex = build_bl_tree2(s);
+        opt_lenb = s.opt_len + 3 + 7 >>> 3;
+        static_lenb = s.static_len + 3 + 7 >>> 3;
+        if (static_lenb <= opt_lenb || s.strategy === Z_FIXED2) opt_lenb = static_lenb;
+      } else opt_lenb = static_lenb = stored_len + 5;
+      if (stored_len + 4 <= opt_lenb && buf !== -1) _tr_stored_block2(s, buf, stored_len, last);
+      else if (s.strategy === Z_FIXED2 || static_lenb === opt_lenb) {
+        send_bits2(s, (STATIC_TREES2 << 1) + (last ? 1 : 0), 3);
+        compress_block2(s, static_ltree2, static_dtree2);
+      } else {
+        send_bits2(s, (DYN_TREES2 << 1) + (last ? 1 : 0), 3);
+        send_all_trees2(s, s.l_desc.max_code + 1, s.d_desc.max_code + 1, max_blindex + 1);
+        compress_block2(s, s.dyn_ltree, s.dyn_dtree);
+      }
+      init_block2(s);
+      if (last) bi_windup2(s);
+    };
+    _tr_tally2 = (s, dist, lc) => {
+      s.pending_buf[s.sym_buf + s.sym_next++] = dist;
+      s.pending_buf[s.sym_buf + s.sym_next++] = dist >> 8;
+      s.pending_buf[s.sym_buf + s.sym_next++] = lc;
+      if (dist === 0) s.dyn_ltree[lc * 2]++;
+      else {
+        s.matches++;
+        dist--;
+        s.dyn_ltree[(_length_code2[lc] + LITERALS2 + 1) * 2]++;
+        s.dyn_dtree[d_code2(dist) * 2]++;
+      }
+      return s.sym_next === s.sym_end;
+    };
+    adler322 = (adler, buf, len, pos) => {
+      let s1 = adler & 65535 | 0, s2 = adler >>> 16 & 65535 | 0, n = 0;
+      while (len !== 0) {
+        n = len > 2e3 ? 2e3 : len;
+        len -= n;
+        do {
+          s1 = s1 + buf[pos++] | 0;
+          s2 = s2 + s1 | 0;
+        } while (--n);
+        s1 %= 65521;
+        s2 %= 65521;
+      }
+      return s1 | s2 << 16 | 0;
+    };
+    makeTable2 = () => {
+      let c, table = [];
+      for (var n = 0; n < 256; n++) {
+        c = n;
+        for (var k = 0; k < 8; k++) c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+        table[n] = c;
+      }
+      return table;
+    };
+    crcTable2 = new Uint32Array(makeTable2());
+    crc324 = (crc, buf, len, pos) => {
+      const t = crcTable2;
+      const end = pos + len;
+      crc ^= -1;
+      for (let i = pos; i < end; i++) crc = crc >>> 8 ^ t[(crc ^ buf[i]) & 255];
+      return crc ^ -1;
+    };
+    messages_default2 = {
+      2: "need dictionary",
+      1: "stream end",
+      0: "",
+      "-1": "file error",
+      "-2": "stream error",
+      "-3": "data error",
+      "-4": "insufficient memory",
+      "-5": "buffer error",
+      "-6": "incompatible version"
+    };
+    MIN_MATCH2 = 3;
+    MAX_MATCH2 = 258;
+    MIN_LOOKAHEAD2 = 262;
+    BS_NEED_MORE2 = 1;
+    BS_BLOCK_DONE2 = 2;
+    BS_FINISH_STARTED2 = 3;
+    BS_FINISH_DONE2 = 4;
+    slide_hash2 = (s) => {
+      let n, m;
+      let p;
+      let wsize = s.w_size;
+      n = s.hash_size;
+      p = n;
+      do {
+        m = s.head[--p];
+        s.head[p] = m >= wsize ? m - wsize : 0;
+      } while (--n);
+      n = wsize;
+      p = n;
+      do {
+        m = s.prev[--p];
+        s.prev[p] = m >= wsize ? m - wsize : 0;
+      } while (--n);
+    };
+    HASH2 = (s, prev, data) => (prev << s.hash_shift ^ data) & s.hash_mask;
+    INSERT_STRING2 = (s, str) => {
+      let h;
+      if (s.legacy_hash) h = s.ins_h = HASH2(s, s.ins_h, s.window[str + MIN_MATCH2 - 1]);
+      else {
+        const w = s.window;
+        const value = w[str] | w[str + 1] << 8 | w[str + 2] << 16 | w[str + 3] << 24;
+        h = s.ins_h = Math.imul(value, 66521) + 66521 >>> 16 & s.hash_mask;
+      }
+      const hash_head = s.prev[str & s.w_mask] = s.head[h];
+      s.head[h] = str;
+      return hash_head;
+    };
+    flush_pending2 = (strm) => {
+      const s = strm.state;
+      let len = s.pending;
+      if (len > strm.avail_out) len = strm.avail_out;
+      if (len === 0) return;
+      strm.output.set(s.pending_buf.subarray(s.pending_out, s.pending_out + len), strm.next_out);
+      strm.next_out += len;
+      s.pending_out += len;
+      strm.total_out += len;
+      strm.avail_out -= len;
+      s.pending -= len;
+      if (s.pending === 0) s.pending_out = 0;
+    };
+    flush_block_only2 = (s, last) => {
+      _tr_flush_block2(s, s.block_start >= 0 ? s.block_start : -1, s.strstart - s.block_start, last);
+      s.block_start = s.strstart;
+      flush_pending2(s.strm);
+    };
+    read_buf2 = (strm, buf, start, size) => {
+      let len = strm.avail_in;
+      if (len > size) len = size;
+      if (len === 0) return 0;
+      strm.avail_in -= len;
+      buf.set(strm.input.subarray(strm.next_in, strm.next_in + len), start);
+      if (strm.state.wrap === 1) strm.adler = adler322(strm.adler, buf, len, start);
+      else if (strm.state.wrap === 2) strm.adler = crc324(strm.adler, buf, len, start);
+      strm.next_in += len;
+      strm.total_in += len;
+      return len;
+    };
+    longest_match2 = (s, cur_match) => {
+      let chain_length = s.max_chain_length;
+      let scan = s.strstart;
+      let match;
+      let len;
+      let best_len = s.prev_length;
+      let nice_match = s.nice_match;
+      const limit = s.strstart > s.w_size - MIN_LOOKAHEAD2 ? s.strstart - (s.w_size - MIN_LOOKAHEAD2) : 0;
+      const _win = s.window;
+      const wmask = s.w_mask;
+      const prev = s.prev;
+      const strend = s.strstart + MAX_MATCH2;
+      let scan_end1 = _win[scan + best_len - 1];
+      let scan_end = _win[scan + best_len];
+      if (s.prev_length >= s.good_match) chain_length >>= 2;
+      if (nice_match > s.lookahead) nice_match = s.lookahead;
+      do {
+        match = cur_match;
+        if (_win[match + best_len] !== scan_end || _win[match + best_len - 1] !== scan_end1 || _win[match] !== _win[scan] || _win[++match] !== _win[scan + 1]) continue;
+        scan += 2;
+        match++;
+        do
+          ;
+        while (_win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && _win[++scan] === _win[++match] && scan < strend);
+        len = MAX_MATCH2 - (strend - scan);
+        scan = strend - MAX_MATCH2;
+        if (len > best_len) {
+          s.match_start = cur_match;
+          best_len = len;
+          if (len >= nice_match) break;
+          scan_end1 = _win[scan + best_len - 1];
+          scan_end = _win[scan + best_len];
+        }
+      } while ((cur_match = prev[cur_match & wmask]) > limit && --chain_length !== 0);
+      if (best_len <= s.lookahead) return best_len;
+      return s.lookahead;
+    };
+    fill_window2 = (s) => {
+      const _w_size = s.w_size;
+      let n, more, str;
+      do {
+        more = s.window_size - s.lookahead - s.strstart;
+        if (s.strstart >= _w_size + (_w_size - MIN_LOOKAHEAD2)) {
+          s.window.set(s.window.subarray(_w_size, _w_size + _w_size - more), 0);
+          s.match_start -= _w_size;
+          s.strstart -= _w_size;
+          s.block_start -= _w_size;
+          if (s.insert > s.strstart) s.insert = s.strstart;
+          slide_hash2(s);
+          more += _w_size;
+        }
+        if (s.strm.avail_in === 0) break;
+        n = read_buf2(s.strm, s.window, s.strstart + s.lookahead, more);
+        s.lookahead += n;
+        if (!s.legacy_hash) {
+          if (s.lookahead + s.insert > MIN_MATCH2) {
+            str = s.strstart - s.insert;
+            while (s.insert) {
+              INSERT_STRING2(s, str);
+              str++;
+              s.insert--;
+              if (s.lookahead + s.insert <= MIN_MATCH2) break;
+            }
+          }
+        } else if (s.lookahead + s.insert >= MIN_MATCH2) {
+          str = s.strstart - s.insert;
+          s.ins_h = s.window[str];
+          s.ins_h = HASH2(s, s.ins_h, s.window[str + 1]);
+          while (s.insert) {
+            INSERT_STRING2(s, str);
+            str++;
+            s.insert--;
+            if (s.lookahead + s.insert < MIN_MATCH2) break;
+          }
+        }
+      } while (s.lookahead < MIN_LOOKAHEAD2 && s.strm.avail_in !== 0);
+    };
+    deflate_stored2 = (s, flush) => {
+      let min_block = s.pending_buf_size - 5 > s.w_size ? s.w_size : s.pending_buf_size - 5;
+      let len, left, have, last = 0;
+      let used = s.strm.avail_in;
+      do {
+        len = 65535;
+        have = s.bi_valid + 42 >> 3;
+        if (s.strm.avail_out < have) break;
+        have = s.strm.avail_out - have;
+        left = s.strstart - s.block_start;
+        if (len > left + s.strm.avail_in) len = left + s.strm.avail_in;
+        if (len > have) len = have;
+        if (len < min_block && (len === 0 && flush !== 4 || flush === 0 || len !== left + s.strm.avail_in)) break;
+        last = flush === 4 && len === left + s.strm.avail_in ? 1 : 0;
+        _tr_stored_block2(s, 0, 0, last);
+        s.pending_buf[s.pending - 4] = len;
+        s.pending_buf[s.pending - 3] = len >> 8;
+        s.pending_buf[s.pending - 2] = ~len;
+        s.pending_buf[s.pending - 1] = ~len >> 8;
+        flush_pending2(s.strm);
+        if (left) {
+          if (left > len) left = len;
+          s.strm.output.set(s.window.subarray(s.block_start, s.block_start + left), s.strm.next_out);
+          s.strm.next_out += left;
+          s.strm.avail_out -= left;
+          s.strm.total_out += left;
+          s.block_start += left;
+          len -= left;
+        }
+        if (len) {
+          read_buf2(s.strm, s.strm.output, s.strm.next_out, len);
+          s.strm.next_out += len;
+          s.strm.avail_out -= len;
+          s.strm.total_out += len;
+        }
+      } while (last === 0);
+      used -= s.strm.avail_in;
+      if (used) {
+        if (used >= s.w_size) {
+          s.matches = 2;
+          s.window.set(s.strm.input.subarray(s.strm.next_in - s.w_size, s.strm.next_in), 0);
+          s.strstart = s.w_size;
+          s.insert = s.strstart;
+        } else {
+          if (s.window_size - s.strstart <= used) {
+            s.strstart -= s.w_size;
+            s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+            if (s.matches < 2) s.matches++;
+            if (s.insert > s.strstart) s.insert = s.strstart;
+          }
+          s.window.set(s.strm.input.subarray(s.strm.next_in - used, s.strm.next_in), s.strstart);
+          s.strstart += used;
+          s.insert += used > s.w_size - s.insert ? s.w_size - s.insert : used;
+        }
+        s.block_start = s.strstart;
+      }
+      if (s.high_water < s.strstart) s.high_water = s.strstart;
+      if (last) return BS_FINISH_DONE2;
+      if (flush !== 0 && flush !== 4 && s.strm.avail_in === 0 && s.strstart === s.block_start) return BS_BLOCK_DONE2;
+      have = s.window_size - s.strstart;
+      if (s.strm.avail_in > have && s.block_start >= s.w_size) {
+        s.block_start -= s.w_size;
+        s.strstart -= s.w_size;
+        s.window.set(s.window.subarray(s.w_size, s.w_size + s.strstart), 0);
+        if (s.matches < 2) s.matches++;
+        have += s.w_size;
+        if (s.insert > s.strstart) s.insert = s.strstart;
+      }
+      if (have > s.strm.avail_in) have = s.strm.avail_in;
+      if (have) {
+        read_buf2(s.strm, s.window, s.strstart, have);
+        s.strstart += have;
+        s.insert += have > s.w_size - s.insert ? s.w_size - s.insert : have;
+      }
+      if (s.high_water < s.strstart) s.high_water = s.strstart;
+      have = s.bi_valid + 42 >> 3;
+      have = s.pending_buf_size - have > 65535 ? 65535 : s.pending_buf_size - have;
+      min_block = have > s.w_size ? s.w_size : have;
+      left = s.strstart - s.block_start;
+      if (left >= min_block || (left || flush === 4) && flush !== 0 && s.strm.avail_in === 0 && left <= have) {
+        len = left > have ? have : left;
+        last = flush === 4 && s.strm.avail_in === 0 && len === left ? 1 : 0;
+        _tr_stored_block2(s, s.block_start, len, last);
+        s.block_start += len;
+        flush_pending2(s.strm);
+      }
+      return last ? BS_FINISH_STARTED2 : BS_NEED_MORE2;
+    };
+    deflate_fast2 = (s, flush) => {
+      let hash_head;
+      let bflush;
+      for (; ; ) {
+        if (s.lookahead < MIN_LOOKAHEAD2) {
+          fill_window2(s);
+          if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
+          if (s.lookahead === 0) break;
+        }
+        hash_head = 0;
+        if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
+        if (hash_head !== 0 && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) s.match_length = longest_match2(s, hash_head);
+        if (s.match_length >= MIN_MATCH2) {
+          bflush = _tr_tally2(s, s.strstart - s.match_start, s.match_length - MIN_MATCH2);
+          s.lookahead -= s.match_length;
+          if (s.match_length <= s.max_lazy_match && s.lookahead >= MIN_MATCH2) {
+            s.match_length--;
+            do {
+              s.strstart++;
+              hash_head = INSERT_STRING2(s, s.strstart);
+            } while (--s.match_length !== 0);
+            s.strstart++;
+          } else {
+            s.strstart += s.match_length;
+            s.match_length = 0;
+            if (s.legacy_hash) {
+              s.ins_h = s.window[s.strstart];
+              s.ins_h = HASH2(s, s.ins_h, s.window[s.strstart + 1]);
+            }
+          }
+        } else {
+          bflush = _tr_tally2(s, 0, s.window[s.strstart]);
+          s.lookahead--;
+          s.strstart++;
+        }
+        if (bflush) {
+          flush_block_only2(s, false);
+          if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+        }
+      }
+      s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
+      if (flush === 4) {
+        flush_block_only2(s, true);
+        if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
+        return BS_FINISH_DONE2;
+      }
+      if (s.sym_next) {
+        flush_block_only2(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+      }
+      return BS_BLOCK_DONE2;
+    };
+    deflate_slow2 = (s, flush) => {
+      let hash_head;
+      let bflush;
+      let max_insert;
+      for (; ; ) {
+        if (s.lookahead < MIN_LOOKAHEAD2) {
+          fill_window2(s);
+          if (s.lookahead < MIN_LOOKAHEAD2 && flush === 0) return BS_NEED_MORE2;
+          if (s.lookahead === 0) break;
+        }
+        hash_head = 0;
+        if (s.lookahead >= MIN_MATCH2) hash_head = INSERT_STRING2(s, s.strstart);
+        s.prev_length = s.match_length;
+        s.prev_match = s.match_start;
+        s.match_length = MIN_MATCH2 - 1;
+        if (hash_head !== 0 && s.prev_length < s.max_lazy_match && s.strstart - hash_head <= s.w_size - MIN_LOOKAHEAD2) {
+          s.match_length = longest_match2(s, hash_head);
+          if (s.match_length <= 5 && (s.strategy === 1 || s.match_length === MIN_MATCH2 && s.strstart - s.match_start > 4096)) s.match_length = MIN_MATCH2 - 1;
+        }
+        if (s.prev_length >= MIN_MATCH2 && s.match_length <= s.prev_length) {
+          max_insert = s.strstart + s.lookahead - MIN_MATCH2;
+          bflush = _tr_tally2(s, s.strstart - 1 - s.prev_match, s.prev_length - MIN_MATCH2);
+          s.lookahead -= s.prev_length - 1;
+          s.prev_length -= 2;
+          do
+            if (++s.strstart <= max_insert) hash_head = INSERT_STRING2(s, s.strstart);
+          while (--s.prev_length !== 0);
+          s.match_available = 0;
+          s.match_length = MIN_MATCH2 - 1;
+          s.strstart++;
+          if (bflush) {
+            flush_block_only2(s, false);
+            if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+          }
+        } else if (s.match_available) {
+          bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
+          if (bflush)
+            flush_block_only2(s, false);
+          s.strstart++;
+          s.lookahead--;
+          if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+        } else {
+          s.match_available = 1;
+          s.strstart++;
+          s.lookahead--;
+        }
+      }
+      if (s.match_available) {
+        bflush = _tr_tally2(s, 0, s.window[s.strstart - 1]);
+        s.match_available = 0;
+      }
+      s.insert = s.strstart < MIN_MATCH2 - 1 ? s.strstart : MIN_MATCH2 - 1;
+      if (flush === 4) {
+        flush_block_only2(s, true);
+        if (s.strm.avail_out === 0) return BS_FINISH_STARTED2;
+        return BS_FINISH_DONE2;
+      }
+      if (s.sym_next) {
+        flush_block_only2(s, false);
+        if (s.strm.avail_out === 0) return BS_NEED_MORE2;
+      }
+      return BS_BLOCK_DONE2;
+    };
+    Config2 = class {
+      constructor(good_length, max_lazy, nice_length, max_chain, func) {
+        this.good_length = good_length;
+        this.max_lazy = max_lazy;
+        this.nice_length = nice_length;
+        this.max_chain = max_chain;
+        this.func = func;
+      }
+    };
+    configuration_table2 = [
+      new Config2(0, 0, 0, 0, deflate_stored2),
+      new Config2(4, 4, 8, 4, deflate_fast2),
+      new Config2(4, 5, 16, 8, deflate_fast2),
+      new Config2(4, 6, 32, 32, deflate_fast2),
+      new Config2(4, 4, 16, 16, deflate_slow2),
+      new Config2(8, 16, 32, 32, deflate_slow2),
+      new Config2(8, 16, 128, 128, deflate_slow2),
+      new Config2(8, 32, 128, 256, deflate_slow2),
+      new Config2(32, 128, 258, 1024, deflate_slow2),
+      new Config2(32, 258, 258, 4096, deflate_slow2)
+    ];
+    BAD$12 = 16209;
+    TYPE$12 = 16191;
+    MAXBITS2 = 15;
+    ENOUGH_LENS$12 = 852;
+    ENOUGH_DISTS$12 = 592;
+    CODES$12 = 0;
+    LENS$12 = 1;
+    DISTS$12 = 2;
+    lbase2 = new Uint16Array([
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      13,
+      15,
+      17,
+      19,
+      23,
+      27,
+      31,
+      35,
+      43,
+      51,
+      59,
+      67,
+      83,
+      99,
+      115,
+      131,
+      163,
+      195,
+      227,
+      258,
+      0,
+      0
+    ]);
+    lext2 = new Uint8Array([
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      16,
+      17,
+      17,
+      17,
+      17,
+      18,
+      18,
+      18,
+      18,
+      19,
+      19,
+      19,
+      19,
+      20,
+      20,
+      20,
+      20,
+      21,
+      21,
+      21,
+      21,
+      16,
+      199,
+      75
+    ]);
+    dbase2 = new Uint16Array([
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      9,
+      13,
+      17,
+      25,
+      33,
+      49,
+      65,
+      97,
+      129,
+      193,
+      257,
+      385,
+      513,
+      769,
+      1025,
+      1537,
+      2049,
+      3073,
+      4097,
+      6145,
+      8193,
+      12289,
+      16385,
+      24577,
+      0,
+      0
+    ]);
+    dext2 = new Uint8Array([
+      16,
+      16,
+      16,
+      16,
+      17,
+      17,
+      18,
+      18,
+      19,
+      19,
+      20,
+      20,
+      21,
+      21,
+      22,
+      22,
+      23,
+      23,
+      24,
+      24,
+      25,
+      25,
+      26,
+      26,
+      27,
+      27,
+      28,
+      28,
+      29,
+      29,
+      64,
+      64
+    ]);
+    inflate_table2 = (type, lens, lens_index, codes, table, table_index, work, opts) => {
+      const bits = opts.bits;
+      let len = 0;
+      let sym = 0;
+      let min = 0, max = 0;
+      let root = 0;
+      let curr = 0;
+      let drop = 0;
+      let left = 0;
+      let used = 0;
+      let huff = 0;
+      let incr;
+      let fill;
+      let low;
+      let mask;
+      let next;
+      let base = null;
+      let match;
+      const count = /* @__PURE__ */ new Uint16Array(16);
+      const offs = /* @__PURE__ */ new Uint16Array(16);
+      let extra = null;
+      let here_bits, here_op, here_val;
+      for (len = 0; len <= MAXBITS2; len++) count[len] = 0;
+      for (sym = 0; sym < codes; sym++) count[lens[lens_index + sym]]++;
+      root = bits;
+      for (max = MAXBITS2; max >= 1; max--) if (count[max] !== 0) break;
+      if (root > max) root = max;
+      if (max === 0) {
+        table[table_index++] = 20971520;
+        table[table_index++] = 20971520;
+        opts.bits = 1;
+        return 0;
+      }
+      for (min = 1; min < max; min++) if (count[min] !== 0) break;
+      if (root < min) root = min;
+      left = 1;
+      for (len = 1; len <= MAXBITS2; len++) {
+        left <<= 1;
+        left -= count[len];
+        if (left < 0) return -1;
+      }
+      if (left > 0 && (type === CODES$12 || max !== 1)) return -1;
+      offs[1] = 0;
+      for (len = 1; len < MAXBITS2; len++) offs[len + 1] = offs[len] + count[len];
+      for (sym = 0; sym < codes; sym++) if (lens[lens_index + sym] !== 0) work[offs[lens[lens_index + sym]]++] = sym;
+      if (type === CODES$12) {
+        base = extra = work;
+        match = 20;
+      } else if (type === LENS$12) {
+        base = lbase2;
+        extra = lext2;
+        match = 257;
+      } else {
+        base = dbase2;
+        extra = dext2;
+        match = 0;
+      }
+      huff = 0;
+      sym = 0;
+      len = min;
+      next = table_index;
+      curr = root;
+      drop = 0;
+      low = -1;
+      used = 1 << root;
+      mask = used - 1;
+      if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
+      for (; ; ) {
+        here_bits = len - drop;
+        if (work[sym] + 1 < match) {
+          here_op = 0;
+          here_val = work[sym];
+        } else if (work[sym] >= match) {
+          here_op = extra[work[sym] - match];
+          here_val = base[work[sym] - match];
+        } else {
+          here_op = 96;
+          here_val = 0;
+        }
+        incr = 1 << len - drop;
+        fill = 1 << curr;
+        min = fill;
+        do {
+          fill -= incr;
+          table[next + (huff >> drop) + fill] = here_bits << 24 | here_op << 16 | here_val | 0;
+        } while (fill !== 0);
+        incr = 1 << len - 1;
+        while (huff & incr) incr >>= 1;
+        if (incr !== 0) {
+          huff &= incr - 1;
+          huff += incr;
+        } else huff = 0;
+        sym++;
+        if (--count[len] === 0) {
+          if (len === max) break;
+          len = lens[lens_index + work[sym]];
+        }
+        if (len > root && (huff & mask) !== low) {
+          if (drop === 0) drop = root;
+          next += min;
+          curr = len - drop;
+          left = 1 << curr;
+          while (curr + drop < max) {
+            left -= count[curr + drop];
+            if (left <= 0) break;
+            curr++;
+            left <<= 1;
+          }
+          used += 1 << curr;
+          if (type === LENS$12 && used > ENOUGH_LENS$12 || type === DISTS$12 && used > ENOUGH_DISTS$12) return 1;
+          low = huff & mask;
+          table[low] = root << 24 | curr << 16 | next - table_index | 0;
+        }
+      }
+      if (huff !== 0) table[next + huff] = len - drop << 24 | 4194304;
+      opts.bits = root;
+      return 0;
+    };
+    CODES2 = 0;
+    LENS2 = 1;
+    DISTS2 = 2;
+    HEAD2 = 16180;
+    FLAGS2 = 16181;
+    TIME2 = 16182;
+    OS2 = 16183;
+    EXLEN2 = 16184;
+    EXTRA2 = 16185;
+    NAME2 = 16186;
+    COMMENT2 = 16187;
+    HCRC2 = 16188;
+    DICTID2 = 16189;
+    DICT2 = 16190;
+    TYPE2 = 16191;
+    TYPEDO2 = 16192;
+    STORED2 = 16193;
+    COPY_2 = 16194;
+    COPY2 = 16195;
+    TABLE2 = 16196;
+    LENLENS2 = 16197;
+    CODELENS2 = 16198;
+    LEN_2 = 16199;
+    LEN2 = 16200;
+    LENEXT2 = 16201;
+    DIST2 = 16202;
+    DISTEXT2 = 16203;
+    MATCH2 = 16204;
+    LIT2 = 16205;
+    CHECK2 = 16206;
+    LENGTH2 = 16207;
+    DONE2 = 16208;
+    BAD2 = 16209;
+    MEM2 = 16210;
+    SYNC2 = 16211;
+    ENOUGH_LENS2 = 852;
+    ENOUGH_DISTS2 = 592;
+    zswap322 = (q) => {
+      return (q >>> 24 & 255) + (q >>> 8 & 65280) + ((q & 65280) << 8) + ((q & 255) << 24);
+    };
+    InflateState2 = class {
+      constructor() {
+        this.strm = null;
+        this.mode = 0;
+        this.last = false;
+        this.wrap = 0;
+        this.havedict = false;
+        this.flags = 0;
+        this.dmax = 0;
+        this.check = 0;
+        this.total = 0;
+        this.head = null;
+        this.wbits = 0;
+        this.wsize = 0;
+        this.whave = 0;
+        this.wnext = 0;
+        this.window = null;
+        this.hold = 0;
+        this.bits = 0;
+        this.length = 0;
+        this.offset = 0;
+        this.extra = 0;
+        this.lencode = null;
+        this.distcode = null;
+        this.lenbits = 0;
+        this.distbits = 0;
+        this.ncode = 0;
+        this.nlen = 0;
+        this.ndist = 0;
+        this.have = 0;
+        this.next = null;
+        this.lens = /* @__PURE__ */ new Uint16Array(320);
+        this.work = /* @__PURE__ */ new Uint16Array(288);
+        this.lendyn = null;
+        this.distdyn = null;
+        this.sane = 0;
+        this.back = 0;
+        this.was = 0;
+      }
+    };
+    inflateStateCheck2 = (strm) => {
+      if (!strm) return 1;
+      const state = strm.state;
+      if (!state || state.strm !== strm || state.mode < HEAD2 || state.mode > SYNC2) return 1;
+      return 0;
+    };
+    inflateResetKeep2 = (strm) => {
+      if (inflateStateCheck2(strm)) return -2;
+      const state = strm.state;
+      strm.total_in = strm.total_out = state.total = 0;
+      strm.msg = "";
+      if (state.wrap) strm.adler = state.wrap & 1;
+      state.mode = HEAD2;
+      state.last = 0;
+      state.havedict = 0;
+      state.flags = -1;
+      state.dmax = 32768;
+      state.head = null;
+      state.hold = 0;
+      state.bits = 0;
+      state.lencode = state.lendyn = new Int32Array(ENOUGH_LENS2);
+      state.distcode = state.distdyn = new Int32Array(ENOUGH_DISTS2);
+      state.sane = 1;
+      state.back = -1;
+      return 0;
+    };
+    inflateReset3 = (strm) => {
+      if (inflateStateCheck2(strm)) return -2;
+      const state = strm.state;
+      state.wsize = 0;
+      state.whave = 0;
+      state.wnext = 0;
+      return inflateResetKeep2(strm);
+    };
+    inflateReset22 = (strm, windowBits) => {
+      let wrap;
+      if (inflateStateCheck2(strm)) return -2;
+      const state = strm.state;
+      if (windowBits < 0) {
+        wrap = 0;
+        windowBits = -windowBits;
+      } else {
+        wrap = (windowBits >> 4) + 5;
+        if (windowBits < 48) windowBits &= 15;
+      }
+      if (windowBits && (windowBits < 8 || windowBits > 15)) return -2;
+      if (state.window !== null && state.wbits !== windowBits) state.window = null;
+      state.wrap = wrap;
+      state.wbits = windowBits;
+      return inflateReset3(strm);
+    };
+    inflateInit22 = (strm, windowBits) => {
+      if (!strm) return -2;
+      const state = new InflateState2();
+      strm.state = state;
+      state.strm = strm;
+      state.window = null;
+      state.mode = HEAD2;
+      const ret = inflateReset22(strm, windowBits);
+      if (ret !== 0) strm.state = null;
+      return ret;
+    };
+    virgin2 = true;
+    fixedtables2 = (state) => {
+      if (virgin2) {
+        lenfix2 = /* @__PURE__ */ new Int32Array(512);
+        distfix2 = /* @__PURE__ */ new Int32Array(32);
+        let sym = 0;
+        while (sym < 144) state.lens[sym++] = 8;
+        while (sym < 256) state.lens[sym++] = 9;
+        while (sym < 280) state.lens[sym++] = 7;
+        while (sym < 288) state.lens[sym++] = 8;
+        inflate_table2(LENS2, state.lens, 0, 288, lenfix2, 0, state.work, { bits: 9 });
+        sym = 0;
+        while (sym < 32) state.lens[sym++] = 5;
+        inflate_table2(DISTS2, state.lens, 0, 32, distfix2, 0, state.work, { bits: 5 });
+        virgin2 = false;
+      }
+      state.lencode = lenfix2;
+      state.lenbits = 9;
+      state.distcode = distfix2;
+      state.distbits = 5;
+    };
+    updatewindow2 = (strm, src, end, copy) => {
+      let dist;
+      const state = strm.state;
+      if (state.window === null) state.window = new Uint8Array(1 << state.wbits);
+      if (state.wsize === 0) {
+        state.wsize = 1 << state.wbits;
+        state.wnext = 0;
+        state.whave = 0;
+      }
+      if (copy >= state.wsize) {
+        state.window.set(src.subarray(end - state.wsize, end), 0);
+        state.wnext = 0;
+        state.whave = state.wsize;
+      } else {
+        dist = state.wsize - state.wnext;
+        if (dist > copy) dist = copy;
+        state.window.set(src.subarray(end - copy, end - copy + dist), state.wnext);
+        copy -= dist;
+        if (copy) {
+          state.window.set(src.subarray(end - copy, end), 0);
+          state.wnext = copy;
+          state.whave = state.wsize;
+        } else {
+          state.wnext += dist;
+          if (state.wnext === state.wsize) state.wnext = 0;
+          if (state.whave < state.wsize) state.whave += dist;
+        }
+      }
+      return 0;
+    };
+    inflate$12 = (strm, flush) => {
+      let state;
+      let input, output;
+      let next;
+      let put;
+      let have, left;
+      let hold;
+      let bits;
+      let _in, _out;
+      let copy;
+      let from;
+      let from_source;
+      let here = 0;
+      let here_bits, here_op, here_val;
+      let last_bits, last_op, last_val;
+      let len;
+      let ret;
+      const hbuf = /* @__PURE__ */ new Uint8Array(4);
+      let opts;
+      let n;
+      const order = new Uint8Array([
+        16,
+        17,
+        18,
+        0,
+        8,
+        7,
+        9,
+        6,
+        10,
+        5,
+        11,
+        4,
+        12,
+        3,
+        13,
+        2,
+        14,
+        1,
+        15
+      ]);
+      if (inflateStateCheck2(strm) || !strm.output || !strm.input && strm.avail_in !== 0) return -2;
+      state = strm.state;
+      if (state.mode === TYPE2) state.mode = TYPEDO2;
+      put = strm.next_out;
+      output = strm.output;
+      left = strm.avail_out;
+      next = strm.next_in;
+      input = strm.input;
+      have = strm.avail_in;
+      hold = state.hold;
+      bits = state.bits;
+      _in = have;
+      _out = left;
+      ret = 0;
+      inf_leave: for (; ; ) switch (state.mode) {
+        case HEAD2:
+          if (state.wrap === 0) {
+            state.mode = TYPEDO2;
+            break;
+          }
+          while (bits < 16) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (state.wrap & 2 && hold === 35615) {
+            if (state.wbits === 0) state.wbits = 15;
+            state.check = 0;
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            state.check = crc324(state.check, hbuf, 2, 0);
+            hold = 0;
+            bits = 0;
+            state.mode = FLAGS2;
+            break;
+          }
+          if (state.head) state.head.done = false;
+          if (!(state.wrap & 1) || (((hold & 255) << 8) + (hold >> 8)) % 31) {
+            strm.msg = "incorrect header check";
+            state.mode = BAD2;
+            break;
+          }
+          if ((hold & 15) !== 8) {
+            strm.msg = "unknown compression method";
+            state.mode = BAD2;
+            break;
+          }
+          hold >>>= 4;
+          bits -= 4;
+          len = (hold & 15) + 8;
+          if (state.wbits === 0) state.wbits = len;
+          if (len > 15 || len > state.wbits) {
+            strm.msg = "invalid window size";
+            state.mode = BAD2;
+            break;
+          }
+          state.dmax = 1 << state.wbits;
+          state.flags = 0;
+          strm.adler = state.check = 1;
+          state.mode = hold & 512 ? DICTID2 : TYPE2;
+          hold = 0;
+          bits = 0;
+          break;
+        case FLAGS2:
+          while (bits < 16) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          state.flags = hold;
+          if ((state.flags & 255) !== 8) {
+            strm.msg = "unknown compression method";
+            state.mode = BAD2;
+            break;
+          }
+          if (state.flags & 57344) {
+            strm.msg = "unknown header flags set";
+            state.mode = BAD2;
+            break;
+          }
+          if (state.head) state.head.text = hold >> 8 & 1;
+          if (state.flags & 512 && state.wrap & 4) {
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            state.check = crc324(state.check, hbuf, 2, 0);
+          }
+          hold = 0;
+          bits = 0;
+          state.mode = TIME2;
+        case TIME2:
+          while (bits < 32) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (state.head) state.head.time = hold >>> 0;
+          if (state.flags & 512 && state.wrap & 4) {
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            hbuf[2] = hold >>> 16 & 255;
+            hbuf[3] = hold >>> 24 & 255;
+            state.check = crc324(state.check, hbuf, 4, 0);
+          }
+          hold = 0;
+          bits = 0;
+          state.mode = OS2;
+        case OS2:
+          while (bits < 16) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (state.head) {
+            state.head.xflags = hold & 255;
+            state.head.os = hold >> 8;
+          }
+          if (state.flags & 512 && state.wrap & 4) {
+            hbuf[0] = hold & 255;
+            hbuf[1] = hold >>> 8 & 255;
+            state.check = crc324(state.check, hbuf, 2, 0);
+          }
+          hold = 0;
+          bits = 0;
+          state.mode = EXLEN2;
+        case EXLEN2:
+          if (state.flags & 1024) {
+            while (bits < 16) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.length = hold;
+            if (state.head) state.head.extra_len = hold;
+            if (state.flags & 512 && state.wrap & 4) {
+              hbuf[0] = hold & 255;
+              hbuf[1] = hold >>> 8 & 255;
+              state.check = crc324(state.check, hbuf, 2, 0);
+            }
+            hold = 0;
+            bits = 0;
+          } else if (state.head) state.head.extra = null;
+          state.mode = EXTRA2;
+        case EXTRA2:
+          if (state.flags & 1024) {
+            copy = state.length;
+            if (copy > have) copy = have;
+            if (copy) {
+              if (state.head) {
+                len = state.head.extra_len - state.length;
+                if (!state.head.extra) state.head.extra = new Uint8Array(state.head.extra_len);
+                state.head.extra.set(input.subarray(next, next + copy), len);
+              }
+              if (state.flags & 512 && state.wrap & 4) state.check = crc324(state.check, input, copy, next);
+              have -= copy;
+              next += copy;
+              state.length -= copy;
+            }
+            if (state.length) break inf_leave;
+          }
+          state.length = 0;
+          state.mode = NAME2;
+        case NAME2:
+          if (state.flags & 2048) {
+            if (have === 0) break inf_leave;
+            copy = 0;
+            do {
+              len = input[next + copy++];
+              if (state.head && len && state.length < 65536) state.head.name += String.fromCharCode(len);
+            } while (len && copy < have);
+            if (state.flags & 512 && state.wrap & 4) state.check = crc324(state.check, input, copy, next);
+            have -= copy;
+            next += copy;
+            if (len) break inf_leave;
+          } else if (state.head) state.head.name = null;
+          state.length = 0;
+          state.mode = COMMENT2;
+        case COMMENT2:
+          if (state.flags & 4096) {
+            if (have === 0) break inf_leave;
+            copy = 0;
+            do {
+              len = input[next + copy++];
+              if (state.head && len && state.length < 65536) state.head.comment += String.fromCharCode(len);
+            } while (len && copy < have);
+            if (state.flags & 512 && state.wrap & 4) state.check = crc324(state.check, input, copy, next);
+            have -= copy;
+            next += copy;
+            if (len) break inf_leave;
+          } else if (state.head) state.head.comment = null;
+          state.mode = HCRC2;
+        case HCRC2:
+          if (state.flags & 512) {
+            while (bits < 16) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            if (state.wrap & 4 && hold !== (state.check & 65535)) {
+              strm.msg = "header crc mismatch";
+              state.mode = BAD2;
+              break;
+            }
+            hold = 0;
+            bits = 0;
+          }
+          if (state.head) {
+            state.head.hcrc = state.flags >> 9 & 1;
+            state.head.done = true;
+          }
+          strm.adler = state.check = 0;
+          state.mode = TYPE2;
+          break;
+        case DICTID2:
+          while (bits < 32) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          strm.adler = state.check = zswap322(hold);
+          hold = 0;
+          bits = 0;
+          state.mode = DICT2;
+        case DICT2:
+          if (state.havedict === 0) {
+            strm.next_out = put;
+            strm.avail_out = left;
+            strm.next_in = next;
+            strm.avail_in = have;
+            state.hold = hold;
+            state.bits = bits;
+            return 2;
+          }
+          strm.adler = state.check = 1;
+          state.mode = TYPE2;
+        case TYPE2:
+          if (flush === 5 || flush === 6) break inf_leave;
+        case TYPEDO2:
+          if (state.last) {
+            hold >>>= bits & 7;
+            bits -= bits & 7;
+            state.mode = CHECK2;
+            break;
+          }
+          while (bits < 3) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          state.last = hold & 1;
+          hold >>>= 1;
+          bits -= 1;
+          switch (hold & 3) {
+            case 0:
+              state.mode = STORED2;
+              break;
+            case 1:
+              fixedtables2(state);
+              state.mode = LEN_2;
+              if (flush === 6) {
+                hold >>>= 2;
+                bits -= 2;
+                break inf_leave;
+              }
+              break;
+            case 2:
+              state.mode = TABLE2;
+              break;
+            case 3:
+              strm.msg = "invalid block type";
+              state.mode = BAD2;
+          }
+          hold >>>= 2;
+          bits -= 2;
+          break;
+        case STORED2:
+          hold >>>= bits & 7;
+          bits -= bits & 7;
+          while (bits < 32) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if ((hold & 65535) !== (hold >>> 16 ^ 65535)) {
+            strm.msg = "invalid stored block lengths";
+            state.mode = BAD2;
+            break;
+          }
+          state.length = hold & 65535;
+          hold = 0;
+          bits = 0;
+          state.mode = COPY_2;
+          if (flush === 6) break inf_leave;
+        case COPY_2:
+          state.mode = COPY2;
+        case COPY2:
+          copy = state.length;
+          if (copy) {
+            if (copy > have) copy = have;
+            if (copy > left) copy = left;
+            if (copy === 0) break inf_leave;
+            output.set(input.subarray(next, next + copy), put);
+            have -= copy;
+            next += copy;
+            left -= copy;
+            put += copy;
+            state.length -= copy;
+            break;
+          }
+          state.mode = TYPE2;
+          break;
+        case TABLE2:
+          while (bits < 14) {
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          state.nlen = (hold & 31) + 257;
+          hold >>>= 5;
+          bits -= 5;
+          state.ndist = (hold & 31) + 1;
+          hold >>>= 5;
+          bits -= 5;
+          state.ncode = (hold & 15) + 4;
+          hold >>>= 4;
+          bits -= 4;
+          if (state.nlen > 286 || state.ndist > 30) {
+            strm.msg = "too many length or distance symbols";
+            state.mode = BAD2;
+            break;
+          }
+          state.have = 0;
+          state.mode = LENLENS2;
+        case LENLENS2:
+          while (state.have < state.ncode) {
+            while (bits < 3) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.lens[order[state.have++]] = hold & 7;
+            hold >>>= 3;
+            bits -= 3;
+          }
+          while (state.have < 19) state.lens[order[state.have++]] = 0;
+          state.lencode = state.lendyn;
+          state.lenbits = 7;
+          opts = { bits: state.lenbits };
+          ret = inflate_table2(CODES2, state.lens, 0, 19, state.lencode, 0, state.work, opts);
+          state.lenbits = opts.bits;
+          if (ret) {
+            strm.msg = "invalid code lengths set";
+            state.mode = BAD2;
+            break;
+          }
+          state.have = 0;
+          state.mode = CODELENS2;
+        case CODELENS2:
+          while (state.have < state.nlen + state.ndist) {
+            for (; ; ) {
+              here = state.lencode[hold & (1 << state.lenbits) - 1];
+              here_bits = here >>> 24;
+              here_op = here >>> 16 & 255;
+              here_val = here & 65535;
+              if (here_bits <= bits) break;
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            if (here_val < 16) {
+              hold >>>= here_bits;
+              bits -= here_bits;
+              state.lens[state.have++] = here_val;
+            } else {
+              if (here_val === 16) {
+                n = here_bits + 2;
+                while (bits < n) {
+                  if (have === 0) break inf_leave;
+                  have--;
+                  hold += input[next++] << bits;
+                  bits += 8;
+                }
+                hold >>>= here_bits;
+                bits -= here_bits;
+                if (state.have === 0) {
+                  strm.msg = "invalid bit length repeat";
+                  state.mode = BAD2;
+                  break;
+                }
+                len = state.lens[state.have - 1];
+                copy = 3 + (hold & 3);
+                hold >>>= 2;
+                bits -= 2;
+              } else if (here_val === 17) {
+                n = here_bits + 3;
+                while (bits < n) {
+                  if (have === 0) break inf_leave;
+                  have--;
+                  hold += input[next++] << bits;
+                  bits += 8;
+                }
+                hold >>>= here_bits;
+                bits -= here_bits;
+                len = 0;
+                copy = 3 + (hold & 7);
+                hold >>>= 3;
+                bits -= 3;
+              } else {
+                n = here_bits + 7;
+                while (bits < n) {
+                  if (have === 0) break inf_leave;
+                  have--;
+                  hold += input[next++] << bits;
+                  bits += 8;
+                }
+                hold >>>= here_bits;
+                bits -= here_bits;
+                len = 0;
+                copy = 11 + (hold & 127);
+                hold >>>= 7;
+                bits -= 7;
+              }
+              if (state.have + copy > state.nlen + state.ndist) {
+                strm.msg = "invalid bit length repeat";
+                state.mode = BAD2;
+                break;
+              }
+              while (copy--) state.lens[state.have++] = len;
+            }
+          }
+          if (state.mode === BAD2) break;
+          if (state.lens[256] === 0) {
+            strm.msg = "invalid code -- missing end-of-block";
+            state.mode = BAD2;
+            break;
+          }
+          state.lenbits = 9;
+          opts = { bits: state.lenbits };
+          ret = inflate_table2(LENS2, state.lens, 0, state.nlen, state.lencode, 0, state.work, opts);
+          state.lenbits = opts.bits;
+          if (ret) {
+            strm.msg = "invalid literal/lengths set";
+            state.mode = BAD2;
+            break;
+          }
+          state.distbits = 6;
+          state.distcode = state.distdyn;
+          opts = { bits: state.distbits };
+          ret = inflate_table2(DISTS2, state.lens, state.nlen, state.ndist, state.distcode, 0, state.work, opts);
+          state.distbits = opts.bits;
+          if (ret) {
+            strm.msg = "invalid distances set";
+            state.mode = BAD2;
+            break;
+          }
+          state.mode = LEN_2;
+          if (flush === 6) break inf_leave;
+        case LEN_2:
+          state.mode = LEN2;
+        case LEN2:
+          if (have >= 6 && left >= 258) {
+            strm.next_out = put;
+            strm.avail_out = left;
+            strm.next_in = next;
+            strm.avail_in = have;
+            state.hold = hold;
+            state.bits = bits;
+            inflate_fast2(strm, _out);
+            put = strm.next_out;
+            output = strm.output;
+            left = strm.avail_out;
+            next = strm.next_in;
+            input = strm.input;
+            have = strm.avail_in;
+            hold = state.hold;
+            bits = state.bits;
+            if (state.mode === TYPE2) state.back = -1;
+            break;
+          }
+          state.back = 0;
+          for (; ; ) {
+            here = state.lencode[hold & (1 << state.lenbits) - 1];
+            here_bits = here >>> 24;
+            here_op = here >>> 16 & 255;
+            here_val = here & 65535;
+            if (here_bits <= bits) break;
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if (here_op && (here_op & 240) === 0) {
+            last_bits = here_bits;
+            last_op = here_op;
+            last_val = here_val;
+            for (; ; ) {
+              here = state.lencode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+              here_bits = here >>> 24;
+              here_op = here >>> 16 & 255;
+              here_val = here & 65535;
+              if (last_bits + here_bits <= bits) break;
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= last_bits;
+            bits -= last_bits;
+            state.back += last_bits;
+          }
+          hold >>>= here_bits;
+          bits -= here_bits;
+          state.back += here_bits;
+          state.length = here_val;
+          if (here_op === 0) {
+            state.mode = LIT2;
+            break;
+          }
+          if (here_op & 32) {
+            state.back = -1;
+            state.mode = TYPE2;
+            break;
+          }
+          if (here_op & 64) {
+            strm.msg = "invalid literal/length code";
+            state.mode = BAD2;
+            break;
+          }
+          state.extra = here_op & 15;
+          state.mode = LENEXT2;
+        case LENEXT2:
+          if (state.extra) {
+            n = state.extra;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.length += hold & (1 << state.extra) - 1;
+            hold >>>= state.extra;
+            bits -= state.extra;
+            state.back += state.extra;
+          }
+          state.was = state.length;
+          state.mode = DIST2;
+        case DIST2:
+          for (; ; ) {
+            here = state.distcode[hold & (1 << state.distbits) - 1];
+            here_bits = here >>> 24;
+            here_op = here >>> 16 & 255;
+            here_val = here & 65535;
+            if (here_bits <= bits) break;
+            if (have === 0) break inf_leave;
+            have--;
+            hold += input[next++] << bits;
+            bits += 8;
+          }
+          if ((here_op & 240) === 0) {
+            last_bits = here_bits;
+            last_op = here_op;
+            last_val = here_val;
+            for (; ; ) {
+              here = state.distcode[last_val + ((hold & (1 << last_bits + last_op) - 1) >> last_bits)];
+              here_bits = here >>> 24;
+              here_op = here >>> 16 & 255;
+              here_val = here & 65535;
+              if (last_bits + here_bits <= bits) break;
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            hold >>>= last_bits;
+            bits -= last_bits;
+            state.back += last_bits;
+          }
+          hold >>>= here_bits;
+          bits -= here_bits;
+          state.back += here_bits;
+          if (here_op & 64) {
+            strm.msg = "invalid distance code";
+            state.mode = BAD2;
+            break;
+          }
+          state.offset = here_val;
+          state.extra = here_op & 15;
+          state.mode = DISTEXT2;
+        case DISTEXT2:
+          if (state.extra) {
+            n = state.extra;
+            while (bits < n) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            state.offset += hold & (1 << state.extra) - 1;
+            hold >>>= state.extra;
+            bits -= state.extra;
+            state.back += state.extra;
+          }
+          if (state.offset > state.dmax) {
+            strm.msg = "invalid distance too far back";
+            state.mode = BAD2;
+            break;
+          }
+          state.mode = MATCH2;
+        case MATCH2:
+          if (left === 0) break inf_leave;
+          copy = _out - left;
+          if (state.offset > copy) {
+            copy = state.offset - copy;
+            if (copy > state.whave) {
+              if (state.sane) {
+                strm.msg = "invalid distance too far back";
+                state.mode = BAD2;
+                break;
+              }
+            }
+            if (copy > state.wnext) {
+              copy -= state.wnext;
+              from = state.wsize - copy;
+            } else from = state.wnext - copy;
+            if (copy > state.length) copy = state.length;
+            from_source = state.window;
+          } else {
+            from_source = output;
+            from = put - state.offset;
+            copy = state.length;
+          }
+          if (copy > left) copy = left;
+          left -= copy;
+          state.length -= copy;
+          do
+            output[put++] = from_source[from++];
+          while (--copy);
+          if (state.length === 0) state.mode = LEN2;
+          break;
+        case LIT2:
+          if (left === 0) break inf_leave;
+          output[put++] = state.length;
+          left--;
+          state.mode = LEN2;
+          break;
+        case CHECK2:
+          if (state.wrap) {
+            while (bits < 32) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold |= input[next++] << bits;
+              bits += 8;
+            }
+            _out -= left;
+            strm.total_out += _out;
+            state.total += _out;
+            if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc324(state.check, output, _out, put - _out) : adler322(state.check, output, _out, put - _out);
+            _out = left;
+            if (state.wrap & 4 && (state.flags ? hold : zswap322(hold)) !== state.check) {
+              strm.msg = "incorrect data check";
+              state.mode = BAD2;
+              break;
+            }
+            hold = 0;
+            bits = 0;
+          }
+          state.mode = LENGTH2;
+        case LENGTH2:
+          if (state.wrap && state.flags) {
+            while (bits < 32) {
+              if (have === 0) break inf_leave;
+              have--;
+              hold += input[next++] << bits;
+              bits += 8;
+            }
+            if (state.wrap & 4 && hold !== (state.total & 4294967295)) {
+              strm.msg = "incorrect length check";
+              state.mode = BAD2;
+              break;
+            }
+            hold = 0;
+            bits = 0;
+          }
+          state.mode = DONE2;
+        case DONE2:
+          ret = 1;
+          break inf_leave;
+        case BAD2:
+          ret = -3;
+          break inf_leave;
+        case MEM2:
+          return -4;
+        case SYNC2:
+        default:
+          return -2;
+      }
+      strm.next_out = put;
+      strm.avail_out = left;
+      strm.next_in = next;
+      strm.avail_in = have;
+      state.hold = hold;
+      state.bits = bits;
+      if (state.wsize || _out !== strm.avail_out && state.mode < BAD2 && (state.mode < CHECK2 || flush !== 4)) {
+        if (updatewindow2(strm, strm.output, strm.next_out, _out - strm.avail_out)) {
+          state.mode = MEM2;
+          return -4;
+        }
+      }
+      _in -= strm.avail_in;
+      _out -= strm.avail_out;
+      strm.total_in += _in;
+      strm.total_out += _out;
+      state.total += _out;
+      if (state.wrap & 4 && _out) strm.adler = state.check = state.flags ? crc324(state.check, output, _out, strm.next_out - _out) : adler322(state.check, output, _out, strm.next_out - _out);
+      strm.data_type = state.bits + (state.last ? 64 : 0) + (state.mode === TYPE2 ? 128 : 0) + (state.mode === LEN_2 || state.mode === COPY_2 ? 256 : 0);
+      if ((_in === 0 && _out === 0 || flush === 4) && ret === 0) ret = -5;
+      return ret;
+    };
+    inflateEnd2 = (strm) => {
+      if (inflateStateCheck2(strm)) return -2;
+      let state = strm.state;
+      if (state.window) state.window = null;
+      strm.state = null;
+      return 0;
+    };
+    inflateSetDictionary2 = (strm, dictionary) => {
+      const dictLength = dictionary.length;
+      let state;
+      let dictid;
+      let ret;
+      if (inflateStateCheck2(strm)) return -2;
+      state = strm.state;
+      if (state.wrap !== 0 && state.mode !== DICT2) return -2;
+      if (state.mode === DICT2) {
+        dictid = 1;
+        dictid = adler322(dictid, dictionary, dictLength, 0);
+        if (dictid !== state.check) return -3;
+      }
+      ret = updatewindow2(strm, dictionary, dictLength, dictLength);
+      if (ret) {
+        state.mode = MEM2;
+        return -4;
+      }
+      state.havedict = 1;
+      return 0;
+    };
+    ZStream2 = class {
+      constructor() {
+        this.input = null;
+        this.next_in = 0;
+        this.avail_in = 0;
+        this.total_in = 0;
+        this.output = null;
+        this.next_out = 0;
+        this.avail_out = 0;
+        this.total_out = 0;
+        this.msg = "";
+        this.state = null;
+        this.data_type = 2;
+        this.adler = 0;
+      }
+    };
+    flattenChunks2 = (chunks) => {
+      const result = new Uint8Array(chunks.reduce((len, chunk) => len + chunk.length, 0));
+      let pos = 0;
+      for (const chunk of chunks) {
+        result.set(chunk, pos);
+        pos += chunk.length;
+      }
+      return result;
+    };
+    toString2 = Object.prototype.toString;
+    defaultOptions2 = {
+      chunkSize: 1024 * 64,
+      windowBits: 15,
+      raw: false,
+      dictionary: /* @__PURE__ */ new Uint8Array(0)
+    };
+    Inflate2 = class {
+      options;
+      /**
+      * Error code after inflate finishes. {@link Z_OK} on success.
+      * Should be checked when broken data is possible.
+      */
+      err;
+      /** Error message, if {@link Inflate.err} is not {@link Z_OK}. */
+      msg;
+      /**
+      * `true` once the compressed stream has ended. A stream may end before the
+      * caller's data does (trailing bytes), so check this to know when to stop
+      * pushing - further {@link Inflate.push} calls are no-ops.
+      */
+      ended;
+      started;
+      /**
+      * Chunks of output data, if {@link Inflate.onData} not overridden.
+      * @internal
+      */
+      chunks;
+      strm;
+      /**
+      * Uncompressed result, generated by default {@link Inflate.onData}
+      * and {@link Inflate.onEnd} handlers. Filled after you push last chunk
+      * (call {@link Inflate.push} with {@link Z_FINISH} / `true` param).
+      */
+      result;
+      /**
+      * Creates a new inflator instance with the specified params. Throws an
+      * exception on bad params. See {@link InflateOptions} for the list of
+      * supported options.
+      *
+      * By default, when no options are set, the deflate/gzip data format is
+      * autodetected via the wrapper header.
+      *
+      * @example
+      * ```javascript
+      * import { Inflate } from 'pako'
+      *
+      * const chunk1 = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9])
+      * const chunk2 = new Uint8Array([10, 11, 12, 13, 14, 15, 16, 17, 18, 19])
+      *
+      * const inflate = new Inflate({ level: 3 })
+      *
+      * inflate.push(chunk1, false)
+      * inflate.push(chunk2, true)  // true -> last chunk
+      *
+      * if (inflate.err) throw new Error(inflate.err)
+      *
+      * console.log(inflate.result)
+      * ```
+      */
+      constructor(options = {}) {
+        this.options = Object.assign({}, defaultOptions2, options);
+        const opt = this.options;
+        if (opt.raw && opt.windowBits >= 0 && opt.windowBits < 16) {
+          opt.windowBits = -opt.windowBits;
+          if (opt.windowBits === 0) opt.windowBits = -15;
+        }
+        if (opt.windowBits >= 0 && opt.windowBits < 16 && !options.windowBits) opt.windowBits += 32;
+        if (opt.windowBits > 15 && opt.windowBits < 48) {
+          if ((opt.windowBits & 15) === 0) opt.windowBits |= 15;
+        }
+        this.err = 0;
+        this.msg = "";
+        this.ended = false;
+        this.started = false;
+        this.chunks = [];
+        this.result = /* @__PURE__ */ new Uint8Array(0);
+        this.strm = new ZStream2();
+        this.strm.avail_out = 0;
+        let status = inflateInit22(this.strm, opt.windowBits);
+        if (status !== 0) throw new Error(messages_default2[status]);
+        if (toString2.call(opt.dictionary) === "[object ArrayBuffer]") opt.dictionary = new Uint8Array(opt.dictionary);
+        const dictionary = opt.dictionary;
+        if (opt.raw && dictionary.length) {
+          status = inflateSetDictionary2(this.strm, dictionary);
+          if (status !== 0) throw new Error(messages_default2[status]);
+        }
+      }
+      /**
+      * Sends input data to the inflate pipe, generating {@link Inflate.onData} calls
+      * with new output chunks. Returns `true` on success. If end of stream is
+      * detected, {@link Inflate.onEnd} will be called.
+      *
+      * `flush_mode` is not needed for normal operation, because end of stream
+      * is detected automatically. Pass {@link Z_SYNC_FLUSH} to force the decoder
+      * to emit all currently available output — handy when you need to decode
+      * data frame-by-frame from a long-running stream.
+      *
+      * On failure, calls {@link Inflate.onEnd} with the error code and returns false.
+      *
+      * Once the stream has ended (a compressed stream may end before your data
+      * does), further `push` calls are no-ops and return whether the decode
+      * finished successfully. The final outcome is in {@link Inflate.result},
+      * {@link Inflate.err} and {@link Inflate.msg}.
+      *
+      * @param flush_mode 0..6 for corresponding {@link Z_NO_FLUSH}..{@link Z_TREES}
+      *   flush modes. See constants. Skipped or `false` means {@link Z_NO_FLUSH},
+      *   `true` means {@link Z_FINISH}.
+      *
+      * @example
+      * ```javascript
+      * push(chunk, false) // push one of data chunks
+      * ...
+      * push(chunk, true)  // push last chunk
+      * ```
+      */
+      push(data, flush_mode = false) {
+        const strm = this.strm;
+        const chunkSize = this.options.chunkSize;
+        let status;
+        let _flush_mode;
+        let last_avail_out;
+        if (this.ended) return this.err === 0;
+        if (typeof flush_mode === "number") _flush_mode = flush_mode;
+        else _flush_mode = flush_mode === true ? 4 : 0;
+        if (toString2.call(data) === "[object ArrayBuffer]") strm.input = new Uint8Array(data);
+        else strm.input = data;
+        strm.next_in = 0;
+        strm.avail_in = strm.input.length;
+        if (!this.started) {
+          this.started = true;
+          this.onStart(strm);
+        }
+        for (; ; ) {
+          if (strm.avail_out === 0) {
+            strm.output = new Uint8Array(chunkSize);
+            strm.next_out = 0;
+            strm.avail_out = chunkSize;
+          }
+          status = inflate$12(strm, _flush_mode);
+          if (status === 2) {
+            const dictionary = this.options.dictionary;
+            if (dictionary.length) {
+              status = inflateSetDictionary2(strm, dictionary);
+              if (status === 0) status = inflate$12(strm, _flush_mode);
+              else if (status === -3) status = 2;
+            }
+          }
+          while (strm.avail_in > 0 && status === 1 && strm.state.wrap & 2 && strm.state.flags !== 0 && strm.input[strm.next_in] !== 0) {
+            inflateReset3(strm);
+            status = inflate$12(strm, _flush_mode);
+          }
+          if (status === -2 || status === -3 || status === 2 || status === -4) break;
+          last_avail_out = strm.avail_out;
+          if (strm.next_out) {
+            if (strm.avail_out === 0 || status === 1 || _flush_mode > 0) {
+              this.onData(strm.output.length === strm.next_out ? strm.output : strm.output.subarray(0, strm.next_out));
+              strm.avail_out = 0;
+              strm.next_out = 0;
+            }
+          }
+          if ((status === 0 || status === -5) && last_avail_out === 0) continue;
+          if (status === 1) {
+            status = inflateEnd2(this.strm);
+            break;
+          }
+          if (strm.avail_in === 0) {
+            if (_flush_mode === 4) {
+              status = inflateEnd2(this.strm);
+              if (status === 0) status = -5;
+              break;
+            }
+            return true;
+          }
+        }
+        this.err = status;
+        this.msg = strm.msg || messages_default2[status];
+        this.ended = true;
+        this.onEnd(status);
+        return status === 0;
+      }
+      /**
+      * Called once before the first low-level inflate call.
+      *
+      * Override this handler to attach low-level inflate state, for example to read
+      * gzip header metadata:
+      *
+      * ```javascript
+      * import { Inflate, GZheader, zlibInflateGetHeader } from 'pako'
+      *
+      * const inflator = new Inflate()
+      *
+      * inflator.onStart = function (strm) {
+      *   this.header = new GZheader()
+      *   zlibInflateGetHeader(strm, this.header)
+      * }
+      *
+      * inflator.push(data, true)
+      * console.log(inflator.header.name)
+      * ```
+      */
+      onStart(strm) {
+      }
+      /**
+      * By default, stores data blocks in the {@link Inflate.chunks} property and glues
+      * them in {@link Inflate.onEnd}. Override this handler if you need another behaviour.
+      *
+      * @param chunk output data.
+      */
+      onData(chunk) {
+        this.chunks.push(chunk);
+      }
+      /**
+      * Called after you tell inflate that the input stream is
+      * complete ({@link Z_FINISH}). By default, joins the collected {@link Inflate.chunks},
+      * frees memory and fills the {@link Inflate.result} property.
+      *
+      * @param status inflate status. {@link Z_OK} on success, other if not.
+      */
+      onEnd(status) {
+        if (status === 0) this.result = flattenChunks2(this.chunks);
+        this.chunks = [];
+      }
+    };
+  }
+});
+
+// packages/assets/src/png.ts
+function validatePng(bytes) {
+  if (bytes.length < 8 || bytes.length > MAX_INPUT_BYTES || !PNG_SIGNATURE.every((byte, index) => bytes[index] === byte)) {
+    throw new Error("Invalid PNG signature or input size.");
+  }
+  let offset = 8;
+  let header;
+  let paletteSeen = false;
+  let transparencySeen = false;
+  let dataSeen = false;
+  let dataEnded = false;
+  let endSeen = false;
+  while (offset < bytes.length) {
+    if (offset + 12 > bytes.length) {
+      throw new Error("Truncated PNG chunk header.");
+    }
+    const length = u32be(bytes, offset);
+    const end = offset + 12 + length;
+    if (!Number.isSafeInteger(end) || end > bytes.length) {
+      throw new Error("Truncated PNG chunk payload.");
+    }
+    const type = String.fromCharCode(...bytes.subarray(offset + 4, offset + 8));
+    const expectedCrc = u32be(bytes, end - 4);
+    const actualCrc = Number.parseInt(data_hash_crc32_default.of(bytes.subarray(offset + 4, end - 4)), 16);
+    if (expectedCrc !== actualCrc) {
+      throw new Error(`PNG ${type} CRC mismatch.`);
+    }
+    if (!header && type !== "IHDR") {
+      throw new Error("PNG IHDR must be first.");
+    }
+    if (type === "IHDR") {
+      if (header || length !== 13) {
+        throw new Error("PNG requires one 13-byte IHDR.");
+      }
+      const width2 = u32be(bytes, offset + 8);
+      const height = u32be(bytes, offset + 12);
+      const depth = bytes[offset + 16];
+      const colorType = bytes[offset + 17];
+      const interlace = bytes[offset + 20];
+      if (width2 === 0 || height === 0 || width2 * height > MAX_PIXELS) {
+        throw new RangeError(`PNG dimensions ${width2}\xD7${height} exceed the pixel limit.`);
+      }
+      if (bytes[offset + 18] !== 0 || bytes[offset + 19] !== 0 || interlace > 1) {
+        throw new Error("Unsupported PNG compression, filter, or interlace method.");
+      }
+      const indexed = colorType === 3 && [1, 2, 4, 8].includes(depth);
+      const gray = colorType === 0 && [1, 2, 4, 8].includes(depth);
+      const byteChannels = [2, 4, 6].includes(colorType) && depth === 8;
+      if (!indexed && !gray && !byteChannels) {
+        throw new Error(
+          `Unsupported PNG color type ${colorType} at ${depth} bits; 16-bit samples are not supported.`
+        );
+      }
+      header = { width: width2, height, depth, colorType, interlace };
+    } else if (type === "PLTE") {
+      if (paletteSeen || dataSeen || length === 0 || length % 3 !== 0 || length > 768) {
+        throw new Error("Invalid PNG PLTE chunk.");
+      }
+      paletteSeen = true;
+    } else if (type === "tRNS") {
+      if (transparencySeen || dataSeen || header?.colorType === 3 && (!paletteSeen || length === 0) || header?.colorType === 0 && length !== 2 || header?.colorType === 2 && length !== 6 || header?.colorType !== 0 && header?.colorType !== 2 && header?.colorType !== 3) {
+        throw new Error("Invalid PNG tRNS chunk.");
+      }
+      transparencySeen = true;
+    } else if (type === "IDAT") {
+      if (dataEnded || header?.colorType === 3 && !paletteSeen) {
+        throw new Error("PNG IDAT chunks must be contiguous and follow PLTE.");
+      }
+      dataSeen = true;
+    } else if (type === "IEND") {
+      if (!dataSeen || length !== 0 || end !== bytes.length) {
+        throw new Error("Invalid PNG IEND chunk.");
+      }
+      endSeen = true;
+      break;
+    } else if ((bytes[offset + 4] & 32) === 0) {
+      throw new Error(`Unsupported critical PNG chunk '${type}'.`);
+    }
+    if (dataSeen && type !== "IDAT") {
+      dataEnded = true;
+    }
+    offset = end;
+  }
+  if (!header || !endSeen) {
+    throw new Error("PNG is missing IHDR or IEND.");
+  }
+  return header;
+}
+function decodeSamples(image, header) {
+  const channels = channelsFor(header.colorType);
+  const bitsPerPixel = channels * header.depth;
+  const passes = header.interlace === 1 ? PASS_STEPS : [[0, 0, 1, 1]];
+  let expected = 0;
+  for (const [sx, sy, dx, dy] of passes) {
+    const width2 = passLength(header.width, sx, dx);
+    const height = passLength(header.height, sy, dy);
+    if (width2 > 0 && height > 0) {
+      expected += height * (1 + Math.ceil(width2 * bitsPerPixel / 8));
+    }
+  }
+  const inflator = new Inflate2({ windowBits: 15, chunkSize: 16 * 1024 });
+  const inflated = new Uint8Array(expected);
+  let written = 0;
+  inflator.onData = (chunk) => {
+    if (written + chunk.length > expected) {
+      throw new Error("PNG inflated data exceeds declared dimensions.");
+    }
+    inflated.set(chunk, written);
+    written += chunk.length;
+  };
+  const compressedLength = image.dataChunks.reduce((size, chunk) => size + chunk.length, 0);
+  const compressed = new Uint8Array(compressedLength);
+  let compressedOffset = 0;
+  for (const chunk of image.dataChunks) {
+    compressed.set(chunk, compressedOffset);
+    compressedOffset += chunk.length;
+  }
+  if (!inflator.push(compressed, true) || inflator.err || written !== expected) {
+    throw new Error(`Invalid PNG image data: ${inflator.msg || "scanline length mismatch"}.`);
+  }
+  const samples = new Uint8Array(header.width * header.height * channels);
+  let cursor = 0;
+  const filterStride = Math.max(1, Math.ceil(bitsPerPixel / 8));
+  for (const [sx, sy, dx, dy] of passes) {
+    const width2 = passLength(header.width, sx, dx);
+    const height = passLength(header.height, sy, dy);
+    if (width2 === 0 || height === 0) {
+      continue;
+    }
+    const rowBytes = Math.ceil(width2 * bitsPerPixel / 8);
+    let previous = new Uint8Array(rowBytes);
+    for (let row = 0; row < height; row++) {
+      const filter = inflated[cursor++];
+      if (filter > 4) {
+        throw new Error(`Invalid PNG scanline filter ${filter}.`);
+      }
+      const current = inflated.slice(cursor, cursor + rowBytes);
+      cursor += rowBytes;
+      for (let index = 0; index < rowBytes; index++) {
+        const left = index >= filterStride ? current[index - filterStride] : 0;
+        const above = previous[index];
+        const upperLeft = index >= filterStride ? previous[index - filterStride] : 0;
+        let predictor = 0;
+        if (filter === 1) {
+          predictor = left;
+        }
+        if (filter === 2) {
+          predictor = above;
+        }
+        if (filter === 3) {
+          predictor = Math.floor((left + above) / 2);
+        }
+        if (filter === 4) {
+          predictor = paeth(left, above, upperLeft);
+        }
+        current[index] = current[index] + predictor & 255;
+      }
+      for (let x = 0; x < width2; x++) {
+        const destination = ((sy + row * dy) * header.width + sx + x * dx) * channels;
+        if (header.depth === 8) {
+          samples.set(current.subarray(x * channels, (x + 1) * channels), destination);
+        } else {
+          const bit2 = x * header.depth;
+          const mask = (1 << header.depth) - 1;
+          samples[destination] = current[bit2 >> 3] >> 8 - header.depth - (bit2 & 7) & mask;
+        }
+      }
+      previous = current;
+    }
+  }
+  return samples;
+}
+var PNG_SIGNATURE, MAX_INPUT_BYTES, MAX_PIXELS, PASS_STEPS, u32be, passLength, paeth, channelsFor, pngImporter;
+var init_png = __esm({
+  async "packages/assets/src/png.ts"() {
+    "use strict";
+    await init_data_hash_crc32();
+    await init_data_image_png();
+    init_pako2();
+    PNG_SIGNATURE = Uint8Array.of(137, 80, 78, 71, 13, 10, 26, 10);
+    MAX_INPUT_BYTES = 16 * 1024 * 1024;
+    MAX_PIXELS = 1024 * 1024;
+    PASS_STEPS = [
+      [0, 0, 8, 8],
+      [4, 0, 8, 8],
+      [0, 4, 4, 8],
+      [2, 0, 4, 4],
+      [0, 2, 2, 4],
+      [1, 0, 2, 2],
+      [0, 1, 1, 2]
+    ];
+    u32be = (bytes, offset) => bytes[offset] * 16777216 + (bytes[offset + 1] << 16) + (bytes[offset + 2] << 8) + bytes[offset + 3] >>> 0;
+    passLength = (size, start, step) => size <= start ? 0 : Math.ceil((size - start) / step);
+    paeth = (a, b, c) => {
+      const target = a + b - c;
+      const da = Math.abs(target - a);
+      const db = Math.abs(target - b);
+      const dc = Math.abs(target - c);
+      if (da <= db && da <= dc) {
+        return a;
+      }
+      if (db <= dc) {
+        return b;
+      }
+      return c;
+    };
+    channelsFor = (colorType) => {
+      if (colorType === 2) {
+        return 3;
+      }
+      if (colorType === 4) {
+        return 2;
+      }
+      if (colorType === 6) {
+        return 4;
+      }
+      return 1;
+    };
+    pngImporter = Object.freeze({
+      id: "uttori.import.png",
+      version: "1.0.0",
+      mediaTypes: ["image/png"],
+      import: (input) => {
+        const header = validatePng(input.bytes);
+        const image = data_image_png_default.fromFile(input.bytes);
+        const samples = decodeSamples(image, header);
+        if (header.colorType === 0 && image.transparency.length === 2) {
+          const transparent = image.transparency[0] << 8 | image.transparency[1];
+          if (transparent >= 2 ** header.depth) {
+            throw new Error("PNG grayscale tRNS sample exceeds bit depth.");
+          }
+        }
+        if (header.colorType === 2 && image.transparency.length === 6 && (image.transparency[0] !== 0 || image.transparency[2] !== 0 || image.transparency[4] !== 0)) {
+          throw new Error("PNG RGB8 tRNS sample exceeds bit depth.");
+        }
+        if (header.colorType === 3) {
+          const paletteBytes = image.palette;
+          const count = paletteBytes.length / 3;
+          if (!Number.isInteger(count) || count === 0 || count > 2 ** header.depth || image.transparency.length > count) {
+            throw new Error("PNG palette size or transparency length is invalid.");
+          }
+          const palette = Array.from(
+            { length: count },
+            (_, index) => [
+              paletteBytes[index * 3],
+              paletteBytes[index * 3 + 1],
+              paletteBytes[index * 3 + 2],
+              image.transparency[index] ?? 255
+            ]
+          );
+          for (const index of samples) {
+            if (index >= count) {
+              throw new Error(`PNG palette index ${index} is out of range.`);
+            }
+          }
+          const value2 = {
+            kind: "indexed-image",
+            width: header.width,
+            height: header.height,
+            indexes: samples,
+            palette,
+            sourceBitDepth: header.depth
+          };
+          return { kind: value2.kind, value: value2 };
+        }
+        const rgba = new Uint8Array(header.width * header.height * 4);
+        const maxGray = 2 ** header.depth - 1;
+        const transparentGray = image.transparency.length === 2 ? image.transparency[0] << 8 | image.transparency[1] : void 0;
+        const transparentRgb = image.transparency.length === 6 ? [image.transparency[1], image.transparency[3], image.transparency[5]] : void 0;
+        for (let pixel = 0; pixel < header.width * header.height; pixel++) {
+          const source = pixel * channelsFor(header.colorType);
+          const output = pixel * 4;
+          if (header.colorType === 0 || header.colorType === 4) {
+            const gray = Math.round(samples[source] * 255 / maxGray);
+            rgba[output] = gray;
+            rgba[output + 1] = gray;
+            rgba[output + 2] = gray;
+            let alpha = 255;
+            if (header.colorType === 4) {
+              alpha = samples[source + 1];
+            } else if (samples[source] === transparentGray) {
+              alpha = 0;
+            }
+            rgba[output + 3] = alpha;
+          } else {
+            rgba.set(samples.subarray(source, source + 3), output);
+            const isTransparent = transparentRgb?.every(
+              (channel, index) => channel === samples[source + index]
+            );
+            let alpha = 255;
+            if (header.colorType === 6) {
+              alpha = samples[source + 3];
+            } else if (isTransparent) {
+              alpha = 0;
+            }
+            rgba[output + 3] = alpha;
+          }
+        }
+        const value = {
+          kind: "rgba-image",
+          width: header.width,
+          height: header.height,
+          rgba
+        };
+        return { kind: value.kind, value };
+      }
+    });
+  }
+});
+
+// packages/assets/src/image-conversion.ts
+function selectPalette(image, options, resources, capacity2) {
+  let colors;
+  let indexes;
+  let sourceToNative;
+  if (image.kind === "indexed-image") {
+    if (options.palette === "auto") {
+      throw new Error("Indexed PNG must preserve palette identity; auto is for truecolor input.");
+    }
+    if (options.palette === "embedded") {
+      colors = image.palette.map((color) => [...color]);
+      indexes = image.indexes.slice();
+      sourceToNative = colors.map((_, index) => index);
+    } else {
+      const resource = resources[options.palette];
+      if (!resource) {
+        throw new Error(`Missing palette resource '${options.palette}'.`);
+      }
+      const external = externalPalette(resource);
+      colors = external.colors;
+      const used = /* @__PURE__ */ new Set();
+      sourceToNative = image.palette.map((source, index) => {
+        const match = colors.findIndex(
+          (candidate, candidateIndex) => !used.has(candidateIndex) && colorKey(candidate) === colorKey(source)
+        );
+        if (match < 0) {
+          throw new Error(`External palette loses source entry ${index}.`);
+        }
+        used.add(match);
+        return match;
+      });
+      indexes = Uint8Array.from(image.indexes, (index) => sourceToNative[index]);
+      if (external.transparentIndex !== 0) {
+        const zero = colors[0];
+        colors[0] = colors[external.transparentIndex];
+        colors[external.transparentIndex] = zero;
+        const swap = (index) => {
+          if (index === 0) {
+            return external.transparentIndex;
+          }
+          if (index === external.transparentIndex) {
+            return 0;
+          }
+          return index;
+        };
+        indexes = Uint8Array.from(indexes, swap);
+        sourceToNative = sourceToNative.map(swap);
+      }
+    }
+  } else {
+    if (options.palette === "embedded") {
+      throw new Error("Truecolor PNG has no embedded indexed palette.");
+    }
+    if (options.palette === "auto") {
+      colors = [[0, 0, 0, 0]];
+      const byColor = /* @__PURE__ */ new Map();
+      indexes = new Uint8Array(image.width * image.height);
+      for (let pixel = 0; pixel < indexes.length; pixel++) {
+        const rgba = image.rgba.subarray(pixel * 4, pixel * 4 + 4);
+        if (rgba[3] !== 0 && rgba[3] !== 255) {
+          throw new Error(`Pixel ${pixel} has partial alpha ${rgba[3]}.`);
+        }
+        if (rgba[3] === 0) {
+          if (byColor.has("transparent") && colorKey(colors[0].slice(0, 3)) !== colorKey(rgba.slice(0, 3))) {
+            throw new Error("Transparent pixels have differing hidden RGB values.");
+          }
+          colors[0] = [rgba[0], rgba[1], rgba[2], 0];
+          byColor.set("transparent", 0);
+          continue;
+        }
+        const key3 = colorKey(rgba.slice(0, 3));
+        let index = byColor.get(key3);
+        if (index === void 0) {
+          index = colors.length;
+          colors.push([rgba[0], rgba[1], rgba[2], 255]);
+          byColor.set(key3, index);
+        }
+        indexes[pixel] = index;
+      }
+    } else {
+      const resource = resources[options.palette];
+      if (!resource) {
+        throw new Error(`Missing palette resource '${options.palette}'.`);
+      }
+      const external = externalPalette(resource);
+      colors = external.colors;
+      if (external.transparentIndex !== 0) {
+        const zero = colors[0];
+        colors[0] = colors[external.transparentIndex];
+        colors[external.transparentIndex] = zero;
+      }
+      const lookup = /* @__PURE__ */ new Map();
+      colors.forEach((color, index) => {
+        const key3 = colorKey(color);
+        if (!lookup.has(key3)) {
+          lookup.set(key3, index);
+        }
+      });
+      indexes = new Uint8Array(image.width * image.height);
+      for (let pixel = 0; pixel < indexes.length; pixel++) {
+        const rgba = image.rgba.subarray(pixel * 4, pixel * 4 + 4);
+        const index = lookup.get(colorKey(rgba));
+        if (index === void 0) {
+          throw new Error(`Pixel ${pixel} is absent from the exact external palette.`);
+        }
+        indexes[pixel] = index;
+      }
+    }
+  }
+  if (colors.length > capacity2) {
+    throw new Error(`Palette has ${colors.length} entries; one bank holds ${capacity2}.`);
+  }
+  if (indexes.some((index) => index >= capacity2)) {
+    throw new Error(`Pixel index exceeds ${capacity2}-color bank.`);
+  }
+  colors.forEach((color, index) => {
+    if (color[3] !== 0 && color[3] !== 255) {
+      throw new Error(`Palette entry ${index} has partial alpha.`);
+    }
+    if (index !== 0 && color[3] === 0 && indexes.includes(index)) {
+      throw new Error(`Transparent palette entry ${index} would be rendered opaque.`);
+    }
+  });
+  if (indexes.some((index) => index === 0 && colors[0][3] !== 0)) {
+    throw new Error("Opaque index-zero pixels cannot be represented by SNES transparency.");
+  }
+  return { colors, indexes, sourceToNative };
+}
+function tileCoordinates(width2, height, layout) {
+  const result = [];
+  if (layout.tileOrder === "row-major") {
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width2; x++) {
+        result.push([x, y]);
+      }
+    }
+  } else if (layout.tileOrder === "column-major") {
+    for (let x = 0; x < width2; x++) {
+      for (let y = 0; y < height; y++) {
+        result.push([x, y]);
+      }
+    }
+  } else {
+    if (width2 % 2 || height % 2) {
+      throw new Error("2\xD72 block layout requires complete tile blocks.");
+    }
+    const blockY = Array.from({ length: height / 2 }, (_, index) => index);
+    if (layout.blockRows === "bottom-to-top") {
+      blockY.reverse();
+    }
+    if (layout.blockOrder === "row-major") {
+      for (const by of blockY) {
+        for (let bx = 0; bx < width2 / 2; bx++) {
+          for (const quadrant of layout.withinBlock) {
+            result.push([bx * 2 + quadrant % 2, by * 2 + Math.floor(quadrant / 2)]);
+          }
+        }
+      }
+    } else {
+      for (let bx = 0; bx < width2 / 2; bx++) {
+        for (const by of blockY) {
+          for (const quadrant of layout.withinBlock) {
+            result.push([bx * 2 + quadrant % 2, by * 2 + Math.floor(quadrant / 2)]);
+          }
+        }
+      }
+    }
+  }
+  return result;
+}
+function mapOrder(width2, height, layout) {
+  if (layout === "row-major") {
+    return Array.from({ length: width2 * height }, (_, index) => index);
+  }
+  if (![32, 64].includes(width2) || ![32, 64].includes(height)) {
+    throw new Error("BG screen-block tilemap requires 32\xD732, 64\xD732, 32\xD764, or 64\xD764 cells.");
+  }
+  const order = [];
+  for (let by = 0; by < height; by += 32) {
+    for (let bx = 0; bx < width2; bx += 32) {
+      for (let y = 0; y < 32; y++) {
+        for (let x = 0; x < 32; x++) {
+          order.push((by + y) * width2 + bx + x);
+        }
+      }
+    }
+  }
+  return order;
+}
+function imageModel(document2) {
+  if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image" || !isRecord4(document2.value)) {
+    throw new Error("Image encoder requires imported PNG pixels.");
+  }
+  const value = document2.value;
+  if (value.kind !== document2.kind || typeof value.width !== "number" || typeof value.height !== "number" || !Number.isSafeInteger(value.width) || !Number.isSafeInteger(value.height) || value.width < 1 || value.height < 1 || value.width * value.height > 1024 * 1024) {
+    throw new Error("Image model has invalid dimensions or kind.");
+  }
+  const pixels = value.width * value.height;
+  if (document2.kind === "indexed-image") {
+    if (!(value.indexes instanceof Uint8Array) || value.indexes.length !== pixels || !Array.isArray(value.palette) || value.palette.length < 1 || value.palette.length > 256 || ![1, 2, 4, 8].includes(Number(value.sourceBitDepth))) {
+      throw new Error("Indexed image model has invalid pixels, palette, or source depth.");
+    }
+    for (const [index, color] of value.palette.entries()) {
+      if (!Array.isArray(color) || color.length !== 4 || color.some(
+        (channel) => typeof channel !== "number" || !Number.isInteger(channel) || channel < 0 || channel > 255
+      )) {
+        throw new Error(`Indexed image palette entry ${index} is not RGBA8.`);
+      }
+    }
+  } else if (!(value.rgba instanceof Uint8Array) || value.rgba.length !== pixels * 4) {
+    throw new Error("RGBA image model has invalid pixel bytes.");
+  }
+  return value;
+}
+function encodeImage(document2, rawOptions, resources, format) {
+  const image = imageModel(document2);
+  if (image.width % 8 !== 0 || image.height % 8 !== 0) {
+    throw new Error(`Image ${image.width}\xD7${image.height} requires dimensions divisible by 8.`);
+  }
+  const mode7 = format === "snes.tile.mode7";
+  const depth = mode7 ? 8 : Number(format.slice("snes.tile.".length, -3));
+  const options = readOptions(rawOptions, image.kind === "indexed-image");
+  const capacity2 = 2 ** depth;
+  const selection = selectPalette(image, options, resources, capacity2);
+  const colors = selection.colors.map((color, index) => ({
+    red: reduce(color[0], options.paletteExpansion, `Palette ${index} red`),
+    green: reduce(color[1], options.paletteExpansion, `Palette ${index} green`),
+    blue: reduce(color[2], options.paletteExpansion, `Palette ${index} blue`),
+    unusedHighBit: 0
+  }));
+  while (colors.length < capacity2) {
+    colors.push({ red: 0, green: 0, blue: 0, unusedHighBit: 0 });
+  }
+  const widthTiles = image.width / 8;
+  const heightTiles = image.height / 8;
+  const coordinates = tileCoordinates(widthTiles, heightTiles, options.layout);
+  const indexByCoordinate = new Array(coordinates.length);
+  const tiles = coordinates.map(([tx, ty], storageIndex) => {
+    indexByCoordinate[ty * widthTiles + tx] = storageIndex;
+    return Array.from(
+      { length: 8 },
+      (_, row) => Array.from({ length: 8 }, (_2, column) => {
+        const sourceX = options.tilemap.horizontalFlip ? 7 - column : column;
+        const sourceY = options.tilemap.verticalFlip ? 7 - row : row;
+        return selection.indexes[(ty * 8 + sourceY) * image.width + tx * 8 + sourceX];
+      })
+    );
+  });
+  const tileBytes = mode7 ? encodeMode7Tiles(tiles) : encodePlanarTiles(tiles, depth);
+  const paletteBytes = encodeBgr555(colors);
+  const decodedTiles = mode7 ? decodeMode7Tiles(tileBytes) : decodePlanarTiles(tileBytes, depth);
+  const decodedColors = decodeBgr555(paletteBytes);
+  const preview = new Uint8Array(image.width * image.height * 4);
+  for (let ty = 0; ty < heightTiles; ty++) {
+    for (let tx = 0; tx < widthTiles; tx++) {
+      const storageIndex = indexByCoordinate[ty * widthTiles + tx];
+      for (let y = 0; y < 8; y++) {
+        for (let x = 0; x < 8; x++) {
+          const tileX = options.tilemap.horizontalFlip ? 7 - x : x;
+          const tileY = options.tilemap.verticalFlip ? 7 - y : y;
+          const index = decodedTiles[storageIndex][tileY][tileX];
+          const destination = ((ty * 8 + y) * image.width + tx * 8 + x) * 4;
+          const color = decodedColors[index];
+          preview[destination] = expand(color.red, options.paletteExpansion);
+          preview[destination + 1] = expand(color.green, options.paletteExpansion);
+          preview[destination + 2] = expand(color.blue, options.paletteExpansion);
+          preview[destination + 3] = selection.colors[index]?.[3] ?? 255;
+          if (image.kind === "indexed-image") {
+            const sourceIndex = image.indexes[destination / 4];
+            if (selection.sourceToNative?.[sourceIndex] !== index) {
+              throw new Error(
+                `Indexed PNG pixel ${destination / 4} lost its original palette index.`
+              );
+            }
+          }
+          const sourceRgba = image.kind === "rgba-image" ? image.rgba.subarray(destination, destination + 4) : image.palette[image.indexes[destination / 4]];
+          for (let channel = 0; channel < 4; channel++) {
+            if (preview[destination + channel] !== sourceRgba[channel]) {
+              throw new Error(
+                `Image pixel ${destination / 4} channel ${channel} cannot be reconstructed exactly.`
+              );
+            }
+          }
+        }
+      }
+    }
+  }
+  const start = options.tilemap.startTileIndex;
+  const limit = mode7 ? 256 : 1024;
+  if (start + coordinates.length > limit) {
+    throw new Error(`Tilemap exceeds ${limit} tile indexes.`);
+  }
+  if (mode7 && (options.tilemap.paletteBank !== 0 || options.tilemap.priority !== 0 || options.tilemap.horizontalFlip || options.tilemap.verticalFlip)) {
+    throw new Error("Mode 7 map has no palette bank, priority, or flip bits.");
+  }
+  if (mode7 && options.tilemap.layout === "screen-blocks") {
+    throw new Error(
+      "Mode 7 maps use row-major storage; full 128\xD7128 maps are a separate contract."
+    );
+  }
+  const mapIndexes = mapOrder(widthTiles, heightTiles, options.tilemap.layout);
+  const tilemapBytes = mode7 ? encodeMode7Map(mapIndexes.map((position) => start + indexByCoordinate[position])) : encodeBgMap(
+    mapIndexes.map((position) => ({
+      tile: start + indexByCoordinate[position],
+      palette: options.tilemap.paletteBank,
+      priority: options.tilemap.priority,
+      horizontalFlip: Number(options.tilemap.horizontalFlip),
+      verticalFlip: Number(options.tilemap.verticalFlip)
+    }))
+  );
+  const metadata = {
+    width: image.width,
+    height: image.height,
+    widthTiles,
+    heightTiles,
+    tileIndexByCoordinate: indexByCoordinate,
+    sourceToNativePaletteIndex: selection.sourceToNative,
+    originalPaletteEntries: image.kind === "indexed-image" ? image.palette.length : void 0,
+    paletteExpansion: options.paletteExpansion,
+    layout: options.layout,
+    tilemap: options.tilemap
+  };
+  return {
+    outputs: {
+      tiles: { bytes: tileBytes, mediaType: "application/octet-stream", metadata },
+      palette: { bytes: paletteBytes, mediaType: "application/octet-stream", metadata },
+      tilemap: { bytes: tilemapBytes, mediaType: "application/octet-stream", metadata },
+      preview: { bytes: preview, mediaType: "application/x-rgba", metadata }
+    },
+    normalizedOptions: options
+  };
+}
+function withImageEncoders(native) {
+  return native.map((encoder) => {
+    if (!encoder.id.startsWith("snes.tile.")) {
+      return encoder;
+    }
+    return Object.freeze({
+      ...encoder,
+      inputKinds: [...encoder.inputKinds, "indexed-image", "rgba-image"],
+      encode: (document2, options, resources) => {
+        if (document2.kind !== "indexed-image" && document2.kind !== "rgba-image") {
+          return encoder.encode(document2, options, resources);
+        }
+        const result = encodeImage(document2, options, resources, encoder.id);
+        return {
+          ...result,
+          fidelity: {
+            kind: "exact",
+            verification: "PNG indexes, palette, and RGBA reconstruction"
+          }
+        };
+      }
+    });
+  });
+}
+var isRecord4, readInteger, readBoolean, expand, reduce, colorKey, readLayout, readOptions, externalPalette;
+var init_image_conversion = __esm({
+  "packages/assets/src/image-conversion.ts"() {
+    "use strict";
+    init_snes();
+    init_validation();
+    isRecord4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    readInteger = (value, label, minimum, maximum) => {
+      if (typeof value !== "number") {
+        throw new RangeError(`${label} must be a number.`);
+      }
+      return integer2(value, label, minimum, maximum);
+    };
+    readBoolean = (value, name) => {
+      if (typeof value !== "boolean") {
+        throw new Error(`${name} must be boolean.`);
+      }
+      return value;
+    };
+    expand = (channel, profile) => {
+      if (profile === "bit-replicate") {
+        return channel << 3 | channel >> 2;
+      }
+      return Math.floor(channel * 255 / 31);
+    };
+    reduce = (channel, profile, label) => {
+      integer2(channel, label, 0, 255);
+      for (let value = 0; value < 32; value++) {
+        if (expand(value, profile) === channel) {
+          return value;
+        }
+      }
+      throw new Error(`${label}=${channel} is not representable by ${profile} BGR555.`);
+    };
+    colorKey = (color) => Array.from(color).join(",");
+    readLayout = (raw) => {
+      if (raw === void 0) {
+        return { tileOrder: "row-major" };
+      }
+      if (!isRecord4(raw)) {
+        throw new Error("layout must be an object.");
+      }
+      const tileOrder = raw.tileOrder ?? "row-major";
+      if (tileOrder !== "row-major" && tileOrder !== "column-major" && tileOrder !== "blocks") {
+        throw new Error("Invalid layout.tileOrder.");
+      }
+      if (tileOrder !== "blocks") {
+        if (Object.keys(raw).some((key3) => key3 !== "tileOrder")) {
+          throw new Error("Block options require tileOrder: 'blocks'.");
+        }
+        return { tileOrder };
+      }
+      if (!Array.isArray(raw.blockSize) || raw.blockSize.length !== 2 || raw.blockSize[0] !== 2 || raw.blockSize[1] !== 2) {
+        throw new Error("Block layout requires blockSize: [2, 2].");
+      }
+      const blockOrder = raw.blockOrder ?? "row-major";
+      const blockRows = raw.blockRows ?? "top-to-bottom";
+      if (blockOrder !== "row-major" && blockOrder !== "column-major" || blockRows !== "top-to-bottom" && blockRows !== "bottom-to-top") {
+        throw new Error("Invalid block traversal order.");
+      }
+      let withinBlock;
+      if (raw.withinBlock === "tl-bl-br-tr") {
+        withinBlock = [0, 2, 3, 1];
+      } else if (raw.withinBlock === "tl-tr-bl-br" || raw.withinBlock === void 0) {
+        withinBlock = [0, 1, 2, 3];
+      } else if (Array.isArray(raw.withinBlock)) {
+        const names = ["tl", "tr", "bl", "br"];
+        withinBlock = raw.withinBlock.map((name) => names.indexOf(String(name)));
+      } else {
+        throw new Error("Invalid withinBlock permutation.");
+      }
+      if (withinBlock.length !== 4 || new Set(withinBlock).size !== 4 || withinBlock.some((index) => index < 0)) {
+        throw new Error("withinBlock must contain each 2\xD72 quadrant once.");
+      }
+      if (Object.keys(raw).some(
+        (key3) => !["tileOrder", "blockSize", "blockOrder", "blockRows", "withinBlock"].includes(key3)
+      )) {
+        throw new Error("Unknown block layout option.");
+      }
+      return { tileOrder, blockSize: [2, 2], blockOrder, blockRows, withinBlock };
+    };
+    readOptions = (raw, indexed) => {
+      if (Object.keys(raw).some(
+        (key3) => !["palette", "paletteExpansion", "layout", "tilemap"].includes(key3)
+      )) {
+        throw new Error("Unknown image conversion option.");
+      }
+      let palette = raw.palette;
+      if (palette === void 0 && indexed) {
+        palette = "embedded";
+      }
+      if (typeof palette !== "string" || palette.length === 0) {
+        throw new Error("Truecolor PNG requires palette: 'auto' or an external palette resource.");
+      }
+      const paletteExpansion = raw.paletteExpansion === void 0 ? "bit-replicate" : raw.paletteExpansion;
+      if (paletteExpansion !== "bit-replicate" && paletteExpansion !== "scale-floor") {
+        throw new Error("Invalid paletteExpansion profile.");
+      }
+      const map = raw.tilemap === void 0 ? {} : raw.tilemap;
+      if (!isRecord4(map) || Object.keys(map).some(
+        (key3) => ![
+          "layout",
+          "startTileIndex",
+          "paletteBank",
+          "priority",
+          "horizontalFlip",
+          "verticalFlip"
+        ].includes(key3)
+      )) {
+        throw new Error("Invalid tilemap options.");
+      }
+      const mapLayout = map.layout ?? "row-major";
+      if (mapLayout !== "row-major" && mapLayout !== "screen-blocks") {
+        throw new Error("Invalid tilemap.layout.");
+      }
+      return {
+        palette,
+        paletteExpansion,
+        layout: readLayout(raw.layout),
+        tilemap: {
+          layout: mapLayout,
+          startTileIndex: readInteger(map.startTileIndex ?? 0, "startTileIndex", 0, 1023),
+          paletteBank: readInteger(map.paletteBank ?? 0, "paletteBank", 0, 7),
+          priority: readInteger(map.priority ?? 0, "priority", 0, 1),
+          horizontalFlip: readBoolean(map.horizontalFlip ?? false, "horizontalFlip"),
+          verticalFlip: readBoolean(map.verticalFlip ?? false, "verticalFlip")
+        }
+      };
+    };
+    externalPalette = (input) => {
+      if (input.mediaType !== "application/json") {
+        throw new Error("External palette resource must be application/json.");
+      }
+      if (input.bytes.length > 64 * 1024) {
+        throw new Error("External palette JSON exceeds 64 KiB.");
+      }
+      const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.bytes));
+      if (!isRecord4(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
+        throw new Error("External palette requires version 1 and 1\u2013256 RGB8 colors.");
+      }
+      const transparentIndex = readInteger(
+        value.transparentIndex,
+        "transparentIndex",
+        0,
+        value.colors.length - 1
+      );
+      const colors = value.colors.map((color, index) => {
+        if (!Array.isArray(color) || color.length !== 3) {
+          throw new Error(`Palette color ${index} requires RGB8.`);
+        }
+        const rgb = color.map(
+          (channel, channelIndex) => readInteger(channel, `Palette color ${index} channel ${channelIndex}`, 0, 255)
+        );
+        return [rgb[0], rgb[1], rgb[2], index === transparentIndex ? 0 : 255];
+      });
+      return { colors, transparentIndex };
+    };
+  }
+});
+
+// packages/assets/src/image.ts
+var init_image = __esm({
+  async "packages/assets/src/image.ts"() {
+    "use strict";
+    await init_png();
+    init_image_conversion();
+  }
+});
+
+// packages/plugin-snes/src/assets/assembly-formats.ts
+var registry, encoders, aliases, imageOptions, audioOptions2, optionSchemaFor, snesAssetFormats;
+var init_assembly_formats = __esm({
+  async "packages/plugin-snes/src/assets/assembly-formats.ts"() {
+    "use strict";
+    init_src3();
+    await init_audio();
+    init_data2();
+    await init_image();
+    init_snes();
+    registry = new AssetRegistry().registerImporter(rawImporter).registerImporter(jsonImporter).registerImporter(pngImporter).registerImporter(waveImporter);
+    encoders = [...withAudioEncoder(withImageEncoders(snesNativeEncoders)), rawEncoder];
+    for (const encoder of encoders) {
+      registry.registerEncoder(encoder);
+    }
+    aliases = {
+      "snes.tile.2bpp": ["2bpp"],
+      "snes.tile.3bpp": ["3bpp"],
+      "snes.tile.4bpp": ["4bpp"],
+      "snes.tile.8bpp": ["8bpp"],
+      "snes.tile.mode7": ["mode7"],
+      "snes.palette.bgr555": ["palette"],
+      "snes.tilemap.bg": ["bgmap"],
+      "snes.tilemap.mode7": ["mode7map"],
+      "snes.brr": ["brr"],
+      "uttori.data.raw": ["raw"]
+    };
+    imageOptions = {
+      palette: { summary: "Embedded, exact external, or auto palette", valueSyntax: '"embedded"' },
+      paletteExpansion: { summary: "RGB8/BGR555 expansion profile", valueSyntax: '"bit-replicate"' },
+      layout: { summary: "Tile traversal and block order", valueSyntax: '{ tileOrder: "row-major" }' },
+      tilemap: { summary: "Map index and attribute options", valueSyntax: "{ startTileIndex: 0 }" }
+    };
+    audioOptions2 = {
+      padding: { summary: "PCM tail padding policy", valueSyntax: '"reject"' },
+      loop: { summary: "Playback loop in sample frames", valueSyntax: "false" }
+    };
+    optionSchemaFor = (id) => {
+      if (id.startsWith("snes.tile.")) {
+        return imageOptions;
+      }
+      if (id === "snes.brr") {
+        return audioOptions2;
+      }
+      return {};
+    };
+    snesAssetFormats = encoders.map((encoder) => ({
+      id: encoder.id,
+      version: encoder.version,
+      aliases: aliases[encoder.id] ?? [],
+      targets: ["snes.sfc"],
+      optionSchema: optionSchemaFor(encoder.id),
+      resourcePaths: (options) => {
+        const palette = options.palette;
+        if (typeof palette === "string" && palette !== "embedded" && palette !== "auto") {
+          return [palette];
+        }
+        return [];
+      },
+      convert: (source, options, resources) => {
+        const result = convertAsset(registry, {
+          source,
+          format: encoder.id,
+          options,
+          resources
+        });
+        return { primaryOutput: result.primaryOutput, outputs: result.outputs };
+      }
+    }));
   }
 });
 
@@ -31039,6 +43502,483 @@ var init_directive_catalog2 = __esm({
     directiveByKeyword = new Map(
       directiveCatalog2.map((descriptor2) => [descriptor2.keyword.toLowerCase(), descriptor2])
     );
+  }
+});
+
+// packages/plugin-snes/src/assembler.ts
+var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin, assembler_default;
+var init_assembler2 = __esm({
+  async "packages/plugin-snes/src/assembler.ts"() {
+    "use strict";
+    init_src();
+    init_decoder();
+    init_spec();
+    init__();
+    init_operand_classifiers();
+    init_spc700_decoder();
+    init_spc700_spec();
+    init_spc700();
+    init_split_operands();
+    init_superfx_decoder();
+    init_superfx_spec();
+    init_superfx();
+    init_compatibility();
+    await init_assembly_formats();
+    init_ca65_compat();
+    init_freespace();
+    init_layout2();
+    init_spc();
+    init_session_state2();
+    init_address_space();
+    init_directive_catalog2();
+    init_instruction_catalog2();
+    SNES_TARGET_ID = "snes.sfc";
+    toolingFor = (keywords) => {
+      const wanted = new Set(keywords);
+      return directiveCatalog2.filter((descriptor2) => wanted.has(descriptor2.keyword));
+    };
+    directive = (id, keywords, handler) => ({
+      id,
+      keywords,
+      phase: "lowered",
+      createHandler: handler,
+      tooling: toolingFor(keywords)
+    });
+    numericArgument = (functionName, args, index) => {
+      const value = args[index];
+      if (typeof value !== "number") {
+        throw new Error(`${functionName}() argument ${index + 1} must be numeric.`);
+      }
+      return value;
+    };
+    addressExpressions = {
+      id: "snes.address-functions",
+      functions: [
+        {
+          name: "snestopc",
+          signature: { parameters: ["address"] },
+          summary: "Convert a SNES address to an output offset.",
+          evaluate: ({ addresses: addresses2 }, args) => addresses2.toOutputOffset(numericArgument("snestopc", args, 0))
+        },
+        {
+          name: "pctosnes",
+          signature: { parameters: ["offset"] },
+          summary: "Convert an output offset to a SNES address.",
+          evaluate: ({ addresses: addresses2 }, args) => addresses2.fromOutputOffset(numericArgument("pctosnes", args, 0))
+        }
+      ]
+    };
+    readExpressions = {
+      id: "snes.read-functions",
+      functions: [
+        ...[1, 2, 3, 4].map((size) => ({
+          name: `canread${size}`,
+          signature: { parameters: ["position"] },
+          summary: `Return whether ${size} byte(s) can be read from the base image.`,
+          evaluate: (context, args) => context.output.canRead(numericArgument(`canread${size}`, args, 0), size)
+        })),
+        {
+          name: "canread",
+          signature: { parameters: ["position", "size"] },
+          summary: "Return whether a range can be read from the base image.",
+          evaluate: ({ output }, args) => output.canRead(numericArgument("canread", args, 0), numericArgument("canread", args, 1))
+        },
+        ...[1, 2, 3, 4].map((size) => ({
+          name: `read${size}`,
+          signature: {
+            parameters: ["position", "defaultValue"],
+            minimumArguments: 1,
+            maximumArguments: 2
+          },
+          summary: `Read ${size} byte(s) from the base image.`,
+          evaluate: (context, args) => {
+            const position = numericArgument(`read${size}`, args, 0);
+            const defaultValue = args.length > 1 ? numericArgument(`read${size}`, args, 1) : void 0;
+            const state = context.state.get(snesSessionStateKey);
+            if (!state.readFunctionsEnabled && defaultValue === void 0) {
+              throw new Error(
+                `Esnes_address_out_of_bounds: SNES address ${position.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`
+              );
+            }
+            return context.output.read(position, size, defaultValue);
+          }
+        }))
+      ]
+    };
+    targetOptions = (configured) => {
+      const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
+      const checksumMode = value.checksumMode ?? "asar";
+      if (checksumMode !== "asar" && checksumMode !== "simple") {
+        throw new Error("checksumMode must be 'asar' or 'simple'.");
+      }
+      return {
+        checksumMode,
+        checksumEnabled: value.checksumEnabled === void 0 ? true : value.checksumEnabled === true,
+        asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true
+      };
+    };
+    createInitialState = (context) => {
+      const options = targetOptions(context.targetOptions);
+      return {
+        mapper: "lorom",
+        sa1Banks: [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1],
+        checksumEnabled: options.checksumEnabled,
+        checksumMode: options.checksumMode,
+        bankCrossMode: "full",
+        readFunctionsEnabled: false,
+        optimizeDirectPage: false,
+        asarSuperFxMoveShortAddress: options.asarSuperFxMoveShortAddress,
+        outputFillByte: 0,
+        activeFreespaceStartOffset: null,
+        activeFreespaceContentStartOffset: null,
+        activeFreespaceEndOffset: null,
+        inSpcBlock: false,
+        spcBlock: null,
+        spcPreviousArchitecture: null,
+        spcInlineCompatibility: false,
+        cpuStack: []
+      };
+    };
+    plugin = definePlugin({
+      manifest: {
+        id: "uttori.asm-plugin-snes",
+        name: "Uttori ASM SNES Plugin",
+        version: "1.0.0",
+        apiVersion: PLUGIN_API_VERSION,
+        description: "SNES targets, architectures, directives, expressions, and Asar compatibility."
+      },
+      validateOptions: targetOptions,
+      activate(context) {
+        for (const format of snesAssetFormats) {
+          context.registerAssetFormat(format);
+        }
+        context.registerSessionState({
+          id: SNES_SESSION_STATE_ID,
+          create: createInitialState,
+          clone: cloneSnesSessionState,
+          resetForStage: (state) => {
+            state.activeFreespaceStartOffset = null;
+            state.activeFreespaceContentStartOffset = null;
+            state.activeFreespaceEndOffset = null;
+            state.inSpcBlock = false;
+            state.spcBlock = null;
+            state.spcPreviousArchitecture = null;
+            state.spcInlineCompatibility = false;
+          }
+        });
+        context.registerArchitecture({
+          id: "snes.65816",
+          aliases: ["65816", "65c816", "65802"],
+          displayName: "WDC 65C816",
+          unknownInstructionBehavior: "throw",
+          splitOperands: splitSingleOperand,
+          classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
+          createEncoder: (factory) => new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
+          createDecoder: () => new Cpu65816Decoder(),
+          instructionSpecifications: cpu65816Specifications,
+          instructions: cpu65816Catalog
+        });
+        context.registerArchitecture({
+          id: "snes.spc700",
+          aliases: ["spc700", "spc700-raw", "spc700-inline"],
+          displayName: "Sony SPC700",
+          unknownInstructionBehavior: "throw",
+          splitOperands: splitTopLevelCommaOperands,
+          classifyOperand: ({ operands }, operand) => classifySpc700Operand(operands, operand),
+          createEncoder: (factory) => new ArchSPC700(factory),
+          createDecoder: () => new Spc700Decoder(),
+          instructionSpecifications: spc700Specifications,
+          instructions: spc700Catalog
+        });
+        context.registerArchitecture({
+          id: "snes.superfx",
+          aliases: ["superfx"],
+          displayName: "Super FX",
+          unknownInstructionBehavior: "returnFalse",
+          splitOperands: splitCommaOperands,
+          classifyOperand: ({ operands }, operand) => classifySuperFxOperand(operands, operand),
+          createEncoder: (factory) => new ArchSuperFX(
+            factory,
+            () => factory.state.get(snesSessionStateKey).asarSuperFxMoveShortAddress
+          ),
+          createDecoder: () => new SuperFxDecoder(),
+          instructionSpecifications: superFxSpecifications,
+          instructions: superFxCatalog
+        });
+        context.registerAddressSpace({
+          id: "snes.cpu",
+          create: ({ state }) => {
+            const mappingContext = () => {
+              const targetState = state.get(snesSessionStateKey);
+              return {
+                mapper: targetState.mapper,
+                sa1banks: targetState.sa1Banks,
+                bankCrossCheckMode: targetState.bankCrossMode
+              };
+            };
+            return {
+              addressWidth: snesRomAddressSpace.addressWidth,
+              defaultOrigin: snesRomAddressSpace.defaultOrigin,
+              normalizeForWrite: (address3) => snesRomAddressSpace.normalizeForWrite(address3, mappingContext()),
+              advance: (address3, amount) => snesRomAddressSpace.advance(address3, amount, mappingContext()),
+              toOutputOffset: (address3) => snesRomAddressSpace.toOutputOffset(address3, mappingContext()),
+              fromOutputOffset: (offset) => snesRomAddressSpace.fromOutputOffset(offset, mappingContext()),
+              validateWrite: (address3, width2) => {
+                const targetState = state.get(snesSessionStateKey);
+                const normalized = snesRomAddressSpace.normalizeForWrite(address3, mappingContext());
+                if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) {
+                  return;
+                }
+                if (targetState.bankCrossMode === "off" || width2 <= 1) {
+                  return;
+                }
+                const start = address3 & 16777215;
+                const end = start + width2 - 1 & 16777215;
+                const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
+                if (((start ^ end) & bankMask) !== 0) {
+                  const errorAddress = start + width2 & 16777215;
+                  throw new Error(
+                    `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`
+                  );
+                }
+              }
+            };
+          }
+        });
+        context.registerOutputFormat({
+          id: "snes.sfc-output",
+          create: ({ state }) => ({
+            finalize: ({ outputBytes }) => {
+              const targetState = state.get(snesSessionStateKey);
+              if (!targetState.checksumEnabled) {
+                return;
+              }
+              const headerOffset = getChecksumHeaderOffset(targetState.mapper);
+              if (outputBytes.length < headerOffset + 32) {
+                return;
+              }
+              outputBytes[headerOffset + 28] = 255;
+              outputBytes[headerOffset + 29] = 255;
+              outputBytes[headerOffset + 30] = 0;
+              outputBytes[headerOffset + 31] = 0;
+              const checksum = calculateHeaderChecksum(outputBytes, targetState.checksumMode);
+              const complement = ~checksum & 65535;
+              outputBytes[headerOffset + 28] = complement & 255;
+              outputBytes[headerOffset + 29] = complement >> 8 & 255;
+              outputBytes[headerOffset + 30] = checksum & 255;
+              outputBytes[headerOffset + 31] = checksum >> 8 & 255;
+            },
+            getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
+          })
+        });
+        context.registerDirectiveSet({
+          id: "snes.mapper-directives",
+          directives: [
+            directive(
+              "snes.directive.mapper",
+              MAPPER_KEYWORDS,
+              ({ state }) => (_ctx, words) => handleMapper(state.get(snesSessionStateKey), words)
+            )
+          ]
+        });
+        context.registerDirectiveSet({
+          id: "snes.policy-directives",
+          tooling: toolingFor(["arch"]),
+          directives: [
+            directive(
+              "snes.directive.check",
+              ["check"],
+              ({ state }) => (_ctx, words) => handleCheck(state.get(snesSessionStateKey), words)
+            ),
+            directive(
+              "snes.directive.optimize",
+              ["optimize"],
+              ({ state }) => (_ctx, words) => handleOptimize(state.get(snesSessionStateKey), words)
+            ),
+            directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => void 0)
+          ]
+        });
+        context.registerDirectiveSet({
+          id: "snes.ca65-compat-directives",
+          directives: [
+            directive(
+              "snes.directive.ca65.a8",
+              [".a8"],
+              ({ session }) => () => handleA8(session)
+            ),
+            directive(
+              "snes.directive.ca65.a16",
+              [".a16"],
+              ({ session }) => () => handleA16(session)
+            ),
+            directive(
+              "snes.directive.ca65.i8",
+              [".i8"],
+              ({ session }) => () => handleI8(session)
+            ),
+            directive(
+              "snes.directive.ca65.i16",
+              [".i16"],
+              ({ session }) => () => handleI16(session)
+            ),
+            directive(
+              "snes.directive.ca65.accu",
+              [".accu"],
+              ({ session }) => (_ctx, words) => handleAccu(session, words)
+            ),
+            directive(
+              "snes.directive.ca65.index",
+              [".index"],
+              ({ session }) => (_ctx, words) => handleIndex(session, words)
+            ),
+            directive(
+              "snes.directive.ca65.smart",
+              [".smart"],
+              ({ session }) => (_ctx, words) => handleSmart(session, words)
+            ),
+            directive(
+              "snes.directive.ca65.setcpu",
+              [".setcpu"],
+              ({ session }) => (_ctx, words) => handleSetcpu(session, words)
+            ),
+            directive(
+              "snes.directive.ca65.pushcpu",
+              [".pushcpu"],
+              ({ session, state }) => () => handlePushcpu(session, state.get(snesSessionStateKey))
+            ),
+            directive(
+              "snes.directive.ca65.popcpu",
+              [".popcpu"],
+              ({ session, state }) => () => handlePopcpu(session, state.get(snesSessionStateKey))
+            )
+          ]
+        });
+        context.registerDirectiveSet({
+          id: "snes.memory-directives",
+          directives: [
+            directive(
+              "snes.directive.freespace",
+              ["freecode", "freespace", "freedata"],
+              ({ session, state }) => (_ctx, words) => handleFreespace(session, state.get(snesSessionStateKey), words)
+            ),
+            directive(
+              "snes.directive.freespacebyte",
+              ["freespacebyte"],
+              ({ session, state }) => (_ctx, words) => handleFreespaceByte(session, state.get(snesSessionStateKey), words)
+            ),
+            directive(
+              "snes.directive.prot",
+              ["prot"],
+              ({ session }) => (_ctx, words) => handleProt(session, words)
+            )
+          ]
+        });
+        context.registerDirectiveSet({
+          id: "snes.spc-directives",
+          directives: [
+            directive(
+              "snes.directive.spcblock",
+              ["spcblock"],
+              ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleSpcblock(words)
+            ),
+            directive(
+              "snes.directive.endspcblock",
+              ["endspcblock"],
+              ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleEndSpcblock(words)
+            ),
+            directive(
+              "snes.directive.startpos",
+              ["startpos"],
+              ({ session, state }) => (_ctx, words) => handleStartpos(session, state.get(snesSessionStateKey), words)
+            )
+          ]
+        });
+        context.registerExpressionSet(addressExpressions);
+        context.registerExpressionSet(readExpressions);
+        context.registerLifecycle({
+          id: "snes.lifecycle",
+          create: ({ state }) => ({
+            onSessionCreated: ({ session }) => {
+              session.outputFillByte = state.get(snesSessionStateKey).outputFillByte;
+            },
+            beforeDirective: ({ session, keyword, words }) => {
+              const targetState = state.get(snesSessionStateKey);
+              if (targetState.inSpcBlock && ["arch", "org", "namespace"].includes(keyword)) {
+                throw new Error(`${keyword.toUpperCase()} is unavailable inside spcblock.`);
+              }
+              if (keyword === "org" && shouldRedirectOrgToSpcblock(targetState.spcInlineCompatibility)) {
+                createSpcRuntime(session, targetState).handleSpcblock(["spcblock", ...words.slice(1)]);
+                return "handled";
+              }
+              return "continue";
+            },
+            onArchitectureSelected: ({ sourceAlias }) => {
+              const targetState = state.get(snesSessionStateKey);
+              targetState.spcInlineCompatibility = shouldEnableSpcInlineCompat(sourceAlias);
+              if (shouldUseNoromAddressing(sourceAlias)) {
+                applyMapperSelection(targetState, "norom");
+              }
+            },
+            shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
+            beforeWrite: ({ session, logicalAddress, width: width2 }) => {
+              const targetState = state.get(snesSessionStateKey);
+              if (targetState.activeFreespaceStartOffset === null) {
+                return;
+              }
+              const outputOffset = session.outputWriter.toOutputOffset(logicalAddress);
+              if (outputOffset < 0) {
+                return;
+              }
+              const endOffset = outputOffset + width2 - 1;
+              targetState.activeFreespaceEndOffset = Math.max(
+                targetState.activeFreespaceEndOffset ?? endOffset,
+                endOffset
+              );
+            },
+            onStageEnd: ({ session }) => {
+              createSpcRuntime(session, state.get(snesSessionStateKey)).finishPass();
+            },
+            beforeOutputFinalize: ({ outputBytes }) => {
+              const targetState = state.get(snesSessionStateKey);
+              const start = targetState.activeFreespaceStartOffset;
+              const contentStart = targetState.activeFreespaceContentStartOffset;
+              const end = targetState.activeFreespaceEndOffset;
+              if (start === null || contentStart === null || end === null || end < contentStart) {
+                return;
+              }
+              const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
+              const complement = ~lengthMinusOne & 65535;
+              outputBytes[start + 4] = lengthMinusOne & 255;
+              outputBytes[start + 5] = lengthMinusOne >> 8 & 255;
+              outputBytes[start + 6] = complement & 255;
+              outputBytes[start + 7] = complement >> 8 & 255;
+            }
+          })
+        });
+        context.registerTarget({
+          id: SNES_TARGET_ID,
+          aliases: ["snes", "sfc", "snes-65816"],
+          displayName: "SNES",
+          defaultArchitecture: "snes.65816",
+          architectures: ["snes.65816", "snes.spc700", "snes.superfx"],
+          addressSpace: "snes.cpu",
+          outputFormat: "snes.sfc-output",
+          directiveSets: [
+            "snes.mapper-directives",
+            "snes.memory-directives",
+            "snes.policy-directives",
+            "snes.spc-directives",
+            "snes.ca65-compat-directives"
+          ],
+          expressionSets: ["snes.address-functions", "snes.read-functions"],
+          lifecycle: ["snes.lifecycle"],
+          syntaxProfile: ASAR_SYNTAX_PROFILE,
+          defaultOutputExtension: ".sfc",
+          createOptions: targetOptions
+        });
+      }
+    });
+    assembler_default = plugin;
   }
 });
 
@@ -32853,7 +45793,7 @@ var init_analysis = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/dizraw-import.ts
-import { createHash as createHash9 } from "node:crypto";
+import { createHash as createHash7 } from "node:crypto";
 var SUBSTITUTIONS, CLASSIFICATIONS, ARCHITECTURES, xmlDecode, attributes, ELEMENT_PATTERNS, element, fake64, decodeMetadata, sameMetadata, decodeRomByteLines, metadataIntervals, DIZ_MAPPERS, DIZ_SPEEDS, importDizRaw;
 var init_dizraw_import = __esm({
   "packages/plugin-snes/src/disassembler/dizraw-import.ts"() {
@@ -33083,7 +46023,7 @@ var init_dizraw_import = __esm({
       if (!mapper) {
         throw new Error(`Unsupported .dizraw mapper '${dataAttributes.RomMapMode}'.`);
       }
-      const sourceSha256 = createHash9("sha256").update(xml).digest("hex");
+      const sourceSha256 = createHash7("sha256").update(xml).digest("hex");
       const sourceName = options.sourceName ?? "import.dizraw";
       const evidenceId = `import:dizraw:${sourceSha256.slice(0, 16)}`;
       const labelsElement = element(data.body, "Labels");
@@ -33266,7 +46206,7 @@ var init_dizraw_import = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/mesen-runtime.ts
-import { createHash as createHash10 } from "node:crypto";
+import { createHash as createHash8 } from "node:crypto";
 var MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2564, stableSuffix, hex5, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
 var init_mesen_runtime = __esm({
   "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
@@ -33286,7 +46226,7 @@ var init_mesen_runtime = __esm({
     CDL_MEMORY_8 = 32;
     CDL_GSU = 64;
     CDL_CX4 = 128;
-    sha2564 = (value) => createHash10("sha256").update(value).digest("hex");
+    sha2564 = (value) => createHash8("sha256").update(value).digest("hex");
     stableSuffix = (value) => sha2564(canonicalJson(value)).slice(0, 16);
     hex5 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
     assertContext = (rom, mapper, context) => {
@@ -33933,7 +46873,7 @@ var init_spc700_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/mesen-labels.ts
-import { createHash as createHash11 } from "node:crypto";
+import { createHash as createHash9 } from "node:crypto";
 var LABEL_PATTERN, MEMORY_TYPES, sha2565, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
 var init_mesen_labels = __esm({
   "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
@@ -33984,7 +46924,7 @@ var init_mesen_labels = __esm({
         maximum: 65536
       }
     };
-    sha2565 = (value) => createHash11("sha256").update(value).digest("hex");
+    sha2565 = (value) => createHash9("sha256").update(value).digest("hex");
     reportFor = (operation, sourceName, sourceSha256, imported, unsupported, warnings) => ({
       id: `${operation}:mesence-labels:${sourceSha256}`,
       format: "mesence-labels",
@@ -34190,20 +47130,20 @@ var init_mesen_labels = __esm({
       const byAddress2 = /* @__PURE__ */ new Map();
       let collisions = 0;
       for (const entry of entries3.sort((left, right) => left.sourceId.localeCompare(right.sourceId))) {
-        const key2 = `${entry.memoryType}:${entry.address}`;
-        const current = byAddress2.get(key2);
+        const key3 = `${entry.memoryType}:${entry.address}`;
+        const current = byAddress2.get(key3);
         if (!current) {
-          byAddress2.set(key2, entry);
+          byAddress2.set(key3, entry);
           continue;
         }
         collisions++;
         if (current.name === "" && entry.name !== "") {
-          byAddress2.set(key2, {
+          byAddress2.set(key3, {
             ...entry,
             comment: [entry.comment, current.comment].filter(Boolean).join("\n")
           });
         } else if (entry.comment) {
-          byAddress2.set(key2, {
+          byAddress2.set(key3, {
             ...current,
             comment: [current.comment, entry.comment].filter(Boolean).join("\n")
           });
@@ -34297,7 +47237,7 @@ var init_code_preservation = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-import * as fs11 from "node:fs";
+import * as fs9 from "node:fs";
 import path10 from "node:path";
 var SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex7, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, isLegacySourceNote, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
@@ -34469,11 +47409,11 @@ var init_ram_map = __esm({
     });
     loadSnesRamMap = (directory) => {
       const file = path10.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs11.existsSync(file)) {
-        fs11.mkdirSync(directory, { recursive: true });
-        fs11.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      if (!fs9.existsSync(file)) {
+        fs9.mkdirSync(directory, { recursive: true });
+        fs9.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs11.readFileSync(file);
+      const sourceBytes = fs9.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -34619,7 +47559,8 @@ function describeSnesStructAccess(binding, address3, width2) {
     }
     const candidate = structure.fields[low - 1];
     const field = candidate && offset < candidate.offset + candidate.size ? candidate : void 0;
-    const record3 = `${binding.name}${index === 0 ? "" : `[${index}]`}`;
+    const suffix = binding.count === 1 && index === 0 ? "" : `[${index}]`;
+    const record3 = `${binding.name}${suffix}`;
     let expression = record3;
     let partOffset = offset;
     let end = structure.fields[low]?.offset ?? structure.size;
@@ -34854,7 +47795,7 @@ var init_struct_expressions = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
-var record2, integer2, text, hex8, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, renderSnesStructUseComments;
+var record2, integer3, text, hex8, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, structUseCommentLimit, compactStructUseComment, describeObservation, renderSnesStructUseComments;
 var init_struct_instruction_uses = __esm({
   "packages/plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
     "use strict";
@@ -34865,7 +47806,7 @@ var init_struct_instruction_uses = __esm({
       }
       return value;
     };
-    integer2 = (value, min, max) => {
+    integer3 = (value, min, max) => {
       if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) {
         throw new Error(`Invalid struct instruction-use integer '${String(value)}'.`);
       }
@@ -34892,7 +47833,7 @@ var init_struct_instruction_uses = __esm({
       const addresses2 = /* @__PURE__ */ new Set();
       return value.map((input) => {
         const entry = record2(input);
-        const address3 = integer2(entry.address, 0, 16777215);
+        const address3 = integer3(entry.address, 0, 16777215);
         if (addresses2.has(address3)) {
           throw new Error(`Duplicate struct instruction use at ${hex8(address3)}.`);
         }
@@ -34900,18 +47841,18 @@ var init_struct_instruction_uses = __esm({
         if (!Array.isArray(entry.expectedBytes) || entry.expectedBytes.length < 1 || entry.expectedBytes.length > 4) {
           throw new Error("Struct instruction uses require 1\u20134 complete expectedBytes.");
         }
-        const expectedBytes = entry.expectedBytes.map((byte) => integer2(byte, 0, 255));
+        const expectedBytes = entry.expectedBytes.map((byte) => integer3(byte, 0, 255));
         let operand;
         if (entry.operand !== void 0) {
           const resolved = resolver.resolve(entry.operand);
-          operand = { expression: resolved.expression, value: integer2(resolved.value, 0, 65535) };
+          operand = { expression: resolved.expression, value: integer3(resolved.value, 0, 65535) };
         }
         let memoryOperand;
         if (entry.memoryOperand !== void 0) {
           const resolved = resolver.resolve(entry.memoryOperand);
           memoryOperand = {
             expression: resolved.expression,
-            value: integer2(resolved.value, 0, 16777215)
+            value: integer3(resolved.value, 0, 16777215)
           };
         }
         if (entry.observations !== void 0 && !Array.isArray(entry.observations)) {
@@ -34920,7 +47861,7 @@ var init_struct_instruction_uses = __esm({
         const observations = (entry.observations ?? []).map(
           (inputObservation) => {
             const observation = record2(inputObservation);
-            const width2 = integer2(observation.width, 1, 2);
+            const width2 = integer3(observation.width, 1, 2);
             const target = resolver.resolve(observation.target);
             if (target.bindings.length !== 1) {
               throw new Error("Struct observation target must reference exactly one binding.");
@@ -35037,23 +47978,57 @@ var init_struct_instruction_uses = __esm({
       }
       return `${instruction.mnemonic}.${operand.width === 1 ? "b" : "w"} #${use.operand.expression}`;
     };
-    renderSnesStructUseComments = (use) => [
-      `[struct use] ${use.reason}`,
-      ...use.observations.map((observation) => {
-        let coverage = "";
-        if (observation.parts.length > 1 || !observation.parts[0].field) {
-          coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+    structUseCommentLimit = 240;
+    compactStructUseComment = (value, suffix = "") => {
+      const line = value.replaceAll(/\s+/g, " ").trim();
+      const available = structUseCommentLimit - suffix.length;
+      if (line.length <= available) {
+        return line + suffix;
+      }
+      return line.slice(0, available - 3).trimEnd() + "..." + suffix;
+    };
+    describeObservation = (observation) => {
+      let coverage = "";
+      if (observation.parts.length > 1 || !observation.parts[0].field) {
+        coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+      }
+      return `${observation.expression} (${hex8(observation.address)}, ${observation.width} byte(s))${coverage}`;
+    };
+    renderSnesStructUseComments = (use) => {
+      const locator = ` Details: struct-map.json instructionUses address=${use.address} (${hex8(use.address)}).`;
+      const reason = `[struct use] ${use.reason}`;
+      if (use.observations.length === 0) {
+        return [compactStructUseComment(reason, reason.length > structUseCommentLimit ? locator : "")];
+      }
+      const first = use.observations[0];
+      let summary;
+      if (use.observations.length === 1) {
+        summary = `[${first.provenance} ${first.access}] ${describeObservation(first)}. ${first.source}: ${first.detail}`;
+      } else {
+        const kinds = /* @__PURE__ */ new Map();
+        const bindings = /* @__PURE__ */ new Set();
+        const sources = /* @__PURE__ */ new Set();
+        for (const observation of use.observations) {
+          const kind = `${observation.provenance} ${observation.access}`;
+          kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
+          bindings.add(observation.binding);
+          sources.add(observation.source);
         }
-        return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex8(observation.address)}, ${observation.width} byte(s))${coverage}. ${observation.source}: ${observation.detail}`;
-      })
-    ];
+        let heading = `[${first.provenance} ${first.access}] ${use.observations.length} observations`;
+        if (kinds.size > 1) {
+          heading = `[struct observations] ${[...kinds].map(([kind, count]) => `${kind}: ${count}`).join(", ")}`;
+        }
+        summary = `${heading}; ${bindings.size} binding(s), ${sources.size} capture(s). Example: ${describeObservation(first)}.`;
+      }
+      return [compactStructUseComment(reason), compactStructUseComment(summary, locator)];
+    };
   }
 });
 
 // packages/plugin-snes/src/disassembler/struct-map.ts
-import * as fs12 from "node:fs";
+import * as fs10 from "node:fs";
 import path11 from "node:path";
-var SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex9, comment, object, integer3, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+var SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex9, comment, object, integer4, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
   "packages/plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
@@ -35071,7 +48046,7 @@ var init_struct_map = __esm({
       }
       return value;
     };
-    integer3 = (value, minimum = 0, maximum = 16777215) => {
+    integer4 = (value, minimum = 0, maximum = 16777215) => {
       if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum) {
         throw new Error(`Invalid struct-map integer '${String(value)}'.`);
       }
@@ -35094,15 +48069,15 @@ var init_struct_map = __esm({
     };
     entryComments = (value, firstIndex, count) => {
       const result = {};
-      for (const [key2, text2] of Object.entries(object(value))) {
-        const index = Number(key2);
-        if (!/^(0|[1-9]\d*)$/.test(key2) || !Number.isSafeInteger(index) || index < firstIndex || index >= firstIndex + count) {
+      for (const [key3, text2] of Object.entries(object(value))) {
+        const index = Number(key3);
+        if (!/^(0|[1-9]\d*)$/.test(key3) || !Number.isSafeInteger(index) || index < firstIndex || index >= firstIndex + count) {
           throw new Error(
-            `Struct entry comment index '${key2}' is outside the binding's logical indexes.`
+            `Struct entry comment index '${key3}' is outside the binding's logical indexes.`
           );
         }
         if (typeof text2 !== "string" || !comment(text2)) {
-          throw new Error(`Struct entry comment '${key2}' must be a non-empty string.`);
+          throw new Error(`Struct entry comment '${key3}' must be a non-empty string.`);
         }
         result[index] = comment(text2);
       }
@@ -35128,7 +48103,7 @@ var init_struct_map = __esm({
       const structures = file.structures.map((input) => {
         const entry = object(input);
         const id = uniqueName(entry.id);
-        const size = integer3(entry.size, 1, 65536);
+        const size = integer4(entry.size, 1, 65536);
         if (entry.byteOrder !== void 0 && entry.byteOrder !== "little") {
           throw new Error(`Struct '${id}' must use little-endian fields.`);
         }
@@ -35146,7 +48121,7 @@ var init_struct_map = __esm({
           if (field.description !== void 0 && typeof field.description !== "string") {
             throw new Error(`Invalid description for '${id}.${name}'.`);
           }
-          const fieldSize = integer3(field.size, 1, size);
+          const fieldSize = integer4(field.size, 1, size);
           let type;
           if (field.type !== void 0) {
             if (typeof field.type !== "string") {
@@ -35160,7 +48135,7 @@ var init_struct_map = __esm({
           }
           return {
             name,
-            offset: integer3(field.offset, 0, size - 1),
+            offset: integer4(field.offset, 0, size - 1),
             size: fieldSize,
             ...type === void 0 ? {} : { type },
             ...field.description === void 0 ? {} : { description: comment(field.description) }
@@ -35183,9 +48158,9 @@ var init_struct_map = __esm({
         if (!structure) {
           throw new Error(`Unknown layout '${String(entry.structure)}' for '${name}'.`);
         }
-        const address3 = integer3(entry.address);
-        const count = integer3(entry.count, 1);
-        const firstIndex = integer3(entry.firstIndex ?? 0);
+        const address3 = integer4(entry.address);
+        const count = integer4(entry.count, 1);
+        const firstIndex = integer4(entry.firstIndex ?? 0);
         if (address3 - firstIndex * structure.size < 0) {
           throw new Error(`Struct binding '${name}' has an invalid first index.`);
         }
@@ -35193,7 +48168,7 @@ var init_struct_map = __esm({
         if (address3 + length > 16777216) {
           throw new Error(`Struct binding '${name}' exceeds CPU memory.`);
         }
-        const fileOffset = entry.fileOffset === void 0 ? void 0 : integer3(entry.fileOffset);
+        const fileOffset = entry.fileOffset === void 0 ? void 0 : integer4(entry.fileOffset);
         if (fileOffset === void 0 && (address3 < 8257536 || address3 + length > 8388608)) {
           throw new Error(`RAM struct '${name}' must be bound inside canonical WRAM.`);
         }
@@ -35237,10 +48212,10 @@ var init_struct_map = __esm({
     };
     loadSnesStructMap = (directory) => {
       const filename = path11.join(directory, SNES_STRUCT_MAP_SOURCE);
-      if (!fs12.existsSync(filename)) {
+      if (!fs10.existsSync(filename)) {
         return void 0;
       }
-      const sourceBytes = fs12.readFileSync(filename);
+      const sourceBytes = fs10.readFileSync(filename);
       return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
     };
     completeFields = (structure) => {
@@ -35304,7 +48279,11 @@ var init_struct_map = __esm({
       return `${lines.join("\n")}
 `;
     };
-    fieldExpression = (binding, index, field) => `${binding.name}${index + binding.firstIndex === 0 ? "" : `[${index + binding.firstIndex}]`}.${field.name}`;
+    fieldExpression = (binding, index, field) => {
+      const logicalIndex = index + binding.firstIndex;
+      const suffix = binding.count === 1 && logicalIndex === 0 ? "" : `[${logicalIndex}]`;
+      return `${binding.name}${suffix}.${field.name}`;
+    };
     indexSnesStructFields = (map, indexed = false) => {
       const result = /* @__PURE__ */ new Map();
       for (const binding of map?.bindings ?? []) {
@@ -35416,9 +48395,9 @@ var init_struct_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/source-export.ts
-import * as fs13 from "node:fs";
+import * as fs11 from "node:fs";
 import path12 from "node:path";
-var hex10, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rawClassifications, rejectedByAnnotation, planInstructions, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
+var sourceFlowTarget, renderFlowLabel, hex10, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, renderedStructEntry, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
@@ -35433,6 +48412,43 @@ var init_source_export2 = __esm({
     init_rom_header();
     init_struct_instruction_uses();
     init_struct_map();
+    sourceFlowTarget = (instruction, sourceAddress) => {
+      const { mode: mode3 } = instruction;
+      if (!["absolute", "absoluteLong", "relative", "relativeLong"].includes(mode3)) {
+        return void 0;
+      }
+      const flow = instruction.references.find(
+        (reference) => ["call", "jump", "branch"].includes(reference.kind) && !reference.indirect && reference.operandIndex === 0
+      );
+      const value = instruction.operands[0]?.value;
+      if (!flow || value === void 0 || instruction.mnemonic === "PER") {
+        return void 0;
+      }
+      let address3 = flow.address;
+      if (mode3 === "relative" || mode3 === "relativeLong") {
+        address3 = sourceAddress & 16711680 | sourceAddress + instruction.size + value & 65535;
+      } else if (mode3 === "absolute") {
+        address3 = sourceAddress & 16711680 | value;
+      }
+      if (address3 === void 0) {
+        return void 0;
+      }
+      return { address: address3, mode: mode3 };
+    };
+    renderFlowLabel = (source, flow, name, labelAddress) => {
+      let operand = name;
+      if (flow.mode === "absolute") {
+        operand = `(${name} & $FFFF)`;
+      } else if (flow.mode === "absoluteLong" && flow.address !== labelAddress) {
+        if ((flow.address & 65535) === (labelAddress & 65535)) {
+          operand = `((${name} & $FFFF) | ${hex10(flow.address & 16711680, 6)})`;
+        } else {
+          const delta = flow.address - labelAddress;
+          operand = `(${name} ${delta < 0 ? "-" : "+"} ${hex10(Math.abs(delta), 6)})`;
+        }
+      }
+      return `${source.slice(0, source.indexOf(" "))} ${operand}`;
+    };
     hex10 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
     byteList = (bytes) => [...bytes].map((byte) => hex10(byte, 2)).join(", ");
     asciiString = (bytes) => {
@@ -35783,7 +48799,10 @@ var init_source_export2 = __esm({
         if (offset === void 0 || values.get(offset)?.some((line) => line.name)) {
           continue;
         }
-        append(offset, { name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}` });
+        append(offset, {
+          name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
+          inferredFunction: true
+        });
       }
       for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
         append(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
@@ -35797,25 +48816,40 @@ var init_source_export2 = __esm({
       }
       return values;
     };
-    renderedMetadata = (lines, hasInstruction = false) => {
+    renderedMetadata = (lines, hasInstruction = false, bodyIndent = "  ") => {
       if (!lines) {
         return [];
       }
       const output = [];
-      for (const line of lines) {
+      const lastLabelIndex = lines.findLastIndex((line) => line.name);
+      for (const [index, line] of lines.entries()) {
+        const indent = line.name || index < lastLabelIndex ? "" : bodyIndent;
         if (line.comment) {
           for (const text2 of line.comment.split(/\r\n|[\n\r\u2028\u2029]/)) {
-            output.push(`; ${text2}`);
+            output.push(`${indent}; ${text2}`);
           }
         }
         if (line.name) {
           output.push(`${line.name}:${line.inlineComment ? ` ; ${line.inlineComment}` : ""}`);
         }
         if (line.instructionComment && !hasInstruction) {
-          output.push(`; [Instruction comment. Instruction unavailable] ${line.instructionComment}`);
+          output.push(
+            `${indent}; [Instruction comment. Instruction unavailable] ${line.instructionComment}`
+          );
         }
       }
       return output;
+    };
+    renderedStructEntry = (indent, source, comment2) => {
+      const line = `${indent}${source}`;
+      if (!comment2) {
+        return [line];
+      }
+      const annotated = `${line} ; ${comment2}`;
+      if (annotated.length > 120) {
+        return [`${indent}; ${comment2}`, line];
+      }
+      return [annotated];
     };
     rawClassifications = /* @__PURE__ */ new Set([
       "data8",
@@ -35830,8 +48864,9 @@ var init_source_export2 = __esm({
       "empty",
       "text"
     ]);
+    isCapturedRomInstruction = (node, runtimeEvidence) => node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
     rejectedByAnnotation = (node, annotations, runtimeEvidence) => {
-      const capturedRomInstruction = node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
+      const capturedRomInstruction = isCapturedRomInstruction(node, runtimeEvidence);
       return node.fileOffset === void 0 || annotations.overlapping(node.fileOffset, node.fileOffset + node.size).some(
         (entry) => rawClassifications.has(entry.classification) || entry.classification === "unreached" && !capturedRomInstruction
       );
@@ -35846,18 +48881,24 @@ var init_source_export2 = __esm({
         shards.analysis.filter((record3) => record3.kind === "conflict").flatMap((record3) => record3.nodes)
       );
       const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
-      const hasInteriorMetadata = (start, end) => {
+      const explicitMetadataOffsets = metadataOffsets.filter(
+        (offset) => metadata.get(offset).some((line) => !line.inferredFunction)
+      );
+      const hasInteriorMetadata = (node) => {
+        const offsets = isCapturedRomInstruction(node, runtimeEvidence) ? explicitMetadataOffsets : metadataOffsets;
+        const start = node.fileOffset;
+        const end = start + node.size;
         let low = 0;
-        let high = metadataOffsets.length;
+        let high = offsets.length;
         while (low < high) {
           const middle = low + high >>> 1;
-          if (metadataOffsets[middle] <= start) {
+          if (offsets[middle] <= start) {
             low = middle + 1;
           } else {
             high = middle;
           }
         }
-        return low < metadataOffsets.length && metadataOffsets[low] < end;
+        return low < offsets.length && offsets[low] < end;
       };
       const fallbackGroups = () => {
         const grouped = /* @__PURE__ */ new Map();
@@ -35884,7 +48925,7 @@ var init_source_export2 = __esm({
         }
         previousOffset = offset;
         const records = group.filter(
-          (record3) => record3.fileOffset !== void 0 && record3.fileOffset >= 0 && record3.fileOffset + record3.size <= rom.length && !(structure !== void 0 && record3.fileOffset < structure.end && structure.start < record3.fileOffset + record3.size) && !conflictNodes.has(record3.id) && !rejectedByAnnotation(record3, annotations, runtimeEvidence) && !hasInteriorMetadata(record3.fileOffset, record3.fileOffset + record3.size)
+          (record3) => record3.fileOffset !== void 0 && record3.fileOffset >= 0 && record3.fileOffset + record3.size <= rom.length && !(structure !== void 0 && record3.fileOffset < structure.end && structure.start < record3.fileOffset + record3.size) && !conflictNodes.has(record3.id) && !rejectedByAnnotation(record3, annotations, runtimeEvidence) && !hasInteriorMetadata(record3)
         );
         if (!records.length) {
           continue;
@@ -35922,8 +48963,18 @@ var init_source_export2 = __esm({
         )) {
           continue;
         }
-        let renderedSource = first.source;
-        if (resolved.some((entry) => entry.source !== renderedSource)) {
+        const capturedDataAddress = resolved.some(
+          ({ record: record3, instruction }) => isCapturedRomInstruction(record3, runtimeEvidence) && instruction.references.some(
+            (reference) => reference.kind === "data" && reference.operandIndex === 0 && reference.address !== void 0
+          )
+        );
+        const namingVariants = resolved.filter(
+          ({ record: record3, instruction }) => !capturedDataAddress || !record3.id.startsWith("static:cfg:") || !instruction.references.some(
+            (reference) => reference.kind === "data" && reference.operandIndex === 0 && reference.address === void 0
+          )
+        );
+        let renderedSource = namingVariants[0].source;
+        if (namingVariants.some((entry) => entry.source !== renderedSource)) {
           const numericSources = resolved.map(
             ({ instruction }) => formatSnes65816SourceInstruction(
               {
@@ -35955,6 +49006,7 @@ var init_source_export2 = __esm({
           end: offset + first.record.size,
           source: renderedSource,
           nodeIds: resolved.map((entry) => entry.record.id),
+          flow: sourceFlowTarget(first.instruction, sourceAddress),
           ...use ? { structComments: renderSnesStructUseComments(use) } : {}
         });
       }
@@ -35978,6 +49030,20 @@ var init_source_export2 = __esm({
         }
       }
       return candidates;
+    };
+    reconcileInferredFunctionMarkers = (metadata, instructions) => {
+      const index = new HalfOpenIntervalIndex([...instructions.values()]);
+      const result = /* @__PURE__ */ new Map();
+      for (const [offset, lines] of metadata) {
+        let retained = lines;
+        if (index.overlapping(offset, offset + 1).some((instruction) => instruction.start < offset)) {
+          retained = lines.filter((line) => !line.inferredFunction);
+        }
+        if (retained.length) {
+          result.set(offset, retained);
+        }
+      }
+      return result;
     };
     planSpans = (rom, mapper, shards, instructions, metadata, annotations, structure, structFields) => {
       const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
@@ -36101,12 +49167,12 @@ var init_source_export2 = __esm({
       return grouped;
     };
     preflight = (directory, force) => {
-      if (!fs13.existsSync(directory)) {
+      if (!fs11.existsSync(directory)) {
         return void 0;
       }
       const manifestFile = path12.join(directory, SOURCE_EXPORT_MANIFEST);
-      if (!fs13.existsSync(manifestFile)) {
-        const unexpected = fs13.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
+      if (!fs11.existsSync(manifestFile)) {
+        const unexpected = fs11.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
         if (!force && unexpected.length > 0) {
           throw new Error(
             `Export directory '${directory}' is not empty. Pass --force to write into it.`
@@ -36123,8 +49189,8 @@ var init_source_export2 = __esm({
     writeFile = (root, relative2, bytes, kind, files) => {
       const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
       const destination = path12.join(root, relative2);
-      fs13.mkdirSync(path12.dirname(destination), { recursive: true });
-      fs13.writeFileSync(destination, value);
+      fs11.mkdirSync(path12.dirname(destination), { recursive: true });
+      fs11.writeFileSync(destination, value);
       files.push({ path: relative2, kind, size: value.length, sha256: sourceExportSha256(value) });
     };
     regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions.filter((region) => {
@@ -36166,21 +49232,7 @@ var init_source_export2 = __esm({
         ...ramMap.variables.map(({ name }) => name),
         ...structNames
       ]);
-      const metadata = metadataLines(project.shards, mapper, rom.length, names);
-      const sourceLabels = /* @__PURE__ */ new Map();
-      for (const label of [...project.shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
-        if (!label.sourceName) {
-          continue;
-        }
-        const offset = toFileOffset(label.addressSpace, label.address, mapper, rom.length);
-        if (offset === void 0 || structure && structure.start <= offset && offset < structure.end) {
-          continue;
-        }
-        const address3 = snesRomAddressSpace.fromOutputOffset(offset, context);
-        if (address3 >= 0 && !sourceLabels.has(address3)) {
-          sourceLabels.set(address3, names.get(label.id));
-        }
-      }
+      const initialMetadata = metadataLines(project.shards, mapper, rom.length, names);
       const annotations = new HalfOpenIntervalIndex(
         project.shards.annotations.filter(
           ({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE
@@ -36190,16 +49242,17 @@ var init_source_export2 = __esm({
         rom,
         mapper,
         project.shards,
-        metadata,
+        initialMetadata,
         annotations,
         ramVariables,
         structure,
-        sourceLabels,
+        void 0,
         structFields,
         indexedStructFields,
         options.instructionGroups,
         instructionUses
       );
+      const metadata = reconcileInferredFunctionMarkers(initialMetadata, instructions);
       for (const [offset, use] of instructionUses ?? []) {
         if (!instructions.has(offset)) {
           throw new Error(
@@ -36218,6 +49271,16 @@ var init_source_export2 = __esm({
         structRomFields
       );
       const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+      const emittedLabels = /* @__PURE__ */ new Map();
+      for (const span of planned) {
+        if (span.structured) {
+          continue;
+        }
+        const name = metadata.get(span.start)?.find((line) => line.name)?.name;
+        if (name) {
+          emittedLabels.set(span.start, name);
+        }
+      }
       if (previousManifest && !options.allowCodeRegression) {
         const previousCode = previousManifest.spans.filter((span) => span.role === "code");
         const proposedCode = planned.filter((span) => span.role === "code");
@@ -36256,30 +49319,48 @@ var init_source_export2 = __esm({
           if (address3 < 0) {
             throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex10(span.start)}.`);
           }
-          const named = span.structured ? [] : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
+          const spanMetadata = metadata.get(span.start);
+          const named = span.structured ? [] : renderedMetadata(spanMetadata, Boolean(span.instruction), span.structRecord ? "" : "  ");
+          let closedTable = false;
           if (table && (span.structRecord?.binding.name !== table.name || span.structRecord?.index !== table.nextIndex || named.length > 0 || nextAddress !== address3)) {
-            lines.push("  endDataStructs");
+            lines.push("endDataStructs");
             table = void 0;
+            closedTable = true;
           }
           if (nextAddress !== address3) {
             lines.push("", `org ${hex10(address3)}`);
           }
-          if (named.length) {
+          if ((named.length || closedTable || !table && (span.structRecord || bankSpans[spanIndex - 1]?.structRecord)) && lines.at(-1) !== "") {
             lines.push("");
+          }
+          if (named.length) {
             for (const line of named) {
               lines.push(line);
             }
           }
           if (span.instruction) {
             for (const comment2 of span.instruction.structComments ?? []) {
-              lines.push(`; ${comment2}`);
+              lines.push(`  ; ${comment2}`);
             }
             const inline = (metadata.get(span.start) ?? []).flatMap(
               (line) => line.instructionComment ? [line.instructionComment] : []
             );
-            lines.push(
-              `  ${span.instruction.source}${inline.length ? ` ; ${inline.join(" | ")}` : ""}`
-            );
+            let source = span.instruction.source;
+            const flow = span.instruction.flow;
+            if (flow) {
+              const targetOffset = toFileOffset(
+                SNES_CPU_ADDRESS_SPACE,
+                flow.address,
+                mapper,
+                rom.length
+              );
+              const name = targetOffset === void 0 ? void 0 : emittedLabels.get(targetOffset);
+              if (name && targetOffset !== void 0) {
+                const labelAddress = snesRomAddressSpace.fromOutputOffset(targetOffset, context);
+                source = renderFlowLabel(source, flow, name, labelAddress);
+              }
+            }
+            lines.push(`  ${source}${inline.length ? ` ; ${inline.join(" | ")}` : ""}`);
             spans.push({
               id: `code:${span.start.toString(16).padStart(6, "0")}`,
               source: "analysis",
@@ -36318,20 +49399,21 @@ var init_source_export2 = __esm({
             const next = bankSpans[spanIndex + 1]?.structRecord;
             if (!table && next?.binding === record3.binding && next.start === record3.end && next.index === record3.index + 1 && !metadata.has(next.start)) {
               table = { name: record3.binding.name, nextIndex: record3.index };
-              lines.push(`  dataStructs ${record3.binding.name}`);
+              lines.push(`dataStructs ${record3.binding.name}`);
             }
             const literal = renderSnesStructInitializer(
               record3,
               rom.read(record3.start, record3.end - record3.start)
             );
             const entryComment = record3.binding.entryComments?.[record3.index];
-            const suffix = entryComment ? ` ; ${entryComment}` : "";
             if (table) {
-              lines.push(`    [${record3.index}] = ${literal}${suffix}`);
+              lines.push(...renderedStructEntry("  ", `[${record3.index}] = ${literal}`, entryComment));
               table.nextIndex = record3.index + 1;
             } else {
               const reference = record3.binding.count === 1 && record3.index === 0 ? record3.binding.name : `${record3.binding.name}[${record3.index}]`;
-              lines.push(`  dataStruct ${reference}, ${literal}${suffix}`);
+              lines.push(
+                ...renderedStructEntry("", `dataStruct ${reference}, ${literal}`, entryComment)
+              );
             }
             spans.push({
               id: `struct:${span.start.toString(16).padStart(6, "0")}`,
@@ -36347,7 +49429,7 @@ var init_source_export2 = __esm({
             const record3 = span.structField.record;
             const entryComment = record3?.binding.entryComments?.[record3.index];
             if (record3?.start === span.start && entryComment) {
-              lines.push(`; ${entryComment}`);
+              lines.push(`  ; ${entryComment}`);
             }
             lines.push(
               ...renderSnesStructData(
@@ -36386,7 +49468,7 @@ var init_source_export2 = __esm({
           nextAddress = address3 + span.end - span.start;
         }
         if (table) {
-          lines.push("  endDataStructs");
+          lines.push("endDataStructs");
         }
         writeFile(directory, bankPath, `${lines.join("\n")}
 `, "source", files);
@@ -36517,12 +49599,12 @@ var init_source_export2 = __esm({
           continue;
         }
         const staleFile = path12.join(directory, stale.path);
-        if (fs13.existsSync(staleFile) && fs13.statSync(staleFile).isFile()) {
-          fs13.unlinkSync(staleFile);
+        if (fs11.existsSync(staleFile) && fs11.statSync(staleFile).isFile()) {
+          fs11.unlinkSync(staleFile);
         }
       }
-      fs13.mkdirSync(directory, { recursive: true });
-      fs13.writeFileSync(
+      fs11.mkdirSync(directory, { recursive: true });
+      fs11.writeFileSync(
         path12.join(directory, SOURCE_EXPORT_MANIFEST),
         canonicalSourceExportJson(manifest)
       );
@@ -36602,7 +49684,7 @@ var init_processor_source_export = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
-import { createHash as createHash12 } from "node:crypto";
+import { createHash as createHash10 } from "node:crypto";
 var isArray3, rank, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
@@ -36694,9 +49776,9 @@ var init_function_heuristics = __esm({
         "disabledRules",
         "registerRules"
       ]);
-      for (const key2 of Object.keys(config)) {
-        if (!allowed.has(key2)) {
-          throw new Error(`Unknown SNES heuristic option '${key2}'.`);
+      for (const key3 of Object.keys(config)) {
+        if (!allowed.has(key3)) {
+          throw new Error(`Unknown SNES heuristic option '${key3}'.`);
         }
       }
       if (config.enabled !== void 0 && typeof config.enabled !== "boolean") {
@@ -36766,7 +49848,7 @@ var init_function_heuristics = __esm({
           incoming.set(edge.to, list);
         }
       }
-      const window = (end) => {
+      const window2 = (end) => {
         const result = [end];
         const seen = /* @__PURE__ */ new Set([end.id]);
         while (result.length < limit) {
@@ -36788,10 +49870,10 @@ var init_function_heuristics = __esm({
         if (disabled.has(rule) || rank[confidence] < rank[config.minimumConfidence ?? "medium"]) {
           return;
         }
-        const key2 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
-        const prior = found.get(key2);
-        found.set(key2, {
-          id: `heuristic:snes:${createHash12("sha256").update(key2).digest("hex").slice(0, 24)}`,
+        const key3 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
+        const prior = found.get(key3);
+        found.set(key3, {
+          id: `heuristic:snes:${createHash10("sha256").update(key3).digest("hex").slice(0, 24)}`,
           rule,
           role,
           addressSpace: node.addressSpace,
@@ -36841,7 +49923,7 @@ var init_function_heuristics = __esm({
             "Block move instruction. Payload purpose requires destination provenance."
           );
         }
-        const trail = window(node);
+        const trail = window2(node);
         if (node.mnemonic === "STA" && ports.includes(16907)) {
           const values = /* @__PURE__ */ new Map();
           const registers2 = /* @__PURE__ */ new Map();
@@ -36943,7 +50025,7 @@ var init_function_heuristics = __esm({
         if (!end) {
           continue;
         }
-        const trail = window(end);
+        const trail = window2(end);
         const startIndex = trail.findIndex((node) => node.address === edge.toAddress);
         if (startIndex < 0) {
           continue;
@@ -36986,12 +50068,12 @@ var init_function_heuristics = __esm({
       }
       const contextNodes = /* @__PURE__ */ new Map();
       for (const node of nodes.values()) {
-        const key2 = canonicalJson(node.context);
-        const indexed = contextNodes.get(key2) ?? /* @__PURE__ */ new Map();
+        const key3 = canonicalJson(node.context);
+        const indexed = contextNodes.get(key3) ?? /* @__PURE__ */ new Map();
         const choices = indexed.get(node.address) ?? [];
         choices.push(node);
         indexed.set(node.address, choices);
-        contextNodes.set(key2, indexed);
+        contextNodes.set(key3, indexed);
       }
       const handshakeAddresses = new Set(
         [...found.values()].filter((role) => role.rule === "apu-handshake").map((role) => role.address)
@@ -37145,7 +50227,7 @@ var init_function_heuristics = __esm({
       const roles = [...found.values()].sort(
         (a, b) => a.address - b.address || a.id.localeCompare(b.id)
       );
-      const signature = createHash12("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
+      const signature = createHash10("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
       const evidence = roles.map((role) => ({
         id: `${role.id}:evidence`,
         source: "detector",
@@ -37169,7 +50251,7 @@ var init_function_heuristics = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/runtime-code.ts
-import { createHash as createHash13 } from "node:crypto";
+import { createHash as createHash11 } from "node:crypto";
 var runtimeDecodeState, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
   "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
@@ -37181,8 +50263,8 @@ var init_runtime_code = __esm({
     init_address_identities();
     init_hardware_registers();
     runtimeDecodeState = (sample) => {
-      const value = (key2, max) => {
-        const entry = sample.state[key2] ?? sample.state[key2.toUpperCase()];
+      const value = (key3, max) => {
+        const entry = sample.state[key3] ?? sample.state[key3.toUpperCase()];
         return typeof entry === "number" && Number.isInteger(entry) && entry >= 0 && entry <= max ? entry : void 0;
       };
       const p = value("p", 255);
@@ -37214,7 +50296,7 @@ var init_runtime_code = __esm({
           continue;
         }
         const state = runtimeDecodeState(sample);
-        const variant = createHash13("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
+        const variant = createHash11("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
         const id = `runtime:code:${variant}`;
         const duplicate = nodes.get(id);
         if (duplicate) {
@@ -37416,7 +50498,7 @@ var init_superfx_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/project-initializer.ts
-import * as fs14 from "node:fs";
+import * as fs12 from "node:fs";
 import path13 from "node:path";
 var TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject;
 var init_project_initializer = __esm({
@@ -37469,47 +50551,47 @@ var init_project_initializer = __esm({
     };
     importDizRawFile = (file, rom) => {
       assertDizRawFile(file);
-      return importDizRaw(fs14.readFileSync(file, "utf8"), {
+      return importDizRaw(fs12.readFileSync(file, "utf8"), {
         sourceName: path13.basename(file),
         expectedRomSize: rom.length
       });
     };
     ensureWritableDestination = (directory) => {
-      if (!fs14.existsSync(directory)) {
+      if (!fs12.existsSync(directory)) {
         return;
       }
-      const stat2 = fs14.statSync(directory);
+      const stat2 = fs12.statSync(directory);
       if (!stat2.isDirectory()) {
         throw new Error(`Destination '${directory}' is not a directory.`);
       }
-      if (fs14.readdirSync(directory).length > 0) {
+      if (fs12.readdirSync(directory).length > 0) {
         throw new Error(`Destination '${directory}' must be empty.`);
       }
     };
     temporarySibling = (destination, suffix) => {
       const resolved = path13.resolve(destination);
       const parent = path13.dirname(resolved);
-      fs14.mkdirSync(parent, { recursive: true });
-      return fs14.mkdtempSync(path13.join(parent, `.${path13.basename(resolved)}.${suffix}-`));
+      fs12.mkdirSync(parent, { recursive: true });
+      return fs12.mkdtempSync(path13.join(parent, `.${path13.basename(resolved)}.${suffix}-`));
     };
     removeDirectory = (directory) => {
-      fs14.rmSync(directory, { recursive: true, force: true });
+      fs12.rmSync(directory, { recursive: true, force: true });
     };
     commitStagedDirectory = (staging, destination) => {
       const resolved = path13.resolve(destination);
       ensureWritableDestination(resolved);
-      if (!fs14.existsSync(resolved)) {
-        fs14.renameSync(staging, resolved);
+      if (!fs12.existsSync(resolved)) {
+        fs12.renameSync(staging, resolved);
         return;
       }
       const backup = `${resolved}.empty-${path13.basename(staging)}`;
-      fs14.renameSync(resolved, backup);
+      fs12.renameSync(resolved, backup);
       try {
-        fs14.renameSync(staging, resolved);
-        fs14.rmdirSync(backup);
+        fs12.renameSync(staging, resolved);
+        fs12.rmdirSync(backup);
       } catch (error) {
-        if (!fs14.existsSync(resolved) && fs14.existsSync(backup)) {
-          fs14.renameSync(backup, resolved);
+        if (!fs12.existsSync(resolved) && fs12.existsSync(backup)) {
+          fs12.renameSync(backup, resolved);
         }
         throw error;
       }
@@ -37686,7 +50768,7 @@ var init_project_initializer = __esm({
       }
       const heuristicFile = path13.join(projectDirectory, "heuristics.json");
       const heuristicConfig = validateSnesHeuristicConfiguration(
-        options.heuristics ?? (fs14.existsSync(heuristicFile) ? JSON.parse(fs14.readFileSync(heuristicFile, "utf8")) : {})
+        options.heuristics ?? (fs12.existsSync(heuristicFile) ? JSON.parse(fs12.readFileSync(heuristicFile, "utf8")) : {})
       );
       const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
       const editableRecords = loaded.view.analysis.filter(
@@ -37917,802 +50999,12 @@ var init_superfx_analysis = __esm({
   }
 });
 
-// packages/plugin-snes/src/assets/common.ts
-var objectValue2, optionsFor2, integerOption2, stringOption2, readBytes, resolveCount, resolveGrid, decodedObject2, arrayValue, integerValue, defaultPath, jsonFile2;
-var init_common2 = __esm({
-  "packages/plugin-snes/src/assets/common.ts"() {
-    "use strict";
-    objectValue2 = (value, label) => {
-      if (value === void 0) {
-        return {};
-      }
-      if (value === null || Array.isArray(value) || typeof value !== "object") {
-        throw new Error(`${label} must be an object.`);
-      }
-      return value;
-    };
-    optionsFor2 = (context) => objectValue2(context.request.options, `Asset '${context.request.id}' options`);
-    integerOption2 = (options, key2, bounds = {}) => {
-      const value = options[key2] ?? bounds.fallback;
-      if (value === void 0 || typeof value !== "number" || !Number.isSafeInteger(value) || bounds.minimum !== void 0 && value < bounds.minimum || bounds.maximum !== void 0 && value > bounds.maximum) {
-        if (value === void 0) {
-          return void 0;
-        }
-        throw new Error(`Asset option '${key2}' is outside its integer bounds.`);
-      }
-      return value;
-    };
-    stringOption2 = (options, key2, fallback) => {
-      const value = options[key2] ?? fallback;
-      if (typeof value !== "string" || value === "") {
-        throw new Error(`Asset option '${key2}' must be a non-empty string.`);
-      }
-      return value;
-    };
-    readBytes = (source, offset, size, owner) => {
-      const bytes = source.read(offset, size);
-      if (!bytes) {
-        throw new Error(`SNES asset '${owner}' source range is unreadable.`);
-      }
-      return bytes;
-    };
-    resolveCount = (context, unitSize, options = optionsFor2(context)) => {
-      const configured = integerOption2(options, "count", { minimum: 1 });
-      const length = context.request.length;
-      if (configured === void 0 && length === void 0) {
-        throw new Error(`SNES asset '${context.request.id}' requires a length or option 'count'.`);
-      }
-      if (length !== void 0 && length % unitSize !== 0) {
-        throw new Error(
-          `SNES asset '${context.request.id}' length ${length} is not divisible by ${unitSize}.`
-        );
-      }
-      const count = configured ?? length / unitSize;
-      const size = count * unitSize;
-      if (!Number.isSafeInteger(size)) {
-        throw new Error(`SNES asset '${context.request.id}' overflowed.`);
-      }
-      if (length !== void 0 && length !== size) {
-        throw new Error(
-          `SNES asset '${context.request.id}' count ${count} requires ${size} bytes, not ${length}.`
-        );
-      }
-      return { count, size };
-    };
-    resolveGrid = (context, unitSize) => {
-      const options = optionsFor2(context);
-      const width2 = integerOption2(options, "width", { minimum: 1 });
-      const height = integerOption2(options, "height", { minimum: 1 });
-      if (width2 === void 0 !== (height === void 0)) {
-        throw new Error("SNES grid assets require both 'width' and 'height'.");
-      }
-      const configuredCount = width2 === void 0 ? void 0 : width2 * height;
-      if (configuredCount !== void 0 && !Number.isSafeInteger(configuredCount)) {
-        throw new Error(`SNES asset '${context.request.id}' grid dimensions overflowed.`);
-      }
-      const countOption = integerOption2(options, "count", { minimum: 1 });
-      if (countOption !== void 0 && configuredCount !== void 0 && countOption !== configuredCount) {
-        throw new Error("SNES grid dimensions do not match option 'count'.");
-      }
-      const resolved = resolveCount(context, unitSize, {
-        ...options,
-        ...configuredCount === void 0 ? {} : { count: configuredCount }
-      });
-      return {
-        ...resolved,
-        ...width2 === void 0 ? {} : { width: width2, height }
-      };
-    };
-    decodedObject2 = (value, owner) => objectValue2(value, `Decoded SNES asset '${owner}'`);
-    arrayValue = (value, label) => {
-      if (!Array.isArray(value)) {
-        throw new Error(`${label} must be an array.`);
-      }
-      return value;
-    };
-    integerValue = (value, label, minimum, maximum) => {
-      if (typeof value !== "number" || !Number.isSafeInteger(value) || value < minimum || value > maximum) {
-        throw new Error(`${label} must be an integer in ${minimum}..${maximum}.`);
-      }
-      return value;
-    };
-    defaultPath = (assetId, suffix) => `assets/${encodeURIComponent(assetId)}.${suffix}`;
-    jsonFile2 = (path16, value) => ({
-      path: path16,
-      mediaType: "application/json",
-      bytes: new TextEncoder().encode(`${JSON.stringify(value, void 0, 2)}
-`)
-    });
-  }
-});
-
-// packages/plugin-snes/src/assets/brr.ts
-var SNES_BRR_ASSET_CODEC_ID, blockCountAndSize, snesBrrAssetCodec;
-var init_brr = __esm({
-  "packages/plugin-snes/src/assets/brr.ts"() {
-    "use strict";
-    init_common2();
-    SNES_BRR_ASSET_CODEC_ID = "snes.asset.brr";
-    blockCountAndSize = (context) => {
-      if (context.request.length !== void 0) {
-        if (context.request.length % 9 !== 0) {
-          throw new Error(`BRR asset '${context.request.id}' length must be a multiple of 9 bytes.`);
-        }
-        return { blockCount: context.request.length / 9, size: context.request.length };
-      }
-      const options = optionsFor2(context);
-      const maxBlocks = integerOption2(options, "maxBlocks", { minimum: 1 });
-      if (maxBlocks === void 0) {
-        throw new Error(`BRR asset '${context.request.id}' requires a length or option 'maxBlocks'.`);
-      }
-      for (let blockCount = 1; blockCount <= maxBlocks; blockCount++) {
-        const block = context.source.read(context.request.sourceOffset + (blockCount - 1) * 9, 9);
-        if (!block) {
-          break;
-        }
-        if ((block[0] & 1) !== 0) {
-          return { blockCount, size: blockCount * 9 };
-        }
-      }
-      throw new Error(`BRR asset '${context.request.id}' has no end block within ${maxBlocks} blocks.`);
-    };
-    snesBrrAssetCodec = Object.freeze({
-      id: SNES_BRR_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 9 },
-      inspect: (context) => {
-        const resolved = blockCountAndSize(context);
-        return {
-          size: resolved.size,
-          metadata: { format: "snes-brr", blockCount: resolved.blockCount, samplesPerBlock: 16 }
-        };
-      },
-      decode: (context) => {
-        const options = optionsFor2(context);
-        const resolved = blockCountAndSize(context);
-        const bytes = readBytes(
-          context.source,
-          context.request.sourceOffset,
-          resolved.size,
-          context.request.id
-        );
-        const blocks = Array.from({ length: resolved.blockCount }, (_, blockIndex) => {
-          const offset = blockIndex * 9;
-          const header = bytes[offset];
-          const nibbles = Array.from({ length: 16 }, (_2, sampleIndex) => {
-            const byte = bytes[offset + 1 + Math.floor(sampleIndex / 2)];
-            const nibble2 = sampleIndex % 2 === 0 ? byte >> 4 : byte & 15;
-            return nibble2 >= 8 ? nibble2 - 16 : nibble2;
-          });
-          return {
-            range: header >> 4,
-            filter: header >> 2 & 3,
-            loop: header >> 1 & 1,
-            end: header & 1,
-            nibbles
-          };
-        });
-        const value = { kind: "snes-brr", blocks };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "brr"));
-        const metadataPath = stringOption2(
-          options,
-          "metadataPath",
-          defaultPath(context.request.id, "brr.json")
-        );
-        return {
-          value,
-          files: [{ path: path16, mediaType: "audio/x-snes-brr", bytes }, jsonFile2(metadataPath, value)]
-        };
-      },
-      encode: (context) => {
-        const resolved = blockCountAndSize(context);
-        const value = decodedObject2(context.decoded.value, context.request.id);
-        const blocks = arrayValue(value.blocks, `BRR asset '${context.request.id}' blocks`);
-        if (blocks.length !== resolved.blockCount) {
-          throw new Error(`BRR asset '${context.request.id}' requires ${resolved.blockCount} blocks.`);
-        }
-        const bytes = new Uint8Array(resolved.size);
-        blocks.forEach((blockValue, blockIndex) => {
-          const block = objectValue2(blockValue, `BRR block ${blockIndex}`);
-          const range = integerValue(block.range, `BRR block ${blockIndex} range`, 0, 15);
-          const filter = integerValue(block.filter, `BRR block ${blockIndex} filter`, 0, 3);
-          const loop = integerValue(block.loop, `BRR block ${blockIndex} loop`, 0, 1);
-          const end = integerValue(block.end, `BRR block ${blockIndex} end`, 0, 1);
-          const nibbles = arrayValue(block.nibbles, `BRR block ${blockIndex} nibbles`);
-          if (nibbles.length !== 16) {
-            throw new Error(`BRR block ${blockIndex} requires exactly 16 nibbles.`);
-          }
-          const offset = blockIndex * 9;
-          bytes[offset] = range << 4 | filter << 2 | loop << 1 | end;
-          for (let sampleIndex = 0; sampleIndex < 16; sampleIndex += 2) {
-            const high = integerValue(
-              nibbles[sampleIndex],
-              `BRR block ${blockIndex} nibble ${sampleIndex}`,
-              -8,
-              7
-            );
-            const low = integerValue(
-              nibbles[sampleIndex + 1],
-              `BRR block ${blockIndex} nibble ${sampleIndex + 1}`,
-              -8,
-              7
-            );
-            bytes[offset + 1 + sampleIndex / 2] = (high < 0 ? high + 16 : high) << 4 | (low < 0 ? low + 16 : low);
-          }
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/plugin-snes/src/assets/palette.ts
-var SNES_PALETTE_ASSET_CODEC_ID, snesPaletteAssetCodec;
-var init_palette = __esm({
-  "packages/plugin-snes/src/assets/palette.ts"() {
-    "use strict";
-    init_common2();
-    SNES_PALETTE_ASSET_CODEC_ID = "snes.asset.palette.bgr555";
-    snesPaletteAssetCodec = Object.freeze({
-      id: SNES_PALETTE_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 2 },
-      inspect: (context) => {
-        const { count, size } = resolveCount(context, 2);
-        return { size, metadata: { format: "snes-cgram-bgr555", count } };
-      },
-      decode: (context) => {
-        const options = optionsFor2(context);
-        const { count, size } = resolveCount(context, 2, options);
-        const bytes = readBytes(context.source, context.request.sourceOffset, size, context.request.id);
-        const colors = Array.from({ length: count }, (_, index) => {
-          const word2 = bytes[index * 2] | bytes[index * 2 + 1] << 8;
-          return {
-            red: word2 & 31,
-            green: word2 >> 5 & 31,
-            blue: word2 >> 10 & 31,
-            unusedHighBit: word2 >> 15 & 1
-          };
-        });
-        const value = { kind: "snes-palette-bgr555", colors };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "palette.json"));
-        return { value, files: [jsonFile2(path16, value)] };
-      },
-      encode: (context) => {
-        const { count, size } = resolveCount(context, 2);
-        const value = decodedObject2(context.decoded.value, context.request.id);
-        const colors = arrayValue(value.colors, `SNES palette '${context.request.id}' colors`);
-        if (colors.length !== count) {
-          throw new Error(`SNES palette '${context.request.id}' requires exactly ${count} colors.`);
-        }
-        const bytes = new Uint8Array(size);
-        colors.forEach((colorValue, index) => {
-          const color = objectValue2(colorValue, `SNES palette color ${index}`);
-          const red = integerValue(color.red, `SNES palette color ${index} red`, 0, 31);
-          const green = integerValue(color.green, `SNES palette color ${index} green`, 0, 31);
-          const blue = integerValue(color.blue, `SNES palette color ${index} blue`, 0, 31);
-          const unused = integerValue(
-            color.unusedHighBit,
-            `SNES palette color ${index} unusedHighBit`,
-            0,
-            1
-          );
-          const word2 = red | green << 5 | blue << 10 | unused << 15;
-          bytes[index * 2] = word2 & 255;
-          bytes[index * 2 + 1] = word2 >> 8;
-        });
-        return bytes;
-      }
-    });
-  }
-});
-
-// packages/plugin-snes/src/assets/tilemap.ts
-var SNES_BG_TILEMAP_ASSET_CODEC_ID, SNES_MODE7_TILEMAP_ASSET_CODEC_ID, dimensions, snesBgTilemapAssetCodec, snesMode7TilemapAssetCodec;
-var init_tilemap = __esm({
-  "packages/plugin-snes/src/assets/tilemap.ts"() {
-    "use strict";
-    init_common2();
-    SNES_BG_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.bg";
-    SNES_MODE7_TILEMAP_ASSET_CODEC_ID = "snes.asset.tilemap.mode7";
-    dimensions = (resolved) => ({
-      ...resolved.width === void 0 ? {} : { width: resolved.width, height: resolved.height }
-    });
-    snesBgTilemapAssetCodec = Object.freeze({
-      id: SNES_BG_TILEMAP_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 2 },
-      inspect: (context) => {
-        const resolved = resolveGrid(context, 2);
-        return {
-          size: resolved.size,
-          metadata: { format: "snes-bg-tilemap", count: resolved.count, ...dimensions(resolved) }
-        };
-      },
-      decode: (context) => {
-        const options = optionsFor2(context);
-        const resolved = resolveGrid(context, 2);
-        const bytes = readBytes(
-          context.source,
-          context.request.sourceOffset,
-          resolved.size,
-          context.request.id
-        );
-        const entries3 = Array.from({ length: resolved.count }, (_, index) => {
-          const word2 = bytes[index * 2] | bytes[index * 2 + 1] << 8;
-          return {
-            tile: word2 & 1023,
-            palette: word2 >> 10 & 7,
-            priority: word2 >> 13 & 1,
-            horizontalFlip: word2 >> 14 & 1,
-            verticalFlip: word2 >> 15 & 1
-          };
-        });
-        const value = {
-          kind: "snes-bg-tilemap",
-          ...dimensions(resolved),
-          entries: entries3
-        };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "tilemap.json"));
-        return { value, files: [jsonFile2(path16, value)] };
-      },
-      encode: (context) => {
-        const resolved = resolveGrid(context, 2);
-        const value = decodedObject2(context.decoded.value, context.request.id);
-        const entries3 = arrayValue(value.entries, `SNES tilemap '${context.request.id}' entries`);
-        if (entries3.length !== resolved.count) {
-          throw new Error(`SNES tilemap '${context.request.id}' requires ${resolved.count} entries.`);
-        }
-        const bytes = new Uint8Array(resolved.size);
-        entries3.forEach((entryValue, index) => {
-          const entry = objectValue2(entryValue, `SNES tilemap entry ${index}`);
-          const tile = integerValue(entry.tile, `SNES tilemap entry ${index} tile`, 0, 1023);
-          const palette = integerValue(entry.palette, `SNES tilemap entry ${index} palette`, 0, 7);
-          const priority = integerValue(entry.priority, `SNES tilemap entry ${index} priority`, 0, 1);
-          const horizontalFlip = integerValue(
-            entry.horizontalFlip,
-            `SNES tilemap entry ${index} horizontalFlip`,
-            0,
-            1
-          );
-          const verticalFlip = integerValue(
-            entry.verticalFlip,
-            `SNES tilemap entry ${index} verticalFlip`,
-            0,
-            1
-          );
-          const word2 = tile | palette << 10 | priority << 13 | horizontalFlip << 14 | verticalFlip << 15;
-          bytes[index * 2] = word2 & 255;
-          bytes[index * 2 + 1] = word2 >> 8;
-        });
-        return bytes;
-      }
-    });
-    snesMode7TilemapAssetCodec = Object.freeze({
-      id: SNES_MODE7_TILEMAP_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 1 },
-      inspect: (context) => {
-        const resolved = resolveGrid(context, 1);
-        return {
-          size: resolved.size,
-          metadata: { format: "snes-mode7-tilemap", count: resolved.count, ...dimensions(resolved) }
-        };
-      },
-      decode: (context) => {
-        const options = optionsFor2(context);
-        const resolved = resolveGrid(context, 1);
-        const bytes = readBytes(
-          context.source,
-          context.request.sourceOffset,
-          resolved.size,
-          context.request.id
-        );
-        const value = {
-          kind: "snes-mode7-tilemap",
-          ...dimensions(resolved),
-          indexes: [...bytes]
-        };
-        const path16 = stringOption2(
-          options,
-          "path",
-          defaultPath(context.request.id, "mode7-tilemap.json")
-        );
-        return { value, files: [jsonFile2(path16, value)] };
-      },
-      encode: (context) => {
-        const resolved = resolveGrid(context, 1);
-        const value = decodedObject2(context.decoded.value, context.request.id);
-        const indexes = arrayValue(
-          value.indexes,
-          `SNES Mode 7 tilemap '${context.request.id}' indexes`
-        );
-        if (indexes.length !== resolved.count) {
-          throw new Error(
-            `SNES Mode 7 tilemap '${context.request.id}' requires ${resolved.count} indexes.`
-          );
-        }
-        return Uint8Array.from(
-          indexes.map(
-            (index, position) => integerValue(index, `SNES Mode 7 tilemap index ${position}`, 0, 255)
-          )
-        );
-      }
-    });
-  }
-});
-
-// packages/plugin-snes/src/assets/tiles.ts
-var SNES_TILE_2BPP_ASSET_CODEC_ID, SNES_TILE_3BPP_ASSET_CODEC_ID, SNES_TILE_4BPP_ASSET_CODEC_ID, SNES_TILE_8BPP_ASSET_CODEC_ID, SNES_MODE7_TILE_ASSET_CODEC_ID, planeOffset, decodePlanarTile, encodeTilePixels, planarTileCodec, mode7TileCodec, snesTile2BppAssetCodec, snesTile3BppAssetCodec, snesTile4BppAssetCodec, snesTile8BppAssetCodec, snesMode7TileAssetCodec;
-var init_tiles = __esm({
-  "packages/plugin-snes/src/assets/tiles.ts"() {
-    "use strict";
-    init_common2();
-    SNES_TILE_2BPP_ASSET_CODEC_ID = "snes.asset.tile.2bpp";
-    SNES_TILE_3BPP_ASSET_CODEC_ID = "snes.asset.tile.3bpp";
-    SNES_TILE_4BPP_ASSET_CODEC_ID = "snes.asset.tile.4bpp";
-    SNES_TILE_8BPP_ASSET_CODEC_ID = "snes.asset.tile.8bpp";
-    SNES_MODE7_TILE_ASSET_CODEC_ID = "snes.asset.tile.mode7";
-    planeOffset = (bitsPerPixel, plane, row) => {
-      if (bitsPerPixel === 3 && plane === 2) {
-        return 16 + row;
-      }
-      return Math.floor(plane / 2) * 16 + row * 2 + plane % 2;
-    };
-    decodePlanarTile = (bytes, start, bitsPerPixel) => Array.from(
-      { length: 8 },
-      (_, row) => Array.from({ length: 8 }, (_2, column) => {
-        let pixel = 0;
-        for (let plane = 0; plane < bitsPerPixel; plane++) {
-          const byte = bytes[start + planeOffset(bitsPerPixel, plane, row)] ?? 0;
-          pixel |= (byte >> 7 - column & 1) << plane;
-        }
-        return pixel;
-      })
-    );
-    encodeTilePixels = (value, owner, tileIndex, maximum) => {
-      const rows = arrayValue(value, `SNES tile ${tileIndex} pixels`);
-      if (rows.length !== 8) {
-        throw new Error(`SNES tile ${tileIndex} must contain exactly 8 rows.`);
-      }
-      return rows.map((row, rowIndex) => {
-        const pixels = arrayValue(row, `SNES tile ${tileIndex} row ${rowIndex}`);
-        if (pixels.length !== 8) {
-          throw new Error(`SNES tile ${tileIndex} row ${rowIndex} must contain exactly 8 pixels.`);
-        }
-        return pixels.map(
-          (pixel, column) => integerValue(pixel, `SNES tile '${owner}' pixel ${rowIndex},${column}`, 0, maximum)
-        );
-      });
-    };
-    planarTileCodec = (id, bitsPerPixel) => {
-      const bytesPerTile = bitsPerPixel * 8;
-      return Object.freeze({
-        id,
-        version: "1.0.0",
-        sizeBounds: { minimum: bytesPerTile, alignment: 1 },
-        inspect: (context) => {
-          const { count, size } = resolveCount(context, bytesPerTile);
-          return {
-            size,
-            metadata: { format: "snes-planar", bitsPerPixel, tileWidth: 8, tileHeight: 8, count }
-          };
-        },
-        decode: (context) => {
-          const options = optionsFor2(context);
-          const { count, size } = resolveCount(context, bytesPerTile, options);
-          const bytes = readBytes(
-            context.source,
-            context.request.sourceOffset,
-            size,
-            context.request.id
-          );
-          const tiles = Array.from(
-            { length: count },
-            (_, index) => decodePlanarTile(bytes, index * bytesPerTile, bitsPerPixel)
-          );
-          const value = {
-            kind: "snes-planar-tiles",
-            bitsPerPixel,
-            tileWidth: 8,
-            tileHeight: 8,
-            tiles
-          };
-          const path16 = stringOption2(
-            options,
-            "path",
-            defaultPath(context.request.id, `${bitsPerPixel}bpp.json`)
-          );
-          return { value, files: [jsonFile2(path16, value)] };
-        },
-        encode: (context) => {
-          const { count, size } = resolveCount(context, bytesPerTile);
-          const value = decodedObject2(context.decoded.value, context.request.id);
-          const tiles = arrayValue(value.tiles, `SNES tile asset '${context.request.id}' tiles`);
-          if (tiles.length !== count) {
-            throw new Error(`SNES tile asset '${context.request.id}' requires exactly ${count} tiles.`);
-          }
-          const bytes = new Uint8Array(size);
-          tiles.forEach((tile, tileIndex) => {
-            const pixels = encodeTilePixels(tile, context.request.id, tileIndex, 2 ** bitsPerPixel - 1);
-            for (let row = 0; row < 8; row++) {
-              for (let column = 0; column < 8; column++) {
-                const pixel = pixels[row][column];
-                for (let plane = 0; plane < bitsPerPixel; plane++) {
-                  if ((pixel & 1 << plane) !== 0) {
-                    const offset = tileIndex * bytesPerTile + planeOffset(bitsPerPixel, plane, row);
-                    bytes[offset] |= 1 << 7 - column;
-                  }
-                }
-              }
-            }
-          });
-          return bytes;
-        }
-      });
-    };
-    mode7TileCodec = Object.freeze({
-      id: SNES_MODE7_TILE_ASSET_CODEC_ID,
-      version: "1.0.0",
-      sizeBounds: { minimum: 64 },
-      inspect: (context) => {
-        const { count, size } = resolveCount(context, 64);
-        return {
-          size,
-          metadata: {
-            format: "snes-mode7-chunky",
-            bitsPerPixel: 8,
-            tileWidth: 8,
-            tileHeight: 8,
-            count
-          }
-        };
-      },
-      decode: (context) => {
-        const options = optionsFor2(context);
-        const { count, size } = resolveCount(context, 64, options);
-        const bytes = readBytes(context.source, context.request.sourceOffset, size, context.request.id);
-        const tiles = Array.from(
-          { length: count },
-          (_, tileIndex) => Array.from(
-            { length: 8 },
-            (_2, row) => Array.from({ length: 8 }, (_3, column) => bytes[tileIndex * 64 + row * 8 + column])
-          )
-        );
-        const value = {
-          kind: "snes-mode7-tiles",
-          bitsPerPixel: 8,
-          tileWidth: 8,
-          tileHeight: 8,
-          tiles
-        };
-        const path16 = stringOption2(options, "path", defaultPath(context.request.id, "mode7.json"));
-        return { value, files: [jsonFile2(path16, value)] };
-      },
-      encode: (context) => {
-        const { count, size } = resolveCount(context, 64);
-        const value = decodedObject2(context.decoded.value, context.request.id);
-        const tiles = arrayValue(value.tiles, `SNES Mode 7 asset '${context.request.id}' tiles`);
-        if (tiles.length !== count) {
-          throw new Error(`SNES Mode 7 asset '${context.request.id}' requires exactly ${count} tiles.`);
-        }
-        const bytes = new Uint8Array(size);
-        tiles.forEach((tile, tileIndex) => {
-          const pixels = encodeTilePixels(tile, context.request.id, tileIndex, 255);
-          pixels.forEach(
-            (row, rowIndex) => row.forEach((pixel, column) => {
-              bytes[tileIndex * 64 + rowIndex * 8 + column] = pixel;
-            })
-          );
-        });
-        return bytes;
-      }
-    });
-    snesTile2BppAssetCodec = planarTileCodec(SNES_TILE_2BPP_ASSET_CODEC_ID, 2);
-    snesTile3BppAssetCodec = planarTileCodec(SNES_TILE_3BPP_ASSET_CODEC_ID, 3);
-    snesTile4BppAssetCodec = planarTileCodec(SNES_TILE_4BPP_ASSET_CODEC_ID, 4);
-    snesTile8BppAssetCodec = planarTileCodec(SNES_TILE_8BPP_ASSET_CODEC_ID, 8);
-    snesMode7TileAssetCodec = mode7TileCodec;
-  }
-});
-
-// packages/plugin-snes/src/assets/previews.ts
-var SNES_SVG_ASSET_PREVIEW_ID, objectValue3, arrayValue2, numberValue, byteHex, svgFile, svg, renderTiles, renderPalette, indexColor, renderTilemap, renderBrr, snesSvgAssetPreviewRenderer;
-var init_previews = __esm({
-  "packages/plugin-snes/src/assets/previews.ts"() {
-    "use strict";
-    init_brr();
-    init_palette();
-    init_tilemap();
-    init_tiles();
-    SNES_SVG_ASSET_PREVIEW_ID = "snes.preview.svg";
-    objectValue3 = (value, name) => {
-      if (!value || Array.isArray(value) || typeof value !== "object") {
-        throw new Error(`${name} must be an object.`);
-      }
-      return value;
-    };
-    arrayValue2 = (value, name) => {
-      if (!Array.isArray(value)) {
-        throw new Error(`${name} must be an array.`);
-      }
-      return value;
-    };
-    numberValue = (value, name) => {
-      if (typeof value !== "number" || !Number.isFinite(value)) {
-        throw new Error(`${name} must be numeric.`);
-      }
-      return value;
-    };
-    byteHex = (value) => Math.round(value).toString(16).padStart(2, "0");
-    svgFile = (id, body) => [
-      {
-        path: `previews/${id.replaceAll("/", "_").replaceAll(":", "_")}.svg`,
-        mediaType: "image/svg+xml",
-        bytes: new TextEncoder().encode(body)
-      }
-    ];
-    svg = (width2, height, content, total) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width2} ${height}" width="${width2}" height="${height}" shape-rendering="crispEdges" data-total="${total}"><rect width="100%" height="100%" fill="#101418"/>${content}</svg>
-`;
-    renderTiles = (id, value) => {
-      const allTiles = arrayValue2(value.tiles, "SNES preview tiles");
-      const tiles = allTiles.slice(0, 256);
-      const bitsPerPixel = numberValue(value.bitsPerPixel, "SNES preview bitsPerPixel");
-      const maximum = 2 ** bitsPerPixel - 1;
-      const columns = Math.min(16, Math.max(1, Math.ceil(Math.sqrt(tiles.length))));
-      const rows = Math.ceil(tiles.length / columns);
-      const scale = 3;
-      const parts = [];
-      tiles.forEach(
-        (tile, tileIndex) => arrayValue2(tile, `SNES preview tile ${tileIndex}`).forEach(
-          (row, y) => arrayValue2(row, `SNES preview tile ${tileIndex} row ${y}`).forEach((pixel, x) => {
-            const intensity = numberValue(pixel, "SNES preview pixel") * 255 / maximum;
-            const color = byteHex(intensity);
-            const tileX = tileIndex % columns * 8;
-            const tileY = Math.floor(tileIndex / columns) * 8;
-            parts.push(
-              `<rect x="${(tileX + x) * scale}" y="${(tileY + y) * scale}" width="${scale}" height="${scale}" fill="#${color}${color}${color}"/>`
-            );
-          })
-        )
-      );
-      return svgFile(id, svg(columns * 8 * scale, rows * 8 * scale, parts.join(""), allTiles.length));
-    };
-    renderPalette = (id, value) => {
-      const allColors = arrayValue2(value.colors, "SNES preview colors");
-      const colors = allColors.slice(0, 256);
-      const columns = Math.min(16, Math.max(1, colors.length));
-      const rows = Math.ceil(colors.length / columns);
-      const size = 18;
-      const parts = colors.map((entry, index) => {
-        const color = objectValue3(entry, `SNES preview color ${index}`);
-        const red = byteHex(numberValue(color.red, "SNES preview red") * 255 / 31);
-        const green = byteHex(numberValue(color.green, "SNES preview green") * 255 / 31);
-        const blue = byteHex(numberValue(color.blue, "SNES preview blue") * 255 / 31);
-        return `<rect x="${index % columns * size}" y="${Math.floor(index / columns) * size}" width="${size}" height="${size}" fill="#${red}${green}${blue}"/>`;
-      });
-      return svgFile(id, svg(columns * size, rows * size, parts.join(""), allColors.length));
-    };
-    indexColor = (index) => `#${byteHex(index * 73 & 255)}${byteHex(index * 151 & 255)}${byteHex(index * 199 & 255)}`;
-    renderTilemap = (id, value) => {
-      const rawEntries = value.entries ?? value.indexes;
-      const allEntries = arrayValue2(rawEntries, "SNES preview tilemap entries");
-      const entries3 = allEntries.slice(0, 1024);
-      const declaredWidth = typeof value.width === "number" ? value.width : void 0;
-      const columns = Math.min(32, Math.max(1, declaredWidth ?? Math.ceil(Math.sqrt(entries3.length))));
-      const rows = Math.ceil(entries3.length / columns);
-      const cell = 8;
-      const parts = entries3.map((entry, index) => {
-        const tile = typeof entry === "number" ? numberValue(entry, "SNES preview Mode 7 index") : numberValue(
-          objectValue3(entry, `SNES preview tilemap entry ${index}`).tile,
-          "SNES preview tile"
-        );
-        return `<rect x="${index % columns * cell}" y="${Math.floor(index / columns) * cell}" width="${cell}" height="${cell}" fill="${indexColor(tile)}"/>`;
-      });
-      return svgFile(id, svg(columns * cell, rows * cell, parts.join(""), allEntries.length));
-    };
-    renderBrr = (id, value) => {
-      const allBlocks = arrayValue2(value.blocks, "SNES preview BRR blocks");
-      const blocks = allBlocks.slice(0, 128);
-      const samples = blocks.flatMap(
-        (block, blockIndex) => arrayValue2(
-          objectValue3(block, `SNES preview BRR block ${blockIndex}`).nibbles,
-          "BRR nibbles"
-        ).map((sample) => numberValue(sample, "BRR encoded nibble"))
-      );
-      const width2 = Math.max(1, samples.length * 2);
-      const height = 64;
-      const points = samples.map((sample, index) => `${index * 2},${32 - sample * 3}`).join(" ");
-      const content = `<line x1="0" y1="32" x2="${width2}" y2="32" stroke="#56616b"/><polyline points="${points}" fill="none" stroke="#7ee787" stroke-width="1"/>`;
-      return svgFile(id, svg(width2, height, content, allBlocks.length));
-    };
-    snesSvgAssetPreviewRenderer = Object.freeze({
-      id: SNES_SVG_ASSET_PREVIEW_ID,
-      version: "1.0.0",
-      codecIds: [
-        SNES_BRR_ASSET_CODEC_ID,
-        SNES_PALETTE_ASSET_CODEC_ID,
-        SNES_BG_TILEMAP_ASSET_CODEC_ID,
-        SNES_MODE7_TILEMAP_ASSET_CODEC_ID,
-        SNES_MODE7_TILE_ASSET_CODEC_ID,
-        SNES_TILE_2BPP_ASSET_CODEC_ID,
-        SNES_TILE_3BPP_ASSET_CODEC_ID,
-        SNES_TILE_4BPP_ASSET_CODEC_ID,
-        SNES_TILE_8BPP_ASSET_CODEC_ID
-      ],
-      render: ({ asset, decoded }) => {
-        const value = objectValue3(decoded.value, `SNES asset '${asset.id}' preview`);
-        if (asset.request.codecId === SNES_PALETTE_ASSET_CODEC_ID) {
-          return renderPalette(asset.id, value);
-        }
-        if (asset.request.codecId === SNES_BG_TILEMAP_ASSET_CODEC_ID || asset.request.codecId === SNES_MODE7_TILEMAP_ASSET_CODEC_ID) {
-          return renderTilemap(asset.id, value);
-        }
-        if (asset.request.codecId === SNES_BRR_ASSET_CODEC_ID) {
-          return renderBrr(asset.id, value);
-        }
-        return renderTiles(asset.id, value);
-      }
-    });
-  }
-});
-
-// packages/plugin-snes/src/assets/index.ts
-var snesAssetCodecs;
-var init_assets = __esm({
-  "packages/plugin-snes/src/assets/index.ts"() {
-    "use strict";
-    init_brr();
-    init_palette();
-    init_tilemap();
-    init_tiles();
-    init_brr();
-    init_palette();
-    init_previews();
-    init_tilemap();
-    init_tiles();
-    snesAssetCodecs = Object.freeze(
-      [
-        snesBrrAssetCodec,
-        snesPaletteAssetCodec,
-        snesBgTilemapAssetCodec,
-        snesMode7TilemapAssetCodec,
-        snesMode7TileAssetCodec,
-        snesTile2BppAssetCodec,
-        snesTile3BppAssetCodec,
-        snesTile4BppAssetCodec,
-        snesTile8BppAssetCodec
-      ].sort((left, right) => left.id.localeCompare(right.id))
-    );
-  }
-});
-
 // packages/plugin-snes/src/index.ts
-var SNES_TARGET_ID, toolingFor, directive, numericArgument, addressExpressions, readExpressions, targetOptions, createInitialState, plugin, src_default;
-var init_src3 = __esm({
-  "packages/plugin-snes/src/index.ts"() {
+var init_src4 = __esm({
+  async "packages/plugin-snes/src/index.ts"() {
     "use strict";
-    init_src();
-    init_decoder();
-    init_spec();
-    init__();
-    init_operand_classifiers();
-    init_spc700_decoder();
-    init_spc700_spec();
-    init_spc700();
-    init_split_operands();
-    init_superfx_decoder();
-    init_superfx_spec();
-    init_superfx();
-    init_compatibility();
-    init_ca65_compat();
-    init_freespace();
-    init_layout2();
-    init_spc();
-    init_session_state2();
-    init_address_space();
-    init_directive_catalog2();
-    init_instruction_catalog2();
+    await init_assembler2();
+    init_assembler2();
     init_analysis();
     init_state();
     init_address_identities();
@@ -38734,7 +51026,6 @@ var init_src3 = __esm({
     init_superfx_address_space();
     init_superfx_analysis();
     init_superfx_state();
-    init_assets();
     init_decoder();
     init_spec();
     init_spc700_decoder();
@@ -38749,462 +51040,18 @@ var init_src3 = __esm({
     init_instruction_catalog2();
     init_function_heuristics();
     init_runtime_code();
-    SNES_TARGET_ID = "snes.sfc";
-    toolingFor = (keywords) => {
-      const wanted = new Set(keywords);
-      return directiveCatalog2.filter((descriptor2) => wanted.has(descriptor2.keyword));
-    };
-    directive = (id, keywords, handler) => ({
-      id,
-      keywords,
-      phase: "lowered",
-      createHandler: handler,
-      tooling: toolingFor(keywords)
-    });
-    numericArgument = (functionName, args, index) => {
-      const value = args[index];
-      if (typeof value !== "number") {
-        throw new Error(`${functionName}() argument ${index + 1} must be numeric.`);
-      }
-      return value;
-    };
-    addressExpressions = {
-      id: "snes.address-functions",
-      functions: [
-        {
-          name: "snestopc",
-          signature: { parameters: ["address"] },
-          summary: "Convert a SNES address to an output offset.",
-          evaluate: ({ addresses: addresses2 }, args) => addresses2.toOutputOffset(numericArgument("snestopc", args, 0))
-        },
-        {
-          name: "pctosnes",
-          signature: { parameters: ["offset"] },
-          summary: "Convert an output offset to a SNES address.",
-          evaluate: ({ addresses: addresses2 }, args) => addresses2.fromOutputOffset(numericArgument("pctosnes", args, 0))
-        }
-      ]
-    };
-    readExpressions = {
-      id: "snes.read-functions",
-      functions: [
-        ...[1, 2, 3, 4].map((size) => ({
-          name: `canread${size}`,
-          signature: { parameters: ["position"] },
-          summary: `Return whether ${size} byte(s) can be read from the base image.`,
-          evaluate: (context, args) => context.output.canRead(numericArgument(`canread${size}`, args, 0), size)
-        })),
-        {
-          name: "canread",
-          signature: { parameters: ["position", "size"] },
-          summary: "Return whether a range can be read from the base image.",
-          evaluate: ({ output }, args) => output.canRead(numericArgument("canread", args, 0), numericArgument("canread", args, 1))
-        },
-        ...[1, 2, 3, 4].map((size) => ({
-          name: `read${size}`,
-          signature: {
-            parameters: ["position", "defaultValue"],
-            minimumArguments: 1,
-            maximumArguments: 2
-          },
-          summary: `Read ${size} byte(s) from the base image.`,
-          evaluate: (context, args) => {
-            const position = numericArgument(`read${size}`, args, 0);
-            const defaultValue = args.length > 1 ? numericArgument(`read${size}`, args, 1) : void 0;
-            const state = context.state.get(snesSessionStateKey);
-            if (!state.readFunctionsEnabled && defaultValue === void 0) {
-              throw new Error(
-                `Esnes_address_out_of_bounds: SNES address ${position.toString(16).toUpperCase().padStart(6, "0")} in read function out of bounds.`
-              );
-            }
-            return context.output.read(position, size, defaultValue);
-          }
-        }))
-      ]
-    };
-    targetOptions = (configured) => {
-      const value = typeof configured === "object" && configured !== null && !Array.isArray(configured) ? configured : {};
-      const checksumMode = value.checksumMode ?? "asar";
-      if (checksumMode !== "asar" && checksumMode !== "simple") {
-        throw new Error("checksumMode must be 'asar' or 'simple'.");
-      }
-      return {
-        checksumMode,
-        checksumEnabled: value.checksumEnabled === void 0 ? true : value.checksumEnabled === true,
-        asarSuperFxMoveShortAddress: value.asarSuperFxMoveShortAddress === true
-      };
-    };
-    createInitialState = (context) => {
-      const options = targetOptions(context.targetOptions);
-      return {
-        mapper: "lorom",
-        sa1Banks: [0 << 20, 1 << 20, -1, -1, 2 << 20, 3 << 20, -1, -1],
-        checksumEnabled: options.checksumEnabled,
-        checksumMode: options.checksumMode,
-        bankCrossMode: "full",
-        readFunctionsEnabled: false,
-        optimizeDirectPage: false,
-        asarSuperFxMoveShortAddress: options.asarSuperFxMoveShortAddress,
-        outputFillByte: 0,
-        activeFreespaceStartOffset: null,
-        activeFreespaceContentStartOffset: null,
-        activeFreespaceEndOffset: null,
-        inSpcBlock: false,
-        spcBlock: null,
-        spcPreviousArchitecture: null,
-        spcInlineCompatibility: false,
-        cpuStack: []
-      };
-    };
-    plugin = definePlugin({
-      manifest: {
-        id: "uttori.asm-plugin-snes",
-        name: "Uttori ASM SNES Plugin",
-        version: "1.0.0",
-        apiVersion: PLUGIN_API_VERSION,
-        description: "SNES targets, architectures, directives, expressions, and Asar compatibility."
-      },
-      validateOptions: targetOptions,
-      activate(context) {
-        context.registerSessionState({
-          id: SNES_SESSION_STATE_ID,
-          create: createInitialState,
-          clone: cloneSnesSessionState,
-          resetForStage: (state) => {
-            state.activeFreespaceStartOffset = null;
-            state.activeFreespaceContentStartOffset = null;
-            state.activeFreespaceEndOffset = null;
-            state.inSpcBlock = false;
-            state.spcBlock = null;
-            state.spcPreviousArchitecture = null;
-            state.spcInlineCompatibility = false;
-          }
-        });
-        context.registerArchitecture({
-          id: "snes.65816",
-          aliases: ["65816", "65c816", "65802"],
-          displayName: "WDC 65C816",
-          unknownInstructionBehavior: "throw",
-          splitOperands: splitSingleOperand,
-          classifyOperand: ({ operands }, operand) => classify65816Operand(operands, operand),
-          createEncoder: (factory) => new Arch65816(factory, () => factory.state.get(snesSessionStateKey).optimizeDirectPage),
-          createDecoder: () => new Cpu65816Decoder(),
-          instructionSpecifications: cpu65816Specifications,
-          instructions: cpu65816Catalog
-        });
-        context.registerArchitecture({
-          id: "snes.spc700",
-          aliases: ["spc700", "spc700-raw", "spc700-inline"],
-          displayName: "Sony SPC700",
-          unknownInstructionBehavior: "throw",
-          splitOperands: splitTopLevelCommaOperands,
-          classifyOperand: ({ operands }, operand) => classifySpc700Operand(operands, operand),
-          createEncoder: (factory) => new ArchSPC700(factory),
-          createDecoder: () => new Spc700Decoder(),
-          instructionSpecifications: spc700Specifications,
-          instructions: spc700Catalog
-        });
-        context.registerArchitecture({
-          id: "snes.superfx",
-          aliases: ["superfx"],
-          displayName: "Super FX",
-          unknownInstructionBehavior: "returnFalse",
-          splitOperands: splitCommaOperands,
-          classifyOperand: ({ operands }, operand) => classifySuperFxOperand(operands, operand),
-          createEncoder: (factory) => new ArchSuperFX(
-            factory,
-            () => factory.state.get(snesSessionStateKey).asarSuperFxMoveShortAddress
-          ),
-          createDecoder: () => new SuperFxDecoder(),
-          instructionSpecifications: superFxSpecifications,
-          instructions: superFxCatalog
-        });
-        context.registerAddressSpace({
-          id: "snes.cpu",
-          create: ({ state }) => {
-            const mappingContext = () => {
-              const targetState = state.get(snesSessionStateKey);
-              return {
-                mapper: targetState.mapper,
-                sa1banks: targetState.sa1Banks,
-                bankCrossCheckMode: targetState.bankCrossMode
-              };
-            };
-            return {
-              addressWidth: snesRomAddressSpace.addressWidth,
-              defaultOrigin: snesRomAddressSpace.defaultOrigin,
-              normalizeForWrite: (address3) => snesRomAddressSpace.normalizeForWrite(address3, mappingContext()),
-              advance: (address3, amount) => snesRomAddressSpace.advance(address3, amount, mappingContext()),
-              toOutputOffset: (address3) => snesRomAddressSpace.toOutputOffset(address3, mappingContext()),
-              fromOutputOffset: (offset) => snesRomAddressSpace.fromOutputOffset(offset, mappingContext()),
-              validateWrite: (address3, width2) => {
-                const targetState = state.get(snesSessionStateKey);
-                const normalized = snesRomAddressSpace.normalizeForWrite(address3, mappingContext());
-                if (snesRomAddressSpace.toOutputOffset(normalized, mappingContext()) < 0) {
-                  return;
-                }
-                if (targetState.bankCrossMode === "off" || width2 <= 1) {
-                  return;
-                }
-                const start = address3 & 16777215;
-                const end = start + width2 - 1 & 16777215;
-                const bankMask = targetState.bankCrossMode === "half" ? 2147450880 : 2147418112;
-                if (((start ^ end) & bankMask) !== 0) {
-                  const errorAddress = start + width2 & 16777215;
-                  throw new Error(
-                    `Ebank_border_crossed: A bank border was crossed, logical address $${errorAddress.toString(16).toUpperCase().padStart(6, "0")}.`
-                  );
-                }
-              }
-            };
-          }
-        });
-        context.registerOutputFormat({
-          id: "snes.sfc-output",
-          create: ({ state }) => ({
-            finalize: ({ outputBytes }) => {
-              const targetState = state.get(snesSessionStateKey);
-              if (!targetState.checksumEnabled) {
-                return;
-              }
-              const headerOffset = getChecksumHeaderOffset(targetState.mapper);
-              if (outputBytes.length < headerOffset + 32) {
-                return;
-              }
-              outputBytes[headerOffset + 28] = 255;
-              outputBytes[headerOffset + 29] = 255;
-              outputBytes[headerOffset + 30] = 0;
-              outputBytes[headerOffset + 31] = 0;
-              const checksum = calculateHeaderChecksum(outputBytes, targetState.checksumMode);
-              const complement = ~checksum & 65535;
-              outputBytes[headerOffset + 28] = complement & 255;
-              outputBytes[headerOffset + 29] = complement >> 8 & 255;
-              outputBytes[headerOffset + 30] = checksum & 255;
-              outputBytes[headerOffset + 31] = checksum >> 8 & 255;
-            },
-            getOutput: ({ outputBytes }) => Uint8Array.from(outputBytes)
-          })
-        });
-        context.registerDirectiveSet({
-          id: "snes.mapper-directives",
-          directives: [
-            directive(
-              "snes.directive.mapper",
-              MAPPER_KEYWORDS,
-              ({ state }) => (_ctx, words) => handleMapper(state.get(snesSessionStateKey), words)
-            )
-          ]
-        });
-        context.registerDirectiveSet({
-          id: "snes.policy-directives",
-          tooling: toolingFor(["arch"]),
-          directives: [
-            directive(
-              "snes.directive.check",
-              ["check"],
-              ({ state }) => (_ctx, words) => handleCheck(state.get(snesSessionStateKey), words)
-            ),
-            directive(
-              "snes.directive.optimize",
-              ["optimize"],
-              ({ state }) => (_ctx, words) => handleOptimize(state.get(snesSessionStateKey), words)
-            ),
-            directive("snes.directive.asar-noops", ASAR_COMPAT_NO_OP_DIRECTIVES, () => () => void 0)
-          ]
-        });
-        context.registerDirectiveSet({
-          id: "snes.ca65-compat-directives",
-          directives: [
-            directive(
-              "snes.directive.ca65.a8",
-              [".a8"],
-              ({ session }) => () => handleA8(session)
-            ),
-            directive(
-              "snes.directive.ca65.a16",
-              [".a16"],
-              ({ session }) => () => handleA16(session)
-            ),
-            directive(
-              "snes.directive.ca65.i8",
-              [".i8"],
-              ({ session }) => () => handleI8(session)
-            ),
-            directive(
-              "snes.directive.ca65.i16",
-              [".i16"],
-              ({ session }) => () => handleI16(session)
-            ),
-            directive(
-              "snes.directive.ca65.accu",
-              [".accu"],
-              ({ session }) => (_ctx, words) => handleAccu(session, words)
-            ),
-            directive(
-              "snes.directive.ca65.index",
-              [".index"],
-              ({ session }) => (_ctx, words) => handleIndex(session, words)
-            ),
-            directive(
-              "snes.directive.ca65.smart",
-              [".smart"],
-              ({ session }) => (_ctx, words) => handleSmart(session, words)
-            ),
-            directive(
-              "snes.directive.ca65.setcpu",
-              [".setcpu"],
-              ({ session }) => (_ctx, words) => handleSetcpu(session, words)
-            ),
-            directive(
-              "snes.directive.ca65.pushcpu",
-              [".pushcpu"],
-              ({ session, state }) => () => handlePushcpu(session, state.get(snesSessionStateKey))
-            ),
-            directive(
-              "snes.directive.ca65.popcpu",
-              [".popcpu"],
-              ({ session, state }) => () => handlePopcpu(session, state.get(snesSessionStateKey))
-            )
-          ]
-        });
-        context.registerDirectiveSet({
-          id: "snes.memory-directives",
-          directives: [
-            directive(
-              "snes.directive.freespace",
-              ["freecode", "freespace", "freedata"],
-              ({ session, state }) => (_ctx, words) => handleFreespace(session, state.get(snesSessionStateKey), words)
-            ),
-            directive(
-              "snes.directive.freespacebyte",
-              ["freespacebyte"],
-              ({ session, state }) => (_ctx, words) => handleFreespaceByte(session, state.get(snesSessionStateKey), words)
-            ),
-            directive(
-              "snes.directive.prot",
-              ["prot"],
-              ({ session }) => (_ctx, words) => handleProt(session, words)
-            )
-          ]
-        });
-        context.registerDirectiveSet({
-          id: "snes.spc-directives",
-          directives: [
-            directive(
-              "snes.directive.spcblock",
-              ["spcblock"],
-              ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleSpcblock(words)
-            ),
-            directive(
-              "snes.directive.endspcblock",
-              ["endspcblock"],
-              ({ session, state }) => (_ctx, words) => createSpcRuntime(session, state.get(snesSessionStateKey)).handleEndSpcblock(words)
-            ),
-            directive(
-              "snes.directive.startpos",
-              ["startpos"],
-              ({ session, state }) => (_ctx, words) => handleStartpos(session, state.get(snesSessionStateKey), words)
-            )
-          ]
-        });
-        context.registerExpressionSet(addressExpressions);
-        context.registerExpressionSet(readExpressions);
-        context.registerLifecycle({
-          id: "snes.lifecycle",
-          create: ({ state }) => ({
-            onSessionCreated: ({ session }) => {
-              session.outputFillByte = state.get(snesSessionStateKey).outputFillByte;
-            },
-            beforeDirective: ({ session, keyword, words }) => {
-              const targetState = state.get(snesSessionStateKey);
-              if (targetState.inSpcBlock && ["arch", "org", "namespace"].includes(keyword)) {
-                throw new Error(`${keyword.toUpperCase()} is unavailable inside spcblock.`);
-              }
-              if (keyword === "org" && shouldRedirectOrgToSpcblock(targetState.spcInlineCompatibility)) {
-                createSpcRuntime(session, targetState).handleSpcblock(["spcblock", ...words.slice(1)]);
-                return "handled";
-              }
-              return "continue";
-            },
-            onArchitectureSelected: ({ sourceAlias }) => {
-              const targetState = state.get(snesSessionStateKey);
-              targetState.spcInlineCompatibility = shouldEnableSpcInlineCompat(sourceAlias);
-              if (shouldUseNoromAddressing(sourceAlias)) {
-                applyMapperSelection(targetState, "norom");
-              }
-            },
-            shouldEndifCloseInnermostWhile: ({ loopType, loopStartLine, ifStartLine }) => shouldEndifCloseInnermostWhile(loopType, loopStartLine, ifStartLine),
-            beforeWrite: ({ session, logicalAddress, width: width2 }) => {
-              const targetState = state.get(snesSessionStateKey);
-              if (targetState.activeFreespaceStartOffset === null) {
-                return;
-              }
-              const outputOffset = session.outputWriter.toOutputOffset(logicalAddress);
-              if (outputOffset < 0) {
-                return;
-              }
-              const endOffset = outputOffset + width2 - 1;
-              targetState.activeFreespaceEndOffset = Math.max(
-                targetState.activeFreespaceEndOffset ?? endOffset,
-                endOffset
-              );
-            },
-            onStageEnd: ({ session }) => {
-              createSpcRuntime(session, state.get(snesSessionStateKey)).finishPass();
-            },
-            beforeOutputFinalize: ({ outputBytes }) => {
-              const targetState = state.get(snesSessionStateKey);
-              const start = targetState.activeFreespaceStartOffset;
-              const contentStart = targetState.activeFreespaceContentStartOffset;
-              const end = targetState.activeFreespaceEndOffset;
-              if (start === null || contentStart === null || end === null || end < contentStart) {
-                return;
-              }
-              const lengthMinusOne = Math.max(0, end - contentStart) & 65535;
-              const complement = ~lengthMinusOne & 65535;
-              outputBytes[start + 4] = lengthMinusOne & 255;
-              outputBytes[start + 5] = lengthMinusOne >> 8 & 255;
-              outputBytes[start + 6] = complement & 255;
-              outputBytes[start + 7] = complement >> 8 & 255;
-            }
-          })
-        });
-        context.registerTarget({
-          id: SNES_TARGET_ID,
-          aliases: ["snes", "sfc", "snes-65816"],
-          displayName: "SNES",
-          defaultArchitecture: "snes.65816",
-          architectures: ["snes.65816", "snes.spc700", "snes.superfx"],
-          addressSpace: "snes.cpu",
-          outputFormat: "snes.sfc-output",
-          directiveSets: [
-            "snes.mapper-directives",
-            "snes.memory-directives",
-            "snes.policy-directives",
-            "snes.spc-directives",
-            "snes.ca65-compat-directives"
-          ],
-          expressionSets: ["snes.address-functions", "snes.read-functions"],
-          lifecycle: ["snes.lifecycle"],
-          syntaxProfile: ASAR_SYNTAX_PROFILE,
-          defaultOutputExtension: ".sfc",
-          createOptions: targetOptions
-        });
-      }
-    });
-    src_default = plugin;
   }
 });
 
 // packages/cli/src/index.ts
 init_src();
 init_src2();
-import * as fs16 from "node:fs";
+import * as fs14 from "node:fs";
 import path15 from "node:path";
 
 // packages/plugin-loader-node/src/configuration.ts
 init_plugin();
-import { existsSync as existsSync3, promises as fs10 } from "node:fs";
+import { existsSync as existsSync3, promises as fs8 } from "node:fs";
 import path8 from "node:path";
 var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
 var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
@@ -39246,7 +51093,7 @@ var validatePluginEntry = (value, index) => {
   if (!isRecord2(value)) {
     throw configurationError(`Configuration entry '${entry}' must be an object.`);
   }
-  const unknown2 = Object.keys(value).filter((key2) => !PLUGIN_KEYS.has(key2));
+  const unknown2 = Object.keys(value).filter((key3) => !PLUGIN_KEYS.has(key3));
   if (unknown2.length > 0) {
     throw configurationError(
       `Configuration entry '${entry}' has unknown field(s): ${unknown2.join(", ")}.`
@@ -39267,7 +51114,7 @@ var validateProjectConfiguration = (value) => {
   if (!isRecord2(value)) {
     throw configurationError("Project configuration must be a JSON object.");
   }
-  const unknown2 = Object.keys(value).filter((key2) => !TOP_LEVEL_KEYS.has(key2));
+  const unknown2 = Object.keys(value).filter((key3) => !TOP_LEVEL_KEYS.has(key3));
   if (unknown2.length > 0) {
     throw configurationError(`Project configuration has unknown field(s): ${unknown2.join(", ")}.`);
   }
@@ -39299,7 +51146,7 @@ var readProjectConfiguration = async (cwd, configuredPath) => {
   for (const configPath of candidates) {
     let source;
     try {
-      source = await fs10.readFile(configPath, "utf8");
+      source = await fs8.readFile(configPath, "utf8");
     } catch (error) {
       const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
       if (code === "ENOENT") {
@@ -39356,7 +51203,7 @@ var stableValue = (value) => {
   }
   if (isRecord3(value)) {
     return Object.fromEntries(
-      Object.keys(value).sort().map((key2) => [key2, stableValue(value[key2])])
+      Object.keys(value).sort().map((key3) => [key3, stableValue(value[key3])])
     );
   }
   return value;
@@ -39656,11 +51503,11 @@ var NodePluginLoader = class {
     };
   }
   #assertAllPluginOptionOverridesMatched(options, modules) {
-    for (const key2 of Object.keys(options.overrides?.pluginOptions ?? {})) {
-      if (!modules.some((item) => item.module === key2 || item.pluginId === key2)) {
-        throw new PluginError(`Plugin option override '${key2}' does not match a loaded plugin.`, {
+    for (const key3 of Object.keys(options.overrides?.pluginOptions ?? {})) {
+      if (!modules.some((item) => item.module === key3 || item.pluginId === key3)) {
+        throw new PluginError(`Plugin option override '${key3}' does not match a loaded plugin.`, {
           code: "PLUGIN_CONFIGURATION_INVALID",
-          pluginId: key2
+          pluginId: key3
         });
       }
     }
@@ -39683,14 +51530,14 @@ var NodePluginLoader = class {
 var defaultLoaders = /* @__PURE__ */ new Map();
 var defaultEnvironments = /* @__PURE__ */ new Map();
 var loadProjectEnvironment = async (options) => {
-  const key2 = path9.resolve(options.cwd);
-  let loader = defaultLoaders.get(key2);
+  const key3 = path9.resolve(options.cwd);
+  let loader = defaultLoaders.get(key3);
   if (!loader) {
     loader = new NodePluginLoader();
-    defaultLoaders.set(key2, loader);
+    defaultLoaders.set(key3, loader);
   }
   const loaded = await loader.loadProjectEnvironment(options);
-  defaultEnvironments.set(key2, loaded);
+  defaultEnvironments.set(key3, loaded);
   const dispose = loaded.dispose.bind(loaded);
   return Object.freeze({
     ...loaded,
@@ -39698,9 +51545,9 @@ var loadProjectEnvironment = async (options) => {
       try {
         await dispose();
       } finally {
-        if (defaultLoaders.get(key2) === loader && defaultEnvironments.get(key2) === loaded) {
-          defaultLoaders.delete(key2);
-          defaultEnvironments.delete(key2);
+        if (defaultLoaders.get(key3) === loader && defaultEnvironments.get(key3) === loaded) {
+          defaultLoaders.delete(key3);
+          defaultEnvironments.delete(key3);
         }
       }
     }
@@ -39708,33 +51555,33 @@ var loadProjectEnvironment = async (options) => {
 };
 
 // packages/cli/src/index.ts
-init_src3();
+await init_src4();
 
 // packages/cli/src/output-files.ts
 import { randomUUID as randomUUID3 } from "node:crypto";
-import * as fs15 from "node:fs";
+import * as fs13 from "node:fs";
 import path14 from "node:path";
 var sameFile = (left, right) => {
   if (left === right) {
     return true;
   }
-  if (!fs15.existsSync(left) || !fs15.existsSync(right)) {
+  if (!fs13.existsSync(left) || !fs13.existsSync(right)) {
     return false;
   }
-  const a = fs15.statSync(left);
-  const b = fs15.statSync(right);
+  const a = fs13.statSync(left);
+  const b = fs13.statSync(right);
   return a.ino !== 0 && a.dev === b.dev && a.ino === b.ino;
 };
 var publishOutputFiles = (outputs, protectedFiles) => {
-  const protectedPaths = protectedFiles.filter((file) => fs15.existsSync(file)).map((file) => fs15.realpathSync(file));
+  const protectedPaths = protectedFiles.filter((file) => fs13.existsSync(file)).map((file) => fs13.realpathSync(file));
   const destinations = [];
   const staged = [];
   try {
     for (const output of outputs) {
-      fs15.mkdirSync(path14.dirname(output.file), { recursive: true });
-      let file = path14.join(fs15.realpathSync(path14.dirname(output.file)), path14.basename(output.file));
-      if (fs15.existsSync(file)) {
-        file = fs15.realpathSync(file);
+      fs13.mkdirSync(path14.dirname(output.file), { recursive: true });
+      let file = path14.join(fs13.realpathSync(path14.dirname(output.file)), path14.basename(output.file));
+      if (fs13.existsSync(file)) {
+        file = fs13.realpathSync(file);
       }
       if (protectedPaths.some((input) => sameFile(input, file))) {
         throw new Error(`Output '${output.file}' would overwrite an input file.`);
@@ -39742,7 +51589,7 @@ var publishOutputFiles = (outputs, protectedFiles) => {
       if (destinations.some((destination) => sameFile(destination, file))) {
         throw new Error(`Output destinations must be distinct: '${output.file}'.`);
       }
-      if (fs15.existsSync(file) && !fs15.statSync(file).isFile()) {
+      if (fs13.existsSync(file) && !fs13.statSync(file).isFile()) {
         throw new Error(`Output '${output.file}' is not a regular file.`);
       }
       destinations.push(file);
@@ -39753,22 +51600,22 @@ var publishOutputFiles = (outputs, protectedFiles) => {
         path14.dirname(file),
         `.${path14.basename(file)}.uttori-${randomUUID3()}.tmp`
       );
-      const mode3 = fs15.existsSync(file) ? fs15.statSync(file).mode & 511 : void 0;
-      const descriptor2 = fs15.openSync(temporary, "wx", mode3);
+      const mode3 = fs13.existsSync(file) ? fs13.statSync(file).mode & 511 : void 0;
+      const descriptor2 = fs13.openSync(temporary, "wx", mode3);
       staged.push({ file, temporary });
       try {
-        fs15.writeFileSync(descriptor2, output.contents);
+        fs13.writeFileSync(descriptor2, output.contents);
       } finally {
-        fs15.closeSync(descriptor2);
+        fs13.closeSync(descriptor2);
       }
     }
     for (const { file, temporary } of staged) {
-      fs15.renameSync(temporary, file);
+      fs13.renameSync(temporary, file);
     }
   } finally {
     for (const { temporary } of staged) {
       try {
-        fs15.rmSync(temporary, { force: true });
+        fs13.rmSync(temporary, { force: true });
       } catch {
       }
     }
@@ -40085,7 +51932,7 @@ var parseCliArguments = (argv) => {
           throw new Error("--plugin-option must use <plugin:key=value> syntax.");
         }
         const plugin2 = value.slice(0, colon);
-        const key2 = value.slice(colon + 1, equals2);
+        const key3 = value.slice(colon + 1, equals2);
         const rawValue = value.slice(equals2 + 1);
         let optionValue = rawValue;
         try {
@@ -40094,7 +51941,7 @@ var parseCliArguments = (argv) => {
         }
         pluginOptions[plugin2] = {
           ...pluginOptions[plugin2] ?? {},
-          [key2]: optionValue
+          [key3]: optionValue
         };
         break;
       }
@@ -40162,12 +52009,12 @@ var formatFailure = (error) => {
 };
 var createAnalysisProject = (parsed, cwd) => {
   const inputFile = path15.resolve(cwd, parsed.input);
-  if (!fs16.existsSync(inputFile)) {
+  if (!fs14.existsSync(inputFile)) {
     console.error(`Error: ROM file '${inputFile}' not found.`);
     return 1;
   }
   const outputDirectory = parsed.output ? path15.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, ".analysis");
-  if (fs16.existsSync(path15.join(outputDirectory, ANALYSIS_PROJECT_MANIFEST))) {
+  if (fs14.existsSync(path15.join(outputDirectory, ANALYSIS_PROJECT_MANIFEST))) {
     console.error(
       `Project creation failed: '${outputDirectory}' already contains an analysis project.`
     );
@@ -40327,7 +52174,7 @@ var importProjectEvidence = async (parsed, cwd) => {
       const filename = path15.resolve(cwd, parsed.mesenCdl);
       merge(
         importMesenSnesCdl(
-          fs16.readFileSync(filename),
+          fs14.readFileSync(filename),
           rom,
           mapper,
           projectContext(path15.basename(filename))
@@ -40337,11 +52184,11 @@ var importProjectEvidence = async (parsed, cwd) => {
     if (parsed.mesenTrace) {
       const filename = path15.resolve(cwd, parsed.mesenTrace);
       const metadata = JSON.parse(
-        fs16.readFileSync(path15.resolve(cwd, parsed.traceMetadata), "utf8")
+        fs14.readFileSync(path15.resolve(cwd, parsed.traceMetadata), "utf8")
       );
       merge(
         importMesen65816Trace(
-          fs16.readFileSync(filename, "utf8"),
+          fs14.readFileSync(filename, "utf8"),
           metadata,
           rom,
           mapper,
@@ -40353,7 +52200,7 @@ var importProjectEvidence = async (parsed, cwd) => {
       const filename = path15.resolve(cwd, parsed.mesenLabels);
       merge(
         importMesenLabels(
-          fs16.readFileSync(filename, "utf8"),
+          fs14.readFileSync(filename, "utf8"),
           rom,
           mapper,
           projectContext(path15.basename(filename))
@@ -40404,8 +52251,8 @@ var reportProjectEvidence = (parsed, cwd) => {
     const text2 = canonicalJson(inspection);
     if (parsed.output) {
       const output = path15.resolve(cwd, parsed.output);
-      fs16.mkdirSync(path15.dirname(output), { recursive: true });
-      fs16.writeFileSync(output, text2);
+      fs14.mkdirSync(path15.dirname(output), { recursive: true });
+      fs14.writeFileSync(output, text2);
       console.log(`Success: Evidence report written to '${output}'.`);
     } else {
       console.log(text2.trimEnd());
@@ -40454,8 +52301,8 @@ var exportProjectMesenLabels = (parsed, cwd) => {
       loaded.manifest.mapping.mapper,
       path15.basename(output)
     );
-    fs16.mkdirSync(path15.dirname(output), { recursive: true });
-    fs16.writeFileSync(output, result.text);
+    fs14.mkdirSync(path15.dirname(output), { recursive: true });
+    fs14.writeFileSync(output, result.text);
     console.log(
       `Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'. ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`
     );
@@ -40529,12 +52376,12 @@ var exportProjectSource = (parsed, cwd) => {
 };
 var assemble = async (parsed, cwd) => {
   const inputFile = path15.resolve(cwd, parsed.input);
-  if (!fs16.existsSync(inputFile)) {
+  if (!fs14.existsSync(inputFile)) {
     console.error(`Error: Input file '${inputFile}' not found.`);
     return 1;
   }
   const explicitConfig = parsed.configFile ? path15.resolve(cwd, parsed.configFile) : path15.resolve(cwd, PROJECT_CONFIG_FILENAME);
-  const hasProjectConfiguration = fs16.existsSync(explicitConfig);
+  const hasProjectConfiguration = fs14.existsSync(explicitConfig);
   const pluginModules = parsed.plugins.map((module) => ({ module }));
   const overrides = {
     ...parsed.target === void 0 ? {} : { target: parsed.target },
@@ -40544,7 +52391,7 @@ var assemble = async (parsed, cwd) => {
   };
   const useSnesHostDefault = !hasProjectConfiguration && pluginModules.length === 0;
   const bundledPlugins = /* @__PURE__ */ new Map([
-    ["@uttori/asm-plugin-snes", src_default]
+    ["@uttori/asm-plugin-snes", assembler_default]
   ]);
   let loaded;
   let assembler;
@@ -40563,13 +52410,15 @@ var assemble = async (parsed, cwd) => {
         }
       } : {}
     });
-    const baseImage = parsed.baseImage ? new Uint8Array(fs16.readFileSync(path15.resolve(cwd, parsed.baseImage))) : void 0;
+    const fileProvider = new NodeAssemblyFileProvider();
+    const baseImage = parsed.baseImage ? fileProvider.readFile(path15.resolve(cwd, parsed.baseImage)) : void 0;
     assembler = new Assembler({
       environment: loaded.environment,
       target: loaded.target,
       architecture: loaded.architecture,
       targetOptions: loaded.targetOptions,
       baseImage,
+      fileProvider,
       collectSourceMetadata: parsed.debug
     });
     if (baseImage) {
@@ -40584,7 +52433,7 @@ var assemble = async (parsed, cwd) => {
       console.log(`Target: ${loaded.target}`);
       console.log(`Architecture: ${loaded.architecture}`);
     }
-    const source = fs16.readFileSync(inputFile, "utf8");
+    const source = fileProvider.readTextFile(inputFile);
     assembler.assembleProgram(assembler.buildProgramModel(source, inputFile, 0));
     const extension = loaded.environment.getTarget(loaded.target).defaultOutputExtension;
     const outputFile = parsed.output ? path15.resolve(cwd, parsed.output) : defaultOutputPath(inputFile, extension);
@@ -40594,11 +52443,23 @@ var assemble = async (parsed, cwd) => {
     ];
     let debugMapFile;
     if (parsed.debug) {
+      if (loaded.configuration.configFile) {
+        fileProvider.readFiles.add(loaded.configuration.configFile);
+      }
+      for (const dependency of fileProvider.readFiles) {
+        const snapshot = assembler.assetAssembly.snapshot(dependency);
+        if (snapshot) {
+          assembler.addressToLineMapping.registerDependencySnapshot(dependency, snapshot);
+        } else {
+          assembler.addressToLineMapping.getFileIndex(dependency);
+        }
+      }
       debugMapFile = parsed.debugMap ? path15.resolve(cwd, parsed.debugMap) : `${outputFile}.debug.json`;
       const debugMap = createDebugMap({
         target: loaded.target,
         output,
         mapping: assembler.addressToLineMapping,
+        dependencyKinds: assembler.assetAssembly.dependencies,
         sourceRoot: path15.dirname(inputFile)
       });
       outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });
@@ -40640,7 +52501,7 @@ var verifyRoundTrip = async (parsed, cwd) => {
     }
     const contentOutput = path15.join(directory, manifest.contentOutput);
     const finalOutput = path15.join(directory, manifest.finalOutput);
-    fs16.mkdirSync(path15.dirname(contentOutput), { recursive: true });
+    fs14.mkdirSync(path15.dirname(contentOutput), { recursive: true });
     const exitCode = await runCli([
       "assemble",
       path15.join(directory, manifest.entrySource),
@@ -40651,9 +52512,9 @@ var verifyRoundTrip = async (parsed, cwd) => {
     if (exitCode !== 0) {
       throw new Error("Generated native source did not assemble successfully.");
     }
-    const content = fs16.readFileSync(contentOutput);
+    const content = fs14.readFileSync(contentOutput);
     const final = manifest.rom.headerSize === 0 ? content : Buffer.concat([
-      fs16.readFileSync(
+      fs14.readFileSync(
         path15.join(
           directory,
           manifest.spans.find((span) => span.role === "copier-header").file

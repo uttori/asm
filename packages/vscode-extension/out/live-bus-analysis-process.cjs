@@ -11,9 +11,9 @@ var __export = (target, all) => {
 };
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
-    for (let key2 of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key2) && key2 !== except)
-        __defProp(to, key2, { get: () => from[key2], enumerable: !(desc = __getOwnPropDesc(from, key2)) || desc.enumerable });
+    for (let key3 of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key3) && key3 !== except)
+        __defProp(to, key3, { get: () => from[key3], enumerable: !(desc = __getOwnPropDesc(from, key3)) || desc.enumerable });
   }
   return to;
 };
@@ -734,21 +734,21 @@ var canonicalValue = (value) => {
   if (value !== null && typeof value === "object") {
     const input = value;
     const result = {};
-    for (const key2 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
-      const entry = input[key2];
+    for (const key3 of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
+      const entry = input[key3];
       if (entry === void 0) {
         continue;
       }
       const normalized = canonicalValue(entry);
-      if (key2 === "__proto__") {
-        Object.defineProperty(result, key2, {
+      if (key3 === "__proto__") {
+        Object.defineProperty(result, key3, {
           value: normalized,
           enumerable: true,
           writable: true,
           configurable: true
         });
       } else {
-        result[key2] = normalized;
+        result[key3] = normalized;
       }
     }
     return result;
@@ -1033,7 +1033,7 @@ var validateRuntimeInstructionDetails = (value, count) => {
       throw new Error("Trace instruction bytes must contain 1\u201316 byte values.");
     }
     if (!detail.state || typeof detail.state !== "object" || isArray(detail.state) || Object.entries(detail.state).some(
-      ([key2, entry]) => !key2 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
+      ([key3, entry]) => !key3 || !["number", "string", "boolean"].includes(typeof entry) || typeof entry === "number" && !Number.isFinite(entry)
     )) {
       throw new Error("Trace instruction state contains an invalid register value.");
     }
@@ -1112,16 +1112,16 @@ var assertNoRomPayload = (value, location) => {
     return;
   }
   const record = value;
-  for (const key2 in record) {
-    if (!Object.hasOwn(record, key2)) {
+  for (const key3 in record) {
+    if (!Object.hasOwn(record, key3)) {
       continue;
     }
-    if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key2)) {
-      throw new Error(`ROM byte payload '${location}.${key2}' is forbidden in analysis projects.`);
+    if (FORBIDDEN_ROM_PAYLOAD_KEYS.has(key3)) {
+      throw new Error(`ROM byte payload '${location}.${key3}' is forbidden in analysis projects.`);
     }
-    const entry = record[key2];
+    const entry = record[key3];
     if (entry && typeof entry === "object") {
-      assertNoRomPayload(entry, `${location}.${key2}`);
+      assertNoRomPayload(entry, `${location}.${key3}`);
     }
   }
 };
@@ -1165,7 +1165,7 @@ var assertCodecReference = (reference, location) => {
       return;
     }
     if (value && typeof value === "object" && Object.getPrototypeOf(value) === Object.prototype) {
-      Object.entries(value).forEach(([key2, entry]) => visitJson(entry, `${current}.${key2}`));
+      Object.entries(value).forEach(([key3, entry]) => visitJson(entry, `${current}.${key3}`));
       return;
     }
     throw new Error(`${current} is not a JSON-safe codec option.`);
@@ -1542,11 +1542,11 @@ var FIELDS = [
   ["x", 2],
   ["y", 2]
 ];
-var FIELD_NAMES = new Set(FIELDS.map(([key2]) => key2));
+var FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
 var HEADER_BYTES = 7;
 var CHECKSUM_BYTES = 4;
 var encodePackedRuntimePayload = (record) => {
-  if (Object.keys(record.state).some((key2) => !FIELD_NAMES.has(key2))) {
+  if (Object.keys(record.state).some((key3) => !FIELD_NAMES.has(key3))) {
     return void 0;
   }
   const bytes = record.bytes;
@@ -1562,12 +1562,12 @@ var encodePackedRuntimePayload = (record) => {
   }
   let mask = 0;
   let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
-  for (const [index, [key2, width]] of FIELDS.entries()) {
-    if (!Object.hasOwn(record.state, key2)) {
+  for (const [index, [key3, width]] of FIELDS.entries()) {
+    if (!Object.hasOwn(record.state, key3)) {
       continue;
     }
-    const value = record.state[key2];
-    const max = key2 === "e" ? 1 : 2 ** (width * 8) - 1;
+    const value = record.state[key3];
+    const max = key3 === "e" ? 1 : 2 ** (width * 8) - 1;
     if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
       return void 0;
     }
@@ -1582,9 +1582,9 @@ var encodePackedRuntimePayload = (record) => {
   for (const byte of bytes ?? []) {
     encoded[offset++] = byte;
   }
-  for (const [index, [key2, width]] of FIELDS.entries()) {
+  for (const [index, [key3, width]] of FIELDS.entries()) {
     if (mask & 1 << index) {
-      encoded.writeUIntLE(record.state[key2], offset, width);
+      encoded.writeUIntLE(record.state[key3], offset, width);
       offset += width;
     }
   }
@@ -1614,13 +1614,13 @@ var decodePackedRuntimePayload = (bytes) => {
   }
   const state = {};
   let offset = HEADER_BYTES + byteCount;
-  for (const [index, [key2, width]] of FIELDS.entries()) {
+  for (const [index, [key3, width]] of FIELDS.entries()) {
     if (mask & 1 << index) {
       const value = encoded.readUIntLE(offset, width);
-      if (key2 === "e" && value > 1) {
+      if (key3 === "e" && value > 1) {
         throw new Error("Invalid packed emulation register.");
       }
-      state[key2] = value;
+      state[key3] = value;
       offset += width;
     }
   }
@@ -2115,21 +2115,21 @@ var conflictReport = (runtime) => {
   }
   const groups = /* @__PURE__ */ new Map();
   for (const observation of observations) {
-    const key2 = [
+    const key3 = [
       observation.architecture,
       observation.addressSpace,
       observation.address,
       observation.field
     ].join(":");
-    const group = groups.get(key2);
+    const group = groups.get(key3);
     if (group) {
       group.push(observation);
     } else {
-      groups.set(key2, [observation]);
+      groups.set(key3, [observation]);
     }
   }
   const conflicts = [];
-  for (const [key2, group] of groups) {
+  for (const [key3, group] of groups) {
     const byValue = /* @__PURE__ */ new Map();
     for (const observation of group) {
       const valueKey = stateValueKey(observation.value);
@@ -2145,7 +2145,7 @@ var conflictReport = (runtime) => {
     }
     const first = group[0];
     conflicts.push({
-      id: `runtime-conflict:${key2}`,
+      id: `runtime-conflict:${key3}`,
       kind: first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
       architecture: first.architecture,
       addressSpace: first.addressSpace,
@@ -2342,7 +2342,7 @@ var ensureAnnotationQueryIndexes = (database) => {
       }
     }
     for (const table of ["analysis", "runtime_observations"]) {
-      const columns = new Set(
+      const columns2 = new Set(
         database.prepare(`PRAGMA table_info(${table})`).all().map((row) => String(row.name))
       );
       for (const [name, type] of [
@@ -2351,7 +2351,7 @@ var ensureAnnotationQueryIndexes = (database) => {
         ["query_data", "TEXT"],
         ["query_ready", "INTEGER NOT NULL DEFAULT 0"]
       ]) {
-        if (!columns.has(name)) {
+        if (!columns2.has(name)) {
           database.exec(`ALTER TABLE ${table} ADD COLUMN ${name} ${type}`);
         }
       }
@@ -2433,23 +2433,16 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
   if (!annotationQueryIndexesReady(database)) {
     throw new Error("Analysis query indexes changed. Refresh the annotation view.");
   }
-  if (ranges.length > 2e3) {
-    throw new Error("At most 2000 visible source ranges may be projected per request.");
-  }
-  for (const range of ranges) {
-    if (!range.addressSpace || !Number.isSafeInteger(range.start) || !Number.isSafeInteger(range.end) || range.start < 0 || range.end <= range.start || (range.outputStart !== void 0 || range.outputEnd !== void 0) && (!Number.isSafeInteger(range.outputStart) || !Number.isSafeInteger(range.outputEnd) || range.outputStart < 0 || range.outputEnd <= range.outputStart)) {
-      throw new Error("Invalid instruction annotation range.");
-    }
-  }
+  validateAnnotationRanges(ranges);
   const fileSpaces = manifest.addressSpaces.filter((space) => space.kind === "file").map((space) => space.id);
   const analysis = /* @__PURE__ */ new Map();
   const locations = /* @__PURE__ */ new Map();
   const offsets = /* @__PURE__ */ new Set();
   let limited = false;
   const locate = (space, address) => {
-    const key2 = `${space}:${address}`;
-    if (locations.size < 2e3 || locations.has(key2)) {
-      locations.set(key2, { space, address });
+    const key3 = `${space}:${address}`;
+    if (locations.size < 2e3 || locations.has(key3)) {
+      locations.set(key3, { space, address });
     } else {
       limited = true;
     }
@@ -2577,8 +2570,8 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
       }
     }
   };
-  for (const [key2, { space, address }] of locations) {
-    executionCounts.set(key2, Number(executionCount.get(space, address)?.n ?? 0));
+  for (const [key3, { space, address }] of locations) {
+    executionCounts.set(key3, Number(executionCount.get(space, address)?.n ?? 0));
     for (const kind of ["runtime-execution", "runtime-cpu-state"]) {
       const minimum = kind === "runtime-execution" ? 1 : 0;
       const budget2 = Math.min(64, Math.max(minimum, 8192 - runtime.size));
@@ -2646,11 +2639,96 @@ var readSqliteAnnotationView = (database, manifest, ranges) => {
     limited
   };
 };
+var validateAnnotationRanges = (ranges) => {
+  if (ranges.length > 2e3) {
+    throw new Error("At most 2000 visible source ranges may be projected per request.");
+  }
+  for (const range of ranges) {
+    if (!range.addressSpace || !Number.isSafeInteger(range.start) || !Number.isSafeInteger(range.end) || range.start < 0 || range.end <= range.start || (range.outputStart !== void 0 || range.outputEnd !== void 0) && (!Number.isSafeInteger(range.outputStart) || !Number.isSafeInteger(range.outputEnd) || range.outputStart < 0 || range.outputEnd <= range.outputStart)) {
+      throw new Error("Invalid instruction annotation range.");
+    }
+  }
+};
+var readInstructionExecutionSummary = (database, manifest, ranges) => {
+  validateAnnotationRanges(ranges);
+  const fileSpaces = manifest.addressSpaces.filter((space) => space.kind === "file");
+  const count = database.prepare(`SELECT COALESCE(SUM(o.count),0) AS n
+    FROM runtime_fact_locations f CROSS JOIN runtime_observations o ON o.fact_id=f.fid
+    WHERE f.kind='runtime-execution' AND f.address_space=? AND f.address=?
+      AND (? IS NULL OR f.architecture=?)`);
+  const aliases = database.prepare(`SELECT DISTINCT f.address_space,f.address,o.query_file_offset
+    FROM runtime_observations o CROSS JOIN runtime_fact_locations f ON f.fid=o.fact_id
+    WHERE o.query_file_offset>=? AND o.query_file_offset<? AND f.kind='runtime-execution'
+      AND (? IS NULL OR f.architecture=?) LIMIT 65`);
+  const logical = database.prepare(`SELECT DISTINCT address FROM runtime_fact_locations
+    WHERE kind='runtime-execution' AND address_space=? AND address>=? AND address<?
+      AND (? IS NULL OR architecture=?) LIMIT 65`);
+  const counts = /* @__PURE__ */ new Map();
+  return ranges.map((range, rangeIndex) => {
+    const locations = /* @__PURE__ */ new Map();
+    let limited = false;
+    const add = (addressSpace, address, offset) => {
+      const key3 = `${addressSpace}:${address}`;
+      let location = locations.get(key3);
+      if (!location) {
+        if (locations.size >= 64) {
+          limited = true;
+          return;
+        }
+        location = { addressSpace, address, offsets: /* @__PURE__ */ new Set() };
+        locations.set(key3, location);
+      }
+      if (offset !== void 0) {
+        location.offsets.add(offset);
+      }
+    };
+    if (range.outputStart !== void 0) {
+      for (const space of fileSpaces) {
+        add(space.id, range.outputStart, range.outputStart);
+      }
+    }
+    add(range.addressSpace, range.start, range.outputStart);
+    const architecture = range.architecture ?? null;
+    for (const row of logical.iterate(
+      range.addressSpace,
+      range.start,
+      range.end,
+      architecture,
+      architecture
+    )) {
+      add(range.addressSpace, Number(row.address));
+    }
+    if (range.outputStart !== void 0 && range.outputEnd !== void 0) {
+      for (const row of aliases.iterate(
+        range.outputStart,
+        range.outputEnd,
+        architecture,
+        architecture
+      )) {
+        add(String(row.address_space), Number(row.address), Number(row.query_file_offset));
+      }
+    }
+    return {
+      rangeIndex,
+      limited,
+      locations: [...locations.values()].map(({ addressSpace, address, offsets }) => {
+        const key3 = `${architecture}:${addressSpace}:${address}`;
+        let executionCount = counts.get(key3);
+        if (executionCount === void 0) {
+          const filter = fileSpaces.some((space) => space.id === addressSpace) ? null : architecture;
+          executionCount = Number(count.get(addressSpace, address, filter, filter)?.n ?? 0);
+          counts.set(key3, executionCount);
+        }
+        return { addressSpace, address, outputOffsets: [...offsets], executionCount };
+      })
+    };
+  });
+};
 
 // packages/disassembler/src/sqlite-query-cache.ts
 var QUERY_CACHE_SCHEMA = "CREATE TABLE IF NOT EXISTS query_cache (name TEXT PRIMARY KEY, signature TEXT NOT NULL, payload TEXT NOT NULL)";
-var installQueryCache = (db, key2, dependencies) => {
-  if (!/^[\d_a-z]+$/.test(key2)) {
+var installQueryCache = (db, key3, dependencies) => {
+  if (!/^[\d_a-z]+$/.test(key3)) {
     throw new Error("Invalid internal query cache key.");
   }
   if (dependencies.some(
@@ -2669,25 +2747,26 @@ var installQueryCache = (db, key2, dependencies) => {
   }
   db.exec(QUERY_CACHE_SCHEMA);
   for (const table of dependencies.flatMap(
-    (name) => name === "runtime" ? ["runtime_facts", "runtime_observations", "runtime_identities"] : [name]
+    (name) => name === "runtime" ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"] : [name]
   )) {
     for (const event of ["INSERT", "UPDATE", "DELETE"]) {
       const update = table === "runtime_observations" && event === "UPDATE" ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id" : event;
-      db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key2}_${table}_${event} AFTER ${update} ON ${table} BEGIN
-      DELETE FROM query_cache WHERE name='${key2}'; END`);
+      const condition = table === "runtime_fact_rows" && event === "UPDATE" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
+      db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key3}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
+      DELETE FROM query_cache WHERE name='${key3}'; END`);
     }
   }
 };
-var readQueryCache = (db, key2, signature) => {
+var readQueryCache = (db, key3, signature) => {
   if (!db.prepare("SELECT 1 FROM sqlite_schema WHERE name='query_cache'").get()) {
     return void 0;
   }
-  const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key2, signature);
+  const row = db.prepare("SELECT payload FROM query_cache WHERE name=? AND signature=?").get(key3, signature);
   return row ? JSON.parse(String(row.payload)) : void 0;
 };
-var writeQueryCache = (db, key2, signature, value) => {
+var writeQueryCache = (db, key3, signature, value) => {
   db.prepare("INSERT OR REPLACE INTO query_cache VALUES(?,?,?)").run(
-    key2,
+    key3,
     signature,
     JSON.stringify(value)
   );
@@ -2946,13 +3025,13 @@ var prepareCoverage = (db, manifest) => {
         regionIds: ids("regionIds")
       };
       const { start: _start, end: _end, ...identity2 } = segment;
-      const key2 = JSON.stringify(identity2);
-      if (pending && key2 === pendingKey) {
+      const key3 = JSON.stringify(identity2);
+      if (pending && key3 === pendingKey) {
         pending = { ...pending, end };
       } else {
         savePending();
         pending = segment;
-        pendingKey = key2;
+        pendingKey = key3;
       }
       const bytes = end - previous;
       for (const c of segment.classifications) {
@@ -3209,6 +3288,269 @@ var publishGraph = (db) => {
     DELETE FROM main.query_graph_edges;INSERT INTO main.query_graph_edges SELECT * FROM temp.query_graph_edges;`);
 };
 
+// packages/disassembler/src/sqlite-runtime-facts.ts
+var RUNTIME_DESCRIPTOR_COLUMNS = [
+  "kind",
+  "architecture",
+  "address_space",
+  "address",
+  "start",
+  "end",
+  "from_address_space",
+  "from_address",
+  "to_address_space",
+  "to_address",
+  "instruction_address_space",
+  "instruction_address",
+  "accessed_address_space",
+  "accessed_address",
+  "coverage"
+];
+var runtimeIdentityKey = (column) => `CASE WHEN typeof(${column})='blob' THEN substr(${column},1,8) ELSE ${column} END`;
+var columns = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `"${column}"`).join(",");
+var inserted = RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `NEW."${column}"`).join(",");
+var key2 = `json_array(${inserted})`;
+var descriptorInsert = `INSERT OR IGNORE INTO runtime_descriptors(key,${columns}) VALUES(${key2},${inserted});`;
+var descriptorId = `(SELECT did FROM runtime_descriptors WHERE key=${key2})`;
+var RUNTIME_FACT_SCHEMA = `
+CREATE TABLE runtime_descriptors (
+  did INTEGER PRIMARY KEY, key TEXT NOT NULL UNIQUE,
+  kind TEXT NOT NULL, architecture TEXT NOT NULL,
+  address_space TEXT, address INTEGER, start INTEGER, "end" INTEGER,
+  from_address_space TEXT, from_address INTEGER, to_address_space TEXT, to_address INTEGER,
+  instruction_address_space TEXT, instruction_address INTEGER,
+  accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT
+);
+CREATE INDEX runtime_lookup ON runtime_descriptors(kind,address_space,address,start);
+CREATE INDEX runtime_memory ON runtime_descriptors(instruction_address_space,instruction_address) WHERE kind='runtime-memory-access';
+CREATE TABLE runtime_fact_rows (
+  fid INTEGER PRIMARY KEY, fingerprint BLOB,
+  descriptor_id INTEGER NOT NULL REFERENCES runtime_descriptors(did),
+  payload BLOB, history_id INTEGER REFERENCES runtime_history(id), history_slot INTEGER,
+  CHECK ((history_id IS NULL AND history_slot IS NULL) OR
+    (history_id IS NOT NULL AND history_slot>=0 AND payload IS NULL))
+);
+CREATE INDEX runtime_fact_fingerprint ON runtime_fact_rows(substr(fingerprint,1,8));
+CREATE INDEX runtime_fact_descriptor ON runtime_fact_rows(descriptor_id);
+CREATE INDEX runtime_history_pending ON runtime_fact_rows(fid) WHERE history_id IS NULL;
+CREATE TRIGGER runtime_fact_unique_insert BEFORE INSERT ON runtime_fact_rows
+WHEN NEW.fingerprint IS NOT NULL AND EXISTS(
+  SELECT 1 FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8) AND fingerprint=NEW.fingerprint AND fid IS NOT NEW.fid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime fact fingerprint'); END;
+CREATE TRIGGER runtime_fact_unique_update BEFORE UPDATE OF fingerprint ON runtime_fact_rows
+WHEN NEW.fingerprint IS NOT NULL AND EXISTS(
+  SELECT 1 FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8)
+    AND fingerprint=NEW.fingerprint AND fid!=OLD.fid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime fact fingerprint'); END;
+CREATE VIEW runtime_fact_locations AS SELECT f.fid,
+  ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `d."${column}"`).join(",")}
+FROM runtime_fact_rows f LEFT JOIN runtime_descriptors d ON d.did=f.descriptor_id;
+CREATE VIEW runtime_facts AS SELECT f.fid,f.fingerprint,
+  ${RUNTIME_DESCRIPTOR_COLUMNS.map((column) => `d."${column}"`).join(",")},
+  CASE WHEN f.history_id IS NULL THEN f.payload
+    ELSE analysis_history_payload(f.history_id,f.history_slot) END AS payload
+FROM runtime_fact_rows f LEFT JOIN runtime_descriptors d ON d.did=f.descriptor_id;
+CREATE TRIGGER runtime_fact_insert INSTEAD OF INSERT ON runtime_facts BEGIN
+  ${descriptorInsert}
+  INSERT INTO runtime_fact_rows(fid,fingerprint,descriptor_id,payload)
+    VALUES(NEW.fid,NEW.fingerprint,${descriptorId},NEW.payload);
+END;
+CREATE TRIGGER runtime_fact_update INSTEAD OF UPDATE ON runtime_facts BEGIN
+  ${descriptorInsert}
+  UPDATE runtime_fact_rows SET fid=NEW.fid,fingerprint=NEW.fingerprint,
+    descriptor_id=${descriptorId},payload=NEW.payload,history_id=NULL,history_slot=NULL WHERE fid=OLD.fid;
+END;
+CREATE TRIGGER runtime_fact_delete INSTEAD OF DELETE ON runtime_facts BEGIN
+  DELETE FROM runtime_fact_rows WHERE fid=OLD.fid;
+END;
+`;
+var RUNTIME_IDENTITY_SCHEMA = `
+CREATE TABLE runtime_identities(iid INTEGER PRIMARY KEY,value BLOB NOT NULL);
+CREATE INDEX runtime_identity_key ON runtime_identities(${runtimeIdentityKey("value")});
+CREATE TRIGGER runtime_identity_unique_insert BEFORE INSERT ON runtime_identities
+WHEN EXISTS(SELECT 1 FROM runtime_identities
+  WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND value=NEW.value)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
+CREATE TRIGGER runtime_identity_unique_update BEFORE UPDATE OF value ON runtime_identities
+WHEN EXISTS(SELECT 1 FROM runtime_identities
+  WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND value=NEW.value AND iid!=OLD.iid)
+BEGIN SELECT RAISE(ABORT,'Duplicate runtime identity'); END;
+`;
+
+// packages/disassembler/src/sqlite-runtime-history.ts
+var import_node_util2 = require("node:util");
+var import_node_zlib3 = require("node:zlib");
+var MAGIC2 = Buffer.from([85, 72, 66, 1]);
+var MAX_ROWS = 1024;
+var MAX_BYTES = 32 * 1024 * 1024;
+var TARGET_BYTES = 256 * 1024;
+var CACHE_BYTES = 4 * 1024 * 1024;
+var utf82 = new import_node_util2.TextDecoder("utf-8", { fatal: true });
+var RUNTIME_HISTORY_SCHEMA = `CREATE TABLE runtime_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT, first_fid INTEGER NOT NULL, last_fid INTEGER NOT NULL,
+  payload BLOB NOT NULL
+);
+CREATE TRIGGER runtime_history_immutable BEFORE UPDATE ON runtime_history BEGIN
+  SELECT RAISE(ABORT,'Runtime history blocks are immutable');
+END;`;
+var encodeRuntimeHistory = (values) => {
+  if (!values.length || values.length > MAX_ROWS) {
+    throw new Error("Invalid runtime history record count.");
+  }
+  const records = values.map((value) => {
+    if (value === null) {
+      return Buffer.from([0]);
+    }
+    const bytes = typeof value === "string" ? Buffer.from(value, "utf8") : Buffer.from(value);
+    return Buffer.concat([Buffer.from([typeof value === "string" ? 1 : 2]), bytes]);
+  });
+  const directoryBytes = (values.length + 1) * 4;
+  const size = directoryBytes + records.reduce((n, record) => n + record.length, 0);
+  if (size > MAX_BYTES) {
+    throw new Error("Runtime history block exceeds its decoded byte limit.");
+  }
+  const body = Buffer.allocUnsafe(size);
+  let offset = directoryBytes;
+  for (const [index, record] of records.entries()) {
+    body.writeUInt32LE(offset, index * 4);
+    record.copy(body, offset);
+    offset += record.length;
+  }
+  body.writeUInt32LE(offset, values.length * 4);
+  const header = Buffer.allocUnsafe(16);
+  MAGIC2.copy(header);
+  header.writeUInt32LE(values.length, 4);
+  header.writeUInt32LE(size, 8);
+  header.writeUInt32LE((0, import_node_zlib3.crc32)(body), 12);
+  return Buffer.concat([header, (0, import_node_zlib3.deflateSync)(body, { level: 6 })]);
+};
+var decodeHistoryBlock = (encoded) => {
+  const bytes = Buffer.from(encoded.buffer, encoded.byteOffset, encoded.byteLength);
+  if (bytes.length < 17 || !bytes.subarray(0, 4).equals(MAGIC2)) {
+    throw new Error("Unsupported runtime history block.");
+  }
+  const count = bytes.readUInt32LE(4);
+  const size = bytes.readUInt32LE(8);
+  if (!count || count > MAX_ROWS || size < (count + 1) * 4 + count || size > MAX_BYTES) {
+    throw new Error("Invalid runtime history block bounds.");
+  }
+  const body = (0, import_node_zlib3.inflateSync)(bytes.subarray(16), { maxOutputLength: size });
+  if (body.length !== size || (0, import_node_zlib3.crc32)(body) !== bytes.readUInt32LE(12)) {
+    throw new Error("Corrupt runtime history block.");
+  }
+  let start = body.readUInt32LE(0);
+  if (start !== (count + 1) * 4) {
+    throw new Error("Invalid runtime history offset directory.");
+  }
+  for (let index = 0; index < count; index++) {
+    const end = body.readUInt32LE((index + 1) * 4);
+    if (end <= start || end > size) {
+      throw new Error("Invalid runtime history record extent.");
+    }
+    const type = body[start];
+    if (type === 0 && end !== start + 1 || type !== 0 && type !== 1 && type !== 2) {
+      throw new Error("Invalid runtime history storage type.");
+    }
+    start = end;
+  }
+  if (start !== size) {
+    throw new Error("Trailing runtime history bytes.");
+  }
+  return { body, count };
+};
+var historyValue = (block, slot) => {
+  const start = block.body.readUInt32LE(slot * 4);
+  const end = block.body.readUInt32LE((slot + 1) * 4);
+  const type = block.body[start];
+  if (type === 0) {
+    return null;
+  }
+  const value = block.body.subarray(start + 1, end);
+  return type === 1 ? utf82.decode(value) : value;
+};
+var registerRuntimeHistory = (db) => {
+  const cache = /* @__PURE__ */ new Map();
+  let used = 0;
+  let read;
+  db.function("analysis_history_payload", (id, slot) => {
+    if (typeof id !== "number" || !Number.isSafeInteger(id) || id <= 0 || typeof slot !== "number" || !Number.isSafeInteger(slot) || slot < 0) {
+      throw new Error("Invalid runtime history reference.");
+    }
+    let block = cache.get(id);
+    if (!block) {
+      read ??= db.prepare("SELECT payload FROM runtime_history WHERE id=?");
+      const encoded = read.get(id)?.payload;
+      if (!import_node_util2.types.isUint8Array(encoded)) {
+        throw new Error("Missing runtime history block.");
+      }
+      block = decodeHistoryBlock(encoded);
+      const size = block.body.byteLength + 128;
+      if (size <= CACHE_BYTES) {
+        while (used + size > CACHE_BYTES) {
+          const first = cache.keys().next().value;
+          used -= cache.get(first).body.byteLength + 128;
+          cache.delete(first);
+        }
+        cache.set(id, block);
+        used += size;
+      }
+    }
+    if (slot >= block.count) {
+      throw new Error("Runtime history slot is out of bounds.");
+    }
+    return historyValue(block, slot);
+  });
+  return () => {
+    cache.clear();
+    used = 0;
+  };
+};
+var packRuntimeHistory = (db, onProgress) => {
+  if (!db.isTransaction) {
+    throw new Error("Runtime history packing requires a transaction.");
+  }
+  const pending = db.prepare(
+    "SELECT fid,payload FROM runtime_fact_rows WHERE history_id IS NULL ORDER BY fid LIMIT ?"
+  );
+  const insert = db.prepare(
+    "INSERT INTO runtime_history(first_fid,last_fid,payload) VALUES(?,?,?)"
+  );
+  const update = db.prepare(
+    "UPDATE runtime_fact_rows SET payload=NULL,history_id=?,history_slot=? WHERE fid=?"
+  );
+  let packed = 0;
+  for (; ; ) {
+    const rows = [];
+    let size = 0;
+    for (const row of pending.iterate(MAX_ROWS)) {
+      const value = row.payload;
+      const bytes = typeof value === "string" ? Buffer.byteLength(value) : value?.byteLength ?? 0;
+      if (rows.length && size + bytes > TARGET_BYTES) {
+        break;
+      }
+      rows.push(row);
+      size += bytes;
+    }
+    if (!rows.length) {
+      return packed;
+    }
+    const encoded = encodeRuntimeHistory(rows.map((row) => row.payload));
+    const id = insert.run(rows[0].fid, rows[rows.length - 1].fid, encoded).lastInsertRowid;
+    for (const [slot, row] of rows.entries()) {
+      update.run(id, slot, row.fid);
+    }
+    packed += rows.length;
+    onProgress?.(packed);
+  }
+};
+var collectRuntimeHistory = (db) => {
+  db.exec(`DELETE FROM runtime_history WHERE NOT EXISTS(
+    SELECT 1 FROM runtime_fact_rows f WHERE f.fid>=runtime_history.first_fid
+      AND f.fid<=runtime_history.last_fid AND f.history_id=runtime_history.id);
+    DELETE FROM runtime_descriptors WHERE NOT EXISTS(
+      SELECT 1 FROM runtime_fact_rows f WHERE f.descriptor_id=runtime_descriptors.did);`);
+};
+
 // packages/disassembler/src/sqlite-runtime-storage.ts
 var import_node_crypto2 = require("node:crypto");
 var RUNTIME_RECORD_STREAM_SQL = [true, false].map(
@@ -3227,19 +3569,11 @@ var RUNTIME_RECORD_STREAM_SQL = [true, false].map(
   ORDER BY o.oid ${paired ? "DESC" : "ASC"}`
 );
 var RUNTIME_STORAGE_SCHEMA = `
-CREATE TABLE runtime_facts (
-  fid INTEGER PRIMARY KEY, fingerprint BLOB UNIQUE,
-  kind TEXT NOT NULL, architecture TEXT NOT NULL,
-  address_space TEXT, address INTEGER, start INTEGER, "end" INTEGER,
-  from_address_space TEXT, from_address INTEGER, to_address_space TEXT, to_address INTEGER,
-  instruction_address_space TEXT, instruction_address INTEGER,
-  accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT, payload BLOB
-);
-CREATE TABLE runtime_identities (
-  iid INTEGER PRIMARY KEY, value BLOB NOT NULL UNIQUE
-);
+${RUNTIME_HISTORY_SCHEMA}
+${RUNTIME_FACT_SCHEMA}
+${RUNTIME_IDENTITY_SCHEMA}
 CREATE TABLE runtime_observations (
-  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_facts(fid),
+  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_fact_rows(fid),
   prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
   identity_id INTEGER NOT NULL REFERENCES runtime_identities(iid),
   evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id), count INTEGER NOT NULL,
@@ -3248,7 +3582,9 @@ CREATE TABLE runtime_observations (
   UNIQUE(prefix_id,identity_id), UNIQUE(state_prefix_id,identity_id)
 );
 CREATE INDEX runtime_observation_fact ON runtime_observations(fact_id);
-CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id);
+-- Native fact and identity IDs commonly coincide. The fact index already covers that case;
+-- index only exceptions, and check both cases before collecting an identity below.
+CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id) WHERE identity_id!=fact_id;
 CREATE VIEW runtime AS
  SELECT o.oid AS rowid,o.prefix_id,i.value AS id,f.kind,f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
@@ -3267,8 +3603,11 @@ CREATE VIEW runtime AS
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
  LEFT JOIN runtime_identities i ON i.iid=o.identity_id WHERE o.state_prefix_id IS NOT NULL;
 CREATE TRIGGER runtime_collect_fact AFTER DELETE ON runtime_observations BEGIN
- DELETE FROM runtime_facts WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
- DELETE FROM runtime_identities WHERE iid=OLD.identity_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id);
+ -- Reclaim the physical owner directly: deleting a fact does not require decoding its payload.
+ DELETE FROM runtime_fact_rows WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
+ DELETE FROM runtime_identities WHERE iid=OLD.identity_id
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.identity_id AND identity_id=OLD.identity_id)
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id AND identity_id!=fact_id);
 END;
 CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query_size,query_data,query_ready ON runtime BEGIN
  UPDATE runtime_observations SET query_file_offset=NEW.query_file_offset,query_size=NEW.query_size,
@@ -3276,14 +3615,15 @@ CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query
 END;
 -- Compatibility mutations detach one logical record. They must never change another capture's shared fact.
 CREATE TRIGGER runtime_insert INSTEAD OF INSERT ON runtime BEGIN
- INSERT OR IGNORE INTO runtime_identities(value) VALUES(NEW.id);
+ INSERT INTO runtime_identities(value) SELECT NEW.id WHERE NOT EXISTS(SELECT 1 FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id);
  INSERT INTO runtime_facts(kind,architecture,address_space,address,start,"end",from_address_space,from_address,
  to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,payload)
  VALUES(NEW.kind,NEW.architecture,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,
  CASE WHEN json_valid(NEW.payload) THEN jsonb(NEW.payload) ELSE NEW.payload END);
+ -- Nested view inserts restore last_insert_rowid(). The single writer owns the new maximum fid.
  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
- VALUES(last_insert_rowid(),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
+ VALUES((SELECT MAX(fid) FROM runtime_fact_rows),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
  CASE WHEN NEW.kind='runtime-execution' THEN 0 ELSE 1 END);
 END;
 CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
@@ -3292,10 +3632,10 @@ CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
  SELECT 'runtime-cpu-state',f.architecture,f.address_space,f.address,f.payload
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_prefix_id IS NOT NULL;
  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_ready)
- SELECT last_insert_rowid(),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
+ SELECT (SELECT MAX(fid) FROM runtime_fact_rows),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
  UPDATE runtime_observations SET state_prefix_id=NULL WHERE oid=-OLD.rowid;
  -- A preceding instruction deletion may have detached this virtual state; stable identity still finds it.
- DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE value=OLD.id);
+ DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("OLD.id")}) AND value=OLD.id);
 END;
 CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,architecture,count,address_space,address,start,"end",
  from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
@@ -3317,7 +3657,9 @@ var SqliteRuntimeWriter = class {
   #findIdentity;
   #insertIdentity;
   constructor(db) {
-    this.#findFact = db.prepare("SELECT fid FROM runtime_facts WHERE fingerprint=?");
+    this.#findFact = db.prepare(
+      "SELECT fid FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(?1,1,8) AND fingerprint=?1"
+    );
     this.#insertFact = db.prepare(`INSERT INTO runtime_facts(fingerprint,kind,architecture,address_space,address,start,"end",
       from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
       accessed_address_space,accessed_address,coverage,payload) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CASE WHEN typeof(?)='text' THEN jsonb(?) ELSE ? END)`);
@@ -3328,9 +3670,11 @@ var SqliteRuntimeWriter = class {
     this.#findPair = db.prepare(`SELECT o.*,f.kind,f.architecture,f.address_space,f.address,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
       FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
       WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE value=?)`);
+      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)`);
     this.#removeObservation = db.prepare("DELETE FROM runtime_observations WHERE oid=?");
-    this.#findIdentity = db.prepare("SELECT iid FROM runtime_identities WHERE value=?");
+    this.#findIdentity = db.prepare(
+      `SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?1")}) AND value=?1`
+    );
     this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
   }
   /** Append one validated logical record. Only exact trace pairs share a count/provenance link.
@@ -3341,7 +3685,7 @@ var SqliteRuntimeWriter = class {
     const identity = sqliteRuntimeIdentity(record.id);
     const prefix = intern("runtime_prefixes", identity.prefix);
     const evidence = intern("runtime_evidence", JSON.stringify(record.evidence));
-    const columns = runtimeColumns(record);
+    const columns2 = runtimeColumns(record);
     let statePrefix = null;
     const match = /^runtime:instruction-trace:([\da-f]{64}):(code|state):([\da-f]{64})$/.exec(
       record.id
@@ -3362,7 +3706,7 @@ var SqliteRuntimeWriter = class {
         this.#removeObservation.run(other.oid);
       }
     }
-    const payload = columns.payload;
+    const payload = columns2.payload;
     const fingerprint = (0, import_node_crypto2.createHash)("sha256").update(
       // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
       // per row. Nulls, two-space indentation and the trailing newline preserve
@@ -3370,22 +3714,22 @@ var SqliteRuntimeWriter = class {
       // Keep this list aligned with runtimeColumns and the all-variant fingerprint test.
       JSON.stringify(
         {
-          accessedAddress: columns.accessedAddress,
-          accessedAddressSpace: columns.accessedAddressSpace,
-          address: columns.address,
-          addressSpace: columns.addressSpace,
+          accessedAddress: columns2.accessedAddress,
+          accessedAddressSpace: columns2.accessedAddressSpace,
+          address: columns2.address,
+          addressSpace: columns2.addressSpace,
           architecture: record.architecture,
-          coverage: columns.coverage,
-          end: columns.end,
-          fromAddress: columns.fromAddress,
-          fromAddressSpace: columns.fromAddressSpace,
-          instructionAddress: columns.instructionAddress,
-          instructionAddressSpace: columns.instructionAddressSpace,
+          coverage: columns2.coverage,
+          end: columns2.end,
+          fromAddress: columns2.fromAddress,
+          fromAddressSpace: columns2.fromAddressSpace,
+          instructionAddress: columns2.instructionAddress,
+          instructionAddressSpace: columns2.instructionAddressSpace,
           kind: record.kind,
           payload,
-          start: columns.start,
-          toAddress: columns.toAddress,
-          toAddressSpace: columns.toAddressSpace
+          start: columns2.start,
+          toAddress: columns2.toAddress,
+          toAddressSpace: columns2.toAddressSpace
         },
         void 0,
         2
@@ -3403,27 +3747,28 @@ var SqliteRuntimeWriter = class {
           encoded = encodeSqlitePayload(payload);
         }
       }
-      fid = this.#insertFact.run(
+      this.#insertFact.run(
         fingerprint,
         record.kind,
         record.architecture,
-        columns.addressSpace,
-        columns.address,
-        columns.start,
-        columns.end,
-        columns.fromAddressSpace,
-        columns.fromAddress,
-        columns.toAddressSpace,
-        columns.toAddress,
-        columns.instructionAddressSpace,
-        columns.instructionAddress,
-        columns.accessedAddressSpace,
-        columns.accessedAddress,
-        columns.coverage,
+        columns2.addressSpace,
+        columns2.address,
+        columns2.start,
+        columns2.end,
+        columns2.fromAddressSpace,
+        columns2.fromAddress,
+        columns2.toAddressSpace,
+        columns2.toAddress,
+        columns2.instructionAddressSpace,
+        columns2.instructionAddress,
+        columns2.accessedAddressSpace,
+        columns2.accessedAddress,
+        columns2.coverage,
         encoded,
         encoded,
         encoded
-      ).lastInsertRowid;
+      );
+      fid = this.#findFact.get(fingerprint).fid;
     }
     const foundIdentity = this.#findIdentity.get(identity.suffix);
     const identityId = foundIdentity?.iid ?? this.#insertIdentity.run(identity.suffix).lastInsertRowid;
@@ -3469,7 +3814,7 @@ var installSummary = (db) => {
       DELETE FROM query_cache WHERE name='${BUILD}';
       INSERT OR IGNORE INTO query_runtime_variant_pending
         SELECT NEW.oid WHERE EXISTS(SELECT 1 FROM query_cache WHERE name='${KEY}')
-        AND EXISTS(SELECT 1 FROM runtime_facts WHERE fid=NEW.fact_id AND kind='runtime-instruction');
+        AND EXISTS(SELECT 1 FROM runtime_fact_locations WHERE fid=NEW.fact_id AND kind='runtime-instruction');
     END;
     CREATE TRIGGER summary_observation_update AFTER UPDATE OF
       oid,fact_id,prefix_id,identity_id,evidence_id,count ON runtime_observations
@@ -3486,17 +3831,24 @@ var installSummary = (db) => {
         EXISTS(SELECT 1 FROM runtime_observations WHERE state_prefix_id=NEW.state_prefix_id AND identity_id=NEW.identity_id))
       BEGIN ${INVALIDATE} END;`);
   for (const [table, primary, unique2] of [
-    ["runtime_facts", "fid", "fingerprint"],
+    ["runtime_fact_rows", "fid", "fingerprint"],
     ["runtime_identities", "iid", "value"],
     ["runtime_prefixes", "id", "value"],
     ["runtime_evidence", "id", "value"]
   ]) {
+    const condition = table === "runtime_fact_rows" ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL" : "";
+    let uniqueMatch = `${unique2}=NEW.${unique2}`;
+    if (table === "runtime_fact_rows") {
+      uniqueMatch = `substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8) AND ${uniqueMatch}`;
+    } else if (table === "runtime_identities") {
+      uniqueMatch = `(${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND ${uniqueMatch}`;
+    }
     db.exec(`CREATE TRIGGER summary_${table}_replace BEFORE INSERT ON ${table}
       WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
         EXISTS(SELECT 1 FROM ${table} WHERE ${primary}=NEW.${primary}) OR
-        EXISTS(SELECT 1 FROM ${table} WHERE ${unique2}=NEW.${unique2}))
+        EXISTS(SELECT 1 FROM ${table} WHERE ${uniqueMatch}))
       BEGIN ${INVALIDATE} END;
-      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} ${condition} BEGIN ${INVALIDATE} END;
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
   }
 };
@@ -3517,13 +3869,13 @@ var registerVariantKey = (db, fields, masks) => {
       payload
     );
     const state = {};
-    for (const key2 of fields) {
-      const value = record.state[key2];
-      const mask = masks[key2];
+    for (const key3 of fields) {
+      const value = record.state[key3];
+      const mask = masks[key3];
       if (mask && typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= mask.max) {
-        state[key2] = value & mask.mask;
+        state[key3] = value & mask.mask;
       } else if (value !== void 0) {
-        state[key2] = value;
+        state[key3] = value;
       }
     }
     return JSON.stringify([record.bytes, state]);
@@ -3614,7 +3966,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
       yield {
         ...record,
         state: Object.fromEntries(
-          Object.entries(record.state).filter(([key2]) => fields.includes(key2))
+          Object.entries(record.state).filter(([key3]) => fields.includes(key3))
         )
       };
     }
@@ -3785,9 +4137,9 @@ var validateStoragePolicy = (value) => {
     throw new Error("Storage policy must be an object containing explicit limits.");
   }
   const policy = { ...DEFAULT_ANALYSIS_STORAGE_POLICY, ...value };
-  for (const [key2, count] of Object.entries(policy)) {
-    if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key2) || !Number.isSafeInteger(count) || count < 0) {
-      throw new Error(`Invalid storage limit '${key2}'. Use nonnegative integer byte limits.`);
+  for (const [key3, count] of Object.entries(policy)) {
+    if (!Object.hasOwn(DEFAULT_ANALYSIS_STORAGE_POLICY, key3) || !Number.isSafeInteger(count) || count < 0) {
+      throw new Error(`Invalid storage limit '${key3}'. Use nonnegative integer byte limits.`);
     }
   }
   return policy;
@@ -3811,7 +4163,8 @@ var storageSnapshot = (db, file) => {
     walBytes,
     livePageBytes: (pages - free) * size,
     freePageBytes: free * size,
-    facts: Number(db.prepare("SELECT COUNT(*) AS n FROM runtime_facts").get().n),
+    // Count the owning rows directly; the logical view would join every shared descriptor.
+    facts: Number(db.prepare("SELECT COUNT(*) AS n FROM runtime_fact_rows").get().n),
     observations: Number(rows.n),
     pairedStates: Number(rows.paired),
     captures: Number(captures.n)
@@ -3903,8 +4256,8 @@ var TraceCache = class {
    * @param {string} key Complete semantic key, never a lossy coordinate projection.
    * @returns {T | undefined} Retained value, or a cache miss.
    */
-  get(key2) {
-    const value = this.#entries.get(key2);
+  get(key3) {
+    const value = this.#entries.get(key3);
     if (this.#metrics) {
       if (value === void 0) {
         this.#metrics.misses++;
@@ -3920,7 +4273,7 @@ var TraceCache = class {
    * @param {T} value Defined value whose ownership stays with the caller.
    * @returns {object | undefined} Displaced key/value, or undefined while filling unused capacity.
    */
-  insert(key2, value) {
+  insert(key3, value) {
     let displaced;
     if (this.#keys.length === 4096) {
       let random = this.#random;
@@ -3932,17 +4285,17 @@ var TraceCache = class {
       const victim = this.#keys[slot];
       displaced = { key: victim, value: this.#entries.get(victim) };
       this.#entries.delete(victim);
-      this.#keys[slot] = key2;
+      this.#keys[slot] = key3;
       if (this.#metrics) {
         this.#metrics.evictions++;
       }
     } else {
-      this.#keys.push(key2);
+      this.#keys.push(key3);
       if (this.#metrics) {
         this.#metrics.peakEntries = Math.max(this.#metrics.peakEntries, this.#keys.length);
       }
     }
-    this.#entries.set(key2, value);
+    this.#entries.set(key3, value);
     return displaced;
   }
   /** Iterate the retained working set, for a final durable delta flush.
@@ -3961,7 +4314,7 @@ var TraceCache = class {
 
 // packages/disassembler/src/sqlite-store.ts
 var ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
-var ANALYSIS_SQLITE_STORAGE_VERSION = 3;
+var ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 var SCHEMA = `
 PRAGMA journal_mode=WAL;
 PRAGMA synchronous=NORMAL;
@@ -4024,7 +4377,7 @@ CREATE TABLE IF NOT EXISTS runtime_evidence (
 );
 ${RUNTIME_STORAGE_SCHEMA}
 ${CAPTURE_CATALOG_SCHEMA}
-PRAGMA user_version=3;
+PRAGMA user_version=4;
 `;
 var SCHEMA_INDEX_STATEMENTS = [
   "CREATE INDEX IF NOT EXISTS labels_addr ON labels (address_space, address)",
@@ -4032,9 +4385,7 @@ var SCHEMA_INDEX_STATEMENTS = [
   'CREATE INDEX IF NOT EXISTS regions_range ON regions (address_space, start, "end")',
   'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
   // Point lookups through the virtual-state branch need an index on its exposed negative ID.
-  "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL",
-  "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
-  "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'"
+  "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL"
 ];
 var RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
@@ -4054,6 +4405,8 @@ var sqliteFileIdentity = (file) => {
 var SqliteAnalysisStore = class {
   #database;
   #fileIdentity;
+  /** Block cache is owned by this connection and reset on commit, rollback, and snapshot entry. */
+  #clearHistory;
   /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
   file;
   #insertEvidence;
@@ -4082,6 +4435,7 @@ var SqliteAnalysisStore = class {
     }
     this.file = file;
     this.#database = new import_node_sqlite2.DatabaseSync(file, { open: true });
+    this.#clearHistory = registerRuntimeHistory(this.#database);
     this.#database.function(
       "analysis_json",
       { deterministic: true },
@@ -4136,7 +4490,7 @@ var SqliteAnalysisStore = class {
         });
       }
       this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
+        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
       this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
     } catch (error) {
       this.#database.close();
@@ -4159,6 +4513,7 @@ var SqliteAnalysisStore = class {
   }
   /** Forget all transaction-owned dictionary references and their bounded text allocation. */
   #clearDictionaryCache() {
+    this.#clearHistory();
     this.#dictionaryIds.clear();
     this.#dictionaryCacheBytes = 0;
   }
@@ -4169,20 +4524,20 @@ var SqliteAnalysisStore = class {
    * @returns {number} Transactionally created or existing dictionary rowid.
    */
   #intern(table, value) {
-    const key2 = `${table}:${value}`;
-    const cached = this.#dictionaryIds.get(key2);
+    const key3 = `${table}:${value}`;
+    const cached = this.#dictionaryIds.get(key3);
     if (cached !== void 0) {
       return cached;
     }
     const statements = this.#dictionaryStatements.get(table);
     const found = statements.find.get(value);
     const id = found ? Number(found.id) : Number(statements.insert.run(value).lastInsertRowid);
-    const bytes = Buffer.byteLength(key2);
+    const bytes = Buffer.byteLength(key3);
     if (this.#dictionaryIds.size >= 256 || this.#dictionaryCacheBytes + bytes > 512 * 1024) {
       this.#clearDictionaryCache();
     }
     if (bytes <= 512 * 1024) {
-      this.#dictionaryIds.set(key2, id);
+      this.#dictionaryIds.set(key3, id);
       this.#dictionaryCacheBytes += bytes;
     }
     return id;
@@ -4283,6 +4638,9 @@ var SqliteAnalysisStore = class {
         void Promise.resolve(result).catch(() => void 0);
         throw new TypeError("Analysis transactions require a synchronous callback, not a Promise.");
       }
+      if (write) {
+        packRuntimeHistory(this.#database);
+      }
       if (write && this.revision() !== revision) {
         enforceDatabaseBudget(this.#database);
       }
@@ -4314,24 +4672,25 @@ var SqliteAnalysisStore = class {
       "UPDATE temp.trace_facts SET count=count+? WHERE id=?"
     );
     const pending = new TraceCache(metrics);
-    const flushEntry = (key2, count) => {
+    const flushEntry = (key3, count) => {
       if (!count) {
         return;
       }
-      incrementMany.run(count, key2);
+      incrementMany.run(count, key3);
       if (metrics) {
         metrics.sqlStatements++;
       }
     };
     const flush = () => {
-      for (const [key2, entry] of pending.entries()) {
-        flushEntry(key2, entry.count);
+      for (const [key3, entry] of pending.entries()) {
+        flushEntry(key3, entry.count);
       }
       pending.clear();
     };
     const index = {
-      add: (key2, create) => {
-        const entry = pending.get(key2);
+      diskBacked: true,
+      add: (key3, create) => {
+        const entry = pending.get(key3);
         if (entry !== void 0) {
           if (!Number.isSafeInteger(entry.count + 1)) {
             throw new Error("Trace count exceeds exact integer range.");
@@ -4339,17 +4698,17 @@ var SqliteAnalysisStore = class {
           entry.count++;
           return false;
         }
-        const displaced = pending.insert(key2, { count: 0 });
+        const displaced = pending.insert(key3, { count: 0 });
         if (displaced) {
           flushEntry(displaced.key, displaced.value.count);
         }
         if (metrics) {
           metrics.sqlStatements++;
         }
-        if (increment.run(key2).changes !== 0) {
+        if (increment.run(key3).changes !== 0) {
           return false;
         }
-        insert.run(key2, JSON.stringify(create()));
+        insert.run(key3, JSON.stringify(create()));
         if (metrics) {
           metrics.sqlStatements++;
           metrics.payloads++;
@@ -4790,7 +5149,8 @@ var SqliteAnalysisStore = class {
       if (kind === "runtime") {
         if (ids) {
           const find = this.#database.prepare(
-            `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`
+            `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
+              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`
           );
           for (const id of ids.slice(0, 200)) {
             const identity = sqliteRuntimeIdentity(id);
@@ -4950,21 +5310,21 @@ var SqliteAnalysisStore = class {
    * @param {Function} [publish] Optional short SQL publication for derived rows built in temporary tables.
    * @returns {T} Current projected value.
    */
-  cachedProjection(key2, signature, dependencies, compute, publish) {
-    const cached = readQueryCache(this.#database, key2, signature);
+  cachedProjection(key3, signature, dependencies, compute, publish) {
+    const cached = readQueryCache(this.#database, key3, signature);
     if (cached !== void 0) {
       return cached;
     }
     const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
     this.transaction(() => {
-      installQueryCache(this.#database, key2, dependencies);
-      writeQueryCache(this.#database, key2, pending, null);
+      installQueryCache(this.#database, key3, dependencies);
+      writeQueryCache(this.#database, key3, pending, null);
     });
     const result = this.transaction(compute, false);
     this.transaction(() => {
-      if (this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key2)?.signature === pending) {
+      if (this.#database.prepare("SELECT signature FROM query_cache WHERE name=?").get(key3)?.signature === pending) {
         publish?.();
-        writeQueryCache(this.#database, key2, signature, result);
+        writeQueryCache(this.#database, key3, signature, result);
       }
     });
     return result;
@@ -5227,6 +5587,14 @@ var SqliteAnalysisStore = class {
     return result;
   }
   /**
+   * Exact viewport counts without materializing the detailed instruction projection.
+   * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
+   * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+   */
+  instructionExecutionSummary(ranges) {
+    return readInstructionExecutionSummary(this.#database, this.manifest(), ranges);
+  }
+  /**
    * Read selected metadata kinds through the address index instead of loading the complete CFG.
    * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
    * @returns {AnalysisRecord[]} Matching rows in stable ID order.
@@ -5352,6 +5720,7 @@ var SqliteAnalysisStore = class {
       );
     }
     this.transaction(() => {
+      collectRuntimeHistory(this.#database);
       this.#database.exec(`
         DELETE FROM runtime_prefixes WHERE id NOT IN (SELECT DISTINCT prefix_id FROM runtime);
         DELETE FROM runtime_evidence WHERE id NOT IN (SELECT DISTINCT evidence_id FROM runtime);
@@ -5496,8 +5865,8 @@ var createRuntimeGraphicsAccumulator = () => {
     }
   };
   const record = (write) => {
-    const key2 = `${write.actor}:${write.channel}:${write.target}`;
-    let group = activity.get(key2);
+    const key3 = `${write.actor}:${write.channel}:${write.target}`;
+    let group = activity.get(key3);
     if (!group) {
       group = {
         actor: write.actor,
@@ -5510,7 +5879,7 @@ var createRuntimeGraphicsAccumulator = () => {
         byteTargets: 0,
         knownValueTargets: 0
       };
-      activity.set(key2, group);
+      activity.set(key3, group);
     }
     group.portWrites++;
     group[write.status]++;
@@ -5732,8 +6101,8 @@ var createRuntimeTransferAccumulator = () => {
   const windows = [];
   let omittedWindows = 0;
   const retain = (window) => {
-    const key2 = `${window.actor}:${window.channel}`;
-    let group = activity.get(key2);
+    const key3 = `${window.actor}:${window.channel}`;
+    let group = activity.get(key3);
     if (!group) {
       group = {
         actor: window.actor,
@@ -5747,7 +6116,7 @@ var createRuntimeTransferAccumulator = () => {
         reads: 0,
         writes: 0
       };
-      activity.set(key2, group);
+      activity.set(key3, group);
     }
     const fields = {
       complete: "complete",
@@ -5783,13 +6152,13 @@ var createRuntimeTransferAccumulator = () => {
       if (!marker && event.phase !== "dma" && event.phase !== "hdma-transfer") {
         return;
       }
-      const key2 = `${event.actor}:${event.channel}`;
-      let current = open2.get(key2);
+      const key3 = `${event.actor}:${event.channel}`;
+      let current = open2.get(key3);
       if (marker && event.boundary === "begin") {
         if (current) {
           throw new Error("Transfer began before the previous channel window ended.");
         }
-        open2.set(key2, {
+        open2.set(key3, {
           actor: event.actor,
           channel: event.channel,
           begin: event,
@@ -5800,7 +6169,7 @@ var createRuntimeTransferAccumulator = () => {
       }
       if (!current) {
         current = { actor: event.actor, channel: event.channel, reads: 0, writes: 0 };
-        open2.set(key2, current);
+        open2.set(key3, current);
       }
       if (!marker) {
         if (event.direction === "read") {
@@ -5839,7 +6208,7 @@ var createRuntimeTransferAccumulator = () => {
         status = event.boundary === "complete" ? "complete" : "interrupted";
       }
       retain({ ...current, end: event, status });
-      open2.delete(key2);
+      open2.delete(key3);
     },
     /** Close remaining windows without claiming completion or an attempted slot count.
      * @returns {RuntimeTransferSummary} Bounded report with exact lifetime window counts.
@@ -5915,13 +6284,13 @@ var createRuntimeBusTraceImporter = (metadata, context, storage) => {
   }
   const memory = /* @__PURE__ */ new Map();
   const index = storage?.index ?? {
-    add: (key2, create) => {
-      const current = memory.get(key2);
+    add: (key3, create) => {
+      const current = memory.get(key3);
       if (current) {
         current.count++;
         return false;
       }
-      memory.set(key2, { fact: create(), count: 1 });
+      memory.set(key3, { fact: create(), count: 1 });
       return true;
     },
     values: () => memory.values(),
@@ -6039,16 +6408,16 @@ ${JSON.stringify(meta)}
           graphics.push(access);
         }
         const factJson = JSON.stringify(fact);
-        let key2 = factKeys.get(factJson);
-        if (key2 === void 0) {
-          key2 = (0, import_node_crypto5.createHash)("sha256").update(factJson).digest("hex");
-          factKeys.insert(factJson, key2);
+        let key3 = factKeys.get(factJson);
+        if (key3 === void 0) {
+          key3 = (0, import_node_crypto5.createHash)("sha256").update(factJson).digest("hex");
+          factKeys.insert(factJson, key3);
         }
-        if (index.add(key2, () => ({
+        if (index.add(key3, () => ({
           kind: "memory",
           record: {
             ...fact,
-            id: key2,
+            id: key3,
             kind: "runtime-bus-access",
             architecture: meta.architecture,
             count: 1,
@@ -6155,7 +6524,7 @@ ${JSON.stringify(meta)}
       const ppuSummary = ppu?.finish();
       const transferCounts = {};
       if (ppuSummary) {
-        for (const key2 of [
+        for (const key3 of [
           "portWrites",
           "written",
           "blocked",
@@ -6163,7 +6532,7 @@ ${JSON.stringify(meta)}
           "byteWrites",
           "renderingRestricted"
         ]) {
-          transferCounts[`ppu.${key2}`] = ppuSummary[key2];
+          transferCounts[`ppu.${key3}`] = ppuSummary[key3];
         }
       }
       if (transferSummary) {

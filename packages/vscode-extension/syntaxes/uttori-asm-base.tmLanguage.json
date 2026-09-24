@@ -127,7 +127,7 @@
         },
         {
           "name": "support.function.pseudo.uttori-asm",
-          "match": "\\b(?i:db|dw|dl|dd|dc\\.b|dc\\.w|dc\\.l|org|base|bank|skip|fillbyte|fillword|filllong|filldword|fill|padbyte|padword|padlong|paddword|pad|incbin|incsrc|include|includeonce|pushpc|pullpc|pushbase|pullbase|table|cleartable|pushtable|pulltable|arch|function|undef|global)\\b"
+          "match": "\\b(?i:db|dw|dl|dd|dc\\.b|dc\\.w|dc\\.l|org|base|bank|skip|fillbyte|fillword|filllong|filldword|fill|padbyte|padword|padlong|paddword|pad|incbin|incsrc|include|includeonce|includeAsset|pushpc|pullpc|pushbase|pullbase|table|cleartable|pushtable|pulltable|arch|function|undef|global)\\b"
         },
         {
           "name": "keyword.control.conditional.uttori-asm",

@@ -11,6 +11,61 @@ import { canonicalSnesWramAddress, indexSnesRamMap, loadSnesRamMap, renderSnesRa
 import { parseSnesInternalRomHeader } from "./rom-header.js";
 import { applySnesStructInstructionOperand, indexSnesStructInstructionUses, renderSnesStructUseComments, } from "./struct-instruction-uses.js";
 import { indexSnesStructFields, loadSnesStructMap, planSnesStructRomFields, renderSnesStructData, renderSnesStructDefines, renderSnesStructInitializer, SNES_STRUCT_DEFINES_SOURCE, SNES_STRUCT_MAP_SOURCE, } from "./struct-map.js";
+/**
+ * Resolve direct control flow in the exported program bank without interpreting indirect pointers.
+ * @param {DecodedInstruction} instruction ROM-matched instruction with encoded operands and references.
+ * @param {number} sourceAddress 24-bit CPU address where the instruction will be emitted.
+ * @returns {SourceFlowTarget | undefined} Direct destination with its encoded addressing mode, or undefined for other operands.
+ */
+const sourceFlowTarget = (instruction, sourceAddress) => {
+    const { mode } = instruction;
+    if (!["absolute", "absoluteLong", "relative", "relativeLong"].includes(mode)) {
+        return undefined;
+    }
+    const flow = instruction.references.find((reference) => ["call", "jump", "branch"].includes(reference.kind) &&
+        !reference.indirect &&
+        reference.operandIndex === 0);
+    const value = instruction.operands[0]?.value;
+    if (!flow || value === undefined || instruction.mnemonic === "PER") {
+        return undefined;
+    }
+    let address = flow.address;
+    if (mode === "relative" || mode === "relativeLong") {
+        address = (sourceAddress & 0xff0000) | ((sourceAddress + instruction.size + value) & 0xffff);
+    }
+    else if (mode === "absolute") {
+        address = (sourceAddress & 0xff0000) | value;
+    }
+    if (address === undefined) {
+        return undefined;
+    }
+    return { address, mode: mode };
+};
+/**
+ * Replace only a direct transfer operand, preserving near width and an encoded long-call mirror.
+ * @param {string} source Formatted instruction text before trailing comments are attached.
+ * @param {SourceFlowTarget} flow Direct destination resolved for the emitted instruction's bank.
+ * @param {string} name Symbol present at the destination's final emitted span boundary.
+ * @param {number} labelAddress 24-bit CPU address assigned to that emitted symbol.
+ * @returns {string} Symbolic instruction text retaining the original transfer width and bus-address alias.
+ */
+const renderFlowLabel = (source, flow, name, labelAddress) => {
+    let operand = name;
+    if (flow.mode === "absolute") {
+        operand = `(${name} & $FFFF)`;
+    }
+    else if (flow.mode === "absoluteLong" && flow.address !== labelAddress) {
+        // A label lives in the export's canonical bank; JSL/JML must keep the original encoded alias.
+        if ((flow.address & 0xffff) === (labelAddress & 0xffff)) {
+            operand = `((${name} & $FFFF) | ${hex(flow.address & 0xff0000, 6)})`;
+        }
+        else {
+            const delta = flow.address - labelAddress;
+            operand = `(${name} ${delta < 0 ? "-" : "+"} ${hex(Math.abs(delta), 6)})`;
+        }
+    }
+    return `${source.slice(0, source.indexOf(" "))} ${operand}`;
+};
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 const byteList = (bytes) => [...bytes].map((byte) => hex(byte, 2)).join(", ");
 const asciiString = (bytes) => {
@@ -317,7 +372,10 @@ const metadataLines = (shards, mapper, romSize, names) => {
         if (offset === undefined || values.get(offset)?.some((line) => line.name)) {
             continue;
         }
-        append(offset, { name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}` });
+        append(offset, {
+            name: `Fn_${fn.address.toString(16).toUpperCase().padStart(6, "0")}`,
+            inferredFunction: true,
+        });
     }
     for (const region of [...shards.regions].sort((a, b) => a.id.localeCompare(b.id))) {
         append(toFileOffset(region.addressSpace, region.start, mapper, romSize), {
@@ -333,25 +391,54 @@ const metadataLines = (shards, mapper, romSize, names) => {
     }
     return values;
 };
-const renderedMetadata = (lines, hasInstruction = false) => {
+/**
+ * Keep label descriptions above labels and other annotations at the owner's indentation.
+ * @param {readonly NamedLine[] | undefined} lines Native metadata at this exact address.
+ * @param {boolean} [hasInstruction] Whether inline instruction comments will be emitted separately.
+ * @param {string} [bodyIndent] Empty for named data; two spaces for instruction bodies.
+ * @returns {string[]} Source lines preserving metadata order and label ownership.
+ */
+const renderedMetadata = (lines, hasInstruction = false, bodyIndent = "  ") => {
     if (!lines) {
         return [];
     }
     const output = [];
-    for (const line of lines) {
+    const lastLabelIndex = lines.findLastIndex((line) => line.name);
+    for (const [index, line] of lines.entries()) {
+        // Label descriptions stay above their label. Comments after the last label or at an
+        // unlabeled instruction belong to its body and must not terminate indentation folding.
+        const indent = line.name || index < lastLabelIndex ? "" : bodyIndent;
         if (line.comment) {
             for (const text of line.comment.split(/\r\n|[\n\r\u2028\u2029]/)) {
-                output.push(`; ${text}`);
+                output.push(`${indent}; ${text}`);
             }
         }
         if (line.name) {
             output.push(`${line.name}:${line.inlineComment ? ` ; ${line.inlineComment}` : ""}`);
         }
         if (line.instructionComment && !hasInstruction) {
-            output.push(`; [Instruction comment. Instruction unavailable] ${line.instructionComment}`);
+            output.push(`${indent}; [Instruction comment. Instruction unavailable] ${line.instructionComment}`);
         }
     }
     return output;
+};
+/**
+ * Keep an entry's description visible without horizontally scrolling through a large initializer.
+ * @param {string} indent Declaration indentation, or the containing table's row indentation.
+ * @param {string} source Complete single-line declaration or row, without indentation.
+ * @param {string} [comment] Validated, single-line entry description; omitted for unnamed rows.
+ * @returns {string[]} Inline comment when the complete line fits 120 columns, otherwise comment above.
+ */
+const renderedStructEntry = (indent, source, comment) => {
+    const line = `${indent}${source}`;
+    if (!comment) {
+        return [line];
+    }
+    const annotated = `${line} ; ${comment}`;
+    if (annotated.length > 120) {
+        return [`${indent}; ${comment}`, line];
+    }
+    return [annotated];
 };
 /** Positive data classifications remain authoritative even when execution was observed. */
 const rawClassifications = new Set([
@@ -368,6 +455,14 @@ const rawClassifications = new Set([
     "text",
 ]);
 /**
+ * Only the ROM-matched runtime-code namespace establishes an observed instruction extent.
+ * Static propagation may inherit the same evidence IDs without observing those bytes.
+ * @param {InstructionExportRecord} node Candidate from native runtime/static analysis.
+ * @param {ReadonlySet<string>} runtimeEvidence IDs of runtime evidence retained by this project.
+ * @returns {boolean} Whether the candidate has direct runtime provenance.
+ */
+const isCapturedRomInstruction = (node, runtimeEvidence) => node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
+/**
  * Reports whether project evidence requires one CFG instruction to remain raw bytes.
  * @param {InstructionExportRecord} node Candidate instruction and its ROM extent.
  * @param {HalfOpenIntervalIndex<IntervalAnnotation>} annotations File-space annotation index shared by the export.
@@ -377,7 +472,7 @@ const rawClassifications = new Set([
 const rejectedByAnnotation = (node, annotations, runtimeEvidence) => {
     // analyzeSnesRuntimeCode assigns this namespace and a fileOffset only after matching captured
     // bytes to ROM. Static nodes may inherit runtime evidence, so provenance alone is insufficient.
-    const capturedRomInstruction = node.id.startsWith("runtime:code:") && node.evidence.some((id) => runtimeEvidence.has(id));
+    const capturedRomInstruction = isCapturedRomInstruction(node, runtimeEvidence);
     return (node.fileOffset === undefined ||
         annotations
             // Performance invariant: use one range query. Do not scan every annotation for every CFG node.
@@ -414,21 +509,29 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
         .filter((record) => record.kind === "conflict")
         .flatMap((record) => record.nodes));
     const metadataOffsets = [...metadata.keys()].sort((left, right) => left - right);
-    const hasInteriorMetadata = (start, end) => {
+    const explicitMetadataOffsets = metadataOffsets.filter((offset) => metadata.get(offset).some((line) => !line.inferredFunction));
+    const hasInteriorMetadata = (node) => {
+        // An imported entry bit may point inside an observed operand. Only inferred function
+        // markers yield here; explicit labels/comments still require their exact source boundary.
+        const offsets = isCapturedRomInstruction(node, runtimeEvidence)
+            ? explicitMetadataOffsets
+            : metadataOffsets;
+        const start = node.fileOffset;
+        const end = start + node.size;
         // Binary search the first metadata offset after start. A linear scan here would multiply label,
         // comment, and region counts by every CFG candidate.
         let low = 0;
-        let high = metadataOffsets.length;
+        let high = offsets.length;
         while (low < high) {
             const middle = (low + high) >>> 1;
-            if (metadataOffsets[middle] <= start) {
+            if (offsets[middle] <= start) {
                 low = middle + 1;
             }
             else {
                 high = middle;
             }
         }
-        return low < metadataOffsets.length && metadataOffsets[low] < end;
+        return low < offsets.length && offsets[low] < end;
     };
     const fallbackGroups = () => {
         const grouped = new Map();
@@ -465,7 +568,7 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
                 structure.start < record.fileOffset + record.size) &&
             !conflictNodes.has(record.id) &&
             !rejectedByAnnotation(record, annotations, runtimeEvidence) &&
-            !hasInteriorMetadata(record.fileOffset, record.fileOffset + record.size));
+            !hasInteriorMetadata(record));
         if (!records.length) {
             continue;
         }
@@ -500,8 +603,20 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
             entry.record.specificationId !== first.record.specificationId)) {
             continue;
         }
-        let renderedSource = first.source;
-        if (resolved.some((entry) => entry.source !== renderedSource)) {
+        // A rebuilt static CFG can add seed nodes with unknown DBR/DP beside an observed address.
+        // Unknown static state supplies no contradictory address evidence; it must not erase a
+        // captured name. Keep every runtime variant and every resolved static address in the vote.
+        const capturedDataAddress = resolved.some(({ record, instruction }) => isCapturedRomInstruction(record, runtimeEvidence) &&
+            instruction.references.some((reference) => reference.kind === "data" &&
+                reference.operandIndex === 0 &&
+                reference.address !== undefined));
+        const namingVariants = resolved.filter(({ record, instruction }) => !capturedDataAddress ||
+            !record.id.startsWith("static:cfg:") ||
+            !instruction.references.some((reference) => reference.kind === "data" &&
+                reference.operandIndex === 0 &&
+                reference.address === undefined));
+        let renderedSource = namingVariants[0].source;
+        if (namingVariants.some((entry) => entry.source !== renderedSource)) {
             // DBR/direct-page changes can give identical ROM instructions different RAM, struct, or
             // hardware names. Keep the instruction with a numeric operand instead of inventing a conflict.
             // Removing data references also disables hardware naming. Control-flow labels remain usable.
@@ -527,6 +642,7 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
             end: offset + first.record.size,
             source: renderedSource,
             nodeIds: resolved.map((entry) => entry.record.id),
+            flow: sourceFlowTarget(first.instruction, sourceAddress),
             ...(use ? { structComments: renderSnesStructUseComments(use) } : {}),
         });
     }
@@ -548,6 +664,27 @@ const planInstructions = (rom, mapper, shards, metadata, annotations, ramVariabl
         }
     }
     return candidates;
+};
+/**
+ * Omit inferred entry markers disproved by accepted instruction interiors, leaving native
+ * records intact. Resolve overlaps first so a rejected runtime candidate cannot hide metadata.
+ * @param {ReadonlyMap<number, readonly NamedLine[]>} metadata Original source metadata by ROM offset.
+ * @param {ReadonlyMap<number, PlannedInstruction>} instructions Final nonoverlapping instruction plan.
+ * @returns {ReadonlyMap<number, readonly NamedLine[]>} Metadata whose boundaries can appear in source.
+ */
+const reconcileInferredFunctionMarkers = (metadata, instructions) => {
+    const index = new HalfOpenIntervalIndex([...instructions.values()]);
+    const result = new Map();
+    for (const [offset, lines] of metadata) {
+        let retained = lines;
+        if (index.overlapping(offset, offset + 1).some((instruction) => instruction.start < offset)) {
+            retained = lines.filter((line) => !line.inferredFunction);
+        }
+        if (retained.length) {
+            result.set(offset, retained);
+        }
+    }
+    return result;
 };
 /**
  * Partitions the complete ROM into deterministic source-emission spans.
@@ -780,27 +917,13 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         ...ramMap.variables.map(({ name }) => name),
         ...structNames,
     ]);
-    const metadata = metadataLines(project.shards, mapper, rom.length, names);
-    const sourceLabels = new Map();
-    for (const label of [...project.shards.labels].sort((a, b) => a.id.localeCompare(b.id))) {
-        if (!label.sourceName) {
-            continue;
-        }
-        const offset = toFileOffset(label.addressSpace, label.address, mapper, rom.length);
-        if (offset === undefined ||
-            (structure && structure.start <= offset && offset < structure.end)) {
-            continue;
-        }
-        const address = snesRomAddressSpace.fromOutputOffset(offset, context);
-        if (address >= 0 && !sourceLabels.has(address)) {
-            sourceLabels.set(address, names.get(label.id));
-        }
-    }
+    const initialMetadata = metadataLines(project.shards, mapper, rom.length, names);
     // Build one immutable index for both instruction rejection and raw/padding span roles. Keeping a
     // single instance is essential: these consumers collectively issue a query for most CFG nodes
     // and planned spans in a production ROM.
     const annotations = new HalfOpenIntervalIndex(project.shards.annotations.filter(({ addressSpace }) => addressSpace === SNES_FILE_ADDRESS_SPACE));
-    const instructions = planInstructions(rom, mapper, project.shards, metadata, annotations, ramVariables, structure, sourceLabels, structFields, indexedStructFields, options.instructionGroups, instructionUses);
+    const instructions = planInstructions(rom, mapper, project.shards, initialMetadata, annotations, ramVariables, structure, undefined, structFields, indexedStructFields, options.instructionGroups, instructionUses);
+    const metadata = reconcileInferredFunctionMarkers(initialMetadata, instructions);
     // Rejected, overlapping and undecoded sites cannot silently acquire authoritative-looking uses.
     // Do this after instruction conflict resolution and before any generated file is written.
     for (const [offset, use] of instructionUses ?? []) {
@@ -810,6 +933,18 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     }
     const fieldPlan = planSpans(rom, mapper, project.shards, instructions, metadata, annotations, structure, structRomFields);
     const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+    // Instruction planning can suppress inferred operand-interior markers. Only labels emitted at
+    // final span starts may enter the lookup, including fallback Fn_ and imported native names.
+    const emittedLabels = new Map();
+    for (const span of planned) {
+        if (span.structured) {
+            continue;
+        }
+        const name = metadata.get(span.start)?.find((line) => line.name)?.name;
+        if (name) {
+            emittedLabels.set(span.start, name);
+        }
+    }
     if (previousManifest && !options.allowCodeRegression) {
         const previousCode = previousManifest.spans.filter((span) => span.role === "code");
         const proposedCode = planned.filter((span) => span.role === "code");
@@ -847,22 +982,32 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
             if (address < 0) {
                 throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex(span.start)}.`);
             }
+            const spanMetadata = metadata.get(span.start);
             const named = span.structured
                 ? []
-                : renderedMetadata(metadata.get(span.start), Boolean(span.instruction));
+                : renderedMetadata(spanMetadata, Boolean(span.instruction), span.structRecord ? "" : "  ");
+            let closedTable = false;
             if (table &&
                 (span.structRecord?.binding.name !== table.name ||
                     span.structRecord?.index !== table.nextIndex ||
                     named.length > 0 ||
                     nextAddress !== address)) {
-                lines.push("  endDataStructs");
+                lines.push("endDataStructs");
                 table = undefined;
+                closedTable = true;
             }
             if (nextAddress !== address) {
                 lines.push("", `org ${hex(address)}`);
             }
-            if (named.length) {
+            // Separate declarations from adjacent code/data, but keep labels and comments attached
+            // to their own data and keep consecutive rows inside the same table together.
+            if ((named.length ||
+                closedTable ||
+                (!table && (span.structRecord || bankSpans[spanIndex - 1]?.structRecord))) &&
+                lines.at(-1) !== "") {
                 lines.push("");
+            }
+            if (named.length) {
                 // Multiple imports can attach an input-sized set of labels/comments to the same offset.
                 for (const line of named) {
                     lines.push(line);
@@ -872,10 +1017,21 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                 // Explicit operand-size suffixes fix the encoding. Emitting ambient M/X directives here
                 // would make identical instructions churn whenever the preferred captured state changes.
                 for (const comment of span.instruction.structComments ?? []) {
-                    lines.push(`; ${comment}`);
+                    // These comments belong to the instruction body; column zero would end label folding.
+                    lines.push(`  ; ${comment}`);
                 }
                 const inline = (metadata.get(span.start) ?? []).flatMap((line) => line.instructionComment ? [line.instructionComment] : []);
-                lines.push(`  ${span.instruction.source}${inline.length ? ` ; ${inline.join(" | ")}` : ""}`);
+                let source = span.instruction.source;
+                const flow = span.instruction.flow;
+                if (flow) {
+                    const targetOffset = toFileOffset(SNES_CPU_ADDRESS_SPACE, flow.address, mapper, rom.length);
+                    const name = targetOffset === undefined ? undefined : emittedLabels.get(targetOffset);
+                    if (name && targetOffset !== undefined) {
+                        const labelAddress = snesRomAddressSpace.fromOutputOffset(targetOffset, context);
+                        source = renderFlowLabel(source, flow, name, labelAddress);
+                    }
+                }
+                lines.push(`  ${source}${inline.length ? ` ; ${inline.join(" | ")}` : ""}`);
                 spans.push({
                     id: `code:${span.start.toString(16).padStart(6, "0")}`,
                     source: "analysis",
@@ -922,21 +1078,21 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                     next.index === record.index + 1 &&
                     !metadata.has(next.start)) {
                     table = { name: record.binding.name, nextIndex: record.index };
-                    lines.push(`  dataStructs ${record.binding.name}`);
+                    // Bindings already name this data. Legacy guide labels never make it a code body.
+                    lines.push(`dataStructs ${record.binding.name}`);
                 }
                 const literal = renderSnesStructInitializer(record, rom.read(record.start, record.end - record.start));
                 // Row comments belong to the binding index, so they neither split arrays nor create labels.
                 const entryComment = record.binding.entryComments?.[record.index];
-                const suffix = entryComment ? ` ; ${entryComment}` : "";
                 if (table) {
-                    lines.push(`    [${record.index}] = ${literal}${suffix}`);
+                    lines.push(...renderedStructEntry("  ", `[${record.index}] = ${literal}`, entryComment));
                     table.nextIndex = record.index + 1;
                 }
                 else {
                     const reference = record.binding.count === 1 && record.index === 0
                         ? record.binding.name
                         : `${record.binding.name}[${record.index}]`;
-                    lines.push(`  dataStruct ${reference}, ${literal}${suffix}`);
+                    lines.push(...renderedStructEntry("", `dataStruct ${reference}, ${literal}`, entryComment));
                 }
                 spans.push({
                     id: `struct:${span.start.toString(16).padStart(6, "0")}`,
@@ -955,7 +1111,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                 const record = span.structField.record;
                 const entryComment = record?.binding.entryComments?.[record.index];
                 if (record?.start === span.start && entryComment) {
-                    lines.push(`; ${entryComment}`);
+                    lines.push(`  ; ${entryComment}`);
                 }
                 // Each field always renders two lines: a placement assertion and one data directive.
                 lines.push(...renderSnesStructData(span.structField, span.start, rom.read(span.start, span.end - span.start)));
@@ -991,7 +1147,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
             nextAddress = address + span.end - span.start;
         }
         if (table) {
-            lines.push("  endDataStructs");
+            lines.push("endDataStructs");
         }
         writeFile(directory, bankPath, `${lines.join("\n")}\n`, "source", files);
     }

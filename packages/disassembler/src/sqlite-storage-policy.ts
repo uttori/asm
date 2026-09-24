@@ -103,7 +103,8 @@ export const storageSnapshot = (db: DatabaseSync, file: string): AnalysisStorage
     walBytes,
     livePageBytes: (pages - free) * size,
     freePageBytes: free * size,
-    facts: Number(db.prepare("SELECT COUNT(*) AS n FROM runtime_facts").get()!.n),
+    // Count the owning rows directly; the logical view would join every shared descriptor.
+    facts: Number(db.prepare("SELECT COUNT(*) AS n FROM runtime_fact_rows").get()!.n),
     observations: Number(rows.n),
     pairedStates: Number(rows.paired),
     captures: Number(captures.n),

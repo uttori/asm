@@ -1,4 +1,4 @@
-import type { AddressToLineMapping, SerializableAddressRange } from "./addressToLine.js";
+import type { AddressToLineMapping, SerializableAddressRange, InstructionSourceInfo, AssetEmissionInfo } from "./addressToLine.js";
 export declare const DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
 export declare const DEBUG_MAP_SCHEMA_VERSION = 1;
 export interface DebugMapSource {
@@ -7,9 +7,20 @@ export interface DebugMapSource {
     readonly size: number;
     readonly crc32: number;
     readonly sha256: string;
+    /** Binary/resource dependencies have no source lines of their own. */
+    readonly kind?: "binary" | "resource";
 }
 export interface DebugMapRange extends Omit<SerializableAddressRange, "source"> {
     readonly sourceId: number;
+}
+/** Final encoder operand values attached to a fingerprinted source snapshot. */
+export interface DebugMapInstruction extends Omit<InstructionSourceInfo, "fileIdx"> {
+    readonly sourceId: number;
+}
+/** Source statement and binary input provenance for one emitted asset stream. */
+export interface DebugMapAsset extends Omit<AssetEmissionInfo, "fileIdx" | "assetFileIdx"> {
+    readonly sourceId: number;
+    readonly assetSourceId: number;
 }
 export interface DebugMap {
     readonly format: typeof DEBUG_MAP_FORMAT;
@@ -25,11 +36,16 @@ export interface DebugMap {
     };
     readonly sources: readonly DebugMapSource[];
     readonly ranges: readonly DebugMapRange[];
+    /** Optional additive editor metadata; older maps remain valid without it. */
+    readonly instructions?: readonly DebugMapInstruction[];
+    /** Optional asset metadata; binary inputs never receive assembly line mappings. */
+    readonly assets?: readonly DebugMapAsset[];
 }
 export interface CreateDebugMapOptions {
     readonly target: string;
     readonly output: Uint8Array;
     readonly mapping: AddressToLineMapping;
+    readonly dependencyKinds?: ReadonlyMap<string, "binary" | "resource">;
     /** Base directory used to make source paths portable. Defaults to the process cwd. */
     readonly sourceRoot?: string;
 }

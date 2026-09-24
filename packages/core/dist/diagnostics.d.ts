@@ -46,6 +46,8 @@ export type AssemblyAnalysisResult = {
     symbols: AssemblySymbolDefinition[];
     references: AssemblySymbolReference[];
     includeEdges: AssemblyIncludeEdge[];
+    /** Resolved binary/resource paths observed without treating them as assembly source. */
+    assetDependencies?: Readonly<Record<string, "binary" | "resource">>;
 };
 /**
  * Error type that preserves assembler analysis metadata.

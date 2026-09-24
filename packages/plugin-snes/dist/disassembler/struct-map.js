@@ -275,7 +275,19 @@ export const renderSnesStructDefines = (map) => {
     }
     return `${lines.join("\n")}\n`;
 };
-const fieldExpression = (binding, index, field) => `${binding.name}${index + binding.firstIndex === 0 ? "" : `[${index + binding.firstIndex}]`}.${field.name}`;
+/**
+ * Render a physical record's field using the binding's logical index.
+ * @param {SnesStructBinding} binding Validated owner, including its count and index origin.
+ * @param {number} index Zero-based physical record offset within the binding.
+ * @param {SnesStructField} field Named field within the record layout.
+ * @returns {string} Native field reference; only a scalar at logical index zero omits brackets.
+ */
+const fieldExpression = (binding, index, field) => {
+    const logicalIndex = index + binding.firstIndex;
+    // Only scalar bindings omit [0], keeping every physical array element visibly indexed.
+    const suffix = binding.count === 1 && logicalIndex === 0 ? "" : `[${logicalIndex}]`;
+    return `${binding.name}${suffix}.${field.name}`;
+};
 /**
  * Index known data bytes by canonical CPU address, leaving unknown gaps unnamed.
  * @param {LoadedSnesStructMap | undefined} map Optional validated metadata.

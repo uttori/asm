@@ -21,7 +21,10 @@ import {
   exportSnes65816Source,
   formatSnes65816SourceInstruction,
 } from "../src/disassembler/source-export.js";
-import { SnesStructExpressionResolver } from "../src/disassembler/struct-expressions.js";
+import {
+  describeSnesStructAccess,
+  SnesStructExpressionResolver,
+} from "../src/disassembler/struct-expressions.js";
 import {
   applySnesStructInstructionOperand,
   indexSnesStructInstructionUses,
@@ -339,11 +342,75 @@ test("observations retain alternatives and provenance without injecting source l
     source: "capture\nSTP",
     detail: "Bus read\norg $0",
   });
-  const comments = renderSnesStructUseComments(validateSnesStructMap(input).instructionUses![1]);
-  t.is(comments.length, 3);
+  const use = validateSnesStructMap(input).instructionUses![1];
+  const comments = renderSnesStructUseComments(use);
+  t.is(comments.length, 2);
   t.true(comments.every((comment) => !comment.includes("\n")));
-  t.regex(comments[1], /trace-derived read.*Commands\[1]\.target/);
-  t.regex(comments[2], /observed read.*Commands\.target.*capture STP/);
+  t.regex(comments[1], /\[struct observations] trace-derived read: 1, observed read: 1/);
+  t.regex(comments[1], /1 binding\(s\), 2 capture\(s\)/);
+  t.regex(comments[1], /struct-map\.json instructionUses address=8421384 \(\$808008\)/);
+  t.is(use.observations[1].source, "capture STP");
+  t.is(use.observations[1].detail, "Bus read org $0");
+});
+
+test("large capture histories produce two bounded comments without discarding any evidence", (t) => {
+  const input = inputMap();
+  const template = observation();
+  input.instructionUses[1].reason = "Shared consumer. ".repeat(100);
+  input.instructionUses[1].observations = Array.from({ length: 1470 }, (_, index) => ({
+    ...template,
+    target: `Commands[${index % 2}].target`,
+    source: `captures/room-${index % 8}.act2`,
+    detail: `Sequence ${index}; ${"long capture reasoning ".repeat(100)}`,
+  }));
+  const use = validateSnesStructMap(input).instructionUses![1];
+  const before = structuredClone(use);
+  const comments = renderSnesStructUseComments(use);
+  t.is(comments.length, 2);
+  t.true(comments.every((comment) => comment.length <= 240 && !/\r|\n/.test(comment)));
+  t.regex(comments[0], /\.{3}$/);
+  t.regex(comments[1], /\[trace-derived read] 1470 observations; 1 binding\(s\), 8 capture\(s\)/);
+  t.regex(comments[1], /Example: Commands\[0]\.target/);
+  t.true(
+    comments[1].endsWith("Details: struct-map.json instructionUses address=8421384 ($808008)."),
+  );
+  t.deepEqual(use, before, "Summarizing must preserve every target, source and detailed locator.");
+  t.deepEqual(renderSnesStructUseComments(use), comments, "Repeated exports are deterministic.");
+});
+
+test("summaries keep observed and derived read/write evidence distinct", (t) => {
+  const input = inputMap();
+  const template = observation();
+  input.instructionUses[1].observations = ["observed", "trace-derived"].flatMap((provenance) =>
+    ["read", "write", "read-write"].map((access) => ({ ...template, provenance, access })),
+  );
+  const comments = renderSnesStructUseComments(validateSnesStructMap(input).instructionUses![1]);
+  t.is(comments.length, 2);
+  t.true(comments[1].startsWith("[struct observations]"));
+  for (const observation of input.instructionUses[1].observations) {
+    t.true(comments[1].includes(`${observation.provenance} ${observation.access}: 1`));
+  }
+  t.true(comments[1].length <= 240);
+});
+
+test("oversized individual notes retain a complete metadata locator", (t) => {
+  const input = inputMap();
+  input.instructionUses[0].reason = "Long rationale. ".repeat(100);
+  input.instructionUses[1].observations![0].detail = "Long observation. ".repeat(100);
+  const uses = validateSnesStructMap(input).instructionUses!;
+  const operandComments = renderSnesStructUseComments(uses[0]);
+  t.is(operandComments.length, 1);
+  t.regex(
+    operandComments[0],
+    /\.\.\. Details: struct-map\.json instructionUses address=8421382 \(\$808006\)\.$/,
+  );
+  const comments = renderSnesStructUseComments(uses[1]);
+  t.regex(comments[1], /trace-derived read.*Commands\[1]\.target.*captures\/ceremony.act2/);
+  t.regex(
+    comments[1],
+    /\.\.\. Details: struct-map\.json instructionUses address=8421384 \(\$808008\)\.$/,
+  );
+  t.true([...operandComments, ...comments].every((comment) => comment.length <= 240));
 });
 
 test("curated memory overlays preserve encoded widths and indexing without changing global bindings", (t) => {
@@ -719,13 +786,13 @@ test("observations cover adjacent fields, records and opaque gaps without invent
       { field: "scope", width: 1 },
     ],
   );
-  t.regex(renderSnesStructUseComments(use)[1], /Covers: Commands.opcode.*Commands.scope/);
+  t.regex(renderSnesStructUseComments(use)[1], /Covers: Commands\[0]\.opcode.*Commands\[0]\.scope/);
   observed.target = "Commands.target + 1";
   use = validateSnesStructMap(input).instructionUses![1];
   t.deepEqual(
     use.observations[0].parts.map(({ expression, address }) => ({ expression, address })),
     [
-      { expression: "(Commands.target + $1)", address: 0x808103 },
+      { expression: "(Commands[0].target + $1)", address: 0x808103 },
       { expression: "Commands[1].opcode", address: 0x808104 },
     ],
   );
@@ -733,6 +800,7 @@ test("observations cover adjacent fields, records and opaque gaps without invent
   observed.target = "startof(Commands) + 1";
   use = validateSnesStructMap(input).instructionUses![1];
   t.is(use.observations[0].parts[0].field, undefined);
+  t.is(use.observations[0].parts[0].expression, "(Commands[0] + $1)");
   t.is(use.observations[0].parts[1].field, "target");
   t.regex(renderSnesStructUseComments(use)[1], /opaque/);
   for (const target of [
@@ -757,6 +825,8 @@ test("observations cover adjacent fields, records and opaque gaps without invent
   t.throws(() => validateSnesStructMap(input), { message: /leaves binding/ });
   observed.target = "startof(Commands)";
   t.is(validateSnesStructMap(input).instructionUses![1].observations[0].address, 0x808100);
+  const scalar = { ...validateSnesStructMap(input).bindings[0], count: 1, firstIndex: 0 };
+  t.is(describeSnesStructAccess(scalar, scalar.address, 1)[0].expression, "Commands.opcode");
 });
 
 test("exports expressions and full spans through SQL and snapshot paths with identical ROM bytes", async (t) => {
@@ -797,7 +867,7 @@ test("exports expressions and full spans through SQL and snapshot paths with ide
     store.close();
   }
   const generated = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
-  t.regex(generated, /Covers: Commands.opcode.*Commands.scope/);
+  t.regex(generated, /Covers: Commands\[0]\.opcode.*Commands\[0]\.scope/);
   t.regex(generated, /ADC.w #\(bytesof\(Commands\) - sizeof\(Tint\)\)/);
   input.instructionUses[2].operand = "sizeof(Tint) - 1";
   fs.writeFileSync(mapPath, JSON.stringify(input));

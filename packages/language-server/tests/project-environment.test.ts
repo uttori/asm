@@ -22,6 +22,27 @@ const createController = (): ProjectEnvironmentController =>
     },
   });
 
+test("repository editor config discovers the packaged SoM sprite preview format", async (t) => {
+  const project = path.resolve("secret-of-mana");
+  const settings = JSON.parse(
+    fs.readFileSync(path.join(project, ".vscode/settings.json"), "utf8"),
+  ) as {
+    "asm.configFile": string;
+  };
+  const controller = createController();
+  try {
+    const state = await controller.replace({
+      cwd: project,
+      configFile: settings["asm.configFile"],
+      workspaceTrusted: true,
+    });
+    t.truthy(state.index.environment.getAssetFormat("som.sprite.frames", state.index.target));
+    t.truthy(state.index.environment.getAssetFormat("som.palette.bgr555", state.index.target));
+  } finally {
+    await controller.dispose();
+  }
+});
+
 test("language server replaces target tooling and preserves build/analysis parity", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asm-lsp-environment-"));
   const sourceFile = path.join(directory, "main.asm");

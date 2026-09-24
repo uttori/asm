@@ -15,7 +15,7 @@ export interface SnesStructAccessObservation {
     readonly access: "read" | "write" | "read-write";
     /** A bus observation and an inference from instruction/register traces are different evidence. */
     readonly provenance: "observed" | "trace-derived";
-    /** Capture path or stable identifier. Export renders it as provenance and never opens it. */
+    /** Capture path or stable identifier. Export may summarize it and never opens it. */
     readonly source: string;
     /** Capture location and reasoning, such as instruction sequence and pointer reconstruction. */
     readonly detail: string;
@@ -69,9 +69,11 @@ export declare const indexSnesStructInstructionUses: (uses: readonly SnesStructI
  */
 export declare const applySnesStructInstructionOperand: (instruction: DecodedInstruction, source: string, use: SnesStructInstructionUse) => string;
 /**
- * Render all capture alternatives as comments. They never become fixed-address CPU operands.
+ * Render at most two bounded comments per instruction: its reason and an evidence summary.
+ * All alternatives and provenance remain in struct-map.json; rendering never mutates them
+ * or substitutes a captured effective address into a CPU operand.
  * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
- * @returns {readonly string[]} Individual comment bodies without the leading semicolon.
+ * @returns {readonly string[]} Comment bodies, each at most 240 characters, without semicolons.
  */
 export declare const renderSnesStructUseComments: (use: SnesStructInstructionUse) => readonly string[];
 //# sourceMappingURL=struct-instruction-uses.d.ts.map

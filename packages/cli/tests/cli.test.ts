@@ -462,6 +462,82 @@ test("E2E: runCli assemble validates every destination before replacing existing
   t.true((await fs.stat(`${nested}.debug.json`)).isFile());
 });
 
+test("E2E: CLI includeAsset rebuilds changed PNG inputs", async (t) => {
+  const temporary = await temporaryDirectory(t, "uttori-cli-asset-");
+  const source = path.join(temporary, "main.asm");
+  const image = path.join(temporary, "title.png");
+  const output = path.join(temporary, "main.sfc");
+  await fs.copyFile(
+    new URL("../../assets/tests/fixtures/colored-4bpp.png", import.meta.url),
+    image,
+  );
+  await fs.writeFile(source, 'norom\norg 0\nincludeAsset("title.png", "4bpp")\nEnd:\ndb $42\n');
+  t.is(await runCli([source, output]), 0);
+  const first = await fs.readFile(output);
+  t.is(first.length, 129);
+  t.is(first.at(-1), 0x42);
+  await fs.copyFile(
+    new URL("../../assets/tests/fixtures/indexed-2bpp.png", import.meta.url),
+    image,
+  );
+  t.is(await runCli([source, output]), 0);
+  const second = await fs.readFile(output);
+  t.is(second.length, 129);
+  t.not(first.toString("hex"), second.toString("hex"));
+});
+
+test("E2E: documented PNG, palette, tilemap and WAVE source assembles", async (t) => {
+  const temporary = await temporaryDirectory(t, "uttori-cli-asset-guide-");
+  const source = new URL("../../plugin-snes/examples/include-assets.asm", import.meta.url).pathname;
+  const output = path.join(temporary, "example.sfc");
+  t.is(await runCli([source, output, "--debug"]), 0);
+  const bytes = await fs.readFile(output);
+  t.is(bytes.length, 354);
+  const map = JSON.parse(await fs.readFile(`${output}.debug.json`, "utf8")) as DebugMap;
+  t.deepEqual(validateDebugMap(map, bytes), []);
+  t.deepEqual(map.sources.filter((entry) => entry.kind === "binary").length, 2);
+  t.deepEqual(map.sources.filter((entry) => entry.kind === "resource").length, 1);
+});
+
+test("E2E: CLI plugin adds a lossless asset transform to the standard SNES target", async (t) => {
+  const temporary = await temporaryDirectory(t, "uttori-cli-transform-");
+  const source = path.join(temporary, "main.asm");
+  const plugin = path.join(temporary, "transform.mjs");
+  const output = path.join(temporary, "main.sfc");
+  await fs.writeFile(path.join(temporary, "payload.bin"), Uint8Array.from([0, 1, 255]));
+  await fs.writeFile(
+    source,
+    'norom\norg 0\nincludeAsset("payload.bin", "raw", compress: "example.xor")\n',
+  );
+  await fs.writeFile(
+    plugin,
+    `export default {
+  manifest: { id: "example.cli-transform", name: "CLI transform", version: "1.0.0", apiVersion: 1 },
+  activate(context) {
+    context.registerAssetTransform({
+      id: "example.xor", version: "1.0.0", targets: ["snes.sfc"],
+      encode: (bytes) => bytes.map((byte) => byte ^ 255),
+      decode: (bytes) => bytes.map((byte) => byte ^ 255),
+    });
+  },
+};`,
+  );
+  t.is(
+    await runCli([
+      source,
+      output,
+      "--plugin",
+      "@uttori/asm-plugin-snes",
+      "--plugin",
+      plugin,
+      "--target",
+      "snes.sfc",
+    ]),
+    0,
+  );
+  t.deepEqual([...(await fs.readFile(output))], [255, 254, 0]);
+});
+
 test("E2E: runCli assemble debug builds emit a fingerprinted map for the assembled binary", async (t) => {
   const temporary = await temporaryDirectory(t, "uttori-asm-cli-debug-");
   const source = path.join(temporary, "main.asm");
@@ -478,6 +554,29 @@ test("E2E: runCli assemble debug builds emit a fingerprinted map for the assembl
     map.ranges.map(({ line, start, end }) => ({ line, start, end })),
     [{ line: 3, start: 0, end: 2 }],
   );
+});
+
+test("E2E: debug snapshots include definitions and binary dependencies without emitted source ranges", async (t) => {
+  const temporary = await temporaryDirectory(t, "uttori-cli-editor-dependencies-");
+  const source = path.join(temporary, "main.asm");
+  const output = path.join(temporary, "main.bin");
+  await fs.writeFile(path.join(temporary, "defines.asm"), "COUNTER = $7E002B\n");
+  await fs.writeFile(path.join(temporary, "payload.bin"), new Uint8Array([0xaa]));
+  await fs.writeFile(
+    source,
+    'norom\norg 0\nincsrc "defines.asm"\nLDA.w COUNTER & $FFFF,x\nincbin "payload.bin"\n',
+  );
+  t.is(await runCli([source, output, "--debug"]), 0);
+  const outputBytes = new Uint8Array(await fs.readFile(output));
+  const map = JSON.parse(await fs.readFile(`${output}.debug.json`, "utf8")) as DebugMap;
+  t.deepEqual([...outputBytes], [0xbd, 0x2b, 0, 0xaa]);
+  t.deepEqual(validateDebugMap(map, outputBytes), []);
+  t.deepEqual(map.sources.map((entry) => entry.path).sort(), [
+    "defines.asm",
+    "main.asm",
+    "payload.bin",
+  ]);
+  t.is(map.instructions?.[0].operands[0].value, 0x2b);
 });
 
 test("E2E: runCli assemble base-image patches preserve untouched bytes and can extend the image", async (t) => {

@@ -24,6 +24,33 @@ export interface AddressToLineRange {
     readonly outputStart?: number;
     readonly outputEnd?: number;
 }
+/** One numeric operand evaluation performed by the encoder, before width truncation. */
+export interface ResolvedInstructionOperand {
+    readonly expression: string;
+    readonly value: number;
+}
+/** Source-attributed final emission; separate records preserve repeated macro/loop expansions. */
+export interface InstructionSourceInfo {
+    readonly fileIdx: number;
+    readonly line: number;
+    readonly architecture: string;
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly outputOffset?: number;
+    readonly operands: readonly ResolvedInstructionOperand[];
+}
+/** One emitted asset, attributed to the assembly statement and its binary input separately. */
+export interface AssetEmissionInfo {
+    readonly fileIdx: number;
+    readonly assetFileIdx: number;
+    readonly line: number;
+    readonly format: string;
+    readonly part: string;
+    readonly size: number;
+    readonly transforms: readonly string[];
+    readonly address: number;
+    readonly outputOffset?: number;
+}
 /** Portable representation used by debug-map writers and readers. */
 export interface SerializableAddressRange extends Omit<AddressToLineRange, "fileIdx"> {
     readonly source: string;
@@ -38,8 +65,17 @@ export declare class AddressToLineMapping {
     filenameCrcs: number[];
     addrToLineInfo: AddrToLineInfo[];
     ranges: AddressToLineRange[];
+    /** Final encoder evaluations, collected without evaluating expressions a second time. */
+    instructions: InstructionSourceInfo[];
+    /** Successful final-pass asset emissions; binary files have no source lines. */
+    assets: AssetEmissionInfo[];
     /** Clears all stored mappings and file information. */
     reset(): void;
+    /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
+     * @param {string} filename Provider path.
+     * @param {Uint8Array} bytes Build snapshot.
+     */
+    registerDependencySnapshot(filename: string, bytes: Uint8Array): void;
     /**
      * Adds a legacy point mapping. New debugger consumers should use ranges.
      * @param {string} filename Source filename.

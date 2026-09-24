@@ -1,7 +1,7 @@
 # @uttori/asm-plugin-snes
 
 SNES/SFC assembly and analysis for the 65816, SPC700, and Super FX. Includes cartridge mapping,
-SNES directives, asset codecs, evidence importers, and conservative source export.
+SNES directives, thin asset-format registration, evidence importers, and conservative source export.
 
 ## Install
 

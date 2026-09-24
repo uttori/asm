@@ -3,13 +3,13 @@ import { type ProjectEvidenceExplanation } from "./project-edit.js";
 import { type AnalysisProjectManifest, type AnalysisProjectShards, type AnalysisRecord, type ImportReport, type RuntimeEvidenceRecord, type ShardKind } from "./project-types.js";
 import { type RuntimeEvidenceBatch, type RuntimeEvidenceConflict } from "./runtime-evidence.js";
 import type { RuntimeTraceFactIndex } from "./runtime-trace.js";
-import { type AnnotationQueryRange, type SqliteAnnotationView, type InstructionExportRecord } from "./sqlite-annotation-query.js";
+import { type InstructionExecutionSummaryRow, type AnnotationQueryRange, type SqliteAnnotationView, type InstructionExportRecord } from "./sqlite-annotation-query.js";
 import { type AnalysisStoragePolicy } from "./sqlite-storage-policy.js";
 import { type TraceIndexMetrics } from "./trace-cache.js";
 /** On-disk sqlite filename stored in `analysis.json` `db`. */
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
-export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 3;
+export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 /**
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
@@ -321,6 +321,12 @@ export declare class SqliteAnalysisStore {
      * @returns {SqliteAnnotationView} Small view. Consume inside the caller's read transaction.
      */
     instructionAnnotationView(ranges: readonly AnnotationQueryRange[]): SqliteAnnotationView;
+    /**
+     * Exact viewport counts without materializing the detailed instruction projection.
+     * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
+     * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+     */
+    instructionExecutionSummary(ranges: readonly AnnotationQueryRange[]): readonly InstructionExecutionSummaryRow[];
     /**
      * Read selected metadata kinds through the address index instead of loading the complete CFG.
      * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.

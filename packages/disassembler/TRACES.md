@@ -53,12 +53,21 @@ source or retain its chunks.
 
 ## Limits and retained data
 
-| Limit                                    | Default     | Meaning                                 |
-| ---------------------------------------- | ----------- | --------------------------------------- |
-| File `maxBytes`                          | 2 GiB       | Whole input file, positive safe integer |
-| Context `maxIndexRecords`, full profile  | 8,000,000   | Distinct aggregate index records        |
-| Context `maxIndexRecords`, 65816 profile | 2,000,000   | Distinct aggregate index records        |
-| Explicit `maxIndexRecords`               | 1–8,000,000 | Record budget, not a heap-byte limit    |
+| Limit                                         | Default                   | Meaning                                                                           |
+| --------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------- |
+| File `maxBytes`                               | 2 GiB                     | Whole input file, positive safe integer                                           |
+| SQLite project `maxIndexRecords`, any profile | `Number.MAX_SAFE_INTEGER` | No fixed 2M/8M record ceiling; storage and input budgets still apply              |
+| In-memory `maxIndexRecords`, full profile     | 8,000,000                 | Distinct aggregate index records                                                  |
+| In-memory `maxIndexRecords`, 65816 profile    | 2,000,000                 | Distinct aggregate index records                                                  |
+| Explicit `maxIndexRecords`                    | Caller supplied           | Positive safe integer; maximum 8M when counters or final records remain in memory |
+
+Records are derived facts, not input instructions: each distinct PC counts once, each joint
+PC/bytes/state variant counts twice (instruction and CPU-state records), and each distinct bus
+observation counts once. Repeated observations increment counts without consuming more records.
+Full register snapshots can therefore produce millions of records even at a small set of PCs.
+File size and invalid budget values are checked before reading the body. An explicit record budget
+can only be enforced as distinct facts are discovered; exceeding it aborts the import without
+publishing partial evidence. Raising the input-byte limit does not raise an explicit record budget.
 
 A custom source must enforce its own input-byte budget. Chunk validation, sequence ordering,
 cumulative loss counts, ROM identity, and index limits still apply. Progress callbacks run

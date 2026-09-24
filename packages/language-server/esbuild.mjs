@@ -10,6 +10,7 @@ const build = withBundleNotices(esbuild);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const outfile = path.join(here, "out/server.mjs");
+const previewWorker = path.join(here, "out/asset-preview-worker.mjs");
 
 await build({
   entryPoints: [path.join(here, "src/server.ts")],
@@ -39,3 +40,21 @@ await build({
 });
 
 chmodSync(outfile, 0o755);
+
+await build({
+  entryPoints: [path.join(here, "src/asset-preview-worker.ts")],
+  outfile: previewWorker,
+  bundle: true,
+  conditions: ["uttori-source"],
+  platform: "node",
+  format: "esm",
+  target: "node26",
+  external: [],
+  banner: {
+    js: [
+      "import { createRequire as __createRequire } from 'node:module';",
+      "const require = __createRequire(import.meta.url);",
+    ].join("\n"),
+  },
+  logLevel: "info",
+});

@@ -2,7 +2,6 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -15,9 +14,11 @@ import {
   loadAnalysisProjectSnapshot,
   openAnalysisProjectStore,
   prepareAnalysisProjectTransaction,
+  resolveProjectNativeAssetId,
   writeAnalysisProject,
   type AnalysisProject,
 } from "../src/index.js";
+import { DatabaseSync } from "./sqlite-connection.js";
 
 const fixture = (): AnalysisProject => ({
   manifest: {
@@ -50,6 +51,43 @@ const changed = (project: AnalysisProject, index: number): AnalysisProject => ({
 });
 
 const temporary = (): string => fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sqlite-storage-"));
+
+test("legacy native asset declarations survive storage and resolve only for analysis", (t) => {
+  const root = temporary();
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const original = fixture();
+  const declaration = {
+    codecId: "snes.asset.tile.4bpp",
+    codecVersion: "1.0.0",
+    provider: { pluginId: "snes", pluginVersion: "1.0.0" },
+    options: { layout: "row-major", count: 2 },
+  } as const;
+  const project: AnalysisProject = {
+    ...original,
+    shards: {
+      ...original.shards,
+      annotations: [
+        {
+          id: "tiles",
+          addressSpace: "rom.file",
+          start: 0,
+          end: 64,
+          classification: "asset",
+          architecture: "snes.65816",
+          asset: declaration,
+          evidence: [],
+        },
+      ],
+    },
+  };
+  writeAnalysisProject(root, project);
+  const loaded = loadAnalysisProject(root).shards.annotations[0]?.asset;
+  t.deepEqual(loaded, declaration);
+  t.is(resolveProjectNativeAssetId(loaded!), "snes.tile.4bpp");
+  t.is(resolveProjectNativeAssetId({ ...declaration, codecVersion: "2.0.0" }), undefined);
+  t.is(resolveProjectNativeAssetId({ ...declaration, codecId: "game.asset.custom" }), undefined);
+  t.deepEqual(loadAnalysisProject(root).shards.annotations[0]?.asset, declaration);
+});
 
 test("prepared edits are validated again and stale commits cannot overwrite newer rows", (t) => {
   const root = temporary();

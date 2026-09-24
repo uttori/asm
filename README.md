@@ -45,8 +45,9 @@ For editor setup, see the [VS Code extension](packages/vscode-extension/README.m
 | Package                                                               | Purpose                                                       |
 | --------------------------------------------------------------------- | ------------------------------------------------------------- |
 | [asm-cli](packages/cli/README.md)                                     | Assembly, analysis, import, export, and verification commands |
+| [asm-assets](packages/assets/README.md)                               | Standalone PNG, WAVE, data, and native conversion             |
 | [asm-core](packages/core/README.md)                                   | Assembly engine, analysis, and plugin contracts               |
-| [asm-disassembler](packages/disassembler/README.md)                   | SQLite projects, evidence, transactions, and assets           |
+| [asm-disassembler](packages/disassembler/README.md)                   | SQLite projects, evidence, transactions, and declarations     |
 | [asm-plugin-loader-node](packages/plugin-loader-node/README.md)       | Project configuration and trusted plugin loading              |
 | [asm-plugin-snes](packages/plugin-snes/README.md)                     | SNES, 65816, SPC700, and Super FX                             |
 | [asm-plugin-65xx](packages/plugin-65xx/README.md)                     | 6502-family, raw, ca65-style, and NES targets                 |
@@ -61,14 +62,12 @@ The extension is distributed separately as a VSIX/Marketplace extension.
 
 ## Documentation
 
-[CLI reference](packages/cli/README.md) ·
-[SNES manual](packages/plugin-snes/MANUAL.md) · [65xx manual](packages/plugin-65xx/MANUAL.md) ·
+[CLI guide](packages/cli/GUIDE.md) ·
+[SNES](packages/plugin-snes/README.md) ·
+[6502 / 65xx family](packages/plugin-65xx/README.md) ·
 [Plugin authoring](packages/plugin-author/GUIDE.md) ·
 [Project configuration](packages/plugin-loader-node/CONFIGURATION.md) ·
-[Analysis projects](packages/disassembler/PROJECTS.md).
-
-Public guides live in each package's README or other top-level Markdown files. Internal research
-and bookkeeping are separate from these user-facing contracts.
+[Analysis projects](packages/disassembler/README.md).
 
 Analysis projects store metadata in SQLite and keep the source ROM external. Analysis is conservative.
 Unknown bytes remain raw assets. Asar/ca65 compatibility is partial. Emulator binaries and ROMs are

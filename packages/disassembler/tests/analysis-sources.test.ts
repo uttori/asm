@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -15,6 +14,7 @@ import {
   type RuntimeExecutionRecord,
   type RuntimeInstructionRecord,
 } from "../src/index.js";
+import { DatabaseSync } from "./sqlite-connection.js";
 
 const fixture = (): AnalysisProject => ({
   manifest: {

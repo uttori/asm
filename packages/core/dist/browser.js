@@ -1,0 +1,11 @@
+/**
+ * Portable assembly entry point. Hosts must supply an in-memory file provider;
+ * filesystem-backed defaults are available from the regular Node entry point.
+ */
+export { Assembler } from "./assembler.js";
+export { MemoryAssemblyFileProvider, } from "./file-provider.js";
+export { definePlugin, PluginManager, PluginError, PLUGIN_API_VERSION } from "./plugin/index.js";
+export { NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE, ASAR_SYNTAX_PROFILE, } from "./syntax-profile.js";
+export { parseOperandSyntax } from "./operand-syntax.js";
+export { createEncoderRuntime } from "./architecture-types.js";
+//# sourceMappingURL=browser.js.map

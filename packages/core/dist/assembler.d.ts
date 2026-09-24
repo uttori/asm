@@ -14,6 +14,7 @@ import { OperandResolver } from "./operand-resolver.js";
 import type { AssemblyStageName } from "./plugin/contracts.js";
 import { type AssemblerEnvironment, type LifecycleContribution, type OwnedContribution, type SessionLifecycle, type TargetAddressSpace as PluginTargetAddressSpace, type TargetOutputFormat as PluginTargetOutputFormat, PluginSessionStateStore, type PluginStateSnapshot } from "./plugin/index.js";
 import { AssemblyFrontEndService } from "./services/assembly-front-end-service.js";
+import { AssetAssemblyService } from "./services/asset-assembly-service.js";
 import { CommandLoweringService, type LoweredCommand, type LoweredExecutableNode, type LoweredLoopNode, type LoweredProgram } from "./services/command-lowering-service.js";
 import { DefineEngine } from "./services/define-engine.js";
 import { DirectiveRuntimeService, type PushPcStackEntry } from "./services/directive-runtime-service.js";
@@ -137,6 +138,8 @@ export type ProgramAnalysisOptions = {
     stages?: readonly AssemblyStageName[];
     /** When false, include directives record an edge without parsing the target. Defaults to true. */
     followIncludes?: boolean;
+    /** Resolve asset paths without converting bytes; labels after assets remain provisional. */
+    deferAssetConversion?: boolean;
 };
 type ActiveLifecycle = {
     record: OwnedContribution<LifecycleContribution>;
@@ -248,6 +251,10 @@ export declare class Assembler {
     readonly activeLifecycles: readonly ActiveLifecycle[];
     readonly cursorAddress: CursorAddressFacade;
     readonly fileProvider: AssemblyFileProvider;
+    /** Binary/resource dependencies and converted bytes owned by the active build. */
+    readonly assetAssembly: AssetAssemblyService;
+    /** Tooling-only path discovery avoids conversion on edit bursts. */
+    deferAssetConversion: boolean;
     readonly frontEndService: AssemblyFrontEndService;
     readonly programModelBuilder: ProgramModelBuilder;
     readonly commandLoweringService: CommandLoweringService;
@@ -570,6 +577,11 @@ export declare class Assembler {
     getActiveStageCapabilities(): StageExecutionCapabilities;
     get traceStage(): AssemblyStageName;
     layoutInstruction(input: string[] | LoweredInstruction): boolean;
+    /**
+     * Encode through the active architecture, observing numeric operands only during final emission.
+     * @param {string[] | LoweredInstruction} input Instruction in the current source/expansion context.
+     * @returns {boolean} Whether the architecture handled it; unsupported mnemonics follow its policy.
+     */
     emitInstruction(input: string[] | LoweredInstruction): boolean;
     /**
      * Picks the appropriate instruction handler based on architecture.

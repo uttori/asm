@@ -16,6 +16,8 @@ import type {
   ProjectOutlineNode,
   SourceRange,
   WorkspaceIndex,
+  ParsedAssetCall,
+  AssetValueNode,
 } from "@uttori/asm-core";
 import {
   CompletionItem,
@@ -42,6 +44,7 @@ import {
   WorkspaceEdit,
 } from "vscode-languageserver";
 
+import { assetCallOnLine, assetLineAt } from "./asset-language.js";
 import {
   findInstruction,
   findDirectiveInCatalog,
@@ -108,6 +111,49 @@ export function pathToUri(filePath: string): DocumentUri {
  */
 export function uriToPath(uri: DocumentUri): string {
   return fileURLToPath(uri);
+}
+
+/** Find the typed asset call on a protocol line without opening its binary input.
+ * @param {string} text Open document text.
+ * @param {Position} position Cursor position.
+ * @returns {ParsedAssetCall | undefined} Complete call when parseable.
+ */
+function assetCallAt(text: string, position: Position): ParsedAssetCall | undefined {
+  const line = assetLineAt(text, position.line);
+  if (!line) {
+    return undefined;
+  }
+  return assetCallOnLine(line, position.line);
+}
+
+/** An argument span includes its closing quote for cursor navigation.
+ * @param {AssetValueNode} node Parsed asset value.
+ * @param {number} character Zero-based cursor column.
+ * @returns {boolean} Whether the cursor is on the value.
+ */
+function assetSpanContains(node: AssetValueNode, character: number): boolean {
+  return character >= node.span.start && character <= node.span.end;
+}
+
+/** Find a primary or declared resource path under the cursor.
+ * @param {ParsedAssetCall} call Parsed statement.
+ * @param {number} character Zero-based cursor column.
+ * @returns {string | undefined} User-spelled path when selected.
+ */
+function assetPathAt(call: ParsedAssetCall, character: number): string | undefined {
+  if (assetSpanContains(call.path, character)) {
+    return call.path.value;
+  }
+  const palette = call.options.palette;
+  if (
+    palette?.kind === "string" &&
+    assetSpanContains(palette, character) &&
+    palette.value !== "embedded" &&
+    palette.value !== "auto"
+  ) {
+    return palette.value;
+  }
+  return undefined;
 }
 
 /**
@@ -1019,6 +1065,21 @@ export function definitionFor(
   file: string,
   position: Position,
 ): Location[] | LocationLink[] {
+  const assetCall = assetCallAt(index.getFileText(file) ?? "", position);
+  const assetPath = assetCall && assetPathAt(assetCall, position.character);
+  if (assetPath) {
+    const target = resolveIncludeTarget(index, file, assetPath);
+    if (target) {
+      const node = assetSpanContains(assetCall.path, position.character)
+        ? assetCall.path
+        : assetCall.options.palette;
+      const start = node?.span.start ?? position.character;
+      const end = node?.span.end ?? position.character;
+      const origin = Range.create(position.line, start, position.line, end);
+      const zero = Range.create(0, 0, 0, 0);
+      return [LocationLink.create(pathToUri(target), zero, zero, origin)];
+    }
+  }
   const word = cursorWord(index, file, position);
   const reference = cursorReference(index, file, position, word);
   if (reference) {
@@ -1131,6 +1192,46 @@ export function hoverFor(
   position: Position,
   text: string,
 ): Hover | null {
+  const assetCall = assetCallAt(text, position);
+  if (
+    assetCall &&
+    position.character >= assetCall.span.start &&
+    position.character <= assetCall.span.end
+  ) {
+    const registered = index.environment.getAssetFormat(assetCall.format.value, index.target);
+    const displayPath = assetCall.path.value.replace(/`/g, "\\`");
+    const selectedOutput = assetCall.options.output;
+    const outputName = selectedOutput?.kind === "string" ? selectedOutput.value : "primary";
+    if (assetSpanContains(assetCall.path, position.character)) {
+      const resolved = resolveIncludeTarget(index, file, assetCall.path.value);
+      if (!resolved) {
+        return markdownHover(
+          `Asset \`${displayPath}\` is missing. Build Binary will report its diagnostic.`,
+        );
+      }
+      let size: number;
+      try {
+        size = fs.statSync(resolved).size;
+      } catch {
+        return markdownHover(
+          `Asset \`${displayPath}\` changed or is unreadable. Build Binary will report its diagnostic.`,
+        );
+      }
+      return markdownHover(
+        `Asset \`${displayPath}\` · ${size.toLocaleString()} source bytes · format \`${registered?.id ?? assetCall.format.value}\` · output \`${outputName}\`. Encoded size is resolved by Build Binary or an explicit preview.`,
+      );
+    }
+    if (assetSpanContains(assetCall.format, position.character)) {
+      if (!registered) {
+        return markdownHover(
+          `Asset format \`${assetCall.format.value}\` is unavailable for \`${index.target}\`.`,
+        );
+      }
+      return markdownHover(
+        `Asset format \`${registered.id}\` (v${registered.version}). Source: \`${displayPath}\`. Output: \`${outputName}\`.`,
+      );
+    }
+  }
   const architecture = index.architecture;
   const word = cursorWord(index, file, position) ?? wordAt(text, position);
   const reference = cursorReference(index, file, position, word);
@@ -1239,6 +1340,60 @@ export function completionsFor(index: WorkspaceIndex): CompletionItem[] {
   return items;
 }
 
+/** Complete format IDs, transform IDs, and schema-backed asset option names in a call.
+ * @param {WorkspaceIndex} index Active project index.
+ * @param {string} text Open document text.
+ * @param {Position} position Cursor position.
+ * @returns {CompletionItem[] | null} Asset candidates, or null outside a call.
+ */
+export function assetCompletionsFor(
+  index: WorkspaceIndex,
+  text: string,
+  position: Position,
+): CompletionItem[] | null {
+  const line = assetLineAt(text, position.line);
+  if (!line || !/\bincludeasset\s*\(/i.test(line)) {
+    return null;
+  }
+  const prefix = line.slice(0, position.character);
+  const call = assetCallOnLine(line, position.line);
+  const inFormat = call && assetSpanContains(call.format, position.character);
+  if (inFormat || /\bincludeasset\s*\(\s*["'][^"']*["']\s*,\s*["'][^"']*$/i.test(prefix)) {
+    return index.environment.getAssetFormats(index.target).flatMap((format) =>
+      [format.id, ...(format.aliases ?? [])].map((label) => ({
+        label,
+        kind: CompletionItemKind.EnumMember,
+        detail: `Asset format · ${format.id} v${format.version}`,
+      })),
+    );
+  }
+  if (/\bcompress\s*:\s*["'][^"']*$/i.test(prefix)) {
+    return index.environment.getAssetTransforms(index.target).flatMap((transform) =>
+      [transform.id, ...(transform.aliases ?? [])].map((label) => ({
+        label,
+        kind: CompletionItemKind.EnumMember,
+        detail: `Lossless transform · ${transform.id} v${transform.version}`,
+      })),
+    );
+  }
+  const format = call && index.environment.getAssetFormat(call.format.value, index.target);
+  const common = new Map<string, string>([
+    ["output", "Selected named output"],
+    ["compress", "Lossless transform ID or chain"],
+    ["compressOptions", "Single-transform options"],
+    ["maxSize", "Maximum emitted bytes"],
+  ]);
+  for (const [name, descriptor] of Object.entries(format?.optionSchema ?? {})) {
+    common.set(name, descriptor.summary);
+  }
+  return [...common].map(([label, detail]) => ({
+    label,
+    kind: CompletionItemKind.Property,
+    detail,
+    insertText: `${label}: `,
+  }));
+}
+
 /**
  * Builds signature help for the instruction or directive starting the line.
  * @param {string} lineText The current line text up to the cursor.
@@ -1247,6 +1402,17 @@ export function completionsFor(index: WorkspaceIndex): CompletionItem[] {
  * @see https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signature-help-request-leftwards_arrow_with_hook
  */
 export function signatureHelpFor(lineText: string, index: WorkspaceIndex): SignatureHelp | null {
+  if (/\bincludeasset\s*\(/i.test(lineText)) {
+    return {
+      signatures: [
+        SignatureInformation.create(
+          "includeAsset(path, format [, optionName: value ...])",
+          "Emit one selected asset output. Compression runs after output selection; maxSize limits final bytes.",
+        ),
+      ],
+      activeSignature: 0,
+    };
+  }
   const leading = lineText.trim().split(/\s+/)[0];
   if (!leading) {
     return null;
@@ -1523,6 +1689,37 @@ export function semanticTokensFor(index: WorkspaceIndex, file: string): Semantic
       continue;
     }
     push(referenceRange(index, reference), type);
+  }
+
+  const source = index.getFileText(file);
+  if (source) {
+    source.split(/\r?\n/).forEach((line, lineNumber) => {
+      const call = assetCallOnLine(line, lineNumber);
+      if (!call) {
+        return;
+      }
+      const addAsset = (start: number, end: number, type: string): void => {
+        if (
+          tokens.some(
+            (token) =>
+              token.line === lineNumber && start < token.char + token.length && token.char < end,
+          )
+        ) {
+          return;
+        }
+        push(Range.create(lineNumber, start, lineNumber, end), tokenTypeIndex.get(type)!);
+      };
+      const keyword = /includeasset\s*\(/i.exec(line.slice(call.span.start));
+      if (keyword) {
+        addAsset(
+          call.span.start + keyword.index,
+          call.span.start + keyword.index + "includeAsset".length,
+          SemanticTokenTypes.function,
+        );
+      }
+      addAsset(call.path.span.start, call.path.span.end, SemanticTokenTypes.string);
+      addAsset(call.format.span.start, call.format.span.end, SemanticTokenTypes.string);
+    });
   }
 
   tokens.sort((a, b) => a.line - b.line || a.char - b.char);

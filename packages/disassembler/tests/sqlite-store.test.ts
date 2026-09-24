@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
 import { test } from "../../../tests/ava-helper.js";
 import { canonicalJson } from "../src/canonical-json.js";
@@ -25,6 +24,7 @@ import {
 import { compareRuntimeRecordIds, runtimeColumns } from "../src/sqlite-records.js";
 import { RUNTIME_RECORD_STREAM_SQL } from "../src/sqlite-runtime-storage.js";
 import { runtimeSummaryGroupSql } from "../src/sqlite-runtime-summary.js";
+import { DatabaseSync } from "./sqlite-connection.js";
 
 test("synchronous transactions reject promises and roll back their writes and revision", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-async-transaction-"));

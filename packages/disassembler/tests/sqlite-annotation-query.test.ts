@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { constants, DatabaseSync, type StatementSync } from "node:sqlite";
+import { constants, type StatementSync } from "node:sqlite";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -16,7 +16,11 @@ import {
   type AnalysisControlFlowNodeRecord,
   type RuntimeEvidenceRecord,
 } from "../src/index.js";
-import { readSqliteAnnotationView } from "../src/sqlite-annotation-query.js";
+import {
+  readSqliteAnnotationView,
+  readInstructionExecutionSummary,
+} from "../src/sqlite-annotation-query.js";
+import { DatabaseSync } from "./sqlite-connection.js";
 
 const node = (id: string, address: number, fileOffset: number): AnalysisControlFlowNodeRecord => ({
   id,
@@ -695,4 +699,51 @@ test("SQL result caching publishes after unrelated writes and invalidates only d
   t.deepEqual(store.cachedProjection("fixture", "1", ["analysis"], compute), { calls: 1 });
   writer.transaction(() => writer.replaceTables({ analysis: [] }));
   t.deepEqual(store.cachedProjection("fixture", "1", ["analysis"], compute), { calls: 2 });
+});
+
+test("compact execution summaries do not read detail payloads and preserve mirrored counts", (t) => {
+  const input = project();
+  input.shards.runtime.push({
+    id: "mirrored-execution",
+    kind: "runtime-execution",
+    architecture: "fixture.cpu",
+    addressSpace: "cpu",
+    address: 0x200,
+    fileOffset: 0,
+    count: 7,
+    evidence: [],
+  });
+  const { store } = fixture(t, input);
+  store.prepareAnnotationQueries();
+  const sql = new DatabaseSync(store.file, { readOnly: true });
+  t.teardown(() => sql.close());
+  sql.setAuthorizer((action, table, column) => {
+    if (
+      action === constants.SQLITE_READ &&
+      (column === "payload" ||
+        ["analysis", "evidence", "annotations", "comments"].includes(table ?? ""))
+    ) {
+      return constants.SQLITE_DENY;
+    }
+    return constants.SQLITE_OK;
+  });
+  const [summary] = readInstructionExecutionSummary(sql, input.manifest, ranges);
+  t.deepEqual(
+    summary.locations.map(({ addressSpace, address, executionCount }) => ({
+      addressSpace,
+      address,
+      executionCount,
+    })),
+    [
+      { addressSpace: "file", address: 0, executionCount: 0 },
+      { addressSpace: "cpu", address: 0x100, executionCount: 12 },
+      { addressSpace: "cpu", address: 0x200, executionCount: 7 },
+    ],
+  );
+  t.false(summary.limited);
+  t.throws(() =>
+    readInstructionExecutionSummary(sql, input.manifest, [
+      { addressSpace: "cpu", start: 2, end: 1 },
+    ]),
+  );
 });

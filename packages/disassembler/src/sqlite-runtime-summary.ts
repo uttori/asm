@@ -5,6 +5,7 @@ import type { RuntimeEvidenceRecord } from "./project-types.js";
 import { parseSqlitePayload } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow } from "./sqlite-records.js";
+import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
 
 /** Masks affect grouping only. The representative keeps its original, unmasked register values. */
 type StateMasks = Readonly<Record<string, { readonly max: number; readonly mask: number }>>;
@@ -34,7 +35,7 @@ export const RUNTIME_SUMMARY_ROWS_SQL = `SELECT i.value AS id,f.kind,f.architect
 
 /**
  * Install a disposable projection and SQL-only change tracking under the caller's writer lock.
- * All connections, including raw SQLite writers, participate without registering JS functions.
+ * Every connection with the runtime-history codec participates; change tracking itself is SQL-only.
  * The pending set contains observation IDs, never another copy of register snapshots.
  * @param {DatabaseSync} db Current-format project connection in a write transaction.
  */
@@ -52,7 +53,7 @@ const installSummary = (db: DatabaseSync): void => {
       DELETE FROM query_cache WHERE name='${BUILD}';
       INSERT OR IGNORE INTO query_runtime_variant_pending
         SELECT NEW.oid WHERE EXISTS(SELECT 1 FROM query_cache WHERE name='${KEY}')
-        AND EXISTS(SELECT 1 FROM runtime_facts WHERE fid=NEW.fact_id AND kind='runtime-instruction');
+        AND EXISTS(SELECT 1 FROM runtime_fact_locations WHERE fid=NEW.fact_id AND kind='runtime-instruction');
     END;
     CREATE TRIGGER summary_observation_update AFTER UPDATE OF
       oid,fact_id,prefix_id,identity_id,evidence_id,count ON runtime_observations
@@ -71,17 +72,28 @@ const installSummary = (db: DatabaseSync): void => {
   // REPLACE does not reliably fire DELETE triggers when recursive_triggers is off. Check conflicts
   // before insertion so rowid reuse and replacement of shared facts cannot masquerade as appends.
   for (const [table, primary, unique] of [
-    ["runtime_facts", "fid", "fingerprint"],
+    ["runtime_fact_rows", "fid", "fingerprint"],
     ["runtime_identities", "iid", "value"],
     ["runtime_prefixes", "id", "value"],
     ["runtime_evidence", "id", "value"],
   ]) {
+    // Sealing immutable blocks does not change the logical fact represented by this row.
+    const condition =
+      table === "runtime_fact_rows"
+        ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL"
+        : "";
+    let uniqueMatch = `${unique}=NEW.${unique}`;
+    if (table === "runtime_fact_rows") {
+      uniqueMatch = `substr(fingerprint,1,8)=substr(NEW.fingerprint,1,8) AND ${uniqueMatch}`;
+    } else if (table === "runtime_identities") {
+      uniqueMatch = `(${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.value")}) AND ${uniqueMatch}`;
+    }
     db.exec(`CREATE TRIGGER summary_${table}_replace BEFORE INSERT ON ${table}
       WHEN EXISTS(SELECT 1 FROM query_cache WHERE name IN ('${KEY}','${BUILD}')) AND (
         EXISTS(SELECT 1 FROM ${table} WHERE ${primary}=NEW.${primary}) OR
-        EXISTS(SELECT 1 FROM ${table} WHERE ${unique}=NEW.${unique}))
+        EXISTS(SELECT 1 FROM ${table} WHERE ${uniqueMatch}))
       BEGIN ${INVALIDATE} END;
-      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} BEGIN ${INVALIDATE} END;
+      CREATE TRIGGER summary_${table}_update AFTER UPDATE ON ${table} ${condition} BEGIN ${INVALIDATE} END;
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
   }
 };

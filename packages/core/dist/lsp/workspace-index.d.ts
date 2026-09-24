@@ -303,6 +303,8 @@ export declare class WorkspaceIndex {
         target: string;
         architecture: string;
         includePaths: readonly string[];
+        converterIdentity: string;
+        targetOptionsIdentity: string;
     };
     /**
      * Hashes overlay or disk bytes for cache invalidation. Works for text and binary includes.
@@ -314,10 +316,11 @@ export declare class WorkspaceIndex {
      * Collects content hashes and mtimes for a root and every file in its include graph.
      * @param {string} root Absolute root path.
      * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
+     * @param {Readonly<Record<string, "binary" | "resource">>} assetDependencies Resolved asset inputs.
      * @returns {{ fileHashes: Record<string, string>; fileMtimes: Record<string, number> } | undefined}
      *   Path-to-hash and path-to-mtime maps, or undefined when incomplete.
      */
-    collectFileHashes(root: string, includeEdges: AssemblyIncludeEdge[]): {
+    collectFileHashes(root: string, includeEdges: AssemblyIncludeEdge[], assetDependencies?: Readonly<Record<string, "binary" | "resource">>): {
         fileHashes: Record<string, string>;
         fileMtimes: Record<string, number>;
     } | undefined;

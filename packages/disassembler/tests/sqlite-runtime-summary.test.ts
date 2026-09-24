@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
 import type { ExecutionContext } from "ava";
 
@@ -12,6 +11,7 @@ import {
   runtimeInstructionSummary,
   runtimeSummaryGroupSql,
 } from "../src/sqlite-runtime-summary.js";
+import { DatabaseSync } from "./sqlite-connection.js";
 
 const fields = ["p", "P", "e", "E", "db", "DB", "d", "D"];
 const masks = { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } };

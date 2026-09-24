@@ -1,7 +1,6 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
 
 import { test } from "../../../tests/ava-helper.js";
 import {
@@ -19,6 +18,7 @@ import {
   type RuntimeInstructionTraceArtifact,
 } from "../src/index.js";
 import { RecordIdSet } from "../src/record-id-set.js";
+import { DatabaseSync } from "./sqlite-connection.js";
 
 const fixture = (): AnalysisProject => ({
   manifest: {
@@ -147,7 +147,7 @@ const trace = (project: AnalysisProject): RuntimeInstructionTraceArtifact => {
   };
 };
 
-for (const indexMode of ["full", "65816-disassembly"] as const) {
+for (const indexMode of ["full", "65816-disassembly", "65816-analysis"] as const) {
   test(`disk import preserves canonical ${indexMode} facts and repairs incomplete reimports`, async (t) => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-disk-import-"));
     t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -168,7 +168,12 @@ for (const indexMode of ["full", "65816-disassembly"] as const) {
       ...project,
       shards: merged.shards,
     });
-    const result = await importRuntimeTraceIntoProject(file, directory, context);
+    // SQLite accepts explicit budgets beyond the old Map ceiling without projecting away
+    // full register variants. Compare every stored fact against the small in-memory fixture.
+    const result = await importRuntimeTraceIntoProject(file, directory, {
+      ...context,
+      maxIndexRecords: 8_000_001,
+    });
     t.deepEqual(result.report, expected.report);
     t.deepEqual(result.added, { runtime: merged.added.runtime, evidence: merged.added.evidence });
     t.deepEqual(
@@ -253,6 +258,31 @@ test("disk import rejects invalid tails, budgets and cancellation without public
     t.deepEqual(loadAnalysisProjectViewSnapshot(directory).revision, revision);
   }
   t.true((await importRuntimeTraceIntoProject(file, directory, context)).changed);
+});
+
+test("disk import rejects invalid record budgets before reading the capture body", async (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-import-preflight-"));
+  t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
+  const project = fixture();
+  writeAnalysisProject(root, project);
+  const before = loadAnalysisProject(root);
+  const source = {
+    metadata: validateRuntimeInstructionTraceMetadata(trace(project)),
+    read: async () => {
+      t.fail("An invalid record budget must fail before capture decoding");
+    },
+  };
+  for (const maxIndexRecords of [0, -1, 1.5, Infinity, Number.MAX_SAFE_INTEGER + 1]) {
+    await t.throwsAsync(
+      importRuntimeTraceSourceIntoProject(source, root, {
+        projectRomContentSha256: project.manifest.rom.contentSha256,
+        sourceName: "invalid-budget.act2",
+        maxIndexRecords,
+      }),
+      { message: /safe integer/ },
+    );
+    t.deepEqual(loadAnalysisProject(root), before);
+  }
 });
 
 test("disk import refuses to overwrite a project edited after runtime merging", async (t) => {

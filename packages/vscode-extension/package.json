@@ -39,6 +39,7 @@
     "vscode:prepublish": "npm run build"
   },
   "dependencies": {
+    "@uttori/asm-assets": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
     "@uttori/asm-debug-sidecar-ares": "1.0.0",
@@ -73,11 +74,17 @@
         "category": "Assembly"
       },
       {
+        "command": "asm.assetPreview.open",
+        "title": "Open Asset Preview",
+        "category": "Assembly",
+        "enablement": "isWorkspaceTrusted"
+      },
+      {
         "command": "asm.analysis.toggleAnnotations",
-        "title": "Toggle Project State Overlays",
+        "title": "Toggle Inline Source Information",
         "category": "Assembly",
         "icon": "$(eye)",
-        "toggled": "config.asm.analysis.showAnnotations"
+        "toggled": "asm.editorInfo.inlineEnabled"
       },
       {
         "command": "asm.toggleWatch",
@@ -281,6 +288,21 @@
       {
         "command": "asm.trace.restore",
         "title": "Restore Capture Pre-action State",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.editorInfo.choosePreset",
+        "title": "Choose Editor Information Preset",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.editorInfo.configureInline",
+        "title": "Configure Inline Fields",
+        "category": "Assembly"
+      },
+      {
+        "command": "asm.editorInfo.inspectLine",
+        "title": "Inspect Line Information",
         "category": "Assembly"
       }
     ],
@@ -862,14 +884,16 @@
           "type": "boolean",
           "scope": "resource",
           "default": true,
-          "description": "Show aligned project-state and runtime analysis overlays in source editors. Toggle with the eye button beside Build Binary."
+          "description": "Show aligned project-state and runtime analysis overlays in source editors. Toggle with the eye button beside Build Binary.",
+          "deprecationMessage": "Use asm.editorInfo.inline.enabled. Explicit values remain supported when the replacement is unset."
         },
         "asm.analysis.annotationColumn": {
           "type": "integer",
           "scope": "resource",
           "minimum": 0,
           "default": 80,
-          "description": "Preferred minimum source column for analysis overlays. All visible overlays align beyond the longest annotated line with a three-column gap. Tab width follows the editor setting."
+          "description": "Preferred minimum source column for analysis overlays. All visible overlays align beyond the longest annotated line with a three-column gap. Tab width follows the editor setting.",
+          "deprecationMessage": "Use asm.editorInfo.inline.column and asm.editorInfo.inline.placement. Explicit values remain supported."
         },
         "asm.analysis.maxWorkItems": {
           "type": "integer",
@@ -983,6 +1007,87 @@
           "type": "boolean",
           "default": true,
           "description": "Include paused start/end WRAM, a pre-action state, controller replay data, visual milestones, and a separate two-frame PPU/bus capture. Requires a matching local ares runtime. Disable only for bare trace capture."
+        },
+        "asm.editorInfo.preset": {
+          "scope": "resource",
+          "type": "string",
+          "enum": [
+            "compact",
+            "authoring",
+            "disassembly"
+          ],
+          "default": "compact",
+          "description": "Default fields for editor information. Explicit inline parts and hover rows override the preset."
+        },
+        "asm.editorInfo.inline.enabled": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Show source information inline. Explicit legacy asm.analysis.showAnnotations is honored when this setting is unset. Hover is controlled separately."
+        },
+        "asm.editorInfo.inline.parts": {
+          "scope": "resource",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 16,
+          "description": "Ordered templates for inline information. Omit to use the preset; [] hides all parts. Fields: output_offsets, output_offset_cpu, output_offset_file, output_bytes, output_size, operand_value, operand_values, execution_observations, execution_counts, execution_count_cpu, project_state.FIELD, runtime_state.FIELD. Use ${field}; $${ escapes a literal ${. Missing values omit the whole part. No color or executable expressions."
+        },
+        "asm.editorInfo.inline.separator": {
+          "scope": "resource",
+          "type": "string",
+          "default": " · ",
+          "maxLength": 32,
+          "description": "Separator between available inline parts."
+        },
+        "asm.editorInfo.inline.placement": {
+          "scope": "resource",
+          "type": "string",
+          "enum": [
+            "afterLine",
+            "aligned"
+          ],
+          "default": "aligned",
+          "description": "Align overlays at one shared left edge by default. Use afterLine to place each overlay immediately after its source line."
+        },
+        "asm.editorInfo.inline.column": {
+          "scope": "resource",
+          "type": "integer",
+          "minimum": 0,
+          "default": 80,
+          "description": "Preferred minimum zero-based column in aligned mode. Honors explicit legacy asm.analysis.annotationColumn when unset."
+        },
+        "asm.editorInfo.inline.color": {
+          "scope": "resource",
+          "type": "string",
+          "default": "editorCodeLens.foreground",
+          "pattern": "^(?:#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})|[A-Za-z][\\w-]*(?:\\.[\\w-]+)+)$",
+          "patternErrorMessage": "Enter a hex color such as #FFA65C or a VS Code theme color such as editorWarning.foreground.",
+          "description": "Color for the entire inline overlay. Accepts #RGB, #RGBA, #RRGGBB, #RRGGBBAA, or a VS Code theme color identifier (for example editorWarning.foreground). Theme colors follow the active theme."
+        },
+        "asm.editorInfo.inline.maxCharacters": {
+          "scope": "resource",
+          "type": "integer",
+          "minimum": 24,
+          "maximum": 500,
+          "default": 120,
+          "description": "Total character budget for one source line, including all contexts and truncation marker."
+        },
+        "asm.editorInfo.hover.enabled": {
+          "scope": "resource",
+          "type": "boolean",
+          "default": true,
+          "description": "Append compact source information to hover. Instruction documentation remains unchanged."
+        },
+        "asm.editorInfo.hover.rows": {
+          "scope": "resource",
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 8,
+          "description": "Ordered hover-row templates, using the same ${field} placeholders as inline parts. Omit for preset defaults; [] hides analysis rows. Missing fields suppress the entire row."
         }
       }
     },

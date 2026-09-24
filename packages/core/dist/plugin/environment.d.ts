@@ -1,4 +1,4 @@
-import type { ArchitectureContribution, AssemblerPluginManifest, DirectiveSetContribution, ExpressionSetContribution, LifecycleContribution, OutputFormatContribution, SessionStateContribution, TargetContribution, TargetSummary, ToolingCatalog, AddressSpaceContribution } from "./contracts.js";
+import type { ArchitectureContribution, AssetFormatContribution, AssetTransformContribution, AssemblerPluginManifest, DirectiveSetContribution, ExpressionSetContribution, LifecycleContribution, OutputFormatContribution, SessionStateContribution, TargetContribution, TargetSummary, ToolingCatalog, AddressSpaceContribution } from "./contracts.js";
 /**
  * A plugin contribution plus the owner metadata recorded at registration time.
  * `registrationOrder` is the global sequence used to sort lifecycles and similar lists.
@@ -20,6 +20,8 @@ export interface EnvironmentContributions {
     readonly addressSpaces: readonly OwnedContribution<AddressSpaceContribution>[];
     readonly outputFormats: readonly OwnedContribution<OutputFormatContribution>[];
     readonly directiveSets: readonly OwnedContribution<DirectiveSetContribution>[];
+    readonly assetFormats?: readonly OwnedContribution<AssetFormatContribution>[];
+    readonly assetTransforms?: readonly OwnedContribution<AssetTransformContribution>[];
     readonly expressionSets: readonly OwnedContribution<ExpressionSetContribution>[];
     readonly lifecycles: readonly OwnedContribution<LifecycleContribution>[];
     readonly targets: readonly OwnedContribution<TargetContribution>[];
@@ -43,6 +45,28 @@ export declare class AssemblerEnvironment {
      * @throws {PluginError} On alias collisions or an invalid target graph.
      */
     constructor(contributions: EnvironmentContributions);
+    /** Resolve a globally named or target-scoped short format ID.
+     * @param {string} id Full ID or short alias.
+     * @param {string} targetId Selected target.
+     * @returns {Readonly<AssetFormatContribution> | undefined} Compatible format.
+     */
+    getAssetFormat(id: string, targetId: string): Readonly<AssetFormatContribution> | undefined;
+    /** List formats compatible with a target for editor completion and discovery.
+     * @param {string} targetId Selected target.
+     * @returns {readonly Readonly<AssetFormatContribution>[]} Canonical registrations.
+     */
+    getAssetFormats(targetId: string): readonly Readonly<AssetFormatContribution>[];
+    /** Resolve a globally named or target-scoped short transform ID.
+     * @param {string} id Full ID or short alias.
+     * @param {string} targetId Selected target.
+     * @returns {Readonly<AssetTransformContribution> | undefined} Compatible transform.
+     */
+    getAssetTransform(id: string, targetId: string): Readonly<AssetTransformContribution> | undefined;
+    /** List reversible transforms compatible with a target for editor completion.
+     * @param {string} targetId Selected target.
+     * @returns {readonly Readonly<AssetTransformContribution>[]} Canonical registrations.
+     */
+    getAssetTransforms(targetId: string): readonly Readonly<AssetTransformContribution>[];
     /**
      * Resolves a target contribution id or alias to the canonical target id.
      * @param {string} idOrAlias Target id or alias (case-insensitive).

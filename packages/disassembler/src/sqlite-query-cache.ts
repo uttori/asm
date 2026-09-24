@@ -39,14 +39,21 @@ export const installQueryCache = (
   }
   db.exec(QUERY_CACHE_SCHEMA);
   for (const table of dependencies.flatMap((name) =>
-    name === "runtime" ? ["runtime_facts", "runtime_observations", "runtime_identities"] : [name],
+    name === "runtime"
+      ? ["runtime_fact_rows", "runtime_observations", "runtime_identities"]
+      : [name],
   )) {
     for (const event of ["INSERT", "UPDATE", "DELETE"]) {
       const update =
         table === "runtime_observations" && event === "UPDATE"
           ? "UPDATE OF fact_id,prefix_id,identity_id,evidence_id,count,state_prefix_id"
           : event;
-      db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key}_${table}_${event} AFTER ${update} ON ${table} BEGIN
+      // Packing changes representation only; it must not invalidate a summary or recount events.
+      const condition =
+        table === "runtime_fact_rows" && event === "UPDATE"
+          ? "WHEN OLD.fid IS NOT NEW.fid OR OLD.fingerprint IS NOT NEW.fingerprint OR OLD.descriptor_id IS NOT NEW.descriptor_id OR NEW.history_id IS NULL"
+          : "";
+      db.exec(`CREATE TRIGGER IF NOT EXISTS cache_${key}_${table}_${event} AFTER ${update} ON ${table} ${condition} BEGIN
       DELETE FROM query_cache WHERE name='${key}'; END`);
     }
   }

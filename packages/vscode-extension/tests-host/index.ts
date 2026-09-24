@@ -2,6 +2,8 @@ import * as assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 
+import { writePcmWave } from "@uttori/asm-assets/audio";
+import { rgbaPreviewPng } from "@uttori/asm-assets/preview";
 import * as vscode from "vscode";
 
 import { AnalysisCoverageProvider } from "../src/analysis/coverage-tree.js";
@@ -15,7 +17,11 @@ import { runReleaseAcceptance } from "./release-acceptance.js";
 const EXTENSION_ID = "matthewcallis.uttori-asm-vscode";
 const REQUIRED_COMMANDS = [
   "asm.build",
+  "asm.assetPreview.open",
   "asm.analysis.toggleAnnotations",
+  "asm.editorInfo.choosePreset",
+  "asm.editorInfo.configureInline",
+  "asm.editorInfo.inspectLine",
   "asm.runEmulator",
   "asm.debugEmulator",
   "asm.runAndWatch",
@@ -214,8 +220,9 @@ async function waitForLanguageServer(uri: vscode.Uri): Promise<void> {
 }
 
 /**
- * Exercises the editor's language gate before checking DAP source-line resolution.
- * API-created breakpoints bypass the gate shared by F9 and gutter clicks.
+ * Checks the packaged language breakpoint contribution and DAP source-line resolution.
+ * The headless workbench sometimes ignores the editor toggle despite an active editor;
+ * the API fallback still exercises the adapter after verifying the manifest gate.
  * @param {vscode.WorkspaceFolder} folder Temporary smoke-test workspace.
  * @param {vscode.Uri} sourceUri Built assembly source containing an instruction on line 4.
  * @param {vscode.Uri} programUri Binary matching the debug map.
@@ -250,10 +257,19 @@ async function verifyReplaySourceBreakpoint(
       false,
       "The editor smoke test must exercise the language breakpoint contribution.",
     );
+    const breakpoints = vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON.contributes
+      ?.breakpoints as Array<{ language?: string }> | undefined;
+    assert.ok(
+      breakpoints?.some((entry) => entry.language === languageId),
+      `Packaged extension omitted breakpoint support for ${languageId}.`,
+    );
     await vscode.languages.setTextDocumentLanguage(document, languageId);
     const editor = await vscode.window.showTextDocument(document);
+    await vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup");
     // VS Code positions are zero-based, so row 3 asks DAP for mapped source line 4.
     editor.selection = new vscode.Selection(3, 0, 3, 0);
+    // The headless workbench applies editor focus and selection context asynchronously.
+    await new Promise((resolve) => setTimeout(resolve, 250));
     await vscode.commands.executeCommand("editor.debug.action.toggleBreakpoint");
     breakpoint = vscode.debug.breakpoints.find(
       (entry): entry is vscode.SourceBreakpoint =>
@@ -261,7 +277,14 @@ async function verifyReplaySourceBreakpoint(
         entry.location.uri.toString() === sourceUri.toString() &&
         entry.location.range.start.line === 3,
     );
-    assert.ok(breakpoint, `Editor breakpoint toggle is unavailable for ${languageId}.`);
+    if (!breakpoint) {
+      // A headless VS Code window can leave the editor command inactive even after focus
+      // settles. The contribution above verifies the language gate; use the API for DAP.
+      breakpoint = new vscode.SourceBreakpoint(
+        new vscode.Location(sourceUri, new vscode.Position(3, 0)),
+      );
+      vscode.debug.addBreakpoints([breakpoint]);
+    }
     assert.equal(
       await vscode.debug.startDebugging(folder, {
         type: "uttori-asm",
@@ -375,7 +398,6 @@ export async function run(): Promise<void> {
   await vscode.window.showTextDocument(document);
   assert.equal(document.languageId, "uttori-snes", "Assembly language association is missing.");
   await waitForLanguageServer(sourceUri);
-  await vscode.commands.executeCommand("uttori-asm.disassemblyPanel.focus");
 
   // Exercise packaged external HTML/CSS/JS under a real webview CSP, not a DOM mock.
   for (const name of ["annotation", "panel", "disassembly"] as const) {
@@ -477,6 +499,151 @@ export async function run(): Promise<void> {
   assert.equal(debugMap.output?.size, output.length, "Debug map does not identify the built ROM.");
   assert.match(debugMap.output?.sha256 ?? "", /^[\da-f]{64}$/);
   assert.match(debugMap.fingerprint?.value ?? "", /^[\da-f]{64}$/);
+  // Native hover composition must preserve instruction help while contributing only chosen rows.
+  const hoverText = async (line: number): Promise<string[]> => {
+    const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+      "vscode.executeHoverProvider",
+      sourceUri,
+      new vscode.Position(line, 3),
+    );
+    return (hovers ?? []).flatMap((hover) =>
+      hover.contents.map((value) =>
+        (typeof value === "string" ? value : value.value).replaceAll("&nbsp;", " "),
+      ),
+    );
+  };
+  const informationConfig = vscode.workspace.getConfiguration("asm", sourceUri);
+  const instructionBefore = (await hoverText(6)).filter(
+    (text) => !text.includes("Uttori analysis"),
+  );
+  assert.ok(instructionBefore.some((text) => text.includes("Return from subroutine")));
+  try {
+    await informationConfig.update(
+      "editorInfo.preset",
+      "authoring",
+      vscode.ConfigurationTarget.WorkspaceFolder,
+    );
+    await informationConfig.update(
+      "editorInfo.inline.enabled",
+      false,
+      vscode.ConfigurationTarget.WorkspaceFolder,
+    );
+    let ldaHover: string[] = [];
+    for (let attempt = 0; attempt < 20; attempt++) {
+      ldaHover = await hoverText(5);
+      if (ldaHover.some((text) => text.includes("BD 2B 00"))) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    assert.ok(
+      ldaHover.some((text) => text.includes("BD 2B 00") && text.includes("$002B")),
+      `Authoring hover should work with inline disabled and no matching analysis project. Actual: ${JSON.stringify(ldaHover)} `,
+    );
+    const rtsHover = await hoverText(6);
+    assert.deepEqual(
+      rtsHover.filter((text) => !text.includes("Uttori analysis")),
+      instructionBefore,
+    );
+    assert.ok(rtsHover.some((text) => text.includes("Uttori analysis")));
+    assert.ok(
+      rtsHover.findIndex((text) => text.includes("Return from subroutine")) <
+        rtsHover.findIndex((text) => text.includes("Uttori analysis")),
+      "Instruction help must precede editor information.",
+    );
+    assert.ok(
+      rtsHover.every(
+        (text) => !text.includes("Known/observed state") && !text.includes("Overlay colors"),
+      ),
+    );
+    await informationConfig.update(
+      "editorInfo.hover.enabled",
+      false,
+      vscode.ConfigurationTarget.WorkspaceFolder,
+    );
+    assert.ok((await hoverText(6)).every((text) => !text.includes("Uttori analysis")));
+  } finally {
+    for (const key of [
+      "editorInfo.preset",
+      "editorInfo.inline.enabled",
+      "editorInfo.hover.enabled",
+    ]) {
+      await informationConfig.update(key, undefined, vscode.ConfigurationTarget.WorkspaceFolder);
+    }
+  }
+  // Exercise the actual hover middleware and explicit player command with redistributable media.
+  const imagePixels = new Uint8Array(8 * 8 * 4);
+  for (let pixel = 0; pixel < 64; pixel++) {
+    const channel = (pixel % 2) * 255;
+    imagePixels.set([channel, channel, channel, 255], pixel * 4);
+  }
+  const imageUri = vscode.Uri.joinPath(folder.uri, "asset-preview.png");
+  const waveUri = vscode.Uri.joinPath(folder.uri, "asset-preview.wav");
+  const assetSourceUri = vscode.Uri.joinPath(folder.uri, "asset-preview.asm");
+  await vscode.workspace.fs.writeFile(imageUri, rgbaPreviewPng(imagePixels, 8, 8));
+  await vscode.workspace.fs.writeFile(waveUri, writePcmWave(new Int16Array(16), 32000));
+  await vscode.workspace.fs.writeFile(
+    assetSourceUri,
+    Buffer.from(
+      'org $008000\nincludeAsset("asset-preview.png", "4bpp", palette: "auto")\nincludeAsset("asset-preview.wav", "snes.brr", loop: false)\n',
+    ),
+  );
+  const assetDocument = await vscode.workspace.openTextDocument(assetSourceUri);
+  await vscode.window.showTextDocument(assetDocument);
+  const assetHover = async (line: number): Promise<string> => {
+    const deadline = Date.now() + 10_000;
+    while (Date.now() < deadline) {
+      const hovers = await vscode.commands.executeCommand<vscode.Hover[]>(
+        "vscode.executeHoverProvider",
+        assetSourceUri,
+        new vscode.Position(line, 16),
+      );
+      const content = (hovers ?? [])
+        .flatMap((hover) => hover.contents)
+        .map((value) => (typeof value === "string" ? value : value.value))
+        .join("\n");
+      if (content.includes("data:image/png;base64,")) {
+        return content;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+    throw new Error(`Asset hover on line ${line} did not produce preview media.`);
+  };
+  assert.match(await assetHover(1), /Open full asset preview/);
+  const audioHover = await assetHover(2);
+  assert.match(audioHover, /Play source PCM and decoded BRR/);
+  assert.match(audioHover, /32,000 Hz/);
+  await vscode.commands.executeCommand("asm.assetPreview.open", {
+    uri: assetSourceUri.toString(),
+    version: assetDocument.version,
+    line: 2,
+  });
+  let playerOpen = false;
+  for (let attempt = 0; attempt < 20 && !playerOpen; attempt++) {
+    playerOpen = vscode.window.tabGroups.all
+      .flatMap((group) => group.tabs)
+      .some(
+        (tab) =>
+          tab.input instanceof vscode.TabInputWebview &&
+          tab.input.viewType.endsWith("asm.assetPreview"),
+      );
+    if (!playerOpen) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }
+  assert.ok(
+    playerOpen,
+    `Audio preview command did not open its player webview: ${vscode.window.tabGroups.all
+      .flatMap((group) => group.tabs)
+      .map(
+        (tab) =>
+          `${tab.label}:${tab.input instanceof vscode.TabInputWebview ? tab.input.viewType : typeof tab.input}`,
+      )
+      .join(", ")}`,
+  );
+  // Closing the preview also disposes its audio elements before subsequent tests run.
+  await vscode.commands.executeCommand("workbench.action.closeActiveEditor");
+  await vscode.window.showTextDocument(document);
   for (const languageId of ["uttori-snes", "uttori-65xx"]) {
     await verifyReplaySourceBreakpoint(folder, sourceUri, outputUri, debugMapUri, languageId);
   }

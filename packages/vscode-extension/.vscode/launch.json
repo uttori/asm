@@ -2,6 +2,17 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Run Uttori Assembly Extension (No Debugger)",
+      "type": "extensionHost",
+      "request": "launch",
+      "noDebug": true,
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}"],
+      "preLaunchTask": "Build SNES Assembly Extension",
+      "env": {
+        "UTTORI_ASM_LSP_TRACE": "verbose"
+      }
+    },
+    {
       "name": "Run Uttori Assembly Extension",
       "type": "extensionHost",
       "request": "launch",
@@ -16,6 +27,7 @@
       "name": "Attach to Server",
       "type": "node",
       "request": "attach",
+      "address": "127.0.0.1",
       "port": 6009,
       "restart": true,
       "outFiles": ["${workspaceFolder}/server/**/*.mjs"]

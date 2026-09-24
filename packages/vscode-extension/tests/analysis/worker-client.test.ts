@@ -33,6 +33,11 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     conditions: ["uttori-source"],
     platform: "node",
     format: "cjs",
+    // Match the shipped worker: optional Data Tools debug branches contain top-level await.
+    define: {
+      "process.env.UTTORI_DATA_DEBUG": "false",
+      "process.env.UTTORI_AUDIOWAV_DEBUG": "false",
+    },
     logLevel: "silent",
   });
   const client = new AnalysisWorkerClient(workerFile);

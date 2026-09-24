@@ -9,6 +9,7 @@ import {
   commands,
   ConfigurationTarget,
   ExtensionMode,
+  Hover,
   StatusBarAlignment,
   Uri,
   debug as vscodeDebug,
@@ -39,6 +40,7 @@ import { navigateToAnalysisLocation } from "./analysis/navigation.js";
 import { AnalysisProjectEditor } from "./analysis/project-editor.js";
 import { AnalysisSourcesProvider } from "./analysis/sources-tree.js";
 import { initializeAnalysisWorker } from "./analysis/worker-client.js";
+import { AssetPreviewController } from "./asset-preview-controller.js";
 import {
   configureEmulatorRuntime,
   configuredEmulatorRuntime,
@@ -80,6 +82,8 @@ const ASSEMBLY_LANGUAGE_IDS = ["uttori-snes", "uttori-65xx"] as const;
  * @see https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#language-client
  */
 let client: LanguageClient | undefined;
+/** Build completion publishes artifacts to the same information controller used by editor hovers. */
+let editorInformationController: AnalysisAnnotationController | undefined;
 /**
  * Shared log/output channel for language-server traffic and Build Binary.
  * @see https://code.visualstudio.com/api/references/vscode-api#LogOutputChannel
@@ -161,6 +165,8 @@ export function activate(context: ExtensionContext): void {
   });
   context.subscriptions.push(worker);
   const serverModule = context.asAbsolutePath(path.join("server", "server.mjs"));
+  const assetPreviewController = new AssetPreviewController(() => client);
+  context.subscriptions.push(assetPreviewController);
 
   /**
    * Spawn Node on the ESM server bundle. The `module` ServerOptions form uses `cp.fork()`,
@@ -191,8 +197,36 @@ export function activate(context: ExtensionContext): void {
       configurationSection: "asm",
       fileEvents: [
         workspace.createFileSystemWatcher("**/*.{asm,src,SRC,s,inc}"),
+        workspace.createFileSystemWatcher("**/*.{png,wav,wave,json,bin,pal,palette}"),
         workspace.createFileSystemWatcher("**/uttori-asm.config.json"),
       ],
+    },
+    middleware: {
+      provideHover: async (document, position, token, next) => {
+        const instruction = await next(document, position, token);
+        if (token.isCancellationRequested) {
+          return undefined;
+        }
+        const information = await editorInformationController?.provideHover(
+          document,
+          position,
+          token,
+        );
+        const assetPreview = await assetPreviewController.provideHover(document, position, token);
+        if (!information && !assetPreview) {
+          return instruction;
+        }
+        // Compose through the supported client middleware so independent provider ordering cannot
+        // put analysis above the existing instruction help. The original Markdown is untouched.
+        return new Hover(
+          [
+            ...(instruction?.contents ?? []),
+            ...(information?.contents ?? []),
+            ...(assetPreview?.contents ?? []),
+          ],
+          instruction?.range ?? information?.range ?? assetPreview?.range,
+        );
+      },
     },
     initializationOptions: serverInitializationOptions(),
     outputChannel,
@@ -222,6 +256,26 @@ export function activate(context: ExtensionContext): void {
   const analysisGraphProvider = new AnalysisGraphProvider();
   const sourcesProvider = new AnalysisSourcesProvider();
   const analysisAnnotationController = new AnalysisAnnotationController();
+  editorInformationController = analysisAnnotationController;
+  // Compare only non-display configuration so changing a template cannot trigger database refreshes.
+  const analysisConfigurationIdentity = (): string =>
+    JSON.stringify(
+      (workspace.workspaceFolders ?? []).map(({ uri }) => {
+        const config = workspace.getConfiguration("asm", uri);
+        const values = {
+          ...config,
+          editorInfo: undefined,
+          analysis: {
+            ...config.get<Record<string, unknown>>("analysis", {}),
+            showAnnotations: undefined,
+            annotationColumn: undefined,
+          },
+        };
+        return values;
+      }),
+    );
+  let previousAnalysisConfiguration = analysisConfigurationIdentity();
+  let previousBuildConfiguration = JSON.stringify(serverInitializationOptions());
   let analysisRefreshTimer: ReturnType<typeof setTimeout> | undefined;
   context.subscriptions.push({ dispose: () => clearTimeout(analysisRefreshTimer) });
   const refreshAnalysisViews = (): void => {
@@ -231,7 +285,7 @@ export function activate(context: ExtensionContext): void {
       coverageProvider.refresh();
       analysisGraphProvider.refresh();
       sourcesProvider.refresh();
-      analysisAnnotationController.refresh();
+      analysisAnnotationController.invalidate();
     }, 150);
   };
   const analysisProjectEditor = new AnalysisProjectEditor(
@@ -284,19 +338,23 @@ export function activate(context: ExtensionContext): void {
     analysisShardWatcher.onDidDelete(refreshAnalysisViews),
     window.onDidChangeActiveTextEditor((editor) => analysisAnnotationController.refresh(editor)),
     window.onDidChangeTextEditorVisibleRanges(({ textEditor }) => {
-      if (textEditor === window.activeTextEditor) {
-        analysisAnnotationController.refresh(textEditor);
-      }
+      analysisAnnotationController.refresh(textEditor);
     }),
     window.onDidChangeTextEditorOptions(({ textEditor }) => {
-      if (textEditor === window.activeTextEditor) {
-        analysisAnnotationController.refresh(textEditor);
-      }
+      analysisAnnotationController.refresh(textEditor);
     }),
     workspace.onDidChangeTextDocument(({ document }) =>
       analysisAnnotationController.documentChanged(document),
     ),
-    workspace.onDidSaveTextDocument(() => analysisAnnotationController.refresh()),
+    workspace.onDidSaveTextDocument(() => analysisAnnotationController.invalidate()),
+    workspace.onDidCloseTextDocument((document) => {
+      if (
+        document.uri.scheme === "file" &&
+        analysisAnnotationController.provider.tracks(document.uri.fsPath)
+      ) {
+        analysisAnnotationController.invalidate();
+      }
+    }),
     vscodeDebug.onDidStartDebugSession((session) => {
       if (session.configuration.uttoriRunAndWatch === true) {
         watchedDebugSession = session;
@@ -310,6 +368,9 @@ export function activate(context: ExtensionContext): void {
       analysisAnnotationController.refresh();
     }),
     commands.registerCommand("asm.build", () => runBuild(resolveBuildEntryUri())),
+    commands.registerCommand("asm.assetPreview.open", (request: unknown) =>
+      assetPreviewController.open(request),
+    ),
     commands.registerCommand(TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND, () =>
       analysisAnnotationController.toggle(),
     ),
@@ -365,12 +426,23 @@ export function activate(context: ExtensionContext): void {
     }),
     workspace.onDidChangeConfiguration((event) => {
       if (
+        event.affectsConfiguration("asm.editorInfo") ||
         event.affectsConfiguration("asm.analysis.showAnnotations") ||
         event.affectsConfiguration("asm.analysis.annotationColumn")
       ) {
         analysisAnnotationController.refresh();
       }
-      if (event.affectsConfiguration("asm")) {
+      const buildConfiguration = JSON.stringify(serverInitializationOptions());
+      if (buildConfiguration !== previousBuildConfiguration) {
+        previousBuildConfiguration = buildConfiguration;
+        analysisAnnotationController.configurationChanged();
+      }
+      const configurationIdentity = analysisConfigurationIdentity();
+      if (
+        event.affectsConfiguration("asm") &&
+        configurationIdentity !== previousAnalysisConfiguration
+      ) {
+        previousAnalysisConfiguration = configurationIdentity;
         void panelProvider.refresh();
         outlineProvider.refresh();
         refreshAnalysisViews();
@@ -781,6 +853,12 @@ async function runBuild(
     })) as BuildResult | undefined;
 
     if (result?.ok) {
+      if (result.debugMapPath) {
+        editorInformationController?.buildCompleted(
+          result.debugMapPath,
+          workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path.dirname(document.fsPath),
+        );
+      }
       const changed =
         result.outputChanged === false && result.debugMapChanged === false ? " (unchanged)" : "";
       const message = `Assembly: built ${result.bytes ?? 0} bytes + debug map → ${result.outputPath ?? "output"}${changed}.`;

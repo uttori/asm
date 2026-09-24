@@ -50,6 +50,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.createDisassemblyProject",
       "asm.importDizProject",
       "asm.build",
+      "asm.assetPreview.open",
       "asm.analysis.toggleAnnotations",
       "asm.toggleWatch",
       "asm.runEmulator",
@@ -83,6 +84,12 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.disassembly.status",
       "asm.disassembly.regenerate",
       "asm.trace.cancelLiveAnalysis",
+      "asm.trace.mark",
+      "asm.trace.replay",
+      "asm.trace.restore",
+      "asm.editorInfo.choosePreset",
+      "asm.editorInfo.configureInline",
+      "asm.editorInfo.inspectLine",
     ],
   );
   t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
@@ -172,11 +179,22 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.baseImage",
       "asm.buildOutput",
       "asm.configFile",
+      "asm.debug.captureContext",
       "asm.debug.traceDetail",
       "asm.debug.traceMode",
       "asm.debug.captureSink",
       "asm.debug.liveBusAnalysis",
       "asm.debug.liveBusMaxLagMiB",
+      "asm.editorInfo.preset",
+      "asm.editorInfo.inline.enabled",
+      "asm.editorInfo.inline.parts",
+      "asm.editorInfo.inline.separator",
+      "asm.editorInfo.inline.placement",
+      "asm.editorInfo.inline.column",
+      "asm.editorInfo.inline.color",
+      "asm.editorInfo.inline.maxCharacters",
+      "asm.editorInfo.hover.enabled",
+      "asm.editorInfo.hover.rows",
       "asm.entryPoints",
       "asm.includePaths",
       "asm.plugins",
@@ -462,9 +480,9 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
   t.true(extension.includes("onDidChangeTextDocument"));
   t.true(extension.includes("onDidSaveTextDocument"));
   t.false(controller.includes("loadAnalysisProject"));
-  t.true(controller.includes('"annotations"'));
+  t.true(controller.includes("info.annotations ?? []"));
   t.true(controller.includes("createTextEditorDecorationType"));
-  t.true(controller.includes("currentAnalysisSourcePath"));
+  t.true(controller.includes("this.provider.invalidate()"));
   t.true(controller.includes("editor.visibleRanges"));
   t.true(debugAnnotations.includes("manifest.target !== map.target"));
   t.true(debugAnnotations.includes("manifest.rom.contentSha256 !== map.output.sha256"));

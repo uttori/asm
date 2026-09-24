@@ -373,6 +373,9 @@ export class WorkspaceIndex {
                     fileSet.add(edge.fromFile);
                     fileSet.add(edge.toFile);
                 }
+                for (const assetFile of Object.keys(result.assetDependencies)) {
+                    fileSet.add(assetFile);
+                }
                 this.#rootFileSets.set(root, fileSet);
                 if (this.lastRootServedFromCache) {
                     cachedRoots += 1;
@@ -446,20 +449,21 @@ export class WorkspaceIndex {
             }));
             assembler.includePaths = this.deriveIncludePaths(root);
             assembler.followIncludes = followIncludes;
-            const result = measureInternalPhase("lspAnalyzeSource", () => assembler.analyzeSource(content, root, 0, { followIncludes }));
+            const result = measureInternalPhase("lspAnalyzeSource", () => assembler.analyzeSource(content, root, 0, { followIncludes, deferAssetConversion: true }));
             const analysis = {
                 followedIncludes: followIncludes,
                 diagnostics: result.diagnostics,
                 symbols: result.symbols,
                 references: result.references,
                 includeEdges: result.includeEdges,
+                assetDependencies: result.assetDependencies ?? {},
             };
             this.logger?.info(`Analyzed ${path.basename(root)} in ${Date.now() - started}ms ` +
                 `(followIncludes=${followIncludes}, symbols=${result.symbols.length}, ` +
                 `refs=${result.references.length}, edges=${result.includeEdges.length}, ` +
                 `errors=${result.diagnostics.length})`);
             if (followIncludes && this.cache) {
-                const collected = measureInternalPhase("lspCollectFileHashes", () => this.collectFileHashes(root, result.includeEdges));
+                const collected = measureInternalPhase("lspCollectFileHashes", () => this.collectFileHashes(root, result.includeEdges, analysis.assetDependencies));
                 const { fileHashes, fileMtimes } = collected ?? {};
                 if (fileHashes && fileMtimes) {
                     measureInternalPhase("lspCacheWrite", () => this.cache.write(root, this.cacheIdentity(), fileHashes, fileMtimes, analysis));
@@ -602,10 +606,20 @@ export class WorkspaceIndex {
      * @returns {import("./root-analysis-cache.js").RootAnalysisCacheIdentity} The identity.
      */
     cacheIdentity() {
+        const formats = this.environment
+            .getAssetFormats(this.target)
+            .map((item) => `${item.id}@${item.version}`)
+            .sort();
+        const transforms = this.environment
+            .getAssetTransforms(this.target)
+            .map((item) => `${item.id}@${item.version}`)
+            .sort();
         return {
             target: this.target,
             architecture: this.architecture,
             includePaths: this.includePaths,
+            converterIdentity: JSON.stringify([formats, transforms]),
+            targetOptionsIdentity: JSON.stringify(this.targetOptions),
         };
     }
     /**
@@ -633,14 +647,18 @@ export class WorkspaceIndex {
      * Collects content hashes and mtimes for a root and every file in its include graph.
      * @param {string} root Absolute root path.
      * @param {AssemblyIncludeEdge[]} includeEdges Include edges from the analysis.
+     * @param {Readonly<Record<string, "binary" | "resource">>} assetDependencies Resolved asset inputs.
      * @returns {{ fileHashes: Record<string, string>; fileMtimes: Record<string, number> } | undefined}
      *   Path-to-hash and path-to-mtime maps, or undefined when incomplete.
      */
-    collectFileHashes(root, includeEdges) {
+    collectFileHashes(root, includeEdges, assetDependencies = {}) {
         const files = new Set([root]);
         for (const edge of includeEdges) {
             files.add(edge.fromFile);
             files.add(edge.toFile);
+        }
+        for (const file of Object.keys(assetDependencies)) {
+            files.add(file);
         }
         const fileHashes = {};
         const fileMtimes = {};

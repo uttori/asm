@@ -7,6 +7,7 @@ import {
   openAnalysisProjectStore,
   writeAnalysisProject,
   type AnalysisProject,
+  type AnalysisFunctionRecord,
   type IntervalAnnotation,
   type RuntimeInstructionRecord,
 } from "@uttori/asm-disassembler";
@@ -99,6 +100,246 @@ const fixture = (
 };
 
 const options = { sourceProjectSha256: "a".repeat(64) };
+
+/** Automatic function marker seeded by an imported entry point, not a reviewed source label. */
+const inferredEntry = (address: number): AnalysisFunctionRecord => ({
+  id: `static:function:${address.toString(16)}`,
+  kind: "function",
+  addressSpace: "snes.cpu",
+  address,
+  source: "entry-point",
+  evidencePath: ["legacy-entry"],
+  evidence: ["legacy"],
+});
+
+test("emitted fallback and imported labels resolve direct transfers without changing encoded aliases", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-flow-labels-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const sites: Array<[number, number[]]> = [
+    [0, [0xf0, 0x0e]], // Relative branch into a separately retained block.
+    [2, [0x20, 0x20, 0x80]],
+    [5, [0x4c, 0x21, 0x80]],
+    [8, [0x22, 0x22, 0x80, 0x00]], // Slow-bank JSL alias must stay encoded as bank 00.
+    [12, [0x5c, 0x23, 0x80, 0x00]],
+    [16, [0x82, 0x0d, 0x00]],
+    [19, [0x6c, 0x24, 0x80]], // An indirect pointer is not the code target.
+    [22, [0x62, 0x08, 0x00]], // PER pushes an address; it is not a control transfer.
+    [32, [0x60]],
+    [33, [0x60]],
+    [34, [0x6b]],
+    [35, [0x6b]],
+    [36, [0x60]],
+  ];
+  const bytes = new Uint8Array(40).fill(0xea);
+  for (const [offset, instruction] of sites) {bytes.set(instruction, offset);}
+  const { rom, project } = fixture(
+    [...bytes],
+    sites.map(([offset, instruction]) => capture(`flow-${offset}`, 0x808000 + offset, instruction)),
+  );
+  const input: AnalysisProject = {
+    ...project,
+    shards: {
+      ...project.shards,
+      annotations: [],
+      labels: [
+        {
+          id: "imported",
+          addressSpace: "snes.cpu",
+          address: 0x008021,
+          name: "ImportedEntry",
+          evidence: ["legacy"],
+        },
+      ],
+      analysis: [
+        ...project.shards.analysis,
+        ...[16, 32, 34, 35, 36].map((n) => inferredEntry(0x808000 + n)),
+      ],
+    },
+  };
+  const sourceDirectory = path.join(directory, "source");
+  const exported = exportSnes65816Source(input, rom, sourceDirectory, options);
+  const source = fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8");
+  t.regex(source, /BEQ Fn_808010/);
+  t.regex(source, /BRL Fn_808020/);
+  t.regex(source, /JSR\.w \(Fn_808020 & \$FFFF\)/);
+  t.regex(source, /JMP\.w \(L_ImportedEntry & \$F{4}\)/);
+  t.regex(source, /JSL\.l \(\(Fn_808022 & \$FFFF\) \| \$000000\)/);
+  t.regex(source, /JML\.l \(\(Fn_808023 & \$FFFF\) \| \$000000\)/);
+  t.notRegex(source, /JMP[^\n]*Fn_808024|PER[^\n]*Fn_808020/);
+  const romFile = path.join(directory, "rom.sfc");
+  fs.writeFileSync(romFile, rom.bytes());
+  t.true(
+    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+      .equal,
+  );
+  const analysisDirectory = path.join(directory, "analysis");
+  writeAnalysisProject(analysisDirectory, input);
+  const store = openAnalysisProjectStore(analysisDirectory);
+  try {
+    store.prepareAnnotationQueries();
+    const streamed = store.transaction(
+      () =>
+        exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+          ...options,
+          instructionGroups: store.instructionExportGroups(),
+        }),
+      false,
+    );
+    t.deepEqual(streamed, exported);
+  } finally {
+    store.close();
+  }
+});
+
+test("a branch to a suppressed operand-interior marker stays numeric", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-suppressed-target-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture(
+    [0xd0, 0x01, 0xa9, 0x18, 0x60],
+    [
+      capture("branch", 0x808000, [0xd0, 0x01], 0x20),
+      capture("load", 0x808002, [0xa9, 0x18], 0x20),
+    ],
+  );
+  const input = {
+    ...project,
+    shards: { ...project.shards, analysis: [...project.shards.analysis, inferredEntry(0x808003)] },
+  };
+  exportSnes65816Source(input, rom, directory, options);
+  const source = fs.readFileSync(path.join(directory, "banks/bank-000.asm"), "utf8");
+  t.regex(source, /BNE \$808003/);
+  t.notRegex(source, /Fn_808003/);
+});
+
+test("captured instruction extents supersede inferred operand entry markers in memory and SQL", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-legacy-entry-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture(
+    [0x20, 0xc0, 0x1b],
+    [capture("observed-jsr", 0x808000, [0x20, 0xc0, 0x1b])],
+  );
+  const input: AnalysisProject = {
+    ...project,
+    shards: {
+      ...project.shards,
+      annotations: [
+        ...project.shards.annotations,
+        { ...annotation("operand", 1, 2), points: ["in"] },
+      ],
+      analysis: [
+        ...project.shards.analysis,
+        inferredEntry(0x808000),
+        inferredEntry(0x808001),
+        inferredEntry(0x808003),
+      ],
+    },
+  };
+  const original = structuredClone(input);
+  const sourceDirectory = path.join(directory, "source");
+  const exported = exportSnes65816Source(input, rom, sourceDirectory, options);
+  t.deepEqual(
+    exported.spans.filter((span) => span.role === "code").map(({ start, end }) => [start, end]),
+    [[0, 3]],
+  );
+  const source = fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8");
+  t.regex(source, /JSR\.w \$1BC0/);
+  t.notRegex(source, /Fn_808001:/);
+  t.regex(source, /Fn_808000:/);
+  t.regex(source, /Fn_808003:/);
+  t.deepEqual(input, original, "the legacy entry and function provenance remain saved");
+  const romFile = path.join(directory, "rom.sfc");
+  fs.writeFileSync(romFile, rom.bytes());
+  t.true(
+    (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
+      .equal,
+  );
+  const analysisDirectory = path.join(directory, "analysis");
+  writeAnalysisProject(analysisDirectory, input);
+  const store = openAnalysisProjectStore(analysisDirectory);
+  try {
+    store.prepareAnnotationQueries();
+    const streamed = store.transaction(
+      () =>
+        exportSnes65816Source(store.sourceExportView(), rom, sourceDirectory, {
+          ...options,
+          instructionGroups: store.instructionExportGroups(),
+        }),
+      false,
+    );
+    t.deepEqual(streamed, exported, "SQL streaming applies the same runtime precedence");
+  } finally {
+    store.close();
+  }
+});
+
+test("inferred entry precedence requires a surviving runtime proof and retains explicit annotations", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-entry-proof-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture(
+    [0xa9, 0x18, 0x60],
+    [capture("observed-load", 0x808000, [0xa9, 0x18], 0x20)],
+  );
+  const marker = inferredEntry(0x808001);
+  const base = {
+    ...project.shards,
+    annotations: [],
+    analysis: [...project.shards.analysis, marker],
+  };
+  const explicitLabel = {
+    id: "reviewed-operand",
+    addressSpace: "snes.cpu",
+    address: 0x808001,
+    name: "OperandByte",
+    sourceName: "OperandByte",
+    evidence: ["legacy"],
+  };
+  const overlap = fixture(
+    [0xa9, 0x18, 0x60],
+    [
+      capture("observed-load", 0x808000, [0xa9, 0x18], 0x20),
+      capture("overlapping-entry", 0x008001, [0x18]),
+    ],
+  );
+  for (const [name, shards] of Object.entries({
+    static: {
+      ...base,
+      analysis: base.analysis.map((record) =>
+        record.kind === "cfg-node" ? { ...record, id: "static:cfg:808000" } : record,
+      ),
+    },
+    missingProvenance: {
+      ...base,
+      evidence: base.evidence.map((record) => ({ ...record, source: "import" as const })),
+    },
+    explicitLabel: { ...base, labels: [explicitLabel] },
+    explicitComment: {
+      ...base,
+      comments: [
+        {
+          id: "operand-note",
+          addressSpace: "snes.cpu",
+          address: 0x808001,
+          text: "Reviewed operand note",
+          evidence: ["legacy"],
+        },
+      ],
+    },
+    overlap: { ...base, analysis: [...overlap.project.shards.analysis, marker] },
+  })) {
+    const output = path.join(directory, name);
+    const exported = exportSnes65816Source({ ...project, shards }, rom, output, options);
+    t.false(
+      exported.spans.some((span) => span.role === "code"),
+      name,
+    );
+    const source = fs.readFileSync(path.join(output, "banks/bank-000.asm"), "utf8");
+    if (name === "explicitLabel") {
+      t.regex(source, /OperandByte:/);
+    } else {
+      t.regex(source, /Fn_808001:/, name);
+    }
+  }
+});
 
 test("captured ROM instructions supersede unreached in memory and SQL without promoting static guesses", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-unreached-"));

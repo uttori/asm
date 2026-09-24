@@ -1,6 +1,6 @@
 # Analysis API and storage
 
-Requires Node.js 26 or newer. The supported baseline is semantic schema 3 and SQLite storage format 3.
+Requires Node.js 26 or newer. The supported baseline is semantic schema 3 and SQLite storage format 4.
 
 Architecture-neutral ROM identity, persistent analysis-project primitives, and conservative control-flow traversal for Uttori ASM.
 
@@ -61,23 +61,40 @@ refresh was interrupted. Earlier development storage layouts are outside the sup
 source-export manifests, and native trace interchange remain JSON. Lossless ACT2 capture readers
 can supply decoded chunks directly through `RuntimeTraceSource`.
 
-Physical SQLite storage format 3 is recorded in `PRAGMA user_version`, independently of semantic
+Physical SQLite storage format 4 is recorded in `PRAGMA user_version`, independently of semantic
 schema version 3 and the logical revision. `runtime_facts` shares coordinates and payloads globally.
-`runtime_observations` retains each capture's identity, count and provenance. An exact instruction/state
-pair occupies one fact and relationship, with a virtual CPU-state row exposed by the `runtime` SQL
-view. Standalone state records remain independent. Point lookups index the negative virtual row IDs.
-Runtime prefixes/evidence sets and identity suffixes are interned. Observations and their uniqueness
-indexes reference suffixes by integer, and paired states share that reference. Canonical hash suffixes
-remain binary; arbitrary text identities preserve their exact spelling.
-Numeric 65816 instruction/state payloads use UAR/1: a field-presence mask, instruction bytes, unsigned
-byte/word registers and CRC32. This codec preserves all flags and register values; it does not apply a
-retention profile. Aliases, unknowns, unexpected fields and other processors retain the general codec.
-Other small payloads use SQLite JSONB. Larger records use bounded, checksummed DEFLATE when it saves space.
-Metadata and compressed export projections use the same codec. Complete runtime arrays retain their
-semantic shape and sort by ID. Streaming consumers must not depend on physical row order.
+`runtime_observations` retains each capture's identity, count and provenance. Physical fact rows
+reference shared coordinate/type descriptors, avoiding repeated architecture/address strings in every
+register snapshot. `runtime_facts` remains a logical SQL view over those rows.
+An exact instruction/state pair occupies one fact and relationship, with a virtual CPU-state row
+exposed by the `runtime` SQL view. Standalone state records remain independent. Point lookups index
+the negative virtual row IDs. Runtime prefixes/evidence sets and identity suffixes are interned.
+Observations whose identity ID equals their fact ID reuse the fact index; a partial identity index
+covers exceptions. Canonical hash suffixes remain binary. Fact and identity lookup indexes store
+8-byte hash prefixes but always compare complete values, preserving collision safety and arbitrary
+external IDs.
 
-Use the store APIs, or query the `runtime` view with the connection's registered `analysis_json(payload)`
-function; raw SQLite JSON functions cannot decode UAR/1. Only SQLite storage format 3 is supported.
+Full runtime payloads are sealed into immutable UHB/1 DEFLATE blocks inside SQLite before publication.
+Each block preserves exact TEXT/BLOB/NULL storage types, a bounded offset directory, and a checksum;
+it contains at most 1,024 records and decodes to at most 32 MiB. Normal batches target 256 KiB. A
+connection-local 4 MiB cache avoids repeated decompression during indexed queries, and is cleared at
+transaction boundaries to protect rollback/reused-ID correctness. Point reads materialize only their
+requested slots within a validated block. Blocks are authoritative evidence,
+not evictable caches. Raw ACT2 files are disposable and are not needed to reconstruct these records.
+
+Numeric 65816 instruction/state payloads inside blocks use UAR/1: a field-presence mask, instruction
+bytes, unsigned byte/word registers and CRC32. This preserves all flags and register values; it never
+applies a reduced retention profile. Aliases, unknowns, unexpected fields and other processors retain
+the general codec. Other small payloads use SQLite JSONB. Larger records use bounded, checksummed
+DEFLATE when it saves space. Metadata and compressed export projections use the same general codec.
+Complete runtime arrays retain their semantic shape and sort by ID. Streaming consumers must not
+depend on physical row order.
+
+Use the store APIs, which register all codecs and own cache lifetime. Low-level Node SQLite readers
+must call `registerRuntimeHistory(database)` before preparing runtime views and call its returned cache
+reset at transaction boundaries. Query the `runtime` view with `analysis_json(payload)` for semantic
+JSON; raw SQLite JSON functions cannot decode UAR/1. `runtime_fact_locations` exposes coordinate-only
+queries without reading or decompressing history payloads. Only SQLite storage format 4 is supported.
 The sole existing project has already been converted; migration commands and older layout readers
 are removed. Rebuild and reload consumers together when changing the storage contract.
 
@@ -273,51 +290,11 @@ Target plugins remain responsible for rendering their native source syntax.
 
 Summary totals distinguish exclusive classified, unknown, and conflicted bytes. Per-classification totals intentionally overlap when a byte has incompatible classifications. CPU and RAM records without an explicit file offset are returned in `unprojected`. The helper never guesses a mapper translation. Partially out-of-range records are clipped with diagnostics, and wholly invalid or out-of-ROM records remain visible as unprojected input.
 
-## Asset Codecs
+## Asset declarations
 
-`AssetCodec` is the target-neutral boundary for binary assets. A codec declares a stable id, implementation version, byte-size/alignment bounds, and stable-id dependencies, then implements three separate operations:
+Analysis interval annotations retain `codecId`, `codecVersion`, JSON-safe options, and optional plugin provenance. An optional compression reference records capacity, bank, and fill policy. These declarations contain no extracted bytes and do not invoke conversion during project load. Unknown IDs remain readable. `resolveProjectNativeAssetId()` identifies known v1 `snes.asset.*` declarations for analysis display without changing the stored ID, version, or options; other versions remain unresolved.
 
-- `inspect` determines the exact encoded extent, logical references, metadata, and nested codec requests without extracting files.
-- `decode` returns a JSON-safe editable value plus optional runtime-only extracted files.
-- `encode` recreates bytes from that decoded result.
-
-`AssetCodecRegistry` accepts codecs in any registration order and resolves the complete dependency graph only by id, rejecting missing dependencies and cycles. `planAssets()` validates deterministic inspection, exact and source bounds, nesting, and address-space-qualified locations. Parent/child byte overlap is intentional. Overlapping roots or siblings remain explicit plan conflicts.
-
-`verifyAssetPlan()` is the mandatory no-op gate before later source-export integration. It repeats decode and encode, canonicalizes values and file ordering, validates extracted paths, rejects nondeterminism and size drift, and requires each encoded range to match its original bytes exactly. Extracted byte payloads are summarized by hash and size in the verification result and are never placed in analysis-project metadata.
-
-`createBuiltinAssetCodecRegistry()` provides the first target-neutral codec set:
-
-| Codec id                     | Editable representation                                                    | Important options                                                                 |
-| ---------------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `uttori.asset.raw`           | Byte array plus an incbin-ready extracted file                             | Exact request `length`, `path`, `mediaType`                                       |
-| `uttori.asset.scalar-array`  | Signed or unsigned integer array                                           | `width`, `endian`, `signed`, `count`                                              |
-| `uttori.asset.struct-array`  | Repeated named scalar fields and LSB0 bitfields, with raw padding retained | `fields`, `stride`, `count`, default `endian`                                     |
-| `uttori.asset.pointer-table` | Qualified logical addresses and raw pointer values                         | `width`, `endian`, `base`, `scale`, `nullValue`, `addressSpace`, `targetAssetIds` |
-| `uttori.asset.index-table`   | Semantic indexes and resolved stable target references                     | `width`, `endian`, `baseIndex`, `nullValue`, `targets`                            |
-| `uttori.asset.text`          | Text plus a terminator flag and UTF-8 extracted file                       | `ascii`, `table`, `terminator`, `maxLength`, `path`                               |
-
-Array codecs accept either an exact request length or `count`. When both are supplied they must agree. Struct fields are either byte-aligned scalars (`name`, `offset`, optional `width`/`endian`/`signed`) or disjoint bitfields (`name`, `bitOffset`, `bits`, optional `signed`). Struct encoding overlays edits on the retained raw bytes so unnamed bits and record padding remain unchanged.
-
-Text translation tables map byte keys written as decimal, `0xHH`, or `$HH` to unique, prefix-free tokens. Printable ASCII and tab/newline/carriage return are enabled by default and can be disabled with `ascii: false`. Unmapped bytes decode as explicit `\xHH` escapes. Terminator discovery is permitted only with a finite `maxLength`. It never scans an unbounded source range.
-
-`decodePlannedAsset()` and `encodePlannedAsset()` are the edit boundary. Encoding always returns a defensive byte copy and rejects any size change from the inspected extent, so one failed asset edit cannot silently move later ROM regions.
-
-`CompressionCodecRegistry` is deliberately separate from semantic asset codecs. Target and game
-plugins register stable, versioned byte-to-byte compressors. `verifyCompressionCodec()` requires
-deterministic decode/encode, decoded-data equivalence, and an exact no-op encoding.
-`reencodeCompressedRange()` enforces the original capacity and optional half-open bank bounds, then
-returns an exact-size replacement that preserves or explicitly fills unused bytes. Recompression
-therefore cannot move a following ROM range.
-
-Asset-capable interval annotations persist `codecId`, `codecVersion`, JSON-safe options, and optional
-plugin id/version provenance. A separately versioned `compression` reference can record capacity,
-bank, and fill constraints. These records contain declarations only—codec implementations remain in
-registries composed by the host, and decoded/extracted bytes remain outside the project.
-
-`AssetPreviewRegistry` is a presentation-only extension point. `renderVerifiedAssetPreview()` refuses
-to run unless the current source bytes, asset range, codec id/version, and byte-identical encoded hash
-match an `AssetVerificationRecord`. Renderers run twice and must return identical safe relative files,
-so a preview can never conceal or weaken the binary correctness gate.
+The disassembler owns ROM identity, interval classification, raw source export, and conservative project edits. It no longer exports a runtime asset codec, range planner, compressor, or preview registry. New source assets use [`includeAsset`](https://github.com/uttori/asm/blob/master/packages/plugin-snes/ASSET-INCLUSION.md) and standalone byte conversion uses [`@uttori/asm-assets`](https://github.com/uttori/asm/blob/master/packages/assets/README.md). Source export continues to preserve unclassified ROM bytes as raw data; a declaration does not automatically authorize an edited ROM range or reencode a cartridge stream.
 
 For implementation ownership, schema-change steps, transaction invariants, importer rules, and test
 gates, read the [architecture guide](https://github.com/uttori/asm/blob/master/packages/disassembler/ARCHITECTURE.md) and repository
@@ -345,9 +322,11 @@ optional cache allocation, and capture receipts. Its controls are `--cache-max-m
 maintenance. Explicit database ceilings roll back entire publications. Facts are never sampled
 or deleted to satisfy a budget.
 
-Imports read source captures without copying them into the project. Keep the original capture if
-you need to reproduce ordered events, full register history or derived graphics views. The project
-retains compact facts and import receipts independently of the source file's lifetime.
+Imports read source captures without copying them into the project. Imported facts, register values,
+counts, provenance and receipts remain durable when the capture is discarded; full-profile history
+is compressed losslessly inside the database. Source captures are needed only for information that
+was not imported, such as original event ordering, omitted registers in a compact profile, or graphics
+views that require companion artifacts.
 
 Post-import maintenance evicts stale or over-budget disposable projections and attempts nonblocking WAL
 checkpoint/truncation. Active readers can defer truncation. The configured 64 MiB journal size limit

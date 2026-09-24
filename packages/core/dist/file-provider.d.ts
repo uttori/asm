@@ -30,6 +30,8 @@ export interface AssemblyFileProvider {
  * Default Node.js-backed file provider used by the assembler runtime.
  */
 export declare class NodeAssemblyFileProvider implements AssemblyFileProvider {
+    /** Consumed paths for dependency snapshots; callers reusing a provider may clear this per build. */
+    readonly readFiles: Set<string>;
     /**
      * Find the first existing path: macro directory, current source directory, include paths, then cwd.
      * @param {string} filename Include path token, optionally quoted.

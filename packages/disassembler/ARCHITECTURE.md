@@ -127,7 +127,7 @@ SQLite WAL handles interrupted writers and concurrent readers. The database is a
 `analysis.json` is atomically refreshed after commit for watchers. A failed pointer refresh is a
 warning about an already committed operation, not a failed edit. Explicit compaction checkpoints and
 VACUUMs the database and prunes unused dictionaries. Normal edits create no filesystem generations.
-Current projects use schema 3 and SQLite storage format 3 exclusively. The sole existing database
+Current projects use schema 3 and SQLite storage format 4 exclusively. The sole existing database
 has already been converted; older storage readers and migration commands are removed. Imports
 retain facts and capture receipts without copying source files.
 Instruction analysis uses compact decoder-key/provenance summaries. Persistent SQL triggers record
@@ -192,14 +192,12 @@ Malformed optional metadata becomes a diagnostic, not a reason to fabricate pres
 
 ## Assets and compression
 
-Asset codecs are target-neutral contracts with stable id/version, dependencies, size/alignment
-bounds, and separate `inspect`, `decode`, and `encode` operations. A verification record exists only
-after deterministic no-op encode reproduces the source bytes. Preview renderers are presentation
-only and cannot weaken that gate.
-
-Compression is separate because decoded semantic equality does not guarantee identical encoded
-bytes. Re-encoding enforces original capacity and optional bank/fill bounds. It cannot move later ROM
-data. Game-specific codecs belong in plugins, not generic analysis.
+Asset interval annotations retain versioned declarations and optional compression capacity/bank
+policy. Known v1 native IDs resolve for analysis display without rewriting persisted data. The
+disassembler does not load converters, render previews, or reencode declared ROM ranges.
+`@uttori/asm-assets` owns standalone conversion and exact byte transforms; source assembly applies
+them only through declared plugin registrations. ROM export remains conservative and keeps original
+raw bytes until a separately verified ownership migration authorizes replacement.
 
 ## Native source export and round trip
 
@@ -281,17 +279,17 @@ bytes.
 
 ## Where to add new behavior
 
-| Behavior                                              | Owning extension point               |
-| ----------------------------------------------------- | ------------------------------------ |
-| architecture-independent decoded operand/flow concept | core decoder contracts               |
-| processor opcode/state/effective-address behavior     | target plugin architecture           |
-| generic CFG/evidence/project projection               | disassembler                         |
-| mapper or source-format import                        | target plugin                        |
-| game asset/compressor                                 | game/target plugin codec registry    |
-| user workflow over existing APIs                      | CLI or editor host                   |
-| emulator-independent debug semantic                   | debug adapter contract + conformance |
-| emulator command/transport                            | corresponding sidecar                |
-| editor-only rendering/navigation                      | VS Code extension                    |
+| Behavior                                              | Owning extension point                            |
+| ----------------------------------------------------- | ------------------------------------------------- |
+| architecture-independent decoded operand/flow concept | core decoder contracts                            |
+| processor opcode/state/effective-address behavior     | target plugin architecture                        |
+| generic CFG/evidence/project projection               | disassembler                                      |
+| mapper or source-format import                        | target plugin                                     |
+| game asset/compressor                                 | asset library and game/target plugin registration |
+| user workflow over existing APIs                      | CLI or editor host                                |
+| emulator-independent debug semantic                   | debug adapter contract + conformance              |
+| emulator command/transport                            | corresponding sidecar                             |
+| editor-only rendering/navigation                      | VS Code extension                                 |
 
 When two packages appear to need the same target-specific helper, define the smallest neutral data
 contract in the lower layer and implement it in the target package. Do not import the target upward.

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
-import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
 
@@ -15,6 +14,7 @@ interface PackedArchive {
 /** Package fields needed to verify its published runtime contract. */
 interface PackageManifest {
   readonly name: string;
+  readonly version: string;
   readonly private?: boolean;
   readonly repository?: { readonly type: string; readonly url: string; readonly directory: string };
   readonly homepage?: string;
@@ -30,7 +30,6 @@ interface PackageManifest {
 
 const root = process.cwd();
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-package-check-"));
-const require = createRequire(import.meta.url);
 
 // Development conditions/loaders can hide a broken package. Consumers use ordinary Node
 // resolution. A private empty npm cache makes installation independent of registry state.
@@ -72,6 +71,29 @@ const npm = (args: string[], cwd: string): string => {
   const executable = process.env.npm_execpath;
   assert.ok(executable, "Run this check through npm run pack:check.");
   return run(process.execPath, [executable, ...args], cwd);
+};
+
+/** Resolve from the declaring package so nested dependency versions match the installed tree.
+ * @param {string} dependency External package name.
+ * @param {string} from Directory of the declaring package.
+ * @returns {string} Absolute manifest path for the resolved package.
+ */
+const dependencyManifest = (dependency: string, from: string): string => {
+  let directory = from;
+  for (;;) {
+    const manifestPath = path.join(directory, "node_modules", dependency, "package.json");
+    if (fs.existsSync(manifestPath)) {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
+      if (manifest.name === dependency) {
+        return manifestPath;
+      }
+    }
+    const parent = path.dirname(directory);
+    if (parent === directory) {
+      throw new Error(`Could not locate installed package '${dependency}'.`);
+    }
+    directory = parent;
+  }
 };
 
 /**
@@ -117,7 +139,7 @@ try {
   });
   const names = new Set(workspaces.map(({ manifest }) => manifest.name));
   const archives: string[] = [];
-  const externalDependencies = new Set<string>();
+  const externalDependencies: Array<{ dependency: string; from: string }> = [];
   const imports: string[] = [];
   const commonJsImports: string[] = [];
   for (const { directory, manifest } of workspaces) {
@@ -186,7 +208,7 @@ try {
     }
     for (const dependency of Object.keys(manifest.dependencies ?? {})) {
       if (!names.has(dependency)) {
-        externalDependencies.add(dependency);
+        externalDependencies.push({ dependency, from: directory });
       }
     }
     archives.push(path.join(scratch, archive.filename));
@@ -196,18 +218,20 @@ try {
   // Stage installed third-party dependencies too. No workspace link, cached unpublished package,
   // or network fetch can rescue this installation. Set iteration includes discovered transitives.
   const stagedDependencies = new Set<string>();
-  for (const dependency of externalDependencies) {
-    if (stagedDependencies.has(dependency)) {
+  for (let index = 0; index < externalDependencies.length; index++) {
+    const { dependency, from } = externalDependencies[index];
+    const manifestPath = dependencyManifest(dependency, from);
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
+    const identity = `${manifest.name}@${manifest.version}`;
+    if (stagedDependencies.has(identity)) {
       continue;
     }
-    stagedDependencies.add(dependency);
-    const manifestPath = require.resolve(`${dependency}/package.json`);
-    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8")) as PackageManifest;
+    stagedDependencies.add(identity);
     const archive = pack(path.dirname(manifestPath), false);
     archives.push(path.join(scratch, archive.filename));
     for (const transitive of Object.keys(manifest.dependencies ?? {})) {
       if (!names.has(transitive)) {
-        externalDependencies.add(transitive);
+        externalDependencies.push({ dependency: transitive, from: path.dirname(manifestPath) });
       }
     }
   }

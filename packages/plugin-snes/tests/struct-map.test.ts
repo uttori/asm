@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
 import { Uint8ArrayDecoderSource } from "@uttori/asm-core";
 import {
   loadAnalysisProjectSnapshot,
@@ -13,13 +14,13 @@ import { test } from "../../../tests/ava-helper.js";
 import { Assembler } from "../../../tests/test-assembler.js";
 import { Cpu65816Decoder } from "../src/architectures/65816-decoder.js";
 import {
-  exportSnes65816Source,
-  formatSnes65816SourceInstruction,
-} from "../src/disassembler/source-export.js";
-import {
   initializeSnesDisassemblyWorkspace,
   verifySnesProjectRoundTrip,
 } from "../src/disassembler/project-initializer.js";
+import {
+  exportSnes65816Source,
+  formatSnes65816SourceInstruction,
+} from "../src/disassembler/source-export.js";
 import {
   indexSnesStructFields,
   planSnesStructRomFields,
@@ -68,6 +69,9 @@ const assemble = (lines: readonly string[]): Uint8Array => {
 test("struct operands preserve mirrored banks, array indexes, and interior bytes", (t) => {
   const map = loadedMap();
   const fields = indexSnesStructFields(map);
+  t.is(fields.get(0x7e0101), "Players[0].word");
+  t.is(fields.get(0x7e0102), "(Players[0].word + $1)");
+  t.is(indexSnesStructFields(map, true).get(0x7e0101), "Players[0].word");
   t.is(fields.get(0x7e010d), "Players[1].word");
   t.is(fields.get(0x7e0106), undefined, "opaque gaps do not receive inferred field names");
   const decoder = new Cpu65816Decoder();
@@ -81,7 +85,9 @@ test("struct operands preserve mirrored banks, array indexes, and interior bytes
         logicalAddress: 0x808000,
         state: { e: 0, m: 0, x: 0 },
       });
-      if (decoded.kind !== "instruction") {throw new Error("Expected decoded fixture instruction.");}
+      if (decoded.kind !== "instruction") {
+        throw new Error("Expected decoded fixture instruction.");
+      }
       const source = formatSnes65816SourceInstruction(
         decoded.instruction,
         undefined,
@@ -89,7 +95,7 @@ test("struct operands preserve mirrored banks, array indexes, and interior bytes
         undefined,
         fields,
       );
-      t.regex(source, /(?:Players|Table)(?:\[1])?\.word/);
+      t.regex(source, /(?:Players|Table)\[[01]]\.word/);
       t.deepEqual(
         assemble(["lorom", "org $808000", ".a16", ".i16", ...definitions, source]),
         bytes,
@@ -99,9 +105,60 @@ test("struct operands preserve mirrored banks, array indexes, and interior bytes
   }
 });
 
+test("array stores use explicit zero indexes while scalar bindings retain their short form", (t) => {
+  const map = {
+    ...validateSnesStructMap({
+      format: "uttori-asm-snes-struct-map",
+      schemaVersion: 1,
+      structures: [
+        { id: "HudCache", size: 2, fields: [{ name: "prefix_tiles", offset: 0, size: 2 }] },
+      ],
+      bindings: [{ name: "SomPartyHudCaches", structure: "HudCache", address: 0x7e0100, count: 3 }],
+    }),
+    sourceBytes: new Uint8Array(),
+  };
+  const fields = indexSnesStructFields(map);
+  const definitions = renderSnesStructDefines(map).split("\n");
+  const decoder = new Cpu65816Decoder();
+  for (let index = 0; index < 3; index++) {
+    const bytes = Uint8Array.of(0x8d, index * 2, 0x01);
+    const decoded = decoder.decode({
+      source: new Uint8ArrayDecoderSource(bytes),
+      offset: 0,
+      logicalAddress: 0x808000,
+      state: { e: 0, m: 0, x: 0, dataBank: 0x7e },
+    });
+    if (decoded.kind !== "instruction") {
+      throw new Error("Expected fixture store instruction.");
+    }
+    const source = formatSnes65816SourceInstruction(
+      decoded.instruction,
+      undefined,
+      0x808000,
+      undefined,
+      fields,
+    );
+    t.is(source, `STA.w SomPartyHudCaches[${index}].prefix_tiles & $FFFF`);
+    t.deepEqual(assemble(["lorom", "org $808000", ".a16", ...definitions, source]), bytes);
+    if (index === 0) {
+      t.deepEqual(
+        assemble(["lorom", "org $808000", ".a16", ...definitions, source.replace("[0]", "")]),
+        bytes,
+        "Existing unindexed references remain valid aliases for index zero.",
+      );
+    }
+  }
+  for (const firstIndex of [0, 1]) {
+    const scalar = { ...map, bindings: [{ ...map.bindings[0], count: 1, firstIndex }] };
+    const reference = firstIndex === 0 ? "SomPartyHudCaches" : "SomPartyHudCaches[1]";
+    t.is(indexSnesStructFields(scalar).get(0x7e0100), `${reference}.prefix_tiles`);
+  }
+});
+
 test("bound ROM fields assemble every width and preserve opaque bytes and split fields", (t) => {
   const map = loadedMap();
   const fields = planSnesStructRomFields(map, 0x8000, (offset) => 0x808000 + offset);
+  t.is(fields[0].expression, "Table[0].byte");
   const bytes = Uint8Array.from({ length: 24 }, (_, index) => (index * 37 + 0x92) & 0xff);
   const lines = ["lorom", "org $808100", ...renderSnesStructDefines(map).split("\n")];
   for (const field of fields) {
@@ -158,7 +215,9 @@ test("one-based ROM arrays distinguish biased indexed operands from adjacent sca
       logicalAddress: 0x808000,
       state: { e: 0, m: 0, x: 0 },
     });
-    if (decoded.kind !== "instruction") {throw new Error("Expected fixture instruction.");}
+    if (decoded.kind !== "instruction") {
+      throw new Error("Expected fixture instruction.");
+    }
     const source = formatSnes65816SourceInstruction(
       decoded.instruction,
       undefined,
@@ -213,16 +272,130 @@ test("entry comments use logical indexes and normalize prose without accepting a
     ...input,
     bindings: [{ ...input.bindings[1], firstIndex, entryComments: comments }],
   });
-  const normalized = validateSnesStructMap(withComments({ 1: "Candy\n  item", 2: "Cup of Wishes" }));
+  const normalized = validateSnesStructMap(
+    withComments({ 1: "Candy\n  item", 2: "Cup of Wishes" }),
+  );
   t.deepEqual(normalized.bindings[0].entryComments, { 1: "Candy item", 2: "Cup of Wishes" });
   t.deepEqual(validateSnesStructMap(withComments({})).bindings[0].entryComments, {});
-  for (const comments of [{ 0: "Wrong base" }, { 3: "Outside" }, { "01": "Ambiguous" },
-    { "1.5": "Fraction" }, { "0x1": "Hex" }, { "-1": "Negative" }, { 1: 42 }, { 1: " \n " }, [], null]) {
+  for (const comments of [
+    { 0: "Wrong base" },
+    { 3: "Outside" },
+    { "01": "Ambiguous" },
+    { "1.5": "Fraction" },
+    { "0x1": "Hex" },
+    { "-1": "Negative" },
+    { 1: 42 },
+    { 1: " \n " },
+    [],
+    null,
+  ]) {
     t.throws(() => validateSnesStructMap(withComments(comments)));
   }
-  t.throws(() => validateSnesStructMap({
-    ...input, bindings: [{ ...input.bindings[0], entryComments: { 0: "No ROM rows" } }],
-  }), { message: /ROM binding/ });
+  t.throws(
+    () =>
+      validateSnesStructMap({
+        ...input,
+        bindings: [{ ...input.bindings[0], entryComments: { 0: "No ROM rows" } }],
+      }),
+    { message: /ROM binding/ },
+  );
+});
+
+test("named data stays outside code and guide labels while short comments stay inline", async (t) => {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-struct-layout-"));
+  t.teardown(() => fs.rmSync(temporary, { recursive: true, force: true }));
+  const romFile = path.join(temporary, "fixture.sfc");
+  const outputDirectory = path.join(temporary, "workspace");
+  const bytes = new Uint8Array(0x8000).fill(0xea);
+  bytes[0] = 0x60; // RTS immediately before a table: its data must not fold into the routine.
+  bytes.fill(0x20, 0x7fc0, 0x7fd5);
+  bytes[0x7fd5] = 0x20;
+  bytes[0x7fd7] = 0x05;
+  bytes.set([0xcb, 0xed, 0x34, 0x12], 0x7fdc);
+  bytes.fill(0, 0x7fe0);
+  bytes.set([0x00, 0x80], 0x7ffc);
+  fs.writeFileSync(romFile, bytes);
+  await initializeSnesDisassemblyWorkspace({ romFile, outputDirectory, mapper: "lorom" });
+  const before = loadAnalysisProjectSnapshot(path.join(outputDirectory, "analysis"));
+  const project = {
+    ...before,
+    shards: {
+      ...before.shards,
+      labels: [
+        ...before.shards.labels,
+        { id: "guide", addressSpace: "rom.file", address: 5, name: "OldTableGuide", evidence: [] },
+        {
+          id: "scalar-guide",
+          addressSpace: "rom.file",
+          address: 9,
+          name: "OldScalarGuide",
+          evidence: [],
+        },
+      ],
+      comments: [
+        ...before.shards.comments,
+        {
+          id: "guide-note",
+          addressSpace: "rom.file",
+          address: 5,
+          text: "Imported guide.",
+          evidence: [],
+        },
+      ],
+    },
+  };
+  const input = {
+    format: "uttori-asm-snes-struct-map",
+    schemaVersion: 1,
+    structures: [{ id: "Word", size: 2, fields: [{ name: "value", offset: 0, size: 2 }] }],
+    bindings: [
+      {
+        name: "Handlers",
+        structure: "Word",
+        address: 0x808001,
+        fileOffset: 1,
+        count: 2,
+        entryComments: { 0: "First handler" },
+      },
+      { name: "GuidedTable", structure: "Word", address: 0x808005, fileOffset: 5, count: 2 },
+      {
+        name: "Scalar",
+        structure: "Word",
+        address: 0x808009,
+        fileOffset: 9,
+        count: 1,
+        entryComments: { 0: "Short description" },
+      },
+      {
+        name: "LongNote",
+        structure: "Word",
+        address: 0x80800b,
+        fileOffset: 11,
+        count: 1,
+        entryComments: { 0: "A long description. ".repeat(10).trim() },
+      },
+    ],
+  };
+  fs.writeFileSync(path.join(outputDirectory, "struct-map.json"), JSON.stringify(input));
+  const exportSource = () =>
+    exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
+      sourceProjectSha256: "0".repeat(64),
+    });
+  const first = exportSource();
+  const bank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
+  t.regex(
+    bank,
+    /  RTS\n\ndataStructs Handlers\n  \[0] = { value = \$EAEA } ; First handler\n  \[1] = { value = \$EAEA }\nendDataStructs\n\n/,
+  );
+  t.regex(bank, /L_OldTableGuide:\n; Imported guide\.\ndataStructs GuidedTable\n  \[0] =/);
+  t.regex(bank, /L_OldScalarGuide:\ndataStruct Scalar, { value = \$EAEA } ; Short description\n/);
+  t.regex(bank, /\n; A long description\.[^\n]+\ndataStruct LongNote, { value = \$EAEA }\n/);
+  t.notRegex(bank, /^[\t ]+(?:dataStructs? |endDataStructs)/m);
+  t.true(
+    (await verifySnesProjectRoundTrip({ romFile, sourceDirectory: outputDirectory })).comparison
+      .equal,
+  );
+  t.deepEqual(exportSource(), first, "Formatting remains deterministic across regeneration.");
 });
 
 test("normal export includes structs, owns typed bytes, retains interior metadata, and detects drift", async (t) => {
@@ -259,12 +432,17 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   };
   const filename = path.join(outputDirectory, "struct-map.json");
   const named = fixtureMap();
-  fs.writeFileSync(filename, JSON.stringify({
-    ...named,
-    bindings: named.bindings.map((binding) => binding.name === "Table"
-      ? { ...binding, entryComments: { 0: "Fragmented Candy", 1: "Cup of Wishes" } }
-      : binding),
-  }));
+  fs.writeFileSync(
+    filename,
+    JSON.stringify({
+      ...named,
+      bindings: named.bindings.map((binding) =>
+        binding.name === "Table"
+          ? { ...binding, entryComments: { 0: "Fragmented Candy", 1: "Cup of Wishes" } }
+          : binding,
+      ),
+    }),
+  );
   const exportSource = () =>
     exportSnes65816Source(project, RomImage.load(romFile), outputDirectory, {
       sourceProjectSha256: "0".repeat(64),
@@ -272,12 +450,16 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   const first = exportSource();
   const bank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
   t.regex(fs.readFileSync(path.join(outputDirectory, "main.asm"), "utf8"), /incsrc "structs.asm"/);
-  t.regex(bank, /LDA\.l Table\.word,x/);
+  t.regex(bank, /LDA\.l Table\[0]\.word,x/);
   t.regex(bank, /LDA\.l Players\[1]\.word/);
-  t.regex(bank, /High byte remains annotated\.\n  assert pc\(\) == Table\.word \+ \$1/);
-  t.regex(bank, /; Fragmented Candy\n  assert pc\(\) == Table\.byte/);
-  t.is(bank.match(/Fragmented Candy/g)?.length, 1, "fragmentation must not duplicate the entry comment");
-  t.regex(bank, /dataStruct Table\[1], .* ; Cup of Wishes\n/);
+  t.regex(bank, /High byte remains annotated\.\n  assert pc\(\) == Table\[0]\.word \+ \$1/);
+  t.regex(bank, /; Fragmented Candy\n  assert pc\(\) == Table\[0]\.byte/);
+  t.is(
+    bank.match(/Fragmented Candy/g)?.length,
+    1,
+    "fragmentation must not duplicate the entry comment",
+  );
+  t.regex(bank, /\n; Cup of Wishes\ndataStruct Table\[1], [^\n;]+\n/);
   t.regex(
     bank,
     /dataStruct Table\[1], { byte = \$EA, word = \$EAEA, pointer = \$EAEAEA, __gap_6 = \[\$EA], dword = \$EAEAEAEA, __gap_b = \[\$EA] }/,
@@ -302,12 +484,20 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   // stays outside the block. An interior comment still forces raw fragments.
   const expanded = fixtureMap();
   expanded.bindings[1].count = 5;
-  fs.writeFileSync(filename, JSON.stringify({
-    ...expanded,
-    bindings: expanded.bindings.map((binding) => binding.name === "Table"
-      ? { ...binding, entryComments: { 1: "Candy", 2: "Cup of Wishes", 4: "Named after a gap" } }
-      : binding),
-  }));
+  fs.writeFileSync(
+    filename,
+    JSON.stringify({
+      ...expanded,
+      bindings: expanded.bindings.map((binding) =>
+        binding.name === "Table"
+          ? {
+              ...binding,
+              entryComments: { 1: "Candy", 2: "Cup of Wishes", 4: "Named after a gap" },
+            }
+          : binding,
+      ),
+    }),
+  );
   const boundaryProject = {
     ...project,
     shards: {
@@ -330,10 +520,9 @@ test("normal export includes structs, owns typed bytes, retains interior metadat
   const groupedBank = fs.readFileSync(path.join(outputDirectory, "banks/bank-000.asm"), "utf8");
   t.regex(
     groupedBank,
-    /dataStructs Table\n    \[1] = .*\n    \[2] = .*\n  endDataStructs\n\n; Fourth record\.\n  dataStructs Table\n    \[3] = .*\n    \[4] = .*\n  endDataStructs/,
+    /\ndataStructs Table\n  \[1] = .* ; Candy\n  ; Cup of Wishes\n  \[2] = .*\nendDataStructs\n\n; Fourth record\.\ndataStructs Table\n  \[3] = .*\n  ; Named after a gap\n  \[4] = .*\nendDataStructs/,
   );
-  t.regex(groupedBank, /\[1] = .* ; Candy\n    \[2] = .* ; Cup of Wishes\n  endDataStructs/);
-  t.regex(groupedBank, /\[3] = [^\n;]+\n {4}\[4] = .* ; Named after a gap\n/);
+  t.notRegex(groupedBank, /\[\d+] = .* ; (?:Cup of Wishes|Named after a gap)/);
   t.is(
     grouped.spans
       .filter((span) => span.source === "struct-map.json")

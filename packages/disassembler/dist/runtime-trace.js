@@ -6,7 +6,7 @@ import { validateRuntimeInstructionDetails, } from "./trace-detail.js";
 export const RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
 /** Supported trace-artifact schema. Readers reject other revisions. */
 export const RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION = 1;
-/** Default distinct-fact budget for compact indexes. Full indexes default to 8,000,000. */
+/** Default in-memory distinct-fact budget for compact indexes. Full memory indexes default to 8M. */
 export const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2_000_000;
 const MAX_RUNTIME_TRACE_INDEX_RECORDS = 8_000_000;
 // P/E control instruction widths. D/DB resolve direct-page and data-bank operands.
@@ -151,6 +151,32 @@ export const importRuntimeInstructionTrace = (value, context) => {
     return importer.finish();
 };
 /**
+ * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
+ * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
+ * @param {RuntimeTraceIndexMode} mode Validated retention profile.
+ * @param {number} requested Explicit caller budget, if any.
+ * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
+ * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
+ */
+export const runtimeTraceIndexRecordLimit = (mode, requested, storage) => {
+    let defaultLimit = DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS;
+    let maximum = MAX_RUNTIME_TRACE_INDEX_RECORDS;
+    if (mode === "full") {
+        defaultLimit = MAX_RUNTIME_TRACE_INDEX_RECORDS;
+    }
+    // Project imports keep both distinct counters and emitted facts in SQLite. Applying the old
+    // Map guard here would reject valid captures late, even when their file/storage budgets allow them.
+    if (storage?.index.diskBacked && storage.onRecord) {
+        defaultLimit = Number.MAX_SAFE_INTEGER;
+        maximum = Number.MAX_SAFE_INTEGER;
+    }
+    const limit = integer(requested ?? defaultLimit, "Trace index record limit", 1);
+    if (limit > maximum) {
+        throw new Error(`Trace index record limit must not exceed ${maximum}.`);
+    }
+    return limit;
+};
+/**
  * Default index for callers explicitly requesting an in-memory evidence batch.
  * @returns {RuntimeTraceFactIndex} Counter map released by importer completion or failure.
  */
@@ -204,13 +230,7 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
         (artifact.architecture !== "snes.65816" || addressSpace !== "snes.cpu")) {
         throw new Error("The 65816 disassembly index requires snes.65816 / snes.cpu capture data.");
     }
-    const maxIndexRecords = integer(context.maxIndexRecords ??
-        (indexMode === "full"
-            ? MAX_RUNTIME_TRACE_INDEX_RECORDS
-            : DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS), "Trace index record limit", 1);
-    if (maxIndexRecords > MAX_RUNTIME_TRACE_INDEX_RECORDS) {
-        throw new Error(`Trace index record limit must not exceed ${MAX_RUNTIME_TRACE_INDEX_RECORDS}.`);
-    }
+    const maxIndexRecords = runtimeTraceIndexRecordLimit(indexMode, context.maxIndexRecords, storage);
     // Match canonicalJson({...metadata, chunks}) exactly without making one huge string.
     const envelope = canonicalJson({ ...artifact, chunks: [] });
     const split = envelope.indexOf('  "chunks": []') + '  "chunks": '.length;
@@ -222,11 +242,12 @@ export const createRuntimeInstructionTraceImporter = (value, context, storage) =
     let memoryRecords = 0;
     let indexRecords = 0;
     const reserve = (count) => {
-        // Budget the eventual output before adding a new key, including paired code/state records.
+        // Budget the eventual output as each new key is discovered, including paired code/state records.
+        // Subtract first so a pair cannot overflow the safe integer ceiling before comparison.
         // Reject the whole import rather than letting callers mistake a truncated index for success.
-        if (indexRecords + count > maxIndexRecords) {
+        if (count > maxIndexRecords - indexRecords) {
             let hint = "The capture has too many distinct code/state/bus variants for this index budget. ";
-            if (indexMode === "full") {
+            if (indexMode === "full" && native65816) {
                 hint =
                     "Use the 65816 disassembly index (asm.trace.indexMode or --trace-index) for large instruction captures. ";
             }

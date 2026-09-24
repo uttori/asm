@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { incrementInternalCounter, measureInternalPhase } from "../internal-instrumentation.js";
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 3;
 /**
  * Disk-backed cache of full-pass workspace analysis artifacts.
  *
@@ -21,10 +21,10 @@ export class RootAnalysisCache {
      * Loads a cached analysis when every recorded file hash still matches.
      *
      * Uses a two-tier validation strategy:
-     * 1. For each file, check mtime first (cheap `statSync`). Files whose mtime
-     *    is unchanged are presumed unmodified and their stored hash is reused.
-     * 2. Only files whose mtime changed (or whose mtime is missing from the
-     *    payload) are re-read and SHA-256 hashed.
+     * 1. For assembly source, check mtime first (cheap `statSync`). Files whose
+     *    mtime is unchanged reuse their stored hash.
+     * 2. Hash binary resources on every read, even when mtime is unchanged;
+     *    generated assets may be replaced while preserving timestamps.
      *
      * This avoids reading and hashing every include file on every startup when
      * the project has not changed — the common case for warm LSP restarts.
@@ -52,9 +52,10 @@ export class RootAnalysisCache {
             for (const recorded of recordedFiles) {
                 const recordedHash = payload.fileHashes[recorded];
                 const recordedMtime = payload.fileMtimes?.[recorded];
-                // Fast-path: if the file's mtime matches the stored value, the file
-                // has not been modified. Reuse the stored hash without reading the file.
-                if (recordedMtime !== undefined) {
+                // Source files use the mtime fast path. Binary inputs always rehash so
+                // copy tools that preserve timestamps cannot leave a stale dependency graph.
+                if (recordedMtime !== undefined &&
+                    !Object.hasOwn(payload.analysis.assetDependencies, recorded)) {
                     try {
                         const currentMtime = statSync(recorded).mtimeMs;
                         if (currentMtime === recordedMtime) {
@@ -103,6 +104,8 @@ export class RootAnalysisCache {
                     target: identity.target,
                     architecture: identity.architecture,
                     includePaths: [...identity.includePaths],
+                    converterIdentity: identity.converterIdentity,
+                    targetOptionsIdentity: identity.targetOptionsIdentity,
                 },
                 fileHashes,
                 fileMtimes,
@@ -171,6 +174,12 @@ export function hashBytes(bytes) {
 }
 function identitiesMatch(stored, current) {
     if (stored.target !== current.target || stored.architecture !== current.architecture) {
+        return false;
+    }
+    if (stored.converterIdentity !== current.converterIdentity) {
+        return false;
+    }
+    if (stored.targetOptionsIdentity !== current.targetOptionsIdentity) {
         return false;
     }
     const left = [...stored.includePaths].sort();

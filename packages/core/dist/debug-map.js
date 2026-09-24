@@ -40,7 +40,15 @@ export const createDebugMap = (options) => {
     const sourceIdByOriginal = new Map();
     const sources = entries.map(({ entry, originalId, portable }, id) => {
         sourceIdByOriginal.set(originalId, id);
-        return { id, path: portable, size: entry.size, crc32: entry.crc, sha256: entry.sha256 };
+        const kind = options.dependencyKinds?.get(entry.name);
+        return {
+            id,
+            path: portable,
+            size: entry.size,
+            crc32: entry.crc,
+            sha256: entry.sha256,
+            ...(kind ? { kind } : {}),
+        };
     });
     const ranges = options.mapping.ranges
         .map(({ fileIdx, ...range }) => ({ ...range, sourceId: sourceIdByOriginal.get(fileIdx) ?? -1 }))
@@ -58,6 +66,27 @@ export const createDebugMap = (options) => {
         output: { size: options.output.length, sha256: sha256(options.output) },
         sources,
         ranges,
+        ...(options.mapping.instructions.length
+            ? {
+                instructions: options.mapping.instructions
+                    .map(({ fileIdx, ...entry }) => ({
+                    ...entry,
+                    sourceId: sourceIdByOriginal.get(fileIdx) ?? -1,
+                }))
+                    .filter((entry) => entry.sourceId >= 0),
+            }
+            : {}),
+        ...(options.mapping.assets.length
+            ? {
+                assets: options.mapping.assets
+                    .map(({ fileIdx, assetFileIdx, ...entry }) => ({
+                    ...entry,
+                    sourceId: sourceIdByOriginal.get(fileIdx) ?? -1,
+                    assetSourceId: sourceIdByOriginal.get(assetFileIdx) ?? -1,
+                }))
+                    .filter((entry) => entry.sourceId >= 0 && entry.assetSourceId >= 0),
+            }
+            : {}),
     };
     return {
         ...payload,

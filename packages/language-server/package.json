@@ -19,6 +19,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@uttori/asm-assets": "1.0.0",
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-plugin-65xx": "1.0.0",
     "@uttori/asm-plugin-loader-node": "1.0.0",

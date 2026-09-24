@@ -1,6 +1,3 @@
-import { createHash } from "node:crypto";
-import * as fs from "node:fs";
-
 import { CRC32 } from "./crc32.js";
 
 /** Information mapping a logical address to a source file and line number. */
@@ -32,6 +29,36 @@ export interface AddressToLineRange {
   readonly outputEnd?: number;
 }
 
+/** One numeric operand evaluation performed by the encoder, before width truncation. */
+export interface ResolvedInstructionOperand {
+  readonly expression: string;
+  readonly value: number;
+}
+
+/** Source-attributed final emission; separate records preserve repeated macro/loop expansions. */
+export interface InstructionSourceInfo {
+  readonly fileIdx: number;
+  readonly line: number;
+  readonly architecture: string;
+  readonly addressSpace: string;
+  readonly address: number;
+  readonly outputOffset?: number;
+  readonly operands: readonly ResolvedInstructionOperand[];
+}
+
+/** One emitted asset, attributed to the assembly statement and its binary input separately. */
+export interface AssetEmissionInfo {
+  readonly fileIdx: number;
+  readonly assetFileIdx: number;
+  readonly line: number;
+  readonly format: string;
+  readonly part: string;
+  readonly size: number;
+  readonly transforms: readonly string[];
+  readonly address: number;
+  readonly outputOffset?: number;
+}
+
 /** Portable representation used by debug-map writers and readers. */
 export interface SerializableAddressRange extends Omit<AddressToLineRange, "fileIdx"> {
   readonly source: string;
@@ -39,13 +66,20 @@ export interface SerializableAddressRange extends Omit<AddressToLineRange, "file
 
 const sourceIdentity = (
   filename: string,
+  supplied?: Uint8Array,
 ): Pick<AddressToLineFileEntry, "crc" | "size" | "sha256"> => {
   try {
-    const data = fs.readFileSync(filename);
+    const fs = typeof process === "undefined" ? undefined : process.getBuiltinModule("node:fs");
+    const crypto =
+      typeof process === "undefined" ? undefined : process.getBuiltinModule("node:crypto");
+    if (!fs || !crypto) {
+      return { crc: 0, size: 0, sha256: "" };
+    }
+    const data = supplied ?? fs.readFileSync(filename);
     return {
       crc: CRC32.compute(data),
       size: data.length,
-      sha256: createHash("sha256").update(data).digest("hex"),
+      sha256: crypto.createHash("sha256").update(data).digest("hex"),
     };
   } catch {
     return { crc: 0, size: 0, sha256: "" };
@@ -62,6 +96,10 @@ export class AddressToLineMapping {
   filenameCrcs: number[] = [];
   addrToLineInfo: AddrToLineInfo[] = [];
   ranges: AddressToLineRange[] = [];
+  /** Final encoder evaluations, collected without evaluating expressions a second time. */
+  instructions: InstructionSourceInfo[] = [];
+  /** Successful final-pass asset emissions; binary files have no source lines. */
+  assets: AssetEmissionInfo[] = [];
 
   /** Clears all stored mappings and file information. */
   reset(): void {
@@ -69,6 +107,18 @@ export class AddressToLineMapping {
     this.filenameCrcs = [];
     this.addrToLineInfo = [];
     this.ranges = [];
+    this.instructions = [];
+    this.assets = [];
+  }
+
+  /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
+   * @param {string} filename Provider path.
+   * @param {Uint8Array} bytes Build snapshot.
+   */
+  registerDependencySnapshot(filename: string, bytes: Uint8Array): void {
+    const index = this.getFileIndex(filename);
+    const identity = sourceIdentity(filename, bytes);
+    this.fileList[index] = { name: filename, ...identity };
   }
 
   /**
@@ -192,7 +242,7 @@ export class AddressToLineMapping {
    * @returns {number} Stable file-table index.
    */
   getFileIndex(filename: string): number {
-    const filenameCrc = CRC32.compute(Buffer.from(filename, "utf8"));
+    const filenameCrc = CRC32.compute(new TextEncoder().encode(filename));
     for (let i = 0; i < this.filenameCrcs.length; i++) {
       if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
         return i;

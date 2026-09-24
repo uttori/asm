@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { AnalysisProjectManifest, AnalysisProjectShards, AnalysisControlFlowNodeRecord } from "./project-types.js";
 /** Exact logical/output coordinates from a validated debug map. Ranges are half-open. */
 export interface AnnotationQueryRange {
+    readonly architecture?: string;
     readonly addressSpace: string;
     readonly start: number;
     readonly end: number;
@@ -39,4 +40,26 @@ export declare const ensureAnnotationQueryIndexes: (database: DatabaseSync) => v
  * @returns {SqliteAnnotationView} Bounded records suitable for the ordinary semantic annotation builder.
  */
 export declare const readSqliteAnnotationView: (database: DatabaseSync, manifest: AnalysisProjectManifest, ranges: readonly AnnotationQueryRange[]) => SqliteAnnotationView;
+/** Exact count at a qualified location, with explicit file offsets for mirror attribution. */
+export interface InstructionExecutionSummary {
+    readonly addressSpace: string;
+    readonly address: number;
+    readonly outputOffsets: readonly number[];
+    readonly executionCount: number;
+}
+/** One requested span; counts are exact even when the number of displayed locations is bounded. */
+export interface InstructionExecutionSummaryRow {
+    readonly rangeIndex: number;
+    readonly locations: readonly InstructionExecutionSummary[];
+    readonly limited: boolean;
+}
+/**
+ * Read only indexed coordinates and aggregate execution counts. No state, CFG payloads, memory,
+ * or evidence records are decoded. Aliases retain separate counts instead of being summed.
+ * @param {DatabaseSync} database Prepared project connection in the caller's read transaction.
+ * @param {AnalysisProjectManifest} manifest Supplies file identities; no mapper inference is performed.
+ * @param {readonly AnnotationQueryRange[]} ranges At most 2000 current source spans.
+ * @returns {readonly InstructionExecutionSummaryRow[]} Exact counts with bounded, qualified locations.
+ */
+export declare const readInstructionExecutionSummary: (database: DatabaseSync, manifest: AnalysisProjectManifest, ranges: readonly AnnotationQueryRange[]) => readonly InstructionExecutionSummaryRow[];
 //# sourceMappingURL=sqlite-annotation-query.d.ts.map

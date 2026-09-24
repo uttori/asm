@@ -15,6 +15,8 @@ const identity: RootAnalysisCacheIdentity = {
   target: "test",
   architecture: "cpu",
   includePaths: ["a", "b"],
+  converterIdentity: "fixture-v1",
+  targetOptionsIdentity: "{}",
 };
 const analysis: CachedRootAnalysis = {
   followedIncludes: true,
@@ -22,6 +24,7 @@ const analysis: CachedRootAnalysis = {
   symbols: [],
   references: [],
   includeEdges: [],
+  assetDependencies: {},
 };
 
 /** Create a real persisted entry so corruption, timestamps, and I/O failures exercise disk behavior. */
@@ -52,6 +55,27 @@ test("root analysis reuses unchanged timestamps and treats include path order as
     undefined,
   );
   t.notThrows(() => cache.invalidate(root));
+});
+
+test("binary dependencies are content checked even when their mtime is unchanged", (t) => {
+  const { directory, root, cache } = fixture(t);
+  const binary = path.join(directory, "art.bin");
+  writeFileSync(binary, Uint8Array.of(1, 2, 3));
+  const originalMtime = statSync(binary).mtime;
+  const assets = { ...analysis, assetDependencies: { [binary]: "binary" as const } };
+  cache.write(
+    root,
+    identity,
+    { [binary]: hashBytes(readFileSync(binary)), [root]: hashBytes(readFileSync(root)) },
+    { [binary]: statSync(binary).mtimeMs, [root]: statSync(root).mtimeMs },
+    assets,
+  );
+  writeFileSync(binary, Uint8Array.of(4, 5, 6));
+  utimesSync(binary, originalMtime, originalMtime);
+  t.is(
+    cache.read(root, identity, (file) => hashBytes(readFileSync(file))),
+    undefined,
+  );
 });
 
 test("root analysis rehashes changed timestamps and old entries without mtimes", (t) => {

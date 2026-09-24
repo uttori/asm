@@ -1,5 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 
 /** Root contributor documents whose local links are release-gated. */
 const ROOT_DOCUMENTS = [
@@ -296,8 +297,10 @@ export const checkDocumentation = (): void => {
     throw new Error(`Documentation validation failed:\n${failures.join("\n")}`);
   }
   console.log(
-    `${documents.length} public documents and ${WORKFLOWS.length} workflows have valid local links.`,
+    `${documents.length} public entry points and ${WORKFLOWS.length} workflows passed documentation checks.`,
   );
 };
 
-checkDocumentation();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  checkDocumentation();
+}

@@ -85,6 +85,7 @@ registerHooks({
           }
           export class Position { constructor(line, character) { this.line = line; this.character = character; } }
           export class Selection extends Range {}
+          export class Hover { constructor(contents, range) { this.contents = contents; this.range = range; } }
           export class MarkdownString {
             appendMarkdown() { return this; }
             appendText() { return this; }
@@ -113,12 +114,15 @@ registerHooks({
             getConfiguration: () => ({
               get: (key, fallback) => (key in host.config ? host.config[key] : fallback),
               update: async (key, value) => { host.config[key] = value; },
+              inspect: (key) => ({ globalValue: host.config[key] }),
             }),
             createFileSystemWatcher: () => watcher(),
             findFiles: async () => [],
             onDidChangeConfiguration: () => disposable(),
             onDidChangeTextDocument: () => disposable(),
             onDidSaveTextDocument: () => disposable(),
+            onDidCloseTextDocument: () => disposable(),
+            textDocuments: [],
             onDidGrantWorkspaceTrust: () => disposable(),
             fs: {
               stat: async () => { throw Object.assign(new Error("missing"), { code: "FileNotFound" }); },
@@ -291,7 +295,7 @@ test.serial(
     await host.commands.get("asm.coverage.refresh")?.();
     await host.commands.get("asm.sources.refresh")?.();
     await host.commands.get("asm.analysis.toggleAnnotations")?.();
-    t.is(host.config["analysis.showAnnotations"], false);
+    t.is(host.config["editorInfo.inline.enabled"], false);
     await deactivate();
     t.is(host.stopped, 1);
     t.true(host.clients.length >= 1);

@@ -32,6 +32,8 @@ import {
   annotationQueryIndexesReady,
   ensureAnnotationQueryIndexes,
   readSqliteAnnotationView,
+  readInstructionExecutionSummary,
+  type InstructionExecutionSummaryRow,
   type AnnotationQueryRange,
   type SqliteAnnotationView,
   type InstructionExportRecord,
@@ -52,6 +54,12 @@ import {
 } from "./sqlite-payload.js";
 import { installQueryCache, readQueryCache, writeQueryCache } from "./sqlite-query-cache.js";
 import { runtimeFromRow, analysisAddress, compareRuntimeRecordIds } from "./sqlite-records.js";
+import { runtimeIdentityKey } from "./sqlite-runtime-facts.js";
+import {
+  collectRuntimeHistory,
+  packRuntimeHistory,
+  registerRuntimeHistory,
+} from "./sqlite-runtime-history.js";
 import {
   RUNTIME_RECORD_STREAM_SQL,
   RUNTIME_STORAGE_SCHEMA,
@@ -80,7 +88,7 @@ import { TraceCache, type TraceIndexMetrics } from "./trace-cache.js";
 export const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
-export const ANALYSIS_SQLITE_STORAGE_VERSION = 3;
+export const ANALYSIS_SQLITE_STORAGE_VERSION = 4;
 
 const SCHEMA = `
 PRAGMA journal_mode=WAL;
@@ -144,7 +152,7 @@ CREATE TABLE IF NOT EXISTS runtime_evidence (
 );
 ${RUNTIME_STORAGE_SCHEMA}
 ${CAPTURE_CATALOG_SCHEMA}
-PRAGMA user_version=3;
+PRAGMA user_version=4;
 `;
 
 // Metadata queries only order records by location. Analysis records are loaded by stable ID.
@@ -156,8 +164,6 @@ const SCHEMA_INDEX_STATEMENTS = [
   'CREATE INDEX IF NOT EXISTS annotations_range ON annotations (address_space, start, "end")',
   // Point lookups through the virtual-state branch need an index on its exposed negative ID.
   "CREATE INDEX IF NOT EXISTS runtime_state_row ON runtime_observations((-oid)) WHERE state_prefix_id IS NOT NULL",
-  "CREATE INDEX IF NOT EXISTS runtime_lookup ON runtime_facts (kind, address_space, address, start)",
-  "CREATE INDEX IF NOT EXISTS runtime_memory ON runtime_facts (instruction_address_space, instruction_address) WHERE kind='runtime-memory-access'",
 ] as const;
 
 /** Joins retain bounded SQLite cursors. No project-sized dictionary is loaded on the JS heap. */
@@ -208,6 +214,8 @@ const sqliteFileIdentity = (file: string): string => {
 export class SqliteAnalysisStore {
   readonly #database: DatabaseSync;
   readonly #fileIdentity: string;
+  /** Block cache is owned by this connection and reset on commit, rollback, and snapshot entry. */
+  readonly #clearHistory: () => void;
   /** Database path as supplied at construction. Resolves relative to cwd when not absolute. */
   readonly file: string;
   readonly #insertEvidence: StatementSync;
@@ -240,6 +248,7 @@ export class SqliteAnalysisStore {
     }
     this.file = file;
     this.#database = new DatabaseSync(file, { open: true });
+    this.#clearHistory = registerRuntimeHistory(this.#database);
     // SQL can inspect packed and compressed payloads without transferring full records to JS callers.
     this.#database.function("analysis_json", { deterministic: true }, (value) =>
       value === null ? "{}" : decodeSqlitePayload(value),
@@ -294,7 +303,7 @@ export class SqliteAnalysisStore {
         });
       }
       this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`);
+        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
       this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
     } catch (error) {
       this.#database.close();
@@ -320,6 +329,7 @@ export class SqliteAnalysisStore {
 
   /** Forget all transaction-owned dictionary references and their bounded text allocation. */
   #clearDictionaryCache(): void {
+    this.#clearHistory();
     this.#dictionaryIds.clear();
     this.#dictionaryCacheBytes = 0;
   }
@@ -458,6 +468,9 @@ export class SqliteAnalysisStore {
         void Promise.resolve(result).catch(() => undefined);
         throw new TypeError("Analysis transactions require a synchronous callback, not a Promise.");
       }
+      if (write) {
+        packRuntimeHistory(this.#database);
+      }
       if (write && this.revision() !== revision) {
         enforceDatabaseBudget(this.#database);
       }
@@ -511,6 +524,7 @@ export class SqliteAnalysisStore {
       pending.clear();
     };
     const index: RuntimeTraceFactIndex = {
+      diskBacked: true,
       add: (key, create) => {
         const entry = pending.get(key);
         if (entry !== undefined) {
@@ -1036,7 +1050,8 @@ export class SqliteAnalysisStore {
       if (kind === "runtime") {
         if (ids) {
           const find = this.#database.prepare(
-            `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND r.id=?`,
+            `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
+              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`,
           );
           for (const id of ids.slice(0, 200)) {
             const identity = sqliteRuntimeIdentity(id);
@@ -1579,6 +1594,17 @@ export class SqliteAnalysisStore {
   }
 
   /**
+   * Exact viewport counts without materializing the detailed instruction projection.
+   * @param {readonly AnnotationQueryRange[]} ranges Current mapped coordinates, validated by the query.
+   * @returns {readonly InstructionExecutionSummaryRow[]} Bounded locations with exact execution totals.
+   */
+  instructionExecutionSummary(
+    ranges: readonly AnnotationQueryRange[],
+  ): readonly InstructionExecutionSummaryRow[] {
+    return readInstructionExecutionSummary(this.#database, this.manifest(), ranges);
+  }
+
+  /**
    * Read selected metadata kinds through the address index instead of loading the complete CFG.
    * @param {readonly AnalysisRecord["kind"][]} kinds Analysis discriminators to include.
    * @returns {AnalysisRecord[]} Matching rows in stable ID order.
@@ -1727,6 +1753,7 @@ export class SqliteAnalysisStore {
       );
     }
     this.transaction(() => {
+      collectRuntimeHistory(this.#database);
       // Retired provenance/prefix sets may remain after complete runtime replacements. Prune with
       // set queries so compaction does not perform one full runtime scan per dictionary entry.
       this.#database.exec(`

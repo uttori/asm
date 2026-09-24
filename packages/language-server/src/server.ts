@@ -19,6 +19,7 @@ import snesPlugin, { SNES_TARGET_ID } from "@uttori/asm-plugin-snes";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
   createConnection,
+  type CancellationToken,
   Diagnostic,
   DiagnosticSeverity,
   DidChangeConfigurationNotification,
@@ -33,6 +34,11 @@ import {
 } from "vscode-languageserver/node";
 
 import {
+  AssetPreviewService,
+  type AssetPreviewRequest,
+  type AssetPreviewResponse,
+} from "./asset-preview-service.js";
+import {
   commitBuildArtifactPair,
   emptyOutputMessage,
   formatElapsed,
@@ -45,6 +51,7 @@ import {
   type ProjectEnvironmentSettings,
 } from "./project-environment.js";
 import {
+  assetCompletionsFor,
   completionsFor,
   definitionFor,
   diagnosticsFor,
@@ -65,6 +72,8 @@ import {
 const connection = createConnection(ProposedFeatures.all);
 /** Open editor buffers; their current text overrides disk contents during analysis and builds. */
 const documents = new TextDocuments(TextDocument);
+/** Conversion media stays in a bounded worker-owned cache. */
+const assetPreviews = new AssetPreviewService();
 /** Owns the plugin lifecycle and keeps build and analysis environments in sync. */
 const environmentController = new ProjectEnvironmentController({
   bundledPlugins: new Map<string, AssemblerPlugin>([
@@ -674,6 +683,17 @@ function buildBinary(
       const { loaded } = environmentController.current;
       // AddressToLineMapping records disk identities by default. Editor builds may use unsaved
       // overlays, so replace those identities with the exact bytes the assembler consumed.
+      if (loaded.configuration.configFile) {
+        provider.readFiles.add(loaded.configuration.configFile);
+      }
+      // Definition-only includes and incbin inputs can change emitted bytes without owning ranges.
+      // Include them in the fingerprinted snapshot so editor facts cannot outlive their dependencies.
+      for (const dependency of provider.readFiles) {
+        assembler.addressToLineMapping.getFileIndex(dependency);
+      }
+      if (baseImagePath) {
+        assembler.addressToLineMapping.getFileIndex(baseImagePath);
+      }
       assembler.addressToLineMapping.fileList = assembler.addressToLineMapping.fileList.map(
         (entry) => {
           const sourceBytes = provider.readFile(entry.name);
@@ -765,6 +785,34 @@ connection.onRequest("asm/projectOutline", async () => {
   return index ? projectOutlineFor(index) : [];
 });
 
+connection.onRequest<AssetPreviewResponse, void>(
+  "asm/assetPreview",
+  async (request: AssetPreviewRequest, token: CancellationToken): Promise<AssetPreviewResponse> => {
+    await configurationQueue;
+    const document = documents.get(request.uri);
+    if (!document || document.version !== request.version || !request.uri.startsWith("file:")) {
+      return { ok: false, message: "Asset preview source is no longer current." };
+    }
+    const cancellation = new AbortController();
+    // Explicit preview commands may arrive without a cancellation token.
+    const subscription = token?.onCancellationRequested(() => cancellation.abort());
+    try {
+      const result = await assetPreviews.preview(
+        index,
+        document.getText(),
+        request,
+        cancellation.signal,
+      );
+      if (document.version !== documents.get(request.uri)?.version || cancellation.signal.aborted) {
+        return { ok: false, message: "Asset preview source changed during conversion." };
+      }
+      return result;
+    } finally {
+      subscription?.dispose();
+    }
+  },
+);
+
 connection.onRequest("asm/status", async () => {
   await configurationQueue;
   if (!index) {
@@ -798,6 +846,7 @@ connection.onRequest("asm/status", async () => {
 });
 
 connection.onDidChangeWatchedFiles((params) => {
+  assetPreviews.clear();
   let reload = false;
   for (const change of params.changes) {
     const file = uriToPath(change.uri);
@@ -833,7 +882,12 @@ documents.onDidClose((event) => {
   void connection.sendDiagnostics({ uri: event.document.uri, diagnostics: [] });
 });
 
-connection.onCompletion(() => completionsFor(index));
+connection.onCompletion((params) => {
+  const document = documents.get(params.textDocument.uri);
+  return document
+    ? (assetCompletionsFor(index, document.getText(), params.position) ?? completionsFor(index))
+    : completionsFor(index);
+});
 connection.onHover((params) => {
   const document = documents.get(params.textDocument.uri);
   return document

@@ -21,7 +21,7 @@ export interface SnesStructAccessObservation {
   readonly access: "read" | "write" | "read-write";
   /** A bus observation and an inference from instruction/register traces are different evidence. */
   readonly provenance: "observed" | "trace-derived";
-  /** Capture path or stable identifier. Export renders it as provenance and never opens it. */
+  /** Capture path or stable identifier. Export may summarize it and never opens it. */
   readonly source: string;
   /** Capture location and reasoning, such as instruction sequence and pointer reconstruction. */
   readonly detail: string;
@@ -302,18 +302,71 @@ export const applySnesStructInstructionOperand = (
   return `${instruction.mnemonic}.${operand.width === 1 ? "b" : "w"} #${use.operand.expression}`;
 };
 
+/** Maximum comment-body length; reserve space for a complete metadata locator before clipping. */
+const structUseCommentLimit = 240;
+
 /**
- * Render all capture alternatives as comments. They never become fixed-address CPU operands.
- * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
- * @returns {readonly string[]} Individual comment bodies without the leading semicolon.
+ * Keep generated notes on one bounded line, including an optional unabridged evidence locator.
+ * @param {string} value Comment body to abbreviate if needed.
+ * @param {string} [suffix] Internal metadata locator, shorter than the limit; never abbreviated.
+ * @returns {string} Whitespace-normalized body plus suffix, at most 240 characters.
  */
-export const renderSnesStructUseComments = (use: SnesStructInstructionUse): readonly string[] => [
-  `[struct use] ${use.reason}`,
-  ...use.observations.map((observation) => {
-    let coverage = "";
-    if (observation.parts.length > 1 || !observation.parts[0].field) {
-      coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+const compactStructUseComment = (value: string, suffix = ""): string => {
+  const line = value.replaceAll(/\s+/g, " ").trim();
+  const available = structUseCommentLimit - suffix.length;
+  if (line.length <= available) {
+    return line + suffix;
+  }
+  return line.slice(0, available - 3).trimEnd() + "..." + suffix;
+};
+
+/**
+ * Describe one complete access, including cross-field/opaque coverage rather than just its start.
+ * @param {SnesStructAccessObservation} observation Validated access with non-empty span coverage.
+ * @returns {string} Target and width followed by cross-part coverage when needed.
+ */
+const describeObservation = (observation: SnesStructAccessObservation): string => {
+  let coverage = "";
+  if (observation.parts.length > 1 || !observation.parts[0].field) {
+    coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
+  }
+  return `${observation.expression} (${hex(observation.address)}, ${observation.width} byte(s))${coverage}`;
+};
+
+/**
+ * Render at most two bounded comments per instruction: its reason and an evidence summary.
+ * All alternatives and provenance remain in struct-map.json; rendering never mutates them
+ * or substitutes a captured effective address into a CPU operand.
+ * @param {SnesStructInstructionUse} use Validated instruction metadata in curator-supplied order.
+ * @returns {readonly string[]} Comment bodies, each at most 240 characters, without semicolons.
+ */
+export const renderSnesStructUseComments = (use: SnesStructInstructionUse): readonly string[] => {
+  // Include the decimal address used in JSON so the complete evidence is directly searchable.
+  const locator = ` Details: struct-map.json instructionUses address=${use.address} (${hex(use.address)}).`;
+  const reason = `[struct use] ${use.reason}`;
+  if (use.observations.length === 0) {
+    return [compactStructUseComment(reason, reason.length > structUseCommentLimit ? locator : "")];
+  }
+  const first = use.observations[0];
+  let summary: string;
+  if (use.observations.length === 1) {
+    summary = `[${first.provenance} ${first.access}] ${describeObservation(first)}. ${first.source}: ${first.detail}`;
+  } else {
+    const kinds = new Map<string, number>();
+    const bindings = new Set<string>();
+    const sources = new Set<string>();
+    for (const observation of use.observations) {
+      const kind = `${observation.provenance} ${observation.access}`;
+      kinds.set(kind, (kinds.get(kind) ?? 0) + 1);
+      bindings.add(observation.binding);
+      sources.add(observation.source);
     }
-    return `[${observation.provenance} ${observation.access}] ${observation.expression} (${hex(observation.address)}, ${observation.width} byte(s))${coverage}. ${observation.source}: ${observation.detail}`;
-  }),
-];
+    // Do not present the first capture's provenance/access as applying to every alternative.
+    let heading = `[${first.provenance} ${first.access}] ${use.observations.length} observations`;
+    if (kinds.size > 1) {
+      heading = `[struct observations] ${[...kinds].map(([kind, count]) => `${kind}: ${count}`).join(", ")}`;
+    }
+    summary = `${heading}; ${bindings.size} binding(s), ${sources.size} capture(s). Example: ${describeObservation(first)}.`;
+  }
+  return [compactStructUseComment(reason), compactStructUseComment(summary, locator)];
+};

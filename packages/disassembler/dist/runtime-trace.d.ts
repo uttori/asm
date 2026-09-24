@@ -43,7 +43,9 @@ export interface RuntimeInstructionTraceImportContext {
     readonly indexMode?: RuntimeTraceIndexMode;
     /**
      * Maximum emitted runtime facts: one per PC, two per byte/state variant, one per bus variant.
-     * Defaults to 2M in compact mode or 8M in full mode. Accepts 1 through 8,000,000. Not a byte/heap limit.
+     * In-memory imports default to 2M in compact mode or 8M in full mode, with an 8M ceiling.
+     * Disk indexes with a record sink default to Number.MAX_SAFE_INTEGER and accept any positive
+     * safe integer budget. Explicit budgets apply to both paths. Not a byte/heap limit.
      */
     readonly maxIndexRecords?: number;
 }
@@ -52,7 +54,7 @@ export interface RuntimeInstructionTraceImportContext {
  * execution counts. A/X/Y/S history remains in the capture and is unavailable from this index.
  */
 export type RuntimeTraceIndexMode = "full" | "65816-disassembly" | "65816-analysis";
-/** Default distinct-fact budget for compact indexes. Full indexes default to 8,000,000. */
+/** Default in-memory distinct-fact budget for compact indexes. Full memory indexes default to 8M. */
 export declare const DEFAULT_RUNTIME_TRACE_MAX_INDEX_RECORDS = 2000000;
 /** Native evidence plus deterministic diagnostics produced without mutating a project. */
 export interface RuntimeInstructionTraceImportResult {
@@ -115,6 +117,8 @@ export type RuntimeTraceIndexedFact = {
 };
 /** Counter storage owned by the caller. Disk implementations keep distinct facts off the JS heap. */
 export interface RuntimeTraceFactIndex {
+    /** True when distinct fact payloads live on disk. Omitted means the index may grow on the JS heap. */
+    readonly diskBacked?: boolean;
     /** Increment a fact, constructing its payload only on first insertion. Return whether it was new. */
     add(key: string, create: () => RuntimeTraceIndexedFact): boolean;
     /** Yield each distinct fact once, with its exact aggregate observation count. */
@@ -130,11 +134,23 @@ export interface RuntimeTraceImporterStorage {
     readonly index: RuntimeTraceFactIndex;
     /** Called after complete source validation, before emitting any provisional records. */
     readonly onSource?: (sha256: string, profile: string) => void;
-    /** Final records are emitted individually. Batch.runtime is omitted when this sink is supplied. */
+    /**
+     * Final records are emitted individually; batch.runtime is omitted. With diskBacked indexing,
+     * the sink must bound its own memory because the importer's default record ceiling is lifted.
+     */
     readonly onRecord?: (record: RuntimeEvidenceRecord) => void;
     /** Throttled provisional merge counts. Reaching the total does not mean the transaction committed. */
     readonly onMergeProgress?: (processedRecords: number, totalRecords: number) => void;
 }
+/**
+ * Resolve the instruction record budget before consuming any chunks. The memory ceiling still
+ * applies if either counters or final records accumulate on the heap; a disk index alone is insufficient.
+ * @param {RuntimeTraceIndexMode} mode Validated retention profile.
+ * @param {number} requested Explicit caller budget, if any.
+ * @param {RuntimeTraceImporterStorage} storage Optional counter storage and final record sink.
+ * @returns {number} Positive safe integer limit, or throws for an invalid or unsafe memory budget.
+ */
+export declare const runtimeTraceIndexRecordLimit: (mode: RuntimeTraceIndexMode, requested: number | undefined, storage?: RuntimeTraceImporterStorage) => number;
 /** Incremental aggregation. Any failed push permanently invalidates the pending import. */
 export interface RuntimeInstructionTraceImporter {
     /** Accept the next ordered chunk. Invalid data or an exceeded record budget prevents finalization. */

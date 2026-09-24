@@ -1,287 +1,515 @@
-/** Hash-gated inline source annotations derived from native analysis projects. */
+/** Configurable, snapshot-backed source information using native editor decorations and hovers. */
 import * as path from "node:path";
 
+import type { AnalysisProjectManifest } from "@uttori/asm-disassembler";
 import {
-  type AnalysisProjectManifest,
-  type InstructionAnalysisAnnotation,
-} from "@uttori/asm-disassembler";
-import {
-  DecorationRangeBehavior,
+  commands,
   ConfigurationTarget,
+  DecorationRangeBehavior,
+  Hover,
   MarkdownString,
   Range,
   ThemeColor,
   window,
   workspace,
+  type CancellationToken,
   type Disposable,
+  type Position,
   type TextDocument,
   type TextEditor,
   type TextEditorDecorationType,
+  type Uri,
 } from "vscode";
 
 import {
-  formatInstructionAnnotationDetails,
-  formatInstructionAnnotationSummary,
-} from "./annotation-format.js";
+  readEditorInformationConfiguration,
+  INFORMATION_PRESETS,
+  type EditorInformationConfiguration,
+} from "../editor-info/configuration.js";
 import {
-  annotationOverlayColumn,
-  annotationOverlayColor,
-  annotationSourceColumns,
-} from "./annotation-layout.js";
+  INFORMATION_FIELDS,
+  compileTemplate,
+  renderInformation,
+  renderTemplate,
+  templateRequirements,
+} from "../editor-info/format.js";
+import { EditorInformationProvider } from "../editor-info/provider.js";
+import { formatInstructionAnnotationDetails } from "./annotation-format.js";
+import { annotationOverlayColumn, annotationSourceColumns } from "./annotation-layout.js";
 import { findAnalysisProjectDirectories } from "./coverage-tree.js";
-import {
-  currentAnalysisSourcePath,
-  findAnalysisDebugMapCandidates,
-  type AnalysisDebugMapIdentity,
-} from "./debug-maps.js";
+import { discoverAnalysisDebugMapFiles } from "./debug-maps.js";
 import { analysisWorker } from "./worker-client.js";
 
-/** Editor toolbar command for showing or hiding project-state overlays. */
+/** Existing toolbar command ID remains stable for saved keybindings. */
 export const TOGGLE_ANALYSIS_ANNOTATIONS_COMMAND = "asm.analysis.toggleAnnotations";
 
-/** Instruction evidence paired with its project directory for editor hover attribution. */
-interface MappedAnnotation {
-  readonly project: string;
-  readonly annotation: InstructionAnalysisAnnotation;
-}
-
 /**
- * Project directory and verified target/ROM identity used to match source maps before decorating
- * an editor.
+ * Use each resource's folder scope, falling back to personal settings outside a workspace.
+ * @param {Uri | undefined} uri Active resource, when available.
+ * @returns {ConfigurationTarget} Scope for explicit user actions.
  */
-interface LoadedAnnotations {
-  readonly directory: string;
-  readonly identity: AnalysisDebugMapIdentity;
-}
+const configurationTarget = (uri: Uri | undefined): ConfigurationTarget =>
+  uri && workspace.getWorkspaceFolder(uri)
+    ? ConfigurationTarget.WorkspaceFolder
+    : ConfigurationTarget.Global;
 
-/**
- * Append to the existing per-key bucket, allocating a bucket only for the first value; mutates
- * the supplied map.
- * @param {Map<Key, Value[]>} map Mutable buckets retaining insertion order.
- * @param {Key} key Bucket identity.
- * @param {Value} value Entry appended without replacing existing values.
- */
-const append = <Key, Value>(map: Map<Key, Value[]>, key: Key, value: Value): void => {
-  const entries = map.get(key);
-  if (entries) {
-    entries.push(value);
-  } else {
-    map.set(key, [value]);
-  }
-};
-
-/**
- * Maintains analysis suffixes on the active, byte-current mapped source editor.
- * @see https://code.visualstudio.com/api/references/vscode-api#TextEditorDecorationType
- * @see https://code.visualstudio.com/api/references/vscode-api#DecorationOptions.hoverMessage
- */
+/** Independent per-editor generations prevent late viewport work from repainting another editor. */
 export class AnalysisAnnotationController implements Disposable {
   readonly #decoration: TextEditorDecorationType;
-  #generation = 0;
+  readonly #disposables: Disposable[] = [];
+  readonly #timers = new Map<TextEditor, ReturnType<typeof setTimeout>>();
+  readonly #generations = new WeakMap<TextEditor, number>();
+  readonly #reportedIssues = new Set<string>();
+  #disposed = false;
 
-  constructor() {
-    this.#decoration = window.createTextEditorDecorationType({
-      after: {
-        color: new ThemeColor("editorCodeLens.foreground"),
+  constructor(
+    readonly provider = new EditorInformationProvider({
+      discoverMaps: discoverAnalysisDebugMapFiles,
+      projects: async () => {
+        const projects: { directory: string; manifest: AnalysisProjectManifest }[] = [];
+        for (const directory of await findAnalysisProjectDirectories()) {
+          try {
+            projects.push({
+              directory,
+              manifest: await analysisWorker().request<AnalysisProjectManifest>(
+                directory,
+                "manifest",
+              ),
+            });
+          } catch {
+            /* One unavailable analysis project must not hide valid build information. */
+          }
+        }
+        return projects;
       },
+      request: (directory, operation, options) =>
+        analysisWorker().request(directory, operation, options),
+    }),
+  ) {
+    this.#decoration = window.createTextEditorDecorationType({
       rangeBehavior: DecorationRangeBehavior.ClosedClosed,
     });
+    this.#disposables.push(
+      commands.registerCommand("asm.editorInfo.choosePreset", () => this.choosePreset()),
+      commands.registerCommand("asm.editorInfo.configureInline", () => this.configureInline()),
+      commands.registerCommand("asm.editorInfo.inspectLine", () => this.inspectLine()),
+    );
+    const watcher = workspace.createFileSystemWatcher("**/*");
+    const changed = (uri: Uri): void => {
+      if (this.provider.tracks(uri.fsPath)) {
+        this.invalidate();
+      }
+    };
+    this.#disposables.push(
+      watcher,
+      watcher.onDidChange(changed),
+      watcher.onDidCreate(changed),
+      watcher.onDidDelete(changed),
+    );
+  }
+
+  #configuration(uri: Uri): EditorInformationConfiguration {
+    const result = readEditorInformationConfiguration(workspace.getConfiguration("asm", uri));
+    for (const issue of result.issues) {
+      if (!this.#reportedIssues.has(issue)) {
+        this.#reportedIssues.add(issue);
+        void window.showWarningMessage(issue);
+      }
+    }
+    return result;
+  }
+
+  #dirtyFiles(): ReadonlySet<string> {
+    return new Set(
+      workspace.textDocuments
+        .filter((document) => document.isDirty && document.uri.scheme === "file")
+        .map((document) => path.resolve(document.uri.fsPath)),
+    );
+  }
+
+  /** Invalidate data only when inputs change; display-only refreshes reuse the same cached facts. */
+  invalidate(): void {
+    this.provider.invalidate();
+    for (const editor of window.visibleTextEditors) {
+      this.#generations.set(editor, (this.#generations.get(editor) ?? 0) + 1);
+      editor.setDecorations(this.#decoration, []);
+    }
+    this.refresh();
+  }
+
+  /** A changed target or include configuration cannot reuse the previous interpretation of source. */
+  configurationChanged(): void {
+    this.provider.configurationChanged();
+    this.invalidate();
   }
 
   /**
-   * Recomputes decorations for the active editor from hash-current project/map inputs.
-   * @param {TextEditor | undefined} editor Active or explicitly selected editor.
+   * Remember a successful build even if automatic discovery has reached its map-file limit.
+   * @param {string} debugMapPath Newly published map filename.
+   * @param {string} sourceRoot Owning workspace/include resolution root.
    */
-  refresh(editor: TextEditor | undefined = window.activeTextEditor): void {
-    const generation = ++this.#generation;
-    for (const visible of window.visibleTextEditors) {
-      if (
-        !workspace
-          .getConfiguration("asm", visible.document.uri)
-          .get("analysis.showAnnotations", true)
-      ) {
-        visible.setDecorations(this.#decoration, []);
-      }
-    }
-    if (!editor || editor.document.uri.scheme !== "file") {
-      return;
-    }
-    editor.setDecorations(this.#decoration, []);
-    if (
-      !workspace.getConfiguration("asm", editor.document.uri).get("analysis.showAnnotations", true)
-    ) {
-      return;
-    }
-    void this.#decorations(editor, generation).catch(() => {
-      if (generation === this.#generation) {
-        editor.setDecorations(this.#decoration, []);
-      }
-    });
-  }
-
-  /** Toggle the active project's overlays, immediately invalidating pending decoration work. */
-  async toggle(): Promise<void> {
-    ++this.#generation;
-    const resource = window.activeTextEditor?.document.uri;
-    const configuration = workspace.getConfiguration("asm", resource);
-    const enabled = configuration.get("analysis.showAnnotations", true);
-    if (enabled) {
-      for (const editor of window.visibleTextEditors) {
-        editor.setDecorations(this.#decoration, []);
-      }
-    }
-    await configuration.update(
-      "analysis.showAnnotations",
-      !enabled,
-      resource && workspace.getWorkspaceFolder(resource)
-        ? ConfigurationTarget.WorkspaceFolder
-        : ConfigurationTarget.Global,
-    );
+  buildCompleted(debugMapPath: string, sourceRoot: string): void {
+    this.provider.buildCompleted(debugMapPath, sourceRoot);
     this.refresh();
   }
 
   /**
-   * Clears annotations immediately when source bytes change. Save triggers a fresh hash check.
-   * @param {TextDocument} document Changed editor document.
+   * Coalesce scrolling; both disabled surfaces produce no provider work.
+   * @param {TextEditor | undefined} editor Optional editor; omission refreshes all visible editors.
    */
-  documentChanged(document: TextDocument): void {
-    const editor = window.activeTextEditor;
-    if (!editor || editor.document !== document) {
+  refresh(editor?: TextEditor): void {
+    if (this.#disposed) {
       return;
     }
-    ++this.#generation;
-    editor.setDecorations(this.#decoration, []);
+    const editors = editor ? [editor] : window.visibleTextEditors;
+    for (const current of editors) {
+      const generation = (this.#generations.get(current) ?? 0) + 1;
+      this.#generations.set(current, generation);
+      clearTimeout(this.#timers.get(current));
+      this.#timers.delete(current);
+      const config = this.#configuration(current.document.uri);
+      if (current === window.activeTextEditor) {
+        void commands.executeCommand(
+          "setContext",
+          "asm.editorInfo.inlineEnabled",
+          config.inlineEnabled,
+        );
+      }
+      if (
+        !config.inlineEnabled ||
+        !config.parts.length ||
+        current.document.isDirty ||
+        current.document.uri.scheme !== "file" ||
+        !["uttori-snes", "uttori-65xx"].includes(current.document.languageId)
+      ) {
+        current.setDecorations(this.#decoration, []);
+        continue;
+      }
+      this.#timers.set(
+        current,
+        setTimeout(() => {
+          this.#timers.delete(current);
+          void this.#decorate(current, generation, config).catch(() => {
+            if (this.#generations.get(current) === generation) {
+              current.setDecorations(this.#decoration, []);
+            }
+          });
+        }, 75),
+      );
+    }
+  }
+
+  /** Toggle only inline information, preserving independently configured hover behavior. */
+  async toggle(): Promise<void> {
+    const resource = window.activeTextEditor?.document.uri;
+    const config = workspace.getConfiguration("asm", resource);
+    const enabled = readEditorInformationConfiguration(config).inlineEnabled;
+    if (enabled) {
+      for (const editor of window.visibleTextEditors) {
+        this.#generations.set(editor, (this.#generations.get(editor) ?? 0) + 1);
+        editor.setDecorations(this.#decoration, []);
+      }
+    }
+    await config.update("editorInfo.inline.enabled", !enabled, configurationTarget(resource));
+    this.refresh();
+  }
+
+  /**
+   * Includes can change another open file's layout; clear all affected work immediately.
+   * @param {TextDocument} document Changed document, including unsaved buffers.
+   */
+  documentChanged(document: TextDocument): void {
+    if (document.uri.scheme === "file") {
+      this.invalidate();
+    }
+  }
+
+  async #decorate(
+    editor: TextEditor,
+    generation: number,
+    config: EditorInformationConfiguration,
+  ): Promise<void> {
+    const version = editor.document.version;
+    const facts = await this.provider.lines(
+      editor.document.uri.fsPath,
+      editor.visibleRanges.map((range) => ({
+        start: range.start.line + 1,
+        end: range.end.line + 1,
+      })),
+      templateRequirements(config.parts),
+      this.#dirtyFiles(),
+    );
+    if (
+      this.#disposed ||
+      this.#generations.get(editor) !== generation ||
+      editor.document.version !== version ||
+      editor.document.isDirty
+    ) {
+      return;
+    }
+    const rows = [...facts].filter(([line]) => line >= 1 && line <= editor.document.lineCount);
+    const tabSize = typeof editor.options.tabSize === "number" ? editor.options.tabSize : 4;
+    const column = annotationOverlayColumn(
+      rows.map(([line]) => editor.document.lineAt(line - 1).text),
+      tabSize,
+      config.column,
+    );
+    // Instance options preserve folder-specific colors while sharing one native decoration type.
+    const color = config.color.startsWith("#") ? config.color : new ThemeColor(config.color);
+    const decorations = rows.flatMap(([line, infos]) => {
+      const text = renderInformation(infos, config.parts, config.separator, config.maximum);
+      if (!text) {
+        return [];
+      }
+      const source = editor.document.lineAt(line - 1).text;
+      const gap =
+        config.placement === "aligned" ? column - annotationSourceColumns(source, tabSize) : 3;
+      return [
+        {
+          range: new Range(line - 1, source.length, line - 1, source.length),
+          renderOptions: { after: { margin: `0 0 0 ${gap}ch`, contentText: text, color } },
+        },
+      ];
+    });
+    // The suffix owns no hover payload; the client hover middleware formats only the requested line.
+    editor.setDecorations(this.#decoration, decorations);
+  }
+
+  /**
+   * Append compact analysis independently of the language server's instruction documentation.
+   * @param {TextDocument} document Source snapshot requested by VS Code.
+   * @param {Position} position Hovered zero-based source position.
+   * @param {CancellationToken} token Host cancellation; stale replies are discarded.
+   * @returns {Promise<Hover | undefined>} Compact additional hover, or nothing when unavailable.
+   */
+  async provideHover(
+    document: TextDocument,
+    position: Position,
+    token: CancellationToken,
+  ): Promise<Hover | undefined> {
+    const config = this.#configuration(document.uri);
+    if (
+      !config.hoverEnabled ||
+      !config.rows.length ||
+      document.isDirty ||
+      token.isCancellationRequested
+    ) {
+      return undefined;
+    }
+    const version = document.version;
+    try {
+      const facts = await this.provider.lines(
+        document.uri.fsPath,
+        [{ start: position.line + 1, end: position.line + 1 }],
+        templateRequirements(config.rows),
+        this.#dirtyFiles(),
+      );
+      const currentConfiguration = this.#configuration(document.uri);
+      if (
+        this.#disposed ||
+        token.isCancellationRequested ||
+        version !== document.version ||
+        document.isDirty ||
+        !currentConfiguration.hoverEnabled ||
+        JSON.stringify(currentConfiguration.rows) !== JSON.stringify(config.rows)
+      ) {
+        return undefined;
+      }
+      const infos = facts.get(position.line + 1) ?? [];
+      const text = renderInformation(infos, config.rows, "\n", 1600);
+      if (!text) {
+        return undefined;
+      }
+      const markdown = new MarkdownString();
+      markdown.appendMarkdown("**Uttori analysis**\n\n");
+      markdown.appendText(text);
+      return new Hover(markdown, document.lineAt(position.line).range);
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** Preset selection intentionally resets field overrides; other display preferences remain. */
+  async choosePreset(): Promise<void> {
+    const selected = await window.showQuickPick(
+      Object.keys(INFORMATION_PRESETS).map((label) => ({
+        label,
+        description: "Use these inline and hover fields",
+      })),
+      { title: "Choose Editor Information Preset" },
+    );
+    if (!selected) {
+      return;
+    }
+    const uri = window.activeTextEditor?.document.uri;
+    const config = workspace.getConfiguration("asm", uri);
+    const target = configurationTarget(uri);
+    await config.update("editorInfo.preset", selected.label, target);
+    const preset = INFORMATION_PRESETS[selected.label as keyof typeof INFORMATION_PRESETS];
+    // Explicit lists override inherited custom templates as well as local ones.
+    await config.update("editorInfo.inline.parts", [...preset.parts], target);
+    await config.update("editorInfo.hover.rows", [...preset.rows], target);
+    this.refresh();
+  }
+
+  /** Quick Pick covers common fields; settings templates remain available for custom labels/order. */
+  async configureInline(): Promise<void> {
+    const uri = window.activeTextEditor?.document.uri;
+    if (!uri) {
+      return;
+    }
+    const config = this.#configuration(uri);
+    const fields = new Set(
+      config.parts.flatMap((template) =>
+        template.flatMap((part) => ("field" in part ? [part.field] : [])),
+      ),
+    );
+    const selected = await window.showQuickPick(
+      Object.entries(INFORMATION_FIELDS).map(([field, description]) => ({
+        label: field,
+        description,
+        picked: fields.has(field),
+      })),
+      { title: "Configure Inline Fields", canPickMany: true },
+    );
+    if (!selected) {
+      return;
+    }
+    await workspace.getConfiguration("asm", uri).update(
+      "editorInfo.inline.parts",
+      selected.map(({ label }) => "${" + label + "}"),
+      configurationTarget(uri),
+    );
+    this.refresh();
+  }
+
+  /** Explicit inspection loads rich evidence only for detail sections, then presents bounded pages. */
+  async inspectLine(): Promise<void> {
+    const editor = window.activeTextEditor;
+    if (!editor) {
+      return;
+    }
+    if (editor.document.isDirty) {
+      void window.showInformationMessage("Build saved source to inspect current line information.");
+      return;
+    }
+    const line = editor.selection.active.line + 1;
+    const sections = [
+      "Summary",
+      "Project state",
+      "Runtime state",
+      "State transitions",
+      "Memory and effective addresses",
+      "Evidence and control flow",
+    ];
+    const section = await window.showQuickPick(sections, { title: "Inspect Line Information" });
+    if (!section) {
+      return;
+    }
+    // Cancelling the picker does no I/O; summary inspection does not load evidence/state previews.
+    const facts = await this.provider.lines(
+      editor.document.uri.fsPath,
+      [{ start: line, end: line }],
+      { counts: true, bytes: section === "Summary", state: section !== "Summary" },
+      this.#dirtyFiles(),
+    );
+    const infos = facts.get(line) ?? [];
+    if (!infos.length) {
+      void window.showInformationMessage(
+        "No current build map matches this line. Build the project to refresh its information.",
+      );
+      return;
+    }
+    const lines: string[] = [];
+    for (const info of infos) {
+      lines.push(info.label, "");
+      if (section === "Summary") {
+        for (const field of Object.keys(INFORMATION_FIELDS)) {
+          const value = renderTemplate(compileTemplate(`${field}: \${${field}}`), info);
+          if (value) {
+            lines.push(value);
+          }
+        }
+      } else {
+        for (const annotation of info.annotations ?? []) {
+          const selected = {
+            ...annotation,
+            stateObservations: [],
+            stateTransitions: [],
+            memoryAccesses: [],
+            effectiveAddresses: [],
+            nodeIds: [],
+            evidence: [],
+            runtimeCoverage: [],
+            comments: [],
+          } as typeof annotation;
+          let detail = selected;
+          if (section === "Project state") {
+            detail = {
+              ...selected,
+              stateObservations: annotation.stateObservations.filter(
+                (value) => value.source === "project",
+              ),
+            };
+          }
+          if (section === "Runtime state") {
+            detail = {
+              ...selected,
+              stateObservations: annotation.stateObservations.filter(
+                (value) => value.source === "runtime",
+              ),
+            };
+          }
+          if (section === "State transitions") {
+            detail = { ...selected, stateTransitions: annotation.stateTransitions };
+          }
+          if (section === "Memory and effective addresses") {
+            detail = {
+              ...selected,
+              memoryAccesses: annotation.memoryAccesses,
+              effectiveAddresses: annotation.effectiveAddresses,
+            };
+          }
+          if (section === "Evidence and control flow") {
+            detail = { ...selected, nodeIds: annotation.nodeIds, evidence: annotation.evidence };
+          }
+          lines.push(formatInstructionAnnotationDetails(detail), "");
+        }
+      }
+    }
+    const content = lines.join("\n").split("\n");
+    let start = 0;
+    if (content.length > 120) {
+      const pages = Array.from({ length: Math.ceil(content.length / 120) }, (_, index) => ({
+        label: `Page ${index + 1}`,
+        start: index * 120,
+      }));
+      const selected = await window.showQuickPick(pages, { title: `${section} — choose a page` });
+      if (!selected) {
+        return;
+      }
+      start = selected.start;
+    }
+    const limited = infos.some((info) => info.limited)
+      ? "Some detail records are omitted from this preview; stored evidence and execution totals are unchanged.\n"
+      : "";
+    const document = await workspace.openTextDocument({
+      language: "plaintext",
+      content: `${editor.document.uri.fsPath}:${line} — ${section}\n${limited}\n${content.slice(start, start + 120).join("\n")}`,
+    });
+    await window.showTextDocument(document, { preview: true, viewColumn: editor.viewColumn });
   }
 
   dispose(): void {
-    ++this.#generation;
+    this.#disposed = true;
+    for (const timer of this.#timers.values()) {
+      clearTimeout(timer);
+    }
+    this.#timers.clear();
+    this.provider.invalidate();
+    for (const disposable of this.#disposables) {
+      disposable.dispose();
+    }
     this.#decoration.dispose();
-  }
-
-  async #decorations(editor: TextEditor, generation: number): Promise<void> {
-    const currentFile = path.resolve(editor.document.uri.fsPath);
-    const byLine = new Map<number, MappedAnnotation[]>();
-    const loaded: LoadedAnnotations[] = [];
-    for (const directory of await findAnalysisProjectDirectories()) {
-      let manifest: AnalysisProjectManifest;
-      try {
-        manifest = await analysisWorker().request<AnalysisProjectManifest>(directory, "manifest");
-      } catch {
-        continue;
-      }
-      const identity = {
-        target: manifest.target,
-        romContentSha256: manifest.rom.contentSha256,
-        romContentSize: manifest.rom.contentSize,
-      };
-      loaded.push({ directory, identity });
-    }
-    if (loaded.length === 0 || generation !== this.#generation) {
-      return;
-    }
-    const candidates = await findAnalysisDebugMapCandidates(loaded.map(({ identity }) => identity));
-    for (const { directory, identity } of loaded) {
-      for (const candidate of candidates) {
-        if (
-          candidate.map.target !== identity.target ||
-          candidate.map.output.sha256 !== identity.romContentSha256 ||
-          candidate.map.output.size !== identity.romContentSize
-        ) {
-          continue;
-        }
-        const sourceIds = new Set(
-          candidate.map.sources
-            .filter((source) => {
-              const resolved = currentAnalysisSourcePath(source, candidate, currentFile);
-              return resolved !== undefined && path.resolve(resolved) === currentFile;
-            })
-            .map(({ id }) => id),
-        );
-        if (sourceIds.size === 0) {
-          continue;
-        }
-        if (generation !== this.#generation) {
-          return;
-        }
-        const ranges = candidate.map.ranges
-          .filter(
-            (range) =>
-              sourceIds.has(range.sourceId) &&
-              editor.visibleRanges.some(
-                (visible) =>
-                  range.line >= visible.start.line + 1 && range.line <= visible.end.line + 1,
-              ),
-          )
-          .slice(0, 2000);
-        if (ranges.length === 0) {
-          continue;
-        }
-        const rows = await analysisWorker().request<
-          { line: number; annotation: InstructionAnalysisAnnotation }[]
-        >(directory, "annotations", { ranges });
-        for (const { line, annotation } of rows) {
-          append(byLine, line, { project: path.basename(directory), annotation });
-        }
-      }
-    }
-    if (generation !== this.#generation || window.activeTextEditor !== editor) {
-      return;
-    }
-    const lines = [...byLine]
-      .filter(([line]) => line >= 1 && line <= editor.document.lineCount)
-      .sort(([left], [right]) => left - right);
-    const tabSize = typeof editor.options.tabSize === "number" ? editor.options.tabSize : 4;
-    const preferredColumn = workspace
-      .getConfiguration("asm", editor.document.uri)
-      .get<number>("analysis.annotationColumn", 80);
-    const column = annotationOverlayColumn(
-      lines.map(([line]) => editor.document.lineAt(line - 1).text),
-      tabSize,
-      Number.isSafeInteger(preferredColumn) && preferredColumn >= 0 ? preferredColumn : 80,
-    );
-    const decorations = lines
-      .map(([line, entries]) => {
-        const unique = new Map(
-          entries.map((entry) => [`${entry.project}:${entry.annotation.id}`, entry]),
-        );
-        const values = [...unique.values()];
-        const summaries = [
-          ...new Set(
-            values
-              .map(({ annotation }) => formatInstructionAnnotationSummary(annotation, 160))
-              .filter(Boolean),
-          ),
-        ];
-        const summaryText = summaries.join(" | ");
-        const hover = new MarkdownString();
-        hover.appendMarkdown("**Uttori analysis**\n\n");
-        hover.appendMarkdown(
-          "Overlay colors: blue = project state, green = runtime observations, amber = state changes.\n\n",
-        );
-        for (const { project, annotation } of values) {
-          hover.appendText(project);
-          hover.appendMarkdown("\n\n");
-          hover.appendCodeblock(formatInstructionAnnotationDetails(annotation), "text");
-        }
-        const targetLine = editor.document.lineAt(line - 1);
-        return {
-          range: new Range(line - 1, targetLine.text.length, line - 1, targetLine.text.length),
-          hoverMessage: hover,
-          renderOptions: {
-            after: {
-              margin: `0 0 0 ${column - annotationSourceColumns(targetLine.text, tabSize)}ch`,
-              color: new ThemeColor(
-                annotationOverlayColor(values.map(({ annotation }) => annotation)),
-              ),
-              contentText:
-                summaries.length > 0
-                  ? `│ ${summaryText.slice(0, 319)}${summaryText.length > 319 ? "…" : ""}`
-                  : "",
-            },
-          },
-        };
-      })
-      .filter(({ renderOptions }) => renderOptions.after.contentText !== "");
-    editor.setDecorations(this.#decoration, decorations);
   }
 }

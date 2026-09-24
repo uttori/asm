@@ -4,6 +4,8 @@ import { CORE_DIRECTIVE_GROUPS } from "../directive-groups.js";
 import type {
   AddressSpaceContribution,
   ArchitectureContribution,
+  AssetFormatContribution,
+  AssetTransformContribution,
   AssemblerPlugin,
   AssemblerPluginManifest,
   DirectiveSetContribution,
@@ -53,6 +55,8 @@ interface PluginTransaction {
   readonly addressSpaces: OwnedContribution<AddressSpaceContribution>[];
   readonly outputFormats: OwnedContribution<OutputFormatContribution>[];
   readonly directiveSets: OwnedContribution<DirectiveSetContribution>[];
+  readonly assetFormats: OwnedContribution<AssetFormatContribution>[];
+  readonly assetTransforms: OwnedContribution<AssetTransformContribution>[];
   readonly expressionSets: OwnedContribution<ExpressionSetContribution>[];
   readonly lifecycles: OwnedContribution<LifecycleContribution>[];
   readonly targets: OwnedContribution<TargetContribution>[];
@@ -281,6 +285,8 @@ export class PluginManager implements PluginDisposable {
   readonly #addressSpaces: OwnedContribution<AddressSpaceContribution>[] = [];
   readonly #outputFormats: OwnedContribution<OutputFormatContribution>[] = [];
   readonly #directiveSets: OwnedContribution<DirectiveSetContribution>[] = [];
+  readonly #assetFormats: OwnedContribution<AssetFormatContribution>[] = [];
+  readonly #assetTransforms: OwnedContribution<AssetTransformContribution>[] = [];
   readonly #expressionSets: OwnedContribution<ExpressionSetContribution>[] = [];
   readonly #lifecycles: OwnedContribution<LifecycleContribution>[] = [];
   readonly #targets: OwnedContribution<TargetContribution>[] = [];
@@ -478,6 +484,8 @@ export class PluginManager implements PluginDisposable {
       addressSpaces: [],
       outputFormats: [],
       directiveSets: [],
+      assetFormats: [],
+      assetTransforms: [],
       expressionSets: [],
       lifecycles: [],
       targets: [],
@@ -517,6 +525,10 @@ export class PluginManager implements PluginDisposable {
         add(transaction.outputFormats, contribution),
       registerDirectiveSet: (contribution: DirectiveSetContribution) =>
         add(transaction.directiveSets, contribution),
+      registerAssetFormat: (contribution: AssetFormatContribution) =>
+        add(transaction.assetFormats, contribution),
+      registerAssetTransform: (contribution: AssetTransformContribution) =>
+        add(transaction.assetTransforms, contribution),
       registerExpressionSet: (contribution: ExpressionSetContribution) =>
         add(transaction.expressionSets, contribution),
       registerLifecycle: (contribution: LifecycleContribution) =>
@@ -546,6 +558,8 @@ export class PluginManager implements PluginDisposable {
       ...transaction.addressSpaces,
       ...transaction.outputFormats,
       ...transaction.directiveSets,
+      ...transaction.assetFormats,
+      ...transaction.assetTransforms,
       ...transaction.expressionSets,
       ...transaction.lifecycles,
       ...transaction.targets,
@@ -656,6 +670,68 @@ export class PluginManager implements PluginDisposable {
         }
       }
     }
+    for (const record of transaction.assetFormats) {
+      validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+      const optionSchema = record.value.optionSchema;
+      const invalidOptionSchema =
+        optionSchema !== undefined &&
+        (!isRecord(optionSchema) ||
+          Object.values(optionSchema).some(
+            (field) =>
+              !isRecord(field) ||
+              typeof field.summary !== "string" ||
+              (field.valueSyntax !== undefined && typeof field.valueSyntax !== "string"),
+          ));
+      if (
+        !semver.valid(record.value.version) ||
+        typeof record.value.convert !== "function" ||
+        invalidOptionSchema ||
+        (record.value.resourcePaths !== undefined &&
+          typeof record.value.resourcePaths !== "function") ||
+        (record.value.targets !== undefined &&
+          (!isArray(record.value.targets) ||
+            record.value.targets.some((target: unknown) => typeof target !== "string")))
+      ) {
+        this.#malformed(transaction, record);
+      }
+    }
+    for (const record of transaction.assetTransforms) {
+      validateAliases(record.value.aliases, transaction.manifest.id, record.contributionId);
+      // Reject malformed schemas at activation so resource discovery cannot depend on a broken field.
+      const schema = record.value.optionSchema;
+      const invalidSchema =
+        schema !== undefined &&
+        (!isRecord(schema) ||
+          Object.values(schema).some(
+            (field) =>
+              !isRecord(field) ||
+              !["string", "integer", "boolean", "enum"].includes(String(field.type)) ||
+              (field.type === "enum" && !Array.isArray(field.enum)) ||
+              (field.required !== undefined && typeof field.required !== "boolean") ||
+              (field.resource !== undefined &&
+                (field.resource !== true || field.type !== "string")) ||
+              (field.minimum !== undefined &&
+                (typeof field.minimum !== "number" || !Number.isFinite(field.minimum))) ||
+              (field.maximum !== undefined &&
+                (typeof field.maximum !== "number" || !Number.isFinite(field.maximum))) ||
+              (field.enum !== undefined && !Array.isArray(field.enum)),
+          ));
+      if (
+        !semver.valid(record.value.version) ||
+        typeof record.value.encode !== "function" ||
+        typeof record.value.decode !== "function" ||
+        invalidSchema ||
+        (record.value.validateOptions !== undefined &&
+          typeof record.value.validateOptions !== "function") ||
+        (record.value.resourcePaths !== undefined &&
+          typeof record.value.resourcePaths !== "function") ||
+        (record.value.targets !== undefined &&
+          (!isArray(record.value.targets) ||
+            record.value.targets.some((target: unknown) => typeof target !== "string")))
+      ) {
+        this.#malformed(transaction, record);
+      }
+    }
     for (const record of transaction.lifecycles) {
       if (typeof record.value.create !== "function") {
         this.#malformed(transaction, record);
@@ -709,6 +785,8 @@ export class PluginManager implements PluginDisposable {
       transaction.addressSpaces,
       transaction.outputFormats,
       transaction.directiveSets,
+      transaction.assetFormats,
+      transaction.assetTransforms,
       transaction.expressionSets,
       transaction.lifecycles,
       transaction.targets,
@@ -742,6 +820,12 @@ export class PluginManager implements PluginDisposable {
     for (const record of transaction.directiveSets) {
       this.#directiveSets.push(record);
     }
+    for (const record of transaction.assetFormats) {
+      this.#assetFormats.push(record);
+    }
+    for (const record of transaction.assetTransforms) {
+      this.#assetTransforms.push(record);
+    }
     for (const record of transaction.expressionSets) {
       this.#expressionSets.push(record);
     }
@@ -774,6 +858,8 @@ export class PluginManager implements PluginDisposable {
       addressSpaces: Object.freeze([...this.#addressSpaces]),
       outputFormats: Object.freeze([...this.#outputFormats]),
       directiveSets: Object.freeze([...this.#directiveSets]),
+      assetFormats: Object.freeze([...this.#assetFormats]),
+      assetTransforms: Object.freeze([...this.#assetTransforms]),
       expressionSets: Object.freeze([...this.#expressionSets]),
       lifecycles: Object.freeze([...this.#lifecycles]),
       targets: Object.freeze([...this.#targets]),

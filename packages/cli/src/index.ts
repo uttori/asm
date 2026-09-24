@@ -1,7 +1,13 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
-import { Assembler, PluginError, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
+import {
+  Assembler,
+  NodeAssemblyFileProvider,
+  PluginError,
+  canonicalDebugMapJson,
+  createDebugMap,
+} from "@uttori/asm-core";
 import type { AssemblerPlugin } from "@uttori/asm-core/plugin";
 import {
   ANALYSIS_PROJECT_MANIFEST,
@@ -1021,8 +1027,9 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
           }
         : {}),
     });
+    const fileProvider = new NodeAssemblyFileProvider();
     const baseImage = parsed.baseImage
-      ? new Uint8Array(fs.readFileSync(path.resolve(cwd, parsed.baseImage)))
+      ? fileProvider.readFile(path.resolve(cwd, parsed.baseImage))
       : undefined;
     assembler = new Assembler({
       environment: loaded.environment,
@@ -1030,6 +1037,7 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
       architecture: loaded.architecture,
       targetOptions: loaded.targetOptions,
       baseImage,
+      fileProvider,
       collectSourceMetadata: parsed.debug,
     });
     // The core base image supplies reads. CLI patching also preserves every unwritten byte.
@@ -1048,7 +1056,7 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
       console.log(`Architecture: ${loaded.architecture}`);
     }
 
-    const source = fs.readFileSync(inputFile, "utf8");
+    const source = fileProvider.readTextFile(inputFile);
     assembler.assembleProgram(assembler.buildProgramModel(source, inputFile, 0));
     const extension = loaded.environment.getTarget(loaded.target)!.defaultOutputExtension;
     const outputFile = parsed.output
@@ -1060,6 +1068,19 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
     ];
     let debugMapFile: string | undefined;
     if (parsed.debug) {
+      // Includes containing only constants and binary inputs still determine the emitted bytes.
+      // Record them so editor snapshots from CLI builds expire when those dependencies change.
+      if (loaded.configuration.configFile) {
+        fileProvider.readFiles.add(loaded.configuration.configFile);
+      }
+      for (const dependency of fileProvider.readFiles) {
+        const snapshot = assembler.assetAssembly.snapshot(dependency);
+        if (snapshot) {
+          assembler.addressToLineMapping.registerDependencySnapshot(dependency, snapshot);
+        } else {
+          assembler.addressToLineMapping.getFileIndex(dependency);
+        }
+      }
       debugMapFile = parsed.debugMap
         ? path.resolve(cwd, parsed.debugMap)
         : `${outputFile}.debug.json`;
@@ -1067,6 +1088,7 @@ const assemble = async (parsed: CliArguments, cwd: string): Promise<number> => {
         target: loaded.target,
         output,
         mapping: assembler.addressToLineMapping,
+        dependencyKinds: assembler.assetAssembly.dependencies,
         sourceRoot: path.dirname(inputFile),
       });
       outputs.push({ file: debugMapFile, contents: canonicalDebugMapJson(debugMap) });

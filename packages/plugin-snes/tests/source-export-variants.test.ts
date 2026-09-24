@@ -7,6 +7,7 @@ import {
   writeAnalysisProject,
   openAnalysisProjectStore,
   type AnalysisProject,
+  type AnalysisControlFlowNodeRecord,
   type RuntimeInstructionRecord,
 } from "@uttori/asm-disassembler";
 
@@ -54,7 +55,12 @@ const projectFor = (
       comments: [],
       regions: [],
       runtime,
-      evidence: [],
+      evidence: runtime.map(({ id }) => ({
+        id,
+        source: "runtime",
+        sourceId: "fixture",
+        confidence: "certain",
+      })),
       imports: [],
     },
   };
@@ -114,6 +120,142 @@ for (const scenario of [
     symbolic: "RAM_STATE",
   },
 ]) {
+  test(`unknown static state cannot erase captured ${scenario.name} names after reanalysis`, async (t) => {
+    const workspace = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-export-reanalysis-"));
+    t.teardown(() => fs.rmSync(workspace, { recursive: true, force: true }));
+    const directory = path.join(workspace, "source");
+    fs.mkdirSync(directory);
+    fs.writeFileSync(path.join(directory, scenario.file), JSON.stringify(scenario.map));
+    const bytes = new Uint8Array(0x8000).fill(0xea);
+    bytes.set(scenario.bytes);
+    const rom = new RomImage(bytes, { headerSize: 0 });
+    const romFile = path.join(workspace, "rom.sfc");
+    fs.writeFileSync(romFile, bytes);
+    const baseline = projectFor(rom, [capture("observed", scenario.bytes, scenario.state)]);
+    const observed = baseline.shards.analysis.find(
+      (record): record is AnalysisControlFlowNodeRecord => record.kind === "cfg-node",
+    )!;
+    // Static seeds inherit provenance but cannot reconstruct the calling bank or direct page.
+    const unknown: AnalysisControlFlowNodeRecord = {
+      ...observed,
+      id: "static:cfg:808000",
+      incomingState: {
+        ...observed.incomingState,
+        dbr: { kind: "unknown" },
+        d: { kind: "unknown" },
+      },
+    };
+    const project: AnalysisProject = {
+      ...baseline,
+      shards: {
+        ...baseline.shards,
+        analysis: [unknown, observed],
+        labels: [
+          {
+            id: "reviewed-entry",
+            addressSpace: "snes.cpu",
+            address: 0x808000,
+            name: "ReviewedEntry",
+            sourceName: "ReviewedEntry",
+            evidence: ["observed"],
+          },
+        ],
+      },
+    };
+    const options = { sourceProjectSha256: "b".repeat(64) };
+    const exported = exportSnes65816Source(project, rom, directory, options);
+    const bank = path.join(directory, "banks/bank-000.asm");
+    t.true(fs.readFileSync(bank, "utf8").includes(scenario.symbolic));
+    t.true(
+      fs.readFileSync(bank, "utf8").includes("ReviewedEntry:"),
+      "native labels survive removal of generated function records",
+    );
+    t.is(
+      exported.spans.find((span) => span.start === 0)?.nodeIds?.length,
+      2,
+      "unresolved static provenance remains in the export",
+    );
+    t.true(
+      (
+        await verifySnesProjectRoundTrip({
+          sourceDirectory: directory,
+          romFile,
+          emitDebugMap: false,
+        })
+      ).comparison.equal,
+    );
+
+    const reordered = { ...project, shards: { ...project.shards, analysis: [observed, unknown] } };
+    t.deepEqual(exportSnes65816Source(reordered, rom, directory, options), exported);
+    const analysisDirectory = path.join(workspace, "analysis");
+    writeAnalysisProject(analysisDirectory, project);
+    const store = openAnalysisProjectStore(analysisDirectory);
+    try {
+      store.prepareAnnotationQueries();
+      const streamed = store.transaction(
+        () =>
+          exportSnes65816Source(store.sourceExportView(), rom, directory, {
+            ...options,
+            instructionGroups: store.instructionExportGroups(),
+          }),
+        false,
+      );
+      t.deepEqual(
+        streamed,
+        exported,
+        "persisted native labels and runtime symbols survive a fresh SQL export",
+      );
+    } finally {
+      store.close();
+    }
+
+    // A known contradictory static address is still evidence against the captured name.
+    const conflictingProject = projectFor(rom, [capture("conflicting", scenario.bytes, {})]);
+    const conflicting = conflictingProject.shards.analysis.find(
+      (record): record is AnalysisControlFlowNodeRecord => record.kind === "cfg-node",
+    )!;
+    exportSnes65816Source(
+      {
+        ...project,
+        shards: {
+          ...project.shards,
+          analysis: [observed, { ...conflicting, id: "static:cfg:conflicting" }],
+        },
+      },
+      rom,
+      directory,
+      options,
+    );
+    t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
+
+    // An unresolved runtime observation is different from an unresolved static guess.
+    exportSnes65816Source(
+      {
+        ...project,
+        shards: {
+          ...project.shards,
+          analysis: [observed, { ...unknown, id: "runtime:code:unknown" }],
+        },
+      },
+      rom,
+      directory,
+      options,
+    );
+    t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
+
+    // Inherited runtime evidence alone cannot promote a static node into an observation.
+    exportSnes65816Source(
+      {
+        ...project,
+        shards: { ...project.shards, analysis: [{ ...observed, id: "static:cfg:known" }, unknown] },
+      },
+      rom,
+      directory,
+      options,
+    );
+    t.true(fs.readFileSync(bank, "utf8").includes(scenario.numeric));
+  });
+
   test(`export retains code and new gains when ${scenario.name} symbols vary across captures`, async (t) => {
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-export-variants-"));
     t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -241,8 +383,9 @@ test("explicit instruction widths round trip and ignore unrelated captured M/X c
   const bank = path.join(sourceDirectory, "banks/bank-000.asm");
   const text = fs.readFileSync(bank, "utf8");
   t.notRegex(text, /^\.[ai](?:8|16)\b/m);
-  for (const source of ["LDA.b #$12", "LDX.w #$1234", "LDY.w #$5678", "LDA.w #$9ABC"])
-    {t.true(text.includes(source), source);}
+  for (const source of ["LDA.b #$12", "LDX.w #$1234", "LDY.w #$5678", "LDA.w #$9ABC"]) {
+    t.true(text.includes(source), source);
+  }
   t.true(
     (await verifySnesProjectRoundTrip({ sourceDirectory, romFile, emitDebugMap: false })).comparison
       .equal,

@@ -6,12 +6,18 @@ export type CachedRootAnalysis = {
     symbols: AssemblySymbolDefinition[];
     references: AssemblySymbolReference[];
     includeEdges: AssemblyIncludeEdge[];
+    /** Binary and resource inputs are dependencies, never assembly source files. */
+    assetDependencies: Readonly<Record<string, "binary" | "resource">>;
 };
 /** Assembler settings that must match for a cache entry to be reused. */
 export type RootAnalysisCacheIdentity = {
     target: string;
     architecture: string;
     includePaths: readonly string[];
+    /** Converter IDs and versions invalidate cached analysis even when files are unchanged. */
+    converterIdentity: string;
+    /** Target settings can affect active conversion and symbol layout. */
+    targetOptionsIdentity: string;
 };
 /**
  * Disk-backed cache of full-pass workspace analysis artifacts.
@@ -29,10 +35,10 @@ export declare class RootAnalysisCache {
      * Loads a cached analysis when every recorded file hash still matches.
      *
      * Uses a two-tier validation strategy:
-     * 1. For each file, check mtime first (cheap `statSync`). Files whose mtime
-     *    is unchanged are presumed unmodified and their stored hash is reused.
-     * 2. Only files whose mtime changed (or whose mtime is missing from the
-     *    payload) are re-read and SHA-256 hashed.
+     * 1. For assembly source, check mtime first (cheap `statSync`). Files whose
+     *    mtime is unchanged reuse their stored hash.
+     * 2. Hash binary resources on every read, even when mtime is unchanged;
+     *    generated assets may be replaced while preserving timestamps.
      *
      * This avoids reading and hashing every include file on every startup when
      * the project has not changed — the common case for warm LSP restarts.

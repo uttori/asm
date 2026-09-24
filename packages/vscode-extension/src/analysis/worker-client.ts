@@ -41,7 +41,7 @@ const interactiveOperations = new Set([
  * Read-only editor/DAP annotation requests routed separately from edits and bulk views when
  * isolation is enabled.
  */
-const previewOperations = new Set(["annotations", "debugAnnotations"]);
+const previewOperations = new Set(["annotations", "annotationSummary", "debugAnnotations"]);
 
 /** Shared projection process: fatal heap errors cannot terminate the extension host. */
 export class AnalysisWorkerClient {

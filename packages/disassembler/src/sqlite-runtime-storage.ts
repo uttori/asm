@@ -9,6 +9,12 @@ import {
   parseSqlitePayload,
 } from "./sqlite-payload.js";
 import { runtimeColumns } from "./sqlite-records.js";
+import {
+  RUNTIME_FACT_SCHEMA,
+  RUNTIME_IDENTITY_SCHEMA,
+  runtimeIdentityKey,
+} from "./sqlite-runtime-facts.js";
+import { RUNTIME_HISTORY_SCHEMA } from "./sqlite-runtime-history.js";
 import { encodePackedRuntimePayload } from "./sqlite-runtime-payload.js";
 
 /** Stream negative virtual rowids first, then positive observations, using the observation PK.
@@ -37,19 +43,11 @@ export const RUNTIME_RECORD_STREAM_SQL = [true, false].map(
  * Standalone states and arbitrary text identities remain independent. Packed payloads retain full state.
  */
 export const RUNTIME_STORAGE_SCHEMA = `
-CREATE TABLE runtime_facts (
-  fid INTEGER PRIMARY KEY, fingerprint BLOB UNIQUE,
-  kind TEXT NOT NULL, architecture TEXT NOT NULL,
-  address_space TEXT, address INTEGER, start INTEGER, "end" INTEGER,
-  from_address_space TEXT, from_address INTEGER, to_address_space TEXT, to_address INTEGER,
-  instruction_address_space TEXT, instruction_address INTEGER,
-  accessed_address_space TEXT, accessed_address INTEGER, coverage TEXT, payload BLOB
-);
-CREATE TABLE runtime_identities (
-  iid INTEGER PRIMARY KEY, value BLOB NOT NULL UNIQUE
-);
+${RUNTIME_HISTORY_SCHEMA}
+${RUNTIME_FACT_SCHEMA}
+${RUNTIME_IDENTITY_SCHEMA}
 CREATE TABLE runtime_observations (
-  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_facts(fid),
+  oid INTEGER PRIMARY KEY, fact_id INTEGER NOT NULL REFERENCES runtime_fact_rows(fid),
   prefix_id INTEGER NOT NULL REFERENCES runtime_prefixes(id),
   identity_id INTEGER NOT NULL REFERENCES runtime_identities(iid),
   evidence_id INTEGER NOT NULL REFERENCES runtime_evidence(id), count INTEGER NOT NULL,
@@ -58,7 +56,9 @@ CREATE TABLE runtime_observations (
   UNIQUE(prefix_id,identity_id), UNIQUE(state_prefix_id,identity_id)
 );
 CREATE INDEX runtime_observation_fact ON runtime_observations(fact_id);
-CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id);
+-- Native fact and identity IDs commonly coincide. The fact index already covers that case;
+-- index only exceptions, and check both cases before collecting an identity below.
+CREATE INDEX runtime_observation_identity ON runtime_observations(identity_id) WHERE identity_id!=fact_id;
 CREATE VIEW runtime AS
  SELECT o.oid AS rowid,o.prefix_id,i.value AS id,f.kind,f.architecture,o.count,
  f.address_space,f.address,f.start,f."end",f.from_address_space,f.from_address,
@@ -77,8 +77,11 @@ CREATE VIEW runtime AS
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
  LEFT JOIN runtime_identities i ON i.iid=o.identity_id WHERE o.state_prefix_id IS NOT NULL;
 CREATE TRIGGER runtime_collect_fact AFTER DELETE ON runtime_observations BEGIN
- DELETE FROM runtime_facts WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
- DELETE FROM runtime_identities WHERE iid=OLD.identity_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id);
+ -- Reclaim the physical owner directly: deleting a fact does not require decoding its payload.
+ DELETE FROM runtime_fact_rows WHERE fid=OLD.fact_id AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.fact_id);
+ DELETE FROM runtime_identities WHERE iid=OLD.identity_id
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE fact_id=OLD.identity_id AND identity_id=OLD.identity_id)
+   AND NOT EXISTS(SELECT 1 FROM runtime_observations WHERE identity_id=OLD.identity_id AND identity_id!=fact_id);
 END;
 CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query_size,query_data,query_ready ON runtime BEGIN
  UPDATE runtime_observations SET query_file_offset=NEW.query_file_offset,query_size=NEW.query_size,
@@ -86,14 +89,15 @@ CREATE TRIGGER runtime_query_update INSTEAD OF UPDATE OF query_file_offset,query
 END;
 -- Compatibility mutations detach one logical record. They must never change another capture's shared fact.
 CREATE TRIGGER runtime_insert INSTEAD OF INSERT ON runtime BEGIN
- INSERT OR IGNORE INTO runtime_identities(value) VALUES(NEW.id);
+ INSERT INTO runtime_identities(value) SELECT NEW.id WHERE NOT EXISTS(SELECT 1 FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id);
  INSERT INTO runtime_facts(kind,architecture,address_space,address,start,"end",from_address_space,from_address,
  to_address_space,to_address,instruction_address_space,instruction_address,accessed_address_space,accessed_address,coverage,payload)
  VALUES(NEW.kind,NEW.architecture,NEW.address_space,NEW.address,NEW.start,NEW."end",NEW.from_address_space,NEW.from_address,
  NEW.to_address_space,NEW.to_address,NEW.instruction_address_space,NEW.instruction_address,NEW.accessed_address_space,NEW.accessed_address,NEW.coverage,
  CASE WHEN json_valid(NEW.payload) THEN jsonb(NEW.payload) ELSE NEW.payload END);
+ -- Nested view inserts restore last_insert_rowid(). The single writer owns the new maximum fid.
  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_file_offset,query_size,query_data,query_ready)
- VALUES(last_insert_rowid(),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
+ VALUES((SELECT MAX(fid) FROM runtime_fact_rows),NEW.prefix_id,(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("NEW.id")}) AND value=NEW.id),NEW.evidence_id,NEW.count,NEW.query_file_offset,NEW.query_size,NEW.query_data,
  CASE WHEN NEW.kind='runtime-execution' THEN 0 ELSE 1 END);
 END;
 CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
@@ -102,10 +106,10 @@ CREATE TRIGGER runtime_delete INSTEAD OF DELETE ON runtime BEGIN
  SELECT 'runtime-cpu-state',f.architecture,f.address_space,f.address,f.payload
  FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id WHERE o.oid=OLD.rowid AND o.state_prefix_id IS NOT NULL;
  INSERT INTO runtime_observations(fact_id,prefix_id,identity_id,evidence_id,count,query_ready)
- SELECT last_insert_rowid(),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
+ SELECT (SELECT MAX(fid) FROM runtime_fact_rows),state_prefix_id,identity_id,evidence_id,count,1 FROM runtime_observations WHERE oid=OLD.rowid AND state_prefix_id IS NOT NULL;
  UPDATE runtime_observations SET state_prefix_id=NULL WHERE oid=-OLD.rowid;
  -- A preceding instruction deletion may have detached this virtual state; stable identity still finds it.
- DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE value=OLD.id);
+ DELETE FROM runtime_observations WHERE prefix_id=OLD.prefix_id AND identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("OLD.id")}) AND value=OLD.id);
 END;
 CREATE TRIGGER runtime_record_update INSTEAD OF UPDATE OF prefix_id,id,kind,architecture,count,address_space,address,start,"end",
  from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
@@ -130,7 +134,9 @@ export class SqliteRuntimeWriter {
   readonly #insertIdentity: StatementSync;
 
   constructor(db: DatabaseSync) {
-    this.#findFact = db.prepare("SELECT fid FROM runtime_facts WHERE fingerprint=?");
+    this.#findFact = db.prepare(
+      "SELECT fid FROM runtime_fact_rows WHERE substr(fingerprint,1,8)=substr(?1,1,8) AND fingerprint=?1",
+    );
     this.#insertFact =
       db.prepare(`INSERT INTO runtime_facts(fingerprint,kind,architecture,address_space,address,start,"end",
       from_address_space,from_address,to_address_space,to_address,instruction_address_space,instruction_address,
@@ -143,9 +149,11 @@ export class SqliteRuntimeWriter {
       db.prepare(`SELECT o.*,f.kind,f.architecture,f.address_space,f.address,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload
       FROM runtime_observations o JOIN runtime_facts f ON f.fid=o.fact_id
       WHERE o.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE value=?)`);
+      AND o.identity_id=(SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)`);
     this.#removeObservation = db.prepare("DELETE FROM runtime_observations WHERE oid=?");
-    this.#findIdentity = db.prepare("SELECT iid FROM runtime_identities WHERE value=?");
+    this.#findIdentity = db.prepare(
+      `SELECT iid FROM runtime_identities WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?1")}) AND value=?1`,
+    );
     this.#insertIdentity = db.prepare("INSERT INTO runtime_identities(value) VALUES(?)");
   }
 
@@ -246,7 +254,7 @@ export class SqliteRuntimeWriter {
           encoded = encodeSqlitePayload(payload);
         }
       }
-      fid = this.#insertFact.run(
+      this.#insertFact.run(
         fingerprint,
         record.kind,
         record.architecture,
@@ -266,7 +274,9 @@ export class SqliteRuntimeWriter {
         encoded,
         encoded,
         encoded,
-      ).lastInsertRowid;
+      );
+      // INSTEAD OF view triggers restore last_insert_rowid; resolve the inserted stable fingerprint.
+      fid = this.#findFact.get(fingerprint)!.fid;
     }
     // Pairing a state-first insertion may delete its last identity reference. Resolve after that
     // deletion and keep no cross-transaction cache, so rollback/garbage collection cannot stale it.

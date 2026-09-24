@@ -4,6 +4,7 @@ import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import { parseSqlitePayload } from "../packages/disassembler/src/sqlite-payload.js";
+import { registerRuntimeHistory } from "../packages/disassembler/src/sqlite-runtime-history.js";
 
 /** Read-only experiment for one native decoder signature; never installs a production cache.
  * Run with node --conditions=uttori-source --import=tsx scripts/benchmark-runtime-summary.ts DB REPORT.
@@ -17,6 +18,7 @@ const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-runtime-summary-
 const summaryFile = path.join(directory, "summary.sqlite");
 const source = new DatabaseSync(sourceFile, { readOnly: true });
 const summary = new DatabaseSync(summaryFile);
+registerRuntimeHistory(source);
 
 /** Prototype rows keep evidence and a stable representative, so projected API records are reproducible. */
 interface Group {

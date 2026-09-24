@@ -270,7 +270,10 @@ const main = async (): Promise<void> => {
   }
   const workspacePath = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-vscode-smoke-"));
   try {
-    fs.writeFileSync(path.join(workspacePath, "main.asm"), "lorom\norg $008000\nStart:\n  sei\n");
+    fs.writeFileSync(
+      path.join(workspacePath, "main.asm"),
+      "lorom\norg $008000\nStart:\n  sei\nRAM_EASTER_EGG_COUNTER = $7E002B\n  LDA.w RAM_EASTER_EGG_COUNTER & $FFFF,x\n  RTS\n",
+    );
     writeAnalysisProject(path.join(workspacePath, "analysis"), {
       manifest: {
         format: ANALYSIS_PROJECT_FORMAT,

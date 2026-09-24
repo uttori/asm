@@ -54,6 +54,7 @@ export interface AnalysisWorkerRequest {
     | "segments"
     | "details"
     | "graph"
+    | "annotationSummary"
     | "annotations"
     | "debugAnnotations"
     | "annotationLookup"
@@ -179,6 +180,17 @@ const request = (message: AnalysisWorkerRequest): unknown => {
     }, false);
     const saved = saveDisassemblyAnnotation(message.directory, snapshot, input);
     return { ...saved.inverse, refresh: { after: saved.snapshot.revision.manifestSha256 } };
+  }
+  if (message.operation === "annotationSummary") {
+    const ranges = message.ranges ?? [];
+    if (!ranges.length) {
+      return [];
+    }
+    if (ranges.length > 2000) {
+      throw new Error("At most 2000 visible source ranges may be projected per request.");
+    }
+    store.prepareAnnotationQueries();
+    return store.transaction(() => store.instructionExecutionSummary(ranges), false);
   }
   if (message.operation === "annotations" || message.operation === "debugAnnotations") {
     const ranges = message.ranges ?? [];

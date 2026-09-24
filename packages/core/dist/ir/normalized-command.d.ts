@@ -1,4 +1,5 @@
 import { type SourceSpan } from "../source-location.js";
+import { type ParsedAssetCall } from "./asset-call.js";
 import { type ExpressionNode, type RangeExpressionNode } from "./expression-node.js";
 export type CommandKind = "unknown" | "directive" | "opcodeCandidate" | "functionDefinition" | "labelDefinition" | "staticAssignment" | "characterMapping" | "macroDefinitionOrInvoke" | "defineCommand" | "structCommand" | "commentOrEmpty";
 export type CommandProvenance = {
@@ -75,6 +76,7 @@ export type ParsedOpcodeOperands = {
     operands: string[];
 };
 export type CommandSemantics = {
+    includeAsset?: ParsedAssetCall;
     condition?: ParsedCondition;
     assignment?: ParsedAssignment;
     forLoop?: ParsedForLoop;

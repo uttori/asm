@@ -5,8 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';"
-    />
+      content="default-src 'none'; style-src {{cspSource}}; script-src 'nonce-{{nonce}}';" />
     <link rel="stylesheet" href="{{styleUri}}" />
     <title>Edit disassembly annotation</title>
   </head>
@@ -27,8 +26,7 @@
             maxlength="256"
             placeholder="APU_IPL_Bootstrap"
             spellcheck="false"
-            aria-describedby="nameHelp"
-          />
+            aria-describedby="nameHelp" />
           <p id="nameHelp" class="hint">
             References use this name when you regenerate source. Leave empty for an instruction
             comment only.
@@ -39,8 +37,7 @@
             id="comment"
             rows="5"
             maxlength="65536"
-            placeholder="Describe what this routine does."
-          ></textarea>
+            placeholder="Describe what this routine does."></textarea>
 
           <label for="inlineComment">Comment beside label</label>
           <input id="inlineComment" maxlength="65536" placeholder="Short note on the label line" />
@@ -50,8 +47,7 @@
             id="instructionComment"
             maxlength="65536"
             placeholder="Short note on the instruction line"
-            aria-describedby="instructionHelp"
-          />
+            aria-describedby="instructionHelp" />
           <p id="instructionHelp" class="hint" hidden>
             An instruction comment needs a mapped instruction at this address.
           </p>

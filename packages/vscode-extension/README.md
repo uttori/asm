@@ -30,10 +30,49 @@ This example demonstrates assembly. It is not a bootable game. For NES / 6502 pr
 - ROM disassembly, SQLite analysis views, persistent annotations, and verified source regeneration.
 - Replay debugging and optional ares / MesenCE live debugging.
 - Runtime capture and evidence import when supported by the selected native runtime.
+- `includeAsset` format/option completion, path navigation, image thumbnails, and WAVE/BRR comparison previews.
 
 Run **Assembly: Create Disassembly Project from ROM** to start analysis. Use **Edit Disassembly Annotation** and **Open Disassembly RAM Map** for edits that survive regeneration. Generated source is hash-checked.
 
+Hover a PNG `includeAsset` statement to inspect source and native sizes and its composed thumbnail. Open the restricted **Asset Preview** link for composed and native storage order. Hover a WAVE-to-BRR statement for a waveform and select **Play source PCM and decoded BRR** to open a player. Playback begins only when you press a player control and stops when the panel closes or hides. A missing, invalid, cancelled, or edited input does not reuse old media. Preview is available in trusted file workspaces; builds remain authoritative for custom converters, numeric expressions, and emitted addresses.
+
 Changing the generated source directly can block regeneration, edits should be made through the extension until disassembly is considered complete.
+
+## Editor Information
+
+Source overlays and hover show compact information from a matching build map. Instruction documentation is unchanged. The default **compact** preset shows file/CPU locations and available execution observations. **Authoring** adds emitted bytes and resolved operands without requiring a disassembly project; **disassembly** adds the available resolved operand to the compact hover.
+
+Run **Assembly: Choose Editor Information Preset**, **Configure Inline Fields**, or **Inspect Line Information**. The eye button beside Build Binary toggles inline information independently of hover. Detailed state, memory, evidence, and CFG records are available in the inspector, with bounded previews and pages.
+
+Configure the project in `.vscode/settings.json`, for example:
+
+```json
+{
+  "asm.editorInfo.preset": "authoring",
+  "asm.editorInfo.inline.parts": [
+    "${output_offset_cpu}",
+    "${output_offset_file}",
+    "${output_bytes}",
+    "operand=${operand_value}"
+  ],
+  "asm.editorInfo.inline.separator": " / ",
+  "asm.editorInfo.inline.placement": "aligned",
+  "asm.editorInfo.inline.column": 80,
+  "asm.editorInfo.inline.color": "#FFA65C",
+  "asm.editorInfo.hover.rows": [
+    "Output Offsets: ${output_offsets}",
+    "Execution Observations: ${execution_observations}"
+  ]
+}
+```
+
+Available fields are `output_offsets`, `output_offset_cpu`, `output_offset_file`, `output_bytes`, `output_size`, `operand_value`, `operand_values`, `execution_observations`, `execution_counts`, `execution_count_cpu`, and explicit `project_state.FIELD` / `runtime_state.FIELD` values. CPU locations are logical addresses; file offsets use the map's output coordinates, including output-format headers where mapped. `execution_counts` follows the file / CPU order of `output_offsets`; qualified counts are never summed across aliases. Missing observations are unavailable, distinct from a known zero count.
+
+Missing fields remove the whole part/row and its separator. An empty parts/rows array displays nothing. `$${` escapes a literal `${`. Templates do not execute expressions or accept per-variable color directives. The default inline limit is 120 characters, byte previews contain up to eight bytes, and hover accepts up to eight rows. Explicit legacy visibility/column settings remain supported when their replacements are unset.
+
+Overlays use `aligned` placement by default: every visible overlay shares one left edge at `asm.editorInfo.inline.column` (80 by default), or farther right when needed to clear longer source lines. Choose `afterLine` to keep each overlay three columns after its own source line. `asm.editorInfo.inline.color` sets the whole overlay's color: use a hex value such as `#FFA65C` for orange, or a VS Code theme color such as `editorWarning.foreground`. The default is `editorCodeLens.foreground`; theme colors follow theme changes automatically. These display settings update without rebuilding the project.
+
+Rebuild once to add resolved operand metadata to an older debug map. Values come from the encoder's numeric evaluations; ambiguous/multiple operands use `operand_values`. A masked operand such as `RAM_EASTER_EGG_COUNTER & $FFFF` is distinct from the runtime address accessed after indexing. Dirty or mismatched source/dependencies suppress snapshot information. Hovering never starts a build, and failed builds do not publish partial output.
 
 ## Source Breakpoints
 

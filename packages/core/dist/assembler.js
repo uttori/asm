@@ -6,12 +6,14 @@ import { CORE_DIRECTIVE_GROUPS } from "./directive-groups.js";
 import { createDirectiveRegistry } from "./directives/registry.js";
 import { NodeAssemblyFileProvider } from "./file-provider.js";
 import { incrementInternalCounter, measureInternalPhase } from "./internal-instrumentation.js";
+import { parseAssetCall } from "./ir/asset-call.js";
 import { isReferenceExpressionNode, parseExpressionNode, renderExpressionNode, renderReferenceExpressionNode, } from "./ir/expression-node.js";
 import { cloneNormalizedCommand, setCommandKind, setCommandWords, } from "./ir/normalized-command.js";
 import { MathCore } from "./mathcore.js";
 import { OperandResolver } from "./operand-resolver.js";
 import { PluginError, PluginSessionStateStore, } from "./plugin/index.js";
 import { AssemblyFrontEndService, } from "./services/assembly-front-end-service.js";
+import { AssetAssemblyService } from "./services/asset-assembly-service.js";
 import { CommandLoweringService, } from "./services/command-lowering-service.js";
 import { getDefineVariable, isBareLabelReference } from "./services/command-text-service.js";
 import { DefineEngine } from "./services/define-engine.js";
@@ -63,6 +65,8 @@ export class Assembler {
     mathCore;
     operandResolver;
     addressToLineMapping = new AddressToLineMapping();
+    /** Only live during final instruction encoding; never captures speculative layout values. */
+    #encodingOperands;
     currentFile = "";
     currentLine = 0;
     /** Optional sink for structured tracing used by tests and ad-hoc debug scripts. */
@@ -122,6 +126,10 @@ export class Assembler {
     activeLifecycles;
     cursorAddress;
     fileProvider;
+    /** Binary/resource dependencies and converted bytes owned by the active build. */
+    assetAssembly = new AssetAssemblyService(this);
+    /** Tooling-only path discovery avoids conversion on edit bursts. */
+    deferAssetConversion = false;
     frontEndService;
     programModelBuilder;
     commandLoweringService;
@@ -669,6 +677,7 @@ export class Assembler {
         this.clearAnalysisArtifacts();
         this.analysisErrorRecoveryEnabled = true;
         const stages = options.stages ?? TOOLING_ANALYSIS_STAGES;
+        this.deferAssetConversion = options.deferAssetConversion ?? false;
         if (options.followIncludes !== undefined) {
             this.followIncludes = options.followIncludes;
         }
@@ -688,6 +697,7 @@ export class Assembler {
             symbols: [...this.symbolDefinitions],
             references: [...this.symbolReferences],
             includeEdges: [...this.includeEdges],
+            assetDependencies: Object.fromEntries(this.assetAssembly.dependencies),
         };
     }
     /**
@@ -747,6 +757,42 @@ export class Assembler {
             table: { session },
             diagnostic: { session },
         }, session.coreDirectiveGroups, session.syntaxProfile.directivePrefixes);
+        registry.registerLowered("includeasset", session, (active, _words, raw, command) => {
+            const call = command?.parsed.includeAsset ?? parseAssetCall(raw);
+            if (!call) {
+                throw new Error("includeAsset requires call syntax: includeAsset(path, format, ...).");
+            }
+            if (active.deferAssetConversion) {
+                // Editor analysis discovers dependencies while exact byte counts wait for an explicit build.
+                // This keeps PNG/WAVE codecs out of the synchronous edit path.
+                active.assetAssembly.discoverDependencies(call);
+                return;
+            }
+            const bytes = active.assetAssembly.materialize(call);
+            const startAddress = active.currentAddress;
+            const startOutput = active.outputWriter.toOutputOffset(startAddress);
+            // Validate the complete range before the first write; a failed conversion
+            // or invalid target address must never leave a partial asset in output.
+            active.outputWriter.validateWrite(bytes.length);
+            for (const byte of bytes) {
+                active.write1(byte);
+            }
+            const asset = active.assetAssembly.lastEmission;
+            if (active.traceStage === "emitProgram" && active.collectSourceMetadata && asset) {
+                active.addressToLineMapping.assets.push({
+                    fileIdx: active.addressToLineMapping.getFileIndex(active.currentFile),
+                    assetFileIdx: active.addressToLineMapping.getFileIndex(asset.sourcePath),
+                    line: active.currentLine + 1,
+                    format: asset.format,
+                    part: asset.part,
+                    size: asset.size,
+                    transforms: asset.transforms,
+                    address: startAddress,
+                    ...(startOutput >= 0 ? { outputOffset: startOutput } : {}),
+                });
+            }
+            active.recordCurrentAddress();
+        });
         const target = session.environment.getTarget(session.targetId);
         for (const setId of target?.directiveSets ?? []) {
             const set = session.environment.getDirectiveSet(setId);
@@ -1068,7 +1114,19 @@ export class Assembler {
             try {
                 const architectureOperands = {
                     expandOperand: (operand) => this.operandResolver.expandOperand(operand),
-                    getnum: (expression) => this.operandResolver.getnum(expression),
+                    getnum: (expression) => {
+                        const value = this.operandResolver.getnum(expression);
+                        // Observe the encoder's evaluation rather than rerunning possibly stateful expressions.
+                        if (this.#encodingOperands &&
+                            typeof expression === "string" &&
+                            Number.isFinite(value)) {
+                            const values = this.#encodingOperands;
+                            if (!values.some((entry) => entry.expression === expression && entry.value === value)) {
+                                values.push({ expression, value });
+                            }
+                        }
+                        return value;
+                    },
                     getCurrentAddress: () => this.operandResolver.getCurrentAddress(),
                     lowerOperand: (operand) => contribution.classifyOperand({ operands: this.operandResolver }, operand),
                 };
@@ -1585,6 +1643,11 @@ export class Assembler {
         this.step(size);
         return true;
     }
+    /**
+     * Encode through the active architecture, observing numeric operands only during final emission.
+     * @param {string[] | LoweredInstruction} input Instruction in the current source/expansion context.
+     * @returns {boolean} Whether the architecture handled it; unsupported mnemonics follow its policy.
+     */
     emitInstruction(input) {
         const words = Array.isArray(input) ? input : input.words;
         if (words.length === 0) {
@@ -1594,10 +1657,33 @@ export class Assembler {
         if (!architecture.definition) {
             return true;
         }
-        const encoded = Array.isArray(input)
-            ? architecture.definition.encoder.encode(words)
-            : (architecture.definition.encoder.encodeInstruction?.(input) ??
-                architecture.definition.encoder.encode(words));
+        const capture = this.collectSourceMetadata && this.canEmitBytes;
+        const address = this.currentTargetAddress;
+        const outputOffset = capture ? this.outputWriter.toOutputOffset(address) : -1;
+        const operands = capture ? [] : undefined;
+        this.#encodingOperands = operands;
+        let encoded;
+        try {
+            encoded = Array.isArray(input)
+                ? architecture.definition.encoder.encode(words)
+                : (architecture.definition.encoder.encodeInstruction?.(input) ??
+                    architecture.definition.encoder.encode(words));
+        }
+        finally {
+            this.#encodingOperands = undefined;
+        }
+        if (encoded && operands) {
+            const command = this.traceCommandStack.at(-1);
+            this.addressToLineMapping.instructions.push({
+                fileIdx: this.addressToLineMapping.getFileIndex(command?.file ?? this.currentFile),
+                line: (command?.line ?? this.currentLine) + 1,
+                architecture: this.arch,
+                addressSpace: this.environment.getTarget(this.targetId)?.addressSpace ?? "target.logical",
+                address,
+                ...(outputOffset >= 0 ? { outputOffset } : {}),
+                operands,
+            });
+        }
         if (!encoded) {
             if (architecture.definition.unknownInstructionBehavior === "returnFalse") {
                 return false;
@@ -2701,6 +2787,7 @@ export class Assembler {
     runStage(stage, program) {
         return measureInternalPhase(stage, () => {
             if (stage === "collectDefinitions") {
+                this.assetAssembly.beginBuild();
                 this.includeSource.beginAssemblySnapshot();
                 this.mathCore.beginAssemblySnapshot();
                 this.stageExecutionStates.clear();

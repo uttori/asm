@@ -42,7 +42,8 @@ The complete gate map, including fixtures and the Extension Host smoke, is in [t
 | plugin contracts or a new target                                   | [plugin-author example](packages/plugin-author/README.md)                            | `packages/core/src/plugin/`, then a plugin package               |
 | 65816, SPC700, SuperFX, mappers, SNES source output                | [SNES reference](packages/plugin-snes/README.md)                                     | `packages/plugin-snes/src/`                                      |
 | NMOS/CMOS/other 65xx targets                                       | [65xx reference](packages/plugin-65xx/README.md)                                     | `packages/plugin-65xx/src/`                                      |
-| ROM projects, analysis, evidence, transactions, assets             | [disassembler architecture](packages/disassembler/ARCHITECTURE.md)                   | `packages/disassembler/src/`                                     |
+| standalone asset conversion, native formats, previews              | [asset package](packages/assets/README.md)                                           | `packages/assets/src/`                                           |
+| ROM projects, analysis, evidence, transactions, declarations       | [disassembler architecture](packages/disassembler/ARCHITECTURE.md)                   | `packages/disassembler/src/`                                     |
 | CLI commands or end-to-end disassembly                             | [CLI reference](packages/cli/README.md)                                              | `packages/cli/src/`                                              |
 | LSP diagnostics or editor language features                        | [architecture guide](packages/disassembler/ARCHITECTURE.md#language-and-editor-path) | `packages/language-server/src/`                                  |
 | DAP, neutral debug contracts, framing, replay                      | [debug-adapter reference](packages/debug-adapter/README.md)                          | `packages/debug-adapter/src/`                                    |
@@ -101,7 +102,7 @@ The deeper dependency and data-flow description is in
 4. Run the focused test and the package type/lint checks.
 5. Regenerate compiled JavaScript and declarations with `npm run make-types` when a public surface changes.
 6. Run the repository and package gates appropriate to the risk.
-7. Update the relevant public documentation in the same change.
+7. Update the relevant package documentation when user-facing behavior changes.
 
 Do not change package versions while the project remains unreleased unless the release owner asks
 for a version change. Dependency additions still require a reviewed `package-lock.json` update.
@@ -116,6 +117,12 @@ TypeScript source for repository development. Root scripts, AVA workers, source 
 esbuild use that condition. Direct development commands should include `--conditions=uttori-source`
 alongside `--import=tsx`. Consumer verification deliberately enables neither. Keep this distinction
 so tests cannot pass against stale output or mask an installed-package resolution error.
+
+When changing SNES analysis or source generation, rebuild every host you are verifying:
+`npm run make-types --workspace @uttori/asm-plugin-snes`, `npm run cli:build`, and
+`npm run vscode:build`. The editor forks its own bundled maintenance worker; a rebuilt CLI
+does not update that worker. Exercise import, reanalysis, export, and verification through
+`packages/vscode-extension/tests/disassembly/maintenance-process.test.ts` as well as plugin tests.
 
 The extension's `src/package.json` marks its TypeScript as ESM while the shipped bundle remains
 CommonJS. Keep this boundary: compiling shared sources as both ESM and CommonJS gives c8 incompatible
@@ -322,10 +329,12 @@ redistributable dummy ROM.
 Change documentation in the same pull request when behavior, a command, a file format, a capability,
 or a validation claim changes. Use this ownership order:
 
-- package README or another Markdown file at that package's top level: public API and end-user behavior.
+- Package READMEs and guides document installation, commands, and public behavior.
 - `packages/disassembler/ARCHITECTURE.md`: system boundaries and invariants.
 - `TESTING.md`: commands, CI, fixtures, and release evidence.
 - ADR: a durable decision with alternatives and consequences.
+
+Run `npm run docs:check` after public documentation changes.
 
 ## Pull-request checklist
 

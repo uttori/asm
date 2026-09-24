@@ -20,6 +20,8 @@ export class OverlayFileProvider implements AssemblyFileProvider {
 
   /** The backing provider used when a path is not in the overlay. */
   readonly base: AssemblyFileProvider;
+  /** Files consumed by this provider, including binary and definition-only dependencies. */
+  readonly readFiles = new Set<string>();
 
   /**
    * Creates an overlay provider.
@@ -91,6 +93,7 @@ export class OverlayFileProvider implements AssemblyFileProvider {
    * @returns {Uint8Array} The file bytes.
    */
   readFile(filePath: string): Uint8Array {
+    this.readFiles.add(filePath);
     const entry = this.overlay.get(filePath);
     if (entry !== undefined) {
       return new Uint8Array(Buffer.from(entry, "utf8"));
@@ -105,6 +108,7 @@ export class OverlayFileProvider implements AssemblyFileProvider {
    * @returns {string} The file text.
    */
   readTextFile(filePath: string, encoding: BufferEncoding = "utf8"): string {
+    this.readFiles.add(filePath);
     const entry = this.overlay.get(filePath);
     if (entry !== undefined) {
       return entry;

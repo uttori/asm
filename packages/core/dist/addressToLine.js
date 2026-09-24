@@ -1,13 +1,16 @@
-import { createHash } from "node:crypto";
-import * as fs from "node:fs";
 import { CRC32 } from "./crc32.js";
-const sourceIdentity = (filename) => {
+const sourceIdentity = (filename, supplied) => {
     try {
-        const data = fs.readFileSync(filename);
+        const fs = typeof process === "undefined" ? undefined : process.getBuiltinModule("node:fs");
+        const crypto = typeof process === "undefined" ? undefined : process.getBuiltinModule("node:crypto");
+        if (!fs || !crypto) {
+            return { crc: 0, size: 0, sha256: "" };
+        }
+        const data = supplied ?? fs.readFileSync(filename);
         return {
             crc: CRC32.compute(data),
             size: data.length,
-            sha256: createHash("sha256").update(data).digest("hex"),
+            sha256: crypto.createHash("sha256").update(data).digest("hex"),
         };
     }
     catch {
@@ -24,12 +27,27 @@ export class AddressToLineMapping {
     filenameCrcs = [];
     addrToLineInfo = [];
     ranges = [];
+    /** Final encoder evaluations, collected without evaluating expressions a second time. */
+    instructions = [];
+    /** Successful final-pass asset emissions; binary files have no source lines. */
+    assets = [];
     /** Clears all stored mappings and file information. */
     reset() {
         this.fileList = [];
         this.filenameCrcs = [];
         this.addrToLineInfo = [];
         this.ranges = [];
+        this.instructions = [];
+        this.assets = [];
+    }
+    /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
+     * @param {string} filename Provider path.
+     * @param {Uint8Array} bytes Build snapshot.
+     */
+    registerDependencySnapshot(filename, bytes) {
+        const index = this.getFileIndex(filename);
+        const identity = sourceIdentity(filename, bytes);
+        this.fileList[index] = { name: filename, ...identity };
     }
     /**
      * Adds a legacy point mapping. New debugger consumers should use ranges.
@@ -121,7 +139,7 @@ export class AddressToLineMapping {
      * @returns {number} Stable file-table index.
      */
     getFileIndex(filename) {
-        const filenameCrc = CRC32.compute(Buffer.from(filename, "utf8"));
+        const filenameCrc = CRC32.compute(new TextEncoder().encode(filename));
         for (let i = 0; i < this.filenameCrcs.length; i++) {
             if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
                 return i;

@@ -194,6 +194,59 @@ export interface DirectiveSetContribution {
     directives: readonly DirectiveContribution[];
     tooling?: readonly DirectiveDescriptor[];
 }
+/** Borrowed file bytes; providers may not retain or mutate the source. */
+export interface AssetSource {
+    readonly bytes: Uint8Array;
+    readonly mediaType: string;
+}
+/** Named conversion result. The assembler emits only the selected output. */
+export interface AssetFormatResult {
+    readonly primaryOutput: string;
+    readonly outputs: Readonly<Record<string, {
+        readonly bytes: Uint8Array;
+    }>>;
+}
+/** Synchronous, target-scoped conversion from supplied bytes. */
+export interface AssetFormatContribution {
+    readonly id: string;
+    readonly version: string;
+    readonly aliases?: readonly string[];
+    /** Canonical target IDs; omission makes the globally named format available on all targets. */
+    readonly targets?: readonly string[];
+    /** Discoverable option names; the converter remains the final validator of nested values. */
+    readonly optionSchema?: Readonly<Record<string, {
+        readonly summary: string;
+        readonly valueSyntax?: string;
+    }>>;
+    /** Return every external resource path the converter will read. */
+    readonly resourcePaths?: (options: Readonly<Record<string, unknown>>) => readonly string[];
+    convert(source: AssetSource, options: Readonly<Record<string, unknown>>, resources: Readonly<Record<string, AssetSource>>): AssetFormatResult;
+}
+/** Lossless byte transform applied after one named output is selected. */
+export interface AssetTransformOptionField {
+    readonly type: "string" | "integer" | "boolean" | "enum";
+    readonly required?: boolean;
+    readonly minimum?: number;
+    readonly maximum?: number;
+    readonly enum?: readonly (string | number | boolean)[];
+    /** A string option naming a provider resource to snapshot before encoding. */
+    readonly resource?: boolean;
+}
+/** Transform options are closed: unspecified keys fail validation. */
+export interface AssetTransformContribution {
+    readonly id: string;
+    readonly version: string;
+    readonly aliases?: readonly string[];
+    readonly targets?: readonly string[];
+    readonly optionSchema?: Readonly<Record<string, AssetTransformOptionField>>;
+    /** Validate all options before resource discovery or byte conversion. */
+    readonly validateOptions?: (options: Readonly<Record<string, unknown>>) => void;
+    /** Declare companion files such as compression dictionaries for snapshot tracking. */
+    readonly resourcePaths?: (options: Readonly<Record<string, unknown>>) => readonly string[];
+    encode(bytes: Uint8Array, options: Readonly<Record<string, unknown>>, resources?: Readonly<Record<string, AssetSource>>): Uint8Array;
+    /** Decode within the exact previous-stage length before verification. */
+    decode(bytes: Uint8Array, options: Readonly<Record<string, unknown>>, maxOutputBytes: number, resources?: Readonly<Record<string, AssetSource>>): Uint8Array;
+}
 /** Editor signature metadata. Implementations must validate their accepted argument values. */
 export interface ExpressionFunctionSignature {
     readonly parameters: readonly string[];
@@ -324,6 +377,8 @@ export interface PluginActivationContext<Options = unknown> {
     registerAddressSpace(contribution: AddressSpaceContribution): void;
     registerOutputFormat(contribution: OutputFormatContribution): void;
     registerDirectiveSet(contribution: DirectiveSetContribution): void;
+    registerAssetFormat(contribution: AssetFormatContribution): void;
+    registerAssetTransform(contribution: AssetTransformContribution): void;
     registerExpressionSet(contribution: ExpressionSetContribution): void;
     registerLifecycle(contribution: LifecycleContribution): void;
     registerTarget(contribution: TargetContribution): void;

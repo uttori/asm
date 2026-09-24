@@ -42,6 +42,9 @@ test("language server bundling rejects undefined imports and preserves the previ
     path.join(directory, "src/server.ts"),
     'import { defaultLd65ConfigText } from "./linker-config.js";\nconsole.log(defaultLd65ConfigText());\n',
   );
+  // The production build has a second entry point for bounded asset previews.
+  // This fixture supplies a tiny worker so the test isolates server import validation.
+  fs.writeFileSync(path.join(directory, "src/asset-preview-worker.ts"), "export {};\n");
   const linker = path.join(directory, "src/linker-config.ts");
   fs.writeFileSync(linker, "");
   const output = path.join(directory, "out/server.mjs");
