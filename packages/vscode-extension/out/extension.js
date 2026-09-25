@@ -27962,7 +27962,7 @@ END;
 });
 
 // packages/disassembler/src/sqlite-runtime-summary.ts
-var import_node_crypto5, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryGroupSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
+var import_node_crypto5, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
   "packages/disassembler/src/sqlite-runtime-summary.ts"() {
     "use strict";
@@ -28037,16 +28037,15 @@ var init_sqlite_runtime_summary = __esm({
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
       }
     };
-    runtimeSummaryGroupSql = (incremental) => {
+    runtimeSummaryInputSql = (incremental) => {
       const from = incremental ? `query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
       CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
       return `SELECT f.address,analysis_instruction_variant(
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
-      o.evidence_id AS evidence,SUM(o.count) AS total,COUNT(*) AS observations,MIN(o.oid) AS sample
+      o.evidence_id AS evidence,o.count AS total,o.oid AS sample
     FROM ${from}
-    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
-    GROUP BY f.address,key,o.evidence_id`;
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`;
     };
     registerVariantKey = (db, fields, masks) => {
       db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
@@ -28067,7 +28066,7 @@ var init_sqlite_runtime_summary = __esm({
       });
     };
     isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
-    runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks) => {
+    runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress) => {
       if (fields.some((field) => !/^\w+$/.test(field))) {
         throw new Error("Invalid instruction state field.");
       }
@@ -28092,10 +28091,21 @@ var init_sqlite_runtime_summary = __esm({
           registerVariantKey(db, fields, masks);
           transaction(() => {
             db.exec(`CREATE TEMP TABLE runtime_summary_groups(
-          address INTEGER,key TEXT,evidence INTEGER,total INTEGER,observations INTEGER,sample INTEGER)`);
-            db.prepare(
-              `INSERT INTO temp.runtime_summary_groups ${runtimeSummaryGroupSql(incremental)}`
-            ).run(architecture, space);
+          address INTEGER NOT NULL,key TEXT NOT NULL,evidence INTEGER NOT NULL,
+          total INTEGER NOT NULL,observations INTEGER NOT NULL,sample INTEGER NOT NULL,
+          PRIMARY KEY(address,key,evidence)) WITHOUT ROWID`);
+            const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
+          VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
+          total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+            let observations = 0;
+            for (const row of db.prepare(runtimeSummaryInputSql(incremental)).iterate(architecture, space)) {
+              accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
+              observations++;
+              if (observations % 4096 === 0) {
+                onProgress?.(observations);
+              }
+            }
+            onProgress?.(observations);
           }, false);
           transaction(() => {
             if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
@@ -28520,7 +28530,7 @@ var init_trace_cache = __esm({
 });
 
 // packages/disassembler/src/sqlite-store.ts
-var import_node_crypto6, import_node_fs3, import_node_path5, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
+var import_node_crypto6, import_node_fs3, import_node_path5, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
   "packages/disassembler/src/sqlite-store.ts"() {
     "use strict";
@@ -28624,6 +28634,17 @@ PRAGMA user_version=4;
     RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
   LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+    RUNTIME_RECORD_LOOKUP_SQL = `${RUNTIME_SELECT} WHERE r.rowid IN (
+  SELECT oid FROM runtime_observations
+  WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+  UNION ALL
+  SELECT -oid FROM runtime_observations
+  WHERE state_prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+)`;
     analysisProjectSqlitePath = (directory, manifest) => {
       const relative5 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
       if (relative5 !== ANALYSIS_PROJECT_SQLITE_FILE) {
@@ -28723,8 +28744,7 @@ PRAGMA user_version=4;
               insert: this.#database.prepare(`INSERT INTO ${table} (value) VALUES (?)`)
             });
           }
-          this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
+          this.#findRuntime = this.#database.prepare(RUNTIME_RECORD_LOOKUP_SQL);
           this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
         } catch (error) {
           this.#database.close();
@@ -28894,9 +28914,10 @@ PRAGMA user_version=4;
        * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
        */
       async indexTrace(action, metrics) {
-        this.#database.exec(`CREATE TEMP TABLE trace_facts (
-      id TEXT PRIMARY KEY, payload TEXT NOT NULL, count INTEGER NOT NULL
-    ) WITHOUT ROWID; BEGIN;`);
+        this.#database.exec(`PRAGMA temp.cache_size=-65536;
+      CREATE TEMP TABLE trace_facts (
+      id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, count INTEGER NOT NULL
+    ); BEGIN;`);
         const increment = this.#database.prepare(
           "UPDATE temp.trace_facts SET count=count+1 WHERE id=?"
         );
@@ -29382,13 +29403,9 @@ PRAGMA user_version=4;
           }
           if (kind === "runtime") {
             if (ids) {
-              const find = this.#database.prepare(
-                `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`
-              );
               for (const id of ids.slice(0, 200)) {
                 const identity2 = sqliteRuntimeIdentity(id);
-                const row = find.get(identity2.prefix, identity2.suffix);
+                const row = this.#findRuntime.get(identity2.prefix, identity2.suffix);
                 if (row) {
                   records2.push(runtimeFromRow(row));
                 }
@@ -29651,17 +29668,19 @@ PRAGMA user_version=4;
        * @param {string} space Exact instruction address space.
        * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
        * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+       * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
        * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
        * Prepare before starting the consuming read transaction.
        */
-      runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
+      runtimeInstructionVariants(architecture, space, stateFields, masks = {}, onProgress) {
         return runtimeInstructionSummary(
           this.#database,
           (action, write) => this.transaction(action, write),
           architecture,
           space,
           stateFields,
-          masks
+          masks,
+          onProgress
         );
       }
       /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
@@ -30938,7 +30957,7 @@ var init_runtime_trace_file = __esm({
 });
 
 // packages/disassembler/src/source-export.ts
-var import_node_crypto9, fs7, import_node_path6, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
+var import_node_crypto9, fs7, import_node_path6, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, inspectSourceExportFiles, describeSourceExportFileIssue, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source-export.ts"() {
     "use strict";
@@ -31011,16 +31030,49 @@ var init_source_export = __esm({
       }
       return manifest;
     };
-    validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+    inspectSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+      const issues = [];
       for (const file of manifest.files) {
         const absolute = import_node_path6.default.join(directory, file.path);
         if (!fs7.existsSync(absolute)) {
-          throw new Error(`Generated file '${file.path}' is missing.`);
+          issues.push({
+            path: file.path,
+            expectedSize: file.size,
+            expectedSha256: file.sha256
+          });
+          continue;
         }
         const bytes = fs7.readFileSync(absolute);
-        if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
-          throw new Error(`Generated file '${file.path}' was modified after export.`);
+        const actualSha256 = sourceExportSha256(bytes);
+        if (bytes.length !== file.size || actualSha256 !== file.sha256) {
+          issues.push({
+            path: file.path,
+            expectedSize: file.size,
+            expectedSha256: file.sha256,
+            actualSize: bytes.length,
+            actualSha256
+          });
         }
+      }
+      return issues;
+    };
+    describeSourceExportFileIssue = (issue) => {
+      if (issue.actualSize === void 0) {
+        return `'${issue.path}' is missing (manifest expects ${issue.expectedSize} bytes)`;
+      }
+      if (issue.actualSize !== issue.expectedSize) {
+        return `'${issue.path}' has ${issue.actualSize} bytes (manifest expects ${issue.expectedSize})`;
+      }
+      return `'${issue.path}' has SHA-256 ${issue.actualSha256} (manifest expects ${issue.expectedSha256})`;
+    };
+    validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+      const issues = inspectSourceExportFiles(directory, manifest);
+      if (issues.length > 0) {
+        const preview = issues.slice(0, 3).map(describeSourceExportFileIssue).join("; ");
+        const remaining = issues.length > 3 ? `; ${issues.length - 3} more` : "";
+        throw new Error(
+          `Generated source differs from '${SOURCE_EXPORT_MANIFEST}' in ${issues.length} of ${manifest.files.length} files: ${preview}${remaining}. Regeneration stopped to protect these files. Run "Assembly: Show Disassembly Status" for the full list. Restore files and manifest from the same export, or save any edits and explicitly re-export with --force.`
+        );
       }
     };
     validateSourceExportInputs = (directory, manifest = loadSourceExportManifest(directory)) => {
@@ -32677,6 +32729,7 @@ __export(src_exports, {
   RUNTIME_BUS_TRACE_FORMAT: () => RUNTIME_BUS_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_FORMAT: () => RUNTIME_INSTRUCTION_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION: () => RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
+  RUNTIME_RECORD_LOOKUP_SQL: () => RUNTIME_RECORD_LOOKUP_SQL,
   RomImage: () => RomImage,
   SOURCE_EXPORT_FORMAT: () => SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_MANIFEST: () => SOURCE_EXPORT_MANIFEST,
@@ -32711,6 +32764,7 @@ __export(src_exports, {
   createRuntimeTraceChunkValidator: () => createRuntimeTraceChunkValidator,
   createRuntimeTraceFileSource: () => createRuntimeTraceFileSource,
   createRuntimeTransferAccumulator: () => createRuntimeTransferAccumulator,
+  describeSourceExportFileIssue: () => describeSourceExportFileIssue,
   detectCopierHeaderSize: () => detectCopierHeaderSize,
   explainProjectEvidence: () => explainProjectEvidence,
   importRuntimeBusTraceSourceIntoProject: () => importRuntimeBusTraceSourceIntoProject,
@@ -32719,6 +32773,7 @@ __export(src_exports, {
   importRuntimeTraceIntoProject: () => importRuntimeTraceIntoProject,
   importRuntimeTraceSourceIntoProject: () => importRuntimeTraceSourceIntoProject,
   inspectRuntimeEvidence: () => inspectRuntimeEvidence,
+  inspectSourceExportFiles: () => inspectSourceExportFiles,
   legacySourceLabelName: () => legacySourceLabelName,
   loadAnalysisProject: () => loadAnalysisProject,
   loadAnalysisProjectSnapshot: () => loadAnalysisProjectSnapshot,
@@ -78373,7 +78428,7 @@ var init_struct_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/source-export.ts
-var fs13, import_node_path12, sourceFlowTarget, renderFlowLabel, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, renderedStructEntry, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
+var fs13, import_node_path12, sourceFlowTarget, renderFlowLabel, loadAssetIncludeMap, applyAssetIncludes, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, renderedStructEntry, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
@@ -78426,6 +78481,86 @@ var init_source_export2 = __esm({
         }
       }
       return `${source.slice(0, source.indexOf(" "))} ${operand}`;
+    };
+    loadAssetIncludeMap = (directory) => {
+      const file = import_node_path12.default.join(directory, "asset-includes.json");
+      if (!fs13.existsSync(file)) {
+        return void 0;
+      }
+      const sourceBytes = fs13.readFileSync(file);
+      const data = JSON.parse(sourceBytes.toString("utf8"));
+      if (!data || typeof data !== "object" || data.version !== 1 || !Array.isArray(data.entries)) {
+        throw new Error("asset-includes.json requires version 1 and an entries array.");
+      }
+      const entries3 = data.entries;
+      for (const entry of entries3) {
+        const item = entry;
+        if (!item || !Number.isSafeInteger(item.start) || !Number.isSafeInteger(item.end) || item.start < 0 || item.end <= item.start || typeof item.directive !== "string" || !/^includeAsset\([^\n\r]+\)$/.test(item.directive)) {
+          throw new Error("asset-includes.json has an invalid ROM span or includeAsset directive.");
+        }
+      }
+      const ordered = [...entries3];
+      ordered.sort((left, right) => left.start - right.start);
+      for (let index = 1; index < ordered.length; index++) {
+        if (ordered[index - 1].end > ordered[index].start) {
+          throw new Error("asset-includes.json has overlapping ROM spans.");
+        }
+      }
+      return { sourceBytes, entries: ordered };
+    };
+    applyAssetIncludes = (planned, map, metadata, bankSize) => {
+      if (!map) {
+        return [...planned];
+      }
+      const result = [];
+      const spans = [...planned];
+      let index = 0;
+      const splitRawAt = (offset) => {
+        const span = spans[index];
+        if (!span || span.start >= offset || span.end <= offset) {
+          return;
+        }
+        if (span.instruction || span.structured || span.structField || span.structRecord) {
+          throw new Error(
+            `Asset include boundary at ROM offset ${hex12(offset)} splits typed data or code.`
+          );
+        }
+        spans.splice(index, 1, { ...span, end: offset }, { ...span, start: offset });
+      };
+      for (const entry of map.entries) {
+        while (index < spans.length && spans[index].end <= entry.start) {
+          result.push(spans[index++]);
+        }
+        splitRawAt(entry.start);
+        while (index < spans.length && spans[index].end <= entry.start) {
+          result.push(spans[index++]);
+        }
+        if (spans[index]?.start !== entry.start || Math.floor(entry.start / bankSize) !== Math.floor((entry.end - 1) / bankSize)) {
+          throw new Error(
+            `Asset include at ROM offset ${hex12(entry.start)} does not start on one bank-local span.`
+          );
+        }
+        let end = entry.start;
+        while (index < spans.length && end < entry.end) {
+          splitRawAt(entry.end);
+          const span = spans[index];
+          if (span.start !== end || span.end > entry.end || span.instruction || span.structured || span.start !== entry.start && metadata.has(span.start)) {
+            throw new Error(
+              `Asset include at ROM offset ${hex12(entry.start)} conflicts with exported data or metadata.`
+            );
+          }
+          end = span.end;
+          index++;
+        }
+        if (end !== entry.end) {
+          throw new Error(`Asset include at ROM offset ${hex12(entry.start)} has no exact end boundary.`);
+        }
+        result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
+      }
+      while (index < spans.length) {
+        result.push(spans[index++]);
+      }
+      return result;
     };
     hex12 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
     byteList = (bytes) => [...bytes].map((byte2) => hex12(byte2, 2)).join(", ");
@@ -79150,7 +79285,9 @@ var init_source_export2 = __esm({
       }
       const manifestFile = import_node_path12.default.join(directory, SOURCE_EXPORT_MANIFEST);
       if (!fs13.existsSync(manifestFile)) {
-        const unexpected = fs13.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
+        const unexpected = fs13.readdirSync(directory).filter(
+          (entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE && entry !== "asset-includes.json" && entry !== "uttori-asm.config.json"
+        );
         if (!force && unexpected.length > 0) {
           throw new Error(
             `Export directory '${directory}' is not empty. Pass --force to write into it.`
@@ -79181,6 +79318,7 @@ var init_source_export2 = __esm({
       const context = createSnesAddressContext(mapper);
       const structure = structuredRomLayout(rom, mapper);
       const previousManifest = preflight(directory, options.force ?? false);
+      const assetIncludes = loadAssetIncludeMap(directory);
       const ramMap = loadSnesRamMap(directory);
       const ramVariables = indexSnesRamMap(ramMap.variables);
       const structMap = loadSnesStructMap(directory);
@@ -79248,7 +79386,13 @@ var init_source_export2 = __esm({
         structure,
         structRomFields
       );
-      const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+      const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
+      const planned = applyAssetIncludes(
+        groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length),
+        assetIncludes,
+        metadata,
+        bankSize
+      );
       const emittedLabels = /* @__PURE__ */ new Map();
       for (const span of planned) {
         if (span.structured) {
@@ -79278,7 +79422,6 @@ var init_source_export2 = __esm({
       const files = [];
       const spans = [];
       const banks = /* @__PURE__ */ new Map();
-      const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
       for (const span of planned) {
         const bank = Math.floor(span.start / bankSize);
         const entries3 = banks.get(bank) ?? [];
@@ -79348,6 +79491,18 @@ var init_source_export2 = __esm({
               role: "code",
               file: bankPath,
               nodeIds: span.instruction.nodeIds,
+              regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
+            });
+          } else if (span.assetInclude) {
+            lines.push(`  ${span.assetInclude}`);
+            spans.push({
+              id: `asset:${span.start.toString(16).padStart(6, "0")}`,
+              source: "asset-includes.json",
+              addressSpace: SNES_FILE_ADDRESS_SPACE,
+              start: span.start,
+              end: span.end,
+              role: "raw",
+              file: bankPath,
               regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
             });
           } else if (span.structured) {
@@ -79522,7 +79677,7 @@ var init_source_export2 = __esm({
         "configuration",
         files
       );
-      const configuration = canonicalSourceExportJson({
+      const defaultConfiguration = canonicalSourceExportJson({
         $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
         plugins: [
           {
@@ -79536,6 +79691,8 @@ var init_source_export2 = __esm({
         includePaths: ["./"],
         buildOutput: "build/rebuilt-content.sfc"
       });
+      const configurationPath = import_node_path12.default.join(directory, "uttori-asm.config.json");
+      const configuration = fs13.existsSync(configurationPath) ? fs13.readFileSync(configurationPath) : defaultConfiguration;
       writeFile(directory, "uttori-asm.config.json", configuration, "configuration", files);
       const manifest = {
         format: SOURCE_EXPORT_FORMAT,
@@ -79551,6 +79708,15 @@ var init_source_export2 = __esm({
         finalOutput: "build/rebuilt.sfc",
         checksumPolicy: "preserve",
         inputs: [
+          ...assetIncludes ? [
+            {
+              path: "asset-includes.json",
+              kind: "metadata",
+              size: assetIncludes.sourceBytes.length,
+              records: assetIncludes.entries.length,
+              sha256: sourceExportSha256(assetIncludes.sourceBytes)
+            }
+          ] : [],
           ...structMap ? [
             {
               path: SNES_STRUCT_MAP_SOURCE,
@@ -81612,7 +81778,15 @@ var init_project_initializer = __esm({
             ARCHITECTURE_ID,
             SNES_CPU_ADDRESS_SPACE,
             ["p", "P", "e", "E", "db", "DB", "d", "D"],
-            { p: { max: 255, mask: 48 }, P: { max: 255, mask: 48 } }
+            { p: { max: 255, mask: 48 }, P: { max: 255, mask: 48 } },
+            (processedObservations) => {
+              throwIfCancelled(options.signal);
+              options.onProgress?.({
+                stage: "analyze",
+                message: "Grouping captured instruction variants in SQLite.",
+                processedObservations
+              });
+            }
           );
           report(
             options,
@@ -81899,19 +82073,27 @@ var init_project_initializer = __esm({
         );
       }
       report(options, "verify", "Preparing the assembler environment.");
-      const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src5(), src_exports3));
+      let configured;
+      if (options.loadEnvironment) {
+        configured = await options.loadEnvironment(
+          import_node_path13.default.join(sourceDirectory, manifest.buildConfiguration)
+        );
+      } else {
+        const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src5(), src_exports3));
+        configured = { environment: await createSnesAssemblerEnvironment2() };
+      }
       throwIfCancelled(options.signal);
-      const environment = await createSnesAssemblerEnvironment2();
       const entrySource = import_node_path13.default.join(sourceDirectory, manifest.entrySource);
       const assembler = new Assembler({
-        environment,
+        environment: configured.environment,
         target: TARGET_ID,
         architecture: ARCHITECTURE_ID,
-        targetOptions: { checksumEnabled: false, checksumMode: "asar" },
+        // A round trip preserves the original checksum bytes even if normal builds repair them.
+        targetOptions: { ...configured.targetOptions, checksumEnabled: false, checksumMode: "asar" },
         collectSourceMetadata: options.emitDebugMap ?? true
       });
       try {
-        assembler.setIncludePaths([sourceDirectory]);
+        assembler.setIncludePaths([.../* @__PURE__ */ new Set([sourceDirectory, ...configured.includePaths ?? []])]);
         assembler.setCurrentFile(entrySource);
         report(options, "verify", "Parsing generated assembly and includes.");
         const source = fs14.readFileSync(entrySource, "utf8");
@@ -86512,13 +86694,22 @@ var AssetPreviewController = class {
         body += `<h2>ROM palette $${escapeHtml(media.metadata.paletteId)}</h2><ul>${users}</ul>`;
       }
       if (media.composedPngBase64) {
-        const paletteStyle = media.format === "som.palette.bgr555" ? ' style="width:296px;height:296px"' : "";
+        let paletteStyle = "";
+        if (media.format === "som.palette.bgr555") {
+          const width2 = media.metadata?.previewWidth;
+          if (typeof width2 === "number" && Number.isSafeInteger(width2) && width2 > 0 && width2 <= 256) {
+            paletteStyle = ` style="image-rendering:pixelated;max-width:100%;width:${width2 * 8}px;height:auto"`;
+          }
+        }
         body += `<h2>Composed image</h2><img alt="Composed asset"${paletteStyle} src="data:image/png;base64,${media.composedPngBase64}">`;
       }
       if (media.storagePngBase64) {
         body += `<h2>Native storage order</h2><img alt="Native storage order" src="data:image/png;base64,${media.storagePngBase64}">`;
       }
     } else {
+      if (media.format === "som.brr.segment") {
+        body += "<p>This ROM bank contains a slice of the BRR stream. Playback uses the complete source because the split may fall inside a BRR block.</p>";
+      }
       if (media.waveformPngBase64) {
         body += `<img alt="Source waveform" src="data:image/png;base64,${media.waveformPngBase64}">`;
       }
@@ -87427,6 +87618,8 @@ var MaintenanceLog = class {
     if (value.processedRecords !== void 0 && value.totalRecords !== void 0) {
       this.#counts = `${value.processedRecords.toLocaleString("en-US")} / ${value.totalRecords.toLocaleString("en-US")} provisional records merged`;
       complete = value.processedRecords === value.totalRecords;
+    } else if (value.processedObservations !== void 0) {
+      this.#counts = `${value.processedObservations.toLocaleString("en-US")} instruction observations grouped (not yet published)`;
     } else if (value.bytesRead !== void 0 && value.totalBytes !== void 0) {
       const percent2 = value.totalBytes > 0 ? value.bytesRead / value.totalBytes * 100 : 100;
       this.#counts = `${mib(value.bytesRead)} / ${mib(value.totalBytes)} read (${percent2.toFixed(1)}%)`;
@@ -87472,7 +87665,12 @@ var MaintenanceLog = class {
   finish(error) {
     this.#flushStderr();
     if (error) {
-      this.#write(error.name === "AbortError" ? "warn" : "error", error.stack ?? error.message);
+      const outcome = error.name === "AbortError" ? "Cancelled" : "Failed";
+      this.#write(
+        error.name === "AbortError" ? "warn" : "error",
+        `${outcome} during: ${this.#stage}. This worker phase did not complete.
+${error.stack ?? error.message}`
+      );
     } else {
       this.#write("info", "Completed. Worker exited");
     }
@@ -88395,14 +88593,12 @@ var statusReport = async (client3, resolved) => {
     (options) => client3.run("coverage", resolved, options),
     resolved.sourceDirectory
   );
-  let integrity = "all generated files match their recorded hashes";
-  let generatedCurrent = true;
-  try {
-    validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
-  } catch (error) {
-    generatedCurrent = false;
-    integrity = `needs attention: ${error instanceof Error ? error.message : String(error)}`;
-  }
+  const generatedIssues = inspectSourceExportFiles(
+    resolved.sourceDirectory,
+    resolved.sourceManifest
+  );
+  const generatedCurrent = generatedIssues.length === 0;
+  const integrity = generatedCurrent ? "all generated files match their recorded hashes" : `${generatedIssues.length} of ${resolved.sourceManifest.files.length} generated files differ from ${SOURCE_EXPORT_MANIFEST}`;
   let inputIntegrity = "all user-owned inputs match the last export";
   let inputsCurrent = true;
   try {
@@ -88418,6 +88614,14 @@ var statusReport = async (client3, resolved) => {
     ...inputsCurrent ? [] : ["RAM map or another source input changed"],
     ...generatedCurrent ? [] : ["a generated file drifted"]
   ];
+  let guidance;
+  if (!generatedCurrent) {
+    guidance = "Regeneration stops to protect these files. Restore generated files and generated-files.json from the same export, or save intended edits and explicitly re-export with the CLI's --force option.";
+  } else if (current) {
+    guidance = "The generated disassembly reflects the current analysis revision.";
+  } else {
+    guidance = "Run **Assembly: Analyze and Regenerate Disassembly** to turn the current RAM map, labels, classifications, and runtime code seeds into generated source.";
+  }
   return `${[
     "# Disassembly status",
     "",
@@ -88436,7 +88640,13 @@ var statusReport = async (client3, resolved) => {
     `- Runtime execution facts: ${coverage.runtimeRecords} address(es), ${coverage.runtimeEvents} event(s)`,
     `- Imported instruction traces: ${coverage.traceImports}`,
     "",
-    current ? "The generated disassembly reflects the current analysis revision." : "Run **Assembly: Analyze and Regenerate Disassembly** to turn the current RAM map, labels, classifications, and runtime code seeds into generated source.",
+    ...generatedCurrent ? [] : [
+      "## Generated-file differences",
+      "",
+      ...generatedIssues.map((issue) => `- ${describeSourceExportFileIssue(issue)}`),
+      ""
+    ],
+    guidance,
     "",
     "A saved trace does not change source by itself. Use **Assembly: Import Runtime Trace and Update Disassembly**. Its report shows the exact instruction/code-byte delta.",
     ""

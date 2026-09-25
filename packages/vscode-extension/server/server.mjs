@@ -54776,6 +54776,9 @@ function referenceTokenType(kind) {
 var MAX_INPUT_BYTES2 = 2 * 1024 * 1024;
 var MAX_TOTAL_BYTES = 3 * 1024 * 1024;
 var MAX_CACHE_ENTRIES = 16;
+function supportsPortableAssetPreview(id) {
+  return id.startsWith("snes.") || id === "uttori.data.raw" || id === "som.sprite.frames" || id === "som.boss.graphics" || id === "som.palette.bgr555" || id === "som.brr.pcm" || id === "som.brr.segment";
+}
 function literal(node) {
   if (node.kind === "string" || node.kind === "boolean") {
     return node.value;
@@ -54885,8 +54888,7 @@ var AssetPreviewService = class {
       if (!format) {
         return { ok: false, message: `Asset format '${call.format.value}' is unavailable.` };
       }
-      const somSprite = format.id === "som.sprite.frames" || format.id === "som.boss.graphics" || format.id === "som.palette.bgr555";
-      if (!format.id.startsWith("snes.") && format.id !== "uttori.data.raw" && !somSprite) {
+      if (!supportsPortableAssetPreview(format.id)) {
         return { ok: false, message: `Preview is unavailable for '${format.id}'.` };
       }
       const file = uriToPath(request.uri);

@@ -44,6 +44,39 @@ The `@uttori/asm-cli` package uses this plugin by default. To configure it expli
 explicitly when source or evidence is ambiguous. Asar compatibility is partial. Unsupported syntax
 and accepted no-op directives are listed in the manual. ROMs and emulator binaries are not included.
 
+## Asset includes in exported source
+
+An exported source project can keep its converted assets through reanalysis and
+source export by placing `asset-includes.json` beside `main.asm`. Each entry owns
+an exact half-open ROM file-offset span and the bank directive emitted there:
+
+```json
+{
+  "version": 1,
+  "entries": [
+    {
+      "start": 532224,
+      "end": 532254,
+      "directive": "includeAsset(\"../assets/palettes/rom-palettes.json\", \"som.palette.bgr555\", palette: \"C81F00\")"
+    }
+  ]
+}
+```
+
+The exporter splits raw spans at these bounds and replaces complete non-code
+spans. It rejects overlaps, code, typed-header splits and interior source labels.
+The asset source path is relative to the generated bank file. The exporter records
+the map as an input in `generated-files.json` and preserves an existing
+`uttori-asm.config.json`, including custom asset plugin registrations. Keep each
+entry's end offset aligned with the bytes the asset plugin emits; verify the full
+ROM after editing an asset or its map entry.
+
+Keep asset descriptions in native analysis `comments` records anchored to the
+entry's `start` in `rom.file`, and asset symbols in native `labels` records with
+`analysisEntryPoint: false`. The exporter renders these before the asset include
+on every regeneration. Comments or labels added only to generated bank assembly
+are not generating inputs and will be lost when that source is replaced.
+
 ## Documentation and support
 
 [SNES manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md) ·

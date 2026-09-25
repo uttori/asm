@@ -290,14 +290,30 @@ export class AssetPreviewController implements Disposable {
         body += `<h2>ROM palette $${escapeHtml(media.metadata.paletteId)}</h2><ul>${users}</ul>`;
       }
       if (media.composedPngBase64) {
-        const paletteStyle =
-          media.format === "som.palette.bgr555" ? ' style="width:296px;height:296px"' : "";
+        // A ROM palette may be a 4-column sprite row or a wider background group.
+        // Keep the native grid aspect ratio while enlarging each source pixel equally.
+        let paletteStyle = "";
+        if (media.format === "som.palette.bgr555") {
+          const width = media.metadata?.previewWidth;
+          if (
+            typeof width === "number" &&
+            Number.isSafeInteger(width) &&
+            width > 0 &&
+            width <= 256
+          ) {
+            paletteStyle = ` style="image-rendering:pixelated;max-width:100%;width:${width * 8}px;height:auto"`;
+          }
+        }
         body += `<h2>Composed image</h2><img alt="Composed asset"${paletteStyle} src="data:image/png;base64,${media.composedPngBase64}">`;
       }
       if (media.storagePngBase64) {
         body += `<h2>Native storage order</h2><img alt="Native storage order" src="data:image/png;base64,${media.storagePngBase64}">`;
       }
     } else {
+      if (media.format === "som.brr.segment") {
+        body +=
+          "<p>This ROM bank contains a slice of the BRR stream. Playback uses the complete source because the split may fall inside a BRR block.</p>";
+      }
       if (media.waveformPngBase64) {
         body += `<img alt="Source waveform" src="data:image/png;base64,${media.waveformPngBase64}">`;
       }

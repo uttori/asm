@@ -13,7 +13,8 @@ import {
   type AnalysisStoragePolicy,
   type RuntimeTraceProjectImportResult,
 } from "@uttori/asm-disassembler";
-import {
+import { NodePluginLoader } from "@uttori/asm-plugin-loader-node";
+import snesPlugin, {
   analyzeSnesProject,
   exportSnesProject,
   verifySnesProjectRoundTrip,
@@ -115,6 +116,8 @@ export interface MaintenanceProgress {
   /** Provisional runtime records merged inside the transaction, independent of file-read progress. */
   readonly processedRecords?: number;
   readonly totalRecords?: number;
+  /** Instruction observations staged for grouping; analysis publication is a later step. */
+  readonly processedObservations?: number;
   /** Finished worker stage. Measured in the worker to exclude progress-message delivery delays. */
   readonly timing?: MaintenanceStageTiming;
 }
@@ -224,7 +227,8 @@ const executeMaintenanceJob = async (
         entryPoints: job.input.entryPoints,
         maxWorkItems: job.input.maxWorkItems,
         signal,
-        onProgress: ({ message }) => progress({ message }),
+        onProgress: ({ message, processedObservations }) =>
+          progress({ message, processedObservations }),
       });
     case "export":
       return exportSnesProject({
@@ -269,12 +273,28 @@ const executeMaintenanceJob = async (
         store.close();
       }
     }
-    case "verify":
-      return verifySnesProjectRoundTrip({
-        ...job.input,
-        signal,
-        onProgress: ({ message }) => progress({ message }),
-      });
+    case "verify": {
+      const loader = new NodePluginLoader();
+      try {
+        return await verifySnesProjectRoundTrip({
+          ...job.input,
+          signal,
+          onProgress: ({ message }) => progress({ message }),
+          // Load only after the verifier validates the export and ROM. The bundled map
+          // resolves SNES in packaged workers; custom modules remain relative to the
+          // source configuration, matching CLI assembly rather than the worker's cwd.
+          loadEnvironment: (configFile) =>
+            loader.loadProjectEnvironment({
+              cwd: path.resolve(job.input.sourceDirectory),
+              configFile,
+              bundledPlugins: new Map([["@uttori/asm-plugin-snes", snesPlugin]]),
+            }),
+        });
+      } finally {
+        // The verifier disposes its assembler session first, including on conversion failure.
+        await loader.dispose();
+      }
+    }
     case "import": {
       const { target, traceFile, maxBytes, architecture, addressSpace } = job.input;
       progress({ message: "Opening and validating trace metadata" });

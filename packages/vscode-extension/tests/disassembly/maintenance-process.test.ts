@@ -3,6 +3,8 @@ import os from "node:os";
 import path from "node:path";
 
 import {
+  createSnesAnalysisProject,
+  exportSnesProject,
   initializeSnesDisassemblyWorkspace,
   type ExportSnesProjectResult,
 } from "@uttori/asm-plugin-snes";
@@ -67,6 +69,83 @@ const fixtureRom = (): Uint8Array => {
   bytes.set([0, 0x80], 0x7ffc);
   return bytes;
 };
+
+test("maintenance verification loads configured asset plugins and include paths, then disposes them", async (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-assets-"));
+  const client = new DisassemblyMaintenanceClient(processFile);
+  t.teardown(() => {
+    client.dispose();
+    fs.rmSync(directory, { recursive: true, force: true });
+  });
+  const romFile = path.join(directory, "rom.sfc");
+  const sourceDirectory = path.join(directory, "source");
+  const projectDirectory = path.join(directory, "analysis");
+  fs.writeFileSync(romFile, fixtureRom());
+  createSnesAnalysisProject({ romFile, projectDirectory, mapper: "lorom" });
+  fs.mkdirSync(sourceDirectory);
+  fs.mkdirSync(path.join(directory, "plugins"));
+  fs.mkdirSync(path.join(directory, "asset-inputs"));
+  const paletteFile = path.join(directory, "asset-inputs", "palette.json");
+  const marker = path.join(directory, "plugins", "lifecycle.txt");
+  fs.writeFileSync(paletteFile, JSON.stringify([0xea, 0xea, 0xea, 0xea]));
+  fs.writeFileSync(
+    path.join(directory, "plugins", "palette.mjs"),
+    `
+import { appendFileSync } from "node:fs";
+const marker = new URL("./lifecycle.txt", import.meta.url);
+export default {
+  manifest: { id: "test.palette-plugin", name: "Test palette", version: "1.0.0", apiVersion: 1 },
+  activate(context) {
+    appendFileSync(marker, "activate\\n");
+    context.registerAssetFormat({
+      id: "test.palette", version: "1.0.0", targets: ["snes.sfc"],
+      convert(source) {
+        const values = JSON.parse(Buffer.from(source.bytes).toString("utf8"));
+        if (!Array.isArray(values)) throw new Error("Invalid test palette");
+        return { primaryOutput: "palette", outputs: { palette: { bytes: Uint8Array.from(values) } } };
+      },
+    });
+    return { dispose() { appendFileSync(marker, "dispose\\n"); } };
+  },
+};
+`,
+  );
+  // Supply authoritative configuration and asset-map inputs before the first export;
+  // generated bank source and manifest hashes always come from the exporter together.
+  fs.writeFileSync(
+    path.join(sourceDirectory, "uttori-asm.config.json"),
+    JSON.stringify({
+      plugins: [{ module: "@uttori/asm-plugin-snes" }, { module: "../plugins/palette.mjs" }],
+      target: "snes.sfc",
+      architecture: "snes.65816",
+      includePaths: ["../asset-inputs"],
+    }),
+  );
+  fs.writeFileSync(
+    path.join(sourceDirectory, "asset-includes.json"),
+    JSON.stringify({
+      version: 1,
+      entries: [
+        { start: 0x20, end: 0x24, directive: 'includeAsset("palette.json", "test.palette")' },
+      ],
+    }),
+  );
+  const exported = exportSnesProject({ romFile, sourceDirectory, projectDirectory });
+  const target = { romFile, sourceDirectory, projectDirectory, sourceManifest: exported.manifest };
+  t.true((await client.run("verify", target, budget)).comparison.equal);
+  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\n");
+
+  fs.writeFileSync(paletteFile, "{}");
+  await t.throwsAsync(client.run("verify", target, budget), { message: /Invalid test palette/ });
+  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\nactivate\ndispose\n");
+
+  // An invalid generated tree must fail before executing configured JavaScript plugins.
+  fs.appendFileSync(path.join(sourceDirectory, "main.asm"), "; changed\n");
+  await t.throwsAsync(client.run("verify", target, budget), {
+    message: /Generated source differs.*main.asm/,
+  });
+  t.is(fs.readFileSync(marker, "utf8"), "activate\ndispose\nactivate\ndispose\n");
+});
 
 test("annotation refresh reuses analysis, preserves runtime, verifies renamed source, and guards stale receipts", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-refresh-"));
@@ -259,11 +338,21 @@ test("maintenance processes import, analyze, export and verify without returning
   t.false("shards" in prepared);
   const prior = loadAnalysisProjectSnapshot(target.projectDirectory).revision;
   const stages: MaintenanceStageTiming[] = [];
+  const grouped: number[] = [];
   const timedBudget = {
     ...budget,
-    onProgress: ({ timing }: { timing?: MaintenanceStageTiming }) => {
+    onProgress: ({
+      timing,
+      processedObservations,
+    }: {
+      timing?: MaintenanceStageTiming;
+      processedObservations?: number;
+    }) => {
       if (timing) {
         stages.push(timing);
+      }
+      if (processedObservations !== undefined) {
+        grouped.push(processedObservations);
       }
     },
   };
@@ -274,6 +363,10 @@ test("maintenance processes import, analyze, export and verify without returning
     },
   );
   t.is(stages.at(-1)?.status, "failed", "worker failure preserves the interrupted stage's timing");
+  t.true(
+    grouped.some((count) => count > 0),
+    "grouping counters cross the worker IPC boundary before analysis publication",
+  );
   stages.length = 0;
   t.deepEqual(loadAnalysisProjectSnapshot(target.projectDirectory).revision, prior);
   const analyzed = await client.run(

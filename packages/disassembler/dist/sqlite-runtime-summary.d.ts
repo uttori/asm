@@ -13,12 +13,12 @@ type Transaction = (action: () => void, write?: boolean) => void;
  * Address/evidence/key order preserves decoder tie-breaking even when new keys get larger IDs.
  */
 export declare const RUNTIME_SUMMARY_ROWS_SQL = "SELECT i.value AS id,f.kind,f.architecture,f.address_space,f.address,\n    grouped.total AS count,CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END AS payload,\n    p.value AS id_prefix,e.value AS evidence\n  FROM (SELECT s.sample,s.total FROM query_runtime_variant_sources s\n    JOIN query_runtime_variant_keys k ON k.id=s.variant\n    ORDER BY k.address,s.evidence,k.key LIMIT -1) grouped\n  CROSS JOIN runtime_observations o ON o.oid=grouped.sample\n  CROSS JOIN runtime_facts f ON f.fid=o.fact_id\n  LEFT JOIN runtime_identities i ON i.iid=o.identity_id\n  LEFT JOIN runtime_prefixes p ON p.id=o.prefix_id\n  LEFT JOIN runtime_evidence e ON e.id=o.evidence_id";
-/** Select compact keys, counts and representatives; never sort expanded logical runtime records.
+/** Stream compact keys, counts and representatives without a blocking sort or aggregate.
  * Pending IDs drive incremental joins so an append does not scan unrelated captures or shared facts.
  * @param {boolean} incremental Whether to select pending observations instead of all history.
- * @returns {string} Grouping SQL binding architecture and address space, in that order.
+ * @returns {string} Input cursor SQL binding architecture and address space, in that order.
  */
-export declare const runtimeSummaryGroupSql: (incremental: boolean) => string;
+export declare const runtimeSummaryInputSql: (incremental: boolean) => string;
 /**
  * Prepare a single decoder configuration. A new configuration or mutation rebuilds from evidence;
  * ordinary appends aggregate only pending observations. Temporary grouping holds a read snapshot,
@@ -31,8 +31,9 @@ export declare const runtimeSummaryGroupSql: (incremental: boolean) => string;
  * @param {string} space Exact instruction address space.
  * @param {readonly string[]} fields Ordered decoder fields; other registers remain in full evidence.
  * @param {StateMasks} masks Grouping-only masks for valid numeric fields.
+ * @param {Function} [onProgress] Cumulative observations staged in this build; throwing aborts it.
  * @returns {IterableIterator<RuntimeEvidenceRecord>} One representative per decoder key and evidence list.
  */
-export declare const runtimeInstructionSummary: (db: DatabaseSync, transaction: Transaction, architecture: string, space: string, fields: readonly string[], masks: StateMasks) => IterableIterator<RuntimeEvidenceRecord>;
+export declare const runtimeInstructionSummary: (db: DatabaseSync, transaction: Transaction, architecture: string, space: string, fields: readonly string[], masks: StateMasks, onProgress?: (observations: number) => void) => IterableIterator<RuntimeEvidenceRecord>;
 export {};
 //# sourceMappingURL=sqlite-runtime-summary.d.ts.map

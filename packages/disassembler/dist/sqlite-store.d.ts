@@ -10,6 +10,12 @@ import { type TraceIndexMetrics } from "./trace-cache.js";
 export declare const ANALYSIS_PROJECT_SQLITE_FILE = "analysis.sqlite";
 /** Physical SQLite layout version, independent of semantic manifest schema and edit revisions. */
 export declare const ANALYSIS_SQLITE_STORAGE_VERSION = 4;
+/** Lookup parameters are the external prefix and binary/text suffix. Resolve both dictionaries
+ * before probing observations: filtering the logical view by external ID otherwise scans every
+ * observation in that capture, making a growing import quadratic. Full suffix equality protects
+ * against truncated hash-key collisions. Signed rowids retain paired-state and deletion semantics.
+ */
+export declare const RUNTIME_RECORD_LOOKUP_SQL: string;
 /**
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
@@ -254,13 +260,14 @@ export declare class SqliteAnalysisStore {
      * @param {string} space Exact instruction address space.
      * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
      * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+     * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
      * Prepare before starting the consuming read transaction.
      */
     runtimeInstructionVariants(architecture: string, space: string, stateFields: readonly string[], masks?: Readonly<Record<string, {
         readonly max: number;
         readonly mask: number;
-    }>>): IterableIterator<RuntimeEvidenceRecord>;
+    }>>, onProgress?: (observations: number) => void): IterableIterator<RuntimeEvidenceRecord>;
     /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
      * @param {string} architecture Target processor.
      * @param {string} space Logical CPU address space.

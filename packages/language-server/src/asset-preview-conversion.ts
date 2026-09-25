@@ -1,12 +1,22 @@
 /** Portable conversion used by the editor worker; the assembler uses the same asset library. */
 import { AssetRegistry, convertAsset, type AssetInput } from "@uttori/asm-assets";
-import { waveImporter, withAudioEncoder, type PcmAudio } from "@uttori/asm-assets/audio";
+import {
+  decodeBrrPcm,
+  waveImporter,
+  withAudioEncoder,
+  writePcmWave,
+  type PcmAudio,
+} from "@uttori/asm-assets/audio";
 import { rawEncoder, rawImporter, jsonImporter } from "@uttori/asm-assets/data";
 import { pngImporter, withImageEncoders, type IndexedImage } from "@uttori/asm-assets/image";
 import { rgbaPreviewPng, waveformPreviewPng } from "@uttori/asm-assets/preview";
 import { snesNativeEncoders } from "@uttori/asm-assets/snes";
 
-import { convertBossImage } from "../../assets/plugins/secret-of-mana/som-asset-plugin.mjs";
+import {
+  convertBossImage,
+  sliceBrrSegment,
+  verifiedBrrFromWave,
+} from "../../assets/plugins/secret-of-mana/som-asset-plugin.mjs";
 import {
   encodeFrameAtlas,
   readFrameLayout,
@@ -185,9 +195,48 @@ function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult 
     encodedBytes: bytes.length,
     format: input.format,
     output: "palette",
-    metadata: { paletteId: id, paletteRomAddress: palette.romAddress, paletteUsers: palette.users },
+    metadata: {
+      paletteId: id,
+      paletteRomAddress: palette.romAddress,
+      paletteUsers: palette.users,
+      previewWidth: preview.width,
+    },
     thumbnailPngBase64: png.toString("base64"),
     composedPngBase64: png.toString("base64"),
+  };
+}
+
+/**
+ * Preview the playable source and verified native BRR stream used by the SoM plugin.
+ * Segment playback uses the complete stream because a bank split can cut through a BRR block.
+ * @param {AssetPreviewInput} input Authored WAVE and literal segment options, when present.
+ * @returns {AssetPreviewResult} Full-stream audio with the selected ROM byte count.
+ */
+function convertSomBrrPreview(input: AssetPreviewInput): AssetPreviewResult {
+  if (input.output !== undefined && input.output !== "brr") {
+    throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+  }
+  const native = verifiedBrrFromWave(input.source);
+  const sourceAudio = waveImporter.import(input.source).value as PcmAudio;
+  const segment = input.format === "som.brr.segment";
+  const selected = segment ? sliceBrrSegment(native, input.options) : native;
+  const decoded = decodeBrrPcm(native);
+  const metadata: Record<string, unknown> = { previewScope: "full-stream" };
+  if (segment) {
+    metadata.segmentStartByte = input.options.startByte;
+    metadata.segmentByteLength = selected.length;
+    metadata.fullStreamBytes = native.length;
+  }
+  return {
+    kind: "audio",
+    sourceBytes: input.source.bytes.length,
+    encodedBytes: selected.length,
+    format: input.format,
+    output: "brr",
+    metadata,
+    waveformPngBase64: Buffer.from(waveformPreviewPng(sourceAudio.samples)).toString("base64"),
+    sourceWavBase64: Buffer.from(input.source.bytes).toString("base64"),
+    decodedWavBase64: Buffer.from(writePcmWave(decoded, sourceAudio.sampleRate)).toString("base64"),
   };
 }
 
@@ -196,6 +245,9 @@ function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult 
  * @returns {AssetPreviewResult} Display metadata and bounded PNG/WAVE media.
  */
 export function convertAssetPreview(input: AssetPreviewInput): AssetPreviewResult {
+  if (input.format === "som.brr.pcm" || input.format === "som.brr.segment") {
+    return convertSomBrrPreview(input);
+  }
   if (input.format === "som.palette.bgr555") {
     return convertSomPalettePreview(input);
   }

@@ -3852,16 +3852,15 @@ var installSummary = (db) => {
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
   }
 };
-var runtimeSummaryGroupSql = (incremental) => {
+var runtimeSummaryInputSql = (incremental) => {
   const from = incremental ? `query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
       CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
   return `SELECT f.address,analysis_instruction_variant(
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
-      o.evidence_id AS evidence,SUM(o.count) AS total,COUNT(*) AS observations,MIN(o.oid) AS sample
+      o.evidence_id AS evidence,o.count AS total,o.oid AS sample
     FROM ${from}
-    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
-    GROUP BY f.address,key,o.evidence_id`;
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`;
 };
 var registerVariantKey = (db, fields, masks) => {
   db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
@@ -3882,7 +3881,7 @@ var registerVariantKey = (db, fields, masks) => {
   });
 };
 var isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
-var runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks) => {
+var runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress) => {
   if (fields.some((field) => !/^\w+$/.test(field))) {
     throw new Error("Invalid instruction state field.");
   }
@@ -3907,10 +3906,21 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
       registerVariantKey(db, fields, masks);
       transaction(() => {
         db.exec(`CREATE TEMP TABLE runtime_summary_groups(
-          address INTEGER,key TEXT,evidence INTEGER,total INTEGER,observations INTEGER,sample INTEGER)`);
-        db.prepare(
-          `INSERT INTO temp.runtime_summary_groups ${runtimeSummaryGroupSql(incremental)}`
-        ).run(architecture, space);
+          address INTEGER NOT NULL,key TEXT NOT NULL,evidence INTEGER NOT NULL,
+          total INTEGER NOT NULL,observations INTEGER NOT NULL,sample INTEGER NOT NULL,
+          PRIMARY KEY(address,key,evidence)) WITHOUT ROWID`);
+        const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
+          VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
+          total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+        let observations = 0;
+        for (const row of db.prepare(runtimeSummaryInputSql(incremental)).iterate(architecture, space)) {
+          accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
+          observations++;
+          if (observations % 4096 === 0) {
+            onProgress?.(observations);
+          }
+        }
+        onProgress?.(observations);
       }, false);
       transaction(() => {
         if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
@@ -4390,6 +4400,17 @@ var SCHEMA_INDEX_STATEMENTS = [
 var RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
   LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+var RUNTIME_RECORD_LOOKUP_SQL = `${RUNTIME_SELECT} WHERE r.rowid IN (
+  SELECT oid FROM runtime_observations
+  WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+  UNION ALL
+  SELECT -oid FROM runtime_observations
+  WHERE state_prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+)`;
 var analysisProjectSqlitePath = (directory, manifest) => {
   const relative = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
   if (relative !== ANALYSIS_PROJECT_SQLITE_FILE) {
@@ -4489,8 +4510,7 @@ var SqliteAnalysisStore = class {
           insert: this.#database.prepare(`INSERT INTO ${table} (value) VALUES (?)`)
         });
       }
-      this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
+      this.#findRuntime = this.#database.prepare(RUNTIME_RECORD_LOOKUP_SQL);
       this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
     } catch (error) {
       this.#database.close();
@@ -4660,9 +4680,10 @@ var SqliteAnalysisStore = class {
    * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
    */
   async indexTrace(action, metrics) {
-    this.#database.exec(`CREATE TEMP TABLE trace_facts (
-      id TEXT PRIMARY KEY, payload TEXT NOT NULL, count INTEGER NOT NULL
-    ) WITHOUT ROWID; BEGIN;`);
+    this.#database.exec(`PRAGMA temp.cache_size=-65536;
+      CREATE TEMP TABLE trace_facts (
+      id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, count INTEGER NOT NULL
+    ); BEGIN;`);
     const increment = this.#database.prepare(
       "UPDATE temp.trace_facts SET count=count+1 WHERE id=?"
     );
@@ -5148,13 +5169,9 @@ var SqliteAnalysisStore = class {
       }
       if (kind === "runtime") {
         if (ids) {
-          const find = this.#database.prepare(
-            `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`
-          );
           for (const id of ids.slice(0, 200)) {
             const identity = sqliteRuntimeIdentity(id);
-            const row = find.get(identity.prefix, identity.suffix);
+            const row = this.#findRuntime.get(identity.prefix, identity.suffix);
             if (row) {
               records.push(runtimeFromRow(row));
             }
@@ -5417,17 +5434,19 @@ var SqliteAnalysisStore = class {
    * @param {string} space Exact instruction address space.
    * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
    * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+   * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
    * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
    * Prepare before starting the consuming read transaction.
    */
-  runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
+  runtimeInstructionVariants(architecture, space, stateFields, masks = {}, onProgress) {
     return runtimeInstructionSummary(
       this.#database,
       (action, write) => this.transaction(action, write),
       architecture,
       space,
       stateFields,
-      masks
+      masks,
+      onProgress
     );
   }
   /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.

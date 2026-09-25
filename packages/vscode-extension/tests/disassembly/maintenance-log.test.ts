@@ -49,8 +49,13 @@ test("maintenance logs keep failure/cancellation context and tolerate a closed o
     error: (s: string) => lines.push(s),
   };
   const log = new MaintenanceLog(sink, "import pid=456", () => 0);
+  log.progress({ message: "Grouping captured instruction variants in SQLite." });
+  log.progress({ processedObservations: 4096 });
+  t.true(lines.at(-1)!.includes("4,096 instruction observations grouped (not yet published)"));
   log.finish(new Error("bad capture tail"));
   t.true(lines.at(-1)!.includes("bad capture tail"));
+  t.true(lines.at(-1)!.includes("Failed during: Grouping captured instruction variants"));
+  t.true(lines.at(-1)!.includes("This worker phase did not complete"));
   const abort = Object.assign(new Error("cancelled after current step"), { name: "AbortError" });
   log.finish(abort);
   t.true(lines.at(-1)!.includes("AbortError"));

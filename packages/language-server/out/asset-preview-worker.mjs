@@ -12921,16 +12921,20 @@ function encodeBossGraphics(data) {
 function expandChannel(value) {
   return value << 3 | value >>> 2;
 }
-function spritePaletteColors(catalog, id) {
+function paletteRecord(catalog, id) {
   if (catalog?.version !== 1 || !catalog.palettes || typeof id !== "string") {
-    throw new Error("Sprite palette catalogue requires version 1 palette records.");
+    throw new Error("Palette catalogue requires version 1 palette records.");
   }
   const palette = catalog.palettes[id];
-  if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) || !Array.isArray(palette.words) || palette.words.length !== 16 - palette.firstIndex) {
-    throw new Error(`Unknown or invalid ROM sprite palette ${id}.`);
+  if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) || !Array.isArray(palette.words) || palette.words.length < 1 || palette.words.length > 256 || palette.words.some((word) => typeof word !== "string" || !/^[0-9A-Fa-f]{4}$/.test(word))) {
+    throw new Error(`Unknown or invalid ROM palette ${id}.`);
   }
-  if (palette.words.some((word) => typeof word !== "string" || !/^[0-9A-Fa-f]{4}$/.test(word))) {
-    throw new Error(`Invalid BGR555 word in sprite palette ${id}.`);
+  return palette;
+}
+function spritePaletteColors(catalog, id) {
+  const palette = paletteRecord(catalog, id);
+  if (palette.words.length !== 16 - palette.firstIndex) {
+    throw new Error(`Frame sprite palette ${id} needs sixteen display slots.`);
   }
   const colors = [[0, 0, 0, 0]];
   for (let index = 1; index < 16; index++) {
@@ -12946,8 +12950,7 @@ function spritePaletteColors(catalog, id) {
   return colors;
 }
 function spritePaletteBytes(catalog, id) {
-  spritePaletteColors(catalog, id);
-  const words = catalog.palettes[id].words;
+  const words = paletteRecord(catalog, id).words;
   const bytes = new Uint8Array(words.length * 2);
   for (const [index, raw] of words.entries()) {
     const word = Number.parseInt(raw, 16);
@@ -12957,26 +12960,32 @@ function spritePaletteBytes(catalog, id) {
   return bytes;
 }
 function spritePalettePreview(catalog, id) {
-  const colors = spritePaletteColors(catalog, id);
-  if (catalog.palettes[id].firstIndex === 0) {
-    const word = Number.parseInt(catalog.palettes[id].words[0], 16);
-    colors[0] = [
+  const palette = paletteRecord(catalog, id);
+  const colors = palette.words.map((raw) => {
+    const word = Number.parseInt(raw, 16);
+    return [
       expandChannel(word & 31),
       expandChannel(word >>> 5 & 31),
       expandChannel(word >>> 10 & 31),
       255
     ];
+  });
+  if (palette.firstIndex === 1) colors.unshift([0, 0, 0, 0]);
+  const columns = palette.previewColumns ?? Math.min(4, colors.length);
+  if (!Number.isSafeInteger(columns) || columns < 1 || columns > 16) {
+    throw new Error(`ROM palette ${id} has invalid preview columns.`);
   }
-  const width = 37;
-  const height = 37;
+  const rows = Math.ceil(colors.length / columns);
+  const width = columns * 9 + 1;
+  const height = rows * 9 + 1;
   const rgba = new Uint8Array(width * height * 4);
   for (let pixel = 0; pixel < width * height; pixel++) {
     rgba.set([64, 64, 64, 255], pixel * 4);
   }
-  for (let colorIndex = 0; colorIndex < 16; colorIndex++) {
+  for (let colorIndex = 0; colorIndex < colors.length; colorIndex++) {
     const [red, green, blue, alpha] = colors[colorIndex];
-    const left = 1 + colorIndex % 4 * 9;
-    const top = 1 + Math.floor(colorIndex / 4) * 9;
+    const left = 1 + colorIndex % columns * 9;
+    const top = 1 + Math.floor(colorIndex / columns) * 9;
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const offset = ((top + y) * width + left + x) * 4;
@@ -13183,6 +13192,19 @@ function verifiedBrrFromWave(source) {
   }
   return native;
 }
+function sliceBrrSegment(brr, options) {
+  const { startByte, byteLength } = options;
+  if (typeof startByte !== "number" || !Number.isSafeInteger(startByte) || startByte < 0) {
+    throw new Error("BRR segment startByte must be a non-negative integer.");
+  }
+  if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
+    throw new Error("BRR segment byteLength must be a positive integer.");
+  }
+  if (startByte + byteLength > brr.length) {
+    throw new Error("BRR segment extends beyond the authored block stream.");
+  }
+  return brr.slice(startByte, startByte + byteLength);
+}
 function encodeActor3bpp(planar, group) {
   if (!Number.isInteger(group) || group < 0 || group > 2)
     throw new Error("actor group must be 0..2.");
@@ -13349,20 +13371,10 @@ var plugin = definePlugin({
       version: "1.0.0",
       targets: ["snes.sfc"],
       convert(source, options) {
-        const { startByte, byteLength } = options;
-        if (!Number.isSafeInteger(startByte) || startByte < 0) {
-          throw new Error("BRR segment startByte must be a non-negative integer.");
-        }
-        if (!Number.isSafeInteger(byteLength) || byteLength < 1) {
-          throw new Error("BRR segment byteLength must be a positive integer.");
-        }
         const brr = verifiedBrrFromWave(source);
-        if (startByte + byteLength > brr.length) {
-          throw new Error("BRR segment extends beyond the authored block stream.");
-        }
         return {
           primaryOutput: "brr",
-          outputs: { brr: { bytes: brr.slice(startByte, startByte + byteLength) } }
+          outputs: { brr: { bytes: sliceBrrSegment(brr, options) } }
         };
       }
     });
@@ -13485,12 +13497,47 @@ function convertSomPalettePreview(input) {
     encodedBytes: bytes.length,
     format: input.format,
     output: "palette",
-    metadata: { paletteId: id, paletteRomAddress: palette.romAddress, paletteUsers: palette.users },
+    metadata: {
+      paletteId: id,
+      paletteRomAddress: palette.romAddress,
+      paletteUsers: palette.users,
+      previewWidth: preview.width
+    },
     thumbnailPngBase64: png.toString("base64"),
     composedPngBase64: png.toString("base64")
   };
 }
+function convertSomBrrPreview(input) {
+  if (input.output !== void 0 && input.output !== "brr") {
+    throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
+  }
+  const native = verifiedBrrFromWave(input.source);
+  const sourceAudio = waveImporter.import(input.source).value;
+  const segment = input.format === "som.brr.segment";
+  const selected = segment ? sliceBrrSegment(native, input.options) : native;
+  const decoded = decodeBrrPcm(native);
+  const metadata = { previewScope: "full-stream" };
+  if (segment) {
+    metadata.segmentStartByte = input.options.startByte;
+    metadata.segmentByteLength = selected.length;
+    metadata.fullStreamBytes = native.length;
+  }
+  return {
+    kind: "audio",
+    sourceBytes: input.source.bytes.length,
+    encodedBytes: selected.length,
+    format: input.format,
+    output: "brr",
+    metadata,
+    waveformPngBase64: Buffer.from(waveformPreviewPng(sourceAudio.samples)).toString("base64"),
+    sourceWavBase64: Buffer.from(input.source.bytes).toString("base64"),
+    decodedWavBase64: Buffer.from(writePcmWave(decoded, sourceAudio.sampleRate)).toString("base64")
+  };
+}
 function convertAssetPreview(input) {
+  if (input.format === "som.brr.pcm" || input.format === "som.brr.segment") {
+    return convertSomBrrPreview(input);
+  }
   if (input.format === "som.palette.bgr555") {
     return convertSomPalettePreview(input);
   }

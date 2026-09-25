@@ -2,6 +2,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 
 import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
+import type { AssemblerEnvironment } from "@uttori/asm-core/plugin";
 import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -77,6 +78,8 @@ export type SnesProjectInitializationStage =
 export interface SnesProjectInitializationProgress {
   readonly stage: SnesProjectInitializationStage;
   readonly message: string;
+  /** Instruction observations grouped so far; these derived counts are not published yet. */
+  readonly processedObservations?: number;
 }
 
 /** Shared cancellation and progress controls for long-running operations. */
@@ -197,6 +200,15 @@ export interface VerifySnesProjectRoundTripOptions extends SnesProjectOperationO
   readonly romFile: string;
   /** Emit a debug map for the headerless content output. Defaults to true. */
   readonly emitDebugMap?: boolean;
+  /** Trusted host loader called with the absolute build-configuration path after integrity and
+   * ROM checks. The host owns plugin disposal after verification settles. Defaults to bundled
+   * SNES support only; configured asset formats/transforms require a host loader.
+   */
+  readonly loadEnvironment?: (configurationFile: string) => Promise<{
+    readonly environment: AssemblerEnvironment;
+    readonly includePaths?: readonly string[];
+    readonly targetOptions?: Readonly<Record<string, unknown>>;
+  }>;
 }
 
 /** Byte-identical verification result and the generated build artifacts. */
@@ -504,6 +516,14 @@ export const analyzeSnesProject = (
         SNES_CPU_ADDRESS_SPACE,
         ["p", "P", "e", "E", "db", "DB", "d", "D"],
         { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } },
+        (processedObservations) => {
+          throwIfCancelled(options.signal);
+          options.onProgress?.({
+            stage: "analyze",
+            message: "Grouping captured instruction variants in SQLite.",
+            processedObservations,
+          });
+        },
       );
       report(
         options,
@@ -841,22 +861,33 @@ export const verifySnesProjectRoundTrip = async (
       `ROM identity mismatch: export expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`,
     );
   }
-  // This dynamic import avoids making the target-owned initializer depend on the CLI host while
-  // still reusing the exact bundled plugin registration exported by this package.
   report(options, "verify", "Preparing the assembler environment.");
-  const { createSnesAssemblerEnvironment } = await import("../index.js");
+  // Hosts resolve trusted project plugins relative to the manifest's configuration. Keep
+  // Node module discovery outside this target package; new-workspace initialization can
+  // still verify with the bundled SNES environment before it has a host configuration.
+  let configured: Awaited<
+    ReturnType<NonNullable<VerifySnesProjectRoundTripOptions["loadEnvironment"]>>
+  >;
+  if (options.loadEnvironment) {
+    configured = await options.loadEnvironment(
+      path.join(sourceDirectory, manifest.buildConfiguration),
+    );
+  } else {
+    const { createSnesAssemblerEnvironment } = await import("../index.js");
+    configured = { environment: await createSnesAssemblerEnvironment() };
+  }
   throwIfCancelled(options.signal);
-  const environment = await createSnesAssemblerEnvironment();
   const entrySource = path.join(sourceDirectory, manifest.entrySource);
   const assembler = new Assembler({
-    environment,
+    environment: configured.environment,
     target: TARGET_ID,
     architecture: ARCHITECTURE_ID,
-    targetOptions: { checksumEnabled: false, checksumMode: "asar" },
+    // A round trip preserves the original checksum bytes even if normal builds repair them.
+    targetOptions: { ...configured.targetOptions, checksumEnabled: false, checksumMode: "asar" },
     collectSourceMetadata: options.emitDebugMap ?? true,
   });
   try {
-    assembler.setIncludePaths([sourceDirectory]);
+    assembler.setIncludePaths([...new Set([sourceDirectory, ...(configured.includePaths ?? [])])]);
     assembler.setCurrentFile(entrySource);
     report(options, "verify", "Parsing generated assembly and includes.");
     const source = fs.readFileSync(entrySource, "utf8");

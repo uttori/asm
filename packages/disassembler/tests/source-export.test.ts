@@ -9,6 +9,8 @@ import {
   SOURCE_EXPORT_MANIFEST,
   SOURCE_EXPORT_SCHEMA_VERSION,
   canonicalSourceExportJson,
+  describeSourceExportFileIssue,
+  inspectSourceExportFiles,
   loadSourceExportManifest,
   sourceExportSha256,
   validateSourceExportFiles,
@@ -20,8 +22,10 @@ test("source export manifests validate generated hashes and byte differences", (
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-export-"));
   try {
     fs.writeFileSync(path.join(directory, "main.asm"), "db $42\n");
+    fs.writeFileSync(path.join(directory, "extra.asm"), "db $00\n");
     fs.writeFileSync(path.join(directory, "ram-map.json"), "{}\n");
     const text = fs.readFileSync(path.join(directory, "main.asm"));
+    const extra = fs.readFileSync(path.join(directory, "extra.asm"));
     const input = fs.readFileSync(path.join(directory, "ram-map.json"));
     const manifest: SourceExportManifest = {
       format: SOURCE_EXPORT_FORMAT,
@@ -52,6 +56,12 @@ test("source export manifests validate generated hashes and byte differences", (
       ],
       files: [
         { path: "main.asm", kind: "source", size: text.length, sha256: sourceExportSha256(text) },
+        {
+          path: "extra.asm",
+          kind: "source",
+          size: extra.length,
+          sha256: sourceExportSha256(extra),
+        },
       ],
       spans: [
         {
@@ -75,7 +85,22 @@ test("source export manifests validate generated hashes and byte differences", (
     fs.writeFileSync(path.join(directory, "ram-map.json"), '{"changed":true}\n');
     t.throws(() => validateSourceExportInputs(directory), { message: /changed/ });
     fs.writeFileSync(path.join(directory, "main.asm"), "db $43\n");
-    t.throws(() => validateSourceExportFiles(directory), { message: /modified/ });
+    const changed = inspectSourceExportFiles(directory);
+    t.is(changed.length, 1);
+    t.is(changed[0].actualSize, changed[0].expectedSize);
+    t.regex(describeSourceExportFileIssue(changed[0]), /SHA-256 .*manifest expects/);
+    t.throws(() => validateSourceExportFiles(directory), {
+      message: /1 of 2 files.*SHA-256.*Regeneration stopped/s,
+    });
+    fs.writeFileSync(path.join(directory, "main.asm"), "db $430\n");
+    fs.rmSync(path.join(directory, "extra.asm"));
+    const issues = inspectSourceExportFiles(directory);
+    t.is(issues.length, 2);
+    t.regex(describeSourceExportFileIssue(issues[0]), /has 8 bytes \(manifest expects 7\)/);
+    t.regex(describeSourceExportFileIssue(issues[1]), /is missing/);
+    t.throws(() => validateSourceExportFiles(directory), {
+      message: /2 of 2 files.*main\.asm.*extra\.asm.*--force/s,
+    });
     t.like(compareByteImages(new Uint8Array([1, 2]), new Uint8Array([1, 3])), {
       equal: false,
       firstDifference: 1,

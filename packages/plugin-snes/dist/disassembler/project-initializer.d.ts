@@ -1,3 +1,4 @@
+import type { AssemblerEnvironment } from "@uttori/asm-core/plugin";
 import { type AnalysisProjectManifest, type ByteComparison, type ImportReport, type ProjectMapping, type RomIdentity, type SourceExportManifest, type StaticAnalysisIncompleteReason } from "@uttori/asm-disassembler";
 import { type Snes65816EntryPoint } from "./65816-analysis.js";
 import { type SnesHeuristicConfiguration } from "./function-heuristics.js";
@@ -11,6 +12,8 @@ export type SnesProjectInitializationStage = "probe" | "create" | "analyze" | "e
 export interface SnesProjectInitializationProgress {
     readonly stage: SnesProjectInitializationStage;
     readonly message: string;
+    /** Instruction observations grouped so far; these derived counts are not published yet. */
+    readonly processedObservations?: number;
 }
 /** Shared cancellation and progress controls for long-running operations. */
 export interface SnesProjectOperationOptions {
@@ -116,6 +119,15 @@ export interface VerifySnesProjectRoundTripOptions extends SnesProjectOperationO
     readonly romFile: string;
     /** Emit a debug map for the headerless content output. Defaults to true. */
     readonly emitDebugMap?: boolean;
+    /** Trusted host loader called with the absolute build-configuration path after integrity and
+     * ROM checks. The host owns plugin disposal after verification settles. Defaults to bundled
+     * SNES support only; configured asset formats/transforms require a host loader.
+     */
+    readonly loadEnvironment?: (configurationFile: string) => Promise<{
+        readonly environment: AssemblerEnvironment;
+        readonly includePaths?: readonly string[];
+        readonly targetOptions?: Readonly<Record<string, unknown>>;
+    }>;
 }
 /** Byte-identical verification result and the generated build artifacts. */
 export interface VerifySnesProjectRoundTripResult {

@@ -5,6 +5,8 @@ import {
   ANALYSIS_PROJECT_MANIFEST,
   RomImage,
   SOURCE_EXPORT_MANIFEST,
+  describeSourceExportFileIssue,
+  inspectSourceExportFiles,
   loadSourceExportManifest,
   parseAnalysisProjectManifest,
   validateSourceExportFiles,
@@ -689,14 +691,14 @@ const statusReport = async (
     (options) => client.run("coverage", resolved, options),
     resolved.sourceDirectory,
   );
-  let integrity = "all generated files match their recorded hashes";
-  let generatedCurrent = true;
-  try {
-    validateSourceExportFiles(resolved.sourceDirectory, resolved.sourceManifest);
-  } catch (error) {
-    generatedCurrent = false;
-    integrity = `needs attention: ${error instanceof Error ? error.message : String(error)}`;
-  }
+  const generatedIssues = inspectSourceExportFiles(
+    resolved.sourceDirectory,
+    resolved.sourceManifest,
+  );
+  const generatedCurrent = generatedIssues.length === 0;
+  const integrity = generatedCurrent
+    ? "all generated files match their recorded hashes"
+    : `${generatedIssues.length} of ${resolved.sourceManifest.files.length} generated files differ from ${SOURCE_EXPORT_MANIFEST}`;
   let inputIntegrity = "all user-owned inputs match the last export";
   let inputsCurrent = true;
   try {
@@ -712,6 +714,16 @@ const statusReport = async (
     ...(inputsCurrent ? [] : ["RAM map or another source input changed"]),
     ...(generatedCurrent ? [] : ["a generated file drifted"]),
   ];
+  let guidance: string;
+  if (!generatedCurrent) {
+    guidance =
+      "Regeneration stops to protect these files. Restore generated files and generated-files.json from the same export, or save intended edits and explicitly re-export with the CLI's --force option.";
+  } else if (current) {
+    guidance = "The generated disassembly reflects the current analysis revision.";
+  } else {
+    guidance =
+      "Run **Assembly: Analyze and Regenerate Disassembly** to turn the current RAM map, labels, classifications, and runtime code seeds into generated source.";
+  }
   return `${[
     "# Disassembly status",
     "",
@@ -730,9 +742,15 @@ const statusReport = async (
     `- Runtime execution facts: ${coverage.runtimeRecords} address(es), ${coverage.runtimeEvents} event(s)`,
     `- Imported instruction traces: ${coverage.traceImports}`,
     "",
-    current
-      ? "The generated disassembly reflects the current analysis revision."
-      : "Run **Assembly: Analyze and Regenerate Disassembly** to turn the current RAM map, labels, classifications, and runtime code seeds into generated source.",
+    ...(generatedCurrent
+      ? []
+      : [
+          "## Generated-file differences",
+          "",
+          ...generatedIssues.map((issue) => `- ${describeSourceExportFileIssue(issue)}`),
+          "",
+        ]),
+    guidance,
     "",
     "A saved trace does not change source by itself. Use **Assembly: Import Runtime Trace and Update Disassembly**. Its report shows the exact instruction/code-byte delta.",
     "",

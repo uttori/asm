@@ -22,7 +22,7 @@ The client supplies workspace roots and initialization options, then updates the
 
 A connection owns its project environment and index, using the first workspace root for configuration. Send `shutdown`, then `exit`, to release it. Cancellation cannot preempt synchronous assembly/indexing. Asset path analysis is lightweight; `asm/assetPreview` runs bounded conversion in a cancellable worker and returns a result only for the current document version. Use a separate connection per project root when independent configurations are needed. This server uses Node filesystem access and does not provide a browser or virtual-filesystem host.
 
-The worker is bundled as `out/asset-preview-worker.mjs` beside `server.mjs`. SNES PNG/WAVE previews accept up to 2 MiB per input and 3 MiB combined, time out after five seconds, and reuse a bounded content-and-converter-version cache. Complex numeric expressions, custom formats without a portable preview contract, and final compressed emission sizes remain build-only. Binary and resource inputs invalidate root analysis without being parsed as source text.
+The worker is bundled as `out/asset-preview-worker.mjs` beside `server.mjs`. SNES PNG/WAVE and Secret of Mana BRR previews accept up to 2 MiB per input and 3 MiB combined, time out after five seconds, and reuse a bounded content-and-converter-version cache. SoM BRR segment playback uses the verified complete stream while reporting the selected bank slice's encoded size. Complex numeric expressions, custom formats without a portable preview contract, and final compressed emission sizes remain build-only. Binary and resource inputs invalidate root analysis without being parsed as source text.
 
 Document formatting is unsupported in v1.0.0.
 

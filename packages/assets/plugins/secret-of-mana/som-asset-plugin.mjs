@@ -97,8 +97,12 @@ export function convertBossImage(source, options, resources = {}) {
   return { primaryOutput: "graphics", outputs: { graphics: { bytes: padded } } };
 }
 
-/** Read the native BRR chunk from a playable PCM WAVE and verify every decoded sample. */
-function verifiedBrrFromWave(source) {
+/**
+ * Read the native BRR chunk from a playable PCM WAVE and verify every decoded sample.
+ * @param {import('@uttori/asm-assets').AssetInput} source Authored WAVE with an sBRR chunk.
+ * @returns {Uint8Array} Exact complete BRR stream owned by the caller.
+ */
+export function verifiedBrrFromWave(source) {
   const document = waveImporter.import(source);
   const pcm = document.value.samples;
   const bytes = source.bytes;
@@ -132,6 +136,27 @@ function verifiedBrrFromWave(source) {
     throw new Error("SoM WAVE PCM no longer matches its native BRR blocks.");
   }
   return native;
+}
+
+/**
+ * Select the ROM-owned part of a verified stream after decoding the complete WAVE.
+ * A bank split may occur inside a nine-byte BRR block, so slices are not decoded alone.
+ * @param {Uint8Array} brr Complete native BRR stream.
+ * @param {Readonly<Record<string, unknown>>} options Half-open byte slice in that stream.
+ * @returns {Uint8Array} Owned bytes for the selected ROM bank span.
+ */
+export function sliceBrrSegment(brr, options) {
+  const { startByte, byteLength } = options;
+  if (typeof startByte !== "number" || !Number.isSafeInteger(startByte) || startByte < 0) {
+    throw new Error("BRR segment startByte must be a non-negative integer.");
+  }
+  if (typeof byteLength !== "number" || !Number.isSafeInteger(byteLength) || byteLength < 1) {
+    throw new Error("BRR segment byteLength must be a positive integer.");
+  }
+  if (startByte + byteLength > brr.length) {
+    throw new Error("BRR segment extends beyond the authored block stream.");
+  }
+  return brr.slice(startByte, startByte + byteLength);
 }
 
 
@@ -326,22 +351,12 @@ const plugin = definePlugin({
       version: "1.0.0",
       targets: ["snes.sfc"],
       convert(source, options) {
-        const { startByte, byteLength } = options;
-        if (!Number.isSafeInteger(startByte) || startByte < 0) {
-          throw new Error("BRR segment startByte must be a non-negative integer.");
-        }
-        if (!Number.isSafeInteger(byteLength) || byteLength < 1) {
-          throw new Error("BRR segment byteLength must be a positive integer.");
-        }
         const brr = verifiedBrrFromWave(source);
-        if (startByte + byteLength > brr.length) {
-          throw new Error("BRR segment extends beyond the authored block stream.");
-        }
         // The violin stream crosses a ROM bank inside one nine-byte BRR block.
         // Slice only after native encoding so both banks share one editable source.
         return {
           primaryOutput: "brr",
-          outputs: { brr: { bytes: brr.slice(startByte, startByte + byteLength) } },
+          outputs: { brr: { bytes: sliceBrrSegment(brr, options) } },
         };
       },
     });

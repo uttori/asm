@@ -101,6 +101,72 @@ const fixture = (
 
 const options = { sourceProjectSha256: "a".repeat(64) };
 
+test("project asset includes survive export and split native raw spans at exact bounds", (t) => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-asset-includes-"));
+  t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
+  const { rom, project } = fixture();
+  const annotated: AnalysisProject = {
+    ...project,
+    shards: {
+      ...project.shards,
+      comments: [
+        {
+          id: "asset-description",
+          addressSpace: "rom.file",
+          address: 0x20,
+          text: "Named frame tiles.\nPreserve their palette association.",
+          evidence: ["legacy"],
+        },
+      ],
+      labels: [
+        {
+          id: "asset-label",
+          addressSpace: "rom.file",
+          address: 0x20,
+          name: "FrameTiles",
+          sourceName: "FrameTiles",
+          analysisEntryPoint: false,
+          evidence: ["legacy"],
+        },
+      ],
+    },
+  };
+  const sourceDirectory = path.join(directory, "source");
+  fs.mkdirSync(sourceDirectory);
+  const directive = 'includeAsset("../assets/palette.json", "raw")';
+  const map = { version: 1, entries: [{ start: 0x20, end: 0x24, directive }] };
+  fs.writeFileSync(path.join(sourceDirectory, "asset-includes.json"), JSON.stringify(map));
+  const customConfiguration = '{"plugins":[{"module":"custom-asset-plugin"}]}\n';
+  fs.writeFileSync(path.join(sourceDirectory, "uttori-asm.config.json"), customConfiguration);
+
+  const first = exportSnes65816Source(annotated, rom, sourceDirectory, options);
+  const bank = fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8");
+  t.true(bank.includes(directive));
+  t.regex(
+    bank,
+    /FrameTiles:[\S\s]*?; Named frame tiles\.\n  ; Preserve their palette association\.\n  includeAsset/,
+  );
+  t.true(
+    first.spans.some(
+      (span) => span.start === 0x20 && span.end === 0x24 && span.file === "banks/bank-000.asm",
+    ),
+  );
+  t.is(
+    fs.readFileSync(path.join(sourceDirectory, "uttori-asm.config.json"), "utf8"),
+    customConfiguration,
+  );
+  const reanalyzed = {
+    ...annotated,
+    shards: {
+      ...annotated.shards,
+      analysis: analyzeSnesRuntimeCode(annotated.shards, rom, "lorom"),
+    },
+  };
+  const second = exportSnes65816Source(reanalyzed, rom, sourceDirectory, options);
+  t.deepEqual(second.files, first.files);
+  t.is(fs.readFileSync(path.join(sourceDirectory, "banks/bank-000.asm"), "utf8"), bank);
+});
+
 /** Automatic function marker seeded by an imported entry point, not a reviewed source label. */
 const inferredEntry = (address: number): AnalysisFunctionRecord => ({
   id: `static:function:${address.toString(16)}`,
@@ -131,7 +197,9 @@ test("emitted fallback and imported labels resolve direct transfers without chan
     [36, [0x60]],
   ];
   const bytes = new Uint8Array(40).fill(0xea);
-  for (const [offset, instruction] of sites) {bytes.set(instruction, offset);}
+  for (const [offset, instruction] of sites) {
+    bytes.set(instruction, offset);
+  }
   const { rom, project } = fixture(
     [...bytes],
     sites.map(([offset, instruction]) => capture(`flow-${offset}`, 0x808000 + offset, instruction)),

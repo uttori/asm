@@ -266,7 +266,14 @@ export const analyzeSnesProject = (options) => {
             const revision = analysisProjectRevision(store.manifest());
             store.prepareAnnotationQueries();
             report(options, "analyze", "Grouping captured instruction variants in SQLite.");
-            store.runtimeInstructionVariants(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, ["p", "P", "e", "E", "db", "DB", "d", "D"], { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } });
+            store.runtimeInstructionVariants(ARCHITECTURE_ID, SNES_CPU_ADDRESS_SPACE, ["p", "P", "e", "E", "db", "DB", "d", "D"], { p: { max: 255, mask: 0x30 }, P: { max: 255, mask: 0x30 } }, (processedObservations) => {
+                throwIfCancelled(options.signal);
+                options.onProgress?.({
+                    stage: "analyze",
+                    message: "Grouping captured instruction variants in SQLite.",
+                    processedObservations,
+                });
+            });
             report(options, "analyze", "Loading metadata, execution seeds, MMIO observations and known code.");
             return store.transaction(() => {
                 assertAnalysisProjectRevision(store, revision);
@@ -543,22 +550,30 @@ export const verifySnesProjectRoundTrip = async (options) => {
         rom.identity.contentSha256 !== manifest.rom.contentSha256) {
         throw new Error(`ROM identity mismatch: export expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`);
     }
-    // This dynamic import avoids making the target-owned initializer depend on the CLI host while
-    // still reusing the exact bundled plugin registration exported by this package.
     report(options, "verify", "Preparing the assembler environment.");
-    const { createSnesAssemblerEnvironment } = await import("../index.js");
+    // Hosts resolve trusted project plugins relative to the manifest's configuration. Keep
+    // Node module discovery outside this target package; new-workspace initialization can
+    // still verify with the bundled SNES environment before it has a host configuration.
+    let configured;
+    if (options.loadEnvironment) {
+        configured = await options.loadEnvironment(path.join(sourceDirectory, manifest.buildConfiguration));
+    }
+    else {
+        const { createSnesAssemblerEnvironment } = await import("../index.js");
+        configured = { environment: await createSnesAssemblerEnvironment() };
+    }
     throwIfCancelled(options.signal);
-    const environment = await createSnesAssemblerEnvironment();
     const entrySource = path.join(sourceDirectory, manifest.entrySource);
     const assembler = new Assembler({
-        environment,
+        environment: configured.environment,
         target: TARGET_ID,
         architecture: ARCHITECTURE_ID,
-        targetOptions: { checksumEnabled: false, checksumMode: "asar" },
+        // A round trip preserves the original checksum bytes even if normal builds repair them.
+        targetOptions: { ...configured.targetOptions, checksumEnabled: false, checksumMode: "asar" },
         collectSourceMetadata: options.emitDebugMap ?? true,
     });
     try {
-        assembler.setIncludePaths([sourceDirectory]);
+        assembler.setIncludePaths([...new Set([sourceDirectory, ...(configured.includePaths ?? [])])]);
         assembler.setCurrentFile(entrySource);
         report(options, "verify", "Parsing generated assembly and includes.");
         const source = fs.readFileSync(entrySource, "utf8");

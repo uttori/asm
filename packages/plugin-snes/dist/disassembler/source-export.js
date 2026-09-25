@@ -66,6 +66,108 @@ const renderFlowLabel = (source, flow, name, labelAddress) => {
     }
     return `${source.slice(0, source.indexOf(" "))} ${operand}`;
 };
+/**
+ * Load exact ROM span replacements without making the exporter game-specific.
+ * @param {string} directory Export source directory containing the optional project-owned map.
+ * @returns {AssetIncludeMap | undefined} Validated replacements or undefined when the project has none.
+ */
+const loadAssetIncludeMap = (directory) => {
+    const file = path.join(directory, "asset-includes.json");
+    if (!fs.existsSync(file)) {
+        return undefined;
+    }
+    const sourceBytes = fs.readFileSync(file);
+    const data = JSON.parse(sourceBytes.toString("utf8"));
+    if (!data ||
+        typeof data !== "object" ||
+        data.version !== 1 ||
+        !Array.isArray(data.entries)) {
+        throw new Error("asset-includes.json requires version 1 and an entries array.");
+    }
+    const entries = data.entries;
+    for (const entry of entries) {
+        const item = entry;
+        if (!item ||
+            !Number.isSafeInteger(item.start) ||
+            !Number.isSafeInteger(item.end) ||
+            item.start < 0 ||
+            item.end <= item.start ||
+            typeof item.directive !== "string" ||
+            !/^includeAsset\([^\n\r]+\)$/.test(item.directive)) {
+            throw new Error("asset-includes.json has an invalid ROM span or includeAsset directive.");
+        }
+    }
+    const ordered = [...entries];
+    ordered.sort((left, right) => left.start - right.start);
+    for (let index = 1; index < ordered.length; index++) {
+        if (ordered[index - 1].end > ordered[index].start) {
+            throw new Error("asset-includes.json has overlapping ROM spans.");
+        }
+    }
+    return { sourceBytes, entries: ordered };
+};
+/**
+ * Replace complete non-code spans only; a changed analysis boundary must be reviewed.
+ * @param {PlannedSpan[]} planned Native spans from code, annotations and struct bindings.
+ * @param {AssetIncludeMap | undefined} map Project-owned includes with half-open ROM file offsets.
+ * @param {ReadonlyMap<number, NamedLine[]>} metadata Labels and comments whose interior boundaries must survive export.
+ * @param {number} bankSize ROM bytes per emitted bank for the active mapper.
+ * @returns {PlannedSpan[]} Spans with includes substituted and uncovered raw bytes retained.
+ */
+const applyAssetIncludes = (planned, map, metadata, bankSize) => {
+    if (!map) {
+        return [...planned];
+    }
+    const result = [];
+    const spans = [...planned];
+    let index = 0;
+    const splitRawAt = (offset) => {
+        const span = spans[index];
+        if (!span || span.start >= offset || span.end <= offset) {
+            return;
+        }
+        if (span.instruction || span.structured || span.structField || span.structRecord) {
+            throw new Error(`Asset include boundary at ROM offset ${hex(offset)} splits typed data or code.`);
+        }
+        // Preserve both untouched sides when a generated raw span crosses the asset boundary.
+        spans.splice(index, 1, { ...span, end: offset }, { ...span, start: offset });
+    };
+    for (const entry of map.entries) {
+        while (index < spans.length && spans[index].end <= entry.start) {
+            result.push(spans[index++]);
+        }
+        splitRawAt(entry.start);
+        while (index < spans.length && spans[index].end <= entry.start) {
+            result.push(spans[index++]);
+        }
+        if (spans[index]?.start !== entry.start ||
+            Math.floor(entry.start / bankSize) !== Math.floor((entry.end - 1) / bankSize)) {
+            throw new Error(`Asset include at ROM offset ${hex(entry.start)} does not start on one bank-local span.`);
+        }
+        let end = entry.start;
+        while (index < spans.length && end < entry.end) {
+            splitRawAt(entry.end);
+            const span = spans[index];
+            if (span.start !== end ||
+                span.end > entry.end ||
+                span.instruction ||
+                span.structured ||
+                (span.start !== entry.start && metadata.has(span.start))) {
+                throw new Error(`Asset include at ROM offset ${hex(entry.start)} conflicts with exported data or metadata.`);
+            }
+            end = span.end;
+            index++;
+        }
+        if (end !== entry.end) {
+            throw new Error(`Asset include at ROM offset ${hex(entry.start)} has no exact end boundary.`);
+        }
+        result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
+    }
+    while (index < spans.length) {
+        result.push(spans[index++]);
+    }
+    return result;
+};
 const hex = (value, width = 6) => `$${value.toString(16).toUpperCase().padStart(width, "0")}`;
 const byteList = (bytes) => [...bytes].map((byte) => hex(byte, 2)).join(", ");
 const asciiString = (bytes) => {
@@ -848,7 +950,10 @@ const preflight = (directory, force) => {
     if (!fs.existsSync(manifestFile)) {
         const unexpected = fs
             .readdirSync(directory)
-            .filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
+            .filter((entry) => entry !== SNES_RAM_MAP_SOURCE &&
+            entry !== SNES_STRUCT_MAP_SOURCE &&
+            entry !== "asset-includes.json" &&
+            entry !== "uttori-asm.config.json");
         if (!force && unexpected.length > 0) {
             throw new Error(`Export directory '${directory}' is not empty. Pass --force to write into it.`);
         }
@@ -896,6 +1001,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     const context = createSnesAddressContext(mapper);
     const structure = structuredRomLayout(rom, mapper);
     const previousManifest = preflight(directory, options.force ?? false);
+    const assetIncludes = loadAssetIncludeMap(directory);
     const ramMap = loadSnesRamMap(directory);
     const ramVariables = indexSnesRamMap(ramMap.variables);
     const structMap = loadSnesStructMap(directory);
@@ -932,7 +1038,8 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         }
     }
     const fieldPlan = planSpans(rom, mapper, project.shards, instructions, metadata, annotations, structure, structRomFields);
-    const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+    const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
+    const planned = applyAssetIncludes(groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length), assetIncludes, metadata, bankSize);
     // Instruction planning can suppress inferred operand-interior markers. Only labels emitted at
     // final span starts may enter the lookup, including fallback Fn_ and imported native names.
     const emittedLabels = new Map();
@@ -963,7 +1070,6 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     const files = [];
     const spans = [];
     const banks = new Map();
-    const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 0x10000 : 0x8000;
     for (const span of planned) {
         const bank = Math.floor(span.start / bankSize);
         const entries = banks.get(bank) ?? [];
@@ -1041,6 +1147,19 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
                     role: "code",
                     file: bankPath,
                     nodeIds: span.instruction.nodeIds,
+                    regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
+                });
+            }
+            else if (span.assetInclude) {
+                lines.push(`  ${span.assetInclude}`);
+                spans.push({
+                    id: `asset:${span.start.toString(16).padStart(6, "0")}`,
+                    source: "asset-includes.json",
+                    addressSpace: SNES_FILE_ADDRESS_SPACE,
+                    start: span.start,
+                    end: span.end,
+                    role: "raw",
+                    file: bankPath,
                     regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length),
                 });
             }
@@ -1209,7 +1328,7 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
     })
         .sort((left, right) => left.id.localeCompare(right.id));
     writeFile(directory, "annotation-report.json", canonicalSourceExportJson({ issues: annotationIssues }), "configuration", files);
-    const configuration = canonicalSourceExportJson({
+    const defaultConfiguration = canonicalSourceExportJson({
         $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
         plugins: [
             {
@@ -1223,6 +1342,12 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         includePaths: ["./"],
         buildOutput: "build/rebuilt-content.sfc",
     });
+    const configurationPath = path.join(directory, "uttori-asm.config.json");
+    // An existing source project may register asset formats and custom compressors.
+    // Rewriting its build configuration would leave regenerated includes unassemblable.
+    const configuration = fs.existsSync(configurationPath)
+        ? fs.readFileSync(configurationPath)
+        : defaultConfiguration;
     writeFile(directory, "uttori-asm.config.json", configuration, "configuration", files);
     const manifest = {
         format: SOURCE_EXPORT_FORMAT,
@@ -1238,6 +1363,17 @@ export const exportSnes65816Source = (project, rom, directory, options) => {
         finalOutput: "build/rebuilt.sfc",
         checksumPolicy: "preserve",
         inputs: [
+            ...(assetIncludes
+                ? [
+                    {
+                        path: "asset-includes.json",
+                        kind: "metadata",
+                        size: assetIncludes.sourceBytes.length,
+                        records: assetIncludes.entries.length,
+                        sha256: sourceExportSha256(assetIncludes.sourceBytes),
+                    },
+                ]
+                : []),
             ...(structMap
                 ? [
                     {

@@ -86,12 +86,12 @@ const installSummary = (db) => {
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
     }
 };
-/** Select compact keys, counts and representatives; never sort expanded logical runtime records.
+/** Stream compact keys, counts and representatives without a blocking sort or aggregate.
  * Pending IDs drive incremental joins so an append does not scan unrelated captures or shared facts.
  * @param {boolean} incremental Whether to select pending observations instead of all history.
- * @returns {string} Grouping SQL binding architecture and address space, in that order.
+ * @returns {string} Input cursor SQL binding architecture and address space, in that order.
  */
-export const runtimeSummaryGroupSql = (incremental) => {
+export const runtimeSummaryInputSql = (incremental) => {
     const from = incremental
         ? `query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
@@ -99,10 +99,9 @@ export const runtimeSummaryGroupSql = (incremental) => {
         : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
     return `SELECT f.address,analysis_instruction_variant(
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
-      o.evidence_id AS evidence,SUM(o.count) AS total,COUNT(*) AS observations,MIN(o.oid) AS sample
+      o.evidence_id AS evidence,o.count AS total,o.oid AS sample
     FROM ${from}
-    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
-    GROUP BY f.address,key,o.evidence_id`;
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`;
 };
 /** Normalize only decoder inputs, preserving aliases, invalid values, null and missing fields.
  * @param {DatabaseSync} db Connection that will evaluate the grouping query.
@@ -150,9 +149,10 @@ const isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== unde
  * @param {string} space Exact instruction address space.
  * @param {readonly string[]} fields Ordered decoder fields; other registers remain in full evidence.
  * @param {StateMasks} masks Grouping-only masks for valid numeric fields.
+ * @param {Function} [onProgress] Cumulative observations staged in this build; throwing aborts it.
  * @returns {IterableIterator<RuntimeEvidenceRecord>} One representative per decoder key and evidence list.
  */
-export const runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks) => {
+export const runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress) => {
     if (fields.some((field) => !/^\w+$/.test(field))) {
         throw new Error("Invalid instruction state field.");
     }
@@ -178,8 +178,27 @@ export const runtimeInstructionSummary = (db, transaction, architecture, space, 
             registerVariantKey(db, fields, masks);
             transaction(() => {
                 db.exec(`CREATE TEMP TABLE runtime_summary_groups(
-          address INTEGER,key TEXT,evidence INTEGER,total INTEGER,observations INTEGER,sample INTEGER)`);
-                db.prepare(`INSERT INTO temp.runtime_summary_groups ${runtimeSummaryGroupSql(incremental)}`).run(architecture, space);
+          address INTEGER NOT NULL,key TEXT NOT NULL,evidence INTEGER NOT NULL,
+          total INTEGER NOT NULL,observations INTEGER NOT NULL,sample INTEGER NOT NULL,
+          PRIMARY KEY(address,key,evidence)) WITHOUT ROWID`);
+                const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
+          VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
+          total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+                let observations = 0;
+                // SQLite callbacks can retain native buffer handles until the outer statement returns.
+                // GROUP BY/INSERT SELECT would inflate the whole capture in one step, defeating the bounded
+                // history cache. Each next() below returns after one input, releasing those temporary handles;
+                // only decoder keys and counters cross into JS, and SQLite owns the accumulated groups.
+                for (const row of db
+                    .prepare(runtimeSummaryInputSql(incremental))
+                    .iterate(architecture, space)) {
+                    accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
+                    observations++;
+                    if (observations % 4096 === 0) {
+                        onProgress?.(observations);
+                    }
+                }
+                onProgress?.(observations);
             }, false);
             transaction(() => {
                 if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !==

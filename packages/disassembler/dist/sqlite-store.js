@@ -103,6 +103,22 @@ const SCHEMA_INDEX_STATEMENTS = [
 const RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
   LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+/** Lookup parameters are the external prefix and binary/text suffix. Resolve both dictionaries
+ * before probing observations: filtering the logical view by external ID otherwise scans every
+ * observation in that capture, making a growing import quadratic. Full suffix equality protects
+ * against truncated hash-key collisions. Signed rowids retain paired-state and deletion semantics.
+ */
+export const RUNTIME_RECORD_LOOKUP_SQL = `${RUNTIME_SELECT} WHERE r.rowid IN (
+  SELECT oid FROM runtime_observations
+  WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+  UNION ALL
+  SELECT -oid FROM runtime_observations
+  WHERE state_prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+)`;
 /**
  * Resolves the sqlite file for a project pointer.
  * @param {string} directory Project root containing analysis.json.
@@ -201,8 +217,7 @@ export class SqliteAnalysisStore {
                     insert: this.#database.prepare(`INSERT INTO ${table} (value) VALUES (?)`),
                 });
             }
-            this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
+            this.#findRuntime = this.#database.prepare(RUNTIME_RECORD_LOOKUP_SQL);
             this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
         }
         catch (error) {
@@ -350,9 +365,15 @@ export class SqliteAnalysisStore {
      * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
      */
     async indexTrace(action, metrics) {
-        this.#database.exec(`CREATE TEMP TABLE trace_facts (
-      id TEXT PRIMARY KEY, payload TEXT NOT NULL, count INTEGER NOT NULL
-    ) WITHOUT ROWID; BEGIN;`);
+        // Keep payloads out of the key B-tree: large full-register traces otherwise scatter
+        // each lookup/insert across payload pages. Rowid storage appends those payloads and
+        // leaves a smaller ID index. NOT NULL retains WITHOUT ROWID's key constraint.
+        // The temp pager has its own cache; main.cache_size does not cover it. Use a 64 MiB
+        // page-cache target to reduce churn while keeping the complete fact set backed by disk.
+        this.#database.exec(`PRAGMA temp.cache_size=-65536;
+      CREATE TEMP TABLE trace_facts (
+      id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, count INTEGER NOT NULL
+    ); BEGIN;`);
         const increment = this.#database.prepare("UPDATE temp.trace_facts SET count=count+1 WHERE id=?");
         const insert = this.#database.prepare("INSERT INTO temp.trace_facts VALUES (?, ?, 1)");
         const values = this.#database.prepare("SELECT payload, count FROM temp.trace_facts");
@@ -858,11 +879,9 @@ export class SqliteAnalysisStore {
             }
             if (kind === "runtime") {
                 if (ids) {
-                    const find = this.#database.prepare(`${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
                     for (const id of ids.slice(0, 200)) {
                         const identity = sqliteRuntimeIdentity(id);
-                        const row = find.get(identity.prefix, identity.suffix);
+                        const row = this.#findRuntime.get(identity.prefix, identity.suffix);
                         if (row) {
                             records.push(runtimeFromRow(row));
                         }
@@ -1128,11 +1147,12 @@ export class SqliteAnalysisStore {
      * @param {string} space Exact instruction address space.
      * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
      * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+     * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
      * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
      * Prepare before starting the consuming read transaction.
      */
-    runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
-        return runtimeInstructionSummary(this.#database, (action, write) => this.transaction(action, write), architecture, space, stateFields, masks);
+    runtimeInstructionVariants(architecture, space, stateFields, masks = {}, onProgress) {
+        return runtimeInstructionSummary(this.#database, (action, write) => this.transaction(action, write), architecture, space, stateFields, masks, onProgress);
     }
     /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
      * @param {string} architecture Target processor.

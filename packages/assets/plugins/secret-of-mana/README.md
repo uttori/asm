@@ -15,6 +15,10 @@ every PCM sample against the shared BRR decoder before emitting those blocks, wh
 preserves the original ROM bytes. The segment format uses one WAVE on both sides of
 the violin's bank boundary. Editing the PCM requires a reviewed BRR re-encode; a
 stale native chunk is rejected.
+Asset Preview shows the source waveform and offers playback of both the authored
+WAVE and the verified decoded BRR. For `som.brr.segment`, the byte count is the
+selected bank slice while playback covers the complete stream, since the split
+can occur inside a BRR block.
 
 Legacy native-order boss PNGs can keep the original compressed stream in a private `soMz` chunk. The
 plugin verifies that its decoded tiles match the visible indexed pixels, then emits
@@ -46,32 +50,45 @@ workspace. The frame preview displays the complete atlas, ROM palette address an
 all catalogue users of that palette. Workspace plugin loading requires a trusted
 workspace.
 
-## Shared sprite palettes
+## Shared ROM palettes
 
-`disassembly/assets/palettes/sprite-palettes.json` is the single source for the
-converted sprites' BGR555 colors. Its top-level `palettes` object has one record per
-ROM span, keyed by six-digit CPU address. A record stores `firstIndex`, its exact
-little-endian ROM `words` in hexadecimal, and `users` for every frame atlas and
-segment that references it. The frame layout's `paletteRefs` point to these keys.
+`disassembly/assets/palettes/rom-palettes.json` is the single source for the
+170 bounded sprite, boss, monster, player, menu, background and effect BGR555 spans.
+Its top-level `palettes` object has one record per ROM span, keyed by six-digit CPU
+address. A record stores `firstIndex`, its exact little-endian ROM `words` in
+hexadecimal, and `users` for every frame atlas and segment that references it.
+The 122 address-indexed monster entries follow Rabite at 30-byte intervals; four
+more 30-byte entries follow the ring menu palette. Their gameplay names and atlas
+uses are not asserted. Records without a known frame atlas
+have an empty `users` array. The frame layout's
+`paletteRefs` point to these keys.
 The same record assembles at its original bank position:
 
 ```asm
-includeAsset("../assets/palettes/sprite-palettes.json", "som.palette.bgr555", palette: "C81000")
+includeAsset("../assets/palettes/rom-palettes.json", "som.palette.bgr555", palette: "C81000")
 ```
 
 The plugin preserves bit 15 of every word, including the `FFFF` cannon palette.
 Actor palettes emit fifteen stored words (`firstIndex: 1`), while boss palettes
-emit sixteen (`firstIndex: 0`). Each record has a generated 37×37 PNG in
-`assets/palettes/previews/`: sixteen color squares in ROM order, each exactly 8×8
-pixels with one-pixel grid lines. Asset Preview displays the same image at a larger
-size and lists its users.
+emit sixteen (`firstIndex: 0`). Background groups can contain 105 words, and effect
+palettes may have other lengths. `previewColumns` controls the swatch grid; the
+background groups use fifteen columns for seven rows. Each record has a generated
+PNG in `assets/palettes/previews/`: color squares in ROM order, each exactly 8×8
+pixels with one-pixel grid lines. Asset Preview enlarges the grid without changing
+its aspect ratio and lists known frame users.
 Run `tools/build-palette-previews.mjs` after editing a word, then run it with
 `--check` and run `tools/check-sprite-palettes.mjs --list` after assembling. The
 checker compares catalogue words to the rebuilt ROM and validates every atlas use.
+`disassembly/asset-includes.json` records every converted palette, image and audio
+segment's exact ROM offset, end and `includeAsset` directive. The source exporter
+reads this project-owned map so a fresh export retains those includes instead of
+reverting them to native struct directives or raw binaries. Update the map whenever
+an asset is added or its encoded length changes; the palette checker rejects a
+palette mismatch with the catalogue.
 
 The sidecar format is deliberately small. `width` and `height` equal the PNG dimensions;
 `version` is `1`. `paletteRefs` lists ROM addresses in the shared
-[`sprite-palettes.json`](../../../../secret-of-mana/disassembly/assets/palettes/sprite-palettes.json)
+[`rom-palettes.json`](../../../../secret-of-mana/disassembly/assets/palettes/rom-palettes.json)
 catalogue. Each address begins a little-endian BGR555 span. `firstIndex: 1` means
 the ROM stores fifteen visible actor colors, while PNG index zero is transparent;
 `firstIndex: 0` means the ROM stores all sixteen boss colors, including a hidden
@@ -120,7 +137,7 @@ For example, a two-tile source with one flipped visible tile can use this shape.
 ```asm
 includeAsset("../assets/images/npc/actor-frames.png", "som.sprite.frames",
              layout: "../assets/images/npc/actor-frames.layout.json",
-             palettes: "../assets/palettes/sprite-palettes.json", segment: "actor-main")
+             palettes: "../assets/palettes/rom-palettes.json", segment: "actor-main")
 ```
 
 To add a sprite from scratch:

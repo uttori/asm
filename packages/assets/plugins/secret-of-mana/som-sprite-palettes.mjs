@@ -1,8 +1,22 @@
-/** Shared ROM palette catalogue for frame atlases and their editor previews. */
+/** Shared ROM palette catalogue for graphics, frame atlases and editor previews. */
 
 /** Expand one five-bit SNES channel using the same bit replication as the PNG exporter. */
 function expandChannel(value) {
   return (value << 3) | (value >>> 2);
+}
+
+/** Validate one address-owned run of BGR555 words, regardless of its display shape. */
+function paletteRecord(catalog, id) {
+  if (catalog?.version !== 1 || !catalog.palettes || typeof id !== "string") {
+    throw new Error("Palette catalogue requires version 1 palette records.");
+  }
+  const palette = catalog.palettes[id];
+  if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) ||
+      !Array.isArray(palette.words) || palette.words.length < 1 || palette.words.length > 256 ||
+      palette.words.some((word) => typeof word !== "string" || !/^[0-9A-Fa-f]{4}$/.test(word))) {
+    throw new Error(`Unknown or invalid ROM palette ${id}.`);
+  }
+  return palette;
 }
 
 /**
@@ -10,16 +24,9 @@ function expandChannel(value) {
  * store only opaque colors 1–15; boss spans also store a hidden color-zero word.
  */
 export function spritePaletteColors(catalog, id) {
-  if (catalog?.version !== 1 || !catalog.palettes || typeof id !== "string") {
-    throw new Error("Sprite palette catalogue requires version 1 palette records.");
-  }
-  const palette = catalog.palettes[id];
-  if (!palette || palette.romAddress !== id || ![0, 1].includes(palette.firstIndex) ||
-      !Array.isArray(palette.words) || palette.words.length !== 16 - palette.firstIndex) {
-    throw new Error(`Unknown or invalid ROM sprite palette ${id}.`);
-  }
-  if (palette.words.some((word) => typeof word !== "string" || !/^[0-9A-Fa-f]{4}$/.test(word))) {
-    throw new Error(`Invalid BGR555 word in sprite palette ${id}.`);
+  const palette = paletteRecord(catalog, id);
+  if (palette.words.length !== 16 - palette.firstIndex) {
+    throw new Error(`Frame sprite palette ${id} needs sixteen display slots.`);
   }
   const colors = [[0, 0, 0, 0]];
   for (let index = 1; index < 16; index++) {
@@ -37,8 +44,7 @@ export function spritePaletteColors(catalog, id) {
 
 /** Emit the catalogue's exact little-endian ROM words, including unused high bits. */
 export function spritePaletteBytes(catalog, id) {
-  spritePaletteColors(catalog, id);
-  const words = catalog.palettes[id].words;
+  const words = paletteRecord(catalog, id).words;
   const bytes = new Uint8Array(words.length * 2);
   for (const [index, raw] of words.entries()) {
     const word = Number.parseInt(raw, 16);
@@ -48,30 +54,34 @@ export function spritePaletteBytes(catalog, id) {
   return bytes;
 }
 
-/** Show each of the sixteen palette slots as one 8×8 square with a one-pixel grid. */
+/** Show stored colors as 8×8 swatches with a one-pixel grid and source grouping. */
 export function spritePalettePreview(catalog, id) {
-  const colors = spritePaletteColors(catalog, id);
-  // Sprite index zero is transparent, but a boss palette stores a real first ROM word.
-  // Show that word in the palette preview even though the frame PNG hides it.
-  if (catalog.palettes[id].firstIndex === 0) {
-    const word = Number.parseInt(catalog.palettes[id].words[0], 16);
-    colors[0] = [
+  const palette = paletteRecord(catalog, id);
+  const colors = palette.words.map((raw) => {
+    const word = Number.parseInt(raw, 16);
+    return [
       expandChannel(word & 31),
       expandChannel((word >>> 5) & 31),
       expandChannel((word >>> 10) & 31),
       255,
     ];
+  });
+  if (palette.firstIndex === 1) colors.unshift([0, 0, 0, 0]);
+  const columns = palette.previewColumns ?? Math.min(4, colors.length);
+  if (!Number.isSafeInteger(columns) || columns < 1 || columns > 16) {
+    throw new Error(`ROM palette ${id} has invalid preview columns.`);
   }
-  const width = 37;
-  const height = 37;
+  const rows = Math.ceil(colors.length / columns);
+  const width = columns * 9 + 1;
+  const height = rows * 9 + 1;
   const rgba = new Uint8Array(width * height * 4);
   for (let pixel = 0; pixel < width * height; pixel++) {
     rgba.set([64, 64, 64, 255], pixel * 4);
   }
-  for (let colorIndex = 0; colorIndex < 16; colorIndex++) {
+  for (let colorIndex = 0; colorIndex < colors.length; colorIndex++) {
     const [red, green, blue, alpha] = colors[colorIndex];
-    const left = 1 + (colorIndex % 4) * 9;
-    const top = 1 + Math.floor(colorIndex / 4) * 9;
+    const left = 1 + (colorIndex % columns) * 9;
+    const top = 1 + Math.floor(colorIndex / columns) * 9;
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
         const offset = ((top + y) * width + left + x) * 4;

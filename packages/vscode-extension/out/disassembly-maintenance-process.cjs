@@ -4265,11 +4265,11 @@ var init_sqlite_graph_query = __esm({
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
           const node = decode3(row.payload);
-          const path15 = node.evidencePath.length ? node.evidencePath : [node.id];
+          const path17 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner;
-          for (let i = path15.length - 1; i >= 0; i--) {
-            if (entries3.has(path15[i])) {
-              owner = path15[i];
+          for (let i = path17.length - 1; i >= 0; i--) {
+            if (entries3.has(path17[i])) {
+              owner = path17[i];
               break;
             }
           }
@@ -4947,7 +4947,7 @@ END;
 });
 
 // packages/disassembler/src/sqlite-runtime-summary.ts
-var import_node_crypto3, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryGroupSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
+var import_node_crypto3, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
   "packages/disassembler/src/sqlite-runtime-summary.ts"() {
     "use strict";
@@ -5022,16 +5022,15 @@ var init_sqlite_runtime_summary = __esm({
       CREATE TRIGGER summary_${table}_delete AFTER DELETE ON ${table} BEGIN ${INVALIDATE} END;`);
       }
     };
-    runtimeSummaryGroupSql = (incremental) => {
+    runtimeSummaryInputSql = (incremental) => {
       const from = incremental ? `query_runtime_variant_pending pending
       CROSS JOIN runtime_observations o ON o.oid=pending.oid
       CROSS JOIN runtime_facts f ON f.fid=o.fact_id` : "runtime_facts f JOIN runtime_observations o ON o.fact_id=f.fid";
       return `SELECT f.address,analysis_instruction_variant(
       CASE WHEN json_valid(f.payload,8) THEN json(f.payload) ELSE f.payload END) AS key,
-      o.evidence_id AS evidence,SUM(o.count) AS total,COUNT(*) AS observations,MIN(o.oid) AS sample
+      o.evidence_id AS evidence,o.count AS total,o.oid AS sample
     FROM ${from}
-    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?
-    GROUP BY f.address,key,o.evidence_id`;
+    WHERE f.kind='runtime-instruction' AND f.architecture=? AND f.address_space=?`;
     };
     registerVariantKey = (db, fields, masks) => {
       db.function("analysis_instruction_variant", { deterministic: true }, (payload) => {
@@ -5052,7 +5051,7 @@ var init_sqlite_runtime_summary = __esm({
       });
     };
     isCurrent = (db, signature) => readQueryCache(db, KEY, signature) !== void 0 && !db.prepare("SELECT 1 FROM query_runtime_variant_pending LIMIT 1").get();
-    runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks) => {
+    runtimeInstructionSummary = (db, transaction, architecture, space, fields, masks, onProgress) => {
       if (fields.some((field) => !/^\w+$/.test(field))) {
         throw new Error("Invalid instruction state field.");
       }
@@ -5077,10 +5076,21 @@ var init_sqlite_runtime_summary = __esm({
           registerVariantKey(db, fields, masks);
           transaction(() => {
             db.exec(`CREATE TEMP TABLE runtime_summary_groups(
-          address INTEGER,key TEXT,evidence INTEGER,total INTEGER,observations INTEGER,sample INTEGER)`);
-            db.prepare(
-              `INSERT INTO temp.runtime_summary_groups ${runtimeSummaryGroupSql(incremental)}`
-            ).run(architecture, space);
+          address INTEGER NOT NULL,key TEXT NOT NULL,evidence INTEGER NOT NULL,
+          total INTEGER NOT NULL,observations INTEGER NOT NULL,sample INTEGER NOT NULL,
+          PRIMARY KEY(address,key,evidence)) WITHOUT ROWID`);
+            const accumulate = db.prepare(`INSERT INTO temp.runtime_summary_groups
+          VALUES(?,?,?,?,1,?) ON CONFLICT(address,key,evidence) DO UPDATE SET
+          total=total+excluded.total,observations=observations+1,sample=MIN(sample,excluded.sample)`);
+            let observations = 0;
+            for (const row of db.prepare(runtimeSummaryInputSql(incremental)).iterate(architecture, space)) {
+              accumulate.run(row.address, row.key, row.evidence, row.total, row.sample);
+              observations++;
+              if (observations % 4096 === 0) {
+                onProgress?.(observations);
+              }
+            }
+            onProgress?.(observations);
           }, false);
           transaction(() => {
             if (db.prepare("SELECT signature FROM query_cache WHERE name=?").get(BUILD)?.signature !== pending) {
@@ -5505,7 +5515,7 @@ var init_trace_cache = __esm({
 });
 
 // packages/disassembler/src/sqlite-store.ts
-var import_node_crypto4, import_node_fs3, import_node_path4, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
+var import_node_crypto4, import_node_fs3, import_node_path4, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
   "packages/disassembler/src/sqlite-store.ts"() {
     "use strict";
@@ -5609,6 +5619,17 @@ PRAGMA user_version=4;
     RUNTIME_SELECT = `SELECT r.*, r.rowid AS storage_rowid, p.value AS id_prefix, e.value AS evidence
   FROM runtime AS r LEFT JOIN runtime_prefixes AS p ON p.id=r.prefix_id
   LEFT JOIN runtime_evidence AS e ON e.id=r.evidence_id`;
+    RUNTIME_RECORD_LOOKUP_SQL = `${RUNTIME_SELECT} WHERE r.rowid IN (
+  SELECT oid FROM runtime_observations
+  WHERE prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+  UNION ALL
+  SELECT -oid FROM runtime_observations
+  WHERE state_prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?1)
+    AND identity_id=(SELECT iid FROM runtime_identities
+      WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
+)`;
     analysisProjectSqlitePath = (directory, manifest) => {
       const relative2 = manifest.db ?? ANALYSIS_PROJECT_SQLITE_FILE;
       if (relative2 !== ANALYSIS_PROJECT_SQLITE_FILE) {
@@ -5708,8 +5729,7 @@ PRAGMA user_version=4;
               insert: this.#database.prepare(`INSERT INTO ${table} (value) VALUES (?)`)
             });
           }
-          this.#findRuntime = this.#database.prepare(`${RUNTIME_SELECT}
-        WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?) AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`);
+          this.#findRuntime = this.#database.prepare(RUNTIME_RECORD_LOOKUP_SQL);
           this.#runtimeWriter = new SqliteRuntimeWriter(this.#database);
         } catch (error) {
           this.#database.close();
@@ -5879,9 +5899,10 @@ PRAGMA user_version=4;
        * @returns {Promise} Parser result after temporary counters commit. The index lives until connection close.
        */
       async indexTrace(action, metrics) {
-        this.#database.exec(`CREATE TEMP TABLE trace_facts (
-      id TEXT PRIMARY KEY, payload TEXT NOT NULL, count INTEGER NOT NULL
-    ) WITHOUT ROWID; BEGIN;`);
+        this.#database.exec(`PRAGMA temp.cache_size=-65536;
+      CREATE TEMP TABLE trace_facts (
+      id TEXT PRIMARY KEY NOT NULL, payload TEXT NOT NULL, count INTEGER NOT NULL
+    ); BEGIN;`);
         const increment = this.#database.prepare(
           "UPDATE temp.trace_facts SET count=count+1 WHERE id=?"
         );
@@ -6367,13 +6388,9 @@ PRAGMA user_version=4;
           }
           if (kind === "runtime") {
             if (ids) {
-              const find = this.#database.prepare(
-                `${RUNTIME_SELECT} WHERE r.prefix_id=(SELECT id FROM runtime_prefixes WHERE value=?)
-              AND (${runtimeIdentityKey("r.id")})=(${runtimeIdentityKey("?2")}) AND r.id=?2`
-              );
               for (const id of ids.slice(0, 200)) {
                 const identity2 = sqliteRuntimeIdentity(id);
-                const row = find.get(identity2.prefix, identity2.suffix);
+                const row = this.#findRuntime.get(identity2.prefix, identity2.suffix);
                 if (row) {
                   records2.push(runtimeFromRow(row));
                 }
@@ -6636,17 +6653,19 @@ PRAGMA user_version=4;
        * @param {string} space Exact instruction address space.
        * @param {readonly string[]} stateFields Only fields the target decoder consumes, including aliases.
        * @param {Readonly<Record>} masks Optional decoder bit masks, applied only to valid nonnegative integers up to max.
+       * @param {Function} [onProgress] Cumulative observations grouped when rebuilding; throwing aborts the build.
        * @returns {IterableIterator<RuntimeEvidenceRecord>} SQL cursor over compact variants with exact per-evidence counts.
        * Prepare before starting the consuming read transaction.
        */
-      runtimeInstructionVariants(architecture, space, stateFields, masks = {}) {
+      runtimeInstructionVariants(architecture, space, stateFields, masks = {}, onProgress) {
         return runtimeInstructionSummary(
           this.#database,
           (action, write) => this.transaction(action, write),
           architecture,
           space,
           stateFields,
-          masks
+          masks,
+          onProgress
         );
       }
       /** Exact execution seed totals grouped by PC and provenance, without decoding execution payloads.
@@ -7923,7 +7942,7 @@ var init_runtime_trace_file = __esm({
 });
 
 // packages/disassembler/src/source-export.ts
-var import_node_crypto7, fs7, import_node_path5, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
+var import_node_crypto7, fs7, import_node_path5, SOURCE_EXPORT_FORMAT, SOURCE_EXPORT_SCHEMA_VERSION, SOURCE_EXPORT_MANIFEST, sourceExportSha256, canonicalSourceExportJson, assertSafePath, loadSourceExportManifest, inspectSourceExportFiles, describeSourceExportFileIssue, validateSourceExportFiles, validateSourceExportInputs, compareByteImages;
 var init_source_export = __esm({
   "packages/disassembler/src/source-export.ts"() {
     "use strict";
@@ -7996,16 +8015,49 @@ var init_source_export = __esm({
       }
       return manifest;
     };
-    validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+    inspectSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+      const issues = [];
       for (const file of manifest.files) {
         const absolute = import_node_path5.default.join(directory, file.path);
         if (!fs7.existsSync(absolute)) {
-          throw new Error(`Generated file '${file.path}' is missing.`);
+          issues.push({
+            path: file.path,
+            expectedSize: file.size,
+            expectedSha256: file.sha256
+          });
+          continue;
         }
         const bytes = fs7.readFileSync(absolute);
-        if (bytes.length !== file.size || sourceExportSha256(bytes) !== file.sha256) {
-          throw new Error(`Generated file '${file.path}' was modified after export.`);
+        const actualSha256 = sourceExportSha256(bytes);
+        if (bytes.length !== file.size || actualSha256 !== file.sha256) {
+          issues.push({
+            path: file.path,
+            expectedSize: file.size,
+            expectedSha256: file.sha256,
+            actualSize: bytes.length,
+            actualSha256
+          });
         }
+      }
+      return issues;
+    };
+    describeSourceExportFileIssue = (issue) => {
+      if (issue.actualSize === void 0) {
+        return `'${issue.path}' is missing (manifest expects ${issue.expectedSize} bytes)`;
+      }
+      if (issue.actualSize !== issue.expectedSize) {
+        return `'${issue.path}' has ${issue.actualSize} bytes (manifest expects ${issue.expectedSize})`;
+      }
+      return `'${issue.path}' has SHA-256 ${issue.actualSha256} (manifest expects ${issue.expectedSha256})`;
+    };
+    validateSourceExportFiles = (directory, manifest = loadSourceExportManifest(directory)) => {
+      const issues = inspectSourceExportFiles(directory, manifest);
+      if (issues.length > 0) {
+        const preview = issues.slice(0, 3).map(describeSourceExportFileIssue).join("; ");
+        const remaining = issues.length > 3 ? `; ${issues.length - 3} more` : "";
+        throw new Error(
+          `Generated source differs from '${SOURCE_EXPORT_MANIFEST}' in ${issues.length} of ${manifest.files.length} files: ${preview}${remaining}. Regeneration stopped to protect these files. Run "Assembly: Show Disassembly Status" for the full list. Restore files and manifest from the same export, or save any edits and explicitly re-export with --force.`
+        );
       }
     };
     validateSourceExportInputs = (directory, manifest = loadSourceExportManifest(directory)) => {
@@ -8303,7 +8355,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path15 = [...item.path, nodeId];
+        const path17 = [...item.path, nodeId];
         nodes.set(nodeId, {
           id: nodeId,
           address: instruction2.address,
@@ -8319,7 +8371,7 @@ var init_static_analysis = __esm({
           effectiveAddresses: instruction2.effectiveAddresses ?? [],
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          evidencePath: path15
+          evidencePath: path17
         });
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
@@ -8376,7 +8428,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path15,
+            path: path17,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -8391,7 +8443,7 @@ var init_static_analysis = __esm({
                 address: target.address,
                 source: kind === "call" ? "call" : "interrupt",
                 evidence: targetEvidence,
-                evidencePath: path15
+                evidencePath: path17
               });
             }
           }
@@ -8426,7 +8478,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path15,
+              path: path17,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -8438,7 +8490,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path15,
+            path: path17,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -9662,6 +9714,7 @@ __export(src_exports, {
   RUNTIME_BUS_TRACE_FORMAT: () => RUNTIME_BUS_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_FORMAT: () => RUNTIME_INSTRUCTION_TRACE_FORMAT,
   RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION: () => RUNTIME_INSTRUCTION_TRACE_SCHEMA_VERSION,
+  RUNTIME_RECORD_LOOKUP_SQL: () => RUNTIME_RECORD_LOOKUP_SQL,
   RomImage: () => RomImage,
   SOURCE_EXPORT_FORMAT: () => SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_MANIFEST: () => SOURCE_EXPORT_MANIFEST,
@@ -9696,6 +9749,7 @@ __export(src_exports, {
   createRuntimeTraceChunkValidator: () => createRuntimeTraceChunkValidator,
   createRuntimeTraceFileSource: () => createRuntimeTraceFileSource,
   createRuntimeTransferAccumulator: () => createRuntimeTransferAccumulator,
+  describeSourceExportFileIssue: () => describeSourceExportFileIssue,
   detectCopierHeaderSize: () => detectCopierHeaderSize,
   explainProjectEvidence: () => explainProjectEvidence,
   importRuntimeBusTraceSourceIntoProject: () => importRuntimeBusTraceSourceIntoProject,
@@ -9704,6 +9758,7 @@ __export(src_exports, {
   importRuntimeTraceIntoProject: () => importRuntimeTraceIntoProject,
   importRuntimeTraceSourceIntoProject: () => importRuntimeTraceSourceIntoProject,
   inspectRuntimeEvidence: () => inspectRuntimeEvidence,
+  inspectSourceExportFiles: () => inspectSourceExportFiles,
   legacySourceLabelName: () => legacySourceLabelName,
   loadAnalysisProject: () => loadAnalysisProject,
   loadAnalysisProjectSnapshot: () => loadAnalysisProjectSnapshot,
@@ -9777,369 +9832,39 @@ var init_src = __esm({
   }
 });
 
-// packages/core/src/address-width.ts
-function maximumAddressForWidth(addressWidth) {
-  if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
-    throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
-  }
-  return 2 ** addressWidth - 1;
+// packages/core/src/plugin/contracts.ts
+function definePlugin(plugin2) {
+  return plugin2;
 }
-function normalizeAddressForWidth(address5, addressWidth) {
-  const modulus = maximumAddressForWidth(addressWidth) + 1;
-  if (!Number.isFinite(address5) || !Number.isInteger(address5)) {
-    throw new Error(`Logical address must be a finite integer, got ${address5}.`);
-  }
-  return (address5 % modulus + modulus) % modulus;
-}
-var init_address_width = __esm({
-  "packages/core/src/address-width.ts"() {
+var PLUGIN_API_VERSION;
+var init_contracts = __esm({
+  "packages/core/src/plugin/contracts.ts"() {
     "use strict";
+    PLUGIN_API_VERSION = 1;
   }
 });
 
-// packages/core/src/crc32.ts
-var CRC32;
-var init_crc32 = __esm({
-  "packages/core/src/crc32.ts"() {
-    "use strict";
-    CRC32 = class _CRC32 {
-      /** Precomputed CRC32 table. */
-      static table = _CRC32.makeCRCTable();
-      /**
-       * Builds the lookup table used for CRC32 computation.
-       * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
-       */
-      static makeCRCTable() {
-        const table = new Uint32Array(256);
-        for (let i = 0; i < 256; i++) {
-          let c = i;
-          for (let k = 0; k < 8; k++) {
-            c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
-          }
-          table[i] = c;
-        }
-        return table;
-      }
-      /**
-       * Computes the CRC32 checksum for the given data.
-       * @param {number[] | Uint8Array} data A Uint8Array (or Node.js Buffer) of data.
-       * @returns {number} The computed CRC32 checksum.
-       */
-      static compute(data) {
-        let crc = 4294967295;
-        for (let i = 0; i < data.length; i++) {
-          crc = _CRC32.table[(crc ^ data[i]) & 255] ^ crc >>> 8;
-        }
-        return (crc ^ 4294967295) >>> 0;
-      }
-    };
-  }
-});
-
-// packages/core/src/addressToLine.ts
-var sourceIdentity, AddressToLineMapping;
-var init_addressToLine = __esm({
-  "packages/core/src/addressToLine.ts"() {
-    "use strict";
-    init_crc32();
-    sourceIdentity = (filename, supplied) => {
-      try {
-        const fs13 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
-        const crypto = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:crypto");
-        if (!fs13 || !crypto) {
-          return { crc: 0, size: 0, sha256: "" };
-        }
-        const data = supplied ?? fs13.readFileSync(filename);
-        return {
-          crc: CRC32.compute(data),
-          size: data.length,
-          sha256: crypto.createHash("sha256").update(data).digest("hex")
-        };
-      } catch {
-        return { crc: 0, size: 0, sha256: "" };
-      }
-    };
-    AddressToLineMapping = class {
-      fileList = [];
-      filenameCrcs = [];
-      addrToLineInfo = [];
-      ranges = [];
-      /** Final encoder evaluations, collected without evaluating expressions a second time. */
-      instructions = [];
-      /** Successful final-pass asset emissions; binary files have no source lines. */
-      assets = [];
-      /** Clears all stored mappings and file information. */
-      reset() {
-        this.fileList = [];
-        this.filenameCrcs = [];
-        this.addrToLineInfo = [];
-        this.ranges = [];
-        this.instructions = [];
-        this.assets = [];
-      }
-      /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
-       * @param {string} filename Provider path.
-       * @param {Uint8Array} bytes Build snapshot.
-       */
-      registerDependencySnapshot(filename, bytes) {
-        const index = this.getFileIndex(filename);
-        const identity2 = sourceIdentity(filename, bytes);
-        this.fileList[index] = { name: filename, ...identity2 };
-      }
-      /**
-       * Adds a legacy point mapping. New debugger consumers should use ranges.
-       * @param {string} filename Source filename.
-       * @param {number} line One-based source line.
-       * @param {number} addr Logical address.
-       */
-      includeMapping(filename, line, addr) {
-        const fileIdx = this.getFileIndex(filename);
-        this.addrToLineInfo.push({ fileIdx, line, addr });
-      }
-      /**
-       * Adds one emitted byte, coalescing it with the preceding compatible range.
-       * @param {string} filename Source filename.
-       * @param {number} line One-based source line.
-       * @param {string} architecture Architecture contribution id.
-       * @param {string} addressSpace Address-space contribution id.
-       * @param {number} address Logical byte address.
-       * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
-       */
-      includeByte(filename, line, architecture, addressSpace, address5, outputOffset) {
-        const fileIdx = this.getFileIndex(filename);
-        const mappedOutput = Number.isInteger(outputOffset) && outputOffset >= 0;
-        const previous = this.ranges.at(-1);
-        if (previous && previous.fileIdx === fileIdx && previous.line === line && previous.architecture === architecture && previous.addressSpace === addressSpace && previous.end === address5 && (mappedOutput && previous.outputEnd === outputOffset || !mappedOutput && previous.outputStart === void 0)) {
-          this.ranges[this.ranges.length - 1] = {
-            ...previous,
-            end: address5 + 1,
-            ...mappedOutput ? { outputEnd: outputOffset + 1 } : {}
-          };
-          return;
-        }
-        this.ranges.push({
-          fileIdx,
-          line,
-          architecture,
-          addressSpace,
-          start: address5,
-          end: address5 + 1,
-          ...mappedOutput ? { outputStart: outputOffset, outputEnd: outputOffset + 1 } : {}
-        });
-      }
-      /**
-       * Returns all source ranges containing a logical address.
-       * @param {string} addressSpace Address-space contribution id.
-       * @param {number} address Logical address.
-       * @param {string} architecture Optional architecture filter.
-       * @returns {readonly SerializableAddressRange[]} Matching source ranges.
-       */
-      findSourceRanges(addressSpace, address5, architecture) {
-        return this.serializableRanges().filter(
-          (range) => range.addressSpace === addressSpace && range.start <= address5 && address5 < range.end && (architecture === void 0 || range.architecture === architecture)
-        );
-      }
-      /**
-       * Returns all address ranges generated by a one-based source line.
-       * @param {string} source Source path.
-       * @param {number} line One-based source line.
-       * @param {string} architecture Optional architecture filter.
-       * @returns {readonly SerializableAddressRange[]} Matching address ranges.
-       */
-      findAddressRanges(source, line, architecture) {
-        return this.serializableRanges().filter(
-          (range) => range.source === source && range.line === line && (architecture === void 0 || range.architecture === architecture)
-        );
-      }
-      /** @returns {readonly SerializableAddressRange[]} Deterministic path-based ranges. */
-      serializableRanges() {
-        return this.ranges.map(({ fileIdx, ...range }) => ({ ...range, source: this.fileList[fileIdx]?.name ?? "" })).sort(
-          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.source.localeCompare(right.source) || left.line - right.line
-        );
-      }
-      /**
-       * Gets or creates a fingerprinted source-file entry.
-       * @param {string} filename Source path.
-       * @returns {number} Stable file-table index.
-       */
-      getFileIndex(filename) {
-        const filenameCrc = CRC32.compute(new TextEncoder().encode(filename));
-        for (let i = 0; i < this.filenameCrcs.length; i++) {
-          if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
-            return i;
-          }
-        }
-        this.fileList.push({ name: filename, ...sourceIdentity(filename) });
-        this.filenameCrcs.push(filenameCrc);
-        return this.fileList.length - 1;
-      }
-    };
-  }
-});
-
-// packages/core/src/architecture-registry.ts
-var ArchitectureRegistry;
-var init_architecture_registry = __esm({
-  "packages/core/src/architecture-registry.ts"() {
-    "use strict";
-    ArchitectureRegistry = class {
-      definitions = /* @__PURE__ */ new Map();
-      aliases = /* @__PURE__ */ new Map();
-      /**
-       * Registers the value.
-       * @param {ArchitectureDefinition} definition The definition.
-       * @param {string[]} [aliases] The aliases.
-       */
-      register(definition, aliases2 = []) {
-        const canonical2 = definition.name.toLowerCase();
-        this.definitions.set(canonical2, { ...definition, name: canonical2 });
-        this.aliases.set(canonical2, canonical2);
-        for (const alias of aliases2) {
-          this.aliases.set(alias.toLowerCase(), canonical2);
-        }
-      }
-      getCanonicalName(name) {
-        return this.aliases.get(name.toLowerCase());
-      }
-      getDefinition(name) {
-        const canonical2 = this.getCanonicalName(name);
-        if (!canonical2) {
-          return void 0;
-        }
-        return this.definitions.get(canonical2);
-      }
-      /**
-       * Returns editor metadata from the same registered encoder used for builds.
-       * @param {string} name Architecture name or alias.
-       * @returns {InstructionDescriptor[]} Registered instruction descriptors.
-       */
-      getInstructionCatalog(name) {
-        const definition = this.getDefinition(name);
-        return [...definition?.instructions ?? definition?.encoder.getInstructionCatalog?.() ?? []];
-      }
-    };
-  }
-});
-
-// packages/core/src/source-location.ts
-function createSourceSpan(start, end, line) {
-  return {
-    start,
-    end,
-    line,
-    columnStart: start,
-    columnEnd: end
-  };
-}
-function createLineSpan(text2, line) {
-  return createSourceSpan(0, text2.length, line);
-}
-function deriveTokenSpans(text2, tokens, line) {
-  if (tokens.length === 0) {
-    return [];
-  }
-  const spans = [];
-  let cursor = 0;
-  for (const token of tokens) {
-    if (!token) {
-      spans.push(createSourceSpan(cursor, cursor, line));
-      continue;
-    }
-    const tokenStart = text2.indexOf(token, cursor);
-    if (tokenStart === -1) {
-      spans.push(createSourceSpan(cursor, cursor + token.length, line));
-      cursor += token.length;
-      continue;
-    }
-    const tokenEnd = tokenStart + token.length;
-    spans.push(createSourceSpan(tokenStart, tokenEnd, line));
-    cursor = tokenEnd;
-  }
-  return spans;
-}
-function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
-  const line = span.line ?? fallbackLine;
-  const startCharacter = span.columnStart ?? span.start;
-  const endCharacter = span.columnEnd ?? span.end;
-  return {
-    start: {
-      line,
-      character: startCharacter
-    },
-    end: {
-      line,
-      character: endCharacter
-    }
-  };
-}
-var init_source_location = __esm({
-  "packages/core/src/source-location.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/diagnostics.ts
-function createAssemblySourceLocation(file, line, span) {
-  return {
-    file,
-    line,
-    span,
-    range: span ? sourceSpanToRange(span, line) : void 0
-  };
-}
-function diagnosticFromError(error, fallbackLocation, stage) {
-  if (error instanceof AssemblyError) {
-    return {
-      code: error.code,
-      message: error.message,
-      severity: error.severity,
-      location: error.location ?? fallbackLocation,
-      stage: error.stage ?? stage
-    };
-  }
-  if (error instanceof Error) {
-    return {
-      code: "ASSEMBLY_ERROR",
-      message: error.message,
-      severity: "error",
-      location: fallbackLocation,
-      stage
-    };
-  }
-  return {
-    code: "ASSEMBLY_ERROR",
-    message: typeof error === "string" ? error : JSON.stringify(error),
-    severity: "error",
-    location: fallbackLocation,
-    stage
-  };
-}
-var AssemblyError;
+// packages/core/src/plugin/diagnostics.ts
+var PluginError;
 var init_diagnostics = __esm({
-  "packages/core/src/diagnostics.ts"() {
+  "packages/core/src/plugin/diagnostics.ts"() {
     "use strict";
-    init_source_location();
-    AssemblyError = class extends Error {
+    PluginError = class extends Error {
       code;
-      severity;
-      location;
-      stage;
-      /**
-       * Creates a new structured assembly error.
-       * @param {string} code Stable diagnostic code.
-       * @param {string} message Human-readable message.
-       * @param {{ severity?: AssemblyDiagnosticSeverity; location?: AssemblySourceLocation; stage?: string }} [options] Optional metadata.
-       * @param {AssemblyDiagnosticSeverity} [options.severity] Optional diagnostic severity.
-       * @param {AssemblySourceLocation} [options.location] Optional source location.
-       * @param {string} [options.stage] Optional pipeline stage.
-       */
-      constructor(code, message, options = {}) {
-        super(message);
-        this.name = "AssemblyError";
-        this.code = code;
-        this.severity = options.severity ?? "error";
-        this.location = options.location;
-        this.stage = options.stage;
+      pluginId;
+      pluginModule;
+      contributionId;
+      targetId;
+      cause;
+      constructor(message, context) {
+        super(message, { cause: context.cause });
+        this.name = "PluginError";
+        this.code = context.code;
+        this.pluginId = context.pluginId;
+        this.pluginModule = context.pluginModule;
+        this.contributionId = context.contributionId;
+        this.targetId = context.targetId;
+        this.cause = context.cause;
       }
     };
   }
@@ -10162,4219 +9887,6 @@ var init_directive_groups = __esm({
       "macro",
       "diagnostic"
     ]);
-  }
-});
-
-// packages/core/src/directives/data.ts
-var handleDataDirective, registerDataDirectives;
-var init_data = __esm({
-  "packages/core/src/directives/data.ts"() {
-    "use strict";
-    handleDataDirective = ({ runtime }, words) => {
-      runtime.handleDataDirective(words[0], words.slice(1));
-    };
-    registerDataDirectives = (registry2, context) => {
-      registry2.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
-    };
-  }
-});
-
-// packages/core/src/directives/fill-pad.ts
-var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
-var init_fill_pad = __esm({
-  "packages/core/src/directives/fill-pad.ts"() {
-    "use strict";
-    FILL_PATTERN_SIZE = 12;
-    PATTERN_WIDTH = {
-      fillbyte: 1,
-      fillword: 2,
-      filllong: 3,
-      filldword: 4,
-      padbyte: 1,
-      padword: 2,
-      padlong: 3,
-      paddword: 4
-    };
-    patternWidth = (keyword, kind) => {
-      if (!keyword.startsWith(kind)) {
-        throw new Error(`Unrecognized ${kind} directive.`);
-      }
-      const width2 = PATTERN_WIDTH[keyword];
-      if (width2 === void 0) {
-        throw new Error(`Unrecognized ${kind} directive.`);
-      }
-      return width2;
-    };
-    writeLittleEndianRepeats = (value, width2, dest, length) => {
-      const unit = value >>> 0;
-      const bytes = [unit & 255, unit >>> 8 & 255, unit >>> 16 & 255, unit >>> 24 & 255];
-      for (let i = 0; i < length; i++) {
-        dest[i] = bytes[i % width2];
-      }
-    };
-    resolvePatternValue = ({ session, operandResolver }, words, kind) => {
-      const keyword = words[0];
-      const width2 = patternWidth(keyword, kind);
-      if (words.length !== 2) {
-        throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
-      }
-      return {
-        width: width2,
-        value: operandResolver.getnum(session.resolvedefines(words[1]))
-      };
-    };
-    handleFillPattern = (ctx, words) => {
-      const { width: width2, value } = resolvePatternValue(ctx, words, "fill");
-      writeLittleEndianRepeats(value, width2, ctx.session.fillbyte, FILL_PATTERN_SIZE);
-    };
-    handleFill = ({ session, operandResolver }, words) => {
-      if (words.length !== 2) {
-        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
-      }
-      const count = operandResolver.getnum(session.resolvedefines(words[1]));
-      for (let i = 0; i < count; i++) {
-        session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
-      }
-    };
-    handlePadPattern = (ctx, words) => {
-      const { session } = ctx;
-      const { width: width2, value } = resolvePatternValue(ctx, words, "pad");
-      session.padUnit = width2;
-      writeLittleEndianRepeats(value, width2, session.padbyte, width2);
-    };
-    handlePad = ({ session, operandResolver }, words) => {
-      let gap;
-      if (words.length === 1) {
-        gap = 65536 - (session.currentTargetAddress & 65535);
-      } else if (words.length === 2) {
-        const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
-        const targetPC = session.outputWriter.toOutputOffset(targetAddress);
-        if (targetPC < 0) {
-          throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
-        }
-        const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
-        if (targetPC <= currentPC) {
-          return;
-        }
-        gap = targetPC - currentPC;
-      } else {
-        throw new Error("PAD directive accepts zero or one parameter.");
-      }
-      for (let i = 0; i < gap; i++) {
-        session.write1(session.padbyte[i % session.padUnit]);
-      }
-    };
-    registerFillPadDirectives = (registry2, context) => {
-      registry2.registerLowered(
-        ["fillbyte", "fillword", "filllong", "filldword"],
-        context,
-        handleFillPattern
-      );
-      registry2.registerLowered("fill", context, handleFill);
-      registry2.registerLowered(
-        ["padbyte", "padword", "padlong", "paddword"],
-        context,
-        handlePadPattern
-      );
-      registry2.registerLowered("pad", context, handlePad);
-    };
-  }
-});
-
-// packages/core/src/directives/flow-control.ts
-var handleRelativeLabel, registerFlowControlDirectives;
-var init_flow_control = __esm({
-  "packages/core/src/directives/flow-control.ts"() {
-    "use strict";
-    handleRelativeLabel = ({ session }, _words, raw) => {
-      session.symbolScope.handleRelativeLabel(raw);
-    };
-    registerFlowControlDirectives = (registry2, context) => {
-      registry2.register(["+", "-"], context, handleRelativeLabel);
-    };
-  }
-});
-
-// packages/core/src/ir/expression-node.ts
-function attachRootSpan(node, text2) {
-  if (!node.span) {
-    node.span = createSourceSpan(0, text2.length);
-  }
-  return node;
-}
-function parseExpressionNode(input) {
-  const trimmed = input.trim();
-  if (!trimmed) {
-    return { type: "raw", value: "", span: createSourceSpan(0, 0) };
-  }
-  if (trimmed.startsWith("#") && trimmed.length > 1) {
-    return parseExpressionNode(trimmed.slice(1));
-  }
-  const rangeIndex = findTopLevelRange(trimmed);
-  if (rangeIndex !== -1) {
-    return attachRootSpan(
-      {
-        type: "range",
-        start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
-        end: parseExpressionNode(trimmed.slice(rangeIndex + 2))
-      },
-      trimmed
-    );
-  }
-  try {
-    const tokens = tokenizeExpression(trimmed);
-    const parser = new ExpressionParser(tokens);
-    const expression = parser.parseExpression();
-    if (!parser.isAtEnd()) {
-      return { type: "raw", value: trimmed, span: createSourceSpan(0, trimmed.length) };
-    }
-    return attachRootSpan(expression, trimmed);
-  } catch {
-    return { type: "raw", value: trimmed, span: createSourceSpan(0, trimmed.length) };
-  }
-}
-function renderExpressionNode(node) {
-  if (isReferenceExpressionNode(node)) {
-    return renderReferenceExpressionNode(node);
-  }
-  switch (node.type) {
-    case "literal":
-      return node.value;
-    case "string":
-      return `${node.quote}${node.value}${node.quote}`;
-    case "raw":
-      return node.value;
-    case "call":
-      return `${node.callee.name}(${node.arguments.map(renderExpressionNode).join(", ")})`;
-    case "unary":
-      return `${node.operator}${renderExpressionNode(node.argument)}`;
-    case "binary":
-      return `${renderExpressionNode(node.left)} ${node.operator} ${renderExpressionNode(node.right)}`;
-    case "range":
-      return `${renderExpressionNode(node.start)}..${renderExpressionNode(node.end)}`;
-    default:
-      return "";
-  }
-}
-function isReferenceExpressionNode(node) {
-  switch (node.type) {
-    case "identifier":
-    case "defineReference":
-      return true;
-    case "member":
-    case "index":
-      return isReferenceExpressionNode(node.object);
-    default:
-      return false;
-  }
-}
-function renderReferenceExpressionNode(node, options = {}) {
-  switch (node.type) {
-    case "identifier":
-      return node.name;
-    case "defineReference":
-      return node.braced ? `!{${node.content ?? ""}}` : `!${node.name ?? ""}`;
-    case "member":
-      return `${renderReferenceExpressionNode(node.object, options)}.${node.property.name}`;
-    case "index": {
-      const index = options.renderIndex ? options.renderIndex(node.index) : renderExpressionNode(node.index);
-      return `${renderReferenceExpressionNode(node.object, options)}[${index}]`;
-    }
-    default:
-      return "";
-  }
-}
-function parseLeadingReferenceExpression(input) {
-  const prefixLength = scanReferenceExpressionPrefix(input);
-  if (prefixLength === 0) {
-    return void 0;
-  }
-  let source = input.slice(0, prefixLength).trimEnd();
-  if (source.endsWith(".")) {
-    source = source.slice(0, -1).trimEnd();
-  }
-  const node = parseExpressionNode(source);
-  if (!isReferenceExpressionNode(node)) {
-    return void 0;
-  }
-  return {
-    node,
-    length: prefixLength
-  };
-}
-function findTopLevelRange(input) {
-  let depth = 0;
-  let bracketDepth = 0;
-  let quote = "";
-  for (let i = 0; i < input.length - 1; i++) {
-    const char = input[i];
-    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
-      quote = quote === char ? "" : quote || char;
-      continue;
-    }
-    if (quote) {
-      continue;
-    }
-    if (char === "(") {
-      depth++;
-      continue;
-    }
-    if (char === ")") {
-      depth--;
-      continue;
-    }
-    if (char === "[") {
-      bracketDepth++;
-      continue;
-    }
-    if (char === "]") {
-      bracketDepth--;
-      continue;
-    }
-    if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
-      if (i === 0) {
-        continue;
-      }
-      return i;
-    }
-  }
-  return -1;
-}
-function scanReferenceExpressionPrefix(input) {
-  let index = 0;
-  index = skipWhitespace(input, index);
-  if (index >= input.length) {
-    return 0;
-  }
-  const root = scanReferenceRoot(input, index);
-  if (root === index) {
-    return 0;
-  }
-  index = root;
-  while (index < input.length) {
-    const lookahead = skipWhitespace(input, index);
-    if (input[lookahead] === ".") {
-      let memberStart = lookahead + 1;
-      memberStart = skipWhitespace(input, memberStart);
-      const propertyEnd = readIdentifier(input, memberStart).nextIndex;
-      if (propertyEnd === memberStart) {
-        return memberStart;
-      }
-      index = propertyEnd;
-      continue;
-    }
-    if (input[lookahead] === "[") {
-      const bracketEnd = findMatchingBracket(input, lookahead);
-      if (bracketEnd === -1) {
-        return 0;
-      }
-      index = bracketEnd + 1;
-      continue;
-    }
-    break;
-  }
-  return index;
-}
-function scanReferenceRoot(input, start) {
-  if (input[start] === "!") {
-    try {
-      return readDefineReference(input, start).nextIndex;
-    } catch {
-      return start;
-    }
-  }
-  return readIdentifier(input, start).nextIndex;
-}
-function findMatchingBracket(input, start) {
-  let bracketDepth = 0;
-  let parenDepth = 0;
-  let quote = "";
-  for (let index = start; index < input.length; index++) {
-    const char = input[index];
-    if ((char === '"' || char === "'") && input[index - 1] !== "\\") {
-      quote = quote === char ? "" : quote || char;
-      continue;
-    }
-    if (quote) {
-      continue;
-    }
-    if (char === "[") {
-      bracketDepth++;
-      continue;
-    }
-    if (char === "]") {
-      bracketDepth--;
-      if (bracketDepth === 0 && parenDepth === 0) {
-        return index;
-      }
-      continue;
-    }
-    if (char === "(") {
-      parenDepth++;
-      continue;
-    }
-    if (char === ")") {
-      parenDepth--;
-    }
-  }
-  return -1;
-}
-function skipWhitespace(input, index) {
-  let current = index;
-  while (current < input.length && /\s/.test(input[current])) {
-    current++;
-  }
-  return current;
-}
-function tokenizeExpression(input) {
-  const tokens = [];
-  let index = 0;
-  while (index < input.length) {
-    const char = input[index];
-    if (/\s/.test(char)) {
-      index++;
-      continue;
-    }
-    if (char === "(") {
-      tokens.push({ type: "lparen" });
-      index++;
-      continue;
-    }
-    if (char === ")") {
-      tokens.push({ type: "rparen" });
-      index++;
-      continue;
-    }
-    if (char === ",") {
-      tokens.push({ type: "comma" });
-      index++;
-      continue;
-    }
-    if (char === ".") {
-      tokens.push({ type: "dot" });
-      index++;
-      continue;
-    }
-    if (char === "[") {
-      tokens.push({ type: "lbracket" });
-      index++;
-      continue;
-    }
-    if (char === "]") {
-      tokens.push({ type: "rbracket" });
-      index++;
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      const { value, nextIndex, quote } = readQuotedString(input, index);
-      tokens.push({ type: "string", value, quote });
-      index = nextIndex;
-      continue;
-    }
-    const operator = (input.startsWith("<:", index) ? "<:" : void 0) ?? binaryOperators.find((candidate) => input.startsWith(candidate, index));
-    if (operator) {
-      tokens.push({ type: "operator", value: operator });
-      index += operator.length;
-      continue;
-    }
-    if (char === "!") {
-      const { token, nextIndex } = readDefineReference(input, index);
-      tokens.push(token);
-      index = nextIndex;
-      continue;
-    }
-    if (char === "@" || /[A-Z_a-z]/.test(char)) {
-      const { value, nextIndex } = readIdentifier(input, index);
-      tokens.push({ type: "identifier", value });
-      index = nextIndex;
-      continue;
-    }
-    if (char === "$") {
-      const match = input.slice(index).match(/^\$[\dA-Fa-f]+/);
-      if (!match) {
-        throw new Error("Invalid hex literal");
-      }
-      tokens.push({ type: "literal", value: match[0] });
-      index += match[0].length;
-      continue;
-    }
-    if (char === "%") {
-      const match = input.slice(index).match(/^%[01]+/);
-      if (!match) {
-        throw new Error("Invalid binary literal");
-      }
-      tokens.push({ type: "literal", value: match[0] });
-      index += match[0].length;
-      continue;
-    }
-    if (/\d/.test(char)) {
-      const match = input.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
-      if (!match) {
-        throw new Error("Invalid numeric literal");
-      }
-      tokens.push({ type: "literal", value: match[0] });
-      index += match[0].length;
-      continue;
-    }
-    throw new Error(`Unexpected token '${char}'`);
-  }
-  return tokens;
-}
-function readQuotedString(input, start) {
-  const quote = input[start];
-  let value = "";
-  let index = start + 1;
-  while (index < input.length) {
-    const char = input[index];
-    if (char === quote && input[index - 1] !== "\\") {
-      return { value, nextIndex: index + 1, quote };
-    }
-    value += char;
-    index++;
-  }
-  throw new Error("Unterminated string literal");
-}
-function readIdentifier(input, start) {
-  let index = start;
-  if (input[index] === "@") {
-    index++;
-  }
-  while (index < input.length && /\w/.test(input[index])) {
-    index++;
-  }
-  return { value: input.slice(start, index), nextIndex: index };
-}
-function readDefineReference(input, start) {
-  if (input[start + 1] === "{") {
-    let index = start + 2;
-    let braces = 1;
-    let content = "";
-    while (index < input.length) {
-      const char = input[index];
-      if (char === "{") {
-        braces++;
-      } else if (char === "}") {
-        braces--;
-        if (braces === 0) {
-          return {
-            token: { type: "defineReference", content, braced: true },
-            nextIndex: index + 1
-          };
-        }
-      }
-      content += char;
-      index++;
-    }
-    throw new Error("Unterminated braced define reference");
-  }
-  const { value, nextIndex } = readIdentifier(input, start + 1);
-  if (!value) {
-    throw new Error("Expected define reference name");
-  }
-  return {
-    token: { type: "defineReference", name: value, braced: false },
-    nextIndex
-  };
-}
-function isBinaryOperator(value) {
-  return value in binaryPrecedence;
-}
-var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
-var init_expression_node = __esm({
-  "packages/core/src/ir/expression-node.ts"() {
-    "use strict";
-    init_source_location();
-    binaryPrecedence = {
-      "||": 0,
-      "&&": 1,
-      "==": 2,
-      "=": 2,
-      "!=": 2,
-      "<": 2,
-      ">": 2,
-      "<=": 2,
-      ">=": 2,
-      "|": 3,
-      "^": 3,
-      "&": 3,
-      "<<": 3,
-      ">>": 3,
-      "+": 4,
-      "-": 4,
-      "*": 5,
-      "/": 5,
-      "%": 5,
-      "**": 6
-    };
-    unaryOperators = /* @__PURE__ */ new Set(["<:", "<", ">", "^", "~", "-", "+"]);
-    binaryOperators = [
-      "**",
-      "<<",
-      ">>",
-      "<=",
-      ">=",
-      "==",
-      "=",
-      "!=",
-      "&&",
-      "||",
-      "*",
-      "/",
-      "%",
-      "+",
-      "-",
-      "&",
-      "|",
-      "^",
-      "<",
-      ">"
-    ];
-    ExpressionParser = class {
-      constructor(tokens) {
-        this.tokens = tokens;
-      }
-      tokens;
-      index = 0;
-      parseExpression(minPrecedence = 0) {
-        let left = this.parsePrefix();
-        while (true) {
-          const token = this.peek();
-          if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
-            break;
-          }
-          const precedence = binaryPrecedence[token.value];
-          if (precedence < minPrecedence) {
-            break;
-          }
-          this.consume();
-          const nextMinPrecedence = token.value === "**" ? precedence : precedence + 1;
-          const right = this.parseExpression(nextMinPrecedence);
-          left = {
-            type: "binary",
-            operator: token.value,
-            left,
-            right
-          };
-        }
-        return left;
-      }
-      isAtEnd() {
-        return this.index >= this.tokens.length;
-      }
-      parsePrefix() {
-        const token = this.peek();
-        if (!token) {
-          throw new Error("Unexpected end of expression");
-        }
-        if (token.type === "operator" && unaryOperators.has(token.value)) {
-          this.consume();
-          return {
-            type: "unary",
-            operator: token.value,
-            argument: this.parsePrefix()
-          };
-        }
-        return this.parsePostfix(this.parsePrimary());
-      }
-      parsePrimary() {
-        if (this.peek()?.type === "dot") {
-          let name = "";
-          while (this.match({ type: "dot" })) {
-            name += ".";
-          }
-          const token2 = this.consume();
-          if (token2?.type === "identifier") {
-            return { type: "identifier", name: name + token2.value };
-          }
-          if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
-            return { type: "identifier", name: name + token2.value };
-          }
-          throw new Error("Expected label name after '.'");
-        }
-        const token = this.consume();
-        if (!token) {
-          throw new Error("Unexpected end of expression");
-        }
-        switch (token.type) {
-          case "literal":
-            return { type: "literal", value: token.value };
-          case "string":
-            return { type: "string", value: token.value, quote: token.quote };
-          case "defineReference":
-            return token.braced ? { type: "defineReference", content: token.content, braced: true } : { type: "defineReference", name: token.name, braced: false };
-          case "identifier":
-            return { type: "identifier", name: token.value };
-          case "lparen": {
-            const expression = this.parseExpression();
-            this.expect("rparen");
-            return expression;
-          }
-          default:
-            throw new Error(`Unexpected token ${token.type}`);
-        }
-      }
-      parsePostfix(expression) {
-        let current = expression;
-        while (true) {
-          if (this.match({ type: "lparen" })) {
-            if (current.type !== "identifier") {
-              throw new Error("Only identifier call expressions are currently supported");
-            }
-            current = {
-              type: "call",
-              callee: current,
-              arguments: this.parseCallArguments()
-            };
-            continue;
-          }
-          if (this.match({ type: "dot" })) {
-            if (!isReferenceExpressionNode(current)) {
-              throw new Error("Member access requires a reference expression");
-            }
-            const property = this.consume();
-            if (!property || property.type !== "identifier") {
-              throw new Error("Expected member name after '.'");
-            }
-            current = {
-              type: "member",
-              object: current,
-              property: { type: "identifier", name: property.value }
-            };
-            continue;
-          }
-          if (this.match({ type: "lbracket" })) {
-            if (!isReferenceExpressionNode(current)) {
-              throw new Error("Index access requires a reference expression");
-            }
-            const indexExpression = this.parseExpression();
-            this.expect("rbracket");
-            current = {
-              type: "index",
-              object: current,
-              index: indexExpression
-            };
-            continue;
-          }
-          return current;
-        }
-      }
-      parseCallArguments() {
-        const args = [];
-        if (this.match({ type: "rparen" })) {
-          return args;
-        }
-        do {
-          args.push(this.parseExpression());
-        } while (this.match({ type: "comma" }));
-        this.expect("rparen");
-        return args;
-      }
-      /**
-       * Expects a value.
-       * @param {Token["type"]} type The type.
-       */
-      expect(type) {
-        const token = this.consume();
-        if (!token || token.type !== type) {
-          throw new Error(`Expected token ${type}`);
-        }
-      }
-      match(expected) {
-        const token = this.peek();
-        if (token && token.type === expected.type) {
-          this.index++;
-          return true;
-        }
-        return false;
-      }
-      consume() {
-        const token = this.tokens[this.index];
-        this.index++;
-        return token;
-      }
-      peek() {
-        return this.tokens[this.index];
-      }
-    };
-  }
-});
-
-// packages/core/src/directives/include-source.ts
-var IDENTITY_INCLUDE_DEFINES, NUMERIC_INCBIN_TARGET, expandIncludeFilename, resolveIncludeTarget, splitIncbinArrow, parseIncbinFilenameAndRange, applyEofEnd, findTopLevelHyphen, assertIncbinMathParensBalanced, parseIncbinUnprefixedHex, parseDeprecatedHyphenIncbinRange, evaluateIncbinRange, assertIncbinBounds, handleIncbin, handleIncsrc, handleInclude, registerIncludeSourceDirectives;
-var init_include_source = __esm({
-  "packages/core/src/directives/include-source.ts"() {
-    "use strict";
-    init_expression_node();
-    IDENTITY_INCLUDE_DEFINES = {
-      resolveDefinesInStringLiteral: (content) => content,
-      resolveRegularDefines: (content) => content
-    };
-    NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
-    expandIncludeFilename = (target, defineEngine) => {
-      if (target.length >= 2) {
-        const quote = target[0];
-        const isQuoted = (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
-        if (isQuoted) {
-          return `${quote}${defineEngine.resolveDefinesInStringLiteral(target.slice(1, -1))}${quote}`;
-        }
-      }
-      return defineEngine.resolveRegularDefines(target);
-    };
-    resolveIncludeTarget = (words, command, directive2, defineEngine) => {
-      const target = command?.parsed.includeTarget?.target ?? words[1];
-      if (!target) {
-        throw new Error(`${directive2} requires exactly one filename parameter`);
-      }
-      return expandIncludeFilename(target, defineEngine);
-    };
-    splitIncbinArrow = (words) => {
-      const arrowIndex = words.indexOf("->");
-      if (arrowIndex === -1) {
-        return { sourceWords: words.slice(1), targetLocation: void 0 };
-      }
-      if (arrowIndex + 1 >= words.length) {
-        throw new Error("incbin '->' syntax requires a target location.");
-      }
-      return {
-        sourceWords: words.slice(1, arrowIndex),
-        targetLocation: words[arrowIndex + 1]
-      };
-    };
-    parseIncbinFilenameAndRange = (filenameWithRange) => {
-      const quote = filenameWithRange[0];
-      if (quote === '"' || quote === "'" || quote === "`") {
-        const endQuote = filenameWithRange.indexOf(quote, 1);
-        if (endQuote !== -1) {
-          const filename = filenameWithRange.slice(1, endQuote);
-          const rest = filenameWithRange.slice(endQuote + 1);
-          if (rest.startsWith(":")) {
-            return { filename, rangeStr: rest.slice(1) };
-          }
-          return { filename, rangeStr: void 0 };
-        }
-      }
-      const colonIndex = filenameWithRange.indexOf(":");
-      if (colonIndex === -1) {
-        return { filename: filenameWithRange, rangeStr: void 0 };
-      }
-      return {
-        filename: filenameWithRange.slice(0, colonIndex),
-        rangeStr: filenameWithRange.slice(colonIndex + 1)
-      };
-    };
-    applyEofEnd = (startOffset, endOffset, fileLength) => {
-      if (endOffset === 0) {
-        return { startOffset, endOffset: fileLength };
-      }
-      return { startOffset, endOffset };
-    };
-    findTopLevelHyphen = (input) => {
-      let depth = 0;
-      let quote = "";
-      for (let i = 0; i < input.length; i++) {
-        const char = input[i];
-        if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
-          if (quote === char) {
-            quote = "";
-          } else if (quote === "") {
-            quote = char;
-          }
-          continue;
-        }
-        if (quote !== "") {
-          continue;
-        }
-        if (char === "(") {
-          depth += 1;
-          continue;
-        }
-        if (char === ")") {
-          depth -= 1;
-          continue;
-        }
-        if (depth === 0 && char === "-") {
-          return i;
-        }
-      }
-      return -1;
-    };
-    assertIncbinMathParensBalanced = (text2) => {
-      let depth = 0;
-      for (let i = 0; i < text2.length; i++) {
-        const char = text2[i];
-        if (char === "(") {
-          depth += 1;
-          continue;
-        }
-        if (char === ")") {
-          depth -= 1;
-          if (depth < 0) {
-            throw new Error("Emismatched_parentheses: Mismatched parentheses.");
-          }
-        }
-      }
-      if (depth !== 0) {
-        throw new Error("Emismatched_parentheses: Mismatched parentheses.");
-      }
-    };
-    parseIncbinUnprefixedHex = (text2) => {
-      const digits = text2.match(/^[\dA-Fa-f]*/)[0];
-      const value = digits === "" ? 0 : Number.parseInt(digits, 16);
-      return { value, rest: text2.slice(digits.length) };
-    };
-    parseDeprecatedHyphenIncbinRange = (rangeStr) => {
-      let rest = rangeStr;
-      let start;
-      if (rest.startsWith("(")) {
-        const hyphen = findTopLevelHyphen(rest);
-        if (hyphen < 1 || rest[hyphen - 1] !== ")") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        const inner = rest.slice(1, hyphen - 1);
-        assertIncbinMathParensBalanced(inner);
-        start = inner;
-        rest = rest.slice(hyphen);
-      } else {
-        const parsed = parseIncbinUnprefixedHex(rest);
-        start = parsed.value;
-        rest = parsed.rest;
-      }
-      if (!rest.startsWith("-")) {
-        throw new Error(`Invalid range specification: ${rangeStr}`);
-      }
-      rest = rest.slice(1);
-      let end;
-      if (rest.startsWith("(")) {
-        if (!rest.endsWith(")")) {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        const inner = rest.slice(1, -1);
-        assertIncbinMathParensBalanced(inner);
-        end = inner;
-      } else {
-        const parsed = parseIncbinUnprefixedHex(rest);
-        if (parsed.rest !== "") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        end = parsed.value;
-      }
-      return { start, end };
-    };
-    evaluateIncbinRange = (rangeStr, evaluate, fileLength) => {
-      if (rangeStr.includes("..")) {
-        const parts = rangeStr.split("..");
-        if (parts.length !== 2 || parts[0] === "" || parts[1] === "") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        const rangeNode = parseExpressionNode(rangeStr);
-        if (rangeNode.type !== "range") {
-          throw new Error(`Invalid range specification: ${rangeStr}`);
-        }
-        return applyEofEnd(evaluate(rangeNode.start), evaluate(rangeNode.end), fileLength);
-      }
-      if (rangeStr.includes("-")) {
-        const bounds = parseDeprecatedHyphenIncbinRange(rangeStr);
-        let startOffset;
-        if (typeof bounds.start === "number") {
-          startOffset = bounds.start;
-        } else {
-          startOffset = evaluate(bounds.start);
-        }
-        let endOffset;
-        if (typeof bounds.end === "number") {
-          endOffset = bounds.end;
-        } else {
-          endOffset = evaluate(bounds.end);
-        }
-        return applyEofEnd(startOffset, endOffset, fileLength);
-      }
-      throw new Error(`Invalid range specification: ${rangeStr}`);
-    };
-    assertIncbinBounds = (startOffset, endOffset, fileLength, filename, rangeStr) => {
-      const rangeHint = rangeStr ? `, range ${rangeStr}` : "";
-      if (startOffset < 0 || startOffset > endOffset || startOffset > fileLength) {
-        throw new Error(
-          `Start offset ${startOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`
-        );
-      }
-      if (endOffset > fileLength) {
-        throw new Error(
-          `End offset ${endOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`
-        );
-      }
-    };
-    handleIncbin = ({ session, includeSource, operandResolver, runtime, defineEngine }, words, _raw = "", command) => {
-      const { sourceWords, targetLocation } = splitIncbinArrow(words);
-      const filenameWithRange = sourceWords.join(" ");
-      const { filename: rawFilename, rangeStr } = parseIncbinFilenameAndRange(filenameWithRange);
-      const expander = defineEngine ?? IDENTITY_INCLUDE_DEFINES;
-      const quote = filenameWithRange[0];
-      let filename = rawFilename;
-      if (quote === '"' || quote === "'" || quote === "`") {
-        filename = expander.resolveDefinesInStringLiteral(rawFilename);
-      } else {
-        filename = expander.resolveRegularDefines(rawFilename);
-      }
-      const fileData = includeSource.readFile(filename);
-      if (!(fileData instanceof Uint8Array)) {
-        throw new Error(`Failed to read file: ${filename}`);
-      }
-      let startOffset = 0;
-      let endOffset = fileData.length;
-      const parsedRange = command?.parsed.incbinRange;
-      if (parsedRange) {
-        ({ startOffset, endOffset } = applyEofEnd(
-          session.evaluateRangeExpression(parsedRange.start),
-          session.evaluateRangeExpression(parsedRange.end),
-          fileData.length
-        ));
-      } else if (rangeStr) {
-        ({ startOffset, endOffset } = evaluateIncbinRange(
-          rangeStr,
-          (expression) => session.evaluateRangeExpression(expression),
-          fileData.length
-        ));
-      }
-      assertIncbinBounds(startOffset, endOffset, fileData.length, filename, rangeStr);
-      const incbinData = fileData.subarray(startOffset, endOffset);
-      if (targetLocation !== void 0) {
-        runtime.handlePushPC();
-        let targetAddress;
-        if (NUMERIC_INCBIN_TARGET.test(targetLocation)) {
-          targetAddress = operandResolver.getnum(targetLocation);
-        } else {
-          targetAddress = session.symbolScope.getLabelValue(targetLocation, false);
-        }
-        session.setWritePosition(targetAddress);
-      }
-      for (let i = 0; i < incbinData.length; i++) {
-        session.write1(incbinData[i]);
-      }
-      if (targetLocation !== void 0) {
-        runtime.handlePullPC();
-      }
-      session.recordCurrentAddress();
-    };
-    handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", command) => {
-      includeSource.assembleFile(
-        resolveIncludeTarget(words, command, "incsrc", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
-      );
-    };
-    handleInclude = ({ includeSource, defineEngine }, words, _raw = "", command) => {
-      includeSource.includeFile(
-        resolveIncludeTarget(words, command, "include", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
-      );
-    };
-    registerIncludeSourceDirectives = (registry2, context) => {
-      registry2.registerLowered("incsrc", context, handleIncsrc);
-      registry2.registerLowered("include", context, handleInclude);
-      registry2.registerLowered("includeonce", context, ({ includeSource }) => {
-        includeSource.guardCurrentFile();
-      });
-      registry2.registerLowered("incbin", context, handleIncbin);
-    };
-  }
-});
-
-// packages/core/src/directives/layout.ts
-var handlePushBase, handlePullBase, handleArch, registerGenericLayoutDirectives, registerLayoutDirectives;
-var init_layout = __esm({
-  "packages/core/src/directives/layout.ts"() {
-    "use strict";
-    handlePushBase = ({ session }) => {
-      session.pushBaseStack.push(session.currentTargetAddress);
-    };
-    handlePullBase = ({ session }) => {
-      const baseAddress = session.pushBaseStack.pop();
-      if (baseAddress === void 0) {
-        throw new Error("No base value to pull.");
-      }
-      session.currentTargetAddress = baseAddress;
-    };
-    handleArch = ({ session }, words) => {
-      if (!words[1]) {
-        throw new Error("ARCH command requires an architecture parameter.");
-      }
-      const archParam = words[1].toLowerCase();
-      const canonical2 = session.architectureRegistry.getCanonicalName(archParam);
-      if (!canonical2) {
-        if (session.selectArchitecture) {
-          session.selectArchitecture(archParam, archParam);
-          return;
-        }
-        throw new Error("Unsupported architecture: " + archParam);
-      }
-      if (!session.selectArchitecture && session.availableArchitectures && !session.availableArchitectures.has(canonical2)) {
-        throw new Error(
-          `Architecture ${canonical2} is unavailable for target ${session.targetDisplayName ?? "active target"}.`
-        );
-      }
-      if (session.selectArchitecture) {
-        session.selectArchitecture(canonical2, archParam);
-      } else {
-        session.arch = canonical2;
-      }
-    };
-    registerGenericLayoutDirectives = (registry2, context) => {
-      registry2.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
-        if (words.length !== 2) {
-          throw new Error("BASE directive requires exactly one parameter.");
-        }
-        const param = words[1].trim();
-        if (param.toLowerCase() === "off") {
-          const baseAddress = Number(session.currentTargetBaseAddress);
-          const baseStartAddress = Number(session.currentTargetBaseStartAddress);
-          session.currentTargetAddress = baseAddress;
-          session.currentTargetStartAddress = baseStartAddress;
-          return;
-        }
-        const value = operandResolver.getnum(param);
-        const addressWidth = session.addressWidth;
-        const maxAddress = 2 ** addressWidth - 1;
-        if (value < 0 || value > maxAddress) {
-          throw new Error(`Invalid base address: ${param}. Must be within ${addressWidth} bits.`);
-        }
-        session.currentTargetAddress = value;
-        session.currentTargetStartAddress = value;
-      });
-      registry2.registerLowered("org", context.org, ({ runtime }, words) => {
-        runtime.handleOrg(words.slice(1));
-      });
-      registry2.registerLowered("pushbase", context.addressStack, handlePushBase);
-      registry2.registerLowered("pullbase", context.addressStack, handlePullBase);
-      registry2.registerLowered("pushpc", context.runtime, ({ runtime }) => {
-        runtime.handlePushPC();
-      });
-      registry2.registerLowered("pullpc", context.runtime, ({ runtime }) => {
-        runtime.handlePullPC();
-      });
-      registry2.registerLowered("arch", context.architecture, handleArch);
-    };
-    registerLayoutDirectives = (registry2, context) => {
-      registerGenericLayoutDirectives(registry2, context);
-    };
-  }
-});
-
-// packages/core/src/services/struct-initializer.ts
-function splitInitializerList(text2) {
-  const entries3 = [];
-  const stack = [];
-  let quote = "";
-  let start = 0;
-  for (let index = 0; index < text2.length; index++) {
-    const char = text2[index];
-    if (quote) {
-      if (char === quote && text2[index - 1] !== "\\") {
-        quote = "";
-      }
-      continue;
-    }
-    if (char === '"' || char === "'") {
-      quote = char;
-      continue;
-    }
-    if ("([{".includes(char)) {
-      stack.push(char);
-    } else if (")]}".includes(char)) {
-      const expected = { ")": "(", "]": "[", "}": "{" }[char];
-      if (stack.pop() !== expected) {
-        throw new Error("Mismatched initializer delimiters.");
-      }
-    } else if (char === "," && stack.length === 0) {
-      const entry = text2.slice(start, index).trim();
-      if (!entry) {
-        throw new Error("Empty initializer item.");
-      }
-      entries3.push(entry);
-      start = index + 1;
-    }
-  }
-  if (quote || stack.length) {
-    throw new Error("Unclosed initializer delimiter.");
-  }
-  const last = text2.slice(start).trim();
-  if (last) {
-    entries3.push(last);
-  }
-  return entries3;
-}
-function parseStructInitializer(text2) {
-  const trimmed = text2.trim();
-  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
-    throw new Error("dataStruct requires a named initializer: { field = value }.");
-  }
-  const fields = /* @__PURE__ */ new Map();
-  for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
-    const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
-    if (!match) {
-      throw new Error(`Expected 'field = value' in initializer: ${entry}`);
-    }
-    const [, name, value] = match;
-    if (fields.has(name)) {
-      throw new Error(`Duplicate initializer field '${name}'.`);
-    }
-    if (value.startsWith("[")) {
-      if (!value.endsWith("]")) {
-        throw new Error(`Unclosed array initializer '${name}'.`);
-      }
-      fields.set(name, splitInitializerList(value.slice(1, -1)));
-    } else {
-      fields.set(name, value);
-    }
-  }
-  return fields;
-}
-function isOpenStructInitializer(text2) {
-  if (!/^(?:datastruct\b|\[)/i.test(text2.trimStart())) {
-    return false;
-  }
-  let depth = 0;
-  let quote = "";
-  for (let index = 0; index < text2.length; index++) {
-    const char = text2[index];
-    if (quote) {
-      if (char === quote && text2[index - 1] !== "\\") {
-        quote = "";
-      }
-    } else if (char === '"' || char === "'") {
-      quote = char;
-    } else if (char === "{") {
-      depth++;
-    } else if (char === "}") {
-      depth--;
-    }
-  }
-  return depth > 0;
-}
-var init_struct_initializer = __esm({
-  "packages/core/src/services/struct-initializer.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/syntax-profile.ts
-var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
-var init_syntax_profile = __esm({
-  "packages/core/src/syntax-profile.ts"() {
-    "use strict";
-    ASAR_SYNTAX_PROFILE = Object.freeze({
-      id: "asar",
-      preserveLeadingWhitespace: false,
-      splitColonStatements: true,
-      splitRelativeLabelStatements: true,
-      leadingDotLabels: true,
-      directivePrefixes: Object.freeze(["@"]),
-      cheapLocalPrefix: "",
-      fileLocalSymbols: false
-    });
-    NATIVE_SYNTAX_PROFILE = Object.freeze({
-      id: "native",
-      preserveLeadingWhitespace: true,
-      splitColonStatements: false,
-      splitRelativeLabelStatements: false,
-      leadingDotLabels: true,
-      directivePrefixes: Object.freeze([]),
-      cheapLocalPrefix: "",
-      fileLocalSymbols: false
-    });
-    CA65_SYNTAX_PROFILE = Object.freeze({
-      id: "ca65",
-      preserveLeadingWhitespace: true,
-      splitColonStatements: false,
-      splitRelativeLabelStatements: false,
-      leadingDotLabels: false,
-      directivePrefixes: Object.freeze(["."]),
-      cheapLocalPrefix: "@",
-      fileLocalSymbols: true
-    });
-  }
-});
-
-// packages/core/src/services/command-text-service.ts
-function isLabelIdentifierStart(char) {
-  const code = char.charCodeAt(0);
-  return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-}
-function isLabelIdentifierPart(char) {
-  const code = char.charCodeAt(0);
-  return char === "_" || code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
-}
-function isBareLabelReference(input) {
-  if (!input) {
-    return false;
-  }
-  if (/^(a|x|y|ya|sp|s|c|r\d{1,2})$/i.test(input)) {
-    return false;
-  }
-  let numericOnly = true;
-  for (const char of input) {
-    if (char < "0" || char > "9") {
-      numericOnly = false;
-      break;
-    }
-  }
-  if (numericOnly) {
-    return true;
-  }
-  let index = 0;
-  while (input[index] === ".") {
-    index += 1;
-  }
-  if (index >= input.length || !isLabelIdentifierStart(input[index])) {
-    return false;
-  }
-  const consumeIdentifier = () => {
-    if (index >= input.length || !isLabelIdentifierStart(input[index])) {
-      return false;
-    }
-    index += 1;
-    while (index < input.length && isLabelIdentifierPart(input[index])) {
-      index += 1;
-    }
-    return true;
-  };
-  if (!consumeIdentifier()) {
-    return false;
-  }
-  while (index < input.length && input[index] === ".") {
-    index += 1;
-    if (!consumeIdentifier()) {
-      return false;
-    }
-  }
-  if (index < input.length && input[index] === "[") {
-    index += 1;
-    const digitStart = index;
-    while (index < input.length && input[index] >= "0" && input[index] <= "9") {
-      index += 1;
-    }
-    if (digitStart === index || input[index] !== "]") {
-      return false;
-    }
-    index += 1;
-    while (index < input.length && input[index] === ".") {
-      index += 1;
-      if (!consumeIdentifier()) {
-        return false;
-      }
-    }
-  }
-  return index === input.length;
-}
-var isEscapedAt, removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
-var init_command_text_service = __esm({
-  "packages/core/src/services/command-text-service.ts"() {
-    "use strict";
-    init_struct_initializer();
-    init_syntax_profile();
-    isEscapedAt = (text2, index) => {
-      let slashes = 0;
-      for (let at = index - 1; at >= 0 && text2[at] === "\\"; at--) {
-        slashes++;
-      }
-      return slashes % 2 === 1;
-    };
-    removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
-      let quote = "";
-      for (let i = 0; i < line.length; i++) {
-        const ch = line[i];
-        if ((ch === '"' || ch === "'") && !isEscapedAt(line, i)) {
-          if (quote === ch) {
-            quote = "";
-          } else if (quote === "") {
-            quote = ch;
-          }
-        } else if (quote === "" && ch === ";") {
-          const uncommented = line.substring(0, i);
-          return syntaxProfile.preserveLeadingWhitespace ? uncommented.trimEnd() : uncommented.trim();
-        }
-      }
-      return syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
-    };
-    preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile = ASAR_SYNTAX_PROFILE) => {
-      const lines = block.split("\n");
-      const sourcedCommands = [];
-      let nextCommandBuffer = commandBuffer;
-      let bufferStartLine;
-      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
-        let line = lines[lineIndex];
-        line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
-        if (!line.trim()) {
-          continue;
-        }
-        if (line.trimStart().startsWith(";`+")) {
-          sourcedCommands.push({ text: line, line: lineIndex });
-          continue;
-        }
-        line = removeInlineComment(line, syntaxProfile);
-        if (!line.trim()) {
-          continue;
-        }
-        if (isOpenStructInitializer(nextCommandBuffer + line)) {
-          if (nextCommandBuffer === "") {
-            bufferStartLine = lineIndex;
-          }
-          nextCommandBuffer += `${line} `;
-        } else if (line.endsWith("\\")) {
-          if (nextCommandBuffer === "") {
-            bufferStartLine = lineIndex;
-          }
-          nextCommandBuffer += line.slice(0, -1);
-        } else if (line.endsWith(",")) {
-          if (nextCommandBuffer === "") {
-            bufferStartLine = lineIndex;
-          }
-          nextCommandBuffer += line;
-        } else {
-          sourcedCommands.push({
-            text: nextCommandBuffer + line,
-            line: nextCommandBuffer === "" ? lineIndex : bufferStartLine ?? lineIndex
-          });
-          nextCommandBuffer = "";
-          bufferStartLine = void 0;
-        }
-      }
-      return {
-        commands: sourcedCommands.map((command) => command.text),
-        sourcedCommands,
-        commandBuffer: nextCommandBuffer
-      };
-    };
-    splitOnInlineStatementSeparator = (command) => {
-      const parts = [];
-      let current = "";
-      let quote = "";
-      let depth = 0;
-      for (let i = 0; i < command.length; i++) {
-        const char = command[i];
-        if ((char === '"' || char === "'") && !isEscapedAt(command, i)) {
-          if (quote === char) {
-            quote = "";
-          } else if (quote === "") {
-            quote = char;
-          }
-          current += char;
-          continue;
-        }
-        if (quote === "") {
-          if (char === "(" || char === "[" || char === "{") {
-            depth++;
-          } else if (char === ")" || char === "]" || char === "}") {
-            depth--;
-          }
-        }
-        const next = command[i + 1];
-        const after = command[i + 2];
-        if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
-          const trimmed2 = current.trim();
-          if (trimmed2 !== "") {
-            parts.push(trimmed2);
-          }
-          current = "";
-          i += 2;
-          continue;
-        }
-        current += char;
-      }
-      const trimmed = current.trim();
-      if (trimmed !== "") {
-        parts.push(trimmed);
-      }
-      return parts;
-    };
-    splitInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
-      const output = [];
-      for (const command of commands) {
-        const split = syntaxProfile.splitColonStatements ? splitOnInlineStatementSeparator(command) : [command];
-        if (split.length === 0) {
-          continue;
-        }
-        for (const entry of split) {
-          const relativeLabelMatch = syntaxProfile.splitRelativeLabelStatements ? entry.match(/^([+-]+:)\s+(.+)$/) : null;
-          if (relativeLabelMatch) {
-            output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
-            continue;
-          }
-          output.push(entry);
-        }
-      }
-      return output;
-    };
-    splitSourcedInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
-      const output = [];
-      for (const command of commands) {
-        for (const text2 of splitInlineCommands([command.text], syntaxProfile)) {
-          output.push({ text: text2, line: command.line });
-        }
-      }
-      return output;
-    };
-    splitCommandIntoWords = (command) => {
-      const trimmed = command.trim();
-      const label = /^([$.?A-Z_a-z][\w$.?]*:)\s+/.exec(trimmed);
-      const labelPrefix = label?.[0] ?? "";
-      const remainder = trimmed.slice(labelPrefix.length);
-      if (/^includeasset\s*\(/i.test(remainder)) {
-        return [...label ? [label[1]] : [], "includeasset", remainder.slice("includeasset".length)];
-      }
-      const words = [];
-      let currentWord = "";
-      let inQuotes = false;
-      let quoteChar = "";
-      const trimmedCommand = command.trim();
-      for (let i = 0; i < trimmedCommand.length; i++) {
-        const char = trimmedCommand[i];
-        if ((char === '"' || char === "'") && !isEscapedAt(trimmedCommand, i)) {
-          if (!inQuotes) {
-            inQuotes = true;
-            quoteChar = char;
-            currentWord += char;
-          } else if (char === quoteChar) {
-            inQuotes = false;
-            currentWord += char;
-          } else {
-            currentWord += char;
-          }
-        } else if (/\s/.test(char) && !inQuotes) {
-          if (currentWord) {
-            words.push(currentWord);
-            currentWord = "";
-          }
-        } else {
-          currentWord += char;
-        }
-      }
-      if (currentWord) {
-        words.push(currentWord);
-      }
-      return words;
-    };
-    splitRespectingFunctions = (input) => {
-      const result = [];
-      let current = "";
-      let parenDepth = 0;
-      let inQuotes = false;
-      let quoteChar = "";
-      for (let i = 0; i < input.length; i++) {
-        const char = input[i];
-        if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
-          if (!inQuotes) {
-            inQuotes = true;
-            quoteChar = char;
-          } else if (char === quoteChar) {
-            inQuotes = false;
-          }
-        }
-        if (!inQuotes) {
-          if (char === "(") {
-            parenDepth++;
-          } else if (char === ")") {
-            parenDepth--;
-          } else if (char === "," && parenDepth === 0) {
-            result.push(current.trim());
-            current = "";
-            continue;
-          }
-        }
-        current += char;
-      }
-      if (current) {
-        result.push(current.trim());
-      }
-      return result;
-    };
-    getDefineVariable = (line) => {
-      const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
-      return match ? match[1] : void 0;
-    };
-  }
-});
-
-// packages/core/src/directives/misc.ts
-var handlePullTable, handlePushTable, stripLeadingKeyword, unwrapQuoted, formatPrintArgs, handleAssert, handleError, hex6, invalidTableLine, parseAsarTableLine, handleClearTable, handleTable, handleWarnpc, registerMiscDirectives;
-var init_misc = __esm({
-  "packages/core/src/directives/misc.ts"() {
-    "use strict";
-    init_command_text_service();
-    handlePullTable = ({ session }) => {
-      if (session.tableStack.length === 0) {
-        throw new Error("pulltable without pushtable");
-      }
-      session.characterMappings = session.tableStack.pop();
-    };
-    handlePushTable = ({ session }) => {
-      session.tableStack.push(new Map(session.characterMappings));
-    };
-    stripLeadingKeyword = (raw, keyword) => {
-      const trimmed = raw.trim();
-      let rest = trimmed;
-      if (rest.startsWith("@")) {
-        rest = rest.slice(1);
-      }
-      if (rest.length < keyword.length) {
-        return "";
-      }
-      if (rest.slice(0, keyword.length).toLowerCase() !== keyword) {
-        return trimmed;
-      }
-      return rest.slice(keyword.length).trim();
-    };
-    unwrapQuoted = (fragment) => {
-      const text2 = fragment.trim();
-      if (text2.length < 2) {
-        return text2;
-      }
-      const quote = text2[0];
-      if ((quote === '"' || quote === "'") && text2.endsWith(quote)) {
-        return text2.slice(1, -1);
-      }
-      return text2;
-    };
-    formatPrintArgs = (parts) => {
-      let out = "";
-      for (const part of parts) {
-        out += unwrapQuoted(part);
-      }
-      return out;
-    };
-    handleAssert = ({ session }, _words, raw) => {
-      const payload = stripLeadingKeyword(raw, "assert");
-      const parts = splitRespectingFunctions(payload);
-      const condition = parts[0] ?? "";
-      if (condition === "") {
-        throw new Error("Broken conditional: assert");
-      }
-      if (session.evaluateExpression(condition)) {
-        return;
-      }
-      const messageParts = parts.slice(1);
-      if (messageParts.length === 0) {
-        throw new Error("Assertion failed.");
-      }
-      throw new Error(`Assertion failed: ${formatPrintArgs(messageParts)}`);
-    };
-    handleError = (_ctx, _words, raw) => {
-      const payload = stripLeadingKeyword(raw, "error");
-      if (payload === "") {
-        throw new Error("error command.");
-      }
-      throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
-    };
-    hex6 = (value) => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
-    invalidTableLine = (lineNumber) => new Error(`Invalid table file: line ${lineNumber}`);
-    parseAsarTableLine = (line, rtl, lineNumber) => {
-      if (line.length === 0) {
-        return void 0;
-      }
-      if (line.length < 4 || (line.length & 1) !== 0 || line.length > 10) {
-        throw invalidTableLine(lineNumber);
-      }
-      if (rtl) {
-        if (line[1] === "x" || line[1] === "X") {
-          throw invalidTableLine(lineNumber);
-        }
-        const eq = line.indexOf("=");
-        if (eq < 1 || eq !== line.length - 2) {
-          throw invalidTableLine(lineNumber);
-        }
-        const hex16 = line.slice(0, eq);
-        if (!/^[\dA-Fa-f]+$/.test(hex16)) {
-          throw invalidTableLine(lineNumber);
-        }
-        return { char: line[eq + 1], value: Number.parseInt(hex16, 16) };
-      }
-      if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
-        throw invalidTableLine(lineNumber);
-      }
-      const hex15 = line.slice(2);
-      if (!/^[\dA-Fa-f]+$/.test(hex15)) {
-        throw invalidTableLine(lineNumber);
-      }
-      return { char: line[0], value: Number.parseInt(hex15, 16) };
-    };
-    handleClearTable = ({ session }) => {
-      session.characterMappings.clear();
-      session.currentTable = null;
-    };
-    handleTable = ({ session }, _words, raw) => {
-      let payload = stripLeadingKeyword(raw, "table");
-      let rtl = false;
-      if (/,\s*rtl\s*$/i.test(payload)) {
-        rtl = true;
-        payload = payload.replace(/,\s*rtl\s*$/i, "").trim();
-      } else if (/,\s*ltr\s*$/i.test(payload)) {
-        payload = payload.replace(/,\s*ltr\s*$/i, "").trim();
-      }
-      const filename = unwrapQuoted(payload);
-      if (filename === "") {
-        throw new Error("table requires a filename");
-      }
-      const contents = session.includeSource.readFile(filename, "utf8");
-      if (typeof contents !== "string") {
-        throw new Error(`Error reading file: ${filename}`);
-      }
-      session.characterMappings.clear();
-      session.currentTable = filename;
-      const lines = contents.split("\n");
-      for (let index = 0; index < lines.length; index++) {
-        let line = lines[index];
-        if (line.endsWith("\r")) {
-          line = line.slice(0, -1);
-        }
-        const parsed = parseAsarTableLine(line, rtl, index + 1);
-        if (!parsed) {
-          continue;
-        }
-        session.characterMappings.set(parsed.char, parsed.value);
-      }
-    };
-    handleWarnpc = ({ session }, _words, raw) => {
-      const payload = stripLeadingKeyword(raw, "warnpc");
-      if (payload === "") {
-        throw new Error("warnpc requires an address");
-      }
-      const maxpos = session.operandResolver.getnum(session.resolvedefines(payload));
-      if (session.currentTargetAddress > maxpos) {
-        throw new Error(
-          `warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`
-        );
-      }
-    };
-    registerMiscDirectives = (registry2, context, enabledGroups = /* @__PURE__ */ new Set(["table", "diagnostic"])) => {
-      if (enabledGroups.has("table")) {
-        registry2.registerLowered("pulltable", context.table, handlePullTable);
-        registry2.registerLowered("pushtable", context.table, handlePushTable);
-        registry2.registerLowered("cleartable", context.table, handleClearTable);
-        registry2.registerLowered("table", context.table, handleTable);
-      }
-      if (enabledGroups.has("diagnostic")) {
-        registry2.registerLowered("assert", context.diagnostic, handleAssert);
-        registry2.registerLowered("error", context.diagnostic, handleError);
-        registry2.registerLowered("warnpc", context.diagnostic, handleWarnpc);
-      }
-    };
-  }
-});
-
-// packages/core/src/directives/namespace.ts
-function enterNamespace(session, name) {
-  if (session.namespaceNestingEnabled) {
-    session.namespaceNestingPath.push(name);
-    session.currentNamespace = session.namespaceNestingPath.join("_");
-  } else {
-    session.currentNamespace = name;
-  }
-  const parent = session.namespaceNestingEnabled && session.namespaceNestingPath.length > 1 ? session.namespaceNestingPath.slice(0, -1).join("_") : void 0;
-  session.recordSymbolDefinition("namespace", session.currentNamespace, {
-    containerName: parent || void 0
-  });
-}
-var handlePushNamespace, handlePullNamespace, handleNamespace, registerNamespaceDirectives;
-var init_namespace = __esm({
-  "packages/core/src/directives/namespace.ts"() {
-    "use strict";
-    handlePushNamespace = ({ session }) => {
-      session.namespaceStack.push(session.currentNamespace);
-      if (session.namespaceNestingEnabled) {
-        session.namespaceStack.push(JSON.stringify(session.namespaceNestingPath));
-      }
-    };
-    handlePullNamespace = ({ session }) => {
-      if (session.namespaceStack.length === 0) {
-        throw new Error("pullns without pushns");
-      }
-      if (session.namespaceNestingEnabled) {
-        const pathJson = session.namespaceStack.pop();
-        const parsedPath = JSON.parse(pathJson ?? "[]");
-        session.namespaceNestingPath = Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string") ? parsedPath : [];
-      }
-      session.currentNamespace = session.namespaceStack.pop() ?? "";
-    };
-    handleNamespace = ({ session }, words) => {
-      const params = words.slice(1);
-      if (params.length >= 2 && params[0].toLowerCase() === "nested") {
-        const action2 = params[1].toLowerCase();
-        if (action2 === "on") {
-          session.namespaceNestingEnabled = true;
-          return;
-        } else if (action2 === "off") {
-          session.namespaceNestingEnabled = false;
-          session.namespaceNestingPath = [];
-          session.currentNamespace = "";
-          return;
-        }
-      }
-      if (params.length === 0) {
-        if (session.namespaceNestingEnabled) {
-          session.namespaceNestingPath = [];
-        }
-        session.currentNamespace = "";
-        return;
-      }
-      if (params.length === 1 && params[0].toLowerCase() === "off") {
-        if (session.namespaceNestingEnabled) {
-          session.namespaceNestingPath.pop();
-          session.currentNamespace = session.namespaceNestingPath.join("_");
-        } else {
-          session.currentNamespace = "";
-        }
-        return;
-      } else if (params.length === 1) {
-        enterNamespace(session, params[0]);
-        return;
-      }
-      const action = params[1].toLowerCase();
-      if (action === "off") {
-        if (session.namespaceNestingEnabled) {
-          session.namespaceNestingPath.pop();
-          session.currentNamespace = session.namespaceNestingPath.join("_");
-        } else {
-          session.currentNamespace = "";
-        }
-      } else {
-        enterNamespace(session, params[0]);
-      }
-    };
-    registerNamespaceDirectives = (registry2, context) => {
-      registry2.registerLowered("namespace", context, handleNamespace);
-      registry2.registerLowered("pushns", context, handlePushNamespace);
-      registry2.registerLowered("pullns", context, handlePullNamespace);
-    };
-  }
-});
-
-// packages/core/src/directives/struct-binary.ts
-var registerStructBinaryDirectives;
-var init_struct_binary = __esm({
-  "packages/core/src/directives/struct-binary.ts"() {
-    "use strict";
-    registerStructBinaryDirectives = (registry2, context) => {
-      registry2.register("struct", context, ({ session }, words) => {
-        session.structEngine.handleStruct(words);
-      });
-      registry2.register("endstruct", context, ({ session }, words) => {
-        session.structEngine.handleEndStruct(words);
-      });
-      registry2.register("datastruct", context, ({ session }, words) => {
-        session.structEngine.data.emit(words);
-      });
-      registry2.register("datastructs", context, ({ session }, words) => {
-        session.structEngine.data.begin(words);
-      });
-      registry2.register("enddatastructs", context, ({ session }, words) => {
-        session.structEngine.data.end(words);
-      });
-    };
-  }
-});
-
-// packages/core/src/directives/registry.ts
-var DirectiveRegistry, createDirectiveRegistry;
-var init_registry = __esm({
-  "packages/core/src/directives/registry.ts"() {
-    "use strict";
-    init_directive_groups();
-    init_data();
-    init_fill_pad();
-    init_flow_control();
-    init_include_source();
-    init_layout();
-    init_misc();
-    init_namespace();
-    init_struct_binary();
-    DirectiveRegistry = class {
-      constructor(directivePrefixes = []) {
-        this.directivePrefixes = directivePrefixes;
-      }
-      directivePrefixes;
-      handlers = /* @__PURE__ */ new Map();
-      phases = /* @__PURE__ */ new Map();
-      /**
-       * Registers the value.
-       * @param {string | string[]} keyword The keyword.
-       * @param {Context} context The context.
-       * @param {NarrowDirectiveHandler<Context>} handler The handler.
-       * @param {DirectiveExecutionPhase} [phase] The directive execution phase.
-       */
-      register(keyword, context, handler, phase = "preprocess") {
-        const keywords = Array.isArray(keyword) ? keyword : [keyword];
-        for (const entry of keywords) {
-          this.handlers.set(entry, (words, raw, command) => handler(context, words, raw, command));
-          this.phases.set(entry, phase);
-        }
-      }
-      /**
-       * Registers a directive that can execute from durable lowered command data.
-       * @param {string | string[]} keyword The directive keyword or aliases.
-       * @param {Context} context The handler context.
-       * @param {NarrowDirectiveHandler<Context>} handler The handler.
-       */
-      registerLowered(keyword, context, handler) {
-        this.register(keyword, context, handler, "lowered");
-      }
-      has(keyword) {
-        return this.lookup(keyword) !== void 0;
-      }
-      dispatch(keyword, words, raw, command) {
-        const handler = this.lookup(keyword);
-        if (!handler) {
-          return false;
-        }
-        handler(words, raw, command);
-        return true;
-      }
-      /**
-       * Resolves a directive handler using prefixes supplied by the active syntax profile.
-       * @param {string} keyword The directive keyword.
-       * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
-       */
-      lookup(keyword) {
-        const direct = this.handlers.get(keyword);
-        if (direct) {
-          return direct;
-        }
-        for (const prefix of this.directivePrefixes) {
-          if (keyword.startsWith(prefix)) {
-            return this.handlers.get(keyword.slice(prefix.length));
-          }
-        }
-        return void 0;
-      }
-      /**
-       * Resolves the execution phase declared alongside a directive handler.
-       * @param {string} keyword The directive keyword.
-       * @returns {DirectiveExecutionPhase | undefined} The active directive phase.
-       */
-      getPhase(keyword) {
-        const direct = this.phases.get(keyword);
-        if (direct) {
-          return direct;
-        }
-        for (const prefix of this.directivePrefixes) {
-          if (keyword.startsWith(prefix)) {
-            return this.phases.get(keyword.slice(prefix.length));
-          }
-        }
-        return void 0;
-      }
-    };
-    createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
-      const registry2 = new DirectiveRegistry(directivePrefixes);
-      const enabled = new Set(enabledGroups);
-      if (enabled.has("include")) {
-        registerIncludeSourceDirectives(registry2, contexts.includeSource);
-      }
-      if (enabled.has("memory")) {
-        registerFillPadDirectives(registry2, contexts.fillPad);
-      }
-      if (enabled.has("control")) {
-        registerFlowControlDirectives(registry2, contexts.flowControl);
-      }
-      if (enabled.has("namespace")) {
-        registerNamespaceDirectives(registry2, contexts.namespace);
-      }
-      if (enabled.has("layout")) {
-        registerLayoutDirectives(registry2, contexts.layout);
-      }
-      if (enabled.has("data")) {
-        registerDataDirectives(registry2, contexts.data);
-      }
-      if (enabled.has("struct")) {
-        registerStructBinaryDirectives(registry2, contexts.struct);
-      }
-      if (enabled.has("table") || enabled.has("diagnostic")) {
-        registerMiscDirectives(
-          registry2,
-          {
-            table: contexts.table,
-            diagnostic: contexts.diagnostic
-          },
-          enabled
-        );
-      }
-      return registry2;
-    };
-  }
-});
-
-// packages/core/src/file-provider.ts
-function stripWrappingQuotes(filename) {
-  if (filename.startsWith('"') && filename.endsWith('"') || filename.startsWith("'") && filename.endsWith("'") || filename.startsWith("`") && filename.endsWith("`")) {
-    return filename.slice(1, -1);
-  }
-  return filename;
-}
-var nodePath, nodeFs, virtualPath, path6, requireNodeFs, NodeAssemblyFileProvider;
-var init_file_provider = __esm({
-  "packages/core/src/file-provider.ts"() {
-    "use strict";
-    nodePath = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:path");
-    nodeFs = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
-    virtualPath = {
-      isAbsolute: (value) => value.startsWith("/"),
-      dirname: (value) => value.slice(0, value.lastIndexOf("/")) || ".",
-      resolve: (...parts) => {
-        const joined = parts.filter(Boolean).join("/");
-        const stack = [];
-        for (const part of joined.split("/")) {
-          if (part === "..") {
-            stack.pop();
-          } else if (part && part !== ".") {
-            stack.push(part);
-          }
-        }
-        return `/${stack.join("/")}`;
-      }
-    };
-    path6 = nodePath ?? virtualPath;
-    requireNodeFs = () => {
-      if (!nodeFs) {
-        throw new Error("NodeAssemblyFileProvider requires Node.js.");
-      }
-      return nodeFs;
-    };
-    NodeAssemblyFileProvider = class {
-      /** Consumed paths for dependency snapshots; callers reusing a provider may clear this per build. */
-      readFiles = /* @__PURE__ */ new Set();
-      /**
-       * Find the first existing path: macro directory, current source directory, include paths, then cwd.
-       * @param {string} filename Include path token, optionally quoted.
-       * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
-       * @returns {string | undefined} First existing file identity, or undefined.
-       */
-      resolvePath(filename, options = {}) {
-        const fs13 = requireNodeFs();
-        if (!filename) {
-          return void 0;
-        }
-        const normalized = stripWrappingQuotes(filename);
-        if (path6.isAbsolute(normalized)) {
-          return fs13.existsSync(normalized) ? normalized : void 0;
-        }
-        const candidates = /* @__PURE__ */ new Set();
-        const baseDirectories = [
-          options.macroSourceFile ? path6.dirname(options.macroSourceFile) : void 0,
-          options.currentFile ? path6.dirname(options.currentFile) : void 0,
-          ...options.includePaths ?? [],
-          process.cwd()
-        ].filter((entry) => Boolean(entry));
-        for (const baseDirectory of baseDirectories) {
-          candidates.add(path6.resolve(baseDirectory, normalized));
-        }
-        for (const candidate of candidates) {
-          if (fs13.existsSync(candidate)) {
-            return candidate;
-          }
-        }
-        return void 0;
-      }
-      stat(filePath) {
-        const fs13 = requireNodeFs();
-        let st;
-        try {
-          st = fs13.statSync(filePath);
-        } catch {
-          return { exists: false, readable: false };
-        }
-        try {
-          fs13.accessSync(filePath, fs13.constants.R_OK);
-          return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
-        } catch {
-          return { exists: true, readable: false, mtimeMs: st.mtimeMs };
-        }
-      }
-      readFile(filePath) {
-        const fs13 = requireNodeFs();
-        this.readFiles.add(filePath);
-        return new Uint8Array(fs13.readFileSync(filePath));
-      }
-      readTextFile(filePath, encoding = "utf8") {
-        const fs13 = requireNodeFs();
-        this.readFiles.add(filePath);
-        return fs13.readFileSync(filePath, encoding);
-      }
-    };
-  }
-});
-
-// packages/core/src/internal-instrumentation.ts
-function sampleMemory(metrics) {
-  const memory = process.memoryUsage();
-  metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
-  metrics.peakHeapUsedBytes = Math.max(metrics.peakHeapUsedBytes, memory.heapUsed);
-}
-function incrementInternalCounter(name, amount = 1) {
-  const metrics = activeInstrumentation;
-  if (metrics) {
-    metrics.counters[name] += amount;
-  }
-}
-function isInternalInstrumentationActive() {
-  return activeInstrumentation !== void 0;
-}
-function recordInternalCounterPeak(name, value) {
-  const metrics = activeInstrumentation;
-  if (metrics) {
-    metrics.counters[name] = Math.max(metrics.counters[name], value);
-  }
-}
-function measureInternalPhase(name, callback) {
-  const metrics = activeInstrumentation;
-  if (!metrics) {
-    return callback();
-  }
-  const start = performance.now();
-  try {
-    return callback();
-  } finally {
-    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance.now() - start;
-    sampleMemory(metrics);
-  }
-}
-var activeInstrumentation;
-var init_internal_instrumentation = __esm({
-  "packages/core/src/internal-instrumentation.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/ir/asset-call.ts
-function parseAssetCall(command, line) {
-  const leading = command.length - command.trimStart().length;
-  const trimmed = command.slice(leading);
-  const label = /^[\w$.?]+:/.exec(trimmed);
-  let callStart = leading;
-  if (label && /\s/.test(trimmed[label[0].length] ?? "")) {
-    callStart += label[0].length;
-    while (/\s/.test(command[callStart] ?? "")) {
-      callStart++;
-    }
-  }
-  const prefix = /^includeasset\s*\(/i.exec(command.slice(callStart));
-  if (!prefix) {
-    return void 0;
-  }
-  let at = callStart + prefix[0].length;
-  const span = (start, end) => createSourceSpan(start, end, line);
-  const fail2 = (message) => {
-    throw new Error(`includeAsset at column ${at + 1}: ${message}`);
-  };
-  const skip = () => {
-    while (/\s/.test(command[at] ?? "") && at < command.length) {
-      at++;
-    }
-  };
-  const string4 = () => {
-    const start = at;
-    const quote = command[at++];
-    let value2 = "";
-    while (at < command.length) {
-      const character = command[at++];
-      if (character === quote) {
-        return { kind: "string", value: value2, span: span(start, at) };
-      }
-      if (character === "\\") {
-        const escaped = command[at++];
-        if (escaped === void 0) {
-          fail2("unterminated string escape");
-        }
-        if (escaped === quote || escaped === "\\") {
-          value2 += escaped;
-        } else if (escaped === "n") {
-          value2 += "\n";
-        } else if (escaped === "t") {
-          value2 += "	";
-        } else {
-          value2 += `\\${escaped}`;
-        }
-      } else {
-        value2 += character;
-      }
-    }
-    return fail2("unterminated string");
-  };
-  const value = () => {
-    skip();
-    const start = at;
-    const character = command[at];
-    if (character === '"' || character === "'") {
-      return string4();
-    }
-    if (character === "[") {
-      at++;
-      const items = [];
-      skip();
-      while (command[at] !== "]") {
-        items.push(value());
-        skip();
-        if (command[at] === "]") {
-          break;
-        }
-        if (command[at++] !== ",") {
-          fail2("expected ',' in array");
-        }
-        skip();
-      }
-      if (command[at++] !== "]") {
-        fail2("unterminated array");
-      }
-      return { kind: "array", items, span: span(start, at) };
-    }
-    if (character === "{") {
-      at++;
-      const entries3 = {};
-      skip();
-      while (command[at] !== "}") {
-        let key3;
-        if (command[at] === '"' || command[at] === "'") {
-          key3 = string4().value;
-        } else {
-          const match = /^[A-Z_a-z][\w-]*/.exec(command.slice(at));
-          if (!match) {
-            return fail2("expected object key");
-          }
-          key3 = match[0];
-          at += key3.length;
-        }
-        skip();
-        if (command[at++] !== ":") {
-          fail2("expected ':' after object key");
-        }
-        if (Object.hasOwn(entries3, key3)) {
-          fail2(`duplicate object key '${key3}'`);
-        }
-        entries3[key3] = value();
-        skip();
-        if (command[at] === "}") {
-          break;
-        }
-        if (command[at++] !== ",") {
-          fail2("expected ',' in object");
-        }
-        skip();
-      }
-      if (command[at++] !== "}") {
-        fail2("unterminated object");
-      }
-      return { kind: "object", entries: entries3, span: span(start, at) };
-    }
-    let parens = 0;
-    while (at < command.length) {
-      const next = command[at];
-      if (next === "(") {
-        parens++;
-      } else if (next === ")") {
-        if (parens === 0) {
-          break;
-        }
-        parens--;
-      } else if (parens === 0 && (next === "," || next === "]" || next === "}")) {
-        break;
-      }
-      at++;
-    }
-    if (parens !== 0) {
-      fail2("unbalanced numeric expression");
-    }
-    const expression = command.slice(start, at).trim();
-    if (expression === "true" || expression === "false") {
-      return { kind: "boolean", value: expression === "true", span: span(start, at) };
-    }
-    if (!expression) {
-      fail2("expected value");
-    }
-    return { kind: "number", expression, span: span(start, at) };
-  };
-  const positional = [];
-  const options = {};
-  let named = false;
-  while (true) {
-    skip();
-    if (command[at] === ")") {
-      break;
-    }
-    const namedMatch = /^([A-Z_a-z][\w-]*)\s*:/.exec(command.slice(at));
-    if (namedMatch) {
-      named = true;
-      at += namedMatch[0].length;
-      if (Object.hasOwn(options, namedMatch[1])) {
-        fail2(`duplicate option '${namedMatch[1]}'`);
-      }
-      options[namedMatch[1]] = value();
-    } else {
-      if (named) {
-        fail2("positional argument after named argument");
-      }
-      positional.push(value());
-    }
-    skip();
-    if (command[at] === ")") {
-      break;
-    }
-    if (command[at++] !== ",") {
-      fail2("expected ',' between arguments");
-    }
-  }
-  if (command[at++] !== ")") {
-    fail2("unterminated call");
-  }
-  skip();
-  if (at !== command.length) {
-    fail2("unexpected text after call");
-  }
-  if (positional.length !== 2 || positional[0].kind !== "string" || positional[1].kind !== "string") {
-    fail2("expected exactly two leading string arguments");
-  }
-  return {
-    path: positional[0],
-    format: positional[1],
-    options,
-    span: span(callStart, at)
-  };
-}
-var init_asset_call = __esm({
-  "packages/core/src/ir/asset-call.ts"() {
-    "use strict";
-    init_source_location();
-  }
-});
-
-// packages/core/src/ir/normalized-command.ts
-function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
-  if (!collectSourceMetadata) {
-    return {
-      file,
-      line,
-      raw,
-      normalized,
-      span: EMPTY_COMMAND_SPAN,
-      normalizedSpan: EMPTY_COMMAND_SPAN,
-      tokenSpans: EMPTY_TOKEN_SPANS
-    };
-  }
-  return {
-    file,
-    line,
-    raw,
-    normalized,
-    span: createLineSpan(raw, line),
-    normalizedSpan: createLineSpan(normalized, line),
-    tokenSpans: deriveTokenSpans(raw, words, line)
-  };
-}
-function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
-  const command = normalized.trim();
-  const keyword = words[0] ?? "";
-  return {
-    kind: classifyCommand(command, words),
-    source: createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata),
-    command,
-    words,
-    keyword,
-    labelName: deriveLabelName(keyword),
-    assignmentTarget: deriveAssignmentTarget(words),
-    parsed: deriveCommandSemantics(command, words, line, raw)
-  };
-}
-function cloneNormalizedCommand(command) {
-  incrementInternalCounter("normalizedCommandClones");
-  return { ...command };
-}
-function setCommandWords(command, words, normalized) {
-  command.words = words;
-  command.keyword = words[0] ?? "";
-  command.command = (normalized ?? words.join(" ")).trim();
-  const normalizedSource = normalized ?? command.command;
-  if (command.source.tokenSpans === EMPTY_TOKEN_SPANS) {
-    command.source = {
-      ...command.source,
-      normalized: normalizedSource,
-      normalizedSpan: EMPTY_COMMAND_SPAN,
-      tokenSpans: EMPTY_TOKEN_SPANS
-    };
-  } else {
-    command.source = {
-      ...command.source,
-      normalized: normalizedSource,
-      normalizedSpan: createLineSpan(normalizedSource, command.source.line),
-      tokenSpans: deriveTokenSpans(command.source.raw, words, command.source.line)
-    };
-  }
-  command.labelName = deriveLabelName(command.keyword);
-  command.assignmentTarget = deriveAssignmentTarget(words);
-  command.parsed = deriveCommandSemantics(
-    command.command,
-    words,
-    command.source.line,
-    command.source.raw
-  );
-  command.kind = classifyCommand(command.command, words);
-  return command;
-}
-function setCommandKind(command, kind) {
-  command.kind = kind;
-  return command;
-}
-function classifyCommand(command, words) {
-  const trimmed = command.trim();
-  const keyword = (words[0] ?? "").toLowerCase();
-  if (!trimmed || trimmed.startsWith(";")) {
-    return "commentOrEmpty";
-  }
-  if (words.length === 3 && words[1] === "=" && (words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
-    return "characterMapping";
-  }
-  if (trimmed.startsWith("!")) {
-    return "defineCommand";
-  }
-  if (keyword === "macro" || keyword === "endmacro" || keyword.startsWith("%")) {
-    return "macroDefinitionOrInvoke";
-  }
-  if (keyword === "undef") {
-    return "defineCommand";
-  }
-  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip" || keyword === "datastruct" || keyword === "datastructs" || keyword === "enddatastructs" || /^\[[^\]]+]\s*=/.test(trimmed)) {
-    return "structCommand";
-  }
-  if (keyword === "function") {
-    return "functionDefinition";
-  }
-  if (keyword === "global") {
-    return "labelDefinition";
-  }
-  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
-    return "staticAssignment";
-  }
-  if (deriveLabelName(words[0] ?? "")) {
-    return "labelDefinition";
-  }
-  return keyword ? "opcodeCandidate" : "unknown";
-}
-function deriveLabelName(keyword) {
-  if (!keyword) {
-    return void 0;
-  }
-  if (keyword === ":") {
-    return ":";
-  }
-  if (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword)) {
-    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-  }
-  if (keyword.endsWith(":") || keyword.startsWith(".")) {
-    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
-  }
-  return void 0;
-}
-function deriveAssignmentTarget(words) {
-  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
-    return words[0];
-  }
-  return void 0;
-}
-function deriveCommandSemantics(command, words, line, raw = command) {
-  const keyword = (words[0] ?? "").toLowerCase();
-  const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
-  const semantics = {};
-  if (keyword === "includeasset") {
-    semantics.includeAsset = parseAssetCall(raw, line);
-  }
-  if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
-    semantics.condition = {
-      expression: parseExpressionNode(words.slice(1).join(" "))
-    };
-  }
-  if (keyword === "for" && words.length >= 4 && words[2] === "=") {
-    const variable = words[1];
-    const parsedRange = parseExpressionNode(words.slice(3).join(" "));
-    if (parsedRange.type === "range") {
-      semantics.forLoop = {
-        variable,
-        range: parsedRange,
-        start: parsedRange.start,
-        end: parsedRange.end
-      };
-    }
-  }
-  if (words.length === 3 && (words[1] === "=" || words[1] === ":=") && !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
-    semantics.assignment = {
-      target: words[0],
-      expression: parseExpressionNode(words[2])
-    };
-  }
-  if (bareKeyword === "incbin" && words.length >= 2) {
-    const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
-    const colonIndex = incbinSource.indexOf(":");
-    const rangeCandidate = colonIndex === -1 ? void 0 : incbinSource.slice(colonIndex + 1);
-    if (rangeCandidate) {
-      const parsedRange = parseExpressionNode(rangeCandidate);
-      if (parsedRange.type === "range") {
-        semantics.incbinRange = {
-          range: parsedRange,
-          start: parsedRange.start,
-          end: parsedRange.end
-        };
-      }
-    }
-    const includePath = extractIncludePath(incbinSource);
-    if (includePath) {
-      semantics.includeTarget = { directive: "incbin", target: includePath };
-    }
-  }
-  if (keyword.startsWith("%")) {
-    const invocationText = command.trim().slice(1);
-    const openParen = invocationText.indexOf("(");
-    if (openParen !== -1 && invocationText.endsWith(")")) {
-      const name = invocationText.slice(0, openParen).trim();
-      const argsText = invocationText.slice(openParen + 1, -1);
-      const args = splitCommaArguments(argsText);
-      semantics.macroInvocation = { name, args };
-    } else if (invocationText) {
-      semantics.macroInvocation = { name: invocationText.trim(), args: [] };
-    }
-  }
-  if ((bareKeyword === "include" || bareKeyword === "incsrc") && words.length >= 2) {
-    semantics.includeTarget = {
-      directive: bareKeyword,
-      target: words.slice(1).join(" ").trim()
-    };
-  }
-  const labelSplit = extractLabelSplit(command);
-  if (labelSplit) {
-    semantics.labelSplit = labelSplit;
-  }
-  if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword) && words.length >= 2) {
-    const payload = command.slice((words[0] ?? "").length).trim();
-    semantics.dataDirective = {
-      directive: keyword,
-      operands: splitCommaArguments(payload)
-    };
-  }
-  if (keyword && !keyword.startsWith("%") && !keyword.startsWith("!")) {
-    const payload = command.slice((words[0] ?? "").length).trim();
-    const args = semantics.dataDirective?.operands ?? (payload ? splitCommaArguments(payload) : []);
-    semantics.directiveArgs = {
-      name: keyword,
-      args
-    };
-    if (!deriveLabelName(words[0] ?? "") && payload) {
-      semantics.opcodeOperands = {
-        mnemonic: words[0] ?? "",
-        operandText: payload,
-        operands: args
-      };
-    }
-  }
-  return semantics;
-}
-function extractIncludePath(raw) {
-  const trimmed = raw.trim();
-  const quote = trimmed[0];
-  if (quote === '"' || quote === "'" || quote === "`") {
-    const end = trimmed.indexOf(quote, 1);
-    if (end !== -1) {
-      return trimmed.slice(1, end);
-    }
-  }
-  const colonIndex = trimmed.indexOf(":");
-  const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
-  return pathToken.replace(/^["'`]+|["'`]+$/g, "");
-}
-function extractLabelSplit(command) {
-  const trimmed = command.trim();
-  const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
-  if (!labelMatch) {
-    return void 0;
-  }
-  const trailing = labelMatch[2].trim();
-  return {
-    label: labelMatch[1],
-    trailing: trailing || void 0
-  };
-}
-function splitCommaArguments(input) {
-  const values = [];
-  let current = "";
-  let depth = 0;
-  let inQuote = false;
-  let quoteChar = "";
-  for (let i = 0; i < input.length; i++) {
-    const char = input[i];
-    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
-      if (!inQuote) {
-        inQuote = true;
-        quoteChar = char;
-      } else if (quoteChar === char) {
-        inQuote = false;
-      }
-      current += char;
-      continue;
-    }
-    if (!inQuote && char === "(") {
-      depth++;
-      current += char;
-      continue;
-    }
-    if (!inQuote && char === ")") {
-      depth = Math.max(0, depth - 1);
-      current += char;
-      continue;
-    }
-    if (!inQuote && depth === 0 && char === ",") {
-      const normalized = current.trim();
-      if (normalized) {
-        values.push(normalized);
-      }
-      current = "";
-      continue;
-    }
-    current += char;
-  }
-  const tail = current.trim();
-  if (tail) {
-    values.push(tail);
-  }
-  return values;
-}
-var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
-var init_normalized_command = __esm({
-  "packages/core/src/ir/normalized-command.ts"() {
-    "use strict";
-    init_internal_instrumentation();
-    init_source_location();
-    init_asset_call();
-    init_expression_node();
-    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
-    EMPTY_TOKEN_SPANS = Object.freeze([]);
-  }
-});
-
-// packages/core/src/mathcore.ts
-function throwMathError(message) {
-  throw new AssemblyError("MATH_EVALUATION_ERROR", message);
-}
-function getOperator(operators, token) {
-  if (!Object.hasOwn(operators, token)) {
-    return void 0;
-  }
-  return operators[token];
-}
-function isScanWhitespace(code) {
-  if (code === 32 || code === 9 || code === 10 || code === 13) {
-    return true;
-  }
-  if (code === 11 || code === 12 || code === 160 || code === 65279) {
-    return true;
-  }
-  return false;
-}
-function isWordChar(code) {
-  if (code >= 48 && code <= 57) {
-    return true;
-  }
-  if (code >= 65 && code <= 90) {
-    return true;
-  }
-  if (code >= 97 && code <= 122) {
-    return true;
-  }
-  return code === 95;
-}
-var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
-var init_mathcore = __esm({
-  "packages/core/src/mathcore.ts"() {
-    "use strict";
-    init_diagnostics();
-    init_internal_instrumentation();
-    init_expression_node();
-    OPERATORS = {
-      // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
-      "**": { priority: 6, operation: (left, right) => Math.pow(left, right) },
-      "*": { priority: 5, operation: (left, right) => left * right },
-      "/": {
-        priority: 5,
-        operation: (left, right) => right !== 0 ? left / right : throwMathError("Division by zero")
-      },
-      "%": {
-        priority: 5,
-        operation: (left, right) => right !== 0 ? left % right : throwMathError("Modulo by zero")
-      },
-      "+": { priority: 4, operation: (left, right) => left + right },
-      "-": { priority: 4, operation: (left, right) => left - right },
-      "<<": { priority: 3, operation: (left, right) => left << right },
-      ">>": { priority: 3, operation: (left, right) => left >> right },
-      "&": { priority: 3, operation: (left, right) => left & right },
-      "|": { priority: 3, operation: (left, right) => left | right },
-      "^": { priority: 3, operation: (left, right) => left ^ right },
-      "<": { priority: 2, operation: (left, right) => left < right ? 1 : 0 },
-      ">": { priority: 2, operation: (left, right) => left > right ? 1 : 0 },
-      "<=": { priority: 2, operation: (left, right) => left <= right ? 1 : 0 },
-      ">=": { priority: 2, operation: (left, right) => left >= right ? 1 : 0 },
-      "==": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
-      "=": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
-      "!=": { priority: 2, operation: (left, right) => left !== right ? 1 : 0 },
-      "&&": { priority: 1, operation: (left, right) => left && right ? 1 : 0 },
-      "||": { priority: 0, operation: (left, right) => left || right ? 1 : 0 }
-    };
-    BUILTIN_NUMERIC_UNARY = {
-      sqrt: Math.sqrt,
-      sin: Math.sin,
-      cos: Math.cos,
-      tan: Math.tan,
-      asin: Math.asin,
-      acos: Math.acos,
-      atan: Math.atan,
-      log: Math.log,
-      log10: Math.log10,
-      log2: Math.log2,
-      ceil: Math.ceil,
-      floor: Math.floor
-    };
-    NUMERIC_UNARY_ALIASES = {
-      arcsin: "asin",
-      arccos: "acos",
-      arctan: "atan"
-    };
-    STRING_FIRST_ARG_FUNCTIONS = /* @__PURE__ */ new Set([
-      "countof",
-      "bytesof",
-      "startof",
-      "endof",
-      "defined",
-      "sizeof",
-      "objectsize",
-      "datasize",
-      "filesize",
-      "getfilestatus"
-    ]);
-    STRING_TWO_ARG_FUNCTIONS = /* @__PURE__ */ new Set(["stringsequal", "stringsequalnocase"]);
-    FILE_STRING_FUNCTION = /^(?:canreadfile|readfile)\d?$/;
-    MathCore = class {
-      pureStringExpressionCache = /* @__PURE__ */ new Map();
-      roundedPureStringExpressionCache = /* @__PURE__ */ new Map();
-      pureStringClassification = /* @__PURE__ */ new Map();
-      instrumentedExpressionStrings = /* @__PURE__ */ new Set();
-      instrumentedPureExpressionStrings = /* @__PURE__ */ new Set();
-      instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
-      instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
-      host;
-      math_round = false;
-      userFunctions = /* @__PURE__ */ new Map();
-      expressionFunctions = /* @__PURE__ */ new Map();
-      operators = OPERATORS;
-      /** Full expression currently being scanned. */
-      scanSource = "";
-      /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
-      scanIndex = 0;
-      /**
-       * Remaining unconsumed expression text.
-       * @returns {string} The unconsumed source from the scan cursor.
-       */
-      get str() {
-        return this.scanSource.slice(this.scanIndex);
-      }
-      /**
-       * Replaces the expression being scanned.
-       * @param {string} value The new expression source.
-       */
-      set str(value) {
-        this.scanSource = value;
-        this.scanIndex = 0;
-      }
-      /**
-       * Advances the scan cursor past ASCII / trim whitespace.
-       */
-      skipWhitespace() {
-        const source = this.scanSource;
-        let index = this.scanIndex;
-        while (index < source.length && isScanWhitespace(source.charCodeAt(index))) {
-          index++;
-        }
-        this.scanIndex = index;
-      }
-      /**
-       * Returns whether the remaining source starts with a literal.
-       * @param {string} text The literal to match.
-       * @returns {boolean} Whether the literal is present at the cursor.
-       */
-      remainingStartsWith(text2) {
-        return this.scanSource.startsWith(text2, this.scanIndex);
-      }
-      /**
-       * Consumes a fixed number of characters from the scan cursor.
-       * @param {number} count The number of characters to consume.
-       */
-      advance(count) {
-        this.scanIndex += count;
-      }
-      /**
-       * Initialize the math core.
-       */
-      reset() {
-        this.math_round = false;
-        this.userFunctions.clear();
-        this.clearExpressionCaches();
-      }
-      /**
-       * Installs a target-provided expression function for this session.
-       * @param {string | readonly string[]} names The canonical name and aliases.
-       * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
-       */
-      registerExpressionFunction(names, expressionFunction) {
-        for (const name of typeof names === "string" ? [names] : names) {
-          this.expressionFunctions.set(name.toLowerCase(), expressionFunction);
-        }
-      }
-      /**
-       * Starts a new expression-cache snapshot for an assembly.
-       */
-      beginAssemblySnapshot() {
-        this.clearExpressionCaches();
-      }
-      /**
-       * Releases expression values retained for a completed assembly.
-       */
-      endAssemblySnapshot() {
-        this.clearExpressionCaches();
-      }
-      /**
-       * Clears expression caches retained for the current assembly.
-       */
-      clearExpressionCaches() {
-        this.pureStringExpressionCache.clear();
-        this.roundedPureStringExpressionCache.clear();
-        this.pureStringClassification.clear();
-        this.instrumentedExpressionStrings.clear();
-        this.instrumentedPureExpressionStrings.clear();
-        this.instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
-        this.instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
-      }
-      /**
-       * Evaluates an expression.
-       * This is a direct conversion of `math` in `asar_math.cpp`.
-       * @param {string} expression The expression to evaluate.
-       * @returns {number} The result of the expression.
-       */
-      math = (expression) => {
-        if (isInternalInstrumentationActive()) {
-          return measureInternalPhase("expressionEvaluation", () => {
-            this.recordExpressionEvaluation(expression);
-            return this.evaluateMathInput(expression);
-          });
-        }
-        return this.evaluateMathInput(expression);
-      };
-      /**
-       * Evaluates a string or typed expression without instrumentation dispatch.
-       * @param {string | ExpressionNode} expression The expression to evaluate.
-       * @returns {number} The expression result.
-       */
-      evaluateMathInput(expression) {
-        if (typeof expression !== "string") {
-          return this.evaluateExpressionNode(expression);
-        }
-        return this.evaluateCachedStringExpression(expression);
-      }
-      /**
-       * Reuses successful results only for strings proven to contain literal operators.
-       * @param {string} expression The legacy expression source.
-       * @returns {number} The expression result.
-       */
-      evaluateCachedStringExpression(expression) {
-        let isPure = this.pureStringClassification.get(expression);
-        if (isPure === void 0) {
-          isPure = this.isPureExpressionNode(parseExpressionNode(expression));
-          this.pureStringClassification.set(expression, isPure);
-        }
-        if (!isPure) {
-          return this.evaluateStringExpression(expression);
-        }
-        const cache = this.math_round ? this.roundedPureStringExpressionCache : this.pureStringExpressionCache;
-        const cached = cache.get(expression);
-        if (cached !== void 0) {
-          incrementInternalCounter("pureStringExpressionCacheHits");
-          return cached;
-        }
-        incrementInternalCounter("pureStringExpressionCacheMisses");
-        const result = this.evaluateStringExpression(expression);
-        cache.set(expression, result);
-        return result;
-      }
-      /**
-       * Records the shape and reuse of a top-level expression evaluation.
-       * @param {string | ExpressionNode} expression The evaluated expression.
-       */
-      recordExpressionEvaluation(expression) {
-        incrementInternalCounter("expressionEvaluations");
-        if (typeof expression === "string") {
-          incrementInternalCounter("expressionStringEvaluations");
-          if (!this.instrumentedExpressionStrings.has(expression)) {
-            this.instrumentedExpressionStrings.add(expression);
-            incrementInternalCounter("expressionUniqueStringEvaluations");
-            if (this.isPureExpressionNode(parseExpressionNode(expression))) {
-              this.instrumentedPureExpressionStrings.add(expression);
-              incrementInternalCounter("pureStringExpressionUniqueValues");
-            }
-          }
-          if (this.instrumentedPureExpressionStrings.has(expression)) {
-            incrementInternalCounter("pureStringExpressionEvaluations");
-          }
-          return;
-        }
-        incrementInternalCounter("expressionNodeEvaluations");
-        if (!this.instrumentedExpressionNodes.has(expression)) {
-          this.instrumentedExpressionNodes.add(expression);
-          incrementInternalCounter("expressionUniqueNodeEvaluations");
-        }
-        if (!this.isPureExpressionNode(expression)) {
-          return;
-        }
-        incrementInternalCounter("pureExpressionEvaluations");
-        if (!this.instrumentedPureExpressionNodes.has(expression)) {
-          this.instrumentedPureExpressionNodes.add(expression);
-          incrementInternalCounter("pureExpressionUniqueNodes");
-        }
-      }
-      /**
-       * Determines whether an expression depends only on literal operators.
-       * @param {ExpressionNode} expression The expression to classify.
-       * @returns {boolean} Whether the result is independent of assembler state.
-       */
-      isPureExpressionNode(expression) {
-        switch (expression.type) {
-          case "literal":
-            return true;
-          case "unary":
-            return this.isPureExpressionNode(expression.argument);
-          case "binary":
-            return this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right);
-          default:
-            return false;
-        }
-      }
-      /**
-       * Evaluates a string expression using the legacy parser.
-       * @param {string} expression The expression to evaluate.
-       * @returns {number} The result of the expression.
-       */
-      evaluateStringExpression(expression) {
-        this.str = expression.trim();
-        const rval = this.evalMath(0);
-        if (rval === void 0) {
-          throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
-        }
-        this.skipWhitespace();
-        if (this.scanIndex < this.scanSource.length) {
-          if (this.remainingStartsWith(",")) {
-            throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
-          }
-          throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
-        }
-        return rval;
-      }
-      /**
-       * Evaluates an expression node using typed dispatch before falling back to string parsing.
-       * @param {ExpressionNode} expression The expression node to evaluate.
-       * @returns {number} The numeric result.
-       */
-      evaluateExpressionNode(expression) {
-        if (isReferenceExpressionNode(expression)) {
-          return this.evaluateReferenceExpressionNode(expression);
-        }
-        switch (expression.type) {
-          case "literal":
-            return this.parseLiteralNode(expression.value);
-          case "string":
-            throw new AssemblyError(
-              "MATH_STRING_NOT_NUMERIC",
-              `String expression is not directly numeric: ${expression.value}`
-            );
-          case "call":
-            return this.callFunction(
-              expression.callee.name,
-              expression.arguments.map(
-                (argument, index) => this.evaluateCallArgument(expression.callee.name, index, argument)
-              )
-            );
-          case "unary":
-            return this.evaluateUnaryExpressionNode(expression.operator, expression.argument);
-          case "binary":
-            return this.evaluateBinaryExpressionNode(
-              expression.operator,
-              expression.left,
-              expression.right
-            );
-          case "range":
-            throw new AssemblyError(
-              "MATH_RANGE_NOT_NUMERIC",
-              `Range expression is not directly numeric: ${renderExpressionNode(expression)}`
-            );
-          case "raw":
-          default:
-            return this.evaluateStringExpression(expression.value);
-        }
-      }
-      evaluateCallArgument(functionName, argumentIndex, argument) {
-        if (this.isStringArgument(functionName, argumentIndex)) {
-          switch (argument.type) {
-            case "identifier":
-              return argument.name;
-            case "string":
-              return argument.value;
-            case "raw":
-              return argument.value.replace(/^["']|["']$/g, "");
-            default:
-              return renderExpressionNode(argument);
-          }
-        }
-        switch (argument.type) {
-          case "string":
-            return argument.value;
-          case "range":
-            return renderExpressionNode(argument);
-          case "raw":
-            return this.evaluateStringExpression(argument.value);
-          default:
-            if (isReferenceExpressionNode(argument)) {
-              return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
-                renderReferenceExpressionNode(argument, {
-                  renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-                })
-              );
-            }
-            return this.evaluateExpressionNode(argument);
-        }
-      }
-      evaluateUnaryExpressionNode(operator, argument) {
-        const value = this.evaluateExpressionNode(argument);
-        switch (operator) {
-          case "<:":
-            return value >>> 16;
-          case "<":
-            return value & 255;
-          case ">":
-            return value >> 8 & 255;
-          case "^":
-            return value >> 16 & 255;
-          case "~":
-            return ~value;
-          case "-":
-            return -value;
-          case "+":
-          default:
-            return value;
-        }
-      }
-      evaluateBinaryExpressionNode(operator, left, right) {
-        const spec = this.operators[operator];
-        return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
-      }
-      resolveNumericIdentifierArgument(identifier2) {
-        try {
-          const resolved = this.getHost().resolveLabel(identifier2);
-          return typeof resolved === "number" ? resolved : identifier2;
-        } catch {
-          return identifier2;
-        }
-      }
-      evaluateReferenceExpressionNode(expression) {
-        if (expression.type === "defineReference") {
-          throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
-        }
-        const reference = renderReferenceExpressionNode(expression, {
-          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-        });
-        const resolved = this.getHost().resolveLabel(reference);
-        if (typeof resolved === "number") {
-          return resolved;
-        }
-        throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
-      }
-      resolveLeadingLocalLabelReference(input) {
-        const match = input.match(/^(\.+\w+)/);
-        if (!match) {
-          return void 0;
-        }
-        return { label: match[1], length: match[1].length };
-      }
-      isStringArgument(functionName, argumentIndex) {
-        if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
-          return argumentIndex === 0;
-        }
-        if (STRING_TWO_ARG_FUNCTIONS.has(functionName)) {
-          return argumentIndex < 2;
-        }
-        if (FILE_STRING_FUNCTION.test(functionName)) {
-          return argumentIndex === 0;
-        }
-        return false;
-      }
-      parseLiteralNode(value) {
-        if (/^-?\d+$/.test(value)) {
-          return Number.parseInt(value, 10);
-        }
-        if (/^\$[\dA-Fa-f]+$/.test(value)) {
-          return Number.parseInt(value.slice(1), 16);
-        }
-        if (/^0x[\da-f]+$/i.test(value)) {
-          return Number.parseInt(value.slice(2), 16);
-        }
-        if (/^%[01]+$/.test(value)) {
-          return Number.parseInt(value.slice(1), 2);
-        }
-        throw new Error(`Unsupported literal expression: ${value}`);
-      }
-      /**
-       * Evaluates a mathematical expression.
-       * This replaces the C++ `eval` function.
-       * @param {number} depth The current depth of nested expressions.
-       * @param {string} [stopChar] The character to stop the evaluation at.
-       * @returns {number | undefined} The result of the evaluated expression, or
-       * `undefined` when an inline function definition consumes the expression.
-       */
-      evalMath(depth = 0, stopChar) {
-        let left;
-        if (this.remainingStartsWith("function")) {
-          this.parseFunctionDefinition();
-          left = this.evalMath(depth, stopChar);
-        } else if (this.scanIndex < this.scanSource.length) {
-          left = this.getnum();
-        }
-        if (left === void 0) {
-          return void 0;
-        }
-        if (Number.isNaN(left)) {
-          throw new Error(`Invalid number: ${left}`);
-        }
-        this.skipWhitespace();
-        while (this.scanIndex < this.scanSource.length) {
-          this.skipWhitespace();
-          if (stopChar && this.remainingStartsWith(stopChar)) {
-            break;
-          }
-          const nextChar = this.scanSource[this.scanIndex];
-          if (nextChar === "," || nextChar === ")" || nextChar === "]") {
-            break;
-          }
-          const op2 = this.peekNextOperator(this.operators, depth);
-          if (!op2) {
-            break;
-          }
-          this.advance(op2.length);
-          this.skipWhitespace();
-          const right = this.evalMath(this.operators[op2].priority + 1, stopChar);
-          if (right === void 0) {
-            throw new Error(`Missing right operand for operator '${op2}'.`);
-          }
-          left = this.operators[op2].operation(left, right);
-        }
-        if (this.math_round) {
-          left = Math.trunc(left);
-        }
-        if (Number.isNaN(left)) {
-          throw new Error(`Invalid number: ${left}`);
-        }
-        return left;
-      }
-      /**
-       * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
-       * @param {OperatorTable} operators The operators to check.
-       * @param {number} depth The current depth of nested expressions.
-       * @returns {BinaryOperator | null} The matching operator or null if no match.
-       */
-      peekNextOperator(operators, depth) {
-        this.skipWhitespace();
-        if (this.scanIndex >= this.scanSource.length) {
-          return null;
-        }
-        const remaining = this.scanSource.length - this.scanIndex;
-        if (remaining >= 2) {
-          const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
-          const twoOp = getOperator(operators, twoChars);
-          if (twoOp) {
-            if (twoOp.priority >= depth) {
-              return twoChars;
-            }
-            return null;
-          }
-        }
-        const oneChar = this.scanSource[this.scanIndex];
-        const oneOp = getOperator(operators, oneChar);
-        if (oneOp && oneOp.priority >= depth) {
-          return oneChar;
-        }
-        return null;
-      }
-      /**
-       * Parses numbers from a string while consuming valid characters.
-       * @param {RegExp} regex The regular expression to test against the string.
-       * @returns {string} The substring of the string that matches the regular expression.
-       */
-      consumeWhile(regex) {
-        const source = this.scanSource;
-        const start = this.scanIndex;
-        let index = start;
-        while (index < source.length && regex.test(source[index])) {
-          index++;
-        }
-        const result = source.slice(start, index);
-        this.scanIndex = index;
-        return result;
-      }
-      /**
-       * Retrieves a number from the string.
-       * This implements `getnumcore` and `getnum`.
-       * @returns {number} The number from the string.
-       */
-      getnum = () => {
-        this.skipWhitespace();
-        let applyBitshift = false;
-        let sign = 1;
-        while (true) {
-          if (this.remainingStartsWith("<:")) {
-            this.advance(2);
-            this.skipWhitespace();
-            applyBitshift = true;
-          } else if (this.remainingStartsWith("<") && !this.remainingStartsWith("<<") && !this.remainingStartsWith("<=")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return sign * (this.getnum() & 255) | 0;
-          } else if (this.remainingStartsWith(">") && !this.remainingStartsWith(">>") && !this.remainingStartsWith(">=")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return sign * (this.getnum() >> 8 & 255) | 0;
-          } else if (this.remainingStartsWith("^")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return sign * (this.getnum() >> 16 & 255) | 0;
-          } else if (this.remainingStartsWith("~")) {
-            this.advance(1);
-            this.skipWhitespace();
-            return ~this.getnum();
-          } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
-            const after = this.scanSource[this.scanIndex + 1];
-            let isDefineLike = after === "{";
-            if (after !== void 0) {
-              const code = after.charCodeAt(0);
-              if (code >= 65 && code <= 90 || code >= 97 && code <= 122 || code === 95) {
-                isDefineLike = true;
-              }
-            }
-            if (!isDefineLike) {
-              this.advance(1);
-              this.skipWhitespace();
-              return ~this.getnum();
-            }
-            break;
-          } else if (this.remainingStartsWith("-")) {
-            this.advance(1);
-            this.skipWhitespace();
-            sign *= -1;
-          } else if (this.remainingStartsWith("+")) {
-            this.advance(1);
-            this.skipWhitespace();
-          } else {
-            break;
-          }
-        }
-        const fnName = this.scanFunctionCallName();
-        if (fnName !== void 0) {
-          const args = [];
-          if (this.scanSource[this.scanIndex] === "(") {
-            this.advance(1);
-            this.skipWhitespace();
-            if (!this.remainingStartsWith(")")) {
-              while (true) {
-                this.skipWhitespace();
-                if (this.remainingStartsWith(",")) {
-                  this.advance(1);
-                  this.skipWhitespace();
-                }
-                if (this.remainingStartsWith(")")) {
-                  break;
-                }
-                if (this.remainingStartsWith('"')) {
-                  args.push(this.parseStringLiteral());
-                } else if (this.isStringArgument(fnName, args.length)) {
-                  args.push(this.parseUnquotedStringArgument(fnName));
-                } else {
-                  const val = this.evalMath(0, ")");
-                  if (val === void 0) {
-                    throw new Error(`Missing function argument for '${fnName}'.`);
-                  }
-                  args.push(val);
-                }
-                this.skipWhitespace();
-                if (this.remainingStartsWith(")")) {
-                  break;
-                }
-                if (this.remainingStartsWith(",")) {
-                  this.advance(1);
-                  this.skipWhitespace();
-                  continue;
-                }
-                throw new Error(`Expected ',' or ')' in function call arguments: ${this.str}`);
-              }
-            }
-            const outerSource = this.scanSource;
-            const afterCall = this.scanIndex + 1;
-            const result = this.callFunction(fnName, args);
-            this.scanSource = outerSource;
-            this.scanIndex = afterCall;
-            this.skipWhitespace();
-            let value2 = sign * result;
-            if (applyBitshift) {
-              value2 = value2 >>> 16;
-            }
-            return value2;
-          }
-        }
-        let value;
-        if (this.remainingStartsWith("(")) {
-          this.advance(1);
-          this.skipWhitespace();
-          const nestedValue = this.evalMath(0, ")");
-          if (nestedValue === void 0) {
-            throw new Error("Empty parenthesized expression.");
-          }
-          value = nestedValue;
-          if (!this.remainingStartsWith(")")) {
-            throw new Error("Mismatched parentheses.");
-          }
-          this.advance(1);
-          this.skipWhitespace();
-        } else if (this.remainingStartsWith("$")) {
-          this.advance(1);
-          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
-        } else if (this.remainingStartsWith("0x")) {
-          this.advance(2);
-          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
-        } else if (this.remainingStartsWith("%")) {
-          this.advance(1);
-          value = parseInt(this.consumeWhile(/[01]/), 2);
-        } else if (/\d/.test(this.scanSource[this.scanIndex] ?? "")) {
-          value = parseFloat(this.consumeWhile(/[\d.]/));
-        } else {
-          const remaining = this.str;
-          const unnamedMatch = remaining.match(/^(:(\++|-+))/);
-          if (unnamedMatch) {
-            this.advance(unnamedMatch[1].length);
-            this.skipWhitespace();
-            const resolved = this.getHost().resolveLabel(unnamedMatch[1]);
-            if (typeof resolved !== "number") {
-              throw new Error(`Reference '${unnamedMatch[1]}' did not resolve to a numeric value.`);
-            }
-            value = resolved;
-          } else {
-            const reference = parseLeadingReferenceExpression(remaining);
-            if (reference) {
-              this.advance(reference.length);
-              this.skipWhitespace();
-              const renderedReference = renderReferenceExpressionNode(reference.node, {
-                renderIndex: (node) => this.evaluateExpressionNode(node).toString()
-              });
-              const resolved = this.getHost().resolveLabel(renderedReference);
-              if (typeof resolved !== "number") {
-                throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
-              }
-              value = resolved;
-            } else {
-              const localReference = this.resolveLeadingLocalLabelReference(remaining);
-              if (localReference) {
-                this.advance(localReference.length);
-                this.skipWhitespace();
-                const resolved = this.getHost().resolveLabel(localReference.label);
-                if (typeof resolved !== "number") {
-                  throw new Error(
-                    `Reference '${localReference.label}' did not resolve to a numeric value.`
-                  );
-                }
-                value = resolved;
-              } else {
-                const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
-                if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
-                  throw new Error("Mismatched brackets in struct index");
-                }
-                throw new Error(`Invalid number: ${remaining}`);
-              }
-            }
-          }
-        }
-        value = sign * value;
-        if (applyBitshift) {
-          value = value >>> 16;
-        }
-        return value;
-      };
-      /**
-       * Scans a function-call name if the next token is `name(`.
-       * Leaves the cursor on `(`.
-       * @returns {string | undefined} The function name, if a call starts here.
-       */
-      scanFunctionCallName() {
-        const source = this.scanSource;
-        let index = this.scanIndex;
-        if (index >= source.length || !isWordChar(source.charCodeAt(index))) {
-          return void 0;
-        }
-        index++;
-        while (index < source.length && isWordChar(source.charCodeAt(index))) {
-          index++;
-        }
-        const name = source.slice(this.scanIndex, index);
-        while (index < source.length && isScanWhitespace(source.charCodeAt(index))) {
-          index++;
-        }
-        if (source[index] !== "(") {
-          return void 0;
-        }
-        this.scanIndex = index;
-        return name;
-      }
-      /**
-       * Parses a string literal from the current string with support for quotes.
-       * @returns {string} The parsed string literal.
-       */
-      parseStringLiteral = () => {
-        const source = this.scanSource;
-        const start = this.scanIndex + 1;
-        let index = start;
-        while (index < source.length && source[index] !== '"') {
-          index++;
-        }
-        if (index >= source.length) {
-          throw new Error("Unterminated string literal in function call.");
-        }
-        const result = source.slice(start, index);
-        this.scanIndex = index + 1;
-        this.skipWhitespace();
-        return result;
-      };
-      /**
-       * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
-       * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
-       * @param {string} functionName The function being called.
-       * @returns {string} The raw argument text.
-       */
-      parseUnquotedStringArgument(functionName) {
-        this.skipWhitespace();
-        const source = this.scanSource;
-        const start = this.scanIndex;
-        let depth = 0;
-        let index = start;
-        while (index < source.length) {
-          const character = source[index];
-          if (character === "(" || character === "[") {
-            depth++;
-          } else if (character === ")" || character === "]") {
-            if (depth === 0) {
-              break;
-            }
-            depth--;
-          } else if (character === "," && depth === 0) {
-            break;
-          }
-          index++;
-        }
-        const argument = source.slice(start, index).trim();
-        this.scanIndex = index;
-        if (!argument) {
-          throw new Error(`Missing function argument for '${functionName}'.`);
-        }
-        return argument;
-      }
-      /**
-       * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
-       * @param {string} name The name of the function to call.
-       * @param {Array<number | string>} args The arguments to pass to the function.
-       * @returns {number} The result of the function call.
-       */
-      callFunction = (name, args) => {
-        if (this.userFunctions.has(name)) {
-          return this.callUserFunction(name, args);
-        }
-        const expressionFunction = this.expressionFunctions.get(name.toLowerCase());
-        if (expressionFunction) {
-          if (args.length < expressionFunction.minimumArguments || args.length > expressionFunction.maximumArguments) {
-            const expected = expressionFunction.minimumArguments === expressionFunction.maximumArguments ? `exactly ${expressionFunction.minimumArguments}` : `between ${expressionFunction.minimumArguments} and ${expressionFunction.maximumArguments}`;
-            throw new Error(`${name}() expects ${expected} argument(s).`);
-          }
-          const result = expressionFunction.evaluate(args);
-          if (typeof result !== "number") {
-            throw new Error(`${name}() returned a non-numeric value.`);
-          }
-          return result;
-        }
-        return this.callBuiltInFunction(name, args);
-      };
-      /**
-       * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
-       * @param {string} name The name of the function to call.
-       * @param {Array<number | string>} args The arguments to pass to the function.
-       * @returns {number} The result of the function call.
-       */
-      callUserFunction = (name, args) => {
-        const func = this.userFunctions.get(name);
-        if (!func) {
-          throw new Error(`User function '${name}' not found.`);
-        }
-        if (args.length < func.args.length) {
-          throw new Error(`Function '${name}' expects at least ${func.args.length} argument(s).`);
-        }
-        let content = func.content;
-        for (let i = 0; i < func.args.length; i++) {
-          const paramName = func.args[i];
-          const argValue = args[i];
-          const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
-          const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
-          const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
-          content = content.replace(regex, replacement);
-        }
-        const result = this.math(content);
-        return result;
-      };
-      /**
-       * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
-       * @param {string} name The name of the function to call.
-       * @param {Array<number | string>} args The arguments to pass to the function.
-       * @returns {number} The result of the function call.
-       */
-      callBuiltInFunction = (name, args) => {
-        switch (name) {
-          // --- Trigonometric & Logarithmic functions ---
-          case "sqrt":
-          case "sin":
-          case "cos":
-          case "tan":
-          case "asin":
-          case "acos":
-          case "atan":
-          // Aliases for inverse trig functions
-          case "arcsin":
-          case "arccos":
-          case "arctan":
-          case "log":
-          case "log10":
-          case "log2":
-          case "ceil":
-          case "floor": {
-            if (args.length !== 1) {
-              throw new Error(`${name} expects exactly 1 numeric argument.`);
-            }
-            const builtinName = NUMERIC_UNARY_ALIASES[name] ?? name;
-            const mathFunction = BUILTIN_NUMERIC_UNARY[builtinName];
-            const val = this.numArg(name, args[0]);
-            const result = mathFunction(val);
-            if (Number.isNaN(result)) {
-              throw new Error(`${name} returned NaN for argument ${val}`);
-            }
-            return result;
-          }
-          // Min, Max, Clamp
-          case "min": {
-            if (args.length < 2) {
-              throw new Error("min() expects at least 2 numeric arguments.");
-            }
-            const numArgs = args.map((arg) => this.numArg(name, arg));
-            return numArgs.reduce((minimum, value) => Math.min(minimum, value), Infinity);
-          }
-          case "max": {
-            if (args.length < 2) {
-              throw new Error("max() expects at least 2 numeric arguments.");
-            }
-            const numArgs = args.map((arg) => this.numArg(name, arg));
-            return numArgs.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
-          }
-          case "clamp": {
-            if (args.length !== 3) {
-              throw new Error("clamp() expects exactly 3 numeric arguments.");
-            }
-            const value = this.numArg(name, args[0]);
-            const minVal = this.numArg(name, args[1]);
-            const maxVal = this.numArg(name, args[2]);
-            return Math.max(minVal, Math.min(maxVal, value));
-          }
-          // --- Safe Division and Conditional Selection ---
-          case "safediv": {
-            if (args.length !== 3) {
-              throw new Error("safediv() expects exactly 3 numeric arguments.");
-            }
-            const dividend = this.numArg(name, args[0]);
-            const divisor = this.numArg(name, args[1]);
-            const defaultValue = this.numArg(name, args[2]);
-            return divisor === 0 ? defaultValue : dividend / divisor;
-          }
-          case "select": {
-            if (args.length !== 3) {
-              throw new Error("select() expects exactly 3 numeric arguments.");
-            }
-            const statement = this.numArg(name, args[0]);
-            const trueVal = this.numArg(name, args[1]);
-            const falseVal = this.numArg(name, args[2]);
-            return statement !== 0 ? trueVal : falseVal;
-          }
-          // --- Logical Operations ---
-          case "not": {
-            if (args.length !== 1) {
-              throw new Error("not() expects exactly 1 numeric argument.");
-            }
-            const value = this.numArg(name, args[0]);
-            return value === 0 ? 1 : 0;
-          }
-          case "bank": {
-            if (args.length !== 1) {
-              throw new Error("bank() expects exactly 1 numeric argument.");
-            }
-            return this.numArg(name, args[0]) >> 16 & 255;
-          }
-          case "offset": {
-            if (args.length !== 2) {
-              throw new Error("offset() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[1]) - this.numArg(name, args[0]);
-          }
-          // --- Comparison Functions ---
-          case "equal": {
-            if (args.length !== 2) {
-              throw new Error("equal() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) === this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "notequal": {
-            if (args.length !== 2) {
-              throw new Error("notequal() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) !== this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "less": {
-            if (args.length !== 2) {
-              throw new Error("less() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) < this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "lessequal": {
-            if (args.length !== 2) {
-              throw new Error("lessequal() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) <= this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "greater": {
-            if (args.length !== 2) {
-              throw new Error("greater() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "greaterequal": {
-            if (args.length !== 2) {
-              throw new Error("greaterequal() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
-          }
-          // --- Logical Bitwise Operations ---
-          case "and": {
-            if (args.length !== 2) {
-              throw new Error("and() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "or": {
-            if (args.length !== 2) {
-              throw new Error("or() expects exactly 2 numeric arguments.");
-            }
-            return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
-          }
-          case "nand": {
-            if (args.length !== 2) {
-              throw new Error("nand() expects exactly 2 numeric arguments.");
-            }
-            return !(this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
-          }
-          case "nor": {
-            if (args.length !== 2) {
-              throw new Error("nor() expects exactly 2 numeric arguments.");
-            }
-            return !(this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
-          }
-          case "xor": {
-            if (args.length !== 2) {
-              throw new Error("xor() expects exactly 2 numeric arguments.");
-            }
-            const a = this.numArg(name, args[0]);
-            const b = this.numArg(name, args[1]);
-            return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
-          }
-          // --- Rounding ---
-          case "round": {
-            if (args.length !== 2) {
-              throw new Error("round() expects exactly 2 numeric arguments.");
-            }
-            const number = this.numArg(name, args[0]);
-            const precision = this.numArg(name, args[1]);
-            return parseFloat(number.toFixed(precision));
-          }
-          // --- String Comparisons ---
-          case "stringsequal": {
-            if (args.length !== 2) {
-              throw new Error("stringsequal() expects exactly 2 string arguments.");
-            }
-            const str1 = this.strArg(name, args[0]);
-            const str2 = this.strArg(name, args[1]);
-            return str1 === str2 ? 1 : 0;
-          }
-          case "stringsequalnocase": {
-            if (args.length !== 2) {
-              throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
-            }
-            const str1 = this.strArg(name, args[0]);
-            const str2 = this.strArg(name, args[1]);
-            return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
-          }
-          // --- Filesize & File Status ---
-          case "filesize":
-          case "getfilestatus": {
-            if (args.length !== 1) {
-              throw new Error(`${name}() expects exactly 1 argument.`);
-            }
-            const value = this.strArg(name, args[0]);
-            return name === "filesize" ? this.getHost().getFileSize(value) : this.getHost().getFileStatus(value);
-          }
-          // --- Preprocessor/Struct & Data Size Functions ---
-          case "countof":
-          case "bytesof":
-          case "startof":
-          case "endof": {
-            if (args.length !== 1) {
-              throw new Error(`${name}() expects exactly 1 argument.`);
-            }
-            const host = this.getHost();
-            if (!host.getExpressionStructMetadata) {
-              throw new Error(`${name}() requires a struct metadata host.`);
-            }
-            return host.getExpressionStructMetadata(this.strArg(name, args[0]), name);
-          }
-          case "defined":
-          case "sizeof":
-          case "objectsize":
-          case "datasize": {
-            if (args.length !== 1) {
-              throw new Error(`${name}() expects exactly 1 argument.`);
-            }
-            const value = this.strArg(name, args[0]);
-            if (name === "defined") {
-              return this.getHost().isDefined(value);
-            }
-            return this.getHost().getExpressionObjectSize(value, name === "sizeof");
-          }
-          // --- File Can-Read functions ---
-          case "canreadfile1":
-          case "canreadfile2":
-          case "canreadfile3":
-          case "canreadfile4": {
-            if (args.length !== 2) {
-              throw new Error(`${name}() expects exactly 2 arguments.`);
-            }
-            const filename = this.strArg(name, args[0]);
-            const pos = this.numArg(name, args[1]);
-            return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
-          }
-          case "canreadfile": {
-            if (args.length !== 3) {
-              throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
-            }
-            const filename = this.strArg(name, args[0]);
-            const pos = this.numArg(name, args[1]);
-            const num = this.numArg(name, args[2]);
-            return this.getHost().canReadFile(filename, pos, num);
-          }
-          // --- File Reading functions ---
-          case "readfile1":
-          case "readfile2":
-          case "readfile3":
-          case "readfile4": {
-            if (args.length < 2 || args.length > 3) {
-              throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
-            }
-            const filename = this.strArg(name, args[0]);
-            const pos = this.numArg(name, args[1]);
-            const size = parseInt(name.slice(-1), 10);
-            if (args.length === 3) {
-              const defVal = this.numArg(name, args[2]);
-              return this.getHost().readFile(filename, pos, size, defVal);
-            } else {
-              return this.getHost().readFile(filename, pos, size);
-            }
-          }
-          // --- PC/Realbase ---
-          case "pc":
-          case "realbase": {
-            if (args.length !== 0) {
-              throw new Error(`${name}() expects no arguments.`);
-            }
-            return name === "pc" ? this.getHost().getCurrentAddress() : this.getHost().getCurrentBaseAddress();
-          }
-          default: {
-            throw new Error(`Unknown built-in function '${name}'`);
-          }
-        }
-      };
-      /**
-       * Validates an argument as a number.
-       * @param {string} funcName The name of the function.
-       * @param {number | string} arg The argument to validate.
-       * @returns {number} The validated number.
-       */
-      numArg = (funcName, arg) => {
-        if (typeof arg === "string") {
-          throw new Error(
-            `Function '${funcName}' expected a numeric argument but got a string: ${arg}`
-          );
-        }
-        return arg;
-      };
-      /**
-       * Validates an argument as a string.
-       * @param {string} funcName The name of the function.
-       * @param {number | string} arg The argument to validate.
-       * @returns {string} The validated string.
-       */
-      strArg = (funcName, arg) => {
-        if (typeof arg === "number") {
-          throw new Error(`Function '${funcName}' expected a string argument but got a number: ${arg}`);
-        }
-        return arg;
-      };
-      /**
-       * Parses a function definition.
-       */
-      parseFunctionDefinition = () => {
-        const cleanDef = this.str.replace(/\\\s*\n/g, "");
-        const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
-        const match = cleanDef.match(regex);
-        if (!match || !match[1] || !match[3]) {
-          throw new Error("Invalid function definition syntax.");
-        }
-        const name = match[1];
-        const paramsStr = match[2] || "";
-        const content = match[3].trim();
-        const params = paramsStr ? paramsStr.split(",").map((p) => p.trim()).filter((p) => p.length > 0) : [];
-        this.str = this.str.substring(match[0].length).trim();
-        this.userFunctions.set(name, { args: params, content });
-      };
-      getHost() {
-        if (!this.host) {
-          throw new Error("ExpressionHost not set.");
-        }
-        return this.host;
-      }
-    };
-  }
-});
-
-// packages/core/src/operand-syntax.ts
-function parseOperandSyntax(operand) {
-  const raw = operand;
-  const trimmed = operand.trim();
-  const normalizedUpper = trimmed.toUpperCase();
-  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
-  const indexRegister = indexMatch?.[1].toLowerCase();
-  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
-  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
-  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
-  return {
-    raw,
-    trimmed,
-    normalizedUpper,
-    immediate: trimmed.startsWith("#"),
-    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
-    indexRegister,
-    explicitWidth,
-    numericSpelling: /^[\d#$%]/.test(trimmed)
-  };
-}
-var init_operand_syntax = __esm({
-  "packages/core/src/operand-syntax.ts"() {
-    "use strict";
-  }
-});
-
-// packages/core/src/operand-resolver.ts
-var OperandResolver;
-var init_operand_resolver = __esm({
-  "packages/core/src/operand-resolver.ts"() {
-    "use strict";
-    init_expression_node();
-    init_operand_syntax();
-    OperandResolver = class {
-      constructor(deps) {
-        this.deps = deps;
-      }
-      deps;
-      normalizeNumericBaseMember(operand) {
-        const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
-        if (!match) {
-          return operand;
-        }
-        const [, immediatePrefix, literal, indexSuffix = ""] = match;
-        return `${immediatePrefix}${literal}${indexSuffix}`;
-      }
-      splitMathOperandSuffix(operand) {
-        const trimmed = operand.trim();
-        const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
-        if (!indexedMatch) {
-          return { expression: trimmed, suffix: "" };
-        }
-        return {
-          expression: indexedMatch[1].trim(),
-          suffix: indexedMatch[2]
-        };
-      }
-      isNumericToken(token) {
-        return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
-      }
-      resolveArithmeticToken(token) {
-        if (this.isNumericToken(token)) {
-          return this.getnum(token);
-        }
-        if (token.includes(".") && this.deps.isStructReference(token)) {
-          return this.deps.resolveStructLabel(token);
-        }
-        return this.deps.resolveLabel(token, false);
-      }
-      tryResolveSimpleArithmetic(operand) {
-        const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
-        const match = operand.match(
-          new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`)
-        );
-        if (!match) {
-          return null;
-        }
-        const [, leftToken, operator, rightToken] = match;
-        if (this.isNumericToken(leftToken) && this.isNumericToken(rightToken)) {
-          return null;
-        }
-        const leftValue = this.resolveArithmeticToken(leftToken);
-        const rightValue = this.resolveArithmeticToken(rightToken);
-        switch (operator) {
-          case "+":
-            return leftValue + rightValue;
-          case "-":
-            return leftValue - rightValue;
-          case "<<":
-            return leftValue << rightValue;
-          case ">>":
-            return leftValue >> rightValue;
-          default:
-            return null;
-        }
-      }
-      determineValueLength(value) {
-        if (typeof value !== "string" && typeof value !== "number") {
-          throw new Error(`Invalid value type for length determination: ${typeof value}`);
-        }
-        if (Number.isNaN(value)) {
-          throw new Error(`Invalid value for length determination: ${value}`);
-        }
-        if (typeof value === "string" && value.trim() === "") {
-          return 1;
-        }
-        let hexString;
-        if (typeof value === "number") {
-          hexString = value.toString(16).toUpperCase();
-        } else if (value.startsWith("$")) {
-          hexString = value.substring(1);
-        } else {
-          hexString = value;
-        }
-        return Math.max(1, Math.ceil(hexString.length / 2));
-      }
-      isMathExpression(expression) {
-        if (!expression || typeof expression !== "string") {
-          return false;
-        }
-        if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
-          return true;
-        }
-        return expression.includes("+") || expression.includes("-") || expression.includes("*") || expression.includes("/") || expression.includes("&") || expression.includes("|") || expression.includes("^") || expression.includes("<<") || expression.includes(">>");
-      }
-      tryResolveLabelInOperand(operand) {
-        if (operand.startsWith("#")) {
-          const inner = operand.substring(1).trim();
-          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-            const labelValue = this.deps.tryResolveLabel(inner, false);
-            if (labelValue !== void 0) {
-              return "#$" + labelValue.toString(16).toUpperCase();
-            }
-          }
-          return operand;
-        }
-        if (operand.startsWith("[") && operand.endsWith("]")) {
-          const inner = operand.substring(1, operand.length - 1).trim();
-          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
-            const labelValue = this.deps.tryResolveLabel(inner, false);
-            if (labelValue !== void 0) {
-              return "[$" + labelValue.toString(16).toUpperCase() + "]";
-            }
-          }
-          return operand;
-        }
-        if (operand.includes(",")) {
-          const lastCommaIndex = operand.lastIndexOf(",");
-          const basePart = operand.substring(0, lastCommaIndex).trim();
-          const indexPart = operand.substring(lastCommaIndex).trim();
-          if (!basePart.match(/^[\d$%(]/)) {
-            const labelValue = this.deps.tryResolveLabel(basePart, false);
-            if (labelValue !== void 0) {
-              return "$" + labelValue.toString(16).toUpperCase() + indexPart;
-            }
-          }
-          return operand;
-        }
-        if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
-          const labelValue = this.deps.tryResolveLabel(operand, false);
-          if (labelValue !== void 0) {
-            return "$" + labelValue.toString(16).toUpperCase();
-          }
-        }
-        return operand;
-      }
-      /**
-       * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.
-       * Deferred expression failures yield zero during sizing passes and throw during final emission.
-       * @param {string | ExpressionNode} operand Source operand or parsed expression, including an optional immediate prefix.
-       * @returns {number} Resolved value, or the deferred sizing placeholder.
-       */
-      getnum(operand) {
-        if (typeof operand !== "string") {
-          return this.getnumFromNode(operand);
-        }
-        operand = operand.trim();
-        operand = this.normalizeNumericBaseMember(operand);
-        if (/^-?\d+$/.test(operand)) {
-          return parseInt(operand, 10);
-        }
-        if (/^\$[\dA-Fa-f]+$/.test(operand)) {
-          return parseInt(operand.substring(1), 16);
-        }
-        if (/^%[01]+$/.test(operand)) {
-          return parseInt(operand.substring(1), 2);
-        }
-        operand = this.deps.resolveDefines(operand);
-        if (operand.startsWith("#")) {
-          operand = operand.substring(1).trim();
-        }
-        operand = this.normalizeNumericBaseMember(operand);
-        if (/^[A-Z_a-z]\w*\s*\(/.test(operand)) {
-          try {
-            return this.deps.evaluateMath(operand);
-          } catch (error) {
-            if (this.deps.shouldDeferExpressionEvaluation()) {
-              return 0;
-            }
-            throw error;
-          }
-        }
-        const simpleArithmetic = this.tryResolveSimpleArithmetic(operand);
-        if (simpleArithmetic !== null) {
-          return simpleArithmetic;
-        }
-        if (!operand.match(/^[\d$%]/)) {
-          if (operand.indexOf(".") !== -1 || operand.indexOf("[") !== -1) {
-            if (this.deps.isStructReference(operand)) {
-              return this.deps.resolveStructLabel(operand);
-            }
-            if (!this.isMathExpression(operand)) {
-              return this.deps.resolveLabel(operand, false);
-            }
-          }
-          if (/^\w+$/.test(operand) && this.deps.isStructReference(operand)) {
-            return this.deps.resolveStructLabel(operand);
-          }
-          if (/^\w+$/.test(operand)) {
-            return this.deps.resolveLabel(operand, false);
-          }
-        }
-        try {
-          return this.deps.evaluateMath(operand);
-        } catch (error) {
-          if (this.deps.shouldDeferExpressionEvaluation()) {
-            return 0;
-          }
-          throw error;
-        }
-      }
-      /**
-       * Evaluate an already parsed operand with the same deferred-expression policy as getnum.
-       * @param {ExpressionNode} operand Numeric expression. Range nodes are rejected.
-       * @returns {number} Resolved value, or zero for a deferred expression failure.
-       */
-      getnumFromNode(operand) {
-        if (isReferenceExpressionNode(operand)) {
-          if (operand.type === "defineReference") {
-            return this.getnum(this.deps.resolveDefines(renderExpressionNode(operand)));
-          }
-          const reference = renderReferenceExpressionNode(operand, {
-            renderIndex: (node) => this.getnum(node).toString()
-          });
-          return this.resolveReferenceValue(reference);
-        }
-        switch (operand.type) {
-          case "range":
-            throw new Error(
-              `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
-            );
-          default:
-            try {
-              return this.deps.evaluateMath(operand);
-            } catch (error) {
-              if (this.deps.shouldDeferExpressionEvaluation()) {
-                return 0;
-              }
-              throw error;
-            }
-        }
-      }
-      resolveReferenceValue(reference) {
-        if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
-          if (this.deps.isStructReference(reference)) {
-            return this.deps.resolveStructLabel(reference);
-          }
-          if (!this.isMathExpression(reference)) {
-            return this.deps.resolveLabel(reference, false);
-          }
-        }
-        if (/^\w+$/.test(reference)) {
-          return this.deps.resolveLabel(reference, false);
-        }
-        return this.getnum(reference);
-      }
-      expandOperand(operand) {
-        const raw = operand.trim();
-        const syntax = parseOperandSyntax(raw);
-        if (!operand) {
-          return { raw, expanded: "", length: 2, syntax };
-        }
-        let expanded = raw;
-        let expectedLength = 2;
-        if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-" || /^:(\++|-+)$/.test(expanded)) {
-          return { raw, expanded, length: 2, syntax };
-        }
-        expanded = this.tryResolveLabelInOperand(expanded);
-        try {
-          expanded = this.deps.resolveDefines(expanded);
-        } catch (error) {
-        }
-        if (this.deps.isStructReference(expanded)) {
-          expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
-        }
-        expanded = this.normalizeNumericBaseMember(expanded);
-        if (expanded.startsWith("#")) {
-          const inner = expanded.substring(1).trim();
-          if (this.isMathExpression(inner)) {
-            try {
-              const value = this.getnum(inner);
-              expectedLength = this.determineValueLength(value);
-              expanded = "#$" + value.toString(16).toUpperCase();
-            } catch (error) {
-            }
-          } else if (inner.startsWith("$")) {
-            expectedLength = this.determineValueLength(inner.substring(1));
-          } else {
-            try {
-              const value = this.getnum(inner);
-              expectedLength = this.determineValueLength(value);
-              expanded = "#$" + value.toString(16).toUpperCase();
-            } catch (error) {
-            }
-          }
-        } else if (expanded.includes(",")) {
-          if (expanded.startsWith("$")) {
-            const hexPart = expanded.substring(1, expanded.indexOf(","));
-            expectedLength = this.determineValueLength(hexPart);
-          }
-        } else if (expanded.startsWith("[") && expanded.endsWith("]")) {
-          expectedLength = 2;
-        } else if (expanded.startsWith("$")) {
-          expectedLength = this.determineValueLength(expanded.substring(1));
-        } else {
-          expectedLength = 2;
-        }
-        const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded) || /^:(\++|-+)$/.test(expanded);
-        if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
-          try {
-            const { expression, suffix } = this.splitMathOperandSuffix(expanded);
-            const resolvedValue = this.deps.resolveDefines(expression);
-            const result = this.deps.evaluateMath(resolvedValue);
-            if (!Number.isNaN(result)) {
-              expanded = "$" + result.toString(16).toUpperCase() + suffix;
-              expectedLength = this.determineValueLength(result);
-            }
-          } catch (error) {
-          }
-        }
-        return { raw, expanded, length: expectedLength, syntax };
-      }
-      lowerOperand(operand) {
-        const raw = operand.trim();
-        const expandedOperand = this.expandOperand(raw);
-        const { expanded, length } = expandedOperand;
-        const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
-        return {
-          mode: "unknown",
-          baseExpression: expanded,
-          raw,
-          expanded,
-          length,
-          indexRegister: syntax.indexRegister,
-          immediate: syntax.immediate,
-          indirect: syntax.indirect
-        };
-      }
-      /**
-       * Returns the current logical address without applying architecture policy.
-       * @returns {number} Current logical address.
-       */
-      getCurrentAddress() {
-        return this.deps.getCurrentAddress();
-      }
-    };
-  }
-});
-
-// packages/core/src/plugin/contracts.ts
-function definePlugin(plugin2) {
-  return plugin2;
-}
-var PLUGIN_API_VERSION;
-var init_contracts = __esm({
-  "packages/core/src/plugin/contracts.ts"() {
-    "use strict";
-    PLUGIN_API_VERSION = 1;
-  }
-});
-
-// packages/core/src/plugin/diagnostics.ts
-var PluginError;
-var init_diagnostics2 = __esm({
-  "packages/core/src/plugin/diagnostics.ts"() {
-    "use strict";
-    PluginError = class extends Error {
-      code;
-      pluginId;
-      pluginModule;
-      contributionId;
-      targetId;
-      cause;
-      constructor(message, context) {
-        super(message, { cause: context.cause });
-        this.name = "PluginError";
-        this.code = context.code;
-        this.pluginId = context.pluginId;
-        this.pluginModule = context.pluginModule;
-        this.contributionId = context.contributionId;
-        this.targetId = context.targetId;
-        this.cause = context.cause;
-      }
-    };
   }
 });
 
@@ -14568,7 +10080,7 @@ var init_environment = __esm({
     "use strict";
     init_directive_groups();
     init_directive_catalog();
-    init_diagnostics2();
+    init_diagnostics();
     canonical = (value) => value.toLowerCase();
     toMap = (records2) => new Map(records2.map((record5) => [canonical(record5.contributionId), record5]));
     targetInvalid = (target, message) => {
@@ -17074,7 +12586,7 @@ var init_manager = __esm({
     import_semver = __toESM(require_semver2(), 1);
     init_directive_groups();
     init_contracts();
-    init_diagnostics2();
+    init_diagnostics();
     init_environment();
     noopLogger = {
       debug: () => void 0,
@@ -17747,7 +13259,7 @@ var PluginSessionStateStore;
 var init_session_state = __esm({
   "packages/core/src/plugin/session-state.ts"() {
     "use strict";
-    init_diagnostics2();
+    init_diagnostics();
     PluginSessionStateStore = class {
       #contributions;
       #values;
@@ -17888,10 +13400,4553 @@ var init_plugin = __esm({
   "packages/core/src/plugin/index.ts"() {
     "use strict";
     init_contracts();
-    init_diagnostics2();
+    init_diagnostics();
     init_environment();
     init_manager();
     init_session_state();
+  }
+});
+
+// packages/core/src/address-width.ts
+function maximumAddressForWidth(addressWidth) {
+  if (!Number.isInteger(addressWidth) || addressWidth < 1 || addressWidth > 53) {
+    throw new Error(`Address width must be an integer from 1 through 53, got ${addressWidth}.`);
+  }
+  return 2 ** addressWidth - 1;
+}
+function normalizeAddressForWidth(address5, addressWidth) {
+  const modulus = maximumAddressForWidth(addressWidth) + 1;
+  if (!Number.isFinite(address5) || !Number.isInteger(address5)) {
+    throw new Error(`Logical address must be a finite integer, got ${address5}.`);
+  }
+  return (address5 % modulus + modulus) % modulus;
+}
+var init_address_width = __esm({
+  "packages/core/src/address-width.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/crc32.ts
+var CRC32;
+var init_crc32 = __esm({
+  "packages/core/src/crc32.ts"() {
+    "use strict";
+    CRC32 = class _CRC32 {
+      /** Precomputed CRC32 table. */
+      static table = _CRC32.makeCRCTable();
+      /**
+       * Builds the lookup table used for CRC32 computation.
+       * @returns {Uint32Array} 256 unsigned entries for the reflected CRC32 polynomial.
+       */
+      static makeCRCTable() {
+        const table = new Uint32Array(256);
+        for (let i = 0; i < 256; i++) {
+          let c = i;
+          for (let k = 0; k < 8; k++) {
+            c = c & 1 ? 3988292384 ^ c >>> 1 : c >>> 1;
+          }
+          table[i] = c;
+        }
+        return table;
+      }
+      /**
+       * Computes the CRC32 checksum for the given data.
+       * @param {number[] | Uint8Array} data A Uint8Array (or Node.js Buffer) of data.
+       * @returns {number} The computed CRC32 checksum.
+       */
+      static compute(data) {
+        let crc = 4294967295;
+        for (let i = 0; i < data.length; i++) {
+          crc = _CRC32.table[(crc ^ data[i]) & 255] ^ crc >>> 8;
+        }
+        return (crc ^ 4294967295) >>> 0;
+      }
+    };
+  }
+});
+
+// packages/core/src/addressToLine.ts
+var sourceIdentity, AddressToLineMapping;
+var init_addressToLine = __esm({
+  "packages/core/src/addressToLine.ts"() {
+    "use strict";
+    init_crc32();
+    sourceIdentity = (filename, supplied) => {
+      try {
+        const fs14 = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+        const crypto = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:crypto");
+        if (!fs14 || !crypto) {
+          return { crc: 0, size: 0, sha256: "" };
+        }
+        const data = supplied ?? fs14.readFileSync(filename);
+        return {
+          crc: CRC32.compute(data),
+          size: data.length,
+          sha256: crypto.createHash("sha256").update(data).digest("hex")
+        };
+      } catch {
+        return { crc: 0, size: 0, sha256: "" };
+      }
+    };
+    AddressToLineMapping = class {
+      fileList = [];
+      filenameCrcs = [];
+      addrToLineInfo = [];
+      ranges = [];
+      /** Final encoder evaluations, collected without evaluating expressions a second time. */
+      instructions = [];
+      /** Successful final-pass asset emissions; binary files have no source lines. */
+      assets = [];
+      /** Clears all stored mappings and file information. */
+      reset() {
+        this.fileList = [];
+        this.filenameCrcs = [];
+        this.addrToLineInfo = [];
+        this.ranges = [];
+        this.instructions = [];
+        this.assets = [];
+      }
+      /** Record a binary dependency using the bytes consumed by assembly, not a later disk read.
+       * @param {string} filename Provider path.
+       * @param {Uint8Array} bytes Build snapshot.
+       */
+      registerDependencySnapshot(filename, bytes) {
+        const index = this.getFileIndex(filename);
+        const identity2 = sourceIdentity(filename, bytes);
+        this.fileList[index] = { name: filename, ...identity2 };
+      }
+      /**
+       * Adds a legacy point mapping. New debugger consumers should use ranges.
+       * @param {string} filename Source filename.
+       * @param {number} line One-based source line.
+       * @param {number} addr Logical address.
+       */
+      includeMapping(filename, line, addr) {
+        const fileIdx = this.getFileIndex(filename);
+        this.addrToLineInfo.push({ fileIdx, line, addr });
+      }
+      /**
+       * Adds one emitted byte, coalescing it with the preceding compatible range.
+       * @param {string} filename Source filename.
+       * @param {number} line One-based source line.
+       * @param {string} architecture Architecture contribution id.
+       * @param {string} addressSpace Address-space contribution id.
+       * @param {number} address Logical byte address.
+       * @param {number} outputOffset Physical output offset, or a negative value when unmapped.
+       */
+      includeByte(filename, line, architecture, addressSpace, address5, outputOffset) {
+        const fileIdx = this.getFileIndex(filename);
+        const mappedOutput = Number.isInteger(outputOffset) && outputOffset >= 0;
+        const previous = this.ranges.at(-1);
+        if (previous && previous.fileIdx === fileIdx && previous.line === line && previous.architecture === architecture && previous.addressSpace === addressSpace && previous.end === address5 && (mappedOutput && previous.outputEnd === outputOffset || !mappedOutput && previous.outputStart === void 0)) {
+          this.ranges[this.ranges.length - 1] = {
+            ...previous,
+            end: address5 + 1,
+            ...mappedOutput ? { outputEnd: outputOffset + 1 } : {}
+          };
+          return;
+        }
+        this.ranges.push({
+          fileIdx,
+          line,
+          architecture,
+          addressSpace,
+          start: address5,
+          end: address5 + 1,
+          ...mappedOutput ? { outputStart: outputOffset, outputEnd: outputOffset + 1 } : {}
+        });
+      }
+      /**
+       * Returns all source ranges containing a logical address.
+       * @param {string} addressSpace Address-space contribution id.
+       * @param {number} address Logical address.
+       * @param {string} architecture Optional architecture filter.
+       * @returns {readonly SerializableAddressRange[]} Matching source ranges.
+       */
+      findSourceRanges(addressSpace, address5, architecture) {
+        return this.serializableRanges().filter(
+          (range) => range.addressSpace === addressSpace && range.start <= address5 && address5 < range.end && (architecture === void 0 || range.architecture === architecture)
+        );
+      }
+      /**
+       * Returns all address ranges generated by a one-based source line.
+       * @param {string} source Source path.
+       * @param {number} line One-based source line.
+       * @param {string} architecture Optional architecture filter.
+       * @returns {readonly SerializableAddressRange[]} Matching address ranges.
+       */
+      findAddressRanges(source, line, architecture) {
+        return this.serializableRanges().filter(
+          (range) => range.source === source && range.line === line && (architecture === void 0 || range.architecture === architecture)
+        );
+      }
+      /** @returns {readonly SerializableAddressRange[]} Deterministic path-based ranges. */
+      serializableRanges() {
+        return this.ranges.map(({ fileIdx, ...range }) => ({ ...range, source: this.fileList[fileIdx]?.name ?? "" })).sort(
+          (left, right) => left.addressSpace.localeCompare(right.addressSpace) || left.architecture.localeCompare(right.architecture) || left.start - right.start || left.end - right.end || left.source.localeCompare(right.source) || left.line - right.line
+        );
+      }
+      /**
+       * Gets or creates a fingerprinted source-file entry.
+       * @param {string} filename Source path.
+       * @returns {number} Stable file-table index.
+       */
+      getFileIndex(filename) {
+        const filenameCrc = CRC32.compute(new TextEncoder().encode(filename));
+        for (let i = 0; i < this.filenameCrcs.length; i++) {
+          if (this.filenameCrcs[i] === filenameCrc && this.fileList[i]?.name === filename) {
+            return i;
+          }
+        }
+        this.fileList.push({ name: filename, ...sourceIdentity(filename) });
+        this.filenameCrcs.push(filenameCrc);
+        return this.fileList.length - 1;
+      }
+    };
+  }
+});
+
+// packages/core/src/architecture-registry.ts
+var ArchitectureRegistry;
+var init_architecture_registry = __esm({
+  "packages/core/src/architecture-registry.ts"() {
+    "use strict";
+    ArchitectureRegistry = class {
+      definitions = /* @__PURE__ */ new Map();
+      aliases = /* @__PURE__ */ new Map();
+      /**
+       * Registers the value.
+       * @param {ArchitectureDefinition} definition The definition.
+       * @param {string[]} [aliases] The aliases.
+       */
+      register(definition, aliases2 = []) {
+        const canonical2 = definition.name.toLowerCase();
+        this.definitions.set(canonical2, { ...definition, name: canonical2 });
+        this.aliases.set(canonical2, canonical2);
+        for (const alias of aliases2) {
+          this.aliases.set(alias.toLowerCase(), canonical2);
+        }
+      }
+      getCanonicalName(name) {
+        return this.aliases.get(name.toLowerCase());
+      }
+      getDefinition(name) {
+        const canonical2 = this.getCanonicalName(name);
+        if (!canonical2) {
+          return void 0;
+        }
+        return this.definitions.get(canonical2);
+      }
+      /**
+       * Returns editor metadata from the same registered encoder used for builds.
+       * @param {string} name Architecture name or alias.
+       * @returns {InstructionDescriptor[]} Registered instruction descriptors.
+       */
+      getInstructionCatalog(name) {
+        const definition = this.getDefinition(name);
+        return [...definition?.instructions ?? definition?.encoder.getInstructionCatalog?.() ?? []];
+      }
+    };
+  }
+});
+
+// packages/core/src/source-location.ts
+function createSourceSpan(start, end, line) {
+  return {
+    start,
+    end,
+    line,
+    columnStart: start,
+    columnEnd: end
+  };
+}
+function createLineSpan(text2, line) {
+  return createSourceSpan(0, text2.length, line);
+}
+function deriveTokenSpans(text2, tokens, line) {
+  if (tokens.length === 0) {
+    return [];
+  }
+  const spans = [];
+  let cursor = 0;
+  for (const token of tokens) {
+    if (!token) {
+      spans.push(createSourceSpan(cursor, cursor, line));
+      continue;
+    }
+    const tokenStart = text2.indexOf(token, cursor);
+    if (tokenStart === -1) {
+      spans.push(createSourceSpan(cursor, cursor + token.length, line));
+      cursor += token.length;
+      continue;
+    }
+    const tokenEnd = tokenStart + token.length;
+    spans.push(createSourceSpan(tokenStart, tokenEnd, line));
+    cursor = tokenEnd;
+  }
+  return spans;
+}
+function sourceSpanToRange(span, fallbackLine = span.line ?? 0) {
+  const line = span.line ?? fallbackLine;
+  const startCharacter = span.columnStart ?? span.start;
+  const endCharacter = span.columnEnd ?? span.end;
+  return {
+    start: {
+      line,
+      character: startCharacter
+    },
+    end: {
+      line,
+      character: endCharacter
+    }
+  };
+}
+var init_source_location = __esm({
+  "packages/core/src/source-location.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/diagnostics.ts
+function createAssemblySourceLocation(file, line, span) {
+  return {
+    file,
+    line,
+    span,
+    range: span ? sourceSpanToRange(span, line) : void 0
+  };
+}
+function diagnosticFromError(error, fallbackLocation, stage) {
+  if (error instanceof AssemblyError) {
+    return {
+      code: error.code,
+      message: error.message,
+      severity: error.severity,
+      location: error.location ?? fallbackLocation,
+      stage: error.stage ?? stage
+    };
+  }
+  if (error instanceof Error) {
+    return {
+      code: "ASSEMBLY_ERROR",
+      message: error.message,
+      severity: "error",
+      location: fallbackLocation,
+      stage
+    };
+  }
+  return {
+    code: "ASSEMBLY_ERROR",
+    message: typeof error === "string" ? error : JSON.stringify(error),
+    severity: "error",
+    location: fallbackLocation,
+    stage
+  };
+}
+var AssemblyError;
+var init_diagnostics2 = __esm({
+  "packages/core/src/diagnostics.ts"() {
+    "use strict";
+    init_source_location();
+    AssemblyError = class extends Error {
+      code;
+      severity;
+      location;
+      stage;
+      /**
+       * Creates a new structured assembly error.
+       * @param {string} code Stable diagnostic code.
+       * @param {string} message Human-readable message.
+       * @param {{ severity?: AssemblyDiagnosticSeverity; location?: AssemblySourceLocation; stage?: string }} [options] Optional metadata.
+       * @param {AssemblyDiagnosticSeverity} [options.severity] Optional diagnostic severity.
+       * @param {AssemblySourceLocation} [options.location] Optional source location.
+       * @param {string} [options.stage] Optional pipeline stage.
+       */
+      constructor(code, message, options = {}) {
+        super(message);
+        this.name = "AssemblyError";
+        this.code = code;
+        this.severity = options.severity ?? "error";
+        this.location = options.location;
+        this.stage = options.stage;
+      }
+    };
+  }
+});
+
+// packages/core/src/directives/data.ts
+var handleDataDirective, registerDataDirectives;
+var init_data = __esm({
+  "packages/core/src/directives/data.ts"() {
+    "use strict";
+    handleDataDirective = ({ runtime }, words) => {
+      runtime.handleDataDirective(words[0], words.slice(1));
+    };
+    registerDataDirectives = (registry2, context) => {
+      registry2.register(["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"], context, handleDataDirective);
+    };
+  }
+});
+
+// packages/core/src/directives/fill-pad.ts
+var FILL_PATTERN_SIZE, PATTERN_WIDTH, patternWidth, writeLittleEndianRepeats, resolvePatternValue, handleFillPattern, handleFill, handlePadPattern, handlePad, registerFillPadDirectives;
+var init_fill_pad = __esm({
+  "packages/core/src/directives/fill-pad.ts"() {
+    "use strict";
+    FILL_PATTERN_SIZE = 12;
+    PATTERN_WIDTH = {
+      fillbyte: 1,
+      fillword: 2,
+      filllong: 3,
+      filldword: 4,
+      padbyte: 1,
+      padword: 2,
+      padlong: 3,
+      paddword: 4
+    };
+    patternWidth = (keyword, kind) => {
+      if (!keyword.startsWith(kind)) {
+        throw new Error(`Unrecognized ${kind} directive.`);
+      }
+      const width2 = PATTERN_WIDTH[keyword];
+      if (width2 === void 0) {
+        throw new Error(`Unrecognized ${kind} directive.`);
+      }
+      return width2;
+    };
+    writeLittleEndianRepeats = (value, width2, dest, length) => {
+      const unit = value >>> 0;
+      const bytes = [unit & 255, unit >>> 8 & 255, unit >>> 16 & 255, unit >>> 24 & 255];
+      for (let i = 0; i < length; i++) {
+        dest[i] = bytes[i % width2];
+      }
+    };
+    resolvePatternValue = ({ session, operandResolver }, words, kind) => {
+      const keyword = words[0];
+      const width2 = patternWidth(keyword, kind);
+      if (words.length !== 2) {
+        throw new Error(`${keyword.toUpperCase()} directive requires exactly one parameter.`);
+      }
+      return {
+        width: width2,
+        value: operandResolver.getnum(session.resolvedefines(words[1]))
+      };
+    };
+    handleFillPattern = (ctx, words) => {
+      const { width: width2, value } = resolvePatternValue(ctx, words, "fill");
+      writeLittleEndianRepeats(value, width2, ctx.session.fillbyte, FILL_PATTERN_SIZE);
+    };
+    handleFill = ({ session, operandResolver }, words) => {
+      if (words.length !== 2) {
+        throw new Error("FILL directive requires exactly one parameter (number of bytes to fill).");
+      }
+      const count = operandResolver.getnum(session.resolvedefines(words[1]));
+      for (let i = 0; i < count; i++) {
+        session.write1(session.fillbyte[i % FILL_PATTERN_SIZE]);
+      }
+    };
+    handlePadPattern = (ctx, words) => {
+      const { session } = ctx;
+      const { width: width2, value } = resolvePatternValue(ctx, words, "pad");
+      session.padUnit = width2;
+      writeLittleEndianRepeats(value, width2, session.padbyte, width2);
+    };
+    handlePad = ({ session, operandResolver }, words) => {
+      let gap;
+      if (words.length === 1) {
+        gap = 65536 - (session.currentTargetAddress & 65535);
+      } else if (words.length === 2) {
+        const targetAddress = operandResolver.getnum(session.resolvedefines(words[1]));
+        const targetPC = session.outputWriter.toOutputOffset(targetAddress);
+        if (targetPC < 0) {
+          throw new Error(`Target address ${targetAddress.toString(16)} does not map to output.`);
+        }
+        const currentPC = session.outputWriter.toOutputOffset(session.currentTargetAddress);
+        if (targetPC <= currentPC) {
+          return;
+        }
+        gap = targetPC - currentPC;
+      } else {
+        throw new Error("PAD directive accepts zero or one parameter.");
+      }
+      for (let i = 0; i < gap; i++) {
+        session.write1(session.padbyte[i % session.padUnit]);
+      }
+    };
+    registerFillPadDirectives = (registry2, context) => {
+      registry2.registerLowered(
+        ["fillbyte", "fillword", "filllong", "filldword"],
+        context,
+        handleFillPattern
+      );
+      registry2.registerLowered("fill", context, handleFill);
+      registry2.registerLowered(
+        ["padbyte", "padword", "padlong", "paddword"],
+        context,
+        handlePadPattern
+      );
+      registry2.registerLowered("pad", context, handlePad);
+    };
+  }
+});
+
+// packages/core/src/directives/flow-control.ts
+var handleRelativeLabel, registerFlowControlDirectives;
+var init_flow_control = __esm({
+  "packages/core/src/directives/flow-control.ts"() {
+    "use strict";
+    handleRelativeLabel = ({ session }, _words, raw) => {
+      session.symbolScope.handleRelativeLabel(raw);
+    };
+    registerFlowControlDirectives = (registry2, context) => {
+      registry2.register(["+", "-"], context, handleRelativeLabel);
+    };
+  }
+});
+
+// packages/core/src/ir/expression-node.ts
+function attachRootSpan(node, text2) {
+  if (!node.span) {
+    node.span = createSourceSpan(0, text2.length);
+  }
+  return node;
+}
+function parseExpressionNode(input) {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { type: "raw", value: "", span: createSourceSpan(0, 0) };
+  }
+  if (trimmed.startsWith("#") && trimmed.length > 1) {
+    return parseExpressionNode(trimmed.slice(1));
+  }
+  const rangeIndex = findTopLevelRange(trimmed);
+  if (rangeIndex !== -1) {
+    return attachRootSpan(
+      {
+        type: "range",
+        start: parseExpressionNode(trimmed.slice(0, rangeIndex)),
+        end: parseExpressionNode(trimmed.slice(rangeIndex + 2))
+      },
+      trimmed
+    );
+  }
+  try {
+    const tokens = tokenizeExpression(trimmed);
+    const parser = new ExpressionParser(tokens);
+    const expression = parser.parseExpression();
+    if (!parser.isAtEnd()) {
+      return { type: "raw", value: trimmed, span: createSourceSpan(0, trimmed.length) };
+    }
+    return attachRootSpan(expression, trimmed);
+  } catch {
+    return { type: "raw", value: trimmed, span: createSourceSpan(0, trimmed.length) };
+  }
+}
+function renderExpressionNode(node) {
+  if (isReferenceExpressionNode(node)) {
+    return renderReferenceExpressionNode(node);
+  }
+  switch (node.type) {
+    case "literal":
+      return node.value;
+    case "string":
+      return `${node.quote}${node.value}${node.quote}`;
+    case "raw":
+      return node.value;
+    case "call":
+      return `${node.callee.name}(${node.arguments.map(renderExpressionNode).join(", ")})`;
+    case "unary":
+      return `${node.operator}${renderExpressionNode(node.argument)}`;
+    case "binary":
+      return `${renderExpressionNode(node.left)} ${node.operator} ${renderExpressionNode(node.right)}`;
+    case "range":
+      return `${renderExpressionNode(node.start)}..${renderExpressionNode(node.end)}`;
+    default:
+      return "";
+  }
+}
+function isReferenceExpressionNode(node) {
+  switch (node.type) {
+    case "identifier":
+    case "defineReference":
+      return true;
+    case "member":
+    case "index":
+      return isReferenceExpressionNode(node.object);
+    default:
+      return false;
+  }
+}
+function renderReferenceExpressionNode(node, options = {}) {
+  switch (node.type) {
+    case "identifier":
+      return node.name;
+    case "defineReference":
+      return node.braced ? `!{${node.content ?? ""}}` : `!${node.name ?? ""}`;
+    case "member":
+      return `${renderReferenceExpressionNode(node.object, options)}.${node.property.name}`;
+    case "index": {
+      const index = options.renderIndex ? options.renderIndex(node.index) : renderExpressionNode(node.index);
+      return `${renderReferenceExpressionNode(node.object, options)}[${index}]`;
+    }
+    default:
+      return "";
+  }
+}
+function parseLeadingReferenceExpression(input) {
+  const prefixLength = scanReferenceExpressionPrefix(input);
+  if (prefixLength === 0) {
+    return void 0;
+  }
+  let source = input.slice(0, prefixLength).trimEnd();
+  if (source.endsWith(".")) {
+    source = source.slice(0, -1).trimEnd();
+  }
+  const node = parseExpressionNode(source);
+  if (!isReferenceExpressionNode(node)) {
+    return void 0;
+  }
+  return {
+    node,
+    length: prefixLength
+  };
+}
+function findTopLevelRange(input) {
+  let depth = 0;
+  let bracketDepth = 0;
+  let quote = "";
+  for (let i = 0; i < input.length - 1; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (quote) {
+      continue;
+    }
+    if (char === "(") {
+      depth++;
+      continue;
+    }
+    if (char === ")") {
+      depth--;
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth++;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth--;
+      continue;
+    }
+    if (depth === 0 && bracketDepth === 0 && input.slice(i, i + 2) === "..") {
+      if (i === 0) {
+        continue;
+      }
+      return i;
+    }
+  }
+  return -1;
+}
+function scanReferenceExpressionPrefix(input) {
+  let index = 0;
+  index = skipWhitespace(input, index);
+  if (index >= input.length) {
+    return 0;
+  }
+  const root = scanReferenceRoot(input, index);
+  if (root === index) {
+    return 0;
+  }
+  index = root;
+  while (index < input.length) {
+    const lookahead = skipWhitespace(input, index);
+    if (input[lookahead] === ".") {
+      let memberStart = lookahead + 1;
+      memberStart = skipWhitespace(input, memberStart);
+      const propertyEnd = readIdentifier(input, memberStart).nextIndex;
+      if (propertyEnd === memberStart) {
+        return memberStart;
+      }
+      index = propertyEnd;
+      continue;
+    }
+    if (input[lookahead] === "[") {
+      const bracketEnd = findMatchingBracket(input, lookahead);
+      if (bracketEnd === -1) {
+        return 0;
+      }
+      index = bracketEnd + 1;
+      continue;
+    }
+    break;
+  }
+  return index;
+}
+function scanReferenceRoot(input, start) {
+  if (input[start] === "!") {
+    try {
+      return readDefineReference(input, start).nextIndex;
+    } catch {
+      return start;
+    }
+  }
+  return readIdentifier(input, start).nextIndex;
+}
+function findMatchingBracket(input, start) {
+  let bracketDepth = 0;
+  let parenDepth = 0;
+  let quote = "";
+  for (let index = start; index < input.length; index++) {
+    const char = input[index];
+    if ((char === '"' || char === "'") && input[index - 1] !== "\\") {
+      quote = quote === char ? "" : quote || char;
+      continue;
+    }
+    if (quote) {
+      continue;
+    }
+    if (char === "[") {
+      bracketDepth++;
+      continue;
+    }
+    if (char === "]") {
+      bracketDepth--;
+      if (bracketDepth === 0 && parenDepth === 0) {
+        return index;
+      }
+      continue;
+    }
+    if (char === "(") {
+      parenDepth++;
+      continue;
+    }
+    if (char === ")") {
+      parenDepth--;
+    }
+  }
+  return -1;
+}
+function skipWhitespace(input, index) {
+  let current = index;
+  while (current < input.length && /\s/.test(input[current])) {
+    current++;
+  }
+  return current;
+}
+function tokenizeExpression(input) {
+  const tokens = [];
+  let index = 0;
+  while (index < input.length) {
+    const char = input[index];
+    if (/\s/.test(char)) {
+      index++;
+      continue;
+    }
+    if (char === "(") {
+      tokens.push({ type: "lparen" });
+      index++;
+      continue;
+    }
+    if (char === ")") {
+      tokens.push({ type: "rparen" });
+      index++;
+      continue;
+    }
+    if (char === ",") {
+      tokens.push({ type: "comma" });
+      index++;
+      continue;
+    }
+    if (char === ".") {
+      tokens.push({ type: "dot" });
+      index++;
+      continue;
+    }
+    if (char === "[") {
+      tokens.push({ type: "lbracket" });
+      index++;
+      continue;
+    }
+    if (char === "]") {
+      tokens.push({ type: "rbracket" });
+      index++;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      const { value, nextIndex, quote } = readQuotedString(input, index);
+      tokens.push({ type: "string", value, quote });
+      index = nextIndex;
+      continue;
+    }
+    const operator = (input.startsWith("<:", index) ? "<:" : void 0) ?? binaryOperators.find((candidate) => input.startsWith(candidate, index));
+    if (operator) {
+      tokens.push({ type: "operator", value: operator });
+      index += operator.length;
+      continue;
+    }
+    if (char === "!") {
+      const { token, nextIndex } = readDefineReference(input, index);
+      tokens.push(token);
+      index = nextIndex;
+      continue;
+    }
+    if (char === "@" || /[A-Z_a-z]/.test(char)) {
+      const { value, nextIndex } = readIdentifier(input, index);
+      tokens.push({ type: "identifier", value });
+      index = nextIndex;
+      continue;
+    }
+    if (char === "$") {
+      const match = input.slice(index).match(/^\$[\dA-Fa-f]+/);
+      if (!match) {
+        throw new Error("Invalid hex literal");
+      }
+      tokens.push({ type: "literal", value: match[0] });
+      index += match[0].length;
+      continue;
+    }
+    if (char === "%") {
+      const match = input.slice(index).match(/^%[01]+/);
+      if (!match) {
+        throw new Error("Invalid binary literal");
+      }
+      tokens.push({ type: "literal", value: match[0] });
+      index += match[0].length;
+      continue;
+    }
+    if (/\d/.test(char)) {
+      const match = input.slice(index).match(/^(?:0x[\da-f]+|-?\d+(?:\.\d+)?)/i);
+      if (!match) {
+        throw new Error("Invalid numeric literal");
+      }
+      tokens.push({ type: "literal", value: match[0] });
+      index += match[0].length;
+      continue;
+    }
+    throw new Error(`Unexpected token '${char}'`);
+  }
+  return tokens;
+}
+function readQuotedString(input, start) {
+  const quote = input[start];
+  let value = "";
+  let index = start + 1;
+  while (index < input.length) {
+    const char = input[index];
+    if (char === quote && input[index - 1] !== "\\") {
+      return { value, nextIndex: index + 1, quote };
+    }
+    value += char;
+    index++;
+  }
+  throw new Error("Unterminated string literal");
+}
+function readIdentifier(input, start) {
+  let index = start;
+  if (input[index] === "@") {
+    index++;
+  }
+  while (index < input.length && /\w/.test(input[index])) {
+    index++;
+  }
+  return { value: input.slice(start, index), nextIndex: index };
+}
+function readDefineReference(input, start) {
+  if (input[start + 1] === "{") {
+    let index = start + 2;
+    let braces = 1;
+    let content = "";
+    while (index < input.length) {
+      const char = input[index];
+      if (char === "{") {
+        braces++;
+      } else if (char === "}") {
+        braces--;
+        if (braces === 0) {
+          return {
+            token: { type: "defineReference", content, braced: true },
+            nextIndex: index + 1
+          };
+        }
+      }
+      content += char;
+      index++;
+    }
+    throw new Error("Unterminated braced define reference");
+  }
+  const { value, nextIndex } = readIdentifier(input, start + 1);
+  if (!value) {
+    throw new Error("Expected define reference name");
+  }
+  return {
+    token: { type: "defineReference", name: value, braced: false },
+    nextIndex
+  };
+}
+function isBinaryOperator(value) {
+  return value in binaryPrecedence;
+}
+var binaryPrecedence, unaryOperators, binaryOperators, ExpressionParser;
+var init_expression_node = __esm({
+  "packages/core/src/ir/expression-node.ts"() {
+    "use strict";
+    init_source_location();
+    binaryPrecedence = {
+      "||": 0,
+      "&&": 1,
+      "==": 2,
+      "=": 2,
+      "!=": 2,
+      "<": 2,
+      ">": 2,
+      "<=": 2,
+      ">=": 2,
+      "|": 3,
+      "^": 3,
+      "&": 3,
+      "<<": 3,
+      ">>": 3,
+      "+": 4,
+      "-": 4,
+      "*": 5,
+      "/": 5,
+      "%": 5,
+      "**": 6
+    };
+    unaryOperators = /* @__PURE__ */ new Set(["<:", "<", ">", "^", "~", "-", "+"]);
+    binaryOperators = [
+      "**",
+      "<<",
+      ">>",
+      "<=",
+      ">=",
+      "==",
+      "=",
+      "!=",
+      "&&",
+      "||",
+      "*",
+      "/",
+      "%",
+      "+",
+      "-",
+      "&",
+      "|",
+      "^",
+      "<",
+      ">"
+    ];
+    ExpressionParser = class {
+      constructor(tokens) {
+        this.tokens = tokens;
+      }
+      tokens;
+      index = 0;
+      parseExpression(minPrecedence = 0) {
+        let left = this.parsePrefix();
+        while (true) {
+          const token = this.peek();
+          if (!token || token.type !== "operator" || !isBinaryOperator(token.value)) {
+            break;
+          }
+          const precedence = binaryPrecedence[token.value];
+          if (precedence < minPrecedence) {
+            break;
+          }
+          this.consume();
+          const nextMinPrecedence = token.value === "**" ? precedence : precedence + 1;
+          const right = this.parseExpression(nextMinPrecedence);
+          left = {
+            type: "binary",
+            operator: token.value,
+            left,
+            right
+          };
+        }
+        return left;
+      }
+      isAtEnd() {
+        return this.index >= this.tokens.length;
+      }
+      parsePrefix() {
+        const token = this.peek();
+        if (!token) {
+          throw new Error("Unexpected end of expression");
+        }
+        if (token.type === "operator" && unaryOperators.has(token.value)) {
+          this.consume();
+          return {
+            type: "unary",
+            operator: token.value,
+            argument: this.parsePrefix()
+          };
+        }
+        return this.parsePostfix(this.parsePrimary());
+      }
+      parsePrimary() {
+        if (this.peek()?.type === "dot") {
+          let name = "";
+          while (this.match({ type: "dot" })) {
+            name += ".";
+          }
+          const token2 = this.consume();
+          if (token2?.type === "identifier") {
+            return { type: "identifier", name: name + token2.value };
+          }
+          if (token2?.type === "literal" && /^\d+$/.test(token2.value)) {
+            return { type: "identifier", name: name + token2.value };
+          }
+          throw new Error("Expected label name after '.'");
+        }
+        const token = this.consume();
+        if (!token) {
+          throw new Error("Unexpected end of expression");
+        }
+        switch (token.type) {
+          case "literal":
+            return { type: "literal", value: token.value };
+          case "string":
+            return { type: "string", value: token.value, quote: token.quote };
+          case "defineReference":
+            return token.braced ? { type: "defineReference", content: token.content, braced: true } : { type: "defineReference", name: token.name, braced: false };
+          case "identifier":
+            return { type: "identifier", name: token.value };
+          case "lparen": {
+            const expression = this.parseExpression();
+            this.expect("rparen");
+            return expression;
+          }
+          default:
+            throw new Error(`Unexpected token ${token.type}`);
+        }
+      }
+      parsePostfix(expression) {
+        let current = expression;
+        while (true) {
+          if (this.match({ type: "lparen" })) {
+            if (current.type !== "identifier") {
+              throw new Error("Only identifier call expressions are currently supported");
+            }
+            current = {
+              type: "call",
+              callee: current,
+              arguments: this.parseCallArguments()
+            };
+            continue;
+          }
+          if (this.match({ type: "dot" })) {
+            if (!isReferenceExpressionNode(current)) {
+              throw new Error("Member access requires a reference expression");
+            }
+            const property = this.consume();
+            if (!property || property.type !== "identifier") {
+              throw new Error("Expected member name after '.'");
+            }
+            current = {
+              type: "member",
+              object: current,
+              property: { type: "identifier", name: property.value }
+            };
+            continue;
+          }
+          if (this.match({ type: "lbracket" })) {
+            if (!isReferenceExpressionNode(current)) {
+              throw new Error("Index access requires a reference expression");
+            }
+            const indexExpression = this.parseExpression();
+            this.expect("rbracket");
+            current = {
+              type: "index",
+              object: current,
+              index: indexExpression
+            };
+            continue;
+          }
+          return current;
+        }
+      }
+      parseCallArguments() {
+        const args = [];
+        if (this.match({ type: "rparen" })) {
+          return args;
+        }
+        do {
+          args.push(this.parseExpression());
+        } while (this.match({ type: "comma" }));
+        this.expect("rparen");
+        return args;
+      }
+      /**
+       * Expects a value.
+       * @param {Token["type"]} type The type.
+       */
+      expect(type) {
+        const token = this.consume();
+        if (!token || token.type !== type) {
+          throw new Error(`Expected token ${type}`);
+        }
+      }
+      match(expected) {
+        const token = this.peek();
+        if (token && token.type === expected.type) {
+          this.index++;
+          return true;
+        }
+        return false;
+      }
+      consume() {
+        const token = this.tokens[this.index];
+        this.index++;
+        return token;
+      }
+      peek() {
+        return this.tokens[this.index];
+      }
+    };
+  }
+});
+
+// packages/core/src/directives/include-source.ts
+var IDENTITY_INCLUDE_DEFINES, NUMERIC_INCBIN_TARGET, expandIncludeFilename, resolveIncludeTarget, splitIncbinArrow, parseIncbinFilenameAndRange, applyEofEnd, findTopLevelHyphen, assertIncbinMathParensBalanced, parseIncbinUnprefixedHex, parseDeprecatedHyphenIncbinRange, evaluateIncbinRange, assertIncbinBounds, handleIncbin, handleIncsrc, handleInclude, registerIncludeSourceDirectives;
+var init_include_source = __esm({
+  "packages/core/src/directives/include-source.ts"() {
+    "use strict";
+    init_expression_node();
+    IDENTITY_INCLUDE_DEFINES = {
+      resolveDefinesInStringLiteral: (content) => content,
+      resolveRegularDefines: (content) => content
+    };
+    NUMERIC_INCBIN_TARGET = /^\$[\da-f]+$|^-?\d+$/i;
+    expandIncludeFilename = (target, defineEngine) => {
+      if (target.length >= 2) {
+        const quote = target[0];
+        const isQuoted = (quote === '"' || quote === "'" || quote === "`") && target.endsWith(quote);
+        if (isQuoted) {
+          return `${quote}${defineEngine.resolveDefinesInStringLiteral(target.slice(1, -1))}${quote}`;
+        }
+      }
+      return defineEngine.resolveRegularDefines(target);
+    };
+    resolveIncludeTarget = (words, command, directive2, defineEngine) => {
+      const target = command?.parsed.includeTarget?.target ?? words[1];
+      if (!target) {
+        throw new Error(`${directive2} requires exactly one filename parameter`);
+      }
+      return expandIncludeFilename(target, defineEngine);
+    };
+    splitIncbinArrow = (words) => {
+      const arrowIndex = words.indexOf("->");
+      if (arrowIndex === -1) {
+        return { sourceWords: words.slice(1), targetLocation: void 0 };
+      }
+      if (arrowIndex + 1 >= words.length) {
+        throw new Error("incbin '->' syntax requires a target location.");
+      }
+      return {
+        sourceWords: words.slice(1, arrowIndex),
+        targetLocation: words[arrowIndex + 1]
+      };
+    };
+    parseIncbinFilenameAndRange = (filenameWithRange) => {
+      const quote = filenameWithRange[0];
+      if (quote === '"' || quote === "'" || quote === "`") {
+        const endQuote = filenameWithRange.indexOf(quote, 1);
+        if (endQuote !== -1) {
+          const filename = filenameWithRange.slice(1, endQuote);
+          const rest = filenameWithRange.slice(endQuote + 1);
+          if (rest.startsWith(":")) {
+            return { filename, rangeStr: rest.slice(1) };
+          }
+          return { filename, rangeStr: void 0 };
+        }
+      }
+      const colonIndex = filenameWithRange.indexOf(":");
+      if (colonIndex === -1) {
+        return { filename: filenameWithRange, rangeStr: void 0 };
+      }
+      return {
+        filename: filenameWithRange.slice(0, colonIndex),
+        rangeStr: filenameWithRange.slice(colonIndex + 1)
+      };
+    };
+    applyEofEnd = (startOffset, endOffset, fileLength) => {
+      if (endOffset === 0) {
+        return { startOffset, endOffset: fileLength };
+      }
+      return { startOffset, endOffset };
+    };
+    findTopLevelHyphen = (input) => {
+      let depth = 0;
+      let quote = "";
+      for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+        if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+          if (quote === char) {
+            quote = "";
+          } else if (quote === "") {
+            quote = char;
+          }
+          continue;
+        }
+        if (quote !== "") {
+          continue;
+        }
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+        if (char === ")") {
+          depth -= 1;
+          continue;
+        }
+        if (depth === 0 && char === "-") {
+          return i;
+        }
+      }
+      return -1;
+    };
+    assertIncbinMathParensBalanced = (text2) => {
+      let depth = 0;
+      for (let i = 0; i < text2.length; i++) {
+        const char = text2[i];
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+        if (char === ")") {
+          depth -= 1;
+          if (depth < 0) {
+            throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+          }
+        }
+      }
+      if (depth !== 0) {
+        throw new Error("Emismatched_parentheses: Mismatched parentheses.");
+      }
+    };
+    parseIncbinUnprefixedHex = (text2) => {
+      const digits = text2.match(/^[\dA-Fa-f]*/)[0];
+      const value = digits === "" ? 0 : Number.parseInt(digits, 16);
+      return { value, rest: text2.slice(digits.length) };
+    };
+    parseDeprecatedHyphenIncbinRange = (rangeStr) => {
+      let rest = rangeStr;
+      let start;
+      if (rest.startsWith("(")) {
+        const hyphen = findTopLevelHyphen(rest);
+        if (hyphen < 1 || rest[hyphen - 1] !== ")") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        const inner = rest.slice(1, hyphen - 1);
+        assertIncbinMathParensBalanced(inner);
+        start = inner;
+        rest = rest.slice(hyphen);
+      } else {
+        const parsed = parseIncbinUnprefixedHex(rest);
+        start = parsed.value;
+        rest = parsed.rest;
+      }
+      if (!rest.startsWith("-")) {
+        throw new Error(`Invalid range specification: ${rangeStr}`);
+      }
+      rest = rest.slice(1);
+      let end;
+      if (rest.startsWith("(")) {
+        if (!rest.endsWith(")")) {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        const inner = rest.slice(1, -1);
+        assertIncbinMathParensBalanced(inner);
+        end = inner;
+      } else {
+        const parsed = parseIncbinUnprefixedHex(rest);
+        if (parsed.rest !== "") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        end = parsed.value;
+      }
+      return { start, end };
+    };
+    evaluateIncbinRange = (rangeStr, evaluate, fileLength) => {
+      if (rangeStr.includes("..")) {
+        const parts = rangeStr.split("..");
+        if (parts.length !== 2 || parts[0] === "" || parts[1] === "") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        const rangeNode = parseExpressionNode(rangeStr);
+        if (rangeNode.type !== "range") {
+          throw new Error(`Invalid range specification: ${rangeStr}`);
+        }
+        return applyEofEnd(evaluate(rangeNode.start), evaluate(rangeNode.end), fileLength);
+      }
+      if (rangeStr.includes("-")) {
+        const bounds = parseDeprecatedHyphenIncbinRange(rangeStr);
+        let startOffset;
+        if (typeof bounds.start === "number") {
+          startOffset = bounds.start;
+        } else {
+          startOffset = evaluate(bounds.start);
+        }
+        let endOffset;
+        if (typeof bounds.end === "number") {
+          endOffset = bounds.end;
+        } else {
+          endOffset = evaluate(bounds.end);
+        }
+        return applyEofEnd(startOffset, endOffset, fileLength);
+      }
+      throw new Error(`Invalid range specification: ${rangeStr}`);
+    };
+    assertIncbinBounds = (startOffset, endOffset, fileLength, filename, rangeStr) => {
+      const rangeHint = rangeStr ? `, range ${rangeStr}` : "";
+      if (startOffset < 0 || startOffset > endOffset || startOffset > fileLength) {
+        throw new Error(
+          `Start offset ${startOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`
+        );
+      }
+      if (endOffset > fileLength) {
+        throw new Error(
+          `End offset ${endOffset} out of bounds for file ${filename} (length ${fileLength}${rangeHint})`
+        );
+      }
+    };
+    handleIncbin = ({ session, includeSource, operandResolver, runtime, defineEngine }, words, _raw = "", command) => {
+      const { sourceWords, targetLocation } = splitIncbinArrow(words);
+      const filenameWithRange = sourceWords.join(" ");
+      const { filename: rawFilename, rangeStr } = parseIncbinFilenameAndRange(filenameWithRange);
+      const expander = defineEngine ?? IDENTITY_INCLUDE_DEFINES;
+      const quote = filenameWithRange[0];
+      let filename = rawFilename;
+      if (quote === '"' || quote === "'" || quote === "`") {
+        filename = expander.resolveDefinesInStringLiteral(rawFilename);
+      } else {
+        filename = expander.resolveRegularDefines(rawFilename);
+      }
+      const fileData = includeSource.readFile(filename);
+      if (!(fileData instanceof Uint8Array)) {
+        throw new Error(`Failed to read file: ${filename}`);
+      }
+      let startOffset = 0;
+      let endOffset = fileData.length;
+      const parsedRange = command?.parsed.incbinRange;
+      if (parsedRange) {
+        ({ startOffset, endOffset } = applyEofEnd(
+          session.evaluateRangeExpression(parsedRange.start),
+          session.evaluateRangeExpression(parsedRange.end),
+          fileData.length
+        ));
+      } else if (rangeStr) {
+        ({ startOffset, endOffset } = evaluateIncbinRange(
+          rangeStr,
+          (expression) => session.evaluateRangeExpression(expression),
+          fileData.length
+        ));
+      }
+      assertIncbinBounds(startOffset, endOffset, fileData.length, filename, rangeStr);
+      const incbinData = fileData.subarray(startOffset, endOffset);
+      if (targetLocation !== void 0) {
+        runtime.handlePushPC();
+        let targetAddress;
+        if (NUMERIC_INCBIN_TARGET.test(targetLocation)) {
+          targetAddress = operandResolver.getnum(targetLocation);
+        } else {
+          targetAddress = session.symbolScope.getLabelValue(targetLocation, false);
+        }
+        session.setWritePosition(targetAddress);
+      }
+      for (let i = 0; i < incbinData.length; i++) {
+        session.write1(incbinData[i]);
+      }
+      if (targetLocation !== void 0) {
+        runtime.handlePullPC();
+      }
+      session.recordCurrentAddress();
+    };
+    handleIncsrc = ({ includeSource, defineEngine }, words, _raw = "", command) => {
+      includeSource.assembleFile(
+        resolveIncludeTarget(words, command, "incsrc", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
+      );
+    };
+    handleInclude = ({ includeSource, defineEngine }, words, _raw = "", command) => {
+      includeSource.includeFile(
+        resolveIncludeTarget(words, command, "include", defineEngine ?? IDENTITY_INCLUDE_DEFINES)
+      );
+    };
+    registerIncludeSourceDirectives = (registry2, context) => {
+      registry2.registerLowered("incsrc", context, handleIncsrc);
+      registry2.registerLowered("include", context, handleInclude);
+      registry2.registerLowered("includeonce", context, ({ includeSource }) => {
+        includeSource.guardCurrentFile();
+      });
+      registry2.registerLowered("incbin", context, handleIncbin);
+    };
+  }
+});
+
+// packages/core/src/directives/layout.ts
+var handlePushBase, handlePullBase, handleArch, registerGenericLayoutDirectives, registerLayoutDirectives;
+var init_layout = __esm({
+  "packages/core/src/directives/layout.ts"() {
+    "use strict";
+    handlePushBase = ({ session }) => {
+      session.pushBaseStack.push(session.currentTargetAddress);
+    };
+    handlePullBase = ({ session }) => {
+      const baseAddress = session.pushBaseStack.pop();
+      if (baseAddress === void 0) {
+        throw new Error("No base value to pull.");
+      }
+      session.currentTargetAddress = baseAddress;
+    };
+    handleArch = ({ session }, words) => {
+      if (!words[1]) {
+        throw new Error("ARCH command requires an architecture parameter.");
+      }
+      const archParam = words[1].toLowerCase();
+      const canonical2 = session.architectureRegistry.getCanonicalName(archParam);
+      if (!canonical2) {
+        if (session.selectArchitecture) {
+          session.selectArchitecture(archParam, archParam);
+          return;
+        }
+        throw new Error("Unsupported architecture: " + archParam);
+      }
+      if (!session.selectArchitecture && session.availableArchitectures && !session.availableArchitectures.has(canonical2)) {
+        throw new Error(
+          `Architecture ${canonical2} is unavailable for target ${session.targetDisplayName ?? "active target"}.`
+        );
+      }
+      if (session.selectArchitecture) {
+        session.selectArchitecture(canonical2, archParam);
+      } else {
+        session.arch = canonical2;
+      }
+    };
+    registerGenericLayoutDirectives = (registry2, context) => {
+      registry2.registerLowered("base", context.base, ({ session, operandResolver }, words) => {
+        if (words.length !== 2) {
+          throw new Error("BASE directive requires exactly one parameter.");
+        }
+        const param = words[1].trim();
+        if (param.toLowerCase() === "off") {
+          const baseAddress = Number(session.currentTargetBaseAddress);
+          const baseStartAddress = Number(session.currentTargetBaseStartAddress);
+          session.currentTargetAddress = baseAddress;
+          session.currentTargetStartAddress = baseStartAddress;
+          return;
+        }
+        const value = operandResolver.getnum(param);
+        const addressWidth = session.addressWidth;
+        const maxAddress = 2 ** addressWidth - 1;
+        if (value < 0 || value > maxAddress) {
+          throw new Error(`Invalid base address: ${param}. Must be within ${addressWidth} bits.`);
+        }
+        session.currentTargetAddress = value;
+        session.currentTargetStartAddress = value;
+      });
+      registry2.registerLowered("org", context.org, ({ runtime }, words) => {
+        runtime.handleOrg(words.slice(1));
+      });
+      registry2.registerLowered("pushbase", context.addressStack, handlePushBase);
+      registry2.registerLowered("pullbase", context.addressStack, handlePullBase);
+      registry2.registerLowered("pushpc", context.runtime, ({ runtime }) => {
+        runtime.handlePushPC();
+      });
+      registry2.registerLowered("pullpc", context.runtime, ({ runtime }) => {
+        runtime.handlePullPC();
+      });
+      registry2.registerLowered("arch", context.architecture, handleArch);
+    };
+    registerLayoutDirectives = (registry2, context) => {
+      registerGenericLayoutDirectives(registry2, context);
+    };
+  }
+});
+
+// packages/core/src/services/struct-initializer.ts
+function splitInitializerList(text2) {
+  const entries3 = [];
+  const stack = [];
+  let quote = "";
+  let start = 0;
+  for (let index = 0; index < text2.length; index++) {
+    const char = text2[index];
+    if (quote) {
+      if (char === quote && text2[index - 1] !== "\\") {
+        quote = "";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if ("([{".includes(char)) {
+      stack.push(char);
+    } else if (")]}".includes(char)) {
+      const expected = { ")": "(", "]": "[", "}": "{" }[char];
+      if (stack.pop() !== expected) {
+        throw new Error("Mismatched initializer delimiters.");
+      }
+    } else if (char === "," && stack.length === 0) {
+      const entry = text2.slice(start, index).trim();
+      if (!entry) {
+        throw new Error("Empty initializer item.");
+      }
+      entries3.push(entry);
+      start = index + 1;
+    }
+  }
+  if (quote || stack.length) {
+    throw new Error("Unclosed initializer delimiter.");
+  }
+  const last = text2.slice(start).trim();
+  if (last) {
+    entries3.push(last);
+  }
+  return entries3;
+}
+function parseStructInitializer(text2) {
+  const trimmed = text2.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) {
+    throw new Error("dataStruct requires a named initializer: { field = value }.");
+  }
+  const fields = /* @__PURE__ */ new Map();
+  for (const entry of splitInitializerList(trimmed.slice(1, -1))) {
+    const match = entry.match(/^([A-Z_a-z][\w.]*)\s*=\s*(.+)$/s);
+    if (!match) {
+      throw new Error(`Expected 'field = value' in initializer: ${entry}`);
+    }
+    const [, name, value] = match;
+    if (fields.has(name)) {
+      throw new Error(`Duplicate initializer field '${name}'.`);
+    }
+    if (value.startsWith("[")) {
+      if (!value.endsWith("]")) {
+        throw new Error(`Unclosed array initializer '${name}'.`);
+      }
+      fields.set(name, splitInitializerList(value.slice(1, -1)));
+    } else {
+      fields.set(name, value);
+    }
+  }
+  return fields;
+}
+function isOpenStructInitializer(text2) {
+  if (!/^(?:datastruct\b|\[)/i.test(text2.trimStart())) {
+    return false;
+  }
+  let depth = 0;
+  let quote = "";
+  for (let index = 0; index < text2.length; index++) {
+    const char = text2[index];
+    if (quote) {
+      if (char === quote && text2[index - 1] !== "\\") {
+        quote = "";
+      }
+    } else if (char === '"' || char === "'") {
+      quote = char;
+    } else if (char === "{") {
+      depth++;
+    } else if (char === "}") {
+      depth--;
+    }
+  }
+  return depth > 0;
+}
+var init_struct_initializer = __esm({
+  "packages/core/src/services/struct-initializer.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/syntax-profile.ts
+var ASAR_SYNTAX_PROFILE, NATIVE_SYNTAX_PROFILE, CA65_SYNTAX_PROFILE;
+var init_syntax_profile = __esm({
+  "packages/core/src/syntax-profile.ts"() {
+    "use strict";
+    ASAR_SYNTAX_PROFILE = Object.freeze({
+      id: "asar",
+      preserveLeadingWhitespace: false,
+      splitColonStatements: true,
+      splitRelativeLabelStatements: true,
+      leadingDotLabels: true,
+      directivePrefixes: Object.freeze(["@"]),
+      cheapLocalPrefix: "",
+      fileLocalSymbols: false
+    });
+    NATIVE_SYNTAX_PROFILE = Object.freeze({
+      id: "native",
+      preserveLeadingWhitespace: true,
+      splitColonStatements: false,
+      splitRelativeLabelStatements: false,
+      leadingDotLabels: true,
+      directivePrefixes: Object.freeze([]),
+      cheapLocalPrefix: "",
+      fileLocalSymbols: false
+    });
+    CA65_SYNTAX_PROFILE = Object.freeze({
+      id: "ca65",
+      preserveLeadingWhitespace: true,
+      splitColonStatements: false,
+      splitRelativeLabelStatements: false,
+      leadingDotLabels: false,
+      directivePrefixes: Object.freeze(["."]),
+      cheapLocalPrefix: "@",
+      fileLocalSymbols: true
+    });
+  }
+});
+
+// packages/core/src/services/command-text-service.ts
+function isLabelIdentifierStart(char) {
+  const code = char.charCodeAt(0);
+  return char === "_" || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+function isLabelIdentifierPart(char) {
+  const code = char.charCodeAt(0);
+  return char === "_" || code >= 48 && code <= 57 || code >= 65 && code <= 90 || code >= 97 && code <= 122;
+}
+function isBareLabelReference(input) {
+  if (!input) {
+    return false;
+  }
+  if (/^(a|x|y|ya|sp|s|c|r\d{1,2})$/i.test(input)) {
+    return false;
+  }
+  let numericOnly = true;
+  for (const char of input) {
+    if (char < "0" || char > "9") {
+      numericOnly = false;
+      break;
+    }
+  }
+  if (numericOnly) {
+    return true;
+  }
+  let index = 0;
+  while (input[index] === ".") {
+    index += 1;
+  }
+  if (index >= input.length || !isLabelIdentifierStart(input[index])) {
+    return false;
+  }
+  const consumeIdentifier = () => {
+    if (index >= input.length || !isLabelIdentifierStart(input[index])) {
+      return false;
+    }
+    index += 1;
+    while (index < input.length && isLabelIdentifierPart(input[index])) {
+      index += 1;
+    }
+    return true;
+  };
+  if (!consumeIdentifier()) {
+    return false;
+  }
+  while (index < input.length && input[index] === ".") {
+    index += 1;
+    if (!consumeIdentifier()) {
+      return false;
+    }
+  }
+  if (index < input.length && input[index] === "[") {
+    index += 1;
+    const digitStart = index;
+    while (index < input.length && input[index] >= "0" && input[index] <= "9") {
+      index += 1;
+    }
+    if (digitStart === index || input[index] !== "]") {
+      return false;
+    }
+    index += 1;
+    while (index < input.length && input[index] === ".") {
+      index += 1;
+      if (!consumeIdentifier()) {
+        return false;
+      }
+    }
+  }
+  return index === input.length;
+}
+var isEscapedAt, removeInlineComment, preprocessBlockCommands, splitOnInlineStatementSeparator, splitInlineCommands, splitSourcedInlineCommands, splitCommandIntoWords, splitRespectingFunctions, getDefineVariable;
+var init_command_text_service = __esm({
+  "packages/core/src/services/command-text-service.ts"() {
+    "use strict";
+    init_struct_initializer();
+    init_syntax_profile();
+    isEscapedAt = (text2, index) => {
+      let slashes = 0;
+      for (let at = index - 1; at >= 0 && text2[at] === "\\"; at--) {
+        slashes++;
+      }
+      return slashes % 2 === 1;
+    };
+    removeInlineComment = (line, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
+      let quote = "";
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if ((ch === '"' || ch === "'") && !isEscapedAt(line, i)) {
+          if (quote === ch) {
+            quote = "";
+          } else if (quote === "") {
+            quote = ch;
+          }
+        } else if (quote === "" && ch === ";") {
+          const uncommented = line.substring(0, i);
+          return syntaxProfile.preserveLeadingWhitespace ? uncommented.trimEnd() : uncommented.trim();
+        }
+      }
+      return syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
+    };
+    preprocessBlockCommands = (block, commandBuffer = "", syntaxProfile = ASAR_SYNTAX_PROFILE) => {
+      const lines = block.split("\n");
+      const sourcedCommands = [];
+      let nextCommandBuffer = commandBuffer;
+      let bufferStartLine;
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex++) {
+        let line = lines[lineIndex];
+        line = syntaxProfile.preserveLeadingWhitespace ? line.trimEnd() : line.trim();
+        if (!line.trim()) {
+          continue;
+        }
+        if (line.trimStart().startsWith(";`+")) {
+          sourcedCommands.push({ text: line, line: lineIndex });
+          continue;
+        }
+        line = removeInlineComment(line, syntaxProfile);
+        if (!line.trim()) {
+          continue;
+        }
+        if (isOpenStructInitializer(nextCommandBuffer + line)) {
+          if (nextCommandBuffer === "") {
+            bufferStartLine = lineIndex;
+          }
+          nextCommandBuffer += `${line} `;
+        } else if (line.endsWith("\\")) {
+          if (nextCommandBuffer === "") {
+            bufferStartLine = lineIndex;
+          }
+          nextCommandBuffer += line.slice(0, -1);
+        } else if (line.endsWith(",")) {
+          if (nextCommandBuffer === "") {
+            bufferStartLine = lineIndex;
+          }
+          nextCommandBuffer += line;
+        } else {
+          sourcedCommands.push({
+            text: nextCommandBuffer + line,
+            line: nextCommandBuffer === "" ? lineIndex : bufferStartLine ?? lineIndex
+          });
+          nextCommandBuffer = "";
+          bufferStartLine = void 0;
+        }
+      }
+      return {
+        commands: sourcedCommands.map((command) => command.text),
+        sourcedCommands,
+        commandBuffer: nextCommandBuffer
+      };
+    };
+    splitOnInlineStatementSeparator = (command) => {
+      const parts = [];
+      let current = "";
+      let quote = "";
+      let depth = 0;
+      for (let i = 0; i < command.length; i++) {
+        const char = command[i];
+        if ((char === '"' || char === "'") && !isEscapedAt(command, i)) {
+          if (quote === char) {
+            quote = "";
+          } else if (quote === "") {
+            quote = char;
+          }
+          current += char;
+          continue;
+        }
+        if (quote === "") {
+          if (char === "(" || char === "[" || char === "{") {
+            depth++;
+          } else if (char === ")" || char === "]" || char === "}") {
+            depth--;
+          }
+        }
+        const next = command[i + 1];
+        const after = command[i + 2];
+        if (quote === "" && depth === 0 && /\s/.test(char) && next === ":" && /\s/.test(after ?? "")) {
+          const trimmed2 = current.trim();
+          if (trimmed2 !== "") {
+            parts.push(trimmed2);
+          }
+          current = "";
+          i += 2;
+          continue;
+        }
+        current += char;
+      }
+      const trimmed = current.trim();
+      if (trimmed !== "") {
+        parts.push(trimmed);
+      }
+      return parts;
+    };
+    splitInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
+      const output = [];
+      for (const command of commands) {
+        const split = syntaxProfile.splitColonStatements ? splitOnInlineStatementSeparator(command) : [command];
+        if (split.length === 0) {
+          continue;
+        }
+        for (const entry of split) {
+          const relativeLabelMatch = syntaxProfile.splitRelativeLabelStatements ? entry.match(/^([+-]+:)\s+(.+)$/) : null;
+          if (relativeLabelMatch) {
+            output.push(relativeLabelMatch[1].trim(), relativeLabelMatch[2].trim());
+            continue;
+          }
+          output.push(entry);
+        }
+      }
+      return output;
+    };
+    splitSourcedInlineCommands = (commands, syntaxProfile = ASAR_SYNTAX_PROFILE) => {
+      const output = [];
+      for (const command of commands) {
+        for (const text2 of splitInlineCommands([command.text], syntaxProfile)) {
+          output.push({ text: text2, line: command.line });
+        }
+      }
+      return output;
+    };
+    splitCommandIntoWords = (command) => {
+      const trimmed = command.trim();
+      const label = /^([$.?A-Z_a-z][\w$.?]*:)\s+/.exec(trimmed);
+      const labelPrefix = label?.[0] ?? "";
+      const remainder = trimmed.slice(labelPrefix.length);
+      if (/^includeasset\s*\(/i.test(remainder)) {
+        return [...label ? [label[1]] : [], "includeasset", remainder.slice("includeasset".length)];
+      }
+      const words = [];
+      let currentWord = "";
+      let inQuotes = false;
+      let quoteChar = "";
+      const trimmedCommand = command.trim();
+      for (let i = 0; i < trimmedCommand.length; i++) {
+        const char = trimmedCommand[i];
+        if ((char === '"' || char === "'") && !isEscapedAt(trimmedCommand, i)) {
+          if (!inQuotes) {
+            inQuotes = true;
+            quoteChar = char;
+            currentWord += char;
+          } else if (char === quoteChar) {
+            inQuotes = false;
+            currentWord += char;
+          } else {
+            currentWord += char;
+          }
+        } else if (/\s/.test(char) && !inQuotes) {
+          if (currentWord) {
+            words.push(currentWord);
+            currentWord = "";
+          }
+        } else {
+          currentWord += char;
+        }
+      }
+      if (currentWord) {
+        words.push(currentWord);
+      }
+      return words;
+    };
+    splitRespectingFunctions = (input) => {
+      const result = [];
+      let current = "";
+      let parenDepth = 0;
+      let inQuotes = false;
+      let quoteChar = "";
+      for (let i = 0; i < input.length; i++) {
+        const char = input[i];
+        if ((char === '"' || char === "'") && (i === 0 || input[i - 1] !== "\\")) {
+          if (!inQuotes) {
+            inQuotes = true;
+            quoteChar = char;
+          } else if (char === quoteChar) {
+            inQuotes = false;
+          }
+        }
+        if (!inQuotes) {
+          if (char === "(") {
+            parenDepth++;
+          } else if (char === ")") {
+            parenDepth--;
+          } else if (char === "," && parenDepth === 0) {
+            result.push(current.trim());
+            current = "";
+            continue;
+          }
+        }
+        current += char;
+      }
+      if (current) {
+        result.push(current.trim());
+      }
+      return result;
+    };
+    getDefineVariable = (line) => {
+      const match = line.trim().match(/^!([A-Z_a-z]\w*)\s*=/);
+      return match ? match[1] : void 0;
+    };
+  }
+});
+
+// packages/core/src/directives/misc.ts
+var handlePullTable, handlePushTable, stripLeadingKeyword, unwrapQuoted, formatPrintArgs, handleAssert, handleError, hex6, invalidTableLine, parseAsarTableLine, handleClearTable, handleTable, handleWarnpc, registerMiscDirectives;
+var init_misc = __esm({
+  "packages/core/src/directives/misc.ts"() {
+    "use strict";
+    init_command_text_service();
+    handlePullTable = ({ session }) => {
+      if (session.tableStack.length === 0) {
+        throw new Error("pulltable without pushtable");
+      }
+      session.characterMappings = session.tableStack.pop();
+    };
+    handlePushTable = ({ session }) => {
+      session.tableStack.push(new Map(session.characterMappings));
+    };
+    stripLeadingKeyword = (raw, keyword) => {
+      const trimmed = raw.trim();
+      let rest = trimmed;
+      if (rest.startsWith("@")) {
+        rest = rest.slice(1);
+      }
+      if (rest.length < keyword.length) {
+        return "";
+      }
+      if (rest.slice(0, keyword.length).toLowerCase() !== keyword) {
+        return trimmed;
+      }
+      return rest.slice(keyword.length).trim();
+    };
+    unwrapQuoted = (fragment) => {
+      const text2 = fragment.trim();
+      if (text2.length < 2) {
+        return text2;
+      }
+      const quote = text2[0];
+      if ((quote === '"' || quote === "'") && text2.endsWith(quote)) {
+        return text2.slice(1, -1);
+      }
+      return text2;
+    };
+    formatPrintArgs = (parts) => {
+      let out = "";
+      for (const part of parts) {
+        out += unwrapQuoted(part);
+      }
+      return out;
+    };
+    handleAssert = ({ session }, _words, raw) => {
+      const payload = stripLeadingKeyword(raw, "assert");
+      const parts = splitRespectingFunctions(payload);
+      const condition = parts[0] ?? "";
+      if (condition === "") {
+        throw new Error("Broken conditional: assert");
+      }
+      if (session.evaluateExpression(condition)) {
+        return;
+      }
+      const messageParts = parts.slice(1);
+      if (messageParts.length === 0) {
+        throw new Error("Assertion failed.");
+      }
+      throw new Error(`Assertion failed: ${formatPrintArgs(messageParts)}`);
+    };
+    handleError = (_ctx, _words, raw) => {
+      const payload = stripLeadingKeyword(raw, "error");
+      if (payload === "") {
+        throw new Error("error command.");
+      }
+      throw new Error(`error command: ${formatPrintArgs(splitRespectingFunctions(payload))}`);
+    };
+    hex6 = (value) => (value >>> 0).toString(16).toUpperCase().padStart(6, "0");
+    invalidTableLine = (lineNumber) => new Error(`Invalid table file: line ${lineNumber}`);
+    parseAsarTableLine = (line, rtl, lineNumber) => {
+      if (line.length === 0) {
+        return void 0;
+      }
+      if (line.length < 4 || (line.length & 1) !== 0 || line.length > 10) {
+        throw invalidTableLine(lineNumber);
+      }
+      if (rtl) {
+        if (line[1] === "x" || line[1] === "X") {
+          throw invalidTableLine(lineNumber);
+        }
+        const eq = line.indexOf("=");
+        if (eq < 1 || eq !== line.length - 2) {
+          throw invalidTableLine(lineNumber);
+        }
+        const hex16 = line.slice(0, eq);
+        if (!/^[\dA-Fa-f]+$/.test(hex16)) {
+          throw invalidTableLine(lineNumber);
+        }
+        return { char: line[eq + 1], value: Number.parseInt(hex16, 16) };
+      }
+      if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
+        throw invalidTableLine(lineNumber);
+      }
+      const hex15 = line.slice(2);
+      if (!/^[\dA-Fa-f]+$/.test(hex15)) {
+        throw invalidTableLine(lineNumber);
+      }
+      return { char: line[0], value: Number.parseInt(hex15, 16) };
+    };
+    handleClearTable = ({ session }) => {
+      session.characterMappings.clear();
+      session.currentTable = null;
+    };
+    handleTable = ({ session }, _words, raw) => {
+      let payload = stripLeadingKeyword(raw, "table");
+      let rtl = false;
+      if (/,\s*rtl\s*$/i.test(payload)) {
+        rtl = true;
+        payload = payload.replace(/,\s*rtl\s*$/i, "").trim();
+      } else if (/,\s*ltr\s*$/i.test(payload)) {
+        payload = payload.replace(/,\s*ltr\s*$/i, "").trim();
+      }
+      const filename = unwrapQuoted(payload);
+      if (filename === "") {
+        throw new Error("table requires a filename");
+      }
+      const contents = session.includeSource.readFile(filename, "utf8");
+      if (typeof contents !== "string") {
+        throw new Error(`Error reading file: ${filename}`);
+      }
+      session.characterMappings.clear();
+      session.currentTable = filename;
+      const lines = contents.split("\n");
+      for (let index = 0; index < lines.length; index++) {
+        let line = lines[index];
+        if (line.endsWith("\r")) {
+          line = line.slice(0, -1);
+        }
+        const parsed = parseAsarTableLine(line, rtl, index + 1);
+        if (!parsed) {
+          continue;
+        }
+        session.characterMappings.set(parsed.char, parsed.value);
+      }
+    };
+    handleWarnpc = ({ session }, _words, raw) => {
+      const payload = stripLeadingKeyword(raw, "warnpc");
+      if (payload === "") {
+        throw new Error("warnpc requires an address");
+      }
+      const maxpos = session.operandResolver.getnum(session.resolvedefines(payload));
+      if (session.currentTargetAddress > maxpos) {
+        throw new Error(
+          `warnpc failed: Current pc = $${hex6(session.currentTargetAddress)}, wanted <= $${hex6(maxpos)}`
+        );
+      }
+    };
+    registerMiscDirectives = (registry2, context, enabledGroups = /* @__PURE__ */ new Set(["table", "diagnostic"])) => {
+      if (enabledGroups.has("table")) {
+        registry2.registerLowered("pulltable", context.table, handlePullTable);
+        registry2.registerLowered("pushtable", context.table, handlePushTable);
+        registry2.registerLowered("cleartable", context.table, handleClearTable);
+        registry2.registerLowered("table", context.table, handleTable);
+      }
+      if (enabledGroups.has("diagnostic")) {
+        registry2.registerLowered("assert", context.diagnostic, handleAssert);
+        registry2.registerLowered("error", context.diagnostic, handleError);
+        registry2.registerLowered("warnpc", context.diagnostic, handleWarnpc);
+      }
+    };
+  }
+});
+
+// packages/core/src/directives/namespace.ts
+function enterNamespace(session, name) {
+  if (session.namespaceNestingEnabled) {
+    session.namespaceNestingPath.push(name);
+    session.currentNamespace = session.namespaceNestingPath.join("_");
+  } else {
+    session.currentNamespace = name;
+  }
+  const parent = session.namespaceNestingEnabled && session.namespaceNestingPath.length > 1 ? session.namespaceNestingPath.slice(0, -1).join("_") : void 0;
+  session.recordSymbolDefinition("namespace", session.currentNamespace, {
+    containerName: parent || void 0
+  });
+}
+var handlePushNamespace, handlePullNamespace, handleNamespace, registerNamespaceDirectives;
+var init_namespace = __esm({
+  "packages/core/src/directives/namespace.ts"() {
+    "use strict";
+    handlePushNamespace = ({ session }) => {
+      session.namespaceStack.push(session.currentNamespace);
+      if (session.namespaceNestingEnabled) {
+        session.namespaceStack.push(JSON.stringify(session.namespaceNestingPath));
+      }
+    };
+    handlePullNamespace = ({ session }) => {
+      if (session.namespaceStack.length === 0) {
+        throw new Error("pullns without pushns");
+      }
+      if (session.namespaceNestingEnabled) {
+        const pathJson = session.namespaceStack.pop();
+        const parsedPath = JSON.parse(pathJson ?? "[]");
+        session.namespaceNestingPath = Array.isArray(parsedPath) && parsedPath.every((entry) => typeof entry === "string") ? parsedPath : [];
+      }
+      session.currentNamespace = session.namespaceStack.pop() ?? "";
+    };
+    handleNamespace = ({ session }, words) => {
+      const params = words.slice(1);
+      if (params.length >= 2 && params[0].toLowerCase() === "nested") {
+        const action2 = params[1].toLowerCase();
+        if (action2 === "on") {
+          session.namespaceNestingEnabled = true;
+          return;
+        } else if (action2 === "off") {
+          session.namespaceNestingEnabled = false;
+          session.namespaceNestingPath = [];
+          session.currentNamespace = "";
+          return;
+        }
+      }
+      if (params.length === 0) {
+        if (session.namespaceNestingEnabled) {
+          session.namespaceNestingPath = [];
+        }
+        session.currentNamespace = "";
+        return;
+      }
+      if (params.length === 1 && params[0].toLowerCase() === "off") {
+        if (session.namespaceNestingEnabled) {
+          session.namespaceNestingPath.pop();
+          session.currentNamespace = session.namespaceNestingPath.join("_");
+        } else {
+          session.currentNamespace = "";
+        }
+        return;
+      } else if (params.length === 1) {
+        enterNamespace(session, params[0]);
+        return;
+      }
+      const action = params[1].toLowerCase();
+      if (action === "off") {
+        if (session.namespaceNestingEnabled) {
+          session.namespaceNestingPath.pop();
+          session.currentNamespace = session.namespaceNestingPath.join("_");
+        } else {
+          session.currentNamespace = "";
+        }
+      } else {
+        enterNamespace(session, params[0]);
+      }
+    };
+    registerNamespaceDirectives = (registry2, context) => {
+      registry2.registerLowered("namespace", context, handleNamespace);
+      registry2.registerLowered("pushns", context, handlePushNamespace);
+      registry2.registerLowered("pullns", context, handlePullNamespace);
+    };
+  }
+});
+
+// packages/core/src/directives/struct-binary.ts
+var registerStructBinaryDirectives;
+var init_struct_binary = __esm({
+  "packages/core/src/directives/struct-binary.ts"() {
+    "use strict";
+    registerStructBinaryDirectives = (registry2, context) => {
+      registry2.register("struct", context, ({ session }, words) => {
+        session.structEngine.handleStruct(words);
+      });
+      registry2.register("endstruct", context, ({ session }, words) => {
+        session.structEngine.handleEndStruct(words);
+      });
+      registry2.register("datastruct", context, ({ session }, words) => {
+        session.structEngine.data.emit(words);
+      });
+      registry2.register("datastructs", context, ({ session }, words) => {
+        session.structEngine.data.begin(words);
+      });
+      registry2.register("enddatastructs", context, ({ session }, words) => {
+        session.structEngine.data.end(words);
+      });
+    };
+  }
+});
+
+// packages/core/src/directives/registry.ts
+var DirectiveRegistry, createDirectiveRegistry;
+var init_registry = __esm({
+  "packages/core/src/directives/registry.ts"() {
+    "use strict";
+    init_directive_groups();
+    init_data();
+    init_fill_pad();
+    init_flow_control();
+    init_include_source();
+    init_layout();
+    init_misc();
+    init_namespace();
+    init_struct_binary();
+    DirectiveRegistry = class {
+      constructor(directivePrefixes = []) {
+        this.directivePrefixes = directivePrefixes;
+      }
+      directivePrefixes;
+      handlers = /* @__PURE__ */ new Map();
+      phases = /* @__PURE__ */ new Map();
+      /**
+       * Registers the value.
+       * @param {string | string[]} keyword The keyword.
+       * @param {Context} context The context.
+       * @param {NarrowDirectiveHandler<Context>} handler The handler.
+       * @param {DirectiveExecutionPhase} [phase] The directive execution phase.
+       */
+      register(keyword, context, handler, phase = "preprocess") {
+        const keywords = Array.isArray(keyword) ? keyword : [keyword];
+        for (const entry of keywords) {
+          this.handlers.set(entry, (words, raw, command) => handler(context, words, raw, command));
+          this.phases.set(entry, phase);
+        }
+      }
+      /**
+       * Registers a directive that can execute from durable lowered command data.
+       * @param {string | string[]} keyword The directive keyword or aliases.
+       * @param {Context} context The handler context.
+       * @param {NarrowDirectiveHandler<Context>} handler The handler.
+       */
+      registerLowered(keyword, context, handler) {
+        this.register(keyword, context, handler, "lowered");
+      }
+      has(keyword) {
+        return this.lookup(keyword) !== void 0;
+      }
+      dispatch(keyword, words, raw, command) {
+        const handler = this.lookup(keyword);
+        if (!handler) {
+          return false;
+        }
+        handler(words, raw, command);
+        return true;
+      }
+      /**
+       * Resolves a directive handler using prefixes supplied by the active syntax profile.
+       * @param {string} keyword The directive keyword.
+       * @returns {BoundDirectiveHandler | undefined} The handler, if registered.
+       */
+      lookup(keyword) {
+        const direct = this.handlers.get(keyword);
+        if (direct) {
+          return direct;
+        }
+        for (const prefix of this.directivePrefixes) {
+          if (keyword.startsWith(prefix)) {
+            return this.handlers.get(keyword.slice(prefix.length));
+          }
+        }
+        return void 0;
+      }
+      /**
+       * Resolves the execution phase declared alongside a directive handler.
+       * @param {string} keyword The directive keyword.
+       * @returns {DirectiveExecutionPhase | undefined} The active directive phase.
+       */
+      getPhase(keyword) {
+        const direct = this.phases.get(keyword);
+        if (direct) {
+          return direct;
+        }
+        for (const prefix of this.directivePrefixes) {
+          if (keyword.startsWith(prefix)) {
+            return this.phases.get(keyword.slice(prefix.length));
+          }
+        }
+        return void 0;
+      }
+    };
+    createDirectiveRegistry = (contexts, enabledGroups = CORE_DIRECTIVE_GROUPS, directivePrefixes = []) => {
+      const registry2 = new DirectiveRegistry(directivePrefixes);
+      const enabled = new Set(enabledGroups);
+      if (enabled.has("include")) {
+        registerIncludeSourceDirectives(registry2, contexts.includeSource);
+      }
+      if (enabled.has("memory")) {
+        registerFillPadDirectives(registry2, contexts.fillPad);
+      }
+      if (enabled.has("control")) {
+        registerFlowControlDirectives(registry2, contexts.flowControl);
+      }
+      if (enabled.has("namespace")) {
+        registerNamespaceDirectives(registry2, contexts.namespace);
+      }
+      if (enabled.has("layout")) {
+        registerLayoutDirectives(registry2, contexts.layout);
+      }
+      if (enabled.has("data")) {
+        registerDataDirectives(registry2, contexts.data);
+      }
+      if (enabled.has("struct")) {
+        registerStructBinaryDirectives(registry2, contexts.struct);
+      }
+      if (enabled.has("table") || enabled.has("diagnostic")) {
+        registerMiscDirectives(
+          registry2,
+          {
+            table: contexts.table,
+            diagnostic: contexts.diagnostic
+          },
+          enabled
+        );
+      }
+      return registry2;
+    };
+  }
+});
+
+// packages/core/src/file-provider.ts
+function stripWrappingQuotes(filename) {
+  if (filename.startsWith('"') && filename.endsWith('"') || filename.startsWith("'") && filename.endsWith("'") || filename.startsWith("`") && filename.endsWith("`")) {
+    return filename.slice(1, -1);
+  }
+  return filename;
+}
+var nodePath, nodeFs, virtualPath, path8, requireNodeFs, NodeAssemblyFileProvider;
+var init_file_provider = __esm({
+  "packages/core/src/file-provider.ts"() {
+    "use strict";
+    nodePath = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:path");
+    nodeFs = typeof process === "undefined" ? void 0 : process.getBuiltinModule("node:fs");
+    virtualPath = {
+      isAbsolute: (value) => value.startsWith("/"),
+      dirname: (value) => value.slice(0, value.lastIndexOf("/")) || ".",
+      resolve: (...parts) => {
+        const joined = parts.filter(Boolean).join("/");
+        const stack = [];
+        for (const part of joined.split("/")) {
+          if (part === "..") {
+            stack.pop();
+          } else if (part && part !== ".") {
+            stack.push(part);
+          }
+        }
+        return `/${stack.join("/")}`;
+      }
+    };
+    path8 = nodePath ?? virtualPath;
+    requireNodeFs = () => {
+      if (!nodeFs) {
+        throw new Error("NodeAssemblyFileProvider requires Node.js.");
+      }
+      return nodeFs;
+    };
+    NodeAssemblyFileProvider = class {
+      /** Consumed paths for dependency snapshots; callers reusing a provider may clear this per build. */
+      readFiles = /* @__PURE__ */ new Set();
+      /**
+       * Find the first existing path: macro directory, current source directory, include paths, then cwd.
+       * @param {string} filename Include path token, optionally quoted.
+       * @param {AssemblyFileResolutionOptions} [options] Source and include directories in search order.
+       * @returns {string | undefined} First existing file identity, or undefined.
+       */
+      resolvePath(filename, options = {}) {
+        const fs14 = requireNodeFs();
+        if (!filename) {
+          return void 0;
+        }
+        const normalized = stripWrappingQuotes(filename);
+        if (path8.isAbsolute(normalized)) {
+          return fs14.existsSync(normalized) ? normalized : void 0;
+        }
+        const candidates = /* @__PURE__ */ new Set();
+        const baseDirectories = [
+          options.macroSourceFile ? path8.dirname(options.macroSourceFile) : void 0,
+          options.currentFile ? path8.dirname(options.currentFile) : void 0,
+          ...options.includePaths ?? [],
+          process.cwd()
+        ].filter((entry) => Boolean(entry));
+        for (const baseDirectory of baseDirectories) {
+          candidates.add(path8.resolve(baseDirectory, normalized));
+        }
+        for (const candidate of candidates) {
+          if (fs14.existsSync(candidate)) {
+            return candidate;
+          }
+        }
+        return void 0;
+      }
+      stat(filePath) {
+        const fs14 = requireNodeFs();
+        let st;
+        try {
+          st = fs14.statSync(filePath);
+        } catch {
+          return { exists: false, readable: false };
+        }
+        try {
+          fs14.accessSync(filePath, fs14.constants.R_OK);
+          return { exists: true, readable: true, size: st.size, mtimeMs: st.mtimeMs };
+        } catch {
+          return { exists: true, readable: false, mtimeMs: st.mtimeMs };
+        }
+      }
+      readFile(filePath) {
+        const fs14 = requireNodeFs();
+        this.readFiles.add(filePath);
+        return new Uint8Array(fs14.readFileSync(filePath));
+      }
+      readTextFile(filePath, encoding = "utf8") {
+        const fs14 = requireNodeFs();
+        this.readFiles.add(filePath);
+        return fs14.readFileSync(filePath, encoding);
+      }
+    };
+  }
+});
+
+// packages/core/src/internal-instrumentation.ts
+function sampleMemory(metrics) {
+  const memory = process.memoryUsage();
+  metrics.peakRssBytes = Math.max(metrics.peakRssBytes, memory.rss);
+  metrics.peakHeapUsedBytes = Math.max(metrics.peakHeapUsedBytes, memory.heapUsed);
+}
+function incrementInternalCounter(name, amount = 1) {
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.counters[name] += amount;
+  }
+}
+function isInternalInstrumentationActive() {
+  return activeInstrumentation !== void 0;
+}
+function recordInternalCounterPeak(name, value) {
+  const metrics = activeInstrumentation;
+  if (metrics) {
+    metrics.counters[name] = Math.max(metrics.counters[name], value);
+  }
+}
+function measureInternalPhase(name, callback) {
+  const metrics = activeInstrumentation;
+  if (!metrics) {
+    return callback();
+  }
+  const start = performance.now();
+  try {
+    return callback();
+  } finally {
+    metrics.phasesMs[name] = (metrics.phasesMs[name] ?? 0) + performance.now() - start;
+    sampleMemory(metrics);
+  }
+}
+var activeInstrumentation;
+var init_internal_instrumentation = __esm({
+  "packages/core/src/internal-instrumentation.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/ir/asset-call.ts
+function parseAssetCall(command, line) {
+  const leading = command.length - command.trimStart().length;
+  const trimmed = command.slice(leading);
+  const label = /^[\w$.?]+:/.exec(trimmed);
+  let callStart = leading;
+  if (label && /\s/.test(trimmed[label[0].length] ?? "")) {
+    callStart += label[0].length;
+    while (/\s/.test(command[callStart] ?? "")) {
+      callStart++;
+    }
+  }
+  const prefix = /^includeasset\s*\(/i.exec(command.slice(callStart));
+  if (!prefix) {
+    return void 0;
+  }
+  let at = callStart + prefix[0].length;
+  const span = (start, end) => createSourceSpan(start, end, line);
+  const fail2 = (message) => {
+    throw new Error(`includeAsset at column ${at + 1}: ${message}`);
+  };
+  const skip = () => {
+    while (/\s/.test(command[at] ?? "") && at < command.length) {
+      at++;
+    }
+  };
+  const string4 = () => {
+    const start = at;
+    const quote = command[at++];
+    let value2 = "";
+    while (at < command.length) {
+      const character = command[at++];
+      if (character === quote) {
+        return { kind: "string", value: value2, span: span(start, at) };
+      }
+      if (character === "\\") {
+        const escaped = command[at++];
+        if (escaped === void 0) {
+          fail2("unterminated string escape");
+        }
+        if (escaped === quote || escaped === "\\") {
+          value2 += escaped;
+        } else if (escaped === "n") {
+          value2 += "\n";
+        } else if (escaped === "t") {
+          value2 += "	";
+        } else {
+          value2 += `\\${escaped}`;
+        }
+      } else {
+        value2 += character;
+      }
+    }
+    return fail2("unterminated string");
+  };
+  const value = () => {
+    skip();
+    const start = at;
+    const character = command[at];
+    if (character === '"' || character === "'") {
+      return string4();
+    }
+    if (character === "[") {
+      at++;
+      const items = [];
+      skip();
+      while (command[at] !== "]") {
+        items.push(value());
+        skip();
+        if (command[at] === "]") {
+          break;
+        }
+        if (command[at++] !== ",") {
+          fail2("expected ',' in array");
+        }
+        skip();
+      }
+      if (command[at++] !== "]") {
+        fail2("unterminated array");
+      }
+      return { kind: "array", items, span: span(start, at) };
+    }
+    if (character === "{") {
+      at++;
+      const entries3 = {};
+      skip();
+      while (command[at] !== "}") {
+        let key3;
+        if (command[at] === '"' || command[at] === "'") {
+          key3 = string4().value;
+        } else {
+          const match = /^[A-Z_a-z][\w-]*/.exec(command.slice(at));
+          if (!match) {
+            return fail2("expected object key");
+          }
+          key3 = match[0];
+          at += key3.length;
+        }
+        skip();
+        if (command[at++] !== ":") {
+          fail2("expected ':' after object key");
+        }
+        if (Object.hasOwn(entries3, key3)) {
+          fail2(`duplicate object key '${key3}'`);
+        }
+        entries3[key3] = value();
+        skip();
+        if (command[at] === "}") {
+          break;
+        }
+        if (command[at++] !== ",") {
+          fail2("expected ',' in object");
+        }
+        skip();
+      }
+      if (command[at++] !== "}") {
+        fail2("unterminated object");
+      }
+      return { kind: "object", entries: entries3, span: span(start, at) };
+    }
+    let parens = 0;
+    while (at < command.length) {
+      const next = command[at];
+      if (next === "(") {
+        parens++;
+      } else if (next === ")") {
+        if (parens === 0) {
+          break;
+        }
+        parens--;
+      } else if (parens === 0 && (next === "," || next === "]" || next === "}")) {
+        break;
+      }
+      at++;
+    }
+    if (parens !== 0) {
+      fail2("unbalanced numeric expression");
+    }
+    const expression = command.slice(start, at).trim();
+    if (expression === "true" || expression === "false") {
+      return { kind: "boolean", value: expression === "true", span: span(start, at) };
+    }
+    if (!expression) {
+      fail2("expected value");
+    }
+    return { kind: "number", expression, span: span(start, at) };
+  };
+  const positional = [];
+  const options = {};
+  let named = false;
+  while (true) {
+    skip();
+    if (command[at] === ")") {
+      break;
+    }
+    const namedMatch = /^([A-Z_a-z][\w-]*)\s*:/.exec(command.slice(at));
+    if (namedMatch) {
+      named = true;
+      at += namedMatch[0].length;
+      if (Object.hasOwn(options, namedMatch[1])) {
+        fail2(`duplicate option '${namedMatch[1]}'`);
+      }
+      options[namedMatch[1]] = value();
+    } else {
+      if (named) {
+        fail2("positional argument after named argument");
+      }
+      positional.push(value());
+    }
+    skip();
+    if (command[at] === ")") {
+      break;
+    }
+    if (command[at++] !== ",") {
+      fail2("expected ',' between arguments");
+    }
+  }
+  if (command[at++] !== ")") {
+    fail2("unterminated call");
+  }
+  skip();
+  if (at !== command.length) {
+    fail2("unexpected text after call");
+  }
+  if (positional.length !== 2 || positional[0].kind !== "string" || positional[1].kind !== "string") {
+    fail2("expected exactly two leading string arguments");
+  }
+  return {
+    path: positional[0],
+    format: positional[1],
+    options,
+    span: span(callStart, at)
+  };
+}
+var init_asset_call = __esm({
+  "packages/core/src/ir/asset-call.ts"() {
+    "use strict";
+    init_source_location();
+  }
+});
+
+// packages/core/src/ir/normalized-command.ts
+function createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata = true) {
+  if (!collectSourceMetadata) {
+    return {
+      file,
+      line,
+      raw,
+      normalized,
+      span: EMPTY_COMMAND_SPAN,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS
+    };
+  }
+  return {
+    file,
+    line,
+    raw,
+    normalized,
+    span: createLineSpan(raw, line),
+    normalizedSpan: createLineSpan(normalized, line),
+    tokenSpans: deriveTokenSpans(raw, words, line)
+  };
+}
+function createNormalizedCommand(raw, normalized, words, file, line, collectSourceMetadata = true) {
+  const command = normalized.trim();
+  const keyword = words[0] ?? "";
+  return {
+    kind: classifyCommand(command, words),
+    source: createCommandProvenance(raw, normalized, words, file, line, collectSourceMetadata),
+    command,
+    words,
+    keyword,
+    labelName: deriveLabelName(keyword),
+    assignmentTarget: deriveAssignmentTarget(words),
+    parsed: deriveCommandSemantics(command, words, line, raw)
+  };
+}
+function cloneNormalizedCommand(command) {
+  incrementInternalCounter("normalizedCommandClones");
+  return { ...command };
+}
+function setCommandWords(command, words, normalized) {
+  command.words = words;
+  command.keyword = words[0] ?? "";
+  command.command = (normalized ?? words.join(" ")).trim();
+  const normalizedSource = normalized ?? command.command;
+  if (command.source.tokenSpans === EMPTY_TOKEN_SPANS) {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: EMPTY_COMMAND_SPAN,
+      tokenSpans: EMPTY_TOKEN_SPANS
+    };
+  } else {
+    command.source = {
+      ...command.source,
+      normalized: normalizedSource,
+      normalizedSpan: createLineSpan(normalizedSource, command.source.line),
+      tokenSpans: deriveTokenSpans(command.source.raw, words, command.source.line)
+    };
+  }
+  command.labelName = deriveLabelName(command.keyword);
+  command.assignmentTarget = deriveAssignmentTarget(words);
+  command.parsed = deriveCommandSemantics(
+    command.command,
+    words,
+    command.source.line,
+    command.source.raw
+  );
+  command.kind = classifyCommand(command.command, words);
+  return command;
+}
+function setCommandKind(command, kind) {
+  command.kind = kind;
+  return command;
+}
+function classifyCommand(command, words) {
+  const trimmed = command.trim();
+  const keyword = (words[0] ?? "").toLowerCase();
+  if (!trimmed || trimmed.startsWith(";")) {
+    return "commentOrEmpty";
+  }
+  if (words.length === 3 && words[1] === "=" && (words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
+    return "characterMapping";
+  }
+  if (trimmed.startsWith("!")) {
+    return "defineCommand";
+  }
+  if (keyword === "macro" || keyword === "endmacro" || keyword.startsWith("%")) {
+    return "macroDefinitionOrInvoke";
+  }
+  if (keyword === "undef") {
+    return "defineCommand";
+  }
+  if (keyword === "struct" || keyword === "endstruct" || keyword === "skip" || keyword === "datastruct" || keyword === "datastructs" || keyword === "enddatastructs" || /^\[[^\]]+]\s*=/.test(trimmed)) {
+    return "structCommand";
+  }
+  if (keyword === "function") {
+    return "functionDefinition";
+  }
+  if (keyword === "global") {
+    return "labelDefinition";
+  }
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
+    return "staticAssignment";
+  }
+  if (deriveLabelName(words[0] ?? "")) {
+    return "labelDefinition";
+  }
+  return keyword ? "opcodeCandidate" : "unknown";
+}
+function deriveLabelName(keyword) {
+  if (!keyword) {
+    return void 0;
+  }
+  if (keyword === ":") {
+    return ":";
+  }
+  if (/^\++:?$/.test(keyword) || /^-+:?$/.test(keyword)) {
+    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+  }
+  if (keyword.endsWith(":") || keyword.startsWith(".")) {
+    return keyword.endsWith(":") ? keyword.slice(0, -1) : keyword;
+  }
+  return void 0;
+}
+function deriveAssignmentTarget(words) {
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=")) {
+    return words[0];
+  }
+  return void 0;
+}
+function deriveCommandSemantics(command, words, line, raw = command) {
+  const keyword = (words[0] ?? "").toLowerCase();
+  const bareKeyword = keyword.startsWith(".") ? keyword.slice(1) : keyword;
+  const semantics = {};
+  if (keyword === "includeasset") {
+    semantics.includeAsset = parseAssetCall(raw, line);
+  }
+  if ((keyword === "if" || keyword === "elseif" || keyword === "while") && words.length > 1) {
+    semantics.condition = {
+      expression: parseExpressionNode(words.slice(1).join(" "))
+    };
+  }
+  if (keyword === "for" && words.length >= 4 && words[2] === "=") {
+    const variable = words[1];
+    const parsedRange = parseExpressionNode(words.slice(3).join(" "));
+    if (parsedRange.type === "range") {
+      semantics.forLoop = {
+        variable,
+        range: parsedRange,
+        start: parsedRange.start,
+        end: parsedRange.end
+      };
+    }
+  }
+  if (words.length === 3 && (words[1] === "=" || words[1] === ":=") && !(words[0]?.startsWith("'") || words[0]?.startsWith('"'))) {
+    semantics.assignment = {
+      target: words[0],
+      expression: parseExpressionNode(words[2])
+    };
+  }
+  if (bareKeyword === "incbin" && words.length >= 2) {
+    const incbinSource = command.slice((words[0] ?? "").length).split(/\s+->\s+/u, 1)[0].trim();
+    const colonIndex = incbinSource.indexOf(":");
+    const rangeCandidate = colonIndex === -1 ? void 0 : incbinSource.slice(colonIndex + 1);
+    if (rangeCandidate) {
+      const parsedRange = parseExpressionNode(rangeCandidate);
+      if (parsedRange.type === "range") {
+        semantics.incbinRange = {
+          range: parsedRange,
+          start: parsedRange.start,
+          end: parsedRange.end
+        };
+      }
+    }
+    const includePath = extractIncludePath(incbinSource);
+    if (includePath) {
+      semantics.includeTarget = { directive: "incbin", target: includePath };
+    }
+  }
+  if (keyword.startsWith("%")) {
+    const invocationText = command.trim().slice(1);
+    const openParen = invocationText.indexOf("(");
+    if (openParen !== -1 && invocationText.endsWith(")")) {
+      const name = invocationText.slice(0, openParen).trim();
+      const argsText = invocationText.slice(openParen + 1, -1);
+      const args = splitCommaArguments(argsText);
+      semantics.macroInvocation = { name, args };
+    } else if (invocationText) {
+      semantics.macroInvocation = { name: invocationText.trim(), args: [] };
+    }
+  }
+  if ((bareKeyword === "include" || bareKeyword === "incsrc") && words.length >= 2) {
+    semantics.includeTarget = {
+      directive: bareKeyword,
+      target: words.slice(1).join(" ").trim()
+    };
+  }
+  const labelSplit = extractLabelSplit(command);
+  if (labelSplit) {
+    semantics.labelSplit = labelSplit;
+  }
+  if (["db", "dw", "dl", "dd", "dc.b", "dc.w", "dc.l"].includes(keyword) && words.length >= 2) {
+    const payload = command.slice((words[0] ?? "").length).trim();
+    semantics.dataDirective = {
+      directive: keyword,
+      operands: splitCommaArguments(payload)
+    };
+  }
+  if (keyword && !keyword.startsWith("%") && !keyword.startsWith("!")) {
+    const payload = command.slice((words[0] ?? "").length).trim();
+    const args = semantics.dataDirective?.operands ?? (payload ? splitCommaArguments(payload) : []);
+    semantics.directiveArgs = {
+      name: keyword,
+      args
+    };
+    if (!deriveLabelName(words[0] ?? "") && payload) {
+      semantics.opcodeOperands = {
+        mnemonic: words[0] ?? "",
+        operandText: payload,
+        operands: args
+      };
+    }
+  }
+  return semantics;
+}
+function extractIncludePath(raw) {
+  const trimmed = raw.trim();
+  const quote = trimmed[0];
+  if (quote === '"' || quote === "'" || quote === "`") {
+    const end = trimmed.indexOf(quote, 1);
+    if (end !== -1) {
+      return trimmed.slice(1, end);
+    }
+  }
+  const colonIndex = trimmed.indexOf(":");
+  const pathToken = colonIndex === -1 ? trimmed : trimmed.slice(0, colonIndex);
+  return pathToken.replace(/^["'`]+|["'`]+$/g, "");
+}
+function extractLabelSplit(command) {
+  const trimmed = command.trim();
+  const labelMatch = trimmed.match(/^([$.?A-Z_a-z][\w$.?]*):\s*(.*)$/);
+  if (!labelMatch) {
+    return void 0;
+  }
+  const trailing = labelMatch[2].trim();
+  return {
+    label: labelMatch[1],
+    trailing: trailing || void 0
+  };
+}
+function splitCommaArguments(input) {
+  const values = [];
+  let current = "";
+  let depth = 0;
+  let inQuote = false;
+  let quoteChar = "";
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+    if ((char === '"' || char === "'") && input[i - 1] !== "\\") {
+      if (!inQuote) {
+        inQuote = true;
+        quoteChar = char;
+      } else if (quoteChar === char) {
+        inQuote = false;
+      }
+      current += char;
+      continue;
+    }
+    if (!inQuote && char === "(") {
+      depth++;
+      current += char;
+      continue;
+    }
+    if (!inQuote && char === ")") {
+      depth = Math.max(0, depth - 1);
+      current += char;
+      continue;
+    }
+    if (!inQuote && depth === 0 && char === ",") {
+      const normalized = current.trim();
+      if (normalized) {
+        values.push(normalized);
+      }
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  const tail = current.trim();
+  if (tail) {
+    values.push(tail);
+  }
+  return values;
+}
+var EMPTY_COMMAND_SPAN, EMPTY_TOKEN_SPANS;
+var init_normalized_command = __esm({
+  "packages/core/src/ir/normalized-command.ts"() {
+    "use strict";
+    init_internal_instrumentation();
+    init_source_location();
+    init_asset_call();
+    init_expression_node();
+    EMPTY_COMMAND_SPAN = Object.freeze({ start: 0, end: 0 });
+    EMPTY_TOKEN_SPANS = Object.freeze([]);
+  }
+});
+
+// packages/core/src/mathcore.ts
+function throwMathError(message) {
+  throw new AssemblyError("MATH_EVALUATION_ERROR", message);
+}
+function getOperator(operators, token) {
+  if (!Object.hasOwn(operators, token)) {
+    return void 0;
+  }
+  return operators[token];
+}
+function isScanWhitespace(code) {
+  if (code === 32 || code === 9 || code === 10 || code === 13) {
+    return true;
+  }
+  if (code === 11 || code === 12 || code === 160 || code === 65279) {
+    return true;
+  }
+  return false;
+}
+function isWordChar(code) {
+  if (code >= 48 && code <= 57) {
+    return true;
+  }
+  if (code >= 65 && code <= 90) {
+    return true;
+  }
+  if (code >= 97 && code <= 122) {
+    return true;
+  }
+  return code === 95;
+}
+var OPERATORS, BUILTIN_NUMERIC_UNARY, NUMERIC_UNARY_ALIASES, STRING_FIRST_ARG_FUNCTIONS, STRING_TWO_ARG_FUNCTIONS, FILE_STRING_FUNCTION, MathCore;
+var init_mathcore = __esm({
+  "packages/core/src/mathcore.ts"() {
+    "use strict";
+    init_diagnostics2();
+    init_internal_instrumentation();
+    init_expression_node();
+    OPERATORS = {
+      // Higher priority binds tighter. Same-level ops are left-associative via priority+1.
+      "**": { priority: 6, operation: (left, right) => Math.pow(left, right) },
+      "*": { priority: 5, operation: (left, right) => left * right },
+      "/": {
+        priority: 5,
+        operation: (left, right) => right !== 0 ? left / right : throwMathError("Division by zero")
+      },
+      "%": {
+        priority: 5,
+        operation: (left, right) => right !== 0 ? left % right : throwMathError("Modulo by zero")
+      },
+      "+": { priority: 4, operation: (left, right) => left + right },
+      "-": { priority: 4, operation: (left, right) => left - right },
+      "<<": { priority: 3, operation: (left, right) => left << right },
+      ">>": { priority: 3, operation: (left, right) => left >> right },
+      "&": { priority: 3, operation: (left, right) => left & right },
+      "|": { priority: 3, operation: (left, right) => left | right },
+      "^": { priority: 3, operation: (left, right) => left ^ right },
+      "<": { priority: 2, operation: (left, right) => left < right ? 1 : 0 },
+      ">": { priority: 2, operation: (left, right) => left > right ? 1 : 0 },
+      "<=": { priority: 2, operation: (left, right) => left <= right ? 1 : 0 },
+      ">=": { priority: 2, operation: (left, right) => left >= right ? 1 : 0 },
+      "==": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
+      "=": { priority: 2, operation: (left, right) => left === right ? 1 : 0 },
+      "!=": { priority: 2, operation: (left, right) => left !== right ? 1 : 0 },
+      "&&": { priority: 1, operation: (left, right) => left && right ? 1 : 0 },
+      "||": { priority: 0, operation: (left, right) => left || right ? 1 : 0 }
+    };
+    BUILTIN_NUMERIC_UNARY = {
+      sqrt: Math.sqrt,
+      sin: Math.sin,
+      cos: Math.cos,
+      tan: Math.tan,
+      asin: Math.asin,
+      acos: Math.acos,
+      atan: Math.atan,
+      log: Math.log,
+      log10: Math.log10,
+      log2: Math.log2,
+      ceil: Math.ceil,
+      floor: Math.floor
+    };
+    NUMERIC_UNARY_ALIASES = {
+      arcsin: "asin",
+      arccos: "acos",
+      arctan: "atan"
+    };
+    STRING_FIRST_ARG_FUNCTIONS = /* @__PURE__ */ new Set([
+      "countof",
+      "bytesof",
+      "startof",
+      "endof",
+      "defined",
+      "sizeof",
+      "objectsize",
+      "datasize",
+      "filesize",
+      "getfilestatus"
+    ]);
+    STRING_TWO_ARG_FUNCTIONS = /* @__PURE__ */ new Set(["stringsequal", "stringsequalnocase"]);
+    FILE_STRING_FUNCTION = /^(?:canreadfile|readfile)\d?$/;
+    MathCore = class {
+      pureStringExpressionCache = /* @__PURE__ */ new Map();
+      roundedPureStringExpressionCache = /* @__PURE__ */ new Map();
+      pureStringClassification = /* @__PURE__ */ new Map();
+      instrumentedExpressionStrings = /* @__PURE__ */ new Set();
+      instrumentedPureExpressionStrings = /* @__PURE__ */ new Set();
+      instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
+      instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
+      host;
+      math_round = false;
+      userFunctions = /* @__PURE__ */ new Map();
+      expressionFunctions = /* @__PURE__ */ new Map();
+      operators = OPERATORS;
+      /** Full expression currently being scanned. */
+      scanSource = "";
+      /** Byte offset into `scanSource`. `str` is the slice from here to the end. */
+      scanIndex = 0;
+      /**
+       * Remaining unconsumed expression text.
+       * @returns {string} The unconsumed source from the scan cursor.
+       */
+      get str() {
+        return this.scanSource.slice(this.scanIndex);
+      }
+      /**
+       * Replaces the expression being scanned.
+       * @param {string} value The new expression source.
+       */
+      set str(value) {
+        this.scanSource = value;
+        this.scanIndex = 0;
+      }
+      /**
+       * Advances the scan cursor past ASCII / trim whitespace.
+       */
+      skipWhitespace() {
+        const source = this.scanSource;
+        let index = this.scanIndex;
+        while (index < source.length && isScanWhitespace(source.charCodeAt(index))) {
+          index++;
+        }
+        this.scanIndex = index;
+      }
+      /**
+       * Returns whether the remaining source starts with a literal.
+       * @param {string} text The literal to match.
+       * @returns {boolean} Whether the literal is present at the cursor.
+       */
+      remainingStartsWith(text2) {
+        return this.scanSource.startsWith(text2, this.scanIndex);
+      }
+      /**
+       * Consumes a fixed number of characters from the scan cursor.
+       * @param {number} count The number of characters to consume.
+       */
+      advance(count) {
+        this.scanIndex += count;
+      }
+      /**
+       * Initialize the math core.
+       */
+      reset() {
+        this.math_round = false;
+        this.userFunctions.clear();
+        this.clearExpressionCaches();
+      }
+      /**
+       * Installs a target-provided expression function for this session.
+       * @param {string | readonly string[]} names The canonical name and aliases.
+       * @param {RegisteredExpressionFunction} expressionFunction The function descriptor and evaluator.
+       */
+      registerExpressionFunction(names, expressionFunction) {
+        for (const name of typeof names === "string" ? [names] : names) {
+          this.expressionFunctions.set(name.toLowerCase(), expressionFunction);
+        }
+      }
+      /**
+       * Starts a new expression-cache snapshot for an assembly.
+       */
+      beginAssemblySnapshot() {
+        this.clearExpressionCaches();
+      }
+      /**
+       * Releases expression values retained for a completed assembly.
+       */
+      endAssemblySnapshot() {
+        this.clearExpressionCaches();
+      }
+      /**
+       * Clears expression caches retained for the current assembly.
+       */
+      clearExpressionCaches() {
+        this.pureStringExpressionCache.clear();
+        this.roundedPureStringExpressionCache.clear();
+        this.pureStringClassification.clear();
+        this.instrumentedExpressionStrings.clear();
+        this.instrumentedPureExpressionStrings.clear();
+        this.instrumentedExpressionNodes = /* @__PURE__ */ new WeakSet();
+        this.instrumentedPureExpressionNodes = /* @__PURE__ */ new WeakSet();
+      }
+      /**
+       * Evaluates an expression.
+       * This is a direct conversion of `math` in `asar_math.cpp`.
+       * @param {string} expression The expression to evaluate.
+       * @returns {number} The result of the expression.
+       */
+      math = (expression) => {
+        if (isInternalInstrumentationActive()) {
+          return measureInternalPhase("expressionEvaluation", () => {
+            this.recordExpressionEvaluation(expression);
+            return this.evaluateMathInput(expression);
+          });
+        }
+        return this.evaluateMathInput(expression);
+      };
+      /**
+       * Evaluates a string or typed expression without instrumentation dispatch.
+       * @param {string | ExpressionNode} expression The expression to evaluate.
+       * @returns {number} The expression result.
+       */
+      evaluateMathInput(expression) {
+        if (typeof expression !== "string") {
+          return this.evaluateExpressionNode(expression);
+        }
+        return this.evaluateCachedStringExpression(expression);
+      }
+      /**
+       * Reuses successful results only for strings proven to contain literal operators.
+       * @param {string} expression The legacy expression source.
+       * @returns {number} The expression result.
+       */
+      evaluateCachedStringExpression(expression) {
+        let isPure = this.pureStringClassification.get(expression);
+        if (isPure === void 0) {
+          isPure = this.isPureExpressionNode(parseExpressionNode(expression));
+          this.pureStringClassification.set(expression, isPure);
+        }
+        if (!isPure) {
+          return this.evaluateStringExpression(expression);
+        }
+        const cache = this.math_round ? this.roundedPureStringExpressionCache : this.pureStringExpressionCache;
+        const cached = cache.get(expression);
+        if (cached !== void 0) {
+          incrementInternalCounter("pureStringExpressionCacheHits");
+          return cached;
+        }
+        incrementInternalCounter("pureStringExpressionCacheMisses");
+        const result = this.evaluateStringExpression(expression);
+        cache.set(expression, result);
+        return result;
+      }
+      /**
+       * Records the shape and reuse of a top-level expression evaluation.
+       * @param {string | ExpressionNode} expression The evaluated expression.
+       */
+      recordExpressionEvaluation(expression) {
+        incrementInternalCounter("expressionEvaluations");
+        if (typeof expression === "string") {
+          incrementInternalCounter("expressionStringEvaluations");
+          if (!this.instrumentedExpressionStrings.has(expression)) {
+            this.instrumentedExpressionStrings.add(expression);
+            incrementInternalCounter("expressionUniqueStringEvaluations");
+            if (this.isPureExpressionNode(parseExpressionNode(expression))) {
+              this.instrumentedPureExpressionStrings.add(expression);
+              incrementInternalCounter("pureStringExpressionUniqueValues");
+            }
+          }
+          if (this.instrumentedPureExpressionStrings.has(expression)) {
+            incrementInternalCounter("pureStringExpressionEvaluations");
+          }
+          return;
+        }
+        incrementInternalCounter("expressionNodeEvaluations");
+        if (!this.instrumentedExpressionNodes.has(expression)) {
+          this.instrumentedExpressionNodes.add(expression);
+          incrementInternalCounter("expressionUniqueNodeEvaluations");
+        }
+        if (!this.isPureExpressionNode(expression)) {
+          return;
+        }
+        incrementInternalCounter("pureExpressionEvaluations");
+        if (!this.instrumentedPureExpressionNodes.has(expression)) {
+          this.instrumentedPureExpressionNodes.add(expression);
+          incrementInternalCounter("pureExpressionUniqueNodes");
+        }
+      }
+      /**
+       * Determines whether an expression depends only on literal operators.
+       * @param {ExpressionNode} expression The expression to classify.
+       * @returns {boolean} Whether the result is independent of assembler state.
+       */
+      isPureExpressionNode(expression) {
+        switch (expression.type) {
+          case "literal":
+            return true;
+          case "unary":
+            return this.isPureExpressionNode(expression.argument);
+          case "binary":
+            return this.isPureExpressionNode(expression.left) && this.isPureExpressionNode(expression.right);
+          default:
+            return false;
+        }
+      }
+      /**
+       * Evaluates a string expression using the legacy parser.
+       * @param {string} expression The expression to evaluate.
+       * @returns {number} The result of the expression.
+       */
+      evaluateStringExpression(expression) {
+        this.str = expression.trim();
+        const rval = this.evalMath(0);
+        if (rval === void 0) {
+          throw new AssemblyError("MATH_INVALID_INPUT", "Invalid input: empty expression.");
+        }
+        this.skipWhitespace();
+        if (this.scanIndex < this.scanSource.length) {
+          if (this.remainingStartsWith(",")) {
+            throw new AssemblyError("MATH_INVALID_INPUT", `Invalid input: ${this.str}`);
+          }
+          throw new AssemblyError("MATH_MISMATCHED_PARENTHESES", "Mismatched parentheses.");
+        }
+        return rval;
+      }
+      /**
+       * Evaluates an expression node using typed dispatch before falling back to string parsing.
+       * @param {ExpressionNode} expression The expression node to evaluate.
+       * @returns {number} The numeric result.
+       */
+      evaluateExpressionNode(expression) {
+        if (isReferenceExpressionNode(expression)) {
+          return this.evaluateReferenceExpressionNode(expression);
+        }
+        switch (expression.type) {
+          case "literal":
+            return this.parseLiteralNode(expression.value);
+          case "string":
+            throw new AssemblyError(
+              "MATH_STRING_NOT_NUMERIC",
+              `String expression is not directly numeric: ${expression.value}`
+            );
+          case "call":
+            return this.callFunction(
+              expression.callee.name,
+              expression.arguments.map(
+                (argument, index) => this.evaluateCallArgument(expression.callee.name, index, argument)
+              )
+            );
+          case "unary":
+            return this.evaluateUnaryExpressionNode(expression.operator, expression.argument);
+          case "binary":
+            return this.evaluateBinaryExpressionNode(
+              expression.operator,
+              expression.left,
+              expression.right
+            );
+          case "range":
+            throw new AssemblyError(
+              "MATH_RANGE_NOT_NUMERIC",
+              `Range expression is not directly numeric: ${renderExpressionNode(expression)}`
+            );
+          case "raw":
+          default:
+            return this.evaluateStringExpression(expression.value);
+        }
+      }
+      evaluateCallArgument(functionName, argumentIndex, argument) {
+        if (this.isStringArgument(functionName, argumentIndex)) {
+          switch (argument.type) {
+            case "identifier":
+              return argument.name;
+            case "string":
+              return argument.value;
+            case "raw":
+              return argument.value.replace(/^["']|["']$/g, "");
+            default:
+              return renderExpressionNode(argument);
+          }
+        }
+        switch (argument.type) {
+          case "string":
+            return argument.value;
+          case "range":
+            return renderExpressionNode(argument);
+          case "raw":
+            return this.evaluateStringExpression(argument.value);
+          default:
+            if (isReferenceExpressionNode(argument)) {
+              return argument.type === "defineReference" ? renderReferenceExpressionNode(argument) : this.resolveNumericIdentifierArgument(
+                renderReferenceExpressionNode(argument, {
+                  renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+                })
+              );
+            }
+            return this.evaluateExpressionNode(argument);
+        }
+      }
+      evaluateUnaryExpressionNode(operator, argument) {
+        const value = this.evaluateExpressionNode(argument);
+        switch (operator) {
+          case "<:":
+            return value >>> 16;
+          case "<":
+            return value & 255;
+          case ">":
+            return value >> 8 & 255;
+          case "^":
+            return value >> 16 & 255;
+          case "~":
+            return ~value;
+          case "-":
+            return -value;
+          case "+":
+          default:
+            return value;
+        }
+      }
+      evaluateBinaryExpressionNode(operator, left, right) {
+        const spec = this.operators[operator];
+        return spec.operation(this.evaluateExpressionNode(left), this.evaluateExpressionNode(right));
+      }
+      resolveNumericIdentifierArgument(identifier2) {
+        try {
+          const resolved = this.getHost().resolveLabel(identifier2);
+          return typeof resolved === "number" ? resolved : identifier2;
+        } catch {
+          return identifier2;
+        }
+      }
+      evaluateReferenceExpressionNode(expression) {
+        if (expression.type === "defineReference") {
+          throw new Error(`Unresolved define reference: ${renderReferenceExpressionNode(expression)}`);
+        }
+        const reference = renderReferenceExpressionNode(expression, {
+          renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+        });
+        const resolved = this.getHost().resolveLabel(reference);
+        if (typeof resolved === "number") {
+          return resolved;
+        }
+        throw new Error(`Reference '${reference}' did not resolve to a numeric value.`);
+      }
+      resolveLeadingLocalLabelReference(input) {
+        const match = input.match(/^(\.+\w+)/);
+        if (!match) {
+          return void 0;
+        }
+        return { label: match[1], length: match[1].length };
+      }
+      isStringArgument(functionName, argumentIndex) {
+        if (STRING_FIRST_ARG_FUNCTIONS.has(functionName)) {
+          return argumentIndex === 0;
+        }
+        if (STRING_TWO_ARG_FUNCTIONS.has(functionName)) {
+          return argumentIndex < 2;
+        }
+        if (FILE_STRING_FUNCTION.test(functionName)) {
+          return argumentIndex === 0;
+        }
+        return false;
+      }
+      parseLiteralNode(value) {
+        if (/^-?\d+$/.test(value)) {
+          return Number.parseInt(value, 10);
+        }
+        if (/^\$[\dA-Fa-f]+$/.test(value)) {
+          return Number.parseInt(value.slice(1), 16);
+        }
+        if (/^0x[\da-f]+$/i.test(value)) {
+          return Number.parseInt(value.slice(2), 16);
+        }
+        if (/^%[01]+$/.test(value)) {
+          return Number.parseInt(value.slice(1), 2);
+        }
+        throw new Error(`Unsupported literal expression: ${value}`);
+      }
+      /**
+       * Evaluates a mathematical expression.
+       * This replaces the C++ `eval` function.
+       * @param {number} depth The current depth of nested expressions.
+       * @param {string} [stopChar] The character to stop the evaluation at.
+       * @returns {number | undefined} The result of the evaluated expression, or
+       * `undefined` when an inline function definition consumes the expression.
+       */
+      evalMath(depth = 0, stopChar) {
+        let left;
+        if (this.remainingStartsWith("function")) {
+          this.parseFunctionDefinition();
+          left = this.evalMath(depth, stopChar);
+        } else if (this.scanIndex < this.scanSource.length) {
+          left = this.getnum();
+        }
+        if (left === void 0) {
+          return void 0;
+        }
+        if (Number.isNaN(left)) {
+          throw new Error(`Invalid number: ${left}`);
+        }
+        this.skipWhitespace();
+        while (this.scanIndex < this.scanSource.length) {
+          this.skipWhitespace();
+          if (stopChar && this.remainingStartsWith(stopChar)) {
+            break;
+          }
+          const nextChar = this.scanSource[this.scanIndex];
+          if (nextChar === "," || nextChar === ")" || nextChar === "]") {
+            break;
+          }
+          const op2 = this.peekNextOperator(this.operators, depth);
+          if (!op2) {
+            break;
+          }
+          this.advance(op2.length);
+          this.skipWhitespace();
+          const right = this.evalMath(this.operators[op2].priority + 1, stopChar);
+          if (right === void 0) {
+            throw new Error(`Missing right operand for operator '${op2}'.`);
+          }
+          left = this.operators[op2].operation(left, right);
+        }
+        if (this.math_round) {
+          left = Math.trunc(left);
+        }
+        if (Number.isNaN(left)) {
+          throw new Error(`Invalid number: ${left}`);
+        }
+        return left;
+      }
+      /**
+       * Helper function to peek ahead at the next 1-2 characters and return a matching operator if found and depth-allowed.
+       * @param {OperatorTable} operators The operators to check.
+       * @param {number} depth The current depth of nested expressions.
+       * @returns {BinaryOperator | null} The matching operator or null if no match.
+       */
+      peekNextOperator(operators, depth) {
+        this.skipWhitespace();
+        if (this.scanIndex >= this.scanSource.length) {
+          return null;
+        }
+        const remaining = this.scanSource.length - this.scanIndex;
+        if (remaining >= 2) {
+          const twoChars = this.scanSource.slice(this.scanIndex, this.scanIndex + 2);
+          const twoOp = getOperator(operators, twoChars);
+          if (twoOp) {
+            if (twoOp.priority >= depth) {
+              return twoChars;
+            }
+            return null;
+          }
+        }
+        const oneChar = this.scanSource[this.scanIndex];
+        const oneOp = getOperator(operators, oneChar);
+        if (oneOp && oneOp.priority >= depth) {
+          return oneChar;
+        }
+        return null;
+      }
+      /**
+       * Parses numbers from a string while consuming valid characters.
+       * @param {RegExp} regex The regular expression to test against the string.
+       * @returns {string} The substring of the string that matches the regular expression.
+       */
+      consumeWhile(regex) {
+        const source = this.scanSource;
+        const start = this.scanIndex;
+        let index = start;
+        while (index < source.length && regex.test(source[index])) {
+          index++;
+        }
+        const result = source.slice(start, index);
+        this.scanIndex = index;
+        return result;
+      }
+      /**
+       * Retrieves a number from the string.
+       * This implements `getnumcore` and `getnum`.
+       * @returns {number} The number from the string.
+       */
+      getnum = () => {
+        this.skipWhitespace();
+        let applyBitshift = false;
+        let sign = 1;
+        while (true) {
+          if (this.remainingStartsWith("<:")) {
+            this.advance(2);
+            this.skipWhitespace();
+            applyBitshift = true;
+          } else if (this.remainingStartsWith("<") && !this.remainingStartsWith("<<") && !this.remainingStartsWith("<=")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return sign * (this.getnum() & 255) | 0;
+          } else if (this.remainingStartsWith(">") && !this.remainingStartsWith(">>") && !this.remainingStartsWith(">=")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return sign * (this.getnum() >> 8 & 255) | 0;
+          } else if (this.remainingStartsWith("^")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return sign * (this.getnum() >> 16 & 255) | 0;
+          } else if (this.remainingStartsWith("~")) {
+            this.advance(1);
+            this.skipWhitespace();
+            return ~this.getnum();
+          } else if (this.remainingStartsWith("!") && !this.remainingStartsWith("!=")) {
+            const after = this.scanSource[this.scanIndex + 1];
+            let isDefineLike = after === "{";
+            if (after !== void 0) {
+              const code = after.charCodeAt(0);
+              if (code >= 65 && code <= 90 || code >= 97 && code <= 122 || code === 95) {
+                isDefineLike = true;
+              }
+            }
+            if (!isDefineLike) {
+              this.advance(1);
+              this.skipWhitespace();
+              return ~this.getnum();
+            }
+            break;
+          } else if (this.remainingStartsWith("-")) {
+            this.advance(1);
+            this.skipWhitespace();
+            sign *= -1;
+          } else if (this.remainingStartsWith("+")) {
+            this.advance(1);
+            this.skipWhitespace();
+          } else {
+            break;
+          }
+        }
+        const fnName = this.scanFunctionCallName();
+        if (fnName !== void 0) {
+          const args = [];
+          if (this.scanSource[this.scanIndex] === "(") {
+            this.advance(1);
+            this.skipWhitespace();
+            if (!this.remainingStartsWith(")")) {
+              while (true) {
+                this.skipWhitespace();
+                if (this.remainingStartsWith(",")) {
+                  this.advance(1);
+                  this.skipWhitespace();
+                }
+                if (this.remainingStartsWith(")")) {
+                  break;
+                }
+                if (this.remainingStartsWith('"')) {
+                  args.push(this.parseStringLiteral());
+                } else if (this.isStringArgument(fnName, args.length)) {
+                  args.push(this.parseUnquotedStringArgument(fnName));
+                } else {
+                  const val = this.evalMath(0, ")");
+                  if (val === void 0) {
+                    throw new Error(`Missing function argument for '${fnName}'.`);
+                  }
+                  args.push(val);
+                }
+                this.skipWhitespace();
+                if (this.remainingStartsWith(")")) {
+                  break;
+                }
+                if (this.remainingStartsWith(",")) {
+                  this.advance(1);
+                  this.skipWhitespace();
+                  continue;
+                }
+                throw new Error(`Expected ',' or ')' in function call arguments: ${this.str}`);
+              }
+            }
+            const outerSource = this.scanSource;
+            const afterCall = this.scanIndex + 1;
+            const result = this.callFunction(fnName, args);
+            this.scanSource = outerSource;
+            this.scanIndex = afterCall;
+            this.skipWhitespace();
+            let value2 = sign * result;
+            if (applyBitshift) {
+              value2 = value2 >>> 16;
+            }
+            return value2;
+          }
+        }
+        let value;
+        if (this.remainingStartsWith("(")) {
+          this.advance(1);
+          this.skipWhitespace();
+          const nestedValue = this.evalMath(0, ")");
+          if (nestedValue === void 0) {
+            throw new Error("Empty parenthesized expression.");
+          }
+          value = nestedValue;
+          if (!this.remainingStartsWith(")")) {
+            throw new Error("Mismatched parentheses.");
+          }
+          this.advance(1);
+          this.skipWhitespace();
+        } else if (this.remainingStartsWith("$")) {
+          this.advance(1);
+          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
+        } else if (this.remainingStartsWith("0x")) {
+          this.advance(2);
+          value = parseInt(this.consumeWhile(/[\dA-Fa-f]/), 16);
+        } else if (this.remainingStartsWith("%")) {
+          this.advance(1);
+          value = parseInt(this.consumeWhile(/[01]/), 2);
+        } else if (/\d/.test(this.scanSource[this.scanIndex] ?? "")) {
+          value = parseFloat(this.consumeWhile(/[\d.]/));
+        } else {
+          const remaining = this.str;
+          const unnamedMatch = remaining.match(/^(:(\++|-+))/);
+          if (unnamedMatch) {
+            this.advance(unnamedMatch[1].length);
+            this.skipWhitespace();
+            const resolved = this.getHost().resolveLabel(unnamedMatch[1]);
+            if (typeof resolved !== "number") {
+              throw new Error(`Reference '${unnamedMatch[1]}' did not resolve to a numeric value.`);
+            }
+            value = resolved;
+          } else {
+            const reference = parseLeadingReferenceExpression(remaining);
+            if (reference) {
+              this.advance(reference.length);
+              this.skipWhitespace();
+              const renderedReference = renderReferenceExpressionNode(reference.node, {
+                renderIndex: (node) => this.evaluateExpressionNode(node).toString()
+              });
+              const resolved = this.getHost().resolveLabel(renderedReference);
+              if (typeof resolved !== "number") {
+                throw new Error(`Reference '${renderedReference}' did not resolve to a numeric value.`);
+              }
+              value = resolved;
+            } else {
+              const localReference = this.resolveLeadingLocalLabelReference(remaining);
+              if (localReference) {
+                this.advance(localReference.length);
+                this.skipWhitespace();
+                const resolved = this.getHost().resolveLabel(localReference.label);
+                if (typeof resolved !== "number") {
+                  throw new Error(
+                    `Reference '${localReference.label}' did not resolve to a numeric value.`
+                  );
+                }
+                value = resolved;
+              } else {
+                const rootMatch = remaining.match(/^([A-Z_a-z]\w*)/);
+                if (rootMatch && remaining.substring(rootMatch[1].length).trimStart().startsWith("[")) {
+                  throw new Error("Mismatched brackets in struct index");
+                }
+                throw new Error(`Invalid number: ${remaining}`);
+              }
+            }
+          }
+        }
+        value = sign * value;
+        if (applyBitshift) {
+          value = value >>> 16;
+        }
+        return value;
+      };
+      /**
+       * Scans a function-call name if the next token is `name(`.
+       * Leaves the cursor on `(`.
+       * @returns {string | undefined} The function name, if a call starts here.
+       */
+      scanFunctionCallName() {
+        const source = this.scanSource;
+        let index = this.scanIndex;
+        if (index >= source.length || !isWordChar(source.charCodeAt(index))) {
+          return void 0;
+        }
+        index++;
+        while (index < source.length && isWordChar(source.charCodeAt(index))) {
+          index++;
+        }
+        const name = source.slice(this.scanIndex, index);
+        while (index < source.length && isScanWhitespace(source.charCodeAt(index))) {
+          index++;
+        }
+        if (source[index] !== "(") {
+          return void 0;
+        }
+        this.scanIndex = index;
+        return name;
+      }
+      /**
+       * Parses a string literal from the current string with support for quotes.
+       * @returns {string} The parsed string literal.
+       */
+      parseStringLiteral = () => {
+        const source = this.scanSource;
+        const start = this.scanIndex + 1;
+        let index = start;
+        while (index < source.length && source[index] !== '"') {
+          index++;
+        }
+        if (index >= source.length) {
+          throw new Error("Unterminated string literal in function call.");
+        }
+        const result = source.slice(start, index);
+        this.scanIndex = index + 1;
+        this.skipWhitespace();
+        return result;
+      };
+      /**
+       * Parses an unquoted string function argument up to a top-level comma or closing parenthesis.
+       * Depth tracks nested `()` / `[]` so `Foo[1].bar` and `data/64kb.bin` stay one argument.
+       * @param {string} functionName The function being called.
+       * @returns {string} The raw argument text.
+       */
+      parseUnquotedStringArgument(functionName) {
+        this.skipWhitespace();
+        const source = this.scanSource;
+        const start = this.scanIndex;
+        let depth = 0;
+        let index = start;
+        while (index < source.length) {
+          const character = source[index];
+          if (character === "(" || character === "[") {
+            depth++;
+          } else if (character === ")" || character === "]") {
+            if (depth === 0) {
+              break;
+            }
+            depth--;
+          } else if (character === "," && depth === 0) {
+            break;
+          }
+          index++;
+        }
+        const argument = source.slice(start, index).trim();
+        this.scanIndex = index;
+        if (!argument) {
+          throw new Error(`Missing function argument for '${functionName}'.`);
+        }
+        return argument;
+      }
+      /**
+       * Calls either a built-in or user-defined function by name, passing an array of arguments which can be strings or numbers.
+       * @param {string} name The name of the function to call.
+       * @param {Array<number | string>} args The arguments to pass to the function.
+       * @returns {number} The result of the function call.
+       */
+      callFunction = (name, args) => {
+        if (this.userFunctions.has(name)) {
+          return this.callUserFunction(name, args);
+        }
+        const expressionFunction = this.expressionFunctions.get(name.toLowerCase());
+        if (expressionFunction) {
+          if (args.length < expressionFunction.minimumArguments || args.length > expressionFunction.maximumArguments) {
+            const expected = expressionFunction.minimumArguments === expressionFunction.maximumArguments ? `exactly ${expressionFunction.minimumArguments}` : `between ${expressionFunction.minimumArguments} and ${expressionFunction.maximumArguments}`;
+            throw new Error(`${name}() expects ${expected} argument(s).`);
+          }
+          const result = expressionFunction.evaluate(args);
+          if (typeof result !== "number") {
+            throw new Error(`${name}() returned a non-numeric value.`);
+          }
+          return result;
+        }
+        return this.callBuiltInFunction(name, args);
+      };
+      /**
+       * Calls a user-defined function by name, passing an array of arguments which can be strings or numbers.
+       * @param {string} name The name of the function to call.
+       * @param {Array<number | string>} args The arguments to pass to the function.
+       * @returns {number} The result of the function call.
+       */
+      callUserFunction = (name, args) => {
+        const func = this.userFunctions.get(name);
+        if (!func) {
+          throw new Error(`User function '${name}' not found.`);
+        }
+        if (args.length < func.args.length) {
+          throw new Error(`Function '${name}' expects at least ${func.args.length} argument(s).`);
+        }
+        let content = func.content;
+        for (let i = 0; i < func.args.length; i++) {
+          const paramName = func.args[i];
+          const argValue = args[i];
+          const escapedParamName = paramName.replace(/[$()*+.?[\\\]^{|}]/g, "\\$&");
+          const regex = new RegExp(`\\b${escapedParamName}\\b`, "g");
+          const replacement = typeof argValue === "string" ? JSON.stringify(argValue) : argValue.toString();
+          content = content.replace(regex, replacement);
+        }
+        const result = this.math(content);
+        return result;
+      };
+      /**
+       * Calls a built-in function by name, passing an array of arguments which can be strings or numbers.
+       * @param {string} name The name of the function to call.
+       * @param {Array<number | string>} args The arguments to pass to the function.
+       * @returns {number} The result of the function call.
+       */
+      callBuiltInFunction = (name, args) => {
+        switch (name) {
+          // --- Trigonometric & Logarithmic functions ---
+          case "sqrt":
+          case "sin":
+          case "cos":
+          case "tan":
+          case "asin":
+          case "acos":
+          case "atan":
+          // Aliases for inverse trig functions
+          case "arcsin":
+          case "arccos":
+          case "arctan":
+          case "log":
+          case "log10":
+          case "log2":
+          case "ceil":
+          case "floor": {
+            if (args.length !== 1) {
+              throw new Error(`${name} expects exactly 1 numeric argument.`);
+            }
+            const builtinName = NUMERIC_UNARY_ALIASES[name] ?? name;
+            const mathFunction = BUILTIN_NUMERIC_UNARY[builtinName];
+            const val = this.numArg(name, args[0]);
+            const result = mathFunction(val);
+            if (Number.isNaN(result)) {
+              throw new Error(`${name} returned NaN for argument ${val}`);
+            }
+            return result;
+          }
+          // Min, Max, Clamp
+          case "min": {
+            if (args.length < 2) {
+              throw new Error("min() expects at least 2 numeric arguments.");
+            }
+            const numArgs = args.map((arg) => this.numArg(name, arg));
+            return numArgs.reduce((minimum, value) => Math.min(minimum, value), Infinity);
+          }
+          case "max": {
+            if (args.length < 2) {
+              throw new Error("max() expects at least 2 numeric arguments.");
+            }
+            const numArgs = args.map((arg) => this.numArg(name, arg));
+            return numArgs.reduce((maximum, value) => Math.max(maximum, value), -Infinity);
+          }
+          case "clamp": {
+            if (args.length !== 3) {
+              throw new Error("clamp() expects exactly 3 numeric arguments.");
+            }
+            const value = this.numArg(name, args[0]);
+            const minVal = this.numArg(name, args[1]);
+            const maxVal = this.numArg(name, args[2]);
+            return Math.max(minVal, Math.min(maxVal, value));
+          }
+          // --- Safe Division and Conditional Selection ---
+          case "safediv": {
+            if (args.length !== 3) {
+              throw new Error("safediv() expects exactly 3 numeric arguments.");
+            }
+            const dividend = this.numArg(name, args[0]);
+            const divisor = this.numArg(name, args[1]);
+            const defaultValue = this.numArg(name, args[2]);
+            return divisor === 0 ? defaultValue : dividend / divisor;
+          }
+          case "select": {
+            if (args.length !== 3) {
+              throw new Error("select() expects exactly 3 numeric arguments.");
+            }
+            const statement = this.numArg(name, args[0]);
+            const trueVal = this.numArg(name, args[1]);
+            const falseVal = this.numArg(name, args[2]);
+            return statement !== 0 ? trueVal : falseVal;
+          }
+          // --- Logical Operations ---
+          case "not": {
+            if (args.length !== 1) {
+              throw new Error("not() expects exactly 1 numeric argument.");
+            }
+            const value = this.numArg(name, args[0]);
+            return value === 0 ? 1 : 0;
+          }
+          case "bank": {
+            if (args.length !== 1) {
+              throw new Error("bank() expects exactly 1 numeric argument.");
+            }
+            return this.numArg(name, args[0]) >> 16 & 255;
+          }
+          case "offset": {
+            if (args.length !== 2) {
+              throw new Error("offset() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[1]) - this.numArg(name, args[0]);
+          }
+          // --- Comparison Functions ---
+          case "equal": {
+            if (args.length !== 2) {
+              throw new Error("equal() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) === this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "notequal": {
+            if (args.length !== 2) {
+              throw new Error("notequal() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) !== this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "less": {
+            if (args.length !== 2) {
+              throw new Error("less() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) < this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "lessequal": {
+            if (args.length !== 2) {
+              throw new Error("lessequal() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) <= this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "greater": {
+            if (args.length !== 2) {
+              throw new Error("greater() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) > this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "greaterequal": {
+            if (args.length !== 2) {
+              throw new Error("greaterequal() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) >= this.numArg(name, args[1]) ? 1 : 0;
+          }
+          // --- Logical Bitwise Operations ---
+          case "and": {
+            if (args.length !== 2) {
+              throw new Error("and() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) && this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "or": {
+            if (args.length !== 2) {
+              throw new Error("or() expects exactly 2 numeric arguments.");
+            }
+            return this.numArg(name, args[0]) || this.numArg(name, args[1]) ? 1 : 0;
+          }
+          case "nand": {
+            if (args.length !== 2) {
+              throw new Error("nand() expects exactly 2 numeric arguments.");
+            }
+            return !(this.numArg(name, args[0]) && this.numArg(name, args[1])) ? 1 : 0;
+          }
+          case "nor": {
+            if (args.length !== 2) {
+              throw new Error("nor() expects exactly 2 numeric arguments.");
+            }
+            return !(this.numArg(name, args[0]) || this.numArg(name, args[1])) ? 1 : 0;
+          }
+          case "xor": {
+            if (args.length !== 2) {
+              throw new Error("xor() expects exactly 2 numeric arguments.");
+            }
+            const a = this.numArg(name, args[0]);
+            const b = this.numArg(name, args[1]);
+            return (a ? 1 : 0) ^ (b ? 1 : 0) ? 1 : 0;
+          }
+          // --- Rounding ---
+          case "round": {
+            if (args.length !== 2) {
+              throw new Error("round() expects exactly 2 numeric arguments.");
+            }
+            const number = this.numArg(name, args[0]);
+            const precision = this.numArg(name, args[1]);
+            return parseFloat(number.toFixed(precision));
+          }
+          // --- String Comparisons ---
+          case "stringsequal": {
+            if (args.length !== 2) {
+              throw new Error("stringsequal() expects exactly 2 string arguments.");
+            }
+            const str1 = this.strArg(name, args[0]);
+            const str2 = this.strArg(name, args[1]);
+            return str1 === str2 ? 1 : 0;
+          }
+          case "stringsequalnocase": {
+            if (args.length !== 2) {
+              throw new Error("stringsequalnocase() expects exactly 2 string arguments.");
+            }
+            const str1 = this.strArg(name, args[0]);
+            const str2 = this.strArg(name, args[1]);
+            return str1.toLowerCase() === str2.toLowerCase() ? 1 : 0;
+          }
+          // --- Filesize & File Status ---
+          case "filesize":
+          case "getfilestatus": {
+            if (args.length !== 1) {
+              throw new Error(`${name}() expects exactly 1 argument.`);
+            }
+            const value = this.strArg(name, args[0]);
+            return name === "filesize" ? this.getHost().getFileSize(value) : this.getHost().getFileStatus(value);
+          }
+          // --- Preprocessor/Struct & Data Size Functions ---
+          case "countof":
+          case "bytesof":
+          case "startof":
+          case "endof": {
+            if (args.length !== 1) {
+              throw new Error(`${name}() expects exactly 1 argument.`);
+            }
+            const host = this.getHost();
+            if (!host.getExpressionStructMetadata) {
+              throw new Error(`${name}() requires a struct metadata host.`);
+            }
+            return host.getExpressionStructMetadata(this.strArg(name, args[0]), name);
+          }
+          case "defined":
+          case "sizeof":
+          case "objectsize":
+          case "datasize": {
+            if (args.length !== 1) {
+              throw new Error(`${name}() expects exactly 1 argument.`);
+            }
+            const value = this.strArg(name, args[0]);
+            if (name === "defined") {
+              return this.getHost().isDefined(value);
+            }
+            return this.getHost().getExpressionObjectSize(value, name === "sizeof");
+          }
+          // --- File Can-Read functions ---
+          case "canreadfile1":
+          case "canreadfile2":
+          case "canreadfile3":
+          case "canreadfile4": {
+            if (args.length !== 2) {
+              throw new Error(`${name}() expects exactly 2 arguments.`);
+            }
+            const filename = this.strArg(name, args[0]);
+            const pos = this.numArg(name, args[1]);
+            return this.getHost().canReadFile(filename, pos, parseInt(name.slice(-1), 10));
+          }
+          case "canreadfile": {
+            if (args.length !== 3) {
+              throw new Error("canreadfile expects exactly 3 arguments (filename, pos, num).");
+            }
+            const filename = this.strArg(name, args[0]);
+            const pos = this.numArg(name, args[1]);
+            const num = this.numArg(name, args[2]);
+            return this.getHost().canReadFile(filename, pos, num);
+          }
+          // --- File Reading functions ---
+          case "readfile1":
+          case "readfile2":
+          case "readfile3":
+          case "readfile4": {
+            if (args.length < 2 || args.length > 3) {
+              throw new Error(`${name} expects 2 or 3 arguments (filename, pos, [default]).`);
+            }
+            const filename = this.strArg(name, args[0]);
+            const pos = this.numArg(name, args[1]);
+            const size = parseInt(name.slice(-1), 10);
+            if (args.length === 3) {
+              const defVal = this.numArg(name, args[2]);
+              return this.getHost().readFile(filename, pos, size, defVal);
+            } else {
+              return this.getHost().readFile(filename, pos, size);
+            }
+          }
+          // --- PC/Realbase ---
+          case "pc":
+          case "realbase": {
+            if (args.length !== 0) {
+              throw new Error(`${name}() expects no arguments.`);
+            }
+            return name === "pc" ? this.getHost().getCurrentAddress() : this.getHost().getCurrentBaseAddress();
+          }
+          default: {
+            throw new Error(`Unknown built-in function '${name}'`);
+          }
+        }
+      };
+      /**
+       * Validates an argument as a number.
+       * @param {string} funcName The name of the function.
+       * @param {number | string} arg The argument to validate.
+       * @returns {number} The validated number.
+       */
+      numArg = (funcName, arg) => {
+        if (typeof arg === "string") {
+          throw new Error(
+            `Function '${funcName}' expected a numeric argument but got a string: ${arg}`
+          );
+        }
+        return arg;
+      };
+      /**
+       * Validates an argument as a string.
+       * @param {string} funcName The name of the function.
+       * @param {number | string} arg The argument to validate.
+       * @returns {string} The validated string.
+       */
+      strArg = (funcName, arg) => {
+        if (typeof arg === "number") {
+          throw new Error(`Function '${funcName}' expected a string argument but got a number: ${arg}`);
+        }
+        return arg;
+      };
+      /**
+       * Parses a function definition.
+       */
+      parseFunctionDefinition = () => {
+        const cleanDef = this.str.replace(/\\\s*\n/g, "");
+        const regex = /^function\s+(\w+)(?:\(([\s\w,]*)\))?\s*=\s*(.+)$/;
+        const match = cleanDef.match(regex);
+        if (!match || !match[1] || !match[3]) {
+          throw new Error("Invalid function definition syntax.");
+        }
+        const name = match[1];
+        const paramsStr = match[2] || "";
+        const content = match[3].trim();
+        const params = paramsStr ? paramsStr.split(",").map((p) => p.trim()).filter((p) => p.length > 0) : [];
+        this.str = this.str.substring(match[0].length).trim();
+        this.userFunctions.set(name, { args: params, content });
+      };
+      getHost() {
+        if (!this.host) {
+          throw new Error("ExpressionHost not set.");
+        }
+        return this.host;
+      }
+    };
+  }
+});
+
+// packages/core/src/operand-syntax.ts
+function parseOperandSyntax(operand) {
+  const raw = operand;
+  const trimmed = operand.trim();
+  const normalizedUpper = trimmed.toUpperCase();
+  const indexMatch = trimmed.match(/,\s*([a-z][\da-z]*)$/i);
+  const indexRegister = indexMatch?.[1].toLowerCase();
+  const numericBase = trimmed.replace(/^#\s*/, "").replace(/,\s*[a-z][\da-z]*$/i, "").trim();
+  const explicitHex = numericBase.match(/^\$([\da-f]+)$/i);
+  const explicitWidth = explicitHex ? Math.max(1, Math.ceil(explicitHex[1].length / 2)) : void 0;
+  return {
+    raw,
+    trimmed,
+    normalizedUpper,
+    immediate: trimmed.startsWith("#"),
+    indirect: trimmed.startsWith("(") || trimmed.startsWith("["),
+    indexRegister,
+    explicitWidth,
+    numericSpelling: /^[\d#$%]/.test(trimmed)
+  };
+}
+var init_operand_syntax = __esm({
+  "packages/core/src/operand-syntax.ts"() {
+    "use strict";
+  }
+});
+
+// packages/core/src/operand-resolver.ts
+var OperandResolver;
+var init_operand_resolver = __esm({
+  "packages/core/src/operand-resolver.ts"() {
+    "use strict";
+    init_expression_node();
+    init_operand_syntax();
+    OperandResolver = class {
+      constructor(deps) {
+        this.deps = deps;
+      }
+      deps;
+      normalizeNumericBaseMember(operand) {
+        const match = operand.trim().match(/^(#?)(-?\d+|\$[\da-f]+|%[01]+)\.base(\s*,\s*[sxy])?$/i);
+        if (!match) {
+          return operand;
+        }
+        const [, immediatePrefix, literal, indexSuffix = ""] = match;
+        return `${immediatePrefix}${literal}${indexSuffix}`;
+      }
+      splitMathOperandSuffix(operand) {
+        const trimmed = operand.trim();
+        const indexedMatch = trimmed.match(/^(.+?)(\s*,\s*[sxy])$/i);
+        if (!indexedMatch) {
+          return { expression: trimmed, suffix: "" };
+        }
+        return {
+          expression: indexedMatch[1].trim(),
+          suffix: indexedMatch[2]
+        };
+      }
+      isNumericToken(token) {
+        return /^-?\d+$/.test(token) || /^\$[\dA-Fa-f]+$/.test(token) || /^%[01]+$/.test(token);
+      }
+      resolveArithmeticToken(token) {
+        if (this.isNumericToken(token)) {
+          return this.getnum(token);
+        }
+        if (token.includes(".") && this.deps.isStructReference(token)) {
+          return this.deps.resolveStructLabel(token);
+        }
+        return this.deps.resolveLabel(token, false);
+      }
+      tryResolveSimpleArithmetic(operand) {
+        const tokenPattern = "([.A-Z_a-z][\\w.]*|-?\\d+|\\$[\\dA-Fa-f]+|%[01]+)";
+        const match = operand.match(
+          new RegExp(`^${tokenPattern}\\s*(<<|>>|[+\\-])\\s*${tokenPattern}$`)
+        );
+        if (!match) {
+          return null;
+        }
+        const [, leftToken, operator, rightToken] = match;
+        if (this.isNumericToken(leftToken) && this.isNumericToken(rightToken)) {
+          return null;
+        }
+        const leftValue = this.resolveArithmeticToken(leftToken);
+        const rightValue = this.resolveArithmeticToken(rightToken);
+        switch (operator) {
+          case "+":
+            return leftValue + rightValue;
+          case "-":
+            return leftValue - rightValue;
+          case "<<":
+            return leftValue << rightValue;
+          case ">>":
+            return leftValue >> rightValue;
+          default:
+            return null;
+        }
+      }
+      determineValueLength(value) {
+        if (typeof value !== "string" && typeof value !== "number") {
+          throw new Error(`Invalid value type for length determination: ${typeof value}`);
+        }
+        if (Number.isNaN(value)) {
+          throw new Error(`Invalid value for length determination: ${value}`);
+        }
+        if (typeof value === "string" && value.trim() === "") {
+          return 1;
+        }
+        let hexString;
+        if (typeof value === "number") {
+          hexString = value.toString(16).toUpperCase();
+        } else if (value.startsWith("$")) {
+          hexString = value.substring(1);
+        } else {
+          hexString = value;
+        }
+        return Math.max(1, Math.ceil(hexString.length / 2));
+      }
+      isMathExpression(expression) {
+        if (!expression || typeof expression !== "string") {
+          return false;
+        }
+        if (/^[A-Z_a-z]\w*\s*\(/.test(expression.trim())) {
+          return true;
+        }
+        return expression.includes("+") || expression.includes("-") || expression.includes("*") || expression.includes("/") || expression.includes("&") || expression.includes("|") || expression.includes("^") || expression.includes("<<") || expression.includes(">>");
+      }
+      tryResolveLabelInOperand(operand) {
+        if (operand.startsWith("#")) {
+          const inner = operand.substring(1).trim();
+          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
+            const labelValue = this.deps.tryResolveLabel(inner, false);
+            if (labelValue !== void 0) {
+              return "#$" + labelValue.toString(16).toUpperCase();
+            }
+          }
+          return operand;
+        }
+        if (operand.startsWith("[") && operand.endsWith("]")) {
+          const inner = operand.substring(1, operand.length - 1).trim();
+          if (!inner.match(/^[\d$%(]/) && !inner.includes(",")) {
+            const labelValue = this.deps.tryResolveLabel(inner, false);
+            if (labelValue !== void 0) {
+              return "[$" + labelValue.toString(16).toUpperCase() + "]";
+            }
+          }
+          return operand;
+        }
+        if (operand.includes(",")) {
+          const lastCommaIndex = operand.lastIndexOf(",");
+          const basePart = operand.substring(0, lastCommaIndex).trim();
+          const indexPart = operand.substring(lastCommaIndex).trim();
+          if (!basePart.match(/^[\d$%(]/)) {
+            const labelValue = this.deps.tryResolveLabel(basePart, false);
+            if (labelValue !== void 0) {
+              return "$" + labelValue.toString(16).toUpperCase() + indexPart;
+            }
+          }
+          return operand;
+        }
+        if (!operand.match(/^[\d#$%([]/) && !operand.includes(",")) {
+          const labelValue = this.deps.tryResolveLabel(operand, false);
+          if (labelValue !== void 0) {
+            return "$" + labelValue.toString(16).toUpperCase();
+          }
+        }
+        return operand;
+      }
+      /**
+       * Resolve defines, labels, struct references, and arithmetic under the current assembly stage.
+       * Deferred expression failures yield zero during sizing passes and throw during final emission.
+       * @param {string | ExpressionNode} operand Source operand or parsed expression, including an optional immediate prefix.
+       * @returns {number} Resolved value, or the deferred sizing placeholder.
+       */
+      getnum(operand) {
+        if (typeof operand !== "string") {
+          return this.getnumFromNode(operand);
+        }
+        operand = operand.trim();
+        operand = this.normalizeNumericBaseMember(operand);
+        if (/^-?\d+$/.test(operand)) {
+          return parseInt(operand, 10);
+        }
+        if (/^\$[\dA-Fa-f]+$/.test(operand)) {
+          return parseInt(operand.substring(1), 16);
+        }
+        if (/^%[01]+$/.test(operand)) {
+          return parseInt(operand.substring(1), 2);
+        }
+        operand = this.deps.resolveDefines(operand);
+        if (operand.startsWith("#")) {
+          operand = operand.substring(1).trim();
+        }
+        operand = this.normalizeNumericBaseMember(operand);
+        if (/^[A-Z_a-z]\w*\s*\(/.test(operand)) {
+          try {
+            return this.deps.evaluateMath(operand);
+          } catch (error) {
+            if (this.deps.shouldDeferExpressionEvaluation()) {
+              return 0;
+            }
+            throw error;
+          }
+        }
+        const simpleArithmetic = this.tryResolveSimpleArithmetic(operand);
+        if (simpleArithmetic !== null) {
+          return simpleArithmetic;
+        }
+        if (!operand.match(/^[\d$%]/)) {
+          if (operand.indexOf(".") !== -1 || operand.indexOf("[") !== -1) {
+            if (this.deps.isStructReference(operand)) {
+              return this.deps.resolveStructLabel(operand);
+            }
+            if (!this.isMathExpression(operand)) {
+              return this.deps.resolveLabel(operand, false);
+            }
+          }
+          if (/^\w+$/.test(operand) && this.deps.isStructReference(operand)) {
+            return this.deps.resolveStructLabel(operand);
+          }
+          if (/^\w+$/.test(operand)) {
+            return this.deps.resolveLabel(operand, false);
+          }
+        }
+        try {
+          return this.deps.evaluateMath(operand);
+        } catch (error) {
+          if (this.deps.shouldDeferExpressionEvaluation()) {
+            return 0;
+          }
+          throw error;
+        }
+      }
+      /**
+       * Evaluate an already parsed operand with the same deferred-expression policy as getnum.
+       * @param {ExpressionNode} operand Numeric expression. Range nodes are rejected.
+       * @returns {number} Resolved value, or zero for a deferred expression failure.
+       */
+      getnumFromNode(operand) {
+        if (isReferenceExpressionNode(operand)) {
+          if (operand.type === "defineReference") {
+            return this.getnum(this.deps.resolveDefines(renderExpressionNode(operand)));
+          }
+          const reference = renderReferenceExpressionNode(operand, {
+            renderIndex: (node) => this.getnum(node).toString()
+          });
+          return this.resolveReferenceValue(reference);
+        }
+        switch (operand.type) {
+          case "range":
+            throw new Error(
+              `Range expression is not a numeric operand: ${renderExpressionNode(operand)}`
+            );
+          default:
+            try {
+              return this.deps.evaluateMath(operand);
+            } catch (error) {
+              if (this.deps.shouldDeferExpressionEvaluation()) {
+                return 0;
+              }
+              throw error;
+            }
+        }
+      }
+      resolveReferenceValue(reference) {
+        if (reference.indexOf(".") !== -1 || reference.indexOf("[") !== -1) {
+          if (this.deps.isStructReference(reference)) {
+            return this.deps.resolveStructLabel(reference);
+          }
+          if (!this.isMathExpression(reference)) {
+            return this.deps.resolveLabel(reference, false);
+          }
+        }
+        if (/^\w+$/.test(reference)) {
+          return this.deps.resolveLabel(reference, false);
+        }
+        return this.getnum(reference);
+      }
+      expandOperand(operand) {
+        const raw = operand.trim();
+        const syntax = parseOperandSyntax(raw);
+        if (!operand) {
+          return { raw, expanded: "", length: 2, syntax };
+        }
+        let expanded = raw;
+        let expectedLength = 2;
+        if (/^\++$/.test(expanded) || /^-+$/.test(expanded) || expanded === "?+" || expanded === "?-" || /^:(\++|-+)$/.test(expanded)) {
+          return { raw, expanded, length: 2, syntax };
+        }
+        expanded = this.tryResolveLabelInOperand(expanded);
+        try {
+          expanded = this.deps.resolveDefines(expanded);
+        } catch (error) {
+        }
+        if (this.deps.isStructReference(expanded)) {
+          expanded = `$${this.deps.resolveStructLabel(expanded).toString(16).toUpperCase()}`;
+        }
+        expanded = this.normalizeNumericBaseMember(expanded);
+        if (expanded.startsWith("#")) {
+          const inner = expanded.substring(1).trim();
+          if (this.isMathExpression(inner)) {
+            try {
+              const value = this.getnum(inner);
+              expectedLength = this.determineValueLength(value);
+              expanded = "#$" + value.toString(16).toUpperCase();
+            } catch (error) {
+            }
+          } else if (inner.startsWith("$")) {
+            expectedLength = this.determineValueLength(inner.substring(1));
+          } else {
+            try {
+              const value = this.getnum(inner);
+              expectedLength = this.determineValueLength(value);
+              expanded = "#$" + value.toString(16).toUpperCase();
+            } catch (error) {
+            }
+          }
+        } else if (expanded.includes(",")) {
+          if (expanded.startsWith("$")) {
+            const hexPart = expanded.substring(1, expanded.indexOf(","));
+            expectedLength = this.determineValueLength(hexPart);
+          }
+        } else if (expanded.startsWith("[") && expanded.endsWith("]")) {
+          expectedLength = 2;
+        } else if (expanded.startsWith("$")) {
+          expectedLength = this.determineValueLength(expanded.substring(1));
+        } else {
+          expectedLength = 2;
+        }
+        const isRelativeLabelPlaceholder = /^\++$/.test(expanded) || /^-+$/.test(expanded) || /^:(\++|-+)$/.test(expanded);
+        if (!isRelativeLabelPlaceholder && this.isMathExpression(expanded)) {
+          try {
+            const { expression, suffix } = this.splitMathOperandSuffix(expanded);
+            const resolvedValue = this.deps.resolveDefines(expression);
+            const result = this.deps.evaluateMath(resolvedValue);
+            if (!Number.isNaN(result)) {
+              expanded = "$" + result.toString(16).toUpperCase() + suffix;
+              expectedLength = this.determineValueLength(result);
+            }
+          } catch (error) {
+          }
+        }
+        return { raw, expanded, length: expectedLength, syntax };
+      }
+      lowerOperand(operand) {
+        const raw = operand.trim();
+        const expandedOperand = this.expandOperand(raw);
+        const { expanded, length } = expandedOperand;
+        const syntax = expandedOperand.syntax ?? parseOperandSyntax(raw);
+        return {
+          mode: "unknown",
+          baseExpression: expanded,
+          raw,
+          expanded,
+          length,
+          indexRegister: syntax.indexRegister,
+          immediate: syntax.immediate,
+          indirect: syntax.indirect
+        };
+      }
+      /**
+       * Returns the current logical address without applying architecture policy.
+       * @returns {number} Current logical address.
+       */
+      getCurrentAddress() {
+        return this.deps.getCurrentAddress();
+      }
+    };
   }
 });
 
@@ -18362,8 +18417,8 @@ var init_asset_assembly_service = __esm({
        * @param {string} path Provider identity.
        * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
        */
-      snapshot(path15) {
-        return this.#files.get(path15)?.slice();
+      snapshot(path17) {
+        return this.#files.get(path17)?.slice();
       }
       /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
        * @param {AssetValueNode} node Typed source value.
@@ -18411,13 +18466,13 @@ var init_asset_assembly_service = __esm({
        * @param {string} path Source-relative path.
        * @returns {string} Stable provider identity.
        */
-      #resolve(path15) {
+      #resolve(path17) {
         const resolved = this.session.fileProvider.resolvePath(
-          path15,
+          path17,
           this.session.includeSource.resolutionOptions
         );
         if (!resolved) {
-          throw new Error(`includeAsset cannot find '${path15}'.`);
+          throw new Error(`includeAsset cannot find '${path17}'.`);
         }
         return resolved;
       }
@@ -18426,22 +18481,22 @@ var init_asset_assembly_service = __esm({
        * @param {"binary" | "resource"} kind Dependency role.
        * @returns {Uint8Array} Build-owned bytes.
        */
-      #read(path15, kind) {
-        const cached = this.#files.get(path15);
+      #read(path17, kind) {
+        const cached = this.#files.get(path17);
         if (cached) {
           return cached;
         }
-        const bytes = this.session.fileProvider.readFile(path15).slice();
-        this.#files.set(path15, bytes);
-        this.dependencies.set(path15, kind);
+        const bytes = this.session.fileProvider.readFile(path17).slice();
+        this.#files.set(path17, bytes);
+        this.dependencies.set(path17, kind);
         return bytes;
       }
       /** Media type is inferred only from a declared, supported input extension.
        * @param {string} path Provider identity.
        * @returns {string} Portable media type.
        */
-      #mediaType(path15) {
-        const extension = path15.toLowerCase().split(".").pop();
+      #mediaType(path17) {
+        const extension = path17.toLowerCase().split(".").pop();
         if (extension === "png") {
           return "image/png";
         }
@@ -18597,7 +18652,7 @@ var init_asset_assembly_service = __esm({
         const resources = {};
         const resourceIdentities = [];
         const declaredResources = format.resourcePaths?.(options) ?? [];
-        if (!Array.isArray(declaredResources) || declaredResources.some((path15) => typeof path15 !== "string" || !path15)) {
+        if (!Array.isArray(declaredResources) || declaredResources.some((path17) => typeof path17 !== "string" || !path17)) {
           throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
         }
         for (const resourceName of declaredResources) {
@@ -18691,12 +18746,12 @@ var init_asset_assembly_service = __esm({
           }
           const names = [.../* @__PURE__ */ new Set([...schemaResources, ...resourcePaths])];
           for (const name of names) {
-            const path15 = this.#resolve(name);
+            const path17 = this.#resolve(name);
             transformResources[name] = {
-              bytes: this.#read(path15, "resource"),
-              mediaType: this.#mediaType(path15)
+              bytes: this.#read(path17, "resource"),
+              mediaType: this.#mediaType(path17)
             };
-            transformResourceIdentities.push(`${name}\0${path15}`);
+            transformResourceIdentities.push(`${name}\0${path17}`);
           }
           transforms.push({
             provider: transform,
@@ -22221,7 +22276,7 @@ var init_assembler = __esm({
     init_address_width();
     init_addressToLine();
     init_architecture_registry();
-    init_diagnostics();
+    init_diagnostics2();
     init_directive_groups();
     init_registry();
     init_file_provider();
@@ -25453,12 +25508,12 @@ var init_decoder_types = __esm({
 });
 
 // packages/core/src/debug-map.ts
-var import_node_crypto9, import_node_path6, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2563, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
+var import_node_crypto9, import_node_path8, DEBUG_MAP_FORMAT, DEBUG_MAP_SCHEMA_VERSION, canonicalValue2, canonicalDebugMapJson, sha2563, createDebugMap, validateDebugMap, debugMapRangesForAddress, debugMapRangesForSource;
 var init_debug_map = __esm({
   "packages/core/src/debug-map.ts"() {
     "use strict";
     import_node_crypto9 = require("node:crypto");
-    import_node_path6 = __toESM(require("node:path"), 1);
+    import_node_path8 = __toESM(require("node:path"), 1);
     DEBUG_MAP_FORMAT = "uttori-asm-debug-map";
     DEBUG_MAP_SCHEMA_VERSION = 1;
     canonicalValue2 = (value) => {
@@ -25476,12 +25531,12 @@ var init_debug_map = __esm({
 `;
     sha2563 = (value) => (0, import_node_crypto9.createHash)("sha256").update(value).digest("hex");
     createDebugMap = (options) => {
-      const sourceRoot = import_node_path6.default.resolve(options.sourceRoot ?? process.cwd());
+      const sourceRoot = import_node_path8.default.resolve(options.sourceRoot ?? process.cwd());
       const entries3 = options.mapping.fileList.map((entry, originalId) => {
-        const absolute = import_node_path6.default.resolve(entry.name);
-        const relative2 = import_node_path6.default.relative(sourceRoot, absolute);
-        const portable = relative2 && !relative2.startsWith("..") && !import_node_path6.default.isAbsolute(relative2) ? relative2 : absolute;
-        return { entry, originalId, portable: portable.split(import_node_path6.default.sep).join("/") };
+        const absolute = import_node_path8.default.resolve(entry.name);
+        const relative2 = import_node_path8.default.relative(sourceRoot, absolute);
+        const portable = relative2 && !relative2.startsWith("..") && !import_node_path8.default.isAbsolute(relative2) ? relative2 : absolute;
+        return { entry, originalId, portable: portable.split(import_node_path8.default.sep).join("/") };
       }).sort((left, right) => left.portable.localeCompare(right.portable));
       const sourceIdByOriginal = /* @__PURE__ */ new Map();
       const sources = entries3.map(({ entry, originalId, portable }, id) => {
@@ -25558,7 +25613,7 @@ var init_debug_map = __esm({
       return options.outputOffset !== void 0 && range.outputStart !== void 0 && range.outputEnd !== void 0 && range.outputStart <= options.outputOffset && options.outputOffset < range.outputEnd;
     });
     debugMapRangesForSource = (map, sourcePath, line, architecture) => {
-      const normalized = sourcePath.split(import_node_path6.default.sep).join("/");
+      const normalized = sourcePath.split(import_node_path8.default.sep).join("/");
       const sourceIds = new Set(
         map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
       );
@@ -25655,7 +25710,7 @@ var init_src2 = __esm({
     init_debug_map();
     init_operand_syntax();
     init_syntax_profile();
-    init_diagnostics();
+    init_diagnostics2();
     init_directive_groups();
     init_source_location();
     init_file_provider();
@@ -43911,7 +43966,7 @@ function mapOrder(width2, height, layout) {
   return order;
 }
 function imageModel(document) {
-  if (document.kind !== "indexed-image" && document.kind !== "rgba-image" || !isRecord2(document.value)) {
+  if (document.kind !== "indexed-image" && document.kind !== "rgba-image" || !isRecord4(document.value)) {
     throw new Error("Image encoder requires imported PNG pixels.");
   }
   const value = document.value;
@@ -44077,13 +44132,13 @@ function withImageEncoders(native) {
     });
   });
 }
-var isRecord2, readInteger, readBoolean, expand, reduce, colorKey, readLayout, readOptions, externalPalette;
+var isRecord4, readInteger, readBoolean, expand, reduce, colorKey, readLayout, readOptions, externalPalette;
 var init_image_conversion = __esm({
   "packages/assets/src/image-conversion.ts"() {
     "use strict";
     init_snes();
     init_validation();
-    isRecord2 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+    isRecord4 = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
     readInteger = (value, label, minimum, maximum) => {
       if (typeof value !== "number") {
         throw new RangeError(`${label} must be a number.`);
@@ -44116,7 +44171,7 @@ var init_image_conversion = __esm({
       if (raw === void 0) {
         return { tileOrder: "row-major" };
       }
-      if (!isRecord2(raw)) {
+      if (!isRecord4(raw)) {
         throw new Error("layout must be an object.");
       }
       const tileOrder = raw.tileOrder ?? "row-major";
@@ -44176,7 +44231,7 @@ var init_image_conversion = __esm({
         throw new Error("Invalid paletteExpansion profile.");
       }
       const map = raw.tilemap === void 0 ? {} : raw.tilemap;
-      if (!isRecord2(map) || Object.keys(map).some(
+      if (!isRecord4(map) || Object.keys(map).some(
         (key3) => ![
           "layout",
           "startTileIndex",
@@ -44214,7 +44269,7 @@ var init_image_conversion = __esm({
         throw new Error("External palette JSON exceeds 64 KiB.");
       }
       const value = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(input.bytes));
-      if (!isRecord2(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
+      if (!isRecord4(value) || value.version !== 1 || !Array.isArray(value.colors) || value.colors.length === 0 || value.colors.length > 256) {
         throw new Error("External palette requires version 1 and 1\u2013256 RGB8 colors.");
       }
       const transparentIndex = readInteger(
@@ -49483,12 +49538,12 @@ var init_code_preservation = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-var fs9, import_node_path7, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, isLegacySourceNote, renderSnesRamDefines, renderSnesRamMapSchema;
+var fs10, import_node_path9, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, isLegacySourceNote, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
-    fs9 = __toESM(require("node:fs"), 1);
-    import_node_path7 = __toESM(require("node:path"), 1);
+    fs10 = __toESM(require("node:fs"), 1);
+    import_node_path9 = __toESM(require("node:path"), 1);
     init_src();
     SNES_RAM_MAP_FORMAT = "uttori-asm-snes-ram-map";
     SNES_RAM_MAP_SCHEMA_VERSION = 1;
@@ -49654,12 +49709,12 @@ var init_ram_map = __esm({
       variables: []
     });
     loadSnesRamMap = (directory) => {
-      const file = import_node_path7.default.join(directory, SNES_RAM_MAP_SOURCE);
-      if (!fs9.existsSync(file)) {
-        fs9.mkdirSync(directory, { recursive: true });
-        fs9.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
+      const file = import_node_path9.default.join(directory, SNES_RAM_MAP_SOURCE);
+      if (!fs10.existsSync(file)) {
+        fs10.mkdirSync(directory, { recursive: true });
+        fs10.writeFileSync(file, canonicalSourceExportJson(emptySnesRamMap()));
       }
-      const sourceBytes = fs9.readFileSync(file);
+      const sourceBytes = fs10.readFileSync(file);
       let parsed;
       try {
         parsed = JSON.parse(sourceBytes.toString("utf8"));
@@ -50272,12 +50327,12 @@ var init_struct_instruction_uses = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/struct-map.ts
-var fs10, import_node_path8, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer4, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
+var fs11, import_node_path10, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer4, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializer, renderSnesStructData;
 var init_struct_map = __esm({
   "packages/plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
-    fs10 = __toESM(require("node:fs"), 1);
-    import_node_path8 = __toESM(require("node:path"), 1);
+    fs11 = __toESM(require("node:fs"), 1);
+    import_node_path10 = __toESM(require("node:path"), 1);
     init_ram_map();
     init_struct_instruction_uses();
     SNES_STRUCT_MAP_SOURCE = "struct-map.json";
@@ -50457,11 +50512,11 @@ var init_struct_map = __esm({
       return { structures, bindings, ...instructionUses.length ? { instructionUses } : {} };
     };
     loadSnesStructMap = (directory) => {
-      const filename = import_node_path8.default.join(directory, SNES_STRUCT_MAP_SOURCE);
-      if (!fs10.existsSync(filename)) {
+      const filename = import_node_path10.default.join(directory, SNES_STRUCT_MAP_SOURCE);
+      if (!fs11.existsSync(filename)) {
         return void 0;
       }
-      const sourceBytes = fs10.readFileSync(filename);
+      const sourceBytes = fs11.readFileSync(filename);
       return { ...validateSnesStructMap(JSON.parse(sourceBytes.toString("utf8"))), sourceBytes };
     };
     completeFields = (structure) => {
@@ -50641,12 +50696,12 @@ var init_struct_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/source-export.ts
-var fs11, import_node_path9, sourceFlowTarget, renderFlowLabel, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, renderedStructEntry, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
+var fs12, import_node_path11, sourceFlowTarget, renderFlowLabel, loadAssetIncludeMap, applyAssetIncludes, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, renderedStructEntry, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
-    fs11 = __toESM(require("node:fs"), 1);
-    import_node_path9 = __toESM(require("node:path"), 1);
+    fs12 = __toESM(require("node:fs"), 1);
+    import_node_path11 = __toESM(require("node:path"), 1);
     init_src2();
     init_src();
     init_decoder();
@@ -50694,6 +50749,86 @@ var init_source_export2 = __esm({
         }
       }
       return `${source.slice(0, source.indexOf(" "))} ${operand}`;
+    };
+    loadAssetIncludeMap = (directory) => {
+      const file = import_node_path11.default.join(directory, "asset-includes.json");
+      if (!fs12.existsSync(file)) {
+        return void 0;
+      }
+      const sourceBytes = fs12.readFileSync(file);
+      const data = JSON.parse(sourceBytes.toString("utf8"));
+      if (!data || typeof data !== "object" || data.version !== 1 || !Array.isArray(data.entries)) {
+        throw new Error("asset-includes.json requires version 1 and an entries array.");
+      }
+      const entries3 = data.entries;
+      for (const entry of entries3) {
+        const item = entry;
+        if (!item || !Number.isSafeInteger(item.start) || !Number.isSafeInteger(item.end) || item.start < 0 || item.end <= item.start || typeof item.directive !== "string" || !/^includeAsset\([^\n\r]+\)$/.test(item.directive)) {
+          throw new Error("asset-includes.json has an invalid ROM span or includeAsset directive.");
+        }
+      }
+      const ordered = [...entries3];
+      ordered.sort((left, right) => left.start - right.start);
+      for (let index = 1; index < ordered.length; index++) {
+        if (ordered[index - 1].end > ordered[index].start) {
+          throw new Error("asset-includes.json has overlapping ROM spans.");
+        }
+      }
+      return { sourceBytes, entries: ordered };
+    };
+    applyAssetIncludes = (planned, map, metadata, bankSize) => {
+      if (!map) {
+        return [...planned];
+      }
+      const result = [];
+      const spans = [...planned];
+      let index = 0;
+      const splitRawAt = (offset) => {
+        const span = spans[index];
+        if (!span || span.start >= offset || span.end <= offset) {
+          return;
+        }
+        if (span.instruction || span.structured || span.structField || span.structRecord) {
+          throw new Error(
+            `Asset include boundary at ROM offset ${hex12(offset)} splits typed data or code.`
+          );
+        }
+        spans.splice(index, 1, { ...span, end: offset }, { ...span, start: offset });
+      };
+      for (const entry of map.entries) {
+        while (index < spans.length && spans[index].end <= entry.start) {
+          result.push(spans[index++]);
+        }
+        splitRawAt(entry.start);
+        while (index < spans.length && spans[index].end <= entry.start) {
+          result.push(spans[index++]);
+        }
+        if (spans[index]?.start !== entry.start || Math.floor(entry.start / bankSize) !== Math.floor((entry.end - 1) / bankSize)) {
+          throw new Error(
+            `Asset include at ROM offset ${hex12(entry.start)} does not start on one bank-local span.`
+          );
+        }
+        let end = entry.start;
+        while (index < spans.length && end < entry.end) {
+          splitRawAt(entry.end);
+          const span = spans[index];
+          if (span.start !== end || span.end > entry.end || span.instruction || span.structured || span.start !== entry.start && metadata.has(span.start)) {
+            throw new Error(
+              `Asset include at ROM offset ${hex12(entry.start)} conflicts with exported data or metadata.`
+            );
+          }
+          end = span.end;
+          index++;
+        }
+        if (end !== entry.end) {
+          throw new Error(`Asset include at ROM offset ${hex12(entry.start)} has no exact end boundary.`);
+        }
+        result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
+      }
+      while (index < spans.length) {
+        result.push(spans[index++]);
+      }
+      return result;
     };
     hex12 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
     byteList = (bytes) => [...bytes].map((byte2) => hex12(byte2, 2)).join(", ");
@@ -51413,12 +51548,14 @@ var init_source_export2 = __esm({
       return grouped;
     };
     preflight = (directory, force) => {
-      if (!fs11.existsSync(directory)) {
+      if (!fs12.existsSync(directory)) {
         return void 0;
       }
-      const manifestFile = import_node_path9.default.join(directory, SOURCE_EXPORT_MANIFEST);
-      if (!fs11.existsSync(manifestFile)) {
-        const unexpected = fs11.readdirSync(directory).filter((entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE);
+      const manifestFile = import_node_path11.default.join(directory, SOURCE_EXPORT_MANIFEST);
+      if (!fs12.existsSync(manifestFile)) {
+        const unexpected = fs12.readdirSync(directory).filter(
+          (entry) => entry !== SNES_RAM_MAP_SOURCE && entry !== SNES_STRUCT_MAP_SOURCE && entry !== "asset-includes.json" && entry !== "uttori-asm.config.json"
+        );
         if (!force && unexpected.length > 0) {
           throw new Error(
             `Export directory '${directory}' is not empty. Pass --force to write into it.`
@@ -51434,9 +51571,9 @@ var init_source_export2 = __esm({
     };
     writeFile = (root, relative2, bytes, kind, files) => {
       const value = typeof bytes === "string" ? Buffer.from(bytes) : bytes;
-      const destination = import_node_path9.default.join(root, relative2);
-      fs11.mkdirSync(import_node_path9.default.dirname(destination), { recursive: true });
-      fs11.writeFileSync(destination, value);
+      const destination = import_node_path11.default.join(root, relative2);
+      fs12.mkdirSync(import_node_path11.default.dirname(destination), { recursive: true });
+      fs12.writeFileSync(destination, value);
       files.push({ path: relative2, kind, size: value.length, sha256: sourceExportSha256(value) });
     };
     regionIdsFor = (start, end, shards, mapper, romSize) => shards.regions.filter((region) => {
@@ -51449,6 +51586,7 @@ var init_source_export2 = __esm({
       const context = createSnesAddressContext(mapper);
       const structure = structuredRomLayout(rom, mapper);
       const previousManifest = preflight(directory, options.force ?? false);
+      const assetIncludes = loadAssetIncludeMap(directory);
       const ramMap = loadSnesRamMap(directory);
       const ramVariables = indexSnesRamMap(ramMap.variables);
       const structMap = loadSnesStructMap(directory);
@@ -51516,7 +51654,13 @@ var init_source_export2 = __esm({
         structure,
         structRomFields
       );
-      const planned = groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length);
+      const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
+      const planned = applyAssetIncludes(
+        groupStructRecords(fieldPlan, metadata, project.shards, mapper, rom.length),
+        assetIncludes,
+        metadata,
+        bankSize
+      );
       const emittedLabels = /* @__PURE__ */ new Map();
       for (const span of planned) {
         if (span.structured) {
@@ -51546,7 +51690,6 @@ var init_source_export2 = __esm({
       const files = [];
       const spans = [];
       const banks = /* @__PURE__ */ new Map();
-      const bankSize = mapper === "hirom" || mapper === "exhirom" || mapper === "norom" ? 65536 : 32768;
       for (const span of planned) {
         const bank = Math.floor(span.start / bankSize);
         const entries3 = banks.get(bank) ?? [];
@@ -51616,6 +51759,18 @@ var init_source_export2 = __esm({
               role: "code",
               file: bankPath,
               nodeIds: span.instruction.nodeIds,
+              regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
+            });
+          } else if (span.assetInclude) {
+            lines.push(`  ${span.assetInclude}`);
+            spans.push({
+              id: `asset:${span.start.toString(16).padStart(6, "0")}`,
+              source: "asset-includes.json",
+              addressSpace: SNES_FILE_ADDRESS_SPACE,
+              start: span.start,
+              end: span.end,
+              role: "raw",
+              file: bankPath,
               regionIds: regionIdsFor(span.start, span.end, project.shards, mapper, rom.length)
             });
           } else if (span.structured) {
@@ -51790,7 +51945,7 @@ var init_source_export2 = __esm({
         "configuration",
         files
       );
-      const configuration = canonicalSourceExportJson({
+      const defaultConfiguration = canonicalSourceExportJson({
         $schema: "./node_modules/@uttori/asm-plugin-loader-node/asm-config.schema.json",
         plugins: [
           {
@@ -51804,6 +51959,8 @@ var init_source_export2 = __esm({
         includePaths: ["./"],
         buildOutput: "build/rebuilt-content.sfc"
       });
+      const configurationPath = import_node_path11.default.join(directory, "uttori-asm.config.json");
+      const configuration = fs12.existsSync(configurationPath) ? fs12.readFileSync(configurationPath) : defaultConfiguration;
       writeFile(directory, "uttori-asm.config.json", configuration, "configuration", files);
       const manifest = {
         format: SOURCE_EXPORT_FORMAT,
@@ -51819,6 +51976,15 @@ var init_source_export2 = __esm({
         finalOutput: "build/rebuilt.sfc",
         checksumPolicy: "preserve",
         inputs: [
+          ...assetIncludes ? [
+            {
+              path: "asset-includes.json",
+              kind: "metadata",
+              size: assetIncludes.sourceBytes.length,
+              records: assetIncludes.entries.length,
+              sha256: sourceExportSha256(assetIncludes.sourceBytes)
+            }
+          ] : [],
           ...structMap ? [
             {
               path: SNES_STRUCT_MAP_SOURCE,
@@ -51844,14 +52010,14 @@ var init_source_export2 = __esm({
         if (currentPaths.has(stale.path)) {
           continue;
         }
-        const staleFile = import_node_path9.default.join(directory, stale.path);
-        if (fs11.existsSync(staleFile) && fs11.statSync(staleFile).isFile()) {
-          fs11.unlinkSync(staleFile);
+        const staleFile = import_node_path11.default.join(directory, stale.path);
+        if (fs12.existsSync(staleFile) && fs12.statSync(staleFile).isFile()) {
+          fs12.unlinkSync(staleFile);
         }
       }
-      fs11.mkdirSync(directory, { recursive: true });
-      fs11.writeFileSync(
-        import_node_path9.default.join(directory, SOURCE_EXPORT_MANIFEST),
+      fs12.mkdirSync(directory, { recursive: true });
+      fs12.writeFileSync(
+        import_node_path11.default.join(directory, SOURCE_EXPORT_MANIFEST),
         canonicalSourceExportJson(manifest)
       );
       return manifest;
@@ -53653,12 +53819,12 @@ var init_superfx_address_space = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/project-initializer.ts
-var fs12, import_node_path10, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace;
+var fs13, import_node_path12, TARGET_ID, ARCHITECTURE_ID, MAX_PERSISTED_RUNTIME_ENTRY_POINTS, SnesProjectInitializationCancelledError, emptyShards, report, throwIfCancelled, assertDizRawFile, importDizRawFile, ensureWritableDestination, safeWorkspacePath, temporarySibling, removeDirectory, commitStagedDirectory, probeSnesProject, createSnesAnalysisProject, analyzeSnesProject, exportSnesProject, verifySnesProjectRoundTrip, initializeSnesDisassemblyWorkspace;
 var init_project_initializer = __esm({
   "packages/plugin-snes/src/disassembler/project-initializer.ts"() {
     "use strict";
-    fs12 = __toESM(require("node:fs"), 1);
-    import_node_path10 = __toESM(require("node:path"), 1);
+    fs13 = __toESM(require("node:fs"), 1);
+    import_node_path12 = __toESM(require("node:path"), 1);
     init_src2();
     init_src();
     init_address_space();
@@ -53699,7 +53865,7 @@ var init_project_initializer = __esm({
       }
     };
     assertDizRawFile = (file) => {
-      if (import_node_path10.default.extname(file).toLowerCase() !== ".dizraw") {
+      if (import_node_path12.default.extname(file).toLowerCase() !== ".dizraw") {
         throw new Error(
           "Only uncompressed .dizraw imports are supported. Compressed .diz input is not supported."
         );
@@ -53707,53 +53873,53 @@ var init_project_initializer = __esm({
     };
     importDizRawFile = (file, rom) => {
       assertDizRawFile(file);
-      return importDizRaw(fs12.readFileSync(file, "utf8"), {
-        sourceName: import_node_path10.default.basename(file),
+      return importDizRaw(fs13.readFileSync(file, "utf8"), {
+        sourceName: import_node_path12.default.basename(file),
         expectedRomSize: rom.length
       });
     };
     ensureWritableDestination = (directory) => {
-      if (!fs12.existsSync(directory)) {
+      if (!fs13.existsSync(directory)) {
         return;
       }
-      const stat2 = fs12.statSync(directory);
+      const stat2 = fs13.statSync(directory);
       if (!stat2.isDirectory()) {
         throw new Error(`Destination '${directory}' is not a directory.`);
       }
-      if (fs12.readdirSync(directory).length > 0) {
+      if (fs13.readdirSync(directory).length > 0) {
         throw new Error(`Destination '${directory}' must be empty.`);
       }
     };
     safeWorkspacePath = (relative2) => {
-      if (relative2 === "" || import_node_path10.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === "" || part === "..")) {
+      if (relative2 === "" || import_node_path12.default.isAbsolute(relative2) || relative2.split(/[/\\]/).some((part) => part === "" || part === "..")) {
         throw new Error(`Unsafe workspace file path '${relative2}'.`);
       }
       return relative2;
     };
     temporarySibling = (destination, suffix) => {
-      const resolved = import_node_path10.default.resolve(destination);
-      const parent = import_node_path10.default.dirname(resolved);
-      fs12.mkdirSync(parent, { recursive: true });
-      return fs12.mkdtempSync(import_node_path10.default.join(parent, `.${import_node_path10.default.basename(resolved)}.${suffix}-`));
+      const resolved = import_node_path12.default.resolve(destination);
+      const parent = import_node_path12.default.dirname(resolved);
+      fs13.mkdirSync(parent, { recursive: true });
+      return fs13.mkdtempSync(import_node_path12.default.join(parent, `.${import_node_path12.default.basename(resolved)}.${suffix}-`));
     };
     removeDirectory = (directory) => {
-      fs12.rmSync(directory, { recursive: true, force: true });
+      fs13.rmSync(directory, { recursive: true, force: true });
     };
     commitStagedDirectory = (staging, destination) => {
-      const resolved = import_node_path10.default.resolve(destination);
+      const resolved = import_node_path12.default.resolve(destination);
       ensureWritableDestination(resolved);
-      if (!fs12.existsSync(resolved)) {
-        fs12.renameSync(staging, resolved);
+      if (!fs13.existsSync(resolved)) {
+        fs13.renameSync(staging, resolved);
         return;
       }
-      const backup = `${resolved}.empty-${import_node_path10.default.basename(staging)}`;
-      fs12.renameSync(resolved, backup);
+      const backup = `${resolved}.empty-${import_node_path12.default.basename(staging)}`;
+      fs13.renameSync(resolved, backup);
       try {
-        fs12.renameSync(staging, resolved);
-        fs12.rmdirSync(backup);
+        fs13.renameSync(staging, resolved);
+        fs13.rmdirSync(backup);
       } catch (error) {
-        if (!fs12.existsSync(resolved) && fs12.existsSync(backup)) {
-          fs12.renameSync(backup, resolved);
+        if (!fs13.existsSync(resolved) && fs13.existsSync(backup)) {
+          fs13.renameSync(backup, resolved);
         }
         throw error;
       }
@@ -53761,7 +53927,7 @@ var init_project_initializer = __esm({
     probeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "probe", "Reading ROM and detecting the SNES cartridge mapping.");
-      const rom = RomImage.load(import_node_path10.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path12.default.resolve(options.romFile), {
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       const detection = detectSnesRom(rom, {
@@ -53769,7 +53935,7 @@ var init_project_initializer = __esm({
         ...options.headerSize === void 0 ? {} : { headerSize: options.headerSize }
       });
       throwIfCancelled(options.signal);
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path10.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path12.default.resolve(options.dizRawFile), rom) : void 0;
       const detectedMapper = detection.mapper;
       const importedMapper = imported?.mapping.mapper;
       const conflict = options.mapper === void 0 && detectedMapper !== void 0 && importedMapper !== void 0 && detectedMapper !== importedMapper;
@@ -53797,7 +53963,7 @@ var init_project_initializer = __esm({
       };
     };
     createSnesAnalysisProject = (options) => {
-      const projectDirectory = import_node_path10.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path12.default.resolve(options.projectDirectory);
       ensureWritableDestination(projectDirectory);
       const probe = probeSnesProject(options);
       if (probe.mapperSelectionRequired || probe.detection.mapper === void 0) {
@@ -53807,10 +53973,10 @@ var init_project_initializer = __esm({
       }
       throwIfCancelled(options.signal);
       report(options, "create", "Creating the native analysis project.");
-      const rom = RomImage.load(import_node_path10.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path12.default.resolve(options.romFile), {
         headerSize: probe.rom.headerSize
       });
-      const imported = options.dizRawFile ? importDizRawFile(import_node_path10.default.resolve(options.dizRawFile), rom) : void 0;
+      const imported = options.dizRawFile ? importDizRawFile(import_node_path12.default.resolve(options.dizRawFile), rom) : void 0;
       const mapper = options.mapper ?? probe.detection.mapper;
       const importWarnings = imported && options.mapper && options.mapper !== imported.mapping.mapper ? [
         ...imported.report.warnings,
@@ -53868,7 +54034,7 @@ var init_project_initializer = __esm({
     analyzeSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "analyze", "Preparing SQL instruction indexes.");
-      const projectDirectory = import_node_path10.default.resolve(options.projectDirectory);
+      const projectDirectory = import_node_path12.default.resolve(options.projectDirectory);
       const store = openAnalysisProjectStore(projectDirectory);
       let previousCode = [];
       const loaded = (() => {
@@ -53880,7 +54046,15 @@ var init_project_initializer = __esm({
             ARCHITECTURE_ID,
             SNES_CPU_ADDRESS_SPACE,
             ["p", "P", "e", "E", "db", "DB", "d", "D"],
-            { p: { max: 255, mask: 48 }, P: { max: 255, mask: 48 } }
+            { p: { max: 255, mask: 48 }, P: { max: 255, mask: 48 } },
+            (processedObservations) => {
+              throwIfCancelled(options.signal);
+              options.onProgress?.({
+                stage: "analyze",
+                message: "Grouping captured instruction variants in SQLite.",
+                processedObservations
+              });
+            }
           );
           report(
             options,
@@ -53921,16 +54095,16 @@ var init_project_initializer = __esm({
         }
       })();
       report(options, "analyze", "Building static analysis from the validated runtime view.");
-      const rom = RomImage.load(import_node_path10.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path12.default.resolve(options.romFile), {
         headerSize: loaded.manifest.rom.headerSize
       });
       validateProjectRom(loaded.manifest, rom);
       if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
         throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
       }
-      const heuristicFile = import_node_path10.default.join(projectDirectory, "heuristics.json");
+      const heuristicFile = import_node_path12.default.join(projectDirectory, "heuristics.json");
       const heuristicConfig = validateSnesHeuristicConfiguration(
-        options.heuristics ?? (fs12.existsSync(heuristicFile) ? JSON.parse(fs12.readFileSync(heuristicFile, "utf8")) : {})
+        options.heuristics ?? (fs13.existsSync(heuristicFile) ? JSON.parse(fs13.readFileSync(heuristicFile, "utf8")) : {})
       );
       const addressContext = createSnesAddressContext(loaded.manifest.mapping.mapper);
       const editableRecords = loaded.view.analysis.filter(
@@ -54115,8 +54289,8 @@ var init_project_initializer = __esm({
     exportSnesProject = (options) => {
       throwIfCancelled(options.signal);
       report(options, "export", "Preparing SQL export indexes and metadata.");
-      const projectDirectory = import_node_path10.default.resolve(options.projectDirectory);
-      const sourceDirectory = import_node_path10.default.resolve(options.sourceDirectory);
+      const projectDirectory = import_node_path12.default.resolve(options.projectDirectory);
+      const sourceDirectory = import_node_path12.default.resolve(options.sourceDirectory);
       const store = openAnalysisProjectStore(projectDirectory);
       try {
         store.prepareAnnotationQueries();
@@ -54126,7 +54300,7 @@ var init_project_initializer = __esm({
           if (options.expectedRevision !== void 0 && options.expectedRevision !== revision.manifestSha256) {
             throw new Error("Analysis changed before source refresh. Run regeneration again.");
           }
-          const rom = RomImage.load(import_node_path10.default.resolve(options.romFile), {
+          const rom = RomImage.load(import_node_path12.default.resolve(options.romFile), {
             headerSize: loaded.manifest.rom.headerSize
           });
           validateProjectRom(loaded.manifest, rom);
@@ -54154,11 +54328,11 @@ var init_project_initializer = __esm({
     verifySnesProjectRoundTrip = async (options) => {
       throwIfCancelled(options.signal);
       report(options, "verify", "Validating generated files, inputs and ROM identity.");
-      const sourceDirectory = import_node_path10.default.resolve(options.sourceDirectory);
+      const sourceDirectory = import_node_path12.default.resolve(options.sourceDirectory);
       const manifest = loadSourceExportManifest(sourceDirectory);
       validateSourceExportFiles(sourceDirectory, manifest);
       validateSourceExportInputs(sourceDirectory, manifest);
-      const rom = RomImage.load(import_node_path10.default.resolve(options.romFile), {
+      const rom = RomImage.load(import_node_path12.default.resolve(options.romFile), {
         headerSize: manifest.rom.headerSize
       });
       if (rom.identity.sha256 !== manifest.rom.sha256 || rom.identity.contentSha256 !== manifest.rom.contentSha256) {
@@ -54167,43 +54341,51 @@ var init_project_initializer = __esm({
         );
       }
       report(options, "verify", "Preparing the assembler environment.");
-      const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src4(), src_exports2));
+      let configured;
+      if (options.loadEnvironment) {
+        configured = await options.loadEnvironment(
+          import_node_path12.default.join(sourceDirectory, manifest.buildConfiguration)
+        );
+      } else {
+        const { createSnesAssemblerEnvironment: createSnesAssemblerEnvironment2 } = await Promise.resolve().then(() => (init_src4(), src_exports2));
+        configured = { environment: await createSnesAssemblerEnvironment2() };
+      }
       throwIfCancelled(options.signal);
-      const environment = await createSnesAssemblerEnvironment2();
-      const entrySource = import_node_path10.default.join(sourceDirectory, manifest.entrySource);
+      const entrySource = import_node_path12.default.join(sourceDirectory, manifest.entrySource);
       const assembler = new Assembler({
-        environment,
+        environment: configured.environment,
         target: TARGET_ID,
         architecture: ARCHITECTURE_ID,
-        targetOptions: { checksumEnabled: false, checksumMode: "asar" },
+        // A round trip preserves the original checksum bytes even if normal builds repair them.
+        targetOptions: { ...configured.targetOptions, checksumEnabled: false, checksumMode: "asar" },
         collectSourceMetadata: options.emitDebugMap ?? true
       });
       try {
-        assembler.setIncludePaths([sourceDirectory]);
+        assembler.setIncludePaths([.../* @__PURE__ */ new Set([sourceDirectory, ...configured.includePaths ?? []])]);
         assembler.setCurrentFile(entrySource);
         report(options, "verify", "Parsing generated assembly and includes.");
-        const source = fs12.readFileSync(entrySource, "utf8");
+        const source = fs13.readFileSync(entrySource, "utf8");
         const program = assembler.buildProgramModel(source, entrySource, 0);
         report(options, "verify", "Assembling the ROM.");
         assembler.assembleProgram(program);
         throwIfCancelled(options.signal);
         report(options, "verify", "Writing build outputs and comparing ROM bytes.");
         const content = Buffer.from(assembler.getBinaryOutput());
-        const contentOutput = import_node_path10.default.join(sourceDirectory, manifest.contentOutput);
-        const finalOutput = import_node_path10.default.join(sourceDirectory, manifest.finalOutput);
-        fs12.mkdirSync(import_node_path10.default.dirname(contentOutput), { recursive: true });
-        fs12.writeFileSync(contentOutput, content);
+        const contentOutput = import_node_path12.default.join(sourceDirectory, manifest.contentOutput);
+        const finalOutput = import_node_path12.default.join(sourceDirectory, manifest.finalOutput);
+        fs13.mkdirSync(import_node_path12.default.dirname(contentOutput), { recursive: true });
+        fs13.writeFileSync(contentOutput, content);
         const final = manifest.rom.headerSize === 0 ? content : Buffer.concat([
-          fs12.readFileSync(
-            import_node_path10.default.join(
+          fs13.readFileSync(
+            import_node_path12.default.join(
               sourceDirectory,
               manifest.spans.find((span) => span.role === "copier-header").file
             )
           ),
           content
         ]);
-        fs12.mkdirSync(import_node_path10.default.dirname(finalOutput), { recursive: true });
-        fs12.writeFileSync(finalOutput, final);
+        fs13.mkdirSync(import_node_path12.default.dirname(finalOutput), { recursive: true });
+        fs13.writeFileSync(finalOutput, final);
         const comparison = compareByteImages(rom.fileBytes(), final);
         if (!comparison.equal) {
           throw new Error(
@@ -54214,7 +54396,7 @@ var init_project_initializer = __esm({
         if (options.emitDebugMap ?? true) {
           report(options, "verify", "Generating the debug map.");
           debugMap = `${contentOutput}.debug.json`;
-          fs12.writeFileSync(
+          fs13.writeFileSync(
             debugMap,
             canonicalDebugMapJson(
               createDebugMap({
@@ -54238,7 +54420,7 @@ var init_project_initializer = __esm({
       }
     };
     initializeSnesDisassemblyWorkspace = async (options) => {
-      const outputDirectory = import_node_path10.default.resolve(options.outputDirectory);
+      const outputDirectory = import_node_path12.default.resolve(options.outputDirectory);
       ensureWritableDestination(outputDirectory);
       const staging = temporarySibling(outputDirectory, "workspace");
       const analysisTemporary = temporarySibling(outputDirectory, "workspace-analysis-destination");
@@ -54274,27 +54456,27 @@ var init_project_initializer = __esm({
         });
         throwIfCancelled(options.signal);
         report(options, "configure", "Writing workspace configuration.");
-        fs12.renameSync(analysisTemporary, import_node_path10.default.join(staging, "analysis"));
+        fs13.renameSync(analysisTemporary, import_node_path12.default.join(staging, "analysis"));
         for (const file of options.workspaceFiles ?? []) {
           const relative2 = safeWorkspacePath(file.path);
-          const destination = import_node_path10.default.join(staging, relative2);
-          fs12.mkdirSync(import_node_path10.default.dirname(destination), { recursive: true });
-          fs12.writeFileSync(destination, file.contents);
+          const destination = import_node_path12.default.join(staging, relative2);
+          fs13.mkdirSync(import_node_path12.default.dirname(destination), { recursive: true });
+          fs13.writeFileSync(destination, file.contents);
         }
         throwIfCancelled(options.signal);
         report(options, "commit", "Committing the completed workspace.");
         commitStagedDirectory(staging, outputDirectory);
-        const remap = (value) => import_node_path10.default.join(outputDirectory, import_node_path10.default.relative(staging, value));
+        const remap = (value) => import_node_path12.default.join(outputDirectory, import_node_path12.default.relative(staging, value));
         return {
           outputDirectory,
           probe: project.probe,
           project: {
             ...project,
-            projectDirectory: import_node_path10.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path12.default.join(outputDirectory, "analysis")
           },
           analysis: {
             ...analysis,
-            projectDirectory: import_node_path10.default.join(outputDirectory, "analysis")
+            projectDirectory: import_node_path12.default.join(outputDirectory, "analysis")
           },
           source: { ...source, sourceDirectory: outputDirectory },
           roundTrip: {
@@ -54890,13 +55072,13 @@ var init_conformance = __esm({
         if (existing) {
           return existing;
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           const started2 = Date.now();
           const timer = setInterval(() => {
             const match = this.events.slice(start).find(predicate);
             if (match) {
               clearInterval(timer);
-              resolve(match);
+              resolve2(match);
             } else if (Date.now() - started2 >= timeoutMs) {
               clearInterval(timer);
               reject(new Error(`Timed out after ${timeoutMs} ms waiting for a backend event.`));
@@ -54905,7 +55087,7 @@ var init_conformance = __esm({
         });
       }
     };
-    withTimeout = async (operation, timeoutMs, context) => new Promise((resolve, reject) => {
+    withTimeout = async (operation, timeoutMs, context) => new Promise((resolve2, reject) => {
       const timer = setTimeout(
         () => reject(new Error(`${context} timed out after ${timeoutMs} ms.`)),
         timeoutMs
@@ -54913,7 +55095,7 @@ var init_conformance = __esm({
       operation.then(
         (value) => {
           clearTimeout(timer);
-          resolve(value);
+          resolve2(value);
         },
         (error) => {
           clearTimeout(timer);
@@ -55971,12 +56153,12 @@ var init_capture_v2 = __esm({
 });
 
 // packages/debug-adapter/src/dap.ts
-var import_node_async_hooks, import_node_path11, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
+var import_node_async_hooks, import_node_path13, numeric, records, VIRTUAL_DISASSEMBLY_HEADER, formatDebugAddress, parseDebugAddress, backendEvent, dapBreakpoint, bytesText, breakpointKey, BREAKPOINT_UPDATE_STOP_TIMEOUT_MS, registerNumber, processorLabel, DebugAdapterSession, encodeDapMessage, DapMessageParser;
 var init_dap = __esm({
   "packages/debug-adapter/src/dap.ts"() {
     "use strict";
     import_node_async_hooks = require("node:async_hooks");
-    import_node_path11 = __toESM(require("node:path"), 1);
+    import_node_path13 = __toESM(require("node:path"), 1);
     init_debug_map();
     init_debug_expression();
     init_capture_v2();
@@ -56124,7 +56306,7 @@ var init_dap = __esm({
       constructor(options) {
         this.#backend = options.backend;
         this.#map = options.debugMap;
-        this.#sourceRoot = import_node_path11.default.resolve(options.sourceRoot ?? process.cwd());
+        this.#sourceRoot = import_node_path13.default.resolve(options.sourceRoot ?? process.cwd());
         this.#sourceBreakpointAddresses = options.sourceBreakpointAddresses;
         this.#sourceOutputOffset = options.sourceOutputOffset;
         this.#instructionAnnotation = options.instructionAnnotation;
@@ -56209,7 +56391,7 @@ var init_dap = __esm({
         if (!this.#configurationHandshake) {
           return;
         }
-        const configured = new Promise((resolve, reject) => {
+        const configured = new Promise((resolve2, reject) => {
           const timer = setTimeout(() => {
             this.#configurationDone = void 0;
             this.#cancelConfiguration = void 0;
@@ -56219,7 +56401,7 @@ var init_dap = __esm({
             clearTimeout(timer);
             this.#configurationDone = void 0;
             this.#cancelConfiguration = void 0;
-            resolve();
+            resolve2();
           };
           this.#cancelConfiguration = () => {
             clearTimeout(timer);
@@ -56445,13 +56627,13 @@ var init_dap = __esm({
             if (range && this.#map) {
               const source = this.#map.sources.find((candidate) => candidate.id === range.sourceId);
               if (source) {
-                const sourcePath = import_node_path11.default.isAbsolute(source.path) ? source.path : import_node_path11.default.resolve(this.#sourceRoot, source.path);
+                const sourcePath = import_node_path13.default.isAbsolute(source.path) ? source.path : import_node_path13.default.resolve(this.#sourceRoot, source.path);
                 return {
                   id: frame.id,
                   name: frame.currentOnly ? `${frame.name} (current frame only)` : frame.name,
                   line: range.line,
                   column: 1,
-                  source: { name: import_node_path11.default.basename(sourcePath), path: sourcePath },
+                  source: { name: import_node_path13.default.basename(sourcePath), path: sourcePath },
                   instructionPointerReference: formatDebugAddress(frame.pc)
                 };
               }
@@ -56892,7 +57074,7 @@ var init_dap = __esm({
         if (!this.#map) {
           return [];
         }
-        const normalized = sourcePath.split(import_node_path11.default.sep).join("/");
+        const normalized = sourcePath.split(import_node_path13.default.sep).join("/");
         const sourceIds = new Set(
           this.#map.sources.filter((source) => source.path === normalized || normalized.endsWith(`/${source.path}`)).map((source) => source.id)
         );
@@ -56987,8 +57169,8 @@ var init_dap = __esm({
         let resolvePause;
         let rejectPause;
         const stopped = new Promise(
-          (resolve, reject) => {
-            resolvePause = resolve;
+          (resolve2, reject) => {
+            resolvePause = resolve2;
             rejectPause = reject;
           }
         );
@@ -57288,7 +57470,7 @@ function assertDebugSidecarSessionToken(value) {
   }
 }
 function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS) {
-  if (!isRecord3(value)) {
+  if (!isRecord5(value)) {
     throw new Error("Sidecar message must be an object.");
   }
   if (value.protocol !== DEBUG_SIDECAR_PROTOCOL) {
@@ -57324,14 +57506,14 @@ function assertDebugSidecarMessage(value, limits = DEFAULT_DEBUG_SIDECAR_LIMITS)
     if (!DEBUG_SIDECAR_EVENTS.includes(value.event)) {
       throw new Error(`Unsupported sidecar event '${String(value.event)}'.`);
     }
-    if (!isRecord3(value.body)) {
+    if (!isRecord5(value.body)) {
       throw new Error("Sidecar event body must be an object.");
     }
     return;
   }
   throw new Error(`Unsupported sidecar message type '${String(value.type)}'.`);
 }
-var import_node_crypto17, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord3, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
+var import_node_crypto17, DEBUG_SIDECAR_PROTOCOL, DEBUG_SIDECAR_PROTOCOL_VERSION, DEBUG_SIDECAR_COMMANDS, DEBUG_SIDECAR_EVENTS, DEFAULT_DEBUG_SIDECAR_LIMITS, isRecord5, positiveInteger, nonNegativeInteger, sessionPattern, createDebugSidecarSessionToken, assertRequestBounds, validateLimits, encodeDebugSidecarMessage, DebugSidecarMessageParser, DebugSidecarMessageQueue;
 var init_sidecar_protocol = __esm({
   "packages/debug-adapter/src/sidecar-protocol.ts"() {
     "use strict";
@@ -57375,14 +57557,14 @@ var init_sidecar_protocol = __esm({
       maxQueuedMessages: 1024,
       maxQueuedBytes: 8388608
     });
-    isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+    isRecord5 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
     positiveInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value > 0;
     nonNegativeInteger = (value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
     sessionPattern = /^[\w-]{32,128}$/;
     createDebugSidecarSessionToken = () => (0, import_node_crypto17.randomBytes)(32).toString("base64url");
     assertRequestBounds = (message, limits) => {
       const args = message.arguments ?? {};
-      if (!isRecord3(args)) {
+      if (!isRecord5(args)) {
         throw new Error("Sidecar request arguments must be an object.");
       }
       if (message.command === "readMemory") {
@@ -57579,8 +57761,8 @@ var init_node_stdio_transport = __esm({
         positiveInteger2(this.#shutdownTimeoutMs, "Sidecar shutdown timeout");
         positiveInteger2(this.#maxStderrBytes, "Sidecar stderr limit");
         this.#onStderr = options.onStderr;
-        this.#exit = new Promise((resolve) => {
-          this.#resolveExit = resolve;
+        this.#exit = new Promise((resolve2) => {
+          this.#resolveExit = resolve2;
         });
         this.#child = (0, import_node_child_process.spawn)(options.command, [...options.args ?? []], {
           cwd: options.cwd,
@@ -57622,13 +57804,13 @@ var init_node_stdio_transport = __esm({
         if (this.#notified || this.#exited) {
           return Promise.reject(this.#terminalError ?? new Error("Sidecar process has exited."));
         }
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           try {
             this.#child.stdin.write(Buffer.from(data), (error) => {
               if (error) {
                 reject(error);
               } else {
-                resolve();
+                resolve2();
               }
             });
           } catch (error) {
@@ -57708,12 +57890,12 @@ var init_node_stdio_transport = __esm({
         if (this.#exited) {
           return true;
         }
-        return new Promise((resolve) => {
-          const timer = setTimeout(() => resolve(false), timeoutMs);
+        return new Promise((resolve2) => {
+          const timer = setTimeout(() => resolve2(false), timeoutMs);
           timer.unref();
           void this.#exit.then(() => {
             clearTimeout(timer);
-            resolve(true);
+            resolve2(true);
           });
         });
       }
@@ -59030,12 +59212,12 @@ var init_sidecar_client = __esm({
           );
         }
         this.#queuedWriteBytes += frame.length;
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve2, reject) => {
           const timer = setTimeout(
             () => this.#fail(new Error(`Sidecar request '${command}' timed out.`)),
             this.#requestTimeoutMs
           );
-          this.#pending.set(sequence, { resolve, reject, timer });
+          this.#pending.set(sequence, { resolve: resolve2, reject, timer });
           const write = this.#writeTail.then(() => {
             if (this.#closed) {
               throw new Error("Sidecar client is closed.");
@@ -59480,14 +59662,14 @@ var init_sidecar_server = __esm({
 });
 
 // packages/debug-adapter/src/capture-context.ts
-var import_node_crypto18, import_node_fs6, import_promises2, import_node_path12, CaptureContextRecorder, verifyCaptureContext;
+var import_node_crypto18, import_node_fs7, import_promises3, import_node_path14, CaptureContextRecorder, verifyCaptureContext;
 var init_capture_context = __esm({
   "packages/debug-adapter/src/capture-context.ts"() {
     "use strict";
     import_node_crypto18 = require("node:crypto");
-    import_node_fs6 = require("node:fs");
-    import_promises2 = require("node:fs/promises");
-    import_node_path12 = __toESM(require("node:path"), 1);
+    import_node_fs7 = require("node:fs");
+    import_promises3 = require("node:fs/promises");
+    import_node_path14 = __toESM(require("node:path"), 1);
     CaptureContextRecorder = class {
       directory;
       transport;
@@ -59550,7 +59732,7 @@ var init_capture_context = __esm({
               if (result.contextState !== "draining") {
                 throw new Error(`Capture context stop failed: ${result.contextState}.`);
               }
-              await new Promise((resolve) => setTimeout(resolve, 10));
+              await new Promise((resolve2) => setTimeout(resolve2, 10));
             }
           }
           if (request.operation === "abort" || request.operation === "file-abort") {
@@ -59565,20 +59747,20 @@ var init_capture_context = __esm({
        */
       async finish(summary) {
         const boundaries = JSON.parse(
-          await (0, import_promises2.readFile)(import_node_path12.default.join(this.directory, "boundaries.json"), "utf8")
+          await (0, import_promises3.readFile)(import_node_path14.default.join(this.directory, "boundaries.json"), "utf8")
         );
         if (boundaries.session !== summary.position.session || boundaries.end?.eventThrough !== summary.position.producedThrough) {
           throw new Error("Capture context boundary does not match the completed ACT2 archive.");
         }
         const files = {};
-        for (const name of (await (0, import_promises2.readdir)(this.directory)).sort()) {
+        for (const name of (await (0, import_promises3.readdir)(this.directory)).sort()) {
           if (!/^(?:identity\.txt|machine\.json|start\.bst|wram-(?:start|end)\.bin|inputs\.bin|milestones\.jsonl|(?:start|end)-clock\.txt|boundaries\.json|graphics\.act2|screen-\d+\.png)$/.test(
             name
           )) {
             throw new Error(`Unexpected capture context artifact: ${name}.`);
           }
-          const file = import_node_path12.default.join(this.directory, name);
-          const stat2 = await (0, import_promises2.lstat)(file);
+          const file = import_node_path14.default.join(this.directory, name);
+          const stat2 = await (0, import_promises3.lstat)(file);
           if (!stat2.isFile() || stat2.isSymbolicLink()) {
             throw new Error("Capture context artifacts must be regular files.");
           }
@@ -59589,10 +59771,10 @@ var init_capture_context = __esm({
             throw new Error("Controller evidence has an incomplete row.");
           }
           const hash = (0, import_node_crypto18.createHash)("sha256");
-          for await (const bytes of (0, import_node_fs6.createReadStream)(file)) {
+          for await (const bytes of (0, import_node_fs7.createReadStream)(file)) {
             hash.update(bytes);
           }
-          const handle2 = await (0, import_promises2.open)(file, "r+");
+          const handle2 = await (0, import_promises3.open)(file, "r+");
           try {
             await handle2.sync();
           } finally {
@@ -59621,8 +59803,8 @@ var init_capture_context = __esm({
         if (files["graphics.act2"] && boundaries.graphicsWindowFrames !== null) {
           throw new Error("Capture context requires full-capture graphics from the native runtime.");
         }
-        const manifest = import_node_path12.default.join(this.directory, "manifest.json");
-        const handle = await (0, import_promises2.open)(`${manifest}.partial`, "wx");
+        const manifest = import_node_path14.default.join(this.directory, "manifest.json");
+        const handle = await (0, import_promises3.open)(`${manifest}.partial`, "wx");
         try {
           await handle.writeFile(
             `${JSON.stringify(
@@ -59630,7 +59812,7 @@ var init_capture_context = __esm({
                 format: "uttori-capture-context",
                 version: 1,
                 ...this.#metadata,
-                archive: import_node_path12.default.basename(summary.archive),
+                archive: import_node_path14.default.basename(summary.archive),
                 scope: summary.scope,
                 boundaries,
                 wram: { address: 8257536, bytes: 131072 },
@@ -59648,7 +59830,7 @@ var init_capture_context = __esm({
                   scope: summary.scope,
                   windowFrames: null,
                   file: null,
-                  primaryArchive: import_node_path12.default.basename(summary.archive)
+                  primaryArchive: import_node_path14.default.basename(summary.archive)
                 },
                 files
               },
@@ -59661,8 +59843,8 @@ var init_capture_context = __esm({
         } finally {
           await handle.close();
         }
-        await (0, import_promises2.link)(`${manifest}.partial`, manifest);
-        await (0, import_promises2.unlink)(`${manifest}.partial`);
+        await (0, import_promises3.link)(`${manifest}.partial`, manifest);
+        await (0, import_promises3.unlink)(`${manifest}.partial`);
       }
       async #request(request, expected) {
         const result = await this.#native(request);
@@ -59672,12 +59854,12 @@ var init_capture_context = __esm({
       }
     };
     verifyCaptureContext = async (directory, identity2) => {
-      const metadataFile = import_node_path12.default.join(directory, "manifest.json");
-      const metadataStat = await (0, import_promises2.lstat)(metadataFile);
+      const metadataFile = import_node_path14.default.join(directory, "manifest.json");
+      const metadataStat = await (0, import_promises3.lstat)(metadataFile);
       if (!metadataStat.isFile() || metadataStat.isSymbolicLink() || metadataStat.size > 1048576) {
         throw new Error("Invalid capture context manifest.");
       }
-      const manifest = JSON.parse(await (0, import_promises2.readFile)(metadataFile, "utf8"));
+      const manifest = JSON.parse(await (0, import_promises3.readFile)(metadataFile, "utf8"));
       const producer = manifest.producer;
       if (manifest.format !== "uttori-capture-context" || manifest.version !== 1 || manifest.romContentSha256 !== identity2.romContentSha256 || producer?.id !== identity2.producer.id || producer?.revision !== identity2.producer.revision || !manifest.files || typeof manifest.files !== "object") {
         throw new Error("Capture context requires the matching ROM and emulator build.");
@@ -59704,12 +59886,12 @@ var init_capture_context = __esm({
         ) || !artifact || !Number.isSafeInteger(artifact.bytes) || artifact.bytes < 0 || !/^[\da-f]{64}$/.test(artifact.sha256)) {
           throw new Error("Invalid capture context artifact descriptor.");
         }
-        const file = import_node_path12.default.join(directory, name), stat2 = await (0, import_promises2.lstat)(file);
+        const file = import_node_path14.default.join(directory, name), stat2 = await (0, import_promises3.lstat)(file);
         if (!stat2.isFile() || stat2.isSymbolicLink() || stat2.size !== artifact.bytes || name === "start.bst" && (stat2.size < 538 || stat2.size > 32 * 1048576) || name.startsWith("wram-") && stat2.size !== 131072 || name === "inputs.bin" && stat2.size % 18) {
           throw new Error(`Capture context artifact size/type mismatch: ${name}.`);
         }
         const hash = (0, import_node_crypto18.createHash)("sha256");
-        for await (const bytes of (0, import_node_fs6.createReadStream)(file)) {
+        for await (const bytes of (0, import_node_fs7.createReadStream)(file)) {
           hash.update(bytes);
         }
         if (hash.digest("hex") !== artifact.sha256) {
@@ -59784,16 +59966,16 @@ var init_capture_file_reader = __esm({
 });
 
 // packages/debug-adapter/src/capture-file.ts
-var import_promises3, import_promises4, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
+var import_promises4, import_promises5, pause, metadataValid, jsonFrame, LosslessCaptureFileRecorder, checkCaptureSize, validateCaptureFileHeader, readCaptureBytes, readCaptureFileHeader, recoverCaptureFile, exportCaptureJson, NativeCaptureFileCursor, nativePosition, NativeCaptureFileRecorder;
 var init_capture_file = __esm({
   "packages/debug-adapter/src/capture-file.ts"() {
     "use strict";
-    import_promises3 = require("node:fs/promises");
-    import_promises4 = require("node:timers/promises");
+    import_promises4 = require("node:fs/promises");
+    import_promises5 = require("node:timers/promises");
     init_capture_context();
     init_capture_file_reader();
     init_capture_v2();
-    pause = () => new Promise((resolve) => setTimeout(resolve, 10));
+    pause = () => new Promise((resolve2) => setTimeout(resolve2, 10));
     metadataValid = (m) => {
       if (m.architecture !== "snes.65816" || m.addressSpace !== "snes.cpu" || !/^[\da-f]{64}$/.test(m.romContentSha256) || !m.producer?.id || !m.producer.revision) {
         throw new Error("Capture requires 65816 CPU scope and exact ROM/producer identity.");
@@ -59890,10 +60072,10 @@ var init_capture_file = __esm({
         const context = options.context === false ? void 0 : new CaptureContextRecorder(archive, options, options.transport);
         const transport = context?.transport ?? options.transport;
         if (format === "json") {
-          const destination = await (0, import_promises3.open)(options.file, "wx");
+          const destination = await (0, import_promises4.open)(options.file, "wx");
           await destination.close();
         } else {
-          const existing = await (0, import_promises3.lstat)(archive).catch((error) => {
+          const existing = await (0, import_promises4.lstat)(archive).catch((error) => {
             if (error.code !== "ENOENT") {
               throw error;
             }
@@ -59906,7 +60088,7 @@ var init_capture_file = __esm({
         let handle;
         let position;
         try {
-          handle = await (0, import_promises3.open)(`${archive}.partial`, "wx");
+          handle = await (0, import_promises4.open)(`${archive}.partial`, "wx");
           position = validateCapturePosition(
             await transport({
               operation: "start",
@@ -59956,7 +60138,7 @@ var init_capture_file = __esm({
           }
           await handle?.close().catch(() => void 0);
           if (format === "json") {
-            await (0, import_promises3.unlink)(options.file).catch(() => void 0);
+            await (0, import_promises4.unlink)(options.file).catch(() => void 0);
           }
           throw error;
         }
@@ -60091,8 +60273,8 @@ var init_capture_file = __esm({
           await this.#handle.sync();
           await this.#handle.close();
           const archive = this.#archive;
-          await (0, import_promises3.link)(this.#partial, archive);
-          await (0, import_promises3.unlink)(this.#partial);
+          await (0, import_promises4.link)(this.#partial, archive);
+          await (0, import_promises4.unlink)(this.#partial);
           if (this.#format === "json") {
             await exportCaptureJson(archive, this.#file, true);
           }
@@ -60165,7 +60347,7 @@ var init_capture_file = __esm({
     };
     readCaptureFileHeader = async (file, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises3.open)(file, "r");
+      const handle = await (0, import_promises4.open)(file, "r");
       try {
         checkCaptureSize((await handle.stat()).size, options);
         const prefix = await readCaptureBytes(handle, 12, 0);
@@ -60190,7 +60372,7 @@ var init_capture_file = __esm({
     };
     recoverCaptureFile = async (file, accept, options = {}) => {
       options.signal?.throwIfAborted();
-      const handle = await (0, import_promises3.open)(file, "r");
+      const handle = await (0, import_promises4.open)(file, "r");
       let before;
       try {
         before = await handle.stat();
@@ -60277,7 +60459,7 @@ var init_capture_file = __esm({
             lastCycle = BigInt(captureChunkRecords(pending).at(-1).cycle);
             pending = void 0;
             options.onProgress?.(offset, before.size);
-            await (0, import_promises4.setImmediate)(void 0, { signal: options.signal });
+            await (0, import_promises5.setImmediate)(void 0, { signal: options.signal });
           } else if (magic === "END2") {
             const terminal = validateCapturePosition(await json(prefix), header.session, header.scope);
             if (pending || terminal.state !== "complete" || captureU64(terminal.producedThrough) !== eventThrough || captureU64(terminal.producedChunks) !== chunkThrough) {
@@ -60333,7 +60515,7 @@ var init_capture_file = __esm({
           "Legacy JSON sequence numbers cannot represent this capture. Retain the exact ACT2 archive."
         );
       }
-      const h = await (0, import_promises3.open)(destination, reserved ? "r+" : "wx");
+      const h = await (0, import_promises4.open)(destination, reserved ? "r+" : "wx");
       try {
         if (reserved && (await h.stat()).size !== 0) {
           throw new Error("Reserved trace destination changed during capture.");
@@ -60400,7 +60582,7 @@ var init_capture_file = __esm({
        */
       static async open(file, options = {}) {
         options.signal?.throwIfAborted();
-        const handle = await (0, import_promises3.open)(file, "r");
+        const handle = await (0, import_promises4.open)(file, "r");
         try {
           const identity2 = await handle.stat();
           const prefix = await readCaptureBytes(handle, 12, 0);
@@ -60513,7 +60695,7 @@ var init_capture_file = __esm({
                 throw new Error("Native capture changed during final validation.");
               }
               if (publishedFile) {
-                const published = await (0, import_promises3.lstat)(publishedFile);
+                const published = await (0, import_promises4.lstat)(publishedFile);
                 if (!published.isFile() || published.dev !== this.#identity.dev || published.ino !== this.#identity.ino) {
                   throw new Error("Native capture publication replaced the opened file.");
                 }
@@ -60550,7 +60732,7 @@ var init_capture_file = __esm({
             this.#chunk = captureU64(chunk.sequence);
             this.#event = captureU64(chunk.through);
             this.#cycle = captureU64(records2.at(-1).cycle);
-            await (0, import_promises4.setImmediate)(void 0, { signal: this.#options.signal });
+            await (0, import_promises5.setImmediate)(void 0, { signal: this.#options.signal });
           }
           if (this.#offset === bytes && !this.#complete && position.fileState === "complete") {
             throw new Error("Completed native capture has no terminal frame.");
@@ -60724,7 +60906,7 @@ var init_capture_file = __esm({
               await this.#context?.finish(summary);
               return summary;
             }
-            await new Promise((resolve) => setTimeout(resolve, 50));
+            await new Promise((resolve2) => setTimeout(resolve2, 50));
           }
           throw new Error("Native capture cancelled. The partial archive remains incomplete.");
         } catch (error) {
@@ -60818,9 +61000,491 @@ __export(maintenance_process_exports, {
 module.exports = __toCommonJS(maintenance_process_exports);
 
 // packages/vscode-extension/src/disassembly/maintenance-jobs.ts
-var path14 = __toESM(require("node:path"), 1);
+var path16 = __toESM(require("node:path"), 1);
 var import_node_perf_hooks = require("node:perf_hooks");
 init_src();
+
+// packages/plugin-loader-node/src/configuration.ts
+var import_node_fs6 = require("node:fs");
+var import_node_path6 = __toESM(require("node:path"), 1);
+init_plugin();
+var PROJECT_CONFIG_FILENAME = "uttori-asm.config.json";
+var TOP_LEVEL_KEYS = /* @__PURE__ */ new Set([
+  "$schema",
+  "plugins",
+  "target",
+  "architecture",
+  "includePaths",
+  "entryPoints",
+  "buildOutput",
+  "baseImage"
+]);
+var PLUGIN_KEYS = /* @__PURE__ */ new Set(["module", "options"]);
+var isRecord2 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var configurationError = (message, cause) => new PluginError(message, {
+  code: "PLUGIN_CONFIGURATION_INVALID",
+  cause
+});
+var optionalText = (value, field) => {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (typeof value !== "string" || value.trim() === "") {
+    throw configurationError(`Configuration field '${field}' must be a non-empty string.`);
+  }
+  return value;
+};
+var optionalStringArray = (value, field) => {
+  if (value === void 0) {
+    return void 0;
+  }
+  if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.trim() === "")) {
+    throw configurationError(`Configuration field '${field}' must be an array of strings.`);
+  }
+  return value;
+};
+var validatePluginEntry = (value, index) => {
+  const entry = `plugins[${index}]`;
+  if (!isRecord2(value)) {
+    throw configurationError(`Configuration entry '${entry}' must be an object.`);
+  }
+  const unknown4 = Object.keys(value).filter((key3) => !PLUGIN_KEYS.has(key3));
+  if (unknown4.length > 0) {
+    throw configurationError(
+      `Configuration entry '${entry}' has unknown field(s): ${unknown4.join(", ")}.`
+    );
+  }
+  if (typeof value.module !== "string" || value.module.trim() === "") {
+    throw configurationError(`Configuration entry '${entry}.module' must be a non-empty string.`);
+  }
+  if (value.options !== void 0 && !isRecord2(value.options)) {
+    throw configurationError(`Configuration entry '${entry}.options' must be an object.`);
+  }
+  return {
+    module: value.module,
+    ...value.options === void 0 ? {} : { options: value.options }
+  };
+};
+var validateProjectConfiguration = (value) => {
+  if (!isRecord2(value)) {
+    throw configurationError("Project configuration must be a JSON object.");
+  }
+  const unknown4 = Object.keys(value).filter((key3) => !TOP_LEVEL_KEYS.has(key3));
+  if (unknown4.length > 0) {
+    throw configurationError(`Project configuration has unknown field(s): ${unknown4.join(", ")}.`);
+  }
+  if (value.plugins !== void 0 && !Array.isArray(value.plugins)) {
+    throw configurationError("Configuration field 'plugins' must be an array.");
+  }
+  const schema = optionalText(value.$schema, "$schema");
+  const target = optionalText(value.target, "target");
+  const architecture = optionalText(value.architecture, "architecture");
+  const includePaths = optionalStringArray(value.includePaths, "includePaths");
+  const entryPoints = optionalStringArray(value.entryPoints, "entryPoints");
+  const buildOutput = optionalText(value.buildOutput, "buildOutput");
+  const baseImage = optionalText(value.baseImage, "baseImage");
+  return {
+    ...schema === void 0 ? {} : { $schema: schema },
+    ...value.plugins === void 0 ? {} : { plugins: value.plugins.map((entry, index) => validatePluginEntry(entry, index)) },
+    ...target === void 0 ? {} : { target },
+    ...architecture === void 0 ? {} : { architecture },
+    ...includePaths === void 0 ? {} : { includePaths },
+    ...entryPoints === void 0 ? {} : { entryPoints },
+    ...buildOutput === void 0 ? {} : { buildOutput },
+    ...baseImage === void 0 ? {} : { baseImage }
+  };
+};
+var readProjectConfiguration = async (cwd, configuredPath) => {
+  const explicit = configuredPath !== void 0;
+  const candidates = explicit ? [import_node_path6.default.resolve(cwd, configuredPath)] : [import_node_path6.default.resolve(cwd, PROJECT_CONFIG_FILENAME)];
+  let lastError;
+  for (const configPath of candidates) {
+    let source;
+    try {
+      source = await import_node_fs6.promises.readFile(configPath, "utf8");
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error ? error.code : void 0;
+      if (code === "ENOENT") {
+        lastError = error;
+        continue;
+      }
+      throw configurationError(`Unable to read project configuration '${configPath}'.`, error);
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(source);
+    } catch (error) {
+      throw configurationError(`Project configuration '${configPath}' is not valid JSON.`, error);
+    }
+    return {
+      path: configPath,
+      directory: import_node_path6.default.dirname(configPath),
+      configuration: validateProjectConfiguration(parsed)
+    };
+  }
+  if (!explicit) {
+    return { directory: import_node_path6.default.resolve(cwd), configuration: {} };
+  }
+  throw configurationError(`Unable to read project configuration '${candidates[0]}'.`, lastError);
+};
+
+// packages/plugin-loader-node/src/loader.ts
+var import_promises2 = require("node:fs/promises");
+var import_node_module = require("node:module");
+var import_node_path7 = __toESM(require("node:path"), 1);
+var import_node_url = require("node:url");
+init_plugin();
+var import_meta = {};
+var isRecord3 = (value) => typeof value === "object" && value !== null && !Array.isArray(value);
+var toOptionsRecord = (value, entry) => {
+  if (value === void 0) {
+    return {};
+  }
+  if (!isRecord3(value)) {
+    throw new PluginError(`Configuration entry '${entry}.options' must be an object.`, {
+      code: "PLUGIN_CONFIGURATION_INVALID"
+    });
+  }
+  return { ...value };
+};
+var pluginIdFromNamespace = (namespace) => {
+  if (!isRecord3(namespace) || !isRecord3(namespace.default) || !isRecord3(namespace.default.manifest)) {
+    return void 0;
+  }
+  return typeof namespace.default.manifest.id === "string" ? namespace.default.manifest.id : void 0;
+};
+var stableValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(stableValue);
+  }
+  if (isRecord3(value)) {
+    return Object.fromEntries(
+      Object.keys(value).sort().map((key3) => [key3, stableValue(value[key3])])
+    );
+  }
+  return value;
+};
+var normalizeFileUrl = async (url) => {
+  try {
+    return (0, import_node_url.pathToFileURL)(await (0, import_promises2.realpath)((0, import_node_url.fileURLToPath)(url))).href;
+  } catch {
+    return url.href;
+  }
+};
+var moduleLoadError = (request, message, resolvedModule, cause) => new PluginError(
+  `Configuration entry '${request.configEntry}' (${request.module})${resolvedModule ? ` resolved to '${resolvedModule}'` : ""}: ${message}`,
+  {
+    code: "PLUGIN_MODULE_NOT_FOUND",
+    pluginModule: resolvedModule ?? request.module,
+    cause
+  }
+);
+var resolveExternalModule = async (request) => {
+  try {
+    if (request.module.startsWith("file:")) {
+      return normalizeFileUrl(new URL(request.module));
+    }
+    if (import_node_path7.default.isAbsolute(request.module) || request.module.startsWith("./") || request.module.startsWith("../")) {
+      return normalizeFileUrl((0, import_node_url.pathToFileURL)(import_node_path7.default.resolve(request.baseDirectory, request.module)));
+    }
+    const parent = (0, import_node_url.pathToFileURL)(import_node_path7.default.join(request.baseDirectory, PROJECT_CONFIG_FILENAME));
+    const marker = "uttori:resolve-project-plugin";
+    const hooks = (0, import_node_module.registerHooks)({
+      resolve(specifier, context, nextResolve) {
+        if (specifier === marker) {
+          return nextResolve(request.module, { ...context, parentURL: parent.href });
+        }
+        return nextResolve(specifier, context);
+      }
+    });
+    let resolved;
+    try {
+      resolved = import_meta.resolve(marker);
+    } finally {
+      hooks.deregister();
+    }
+    return await normalizeFileUrl(new URL(resolved));
+  } catch (error) {
+    throw moduleLoadError(request, "module could not be resolved", void 0, error);
+  }
+};
+var wrapActivationError = (error, modules) => {
+  if (!(error instanceof PluginError)) {
+    return new PluginError("Plugin activation failed.", {
+      code: "PLUGIN_ACTIVATION_FAILED",
+      cause: error
+    });
+  }
+  const entry = modules.find(
+    (item) => item.resolvedModule === error.pluginModule || error.pluginId !== void 0 && item.pluginId === error.pluginId
+  );
+  if (!entry) {
+    return error;
+  }
+  return new PluginError(
+    `Configuration entry '${entry.configEntry}' resolved to '${entry.resolvedModule}': ${error.message}`,
+    {
+      code: error.code,
+      pluginId: error.pluginId ?? entry.pluginId,
+      pluginModule: error.pluginModule ?? entry.resolvedModule,
+      contributionId: error.contributionId,
+      targetId: error.targetId,
+      cause: error.cause ?? error
+    }
+  );
+};
+var NodePluginLoader = class {
+  #current;
+  /**
+   * Read, resolve, import, and activate plugins, then select a target and architecture.
+   * An unchanged normalized configuration reuses the current handle. Changed configuration
+   * disposes the old environment before activation. Activation failure leaves no replacement.
+   * Module contents, logger identity, and bundled plugin object identity are not cache keys.
+   * Node's module cache is retained. Failures reject with PluginError or cleanup AggregateError.
+   * @param {LoadProjectEnvironmentOptions} options Project location, trusted plugins, and host precedence settings.
+   * @returns {Promise<LoadedProjectEnvironment>} A borrowed handle owned by this loader until disposal or replacement.
+   */
+  async loadProjectEnvironment(options) {
+    const cwd = import_node_path7.default.resolve(options.cwd);
+    const loadedConfig = options.allowProjectConfiguration === false ? { directory: cwd, configuration: {} } : await readProjectConfiguration(cwd, options.configFile);
+    const configPlugins = loadedConfig.configuration.plugins ?? [];
+    const defaultPlugins = configPlugins.length === 0 ? options.defaults?.plugins ?? [] : [];
+    const requests = [
+      ...configPlugins.map((request, index) => ({
+        ...request,
+        baseDirectory: loadedConfig.directory,
+        source: "configuration",
+        configEntry: `plugins[${index}]`
+      })),
+      ...defaultPlugins.map((request, index) => ({
+        ...request,
+        baseDirectory: cwd,
+        source: "host-default",
+        configEntry: `hostDefaults.plugins[${index}]`
+      })),
+      ...(options.pluginModules ?? []).map((request, index) => ({
+        ...request,
+        baseDirectory: cwd,
+        source: "override",
+        configEntry: `pluginModules[${index}]`
+      }))
+    ];
+    if (options.activateBundledPlugins && options.bundledPlugins) {
+      const requested = new Set(requests.map((request) => request.module));
+      for (const module2 of options.bundledPlugins.keys()) {
+        if (requested.has(module2)) {
+          continue;
+        }
+        requested.add(module2);
+        requests.push({
+          module: module2,
+          baseDirectory: cwd,
+          source: "bundled",
+          configEntry: `bundledPlugins[${module2}]`
+        });
+      }
+    }
+    const modules = [];
+    for (const request of requests) {
+      modules.push(await this.#resolveAndImport(request, options));
+    }
+    const duplicates = /* @__PURE__ */ new Map();
+    for (const item of modules) {
+      const previous = duplicates.get(item.resolvedModule);
+      if (previous) {
+        throw new PluginError(
+          `Configuration entries '${previous.configEntry}' and '${item.configEntry}' resolve to the same module '${item.resolvedModule}'.`,
+          {
+            code: "PLUGIN_CONFIGURATION_INVALID",
+            pluginId: item.pluginId || void 0,
+            pluginModule: item.resolvedModule
+          }
+        );
+      }
+      duplicates.set(item.resolvedModule, item);
+    }
+    this.#assertAllPluginOptionOverridesMatched(options, modules);
+    const targetInput = options.overrides?.target ?? loadedConfig.configuration.target ?? options.defaults?.target;
+    const architectureInput = options.overrides?.architecture ?? loadedConfig.configuration.architecture ?? options.defaults?.architecture;
+    const configuredIncludePaths = options.overrides?.includePaths ?? loadedConfig.configuration.includePaths ?? options.defaults?.includePaths ?? ["./"];
+    let includeBase = cwd;
+    if (options.overrides?.includePaths === void 0 && loadedConfig.configuration.includePaths !== void 0) {
+      includeBase = loadedConfig.directory;
+    }
+    const includePaths = [
+      ...new Set(configuredIncludePaths.map((entry) => import_node_path7.default.resolve(includeBase, entry)))
+    ];
+    const preliminarySnapshot = JSON.stringify(
+      stableValue({
+        configFile: loadedConfig.path,
+        modules: modules.map((item) => ({
+          module: item.module,
+          resolvedModule: item.resolvedModule,
+          pluginId: item.pluginId,
+          options: item.normalizedOptions,
+          source: item.source
+        })),
+        targetInput,
+        architectureInput,
+        includePaths
+      })
+    );
+    if (this.#current?.snapshot === preliminarySnapshot && !this.#current.disposed) {
+      return this.#current.loaded;
+    }
+    await this.#disposeCurrent();
+    const manager = new PluginManager({ logger: options.logger });
+    try {
+      const activationRequests = modules.map((item) => ({
+        module: item.namespace,
+        options: item.normalizedOptions,
+        pluginModule: item.resolvedModule
+      }));
+      await manager.activateModules(activationRequests);
+      const environment = manager.freeze();
+      const targets = environment.getTargetSummaries();
+      const targetCandidate = targetInput ?? (targets.length === 1 ? targets[0]?.id : void 0);
+      if (!targetCandidate) {
+        throw new PluginError(
+          targets.length === 0 ? "No target is configured and the active plugins provide no targets." : `No target is configured. Choose one of: ${targets.map((target2) => target2.id).join(", ")}.`,
+          { code: "PLUGIN_TARGET_INVALID" }
+        );
+      }
+      const target = environment.resolveTargetId(targetCandidate);
+      if (!target) {
+        throw new PluginError(`Unknown configured target '${targetCandidate}'.`, {
+          code: "PLUGIN_TARGET_INVALID",
+          targetId: targetCandidate
+        });
+      }
+      const targetContribution = environment.getTarget(target);
+      const architectureCandidate = architectureInput ?? targetContribution.defaultArchitecture;
+      const architecture = environment.resolveArchitectureId(target, architectureCandidate);
+      if (!architecture) {
+        throw new PluginError(
+          `Architecture '${architectureCandidate}' is not available for target '${target}'.`,
+          {
+            code: "PLUGIN_TARGET_INVALID",
+            targetId: target,
+            contributionId: architectureCandidate
+          }
+        );
+      }
+      const targetOwner = environment.getContributionOwner(target);
+      const configuredTargetOptions = modules.find((item) => item.pluginId === targetOwner)?.normalizedOptions ?? {};
+      const targetOptions2 = Object.freeze({
+        ...targetContribution.createOptions ? configuredTargetOptions : {}
+      });
+      const normalizedPlugins = Object.freeze(
+        modules.map(
+          (item) => Object.freeze({
+            module: item.module,
+            resolvedModule: item.resolvedModule,
+            pluginId: item.pluginId,
+            options: item.normalizedOptions,
+            source: item.source,
+            configEntry: item.configEntry,
+            bundled: item.bundled
+          })
+        )
+      );
+      const configuration = Object.freeze({
+        ...loadedConfig.path === void 0 ? {} : { configFile: loadedConfig.path },
+        projectRoot: loadedConfig.directory,
+        plugins: normalizedPlugins,
+        target,
+        architecture,
+        targetOptions: targetOptions2,
+        includePaths: Object.freeze(includePaths)
+      });
+      const current = {};
+      const loaded = Object.freeze({
+        environment,
+        target,
+        architecture,
+        targetOptions: targetOptions2,
+        includePaths: configuration.includePaths,
+        configuration,
+        diagnostics: Object.freeze([]),
+        dispose: async () => {
+          if (this.#current === current) {
+            this.#current = void 0;
+          }
+          await this.#disposeEntry(current);
+        }
+      });
+      Object.assign(current, {
+        snapshot: preliminarySnapshot,
+        manager,
+        loaded,
+        disposed: false
+      });
+      this.#current = current;
+      return loaded;
+    } catch (error) {
+      await manager.dispose();
+      throw wrapActivationError(error, modules);
+    }
+  }
+  /** Dispose the current environment, if any. This loader may be used again afterward. */
+  async dispose() {
+    await this.#disposeCurrent();
+  }
+  async #resolveAndImport(request, options) {
+    const bundled = options.bundledPlugins?.get(request.module);
+    let resolvedModule;
+    let namespace;
+    if (bundled) {
+      resolvedModule = `bundled:${request.module}`;
+      namespace = { default: bundled };
+    } else {
+      resolvedModule = await resolveExternalModule(request);
+      try {
+        namespace = await import(resolvedModule);
+      } catch (error) {
+        throw moduleLoadError(request, "module could not be imported", resolvedModule, error);
+      }
+    }
+    const pluginId = pluginIdFromNamespace(namespace) ?? "";
+    const configuredOptions = toOptionsRecord(request.options, request.configEntry);
+    const moduleOverride = options.overrides?.pluginOptions?.[request.module] ?? {};
+    const idOverride = pluginId ? options.overrides?.pluginOptions?.[pluginId] ?? {} : {};
+    return {
+      ...request,
+      resolvedModule,
+      bundled: bundled !== void 0,
+      namespace,
+      pluginId,
+      normalizedOptions: Object.freeze({ ...configuredOptions, ...moduleOverride, ...idOverride })
+    };
+  }
+  #assertAllPluginOptionOverridesMatched(options, modules) {
+    for (const key3 of Object.keys(options.overrides?.pluginOptions ?? {})) {
+      if (!modules.some((item) => item.module === key3 || item.pluginId === key3)) {
+        throw new PluginError(`Plugin option override '${key3}' does not match a loaded plugin.`, {
+          code: "PLUGIN_CONFIGURATION_INVALID",
+          pluginId: key3
+        });
+      }
+    }
+  }
+  async #disposeCurrent() {
+    const current = this.#current;
+    this.#current = void 0;
+    if (current) {
+      await this.#disposeEntry(current);
+    }
+  }
+  async #disposeEntry(current) {
+    if (current.disposed) {
+      return;
+    }
+    current.disposed = true;
+    await current.manager.dispose();
+  }
+};
+
+// packages/vscode-extension/src/disassembly/maintenance-jobs.ts
 init_src4();
 
 // packages/vscode-extension/src/runtime/bus-source.ts
@@ -60865,7 +61529,7 @@ var createEditorRuntimeBusSource = async (file, options = {}) => {
 };
 
 // packages/vscode-extension/src/runtime/trace-source.ts
-var import_promises5 = require("node:fs/promises");
+var import_promises6 = require("node:fs/promises");
 var createEditorRuntimeTraceSource = async (file, options = {}) => {
   const {
     canonicalJson: canonicalJson2,
@@ -60874,7 +61538,7 @@ var createEditorRuntimeTraceSource = async (file, options = {}) => {
     validateRuntimeInstructionTraceMetadata: validateRuntimeInstructionTraceMetadata2
   } = await Promise.resolve().then(() => (init_src(), src_exports));
   options.signal?.throwIfAborted();
-  const handle = await (0, import_promises5.open)(file, "r");
+  const handle = await (0, import_promises6.open)(file, "r");
   const magic = Buffer.alloc(4);
   try {
     let offset = 0;
@@ -61044,7 +61708,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
         entryPoints: job.input.entryPoints,
         maxWorkItems: job.input.maxWorkItems,
         signal,
-        onProgress: ({ message }) => progress({ message })
+        onProgress: ({ message, processedObservations }) => progress({ message, processedObservations })
       });
     case "export":
       return exportSnesProject({
@@ -61085,12 +61749,26 @@ var executeMaintenanceJob = async (job, signal, progress) => {
         store.close();
       }
     }
-    case "verify":
-      return verifySnesProjectRoundTrip({
-        ...job.input,
-        signal,
-        onProgress: ({ message }) => progress({ message })
-      });
+    case "verify": {
+      const loader = new NodePluginLoader();
+      try {
+        return await verifySnesProjectRoundTrip({
+          ...job.input,
+          signal,
+          onProgress: ({ message }) => progress({ message }),
+          // Load only after the verifier validates the export and ROM. The bundled map
+          // resolves SNES in packaged workers; custom modules remain relative to the
+          // source configuration, matching CLI assembly rather than the worker's cwd.
+          loadEnvironment: (configFile) => loader.loadProjectEnvironment({
+            cwd: path16.resolve(job.input.sourceDirectory),
+            configFile,
+            bundledPlugins: /* @__PURE__ */ new Map([["@uttori/asm-plugin-snes", assembler_default]])
+          })
+        });
+      } finally {
+        await loader.dispose();
+      }
+    }
     case "import": {
       const { target, traceFile, maxBytes, architecture, addressSpace } = job.input;
       progress({ message: "Opening and validating trace metadata" });
@@ -61104,7 +61782,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
         target.projectDirectory,
         {
           projectRomContentSha256: target.sourceManifest.rom.contentSha256,
-          sourceName: path14.basename(traceFile),
+          sourceName: path16.basename(traceFile),
           indexMode: job.input.indexMode
         },
         {
@@ -61142,7 +61820,7 @@ var executeMaintenanceJob = async (job, signal, progress) => {
         projectDirectory,
         {
           projectRomContentSha256: romContentSha256,
-          sourceName: path14.basename(traceFile)
+          sourceName: path16.basename(traceFile)
         },
         {
           signal,

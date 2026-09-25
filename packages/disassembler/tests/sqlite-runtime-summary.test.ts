@@ -9,7 +9,7 @@ import { SqliteAnalysisStore, type RuntimeInstructionRecord } from "../src/index
 import {
   RUNTIME_SUMMARY_ROWS_SQL,
   runtimeInstructionSummary,
-  runtimeSummaryGroupSql,
+  runtimeSummaryInputSql,
 } from "../src/sqlite-runtime-summary.js";
 import { DatabaseSync } from "./sqlite-connection.js";
 
@@ -86,7 +86,7 @@ test("summary appends only new observations, preserves provenance and full evide
   }
   db.function("analysis_instruction_variant", (payload) => String(payload));
   const plan = db
-    .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryGroupSql(true)}`)
+    .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(true)}`)
     .all("snes.65816", "snes.cpu");
   t.regex(String(plan[0].detail), /SCAN pending/);
   t.true(plan.some((r) => /SEARCH o USING INTEGER PRIMARY KEY/.test(String(r.detail))));
@@ -132,6 +132,78 @@ test("pairing and query metadata do not recount instructions; failed appends rol
   store.transaction(() => store.insertRuntime(next));
   t.is(read()[0].count, 8);
   t.is(store.storageSnapshot().pairedStates, 2);
+});
+
+test("summary input yields after each decode instead of retaining a capture inside one SQLite step", (t) => {
+  const { store, db, read } = fixture(t);
+  store.transaction(() => store.insertRuntime(instruction("base")));
+  read();
+  store.transaction(() => {
+    for (let index = 0; index < 3; index++) {
+      store.insertRuntime({ ...instruction(`next-${index}`), state: { p: index } });
+    }
+  });
+  let decoded = 0;
+  db.function("analysis_instruction_variant", (payload) => {
+    decoded++;
+    return String(payload);
+  });
+  for (const incremental of [false, true]) {
+    const statement = db.prepare(runtimeSummaryInputSql(incremental));
+    const cursor = statement.iterate("snes.65816", "snes.cpu");
+    let rows = 0;
+    for (;;) {
+      const before = decoded;
+      const next = cursor.next();
+      if (next.done) {
+        break;
+      }
+      t.is(decoded - before, 1, "each native step must release its decoded input before advancing");
+      rows++;
+    }
+    t.is(rows, incremental ? 3 : 4);
+    const plan = db
+      .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(incremental)}`)
+      .all("snes.65816", "snes.cpu");
+    t.false(plan.some((row) => /TEMP B-TREE|MATERIALIZE/.test(String(row.detail))));
+  }
+});
+
+test("grouping progress can interrupt staging without publishing partial counts; retries stay exact", (t) => {
+  const { store, db, read, stats } = fixture(t);
+  store.transaction(() => {
+    for (let index = 0; index < 4100; index++) {
+      store.insertRuntime({ ...instruction(`row-${index}`), state: { p: 0x30, a: index } });
+    }
+  });
+  const progress: number[] = [];
+  t.throws(
+    () =>
+      store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks, (count) => {
+        progress.push(count);
+        throw new Error("cancel grouping");
+      }),
+    { message: "cancel grouping" },
+  );
+  t.deepEqual(progress, [4096]);
+  t.is(db.prepare("SELECT COUNT(*) n FROM query_runtime_variant_sources").get()!.n, 0);
+  t.is(
+    db.prepare("SELECT COUNT(*) n FROM query_cache WHERE name LIKE 'instruction_variants%'").get()!
+      .n,
+    0,
+  );
+  progress.length = 0;
+  const rows = [
+    ...store.runtimeInstructionVariants("snes.65816", "snes.cpu", fields, masks, (count) =>
+      progress.push(count),
+    ),
+  ];
+  t.deepEqual(progress, [4096, 4100]);
+  t.is(rows.length, 1);
+  t.is(rows[0].count, 12300);
+  t.is(rows[0].id, "row-0");
+  t.deepEqual(stats(), { incremental: false, observations: 4100 });
+  t.deepEqual(read(), rows);
 });
 
 test("deletion, rowid reuse, and edits rebuild instead of applying an ambiguous delta", (t) => {

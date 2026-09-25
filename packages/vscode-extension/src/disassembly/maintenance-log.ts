@@ -68,6 +68,8 @@ export class MaintenanceLog {
     if (value.processedRecords !== undefined && value.totalRecords !== undefined) {
       this.#counts = `${value.processedRecords.toLocaleString("en-US")} / ${value.totalRecords.toLocaleString("en-US")} provisional records merged`;
       complete = value.processedRecords === value.totalRecords;
+    } else if (value.processedObservations !== undefined) {
+      this.#counts = `${value.processedObservations.toLocaleString("en-US")} instruction observations grouped (not yet published)`;
     } else if (value.bytesRead !== undefined && value.totalBytes !== undefined) {
       const percent = value.totalBytes > 0 ? (value.bytesRead / value.totalBytes) * 100 : 100;
       this.#counts = `${mib(value.bytesRead)} / ${mib(value.totalBytes)} read (${percent.toFixed(1)}%)`;
@@ -116,7 +118,11 @@ export class MaintenanceLog {
   finish(error?: Error): void {
     this.#flushStderr();
     if (error) {
-      this.#write(error.name === "AbortError" ? "warn" : "error", error.stack ?? error.message);
+      const outcome = error.name === "AbortError" ? "Cancelled" : "Failed";
+      this.#write(
+        error.name === "AbortError" ? "warn" : "error",
+        `${outcome} during: ${this.#stage}. This worker phase did not complete.\n${error.stack ?? error.message}`,
+      );
     } else {
       this.#write("info", "Completed. Worker exited");
     }

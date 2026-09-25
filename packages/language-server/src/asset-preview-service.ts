@@ -13,6 +13,23 @@ const MAX_INPUT_BYTES = 2 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 3 * 1024 * 1024;
 const MAX_CACHE_ENTRIES = 16;
 
+/**
+ * Limit worker previews to formats whose conversion is bundled and bounded here.
+ * @param {string} id Registered format identifier from the active project environment.
+ * @returns {boolean} Whether the worker has a portable preview path for this format.
+ */
+export function supportsPortableAssetPreview(id: string): boolean {
+  return (
+    id.startsWith("snes.") ||
+    id === "uttori.data.raw" ||
+    id === "som.sprite.frames" ||
+    id === "som.boss.graphics" ||
+    id === "som.palette.bgr555" ||
+    id === "som.brr.pcm" ||
+    id === "som.brr.segment"
+  );
+}
+
 /** Wire request identifies the exact open document revision. */
 export interface AssetPreviewRequest {
   readonly uri: string;
@@ -165,12 +182,8 @@ export class AssetPreviewService {
       if (!format) {
         return { ok: false, message: `Asset format '${call.format.value}' is unavailable.` };
       }
-      // These game formats share a bounded worker implementation with the assembler.
-      const somSprite =
-        format.id === "som.sprite.frames" ||
-        format.id === "som.boss.graphics" ||
-        format.id === "som.palette.bgr555";
-      if (!format.id.startsWith("snes.") && format.id !== "uttori.data.raw" && !somSprite) {
+      // An unknown plugin format stays build-only until it has a bounded worker path.
+      if (!supportsPortableAssetPreview(format.id)) {
         return { ok: false, message: `Preview is unavailable for '${format.id}'.` };
       }
       const file = uriToPath(request.uri);

@@ -23,7 +23,8 @@ import {
 } from "../src/index.js";
 import { compareRuntimeRecordIds, runtimeColumns } from "../src/sqlite-records.js";
 import { RUNTIME_RECORD_STREAM_SQL } from "../src/sqlite-runtime-storage.js";
-import { runtimeSummaryGroupSql } from "../src/sqlite-runtime-summary.js";
+import { runtimeSummaryInputSql } from "../src/sqlite-runtime-summary.js";
+import { RUNTIME_RECORD_LOOKUP_SQL } from "../src/sqlite-store.js";
 import { DatabaseSync } from "./sqlite-connection.js";
 
 test("synchronous transactions reject promises and roll back their writes and revision", async (t) => {
@@ -220,7 +221,7 @@ test("instruction variants avoid materializing the complete runtime history", (t
     return String(payload);
   });
   const plan = db
-    .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryGroupSql(false)}`)
+    .prepare(`EXPLAIN QUERY PLAN ${runtimeSummaryInputSql(false)}`)
     .all("snes.65816", "snes.cpu")
     .map((row) => String(row.detail));
   // Copying the UNION ALL view and its automatic index can exceed free disk space even
@@ -665,6 +666,84 @@ test("missing identity dictionary entries fail reads instead of hiding observati
   t.throws(() => loadAnalysisProject(directory), { message: /runtime ID suffix/ });
 });
 
+test("runtime identity lookup probes both complete observation keys before reading payloads", (t) => {
+  const directory = temporary();
+  const store = new SqliteAnalysisStore(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+  const db = new DatabaseSync(store.file);
+  try {
+    for (const suffix of ["text-identity", Buffer.alloc(32, 1)]) {
+      const plan = db
+        .prepare(`EXPLAIN QUERY PLAN ${RUNTIME_RECORD_LOOKUP_SQL}`)
+        .all("runtime:probe:", suffix)
+        .map((row) => String(row.detail));
+      // A prefix-only index search is still linear in capture size. Both branches must
+      // constrain identity_id too, then decode only the matched positive/negative rowids.
+      const observations = plan.filter((detail) => /SEARCH runtime_observations /.test(detail));
+      t.true(observations.some((detail) => /\(prefix_id=\? AND identity_id=\?\)/.test(detail)));
+      t.true(
+        observations.some((detail) => /\(state_prefix_id=\? AND identity_id=\?\)/.test(detail)),
+      );
+      t.true(observations.every((detail) => /identity_id=\?/.test(detail)));
+      t.false(
+        plan.some((detail) => /SCAN (o|runtime_observations|runtime_identities)\b/.test(detail)),
+      );
+      t.false(plan.some((detail) => /SEARCH o .*\((?:state_)?prefix_id=\?\)/.test(detail)));
+      t.true(
+        plan.some((detail) =>
+          /SEARCH runtime_identities USING INDEX runtime_identity_key/.test(detail),
+        ),
+      );
+      t.true(plan.some((detail) => /SEARCH o USING INTEGER PRIMARY KEY/.test(detail)));
+      t.true(plan.some((detail) => /SEARCH o USING INDEX runtime_state_row/.test(detail)));
+    }
+  } finally {
+    db.close();
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("runtime lookup distinguishes colliding hash keys, shared suffixes, and text identities", (t) => {
+  const directory = temporary();
+  const project = projectFor(new RomImage(new Uint8Array(0x8000)));
+  writeAnalysisProject(directory, project);
+  const store = openAnalysisProjectStore(directory);
+  const suffix = "a".repeat(16);
+  const ids = [
+    `capture:one:${suffix}${"b".repeat(48)}`,
+    `capture:one:${suffix}${"c".repeat(48)}`,
+    `capture:two:${suffix}${"b".repeat(48)}`,
+    "capture:one:text-identity",
+    "capture:one:text-identity-longer",
+  ];
+  const records = ids.map((id, index) => ({ ...project.shards.runtime[0]!, id, count: index + 1 }));
+  try {
+    store.transaction(() => {
+      for (const record of records) {
+        t.true(store.insertRuntime(record));
+      }
+    });
+    store.transaction(() => {
+      for (const record of records) {
+        t.false(store.insertRuntime(record));
+      }
+    });
+    for (const record of records) {
+      t.throws(() => store.transaction(() => store.insertRuntime({ ...record, count: 99 })), {
+        message: /changed content/,
+      });
+      t.deepEqual(store.evidenceChoices({ runtime: [record.id] }).runtime, [record]);
+    }
+    t.deepEqual(
+      store.evidenceChoices({ runtime: [`capture:one:${suffix}${"d".repeat(48)}`] }).runtime,
+      [],
+    );
+  } finally {
+    store.close();
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("runtime streaming stays ordered without sorting expanded payloads during full-history reads", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
@@ -724,6 +803,14 @@ test("state-first pairing survives identity collection and preserves full regist
     t.deepEqual([...store.runtimeRecords()], [state, code]);
     t.is(store.storageSnapshot().pairedStates, 1);
     t.is(db.prepare("SELECT COUNT(*) AS n FROM runtime_identities").get()!.n, 1);
+    store.transaction(() => {
+      t.false(store.insertRuntime(code));
+      t.false(store.insertRuntime(state));
+    });
+    t.throws(() => store.transaction(() => store.insertRuntime({ ...state, count: 99 })), {
+      message: /changed content/,
+    });
+    t.deepEqual(store.evidenceChoices({ runtime: [state.id, code.id] }).runtime, [state, code]);
     // Removing the instruction detaches a standalone state without losing its shared identity.
     db.exec("DELETE FROM runtime WHERE kind='runtime-instruction'");
     t.deepEqual([...store.runtimeRecords()], [state]);

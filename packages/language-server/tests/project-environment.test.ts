@@ -38,6 +38,8 @@ test("repository editor config discovers the packaged SoM sprite preview format"
     });
     t.truthy(state.index.environment.getAssetFormat("som.sprite.frames", state.index.target));
     t.truthy(state.index.environment.getAssetFormat("som.palette.bgr555", state.index.target));
+    t.truthy(state.index.environment.getAssetFormat("som.brr.pcm", state.index.target));
+    t.truthy(state.index.environment.getAssetFormat("som.brr.segment", state.index.target));
   } finally {
     await controller.dispose();
   }
