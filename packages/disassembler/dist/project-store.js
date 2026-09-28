@@ -1,6 +1,5 @@
 import * as fs from "node:fs";
 import path from "node:path";
-import { publishAnalysisProject } from "./project-transaction.js";
 import { ANALYSIS_PROJECT_MANIFEST, } from "./project-types.js";
 import { validateAnalysisProjectManifest, validateLoadedShards, createRuntimeRecordValidator, } from "./project-validation.js";
 import { compareRuntimeRecordIds } from "./sqlite-records.js";
@@ -104,15 +103,6 @@ export const loadAnalysisProjectView = (directory, createProjection) => {
     const { manifest, shards } = loadProject(directory, false, createProjection);
     return { manifest, view: shards };
 };
-/**
- * Atomically create or replace all records, including runtime. Use view updates to preserve history.
- * Samples the current revision at call time, so it cannot detect an edit derived from an older
- * caller snapshot. Editing clients must use the explicit revision-checked commit APIs instead.
- * @param {string} directory Project root to create or replace.
- * @param {AnalysisProject} project Complete replacement, including runtime history.
- * @returns {AnalysisProjectManifest} Committed manifest and next revision.
- */
-export const writeAnalysisProject = (directory, project) => publishAnalysisProject(directory, project).manifest;
 /**
  * Throw if the ROM's full-file hash, headerless-content hash, or copier-header size differs.
  * Does not open the manifest's source path or alter the supplied ROM.

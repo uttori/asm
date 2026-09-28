@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
-import { acquireFileLease, analysisProjectRevision, durableReplace, openAnalysisProjectStore, RomImage, sourceExportSha256, syncDirectory, validateProjectRom, writeAnalysisProject, } from "@uttori/asm-disassembler";
+import { acquireFileLease, analysisProjectRevision, durableReplace, openAnalysisProjectStore, RomImage, sourceExportSha256, syncDirectory, validateProjectRom, publishAnalysisProject, } from "@uttori/asm-disassembler";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { createSnesAddressContext } from "./address-identities.js";
 import { loadRomModificationProject, modificationOwnedPath, } from "./modification-project.js";
@@ -385,7 +385,7 @@ export async function applyMetadataMigration(options) {
                 shards[item.kind].push(record);
             }
         }
-        writeAnalysisProject(projectDirectory, { manifest: created.manifest, shards });
+        publishAnalysisProject(projectDirectory, { manifest: created.manifest, shards });
         if (selected.has("struct-library")) {
             const library = review.items.find((item) => item.id === "struct-library").after;
             const value = {

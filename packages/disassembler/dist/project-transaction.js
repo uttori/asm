@@ -228,11 +228,13 @@ export const commitAnalysisProjectSelectedEdit = (directory, snapshot, project) 
     }
 };
 /**
- * Create or replace a complete project. Editing clients should use an explicit snapshot revision.
- * Protects against a writer racing this call, but cannot detect a stale caller-owned replacement.
- * @param {string} directory Destination project root.
- * @param {AnalysisProject} project Complete replacement including runtime.
- * @returns {CommittedAnalysisProjectTransaction} Committed identity and publication result.
+ * Atomically create or replace every record, including runtime history.
+ * Samples the current revision when called, so an edit built from an older caller snapshot is not
+ * detected. A writer racing this call is rejected. Editing clients must use the explicit
+ * revision-checked commit APIs instead. Use a view update to preserve runtime history.
+ * @param {string} directory Project root to create or replace.
+ * @param {AnalysisProject} project Complete replacement, including runtime history.
+ * @returns {CommittedAnalysisProjectTransaction} Committed manifest, revision, and publication result.
  */
 export const publishAnalysisProject = (directory, project) => {
     let expected;

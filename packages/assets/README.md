@@ -172,3 +172,6 @@ codec wrappers or silently migrate persisted project records.
 `./preview`, `./image`, and `./audio` are browser-safe. `./node` provides optional file
 reads and coordinated file replacement. `./image` exports the PNG importer, layout helpers, and normalized image models;
 `./audio` exports the WAVE importer, BRR PCM codec, WAVE preview writer, and audio model.
+Secret of Mana codecs stay on their own subpaths: `./secret-of-mana/lz`,
+`./secret-of-mana/som-asset-plugin`, `./secret-of-mana/som-frame-atlas`,
+`./secret-of-mana/som-room-assets`, and `./secret-of-mana/som-sprite-palettes`.

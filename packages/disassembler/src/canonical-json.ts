@@ -1,38 +1,57 @@
 /**
+ * Compare keys preserving the existing locale-based ordering.
+ * @param {string} a First key.
+ * @param {string} b Second key.
+ * @returns {number} Comparison result.
+ */
+const compareKeys = (a: string, b: string): number => a.localeCompare(b);
+
+/**
  * Sort keys and omit undefined fields recursively for bounded JSON identities and payloads.
  * @param {unknown} value Bounded JSON-compatible value. Arrays retain their input order.
  * @returns {unknown} Canonical objects with undefined fields omitted.
  */
 export const canonicalValue = (value: unknown): unknown => {
+  if (typeof value !== "object" || value === null) {
+    return value;
+  }
   if (Array.isArray(value)) {
     return value.map(canonicalValue);
   }
-  if (value !== null && typeof value === "object") {
-    // Rich traces canonicalize millions of small register/access objects. Sorting keys directly
-    // avoids three temporary arrays and per-field entry tuples while preserving locale ordering.
-    const input = value as Record<string, unknown>;
-    const result: Record<string, unknown> = {};
-    for (const key of Object.keys(input).sort((a, b) => a.localeCompare(b))) {
-      const entry = input[key];
-      if (entry === undefined) {
-        continue;
-      }
-      const normalized = canonicalValue(entry);
-      // Match Object.fromEntries: an input named __proto__ is data, not a prototype setter.
-      if (key === "__proto__") {
-        Object.defineProperty(result, key, {
-          value: normalized,
-          enumerable: true,
-          writable: true,
-          configurable: true,
-        });
-      } else {
-        result[key] = normalized;
-      }
-    }
-    return result;
+  // Rich traces canonicalize millions of small register/access objects.
+  // Sorting keys directly avoids three temporary arrays & per-field entry
+  // tuples while preserving locale ordering.
+  const input = value as Record<string, unknown>;
+  const result: Record<string, unknown> = {};
+  const keys = Object.keys(input);
+  // Only sort non-empty objects to avoid unnecessary work.
+  if (keys.length > 1) {
+    keys.sort(compareKeys);
   }
-  return value;
+  for (const key of keys) {
+    const entry = input[key];
+    if (entry === undefined) {
+      continue;
+    }
+
+    // Primitive fields need no recursive normalization.
+    const normalized = typeof entry === "object" && entry !== null
+      ? canonicalValue(entry)
+      : entry;
+
+    // Match Object.fromEntries: an input named __proto__ is data, not a prototype setter.
+    if (key === "__proto__") {
+      Object.defineProperty(result, key, {
+        value: normalized,
+        enumerable: true,
+        writable: true,
+        configurable: true,
+      });
+    } else {
+      result[key] = normalized;
+    }
+  }
+  return result;
 };
 
 /**

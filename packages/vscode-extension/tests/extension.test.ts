@@ -85,6 +85,18 @@ registerHooks({
           }
           export class Position { constructor(line, character) { this.line = line; this.character = character; } }
           export class Selection extends Range {}
+          export class RelativePattern {
+            constructor(base, pattern) { this.base = base; this.pattern = pattern; }
+          }
+          export class CodeAction {
+            constructor(title, kind) { this.title = title; this.kind = kind; }
+          }
+          export const CodeActionKind = { RefactorRewrite: "refactor.rewrite" };
+          export const env = { openExternal: async () => true };
+          export const languages = {
+            registerCodeActionsProvider: () => disposable(),
+            registerHoverProvider: () => disposable(),
+          };
           export class Hover { constructor(contents, range) { this.contents = contents; this.range = range; } }
           export class MarkdownString {
             appendMarkdown() { return this; }
@@ -158,6 +170,7 @@ registerHooks({
             registerWebviewViewProvider: () => disposable(),
             createTextEditorDecorationType: () => disposable(),
             onDidChangeActiveTextEditor: () => disposable(),
+            onDidChangeTextEditorSelection: () => disposable(),
             onDidChangeTextEditorVisibleRanges: () => disposable(),
             onDidChangeTextEditorOptions: () => disposable(),
             showErrorMessage: async (message) => { host.errors.push(message); },

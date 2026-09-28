@@ -11327,11 +11327,11 @@ var require_commonjs3 = __commonJS({
       return (f) => f.length === len && f !== "." && f !== "..";
     };
     var defaultPlatform = typeof process === "object" && process ? typeof process.env === "object" && process.env && process.env.__MINIMATCH_TESTING_PLATFORM__ || process.platform : "posix";
-    var path51 = {
+    var path50 = {
       win32: { sep: "\\" },
       posix: { sep: "/" }
     };
-    exports2.sep = defaultPlatform === "win32" ? path51.win32.sep : path51.posix.sep;
+    exports2.sep = defaultPlatform === "win32" ? path50.win32.sep : path50.posix.sep;
     exports2.minimatch.sep = exports2.sep;
     exports2.GLOBSTAR = /* @__PURE__ */ Symbol("globstar **");
     exports2.minimatch.GLOBSTAR = exports2.GLOBSTAR;
@@ -14178,13 +14178,13 @@ var require_configuration = __commonJS({
         });
       }
       extractSettingsInformation(keys) {
-        function ensurePath(config, path51) {
+        function ensurePath(config, path50) {
           let current = config;
-          for (let i = 0; i < path51.length - 1; i++) {
-            let obj = current[path51[i]];
+          for (let i = 0; i < path50.length - 1; i++) {
+            let obj = current[path50[i]];
             if (!obj) {
               obj = /* @__PURE__ */ Object.create(null);
-              current[path51[i]] = obj;
+              current[path50[i]] = obj;
             }
             current = obj;
           }
@@ -14202,8 +14202,8 @@ var require_configuration = __commonJS({
             config = vscode_1.workspace.getConfiguration(void 0, resource).get(key3);
           }
           if (config) {
-            const path51 = keys[i].split(".");
-            ensurePath(result, path51)[path51[path51.length - 1]] = toJSONObject(config);
+            const path50 = keys[i].split(".");
+            ensurePath(result, path50)[path50[path50.length - 1]] = toJSONObject(config);
           }
         }
         return result;
@@ -18219,13 +18219,13 @@ var require_fileOperations = __commonJS({
       async filter(event, prop) {
         const fileMatches = await Promise.all(event.files.map(async (item) => {
           const uri = prop(item);
-          const path51 = uri.fsPath.replace(/\\/g, "/");
+          const path50 = uri.fsPath.replace(/\\/g, "/");
           for (const filters of this._filters.values()) {
             for (const filter of filters) {
               if (filter.scheme !== void 0 && filter.scheme !== uri.scheme) {
                 continue;
               }
-              if (filter.matcher.match(path51)) {
+              if (filter.matcher.match(path50)) {
                 if (filter.kind === void 0) {
                   return true;
                 }
@@ -18239,7 +18239,7 @@ var require_fileOperations = __commonJS({
                 }
               } else if (filter.kind === proto.FileOperationPatternKind.folder) {
                 const fileType = await _FileOperationFeature.getFileType(uri);
-                if (fileType === code.FileType.Directory && filter.matcher.match(`${path51}/`)) {
+                if (fileType === code.FileType.Directory && filter.matcher.match(`${path50}/`)) {
                   return true;
                 }
               }
@@ -20887,7 +20887,7 @@ var require_main3 = __commonJS({
     exports2.createMessageConnection = createMessageConnection;
     var ril_1 = __importDefault(require_ril());
     ril_1.default.install();
-    var path51 = __importStar(require("path"));
+    var path50 = __importStar(require("path"));
     var os3 = __importStar(require("os"));
     var fs35 = __importStar(require("fs"));
     var crypto_1 = require("crypto");
@@ -21039,7 +21039,7 @@ var require_main3 = __commonJS({
         throw new Error(`Unable to generate a random pipe name with ${randomLength} characters.`);
       }
       const randomSuffix = (0, crypto_1.randomBytes)(Math.floor(randomLength / 2)).toString("hex");
-      return path51.join(tmpDir, `lsp-${randomSuffix}.sock`);
+      return path50.join(tmpDir, `lsp-${randomSuffix}.sock`);
     }
     function createClientPipeTransport(pipeName, encoding = "utf-8") {
       let connectResolve;
@@ -22400,7 +22400,7 @@ var require_main5 = __commonJS({
     exports2.SettingMonitor = exports2.LanguageClient = exports2.TransportKind = void 0;
     var cp = __importStar(require("child_process"));
     var fs35 = __importStar(require("fs"));
-    var path51 = __importStar(require("path"));
+    var path50 = __importStar(require("path"));
     var readline = __importStar(require("readline"));
     var vscode_1 = require("vscode");
     var Is2 = __importStar(require_is());
@@ -22850,18 +22850,18 @@ var require_main5 = __commonJS({
         });
       }
       _getRuntimePath(runtime, serverWorkingDirectory) {
-        if (path51.isAbsolute(runtime)) {
+        if (path50.isAbsolute(runtime)) {
           return runtime;
         }
         const mainRootPath = this._mainGetRootPath();
         if (mainRootPath !== void 0) {
-          const result = path51.join(mainRootPath, runtime);
+          const result = path50.join(mainRootPath, runtime);
           if (fs35.existsSync(result)) {
             return result;
           }
         }
         if (serverWorkingDirectory !== void 0) {
-          const result = path51.join(serverWorkingDirectory, runtime);
+          const result = path50.join(serverWorkingDirectory, runtime);
           if (fs35.existsSync(result)) {
             return result;
           }
@@ -23928,7 +23928,7 @@ var init_analysis_sources = __esm({
     key = (...values) => JSON.stringify(values);
     buildAnalysisSourceCatalog = (shards, importTimes = /* @__PURE__ */ new Map()) => {
       const sources = /* @__PURE__ */ new Map();
-      const ensure = (id, name, format, sha2566) => {
+      const ensure = (id, name, format, sha2564) => {
         let source = sources.get(id);
         if (!source) {
           source = {
@@ -23936,7 +23936,7 @@ var init_analysis_sources = __esm({
             names: /* @__PURE__ */ new Set(),
             kinds: /* @__PURE__ */ new Set(),
             format,
-            sha256: sha2566,
+            sha256: sha2564,
             evidenceIds: [],
             reports: []
           };
@@ -24019,17 +24019,6 @@ var init_project_labels = __esm({
       }
       return names;
     };
-  }
-});
-
-// packages/disassembler/src/project-types.ts
-var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
-var init_project_types = __esm({
-  "packages/disassembler/src/project-types.ts"() {
-    "use strict";
-    ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
-    ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
-    ANALYSIS_PROJECT_MANIFEST = "analysis.json";
   }
 });
 
@@ -24144,6 +24133,17 @@ var init_metadata_validation = __esm({
         }
       }
     };
+  }
+});
+
+// packages/disassembler/src/project-types.ts
+var ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, ANALYSIS_PROJECT_MANIFEST;
+var init_project_types = __esm({
+  "packages/disassembler/src/project-types.ts"() {
+    "use strict";
+    ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
+    ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
+    ANALYSIS_PROJECT_MANIFEST = "analysis.json";
   }
 });
 
@@ -24854,769 +24854,6 @@ var init_project_validation = __esm({
   }
 });
 
-// packages/disassembler/src/project-transaction.ts
-var import_node_crypto3, fs2, import_node_path3, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, commitAnalysisProjectAnnotationUpdate, commitAnalysisProjectSelectedEdit, publishAnalysisProject, compactAnalysisProject;
-var init_project_transaction = __esm({
-  "packages/disassembler/src/project-transaction.ts"() {
-    "use strict";
-    import_node_crypto3 = require("node:crypto");
-    fs2 = __toESM(require("node:fs"), 1);
-    import_node_path3 = __toESM(require("node:path"), 1);
-    init_canonical_json();
-    init_project_store();
-    init_project_types();
-    init_project_validation();
-    init_sqlite_store();
-    ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
-    ANALYSIS_PROJECT_REVISION_VERSION = 1;
-    AnalysisProjectStaleError = class extends Error {
-      constructor(expected, actual) {
-        super(
-          `Analysis project changed since it was loaded (expected ${expected.manifestSha256}, found ${actual.manifestSha256}).`
-        );
-        this.expected = expected;
-        this.actual = actual;
-        this.name = "AnalysisProjectStaleError";
-      }
-      expected;
-      actual;
-    };
-    analysisProjectRevision = (manifest) => ({
-      format: ANALYSIS_PROJECT_REVISION_FORMAT,
-      version: ANALYSIS_PROJECT_REVISION_VERSION,
-      manifestSha256: (0, import_node_crypto3.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
-    });
-    assertAnalysisProjectRevision = (store, expected) => {
-      const actual = analysisProjectRevision(store.manifest());
-      if (expected.manifestSha256 !== actual.manifestSha256) {
-        throw new AnalysisProjectStaleError(expected, actual);
-      }
-    };
-    loadAnalysisProjectSnapshot = (directory) => {
-      const project = loadAnalysisProject(directory);
-      return { ...project, revision: analysisProjectRevision(project.manifest) };
-    };
-    loadAnalysisProjectViewSnapshot = (directory, createProjection) => {
-      const project = loadAnalysisProjectView(directory, createProjection);
-      return { ...project, revision: analysisProjectRevision(project.manifest) };
-    };
-    prepareAnalysisProjectTransaction = (_directory, project) => {
-      validateAnalysisProjectManifest({ ...project.manifest, shards: [] });
-      validateLoadedShards(project.shards, project.manifest);
-      return { project };
-    };
-    committed = (manifest) => ({
-      manifest,
-      revision: analysisProjectRevision(manifest),
-      maintenance: { removedBytes: 0, warnings: [] }
-    });
-    publish = (directory, project, expected, updates = project.shards) => {
-      prepareAnalysisProjectTransaction(directory, project);
-      fs2.mkdirSync(directory, { recursive: true });
-      const exists = fs2.existsSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
-      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path3.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
-      try {
-        const manifest = store.transaction(() => {
-          if (expected) {
-            assertAnalysisProjectRevision(store, expected);
-          } else if (store.revision() !== 0) {
-            throw new Error("Analysis project already exists. Reload before publishing.");
-          }
-          const evidenceIds = new Set(project.shards.evidence.map(({ id }) => id));
-          const removedEvidence = updates.runtime === void 0 && updates.evidence !== void 0 && store.loadTable("evidence").some(({ id }) => !evidenceIds.has(id));
-          store.replaceTables(updates);
-          if (removedEvidence) {
-            store.validateRuntimeEvidence();
-          }
-          return store.publishManifest(project.manifest);
-        });
-        store.writePointer(directory);
-        return committed(manifest);
-      } finally {
-        store.close();
-      }
-    };
-    commitPreparedAnalysisProjectTransaction = (directory, expected, prepared) => publish(directory, prepared.project, expected);
-    commitAnalysisProjectTransaction = (directory, expected, project) => publish(directory, project, expected);
-    commitAnalysisProjectViewUpdate = (directory, snapshot, updates) => {
-      if ("runtime" in updates) {
-        throw new Error("Read-view updates cannot replace runtime history.");
-      }
-      const project = {
-        manifest: snapshot.manifest,
-        shards: { ...snapshot.view, ...updates, runtime: [] }
-      };
-      return publish(directory, project, snapshot.revision, updates);
-    };
-    commitAnalysisProjectAnnotationUpdate = (directory, expected, updates) => {
-      if (Object.keys(updates).some((key3) => !["labels", "comments", "evidence"].includes(key3))) {
-        throw new Error("Annotation updates can only replace labels, comments and append evidence.");
-      }
-      const store = openAnalysisProjectStore(directory);
-      try {
-        const manifest = store.transaction(() => {
-          assertAnalysisProjectRevision(store, expected);
-          const current = store.manifest();
-          validateAnalysisProjectManifest({ ...current, shards: [] });
-          const evidence = new Map(updates.evidence.map((record5) => [record5.id, record5]));
-          for (const record5 of store.loadTable("evidence")) {
-            if (canonicalJson(record5) !== canonicalJson(evidence.get(record5.id))) {
-              throw new Error(`Annotation updates must preserve existing evidence '${record5.id}'.`);
-            }
-          }
-          validateLoadedShards(
-            { annotations: [], analysis: [], regions: [], imports: [], runtime: [], ...updates },
-            current
-          );
-          store.replaceTables(updates);
-          return store.publishManifest(current);
-        });
-        store.writePointer(directory);
-        return committed(manifest);
-      } finally {
-        store.close();
-      }
-    };
-    commitAnalysisProjectSelectedEdit = (directory, snapshot, project) => {
-      if (project.shards.runtime.length || snapshot.shards.runtime.length) {
-        throw new Error("Selected metadata edits cannot include runtime records.");
-      }
-      const store = openAnalysisProjectStore(directory);
-      try {
-        const manifest = store.transaction(() => {
-          assertAnalysisProjectRevision(store, snapshot.revision);
-          store.validateView(project.shards);
-          store.patchMetadata(snapshot.shards, project.shards);
-          return store.publishManifest(store.manifest());
-        });
-        store.writePointer(directory);
-        return committed(manifest);
-      } finally {
-        store.close();
-      }
-    };
-    publishAnalysisProject = (directory, project) => {
-      let expected;
-      if (fs2.existsSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
-        const store = openAnalysisProjectStore(directory);
-        try {
-          expected = store.transaction(() => analysisProjectRevision(store.manifest()), false);
-        } finally {
-          store.close();
-        }
-      }
-      return publish(directory, project, expected);
-    };
-    compactAnalysisProject = (directory) => {
-      const store = openAnalysisProjectStore(directory);
-      try {
-        const before = fs2.statSync(store.file).size;
-        store.compact();
-        return {
-          ...committed(store.manifest()),
-          maintenance: {
-            removedBytes: Math.max(0, before - fs2.statSync(store.file).size),
-            warnings: []
-          }
-        };
-      } finally {
-        store.close();
-      }
-    };
-  }
-});
-
-// packages/disassembler/src/sqlite-runtime-payload.ts
-var import_node_zlib, MAGIC, FIELDS, FIELD_NAMES, HEADER_BYTES, CHECKSUM_BYTES, encodePackedRuntimePayload, isPackedRuntimePayload, decodePackedRuntimePayload;
-var init_sqlite_runtime_payload = __esm({
-  "packages/disassembler/src/sqlite-runtime-payload.ts"() {
-    "use strict";
-    import_node_zlib = require("node:zlib");
-    MAGIC = Buffer.from([85, 65, 82, 1]);
-    FIELDS = [
-      ["a", 2],
-      ["d", 2],
-      ["db", 1],
-      ["e", 1],
-      ["p", 1],
-      ["pb", 1],
-      ["pc", 2],
-      ["s", 2],
-      ["x", 2],
-      ["y", 2]
-    ];
-    FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
-    HEADER_BYTES = 7;
-    CHECKSUM_BYTES = 4;
-    encodePackedRuntimePayload = (record5) => {
-      if (Object.keys(record5.state).some((key3) => !FIELD_NAMES.has(key3))) {
-        return void 0;
-      }
-      const bytes = record5.bytes;
-      if (bytes !== void 0) {
-        if (bytes.length < 1 || bytes.length > 4) {
-          return void 0;
-        }
-        for (const value of bytes) {
-          if (!Number.isInteger(value) || value < 0 || value > 255) {
-            return void 0;
-          }
-        }
-      }
-      let mask = 0;
-      let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
-      for (const [index, [key3, width2]] of FIELDS.entries()) {
-        if (!Object.hasOwn(record5.state, key3)) {
-          continue;
-        }
-        const value = record5.state[key3];
-        const max = key3 === "e" ? 1 : 2 ** (width2 * 8) - 1;
-        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
-          return void 0;
-        }
-        mask |= 1 << index;
-        size += width2;
-      }
-      const encoded = Buffer.allocUnsafe(size);
-      MAGIC.copy(encoded);
-      encoded.writeUInt16LE(mask, 4);
-      encoded[6] = bytes?.length ?? 0;
-      let offset = HEADER_BYTES;
-      for (const byte2 of bytes ?? []) {
-        encoded[offset++] = byte2;
-      }
-      for (const [index, [key3, width2]] of FIELDS.entries()) {
-        if (mask & 1 << index) {
-          encoded.writeUIntLE(record5.state[key3], offset, width2);
-          offset += width2;
-        }
-      }
-      encoded.writeUInt32LE((0, import_node_zlib.crc32)(encoded.subarray(0, offset)), offset);
-      return encoded;
-    };
-    isPackedRuntimePayload = (bytes) => bytes[0] === MAGIC[0] && bytes[1] === MAGIC[1] && bytes[2] === MAGIC[2];
-    decodePackedRuntimePayload = (bytes) => {
-      const encoded = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-      if (encoded.length < HEADER_BYTES + CHECKSUM_BYTES || !encoded.subarray(0, 4).equals(MAGIC)) {
-        throw new Error("Unsupported or truncated packed runtime payload.");
-      }
-      const mask = encoded.readUInt16LE(4);
-      const byteCount = encoded[6];
-      let expected = HEADER_BYTES + byteCount + CHECKSUM_BYTES;
-      for (const [index, [, width2]] of FIELDS.entries()) {
-        if (mask & 1 << index) {
-          expected += width2;
-        }
-      }
-      if (mask >= 1 << FIELDS.length || byteCount > 4 || encoded.length !== expected) {
-        throw new Error("Invalid packed runtime payload layout.");
-      }
-      const end = expected - CHECKSUM_BYTES;
-      if ((0, import_node_zlib.crc32)(encoded.subarray(0, end)) !== encoded.readUInt32LE(end)) {
-        throw new Error("Corrupt packed runtime payload checksum.");
-      }
-      const state = {};
-      let offset = HEADER_BYTES + byteCount;
-      for (const [index, [key3, width2]] of FIELDS.entries()) {
-        if (mask & 1 << index) {
-          const value = encoded.readUIntLE(offset, width2);
-          if (key3 === "e" && value > 1) {
-            throw new Error("Invalid packed emulation register.");
-          }
-          state[key3] = value;
-          offset += width2;
-        }
-      }
-      if (byteCount === 0) {
-        return { state };
-      }
-      return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
-    };
-  }
-});
-
-// packages/disassembler/src/sqlite-payload.ts
-var import_node_util, import_node_zlib2, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES2, utf8, encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
-var init_sqlite_payload = __esm({
-  "packages/disassembler/src/sqlite-payload.ts"() {
-    "use strict";
-    import_node_util = require("node:util");
-    import_node_zlib2 = require("node:zlib");
-    init_sqlite_runtime_payload();
-    MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
-    HEADER = Buffer.from([85, 65, 80, 1]);
-    HEADER_BYTES2 = 8;
-    utf8 = new import_node_util.TextDecoder("utf-8", { fatal: true });
-    encodeSqlitePayload = (json2) => {
-      const bytes = Buffer.byteLength(json2);
-      if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
-        throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
-      }
-      if (bytes < 1024) {
-        return json2;
-      }
-      const small = bytes < 16 * 1024;
-      const compressed = (0, import_node_zlib2.deflateSync)(json2, {
-        level: 1,
-        windowBits: small ? 12 : 15,
-        memLevel: small ? 3 : 8,
-        chunkSize: Math.min(bytes, 16 * 1024)
-      });
-      if (compressed.length + HEADER_BYTES2 > bytes - Math.max(32, Math.ceil(bytes / 8))) {
-        return json2;
-      }
-      const result = Buffer.allocUnsafe(HEADER_BYTES2 + compressed.length);
-      HEADER.copy(result);
-      result.writeUInt32LE(bytes, 4);
-      compressed.copy(result, HEADER_BYTES2);
-      return result;
-    };
-    decodeSqlitePayload = (value) => {
-      if (typeof value === "string") {
-        if (Buffer.byteLength(value) > MAX_SQLITE_PAYLOAD_BYTES) {
-          throw new Error("SQLite text payload exceeds the decoded size limit.");
-        }
-        return value;
-      }
-      if (!import_node_util.types.isUint8Array(value)) {
-        throw new Error("Invalid SQLite payload representation.");
-      }
-      const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
-      if (isPackedRuntimePayload(encoded)) {
-        return JSON.stringify(decodePackedRuntimePayload(encoded));
-      }
-      if (encoded.length <= HEADER_BYTES2 || !encoded.subarray(0, 4).equals(HEADER)) {
-        throw new Error("Unsupported or truncated SQLite payload codec.");
-      }
-      const bytes = encoded.readUInt32LE(4);
-      if (bytes === 0 || bytes > MAX_SQLITE_PAYLOAD_BYTES) {
-        throw new Error("SQLite compressed payload exceeds the decoded size limit.");
-      }
-      try {
-        const decoded = (0, import_node_zlib2.inflateSync)(encoded.subarray(HEADER_BYTES2), {
-          maxOutputLength: bytes,
-          chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
-        });
-        if (decoded.length !== bytes) {
-          throw new Error("Decoded payload length does not match its header.");
-        }
-        return utf8.decode(decoded);
-      } catch (cause) {
-        throw new Error("Corrupt SQLite compressed payload.", { cause });
-      }
-    };
-    parseSqlitePayload = (value) => {
-      if (import_node_util.types.isUint8Array(value) && isPackedRuntimePayload(value)) {
-        return decodePackedRuntimePayload(value);
-      }
-      return JSON.parse(decodeSqlitePayload(value));
-    };
-    sqliteRuntimeIdentity = (id) => {
-      const split = id.lastIndexOf(":") + 1;
-      const suffix = id.slice(split);
-      return {
-        prefix: id.slice(0, split),
-        suffix: /^[\da-f]{64}$/.test(suffix) ? Buffer.from(suffix, "hex") : suffix
-      };
-    };
-    decodeSqliteRuntimeIdentity = (prefix, suffix) => {
-      if (typeof prefix !== "string") {
-        throw new Error("Invalid SQLite runtime ID prefix.");
-      }
-      if (typeof suffix === "string") {
-        return prefix + suffix;
-      }
-      if (!import_node_util.types.isUint8Array(suffix) || suffix.length !== 32) {
-        throw new Error("Invalid SQLite runtime ID suffix.");
-      }
-      return prefix + Buffer.from(suffix).toString("hex");
-    };
-  }
-});
-
-// packages/disassembler/src/sqlite-records.ts
-var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
-var init_sqlite_records = __esm({
-  "packages/disassembler/src/sqlite-records.ts"() {
-    "use strict";
-    init_canonical_json();
-    init_sqlite_payload();
-    compareRuntimeRecordIds = (left, right) => {
-      if (left.id < right.id) {
-        return -1;
-      }
-      if (left.id > right.id) {
-        return 1;
-      }
-      return 0;
-    };
-    runtimeColumns = (record5) => {
-      switch (record5.kind) {
-        case "runtime-execution":
-          return {
-            addressSpace: record5.addressSpace,
-            address: record5.address,
-            start: null,
-            end: null,
-            fromAddressSpace: null,
-            fromAddress: null,
-            toAddressSpace: null,
-            toAddress: null,
-            instructionAddressSpace: null,
-            instructionAddress: null,
-            accessedAddressSpace: null,
-            accessedAddress: null,
-            coverage: null,
-            payload: canonicalJson({
-              ...record5.fileOffset === void 0 ? {} : { fileOffset: record5.fileOffset },
-              ...record5.size === void 0 ? {} : { size: record5.size },
-              ...record5.opcode === void 0 ? {} : { opcode: record5.opcode }
-            })
-          };
-        case "runtime-instruction":
-          return {
-            addressSpace: record5.addressSpace,
-            address: record5.address,
-            start: null,
-            end: null,
-            fromAddressSpace: null,
-            fromAddress: null,
-            toAddressSpace: null,
-            toAddress: null,
-            instructionAddressSpace: null,
-            instructionAddress: null,
-            accessedAddressSpace: null,
-            accessedAddress: null,
-            coverage: null,
-            payload: canonicalJson({ bytes: record5.bytes, state: record5.state })
-          };
-        case "runtime-bus-access":
-          return {
-            addressSpace: null,
-            address: null,
-            start: null,
-            end: null,
-            fromAddressSpace: null,
-            fromAddress: null,
-            toAddressSpace: null,
-            toAddress: null,
-            // Unowned accesses must never become instruction observations through a coordinate query.
-            instructionAddressSpace: record5.context === "instruction" ? record5.addressSpace : null,
-            instructionAddress: record5.context === "instruction" ? record5.pc : null,
-            accessedAddressSpace: record5.addressSpace,
-            accessedAddress: record5.address,
-            coverage: null,
-            payload: canonicalJson({
-              ...record5.ppu ? { ppu: record5.ppu } : {},
-              pc: record5.pc,
-              value: record5.value,
-              direction: record5.direction,
-              actor: record5.actor,
-              channel: record5.channel,
-              phase: record5.phase,
-              context: record5.context
-            })
-          };
-        case "runtime-memory-access":
-          return {
-            addressSpace: null,
-            address: null,
-            start: null,
-            end: null,
-            fromAddressSpace: null,
-            fromAddress: null,
-            toAddressSpace: null,
-            toAddress: null,
-            instructionAddressSpace: record5.instructionAddressSpace,
-            instructionAddress: record5.instructionAddress,
-            accessedAddressSpace: record5.accessedAddressSpace,
-            accessedAddress: record5.accessedAddress,
-            coverage: null,
-            payload: canonicalJson({
-              access: record5.access,
-              width: record5.width,
-              ...record5.actor === void 0 ? {} : { actor: record5.actor },
-              ...record5.channel === void 0 ? {} : { channel: record5.channel },
-              ...record5.value === void 0 ? {} : { value: record5.value }
-            })
-          };
-        case "runtime-cpu-state":
-          return {
-            addressSpace: record5.addressSpace,
-            address: record5.address,
-            start: null,
-            end: null,
-            fromAddressSpace: null,
-            fromAddress: null,
-            toAddressSpace: null,
-            toAddress: null,
-            instructionAddressSpace: null,
-            instructionAddress: null,
-            accessedAddressSpace: null,
-            accessedAddress: null,
-            coverage: null,
-            payload: canonicalJson({ state: record5.state })
-          };
-        case "runtime-coverage":
-          return {
-            addressSpace: record5.addressSpace,
-            address: null,
-            start: record5.start,
-            end: record5.end,
-            fromAddressSpace: null,
-            fromAddress: null,
-            toAddressSpace: null,
-            toAddress: null,
-            instructionAddressSpace: null,
-            instructionAddress: null,
-            accessedAddressSpace: null,
-            accessedAddress: null,
-            coverage: record5.coverage,
-            payload: null
-          };
-        case "runtime-control-target":
-          return {
-            addressSpace: null,
-            address: null,
-            start: null,
-            end: null,
-            fromAddressSpace: record5.fromAddressSpace,
-            fromAddress: record5.fromAddress,
-            toAddressSpace: record5.toAddressSpace,
-            toAddress: record5.toAddress,
-            instructionAddressSpace: null,
-            instructionAddress: null,
-            accessedAddressSpace: null,
-            accessedAddress: null,
-            coverage: null,
-            payload: canonicalJson({ flowKind: record5.flowKind, indirect: record5.indirect })
-          };
-      }
-      throw new Error("Unsupported runtime evidence kind.");
-    };
-    runtimeFromRow = (row) => {
-      const fields = row;
-      const extra = fields.payload === null || fields.payload === void 0 ? {} : parseSqlitePayload(fields.payload);
-      if (typeof fields.evidence !== "string") {
-        throw new Error("Missing SQLite runtime evidence dictionary entry.");
-      }
-      const evidence = JSON.parse(fields.evidence);
-      const kind = fields.kind;
-      const architecture = fields.architecture;
-      const count2 = Number(fields.count);
-      const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
-      if (kind === "runtime-execution") {
-        return {
-          id,
-          kind,
-          architecture,
-          count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          address: Number(fields.address),
-          ...extra
-        };
-      }
-      if (kind === "runtime-instruction") {
-        return {
-          id,
-          kind,
-          architecture,
-          count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          address: Number(fields.address),
-          bytes: extra.bytes,
-          state: extra.state
-        };
-      }
-      if (kind === "runtime-bus-access") {
-        return {
-          id,
-          kind,
-          architecture,
-          count: count2,
-          evidence,
-          addressSpace: fields.accessed_address_space,
-          address: Number(fields.accessed_address),
-          ...extra.ppu === void 0 ? {} : { ppu: extra.ppu },
-          pc: extra.pc,
-          value: extra.value,
-          direction: extra.direction,
-          actor: extra.actor,
-          channel: extra.channel,
-          phase: extra.phase,
-          context: extra.context
-        };
-      }
-      if (kind === "runtime-memory-access") {
-        return {
-          id,
-          kind,
-          architecture,
-          count: count2,
-          evidence,
-          instructionAddressSpace: fields.instruction_address_space,
-          instructionAddress: Number(fields.instruction_address),
-          accessedAddressSpace: fields.accessed_address_space,
-          accessedAddress: Number(fields.accessed_address),
-          access: extra.access,
-          width: extra.width,
-          ...extra.actor === void 0 ? {} : { actor: extra.actor },
-          ...extra.channel === void 0 ? {} : { channel: extra.channel },
-          ...extra.value === void 0 ? {} : { value: extra.value }
-        };
-      }
-      if (kind === "runtime-cpu-state") {
-        return {
-          id,
-          kind,
-          architecture,
-          count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          address: Number(fields.address),
-          state: extra.state
-        };
-      }
-      if (kind === "runtime-coverage") {
-        return {
-          id,
-          kind,
-          architecture,
-          count: count2,
-          evidence,
-          addressSpace: fields.address_space,
-          start: Number(fields.start),
-          end: Number(fields.end),
-          coverage: fields.coverage
-        };
-      }
-      if (kind !== "runtime-control-target") {
-        throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
-      }
-      return {
-        id,
-        kind: "runtime-control-target",
-        architecture,
-        count: count2,
-        evidence,
-        fromAddressSpace: fields.from_address_space,
-        fromAddress: Number(fields.from_address),
-        toAddressSpace: fields.to_address_space,
-        toAddress: Number(fields.to_address),
-        flowKind: extra.flowKind,
-        indirect: Boolean(extra.indirect)
-      };
-    };
-    analysisAddress = (record5) => {
-      if ("addressSpace" in record5 && "address" in record5) {
-        return { addressSpace: record5.addressSpace, address: record5.address };
-      }
-      if ("addressSpace" in record5 && "fromAddress" in record5) {
-        return { addressSpace: record5.addressSpace, address: record5.fromAddress };
-      }
-      return { addressSpace: null, address: null };
-    };
-  }
-});
-
-// packages/disassembler/src/project-store.ts
-var fs3, import_node_path4, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, writeAnalysisProject, validateProjectRom, validateAnalysisProject;
-var init_project_store = __esm({
-  "packages/disassembler/src/project-store.ts"() {
-    "use strict";
-    fs3 = __toESM(require("node:fs"), 1);
-    import_node_path4 = __toESM(require("node:path"), 1);
-    init_project_transaction();
-    init_project_types();
-    init_project_validation();
-    init_sqlite_records();
-    init_sqlite_store();
-    init_canonical_json();
-    init_project_validation();
-    parseAnalysisProjectManifest = (input) => {
-      if (!input || typeof input !== "object") {
-        throw new Error("Invalid analysis project manifest.");
-      }
-      const manifest = input;
-      if (manifest.schemaVersion > 3) {
-        throw new Error(
-          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
-        );
-      }
-      validateAnalysisProjectManifest(manifest);
-      if (manifest.db !== "analysis.sqlite") {
-        throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
-      }
-      return manifest;
-    };
-    openAnalysisProjectStore = (directory) => {
-      const manifest = parseAnalysisProjectManifest(
-        JSON.parse(fs3.readFileSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
-      );
-      return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
-    };
-    loadProject = (directory, runtime, createProjection) => {
-      const store = openAnalysisProjectStore(directory);
-      try {
-        return store.transaction(() => {
-          const manifest = parseAnalysisProjectManifest(store.manifest());
-          const shards = store.loadShards(false);
-          validateLoadedShards(shards, manifest);
-          if (!runtime && !createProjection) {
-            return { manifest, shards };
-          }
-          const validate = createRuntimeRecordValidator(manifest, shards.evidence, false);
-          const records2 = [];
-          const projection = createProjection?.();
-          try {
-            for (const record5 of store.runtimeRecords()) {
-              validate(record5);
-              if (projection) {
-                projection.push(record5);
-              } else {
-                records2.push(record5);
-              }
-            }
-            if (!projection) {
-              records2.sort(compareRuntimeRecordIds);
-            }
-            return {
-              manifest,
-              shards: { ...shards, runtime: projection ? projection.finish() : records2 }
-            };
-          } finally {
-            validate.close();
-          }
-        }, false);
-      } finally {
-        store.close();
-      }
-    };
-    loadAnalysisProject = (directory) => loadProject(directory, true);
-    loadAnalysisProjectView = (directory, createProjection) => {
-      const { manifest, shards } = loadProject(directory, false, createProjection);
-      return { manifest, view: shards };
-    };
-    writeAnalysisProject = (directory, project) => publishAnalysisProject(directory, project).manifest;
-    validateProjectRom = (manifest, rom) => {
-      if (manifest.rom.sha256 !== rom.identity.sha256 || manifest.rom.contentSha256 !== rom.identity.contentSha256 || manifest.rom.headerSize !== rom.identity.headerSize) {
-        throw new Error(
-          `ROM identity mismatch: project expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`
-        );
-      }
-    };
-    validateAnalysisProject = (directory, rom) => {
-      const project = loadAnalysisProject(directory);
-      if (rom) {
-        validateProjectRom(project.manifest, rom);
-      }
-      return project;
-    };
-  }
-});
-
 // packages/disassembler/src/metadata-edit.ts
 var manuallyOwnedMetadata, applyMetadataEdit;
 var init_metadata_edit = __esm({
@@ -25840,8 +25077,8 @@ var RANGE_CLASSIFICATIONS, isStableId2, manifestWithoutShards, assertStableId, r
 var init_project_edit = __esm({
   "packages/disassembler/src/project-edit.ts"() {
     "use strict";
+    init_canonical_json();
     init_project_labels();
-    init_project_store();
     init_metadata_edit();
     RANGE_CLASSIFICATIONS = [
       "unreached",
@@ -26523,8 +25760,8 @@ var emptyCounts, sortedUnique2, stateValueKey, conflictReport, explanationReport
 var init_runtime_evidence = __esm({
   "packages/disassembler/src/runtime-evidence.ts"() {
     "use strict";
+    init_canonical_json();
     init_metadata_edit();
-    init_project_store();
     emptyCounts = () => ({
       analysis: 0,
       annotations: 0,
@@ -26776,6 +26013,501 @@ var init_runtime_evidence = __esm({
       conflicts: conflictReport(shards.runtime),
       explanations: explanationReport(shards)
     });
+  }
+});
+
+// packages/disassembler/src/sqlite-runtime-payload.ts
+var import_node_zlib, MAGIC, FIELDS, FIELD_NAMES, HEADER_BYTES, CHECKSUM_BYTES, encodePackedRuntimePayload, isPackedRuntimePayload, decodePackedRuntimePayload;
+var init_sqlite_runtime_payload = __esm({
+  "packages/disassembler/src/sqlite-runtime-payload.ts"() {
+    "use strict";
+    import_node_zlib = require("node:zlib");
+    MAGIC = Buffer.from([85, 65, 82, 1]);
+    FIELDS = [
+      ["a", 2],
+      ["d", 2],
+      ["db", 1],
+      ["e", 1],
+      ["p", 1],
+      ["pb", 1],
+      ["pc", 2],
+      ["s", 2],
+      ["x", 2],
+      ["y", 2]
+    ];
+    FIELD_NAMES = new Set(FIELDS.map(([key3]) => key3));
+    HEADER_BYTES = 7;
+    CHECKSUM_BYTES = 4;
+    encodePackedRuntimePayload = (record5) => {
+      if (Object.keys(record5.state).some((key3) => !FIELD_NAMES.has(key3))) {
+        return void 0;
+      }
+      const bytes = record5.bytes;
+      if (bytes !== void 0) {
+        if (bytes.length < 1 || bytes.length > 4) {
+          return void 0;
+        }
+        for (const value of bytes) {
+          if (!Number.isInteger(value) || value < 0 || value > 255) {
+            return void 0;
+          }
+        }
+      }
+      let mask = 0;
+      let size = HEADER_BYTES + (bytes?.length ?? 0) + CHECKSUM_BYTES;
+      for (const [index, [key3, width2]] of FIELDS.entries()) {
+        if (!Object.hasOwn(record5.state, key3)) {
+          continue;
+        }
+        const value = record5.state[key3];
+        const max = key3 === "e" ? 1 : 2 ** (width2 * 8) - 1;
+        if (typeof value !== "number" || !Number.isInteger(value) || value < 0 || value > max) {
+          return void 0;
+        }
+        mask |= 1 << index;
+        size += width2;
+      }
+      const encoded = Buffer.allocUnsafe(size);
+      MAGIC.copy(encoded);
+      encoded.writeUInt16LE(mask, 4);
+      encoded[6] = bytes?.length ?? 0;
+      let offset = HEADER_BYTES;
+      for (const byte2 of bytes ?? []) {
+        encoded[offset++] = byte2;
+      }
+      for (const [index, [key3, width2]] of FIELDS.entries()) {
+        if (mask & 1 << index) {
+          encoded.writeUIntLE(record5.state[key3], offset, width2);
+          offset += width2;
+        }
+      }
+      encoded.writeUInt32LE((0, import_node_zlib.crc32)(encoded.subarray(0, offset)), offset);
+      return encoded;
+    };
+    isPackedRuntimePayload = (bytes) => bytes[0] === MAGIC[0] && bytes[1] === MAGIC[1] && bytes[2] === MAGIC[2];
+    decodePackedRuntimePayload = (bytes) => {
+      const encoded = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      if (encoded.length < HEADER_BYTES + CHECKSUM_BYTES || !encoded.subarray(0, 4).equals(MAGIC)) {
+        throw new Error("Unsupported or truncated packed runtime payload.");
+      }
+      const mask = encoded.readUInt16LE(4);
+      const byteCount = encoded[6];
+      let expected = HEADER_BYTES + byteCount + CHECKSUM_BYTES;
+      for (const [index, [, width2]] of FIELDS.entries()) {
+        if (mask & 1 << index) {
+          expected += width2;
+        }
+      }
+      if (mask >= 1 << FIELDS.length || byteCount > 4 || encoded.length !== expected) {
+        throw new Error("Invalid packed runtime payload layout.");
+      }
+      const end = expected - CHECKSUM_BYTES;
+      if ((0, import_node_zlib.crc32)(encoded.subarray(0, end)) !== encoded.readUInt32LE(end)) {
+        throw new Error("Corrupt packed runtime payload checksum.");
+      }
+      const state = {};
+      let offset = HEADER_BYTES + byteCount;
+      for (const [index, [key3, width2]] of FIELDS.entries()) {
+        if (mask & 1 << index) {
+          const value = encoded.readUIntLE(offset, width2);
+          if (key3 === "e" && value > 1) {
+            throw new Error("Invalid packed emulation register.");
+          }
+          state[key3] = value;
+          offset += width2;
+        }
+      }
+      if (byteCount === 0) {
+        return { state };
+      }
+      return { bytes: [...encoded.subarray(HEADER_BYTES, HEADER_BYTES + byteCount)], state };
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-payload.ts
+var import_node_util, import_node_zlib2, MAX_SQLITE_PAYLOAD_BYTES, HEADER, HEADER_BYTES2, utf8, encodeSqlitePayload, decodeSqlitePayload, parseSqlitePayload, sqliteRuntimeIdentity, decodeSqliteRuntimeIdentity;
+var init_sqlite_payload = __esm({
+  "packages/disassembler/src/sqlite-payload.ts"() {
+    "use strict";
+    import_node_util = require("node:util");
+    import_node_zlib2 = require("node:zlib");
+    init_sqlite_runtime_payload();
+    MAX_SQLITE_PAYLOAD_BYTES = 16 * 1024 * 1024;
+    HEADER = Buffer.from([85, 65, 80, 1]);
+    HEADER_BYTES2 = 8;
+    utf8 = new import_node_util.TextDecoder("utf-8", { fatal: true });
+    encodeSqlitePayload = (json2) => {
+      const bytes = Buffer.byteLength(json2);
+      if (bytes > MAX_SQLITE_PAYLOAD_BYTES) {
+        throw new Error(`SQLite record exceeds the ${MAX_SQLITE_PAYLOAD_BYTES}-byte payload limit.`);
+      }
+      if (bytes < 1024) {
+        return json2;
+      }
+      const small = bytes < 16 * 1024;
+      const compressed = (0, import_node_zlib2.deflateSync)(json2, {
+        level: 1,
+        windowBits: small ? 12 : 15,
+        memLevel: small ? 3 : 8,
+        chunkSize: Math.min(bytes, 16 * 1024)
+      });
+      if (compressed.length + HEADER_BYTES2 > bytes - Math.max(32, Math.ceil(bytes / 8))) {
+        return json2;
+      }
+      const result = Buffer.allocUnsafe(HEADER_BYTES2 + compressed.length);
+      HEADER.copy(result);
+      result.writeUInt32LE(bytes, 4);
+      compressed.copy(result, HEADER_BYTES2);
+      return result;
+    };
+    decodeSqlitePayload = (value) => {
+      if (typeof value === "string") {
+        if (Buffer.byteLength(value) > MAX_SQLITE_PAYLOAD_BYTES) {
+          throw new Error("SQLite text payload exceeds the decoded size limit.");
+        }
+        return value;
+      }
+      if (!import_node_util.types.isUint8Array(value)) {
+        throw new Error("Invalid SQLite payload representation.");
+      }
+      const encoded = Buffer.from(value.buffer, value.byteOffset, value.byteLength);
+      if (isPackedRuntimePayload(encoded)) {
+        return JSON.stringify(decodePackedRuntimePayload(encoded));
+      }
+      if (encoded.length <= HEADER_BYTES2 || !encoded.subarray(0, 4).equals(HEADER)) {
+        throw new Error("Unsupported or truncated SQLite payload codec.");
+      }
+      const bytes = encoded.readUInt32LE(4);
+      if (bytes === 0 || bytes > MAX_SQLITE_PAYLOAD_BYTES) {
+        throw new Error("SQLite compressed payload exceeds the decoded size limit.");
+      }
+      try {
+        const decoded = (0, import_node_zlib2.inflateSync)(encoded.subarray(HEADER_BYTES2), {
+          maxOutputLength: bytes,
+          chunkSize: Math.max(64, Math.min(bytes, 16 * 1024))
+        });
+        if (decoded.length !== bytes) {
+          throw new Error("Decoded payload length does not match its header.");
+        }
+        return utf8.decode(decoded);
+      } catch (cause) {
+        throw new Error("Corrupt SQLite compressed payload.", { cause });
+      }
+    };
+    parseSqlitePayload = (value) => {
+      if (import_node_util.types.isUint8Array(value) && isPackedRuntimePayload(value)) {
+        return decodePackedRuntimePayload(value);
+      }
+      return JSON.parse(decodeSqlitePayload(value));
+    };
+    sqliteRuntimeIdentity = (id) => {
+      const split = id.lastIndexOf(":") + 1;
+      const suffix = id.slice(split);
+      return {
+        prefix: id.slice(0, split),
+        suffix: /^[\da-f]{64}$/.test(suffix) ? Buffer.from(suffix, "hex") : suffix
+      };
+    };
+    decodeSqliteRuntimeIdentity = (prefix, suffix) => {
+      if (typeof prefix !== "string") {
+        throw new Error("Invalid SQLite runtime ID prefix.");
+      }
+      if (typeof suffix === "string") {
+        return prefix + suffix;
+      }
+      if (!import_node_util.types.isUint8Array(suffix) || suffix.length !== 32) {
+        throw new Error("Invalid SQLite runtime ID suffix.");
+      }
+      return prefix + Buffer.from(suffix).toString("hex");
+    };
+  }
+});
+
+// packages/disassembler/src/sqlite-records.ts
+var compareRuntimeRecordIds, runtimeColumns, runtimeFromRow, analysisAddress;
+var init_sqlite_records = __esm({
+  "packages/disassembler/src/sqlite-records.ts"() {
+    "use strict";
+    init_canonical_json();
+    init_sqlite_payload();
+    compareRuntimeRecordIds = (left, right) => {
+      if (left.id < right.id) {
+        return -1;
+      }
+      if (left.id > right.id) {
+        return 1;
+      }
+      return 0;
+    };
+    runtimeColumns = (record5) => {
+      switch (record5.kind) {
+        case "runtime-execution":
+          return {
+            addressSpace: record5.addressSpace,
+            address: record5.address,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: canonicalJson({
+              ...record5.fileOffset === void 0 ? {} : { fileOffset: record5.fileOffset },
+              ...record5.size === void 0 ? {} : { size: record5.size },
+              ...record5.opcode === void 0 ? {} : { opcode: record5.opcode }
+            })
+          };
+        case "runtime-instruction":
+          return {
+            addressSpace: record5.addressSpace,
+            address: record5.address,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: canonicalJson({ bytes: record5.bytes, state: record5.state })
+          };
+        case "runtime-bus-access":
+          return {
+            addressSpace: null,
+            address: null,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            // Unowned accesses must never become instruction observations through a coordinate query.
+            instructionAddressSpace: record5.context === "instruction" ? record5.addressSpace : null,
+            instructionAddress: record5.context === "instruction" ? record5.pc : null,
+            accessedAddressSpace: record5.addressSpace,
+            accessedAddress: record5.address,
+            coverage: null,
+            payload: canonicalJson({
+              ...record5.ppu ? { ppu: record5.ppu } : {},
+              pc: record5.pc,
+              value: record5.value,
+              direction: record5.direction,
+              actor: record5.actor,
+              channel: record5.channel,
+              phase: record5.phase,
+              context: record5.context
+            })
+          };
+        case "runtime-memory-access":
+          return {
+            addressSpace: null,
+            address: null,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: record5.instructionAddressSpace,
+            instructionAddress: record5.instructionAddress,
+            accessedAddressSpace: record5.accessedAddressSpace,
+            accessedAddress: record5.accessedAddress,
+            coverage: null,
+            payload: canonicalJson({
+              access: record5.access,
+              width: record5.width,
+              ...record5.actor === void 0 ? {} : { actor: record5.actor },
+              ...record5.channel === void 0 ? {} : { channel: record5.channel },
+              ...record5.value === void 0 ? {} : { value: record5.value }
+            })
+          };
+        case "runtime-cpu-state":
+          return {
+            addressSpace: record5.addressSpace,
+            address: record5.address,
+            start: null,
+            end: null,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: canonicalJson({ state: record5.state })
+          };
+        case "runtime-coverage":
+          return {
+            addressSpace: record5.addressSpace,
+            address: null,
+            start: record5.start,
+            end: record5.end,
+            fromAddressSpace: null,
+            fromAddress: null,
+            toAddressSpace: null,
+            toAddress: null,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: record5.coverage,
+            payload: null
+          };
+        case "runtime-control-target":
+          return {
+            addressSpace: null,
+            address: null,
+            start: null,
+            end: null,
+            fromAddressSpace: record5.fromAddressSpace,
+            fromAddress: record5.fromAddress,
+            toAddressSpace: record5.toAddressSpace,
+            toAddress: record5.toAddress,
+            instructionAddressSpace: null,
+            instructionAddress: null,
+            accessedAddressSpace: null,
+            accessedAddress: null,
+            coverage: null,
+            payload: canonicalJson({ flowKind: record5.flowKind, indirect: record5.indirect })
+          };
+      }
+      throw new Error("Unsupported runtime evidence kind.");
+    };
+    runtimeFromRow = (row) => {
+      const fields = row;
+      const extra = fields.payload === null || fields.payload === void 0 ? {} : parseSqlitePayload(fields.payload);
+      if (typeof fields.evidence !== "string") {
+        throw new Error("Missing SQLite runtime evidence dictionary entry.");
+      }
+      const evidence = JSON.parse(fields.evidence);
+      const kind = fields.kind;
+      const architecture = fields.architecture;
+      const count2 = Number(fields.count);
+      const id = decodeSqliteRuntimeIdentity(fields.id_prefix, fields.id);
+      if (kind === "runtime-execution") {
+        return {
+          id,
+          kind,
+          architecture,
+          count: count2,
+          evidence,
+          addressSpace: fields.address_space,
+          address: Number(fields.address),
+          ...extra
+        };
+      }
+      if (kind === "runtime-instruction") {
+        return {
+          id,
+          kind,
+          architecture,
+          count: count2,
+          evidence,
+          addressSpace: fields.address_space,
+          address: Number(fields.address),
+          bytes: extra.bytes,
+          state: extra.state
+        };
+      }
+      if (kind === "runtime-bus-access") {
+        return {
+          id,
+          kind,
+          architecture,
+          count: count2,
+          evidence,
+          addressSpace: fields.accessed_address_space,
+          address: Number(fields.accessed_address),
+          ...extra.ppu === void 0 ? {} : { ppu: extra.ppu },
+          pc: extra.pc,
+          value: extra.value,
+          direction: extra.direction,
+          actor: extra.actor,
+          channel: extra.channel,
+          phase: extra.phase,
+          context: extra.context
+        };
+      }
+      if (kind === "runtime-memory-access") {
+        return {
+          id,
+          kind,
+          architecture,
+          count: count2,
+          evidence,
+          instructionAddressSpace: fields.instruction_address_space,
+          instructionAddress: Number(fields.instruction_address),
+          accessedAddressSpace: fields.accessed_address_space,
+          accessedAddress: Number(fields.accessed_address),
+          access: extra.access,
+          width: extra.width,
+          ...extra.actor === void 0 ? {} : { actor: extra.actor },
+          ...extra.channel === void 0 ? {} : { channel: extra.channel },
+          ...extra.value === void 0 ? {} : { value: extra.value }
+        };
+      }
+      if (kind === "runtime-cpu-state") {
+        return {
+          id,
+          kind,
+          architecture,
+          count: count2,
+          evidence,
+          addressSpace: fields.address_space,
+          address: Number(fields.address),
+          state: extra.state
+        };
+      }
+      if (kind === "runtime-coverage") {
+        return {
+          id,
+          kind,
+          architecture,
+          count: count2,
+          evidence,
+          addressSpace: fields.address_space,
+          start: Number(fields.start),
+          end: Number(fields.end),
+          coverage: fields.coverage
+        };
+      }
+      if (kind !== "runtime-control-target") {
+        throw new Error(`Unsupported stored runtime kind '${String(kind)}'.`);
+      }
+      return {
+        id,
+        kind: "runtime-control-target",
+        architecture,
+        count: count2,
+        evidence,
+        fromAddressSpace: fields.from_address_space,
+        fromAddress: Number(fields.from_address),
+        toAddressSpace: fields.to_address_space,
+        toAddress: Number(fields.to_address),
+        flowKind: extra.flowKind,
+        indirect: Boolean(extra.indirect)
+      };
+    };
+    analysisAddress = (record5) => {
+      if ("addressSpace" in record5 && "address" in record5) {
+        return { addressSpace: record5.addressSpace, address: record5.address };
+      }
+      if ("addressSpace" in record5 && "fromAddress" in record5) {
+        return { addressSpace: record5.addressSpace, address: record5.fromAddress };
+      }
+      return { addressSpace: null, address: null };
+    };
   }
 });
 
@@ -27630,11 +27362,11 @@ var init_sqlite_graph_query = __esm({
       for (const row of db.prepare("SELECT kind,payload FROM analysis WHERE kind IN ('cfg-node','cfg-edge')").iterate()) {
         if (row.kind === "cfg-node") {
           const node = decode3(row.payload);
-          const path51 = node.evidencePath.length ? node.evidencePath : [node.id];
+          const path50 = node.evidencePath.length ? node.evidencePath : [node.id];
           let owner2;
-          for (let i = path51.length - 1; i >= 0; i--) {
-            if (entries3.has(path51[i])) {
-              owner2 = path51[i];
+          for (let i = path50.length - 1; i >= 0; i--) {
+            if (entries3.has(path50[i])) {
+              owner2 = path50[i];
               break;
             }
           }
@@ -28067,11 +27799,11 @@ END;`;
 });
 
 // packages/disassembler/src/sqlite-runtime-storage.ts
-var import_node_crypto4, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
+var import_node_crypto3, RUNTIME_RECORD_STREAM_SQL, RUNTIME_STORAGE_SCHEMA, SqliteRuntimeWriter;
 var init_sqlite_runtime_storage = __esm({
   "packages/disassembler/src/sqlite-runtime-storage.ts"() {
     "use strict";
-    import_node_crypto4 = require("node:crypto");
+    import_node_crypto3 = require("node:crypto");
     init_canonical_json();
     init_sqlite_payload();
     init_sqlite_records();
@@ -28232,7 +27964,7 @@ END;
           }
         }
         const payload = columns2.payload;
-        const fingerprint = (0, import_node_crypto4.createHash)("sha256").update(
+        const fingerprint = (0, import_node_crypto3.createHash)("sha256").update(
           // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
           // per row. Nulls, two-space indentation and the trailing newline preserve
           // persisted fact fingerprints. Changing the layout would duplicate retained facts.
@@ -28312,11 +28044,11 @@ END;
 });
 
 // packages/disassembler/src/sqlite-runtime-summary.ts
-var import_node_crypto5, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
+var import_node_crypto4, KEY, BUILD, INVALIDATE, RUNTIME_SUMMARY_ROWS_SQL, installSummary, runtimeSummaryInputSql, registerVariantKey, isCurrent, runtimeInstructionSummary;
 var init_sqlite_runtime_summary = __esm({
   "packages/disassembler/src/sqlite-runtime-summary.ts"() {
     "use strict";
-    import_node_crypto5 = require("node:crypto");
+    import_node_crypto4 = require("node:crypto");
     init_sqlite_payload();
     init_sqlite_query_cache();
     init_sqlite_records();
@@ -28429,7 +28161,7 @@ var init_sqlite_runtime_summary = __esm({
         });
       }
       if (!isCurrent(db, signature2)) {
-        const pending = `pending:${(0, import_node_crypto5.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
         let incremental = false;
         transaction(() => {
           incremental = readQueryCache(db, KEY, signature2) !== void 0;
@@ -28880,13 +28612,13 @@ var init_trace_cache = __esm({
 });
 
 // packages/disassembler/src/sqlite-store.ts
-var import_node_crypto6, import_node_fs3, import_node_path5, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
+var import_node_crypto5, import_node_fs3, import_node_path3, import_node_sqlite2, ANALYSIS_PROJECT_SQLITE_FILE, ANALYSIS_SQLITE_STORAGE_VERSION, SCHEMA, SCHEMA_INDEX_STATEMENTS, RUNTIME_SELECT, RUNTIME_RECORD_LOOKUP_SQL, analysisProjectSqlitePath, parseRecord, sqliteFileIdentity, SqliteAnalysisStore;
 var init_sqlite_store = __esm({
   "packages/disassembler/src/sqlite-store.ts"() {
     "use strict";
-    import_node_crypto6 = require("node:crypto");
+    import_node_crypto5 = require("node:crypto");
     import_node_fs3 = __toESM(require("node:fs"), 1);
-    import_node_path5 = __toESM(require("node:path"), 1);
+    import_node_path3 = __toESM(require("node:path"), 1);
     import_node_sqlite2 = require("node:sqlite");
     init_analysis_sources();
     init_canonical_json();
@@ -29000,7 +28732,7 @@ PRAGMA user_version=4;
       if (relative5 !== ANALYSIS_PROJECT_SQLITE_FILE) {
         throw new Error(`Unsupported analysis sqlite path '${relative5}'.`);
       }
-      return import_node_path5.default.join(directory, relative5);
+      return import_node_path3.default.join(directory, relative5);
     };
     parseRecord = (payload) => parseSqlitePayload(payload);
     sqliteFileIdentity = (file) => {
@@ -29918,7 +29650,7 @@ PRAGMA user_version=4;
         if (cached !== void 0) {
           return cached;
         }
-        const pending = `pending:${(0, import_node_crypto6.randomUUID)()}`;
+        const pending = `pending:${(0, import_node_crypto5.randomUUID)()}`;
         this.transaction(() => {
           installQueryCache(this.#database, key3, dependencies);
           writeQueryCache(this.#database, key3, pending, null);
@@ -30297,11 +30029,11 @@ PRAGMA user_version=4;
        * @param {string} directory Project root for the watcher hint.
        */
       writePointer(directory) {
-        const temporary = import_node_path5.default.join(directory, `.analysis.json.${(0, import_node_crypto6.randomUUID)()}.tmp`);
+        const temporary = import_node_path3.default.join(directory, `.analysis.json.${(0, import_node_crypto5.randomUUID)()}.tmp`);
         try {
           this.transaction(() => {
             import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-            import_node_fs3.default.renameSync(temporary, import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+            import_node_fs3.default.renameSync(temporary, import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
           });
         } catch (error) {
           process.emitWarning(
@@ -30316,7 +30048,7 @@ PRAGMA user_version=4;
       }
       /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
       compact() {
-        const disk = import_node_fs3.default.statfsSync(import_node_path5.default.dirname(this.file));
+        const disk = import_node_fs3.default.statfsSync(import_node_path3.default.dirname(this.file));
         const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
         const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
         if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
@@ -30365,8 +30097,8 @@ PRAGMA user_version=4;
        * @param {string} sha256 Canonical capture identity.
        * @returns {object | undefined} Retained import identity and counts.
        */
-      captureReceipt(sha2566) {
-        return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha2566);
+      captureReceipt(sha2564) {
+        return this.#database.prepare("SELECT * FROM capture_catalog WHERE sha256=?").get(sha2564);
       }
       /** Catalog rows contain small import provenance metadata, never capture contents.
        * @returns {object[]} Small capture metadata rows in import order.
@@ -30411,6 +30143,272 @@ PRAGMA user_version=4;
       /** Close once in finally, releasing statements and any active transaction. Further use throws. */
       close() {
         this.#database.close();
+      }
+    };
+  }
+});
+
+// packages/disassembler/src/project-store.ts
+var fs4, import_node_path4, parseAnalysisProjectManifest, openAnalysisProjectStore, loadProject, loadAnalysisProject, loadAnalysisProjectView, validateProjectRom, validateAnalysisProject;
+var init_project_store = __esm({
+  "packages/disassembler/src/project-store.ts"() {
+    "use strict";
+    fs4 = __toESM(require("node:fs"), 1);
+    import_node_path4 = __toESM(require("node:path"), 1);
+    init_project_types();
+    init_project_validation();
+    init_sqlite_records();
+    init_sqlite_store();
+    init_canonical_json();
+    init_project_validation();
+    parseAnalysisProjectManifest = (input) => {
+      if (!input || typeof input !== "object") {
+        throw new Error("Invalid analysis project manifest.");
+      }
+      const manifest = input;
+      if (manifest.schemaVersion > 3) {
+        throw new Error(
+          `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
+        );
+      }
+      validateAnalysisProjectManifest(manifest);
+      if (manifest.db !== "analysis.sqlite") {
+        throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
+      }
+      return manifest;
+    };
+    openAnalysisProjectStore = (directory) => {
+      const manifest = parseAnalysisProjectManifest(
+        JSON.parse(fs4.readFileSync(import_node_path4.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+      );
+      return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
+    };
+    loadProject = (directory, runtime, createProjection) => {
+      const store = openAnalysisProjectStore(directory);
+      try {
+        return store.transaction(() => {
+          const manifest = parseAnalysisProjectManifest(store.manifest());
+          const shards = store.loadShards(false);
+          validateLoadedShards(shards, manifest);
+          if (!runtime && !createProjection) {
+            return { manifest, shards };
+          }
+          const validate = createRuntimeRecordValidator(manifest, shards.evidence, false);
+          const records2 = [];
+          const projection = createProjection?.();
+          try {
+            for (const record5 of store.runtimeRecords()) {
+              validate(record5);
+              if (projection) {
+                projection.push(record5);
+              } else {
+                records2.push(record5);
+              }
+            }
+            if (!projection) {
+              records2.sort(compareRuntimeRecordIds);
+            }
+            return {
+              manifest,
+              shards: { ...shards, runtime: projection ? projection.finish() : records2 }
+            };
+          } finally {
+            validate.close();
+          }
+        }, false);
+      } finally {
+        store.close();
+      }
+    };
+    loadAnalysisProject = (directory) => loadProject(directory, true);
+    loadAnalysisProjectView = (directory, createProjection) => {
+      const { manifest, shards } = loadProject(directory, false, createProjection);
+      return { manifest, view: shards };
+    };
+    validateProjectRom = (manifest, rom) => {
+      if (manifest.rom.sha256 !== rom.identity.sha256 || manifest.rom.contentSha256 !== rom.identity.contentSha256 || manifest.rom.headerSize !== rom.identity.headerSize) {
+        throw new Error(
+          `ROM identity mismatch: project expects ${manifest.rom.sha256}, received ${rom.identity.sha256}.`
+        );
+      }
+    };
+    validateAnalysisProject = (directory, rom) => {
+      const project = loadAnalysisProject(directory);
+      if (rom) {
+        validateProjectRom(project.manifest, rom);
+      }
+      return project;
+    };
+  }
+});
+
+// packages/disassembler/src/project-transaction.ts
+var import_node_crypto6, fs5, import_node_path5, ANALYSIS_PROJECT_REVISION_FORMAT, ANALYSIS_PROJECT_REVISION_VERSION, AnalysisProjectStaleError, analysisProjectRevision, assertAnalysisProjectRevision, loadAnalysisProjectSnapshot, loadAnalysisProjectViewSnapshot, prepareAnalysisProjectTransaction, committed, publish, commitPreparedAnalysisProjectTransaction, commitAnalysisProjectTransaction, commitAnalysisProjectViewUpdate, commitAnalysisProjectAnnotationUpdate, commitAnalysisProjectSelectedEdit, publishAnalysisProject, compactAnalysisProject;
+var init_project_transaction = __esm({
+  "packages/disassembler/src/project-transaction.ts"() {
+    "use strict";
+    import_node_crypto6 = require("node:crypto");
+    fs5 = __toESM(require("node:fs"), 1);
+    import_node_path5 = __toESM(require("node:path"), 1);
+    init_canonical_json();
+    init_project_store();
+    init_project_types();
+    init_project_validation();
+    init_sqlite_store();
+    ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
+    ANALYSIS_PROJECT_REVISION_VERSION = 1;
+    AnalysisProjectStaleError = class extends Error {
+      constructor(expected, actual) {
+        super(
+          `Analysis project changed since it was loaded (expected ${expected.manifestSha256}, found ${actual.manifestSha256}).`
+        );
+        this.expected = expected;
+        this.actual = actual;
+        this.name = "AnalysisProjectStaleError";
+      }
+      expected;
+      actual;
+    };
+    analysisProjectRevision = (manifest) => ({
+      format: ANALYSIS_PROJECT_REVISION_FORMAT,
+      version: ANALYSIS_PROJECT_REVISION_VERSION,
+      manifestSha256: (0, import_node_crypto6.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+    });
+    assertAnalysisProjectRevision = (store, expected) => {
+      const actual = analysisProjectRevision(store.manifest());
+      if (expected.manifestSha256 !== actual.manifestSha256) {
+        throw new AnalysisProjectStaleError(expected, actual);
+      }
+    };
+    loadAnalysisProjectSnapshot = (directory) => {
+      const project = loadAnalysisProject(directory);
+      return { ...project, revision: analysisProjectRevision(project.manifest) };
+    };
+    loadAnalysisProjectViewSnapshot = (directory, createProjection) => {
+      const project = loadAnalysisProjectView(directory, createProjection);
+      return { ...project, revision: analysisProjectRevision(project.manifest) };
+    };
+    prepareAnalysisProjectTransaction = (_directory, project) => {
+      validateAnalysisProjectManifest({ ...project.manifest, shards: [] });
+      validateLoadedShards(project.shards, project.manifest);
+      return { project };
+    };
+    committed = (manifest) => ({
+      manifest,
+      revision: analysisProjectRevision(manifest),
+      maintenance: { removedBytes: 0, warnings: [] }
+    });
+    publish = (directory, project, expected, updates = project.shards) => {
+      prepareAnalysisProjectTransaction(directory, project);
+      fs5.mkdirSync(directory, { recursive: true });
+      const exists = fs5.existsSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+      const store = exists ? openAnalysisProjectStore(directory) : new SqliteAnalysisStore(import_node_path5.default.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
+      try {
+        const manifest = store.transaction(() => {
+          if (expected) {
+            assertAnalysisProjectRevision(store, expected);
+          } else if (store.revision() !== 0) {
+            throw new Error("Analysis project already exists. Reload before publishing.");
+          }
+          const evidenceIds = new Set(project.shards.evidence.map(({ id }) => id));
+          const removedEvidence = updates.runtime === void 0 && updates.evidence !== void 0 && store.loadTable("evidence").some(({ id }) => !evidenceIds.has(id));
+          store.replaceTables(updates);
+          if (removedEvidence) {
+            store.validateRuntimeEvidence();
+          }
+          return store.publishManifest(project.manifest);
+        });
+        store.writePointer(directory);
+        return committed(manifest);
+      } finally {
+        store.close();
+      }
+    };
+    commitPreparedAnalysisProjectTransaction = (directory, expected, prepared) => publish(directory, prepared.project, expected);
+    commitAnalysisProjectTransaction = (directory, expected, project) => publish(directory, project, expected);
+    commitAnalysisProjectViewUpdate = (directory, snapshot, updates) => {
+      if ("runtime" in updates) {
+        throw new Error("Read-view updates cannot replace runtime history.");
+      }
+      const project = {
+        manifest: snapshot.manifest,
+        shards: { ...snapshot.view, ...updates, runtime: [] }
+      };
+      return publish(directory, project, snapshot.revision, updates);
+    };
+    commitAnalysisProjectAnnotationUpdate = (directory, expected, updates) => {
+      if (Object.keys(updates).some((key3) => !["labels", "comments", "evidence"].includes(key3))) {
+        throw new Error("Annotation updates can only replace labels, comments and append evidence.");
+      }
+      const store = openAnalysisProjectStore(directory);
+      try {
+        const manifest = store.transaction(() => {
+          assertAnalysisProjectRevision(store, expected);
+          const current = store.manifest();
+          validateAnalysisProjectManifest({ ...current, shards: [] });
+          const evidence = new Map(updates.evidence.map((record5) => [record5.id, record5]));
+          for (const record5 of store.loadTable("evidence")) {
+            if (canonicalJson(record5) !== canonicalJson(evidence.get(record5.id))) {
+              throw new Error(`Annotation updates must preserve existing evidence '${record5.id}'.`);
+            }
+          }
+          validateLoadedShards(
+            { annotations: [], analysis: [], regions: [], imports: [], runtime: [], ...updates },
+            current
+          );
+          store.replaceTables(updates);
+          return store.publishManifest(current);
+        });
+        store.writePointer(directory);
+        return committed(manifest);
+      } finally {
+        store.close();
+      }
+    };
+    commitAnalysisProjectSelectedEdit = (directory, snapshot, project) => {
+      if (project.shards.runtime.length || snapshot.shards.runtime.length) {
+        throw new Error("Selected metadata edits cannot include runtime records.");
+      }
+      const store = openAnalysisProjectStore(directory);
+      try {
+        const manifest = store.transaction(() => {
+          assertAnalysisProjectRevision(store, snapshot.revision);
+          store.validateView(project.shards);
+          store.patchMetadata(snapshot.shards, project.shards);
+          return store.publishManifest(store.manifest());
+        });
+        store.writePointer(directory);
+        return committed(manifest);
+      } finally {
+        store.close();
+      }
+    };
+    publishAnalysisProject = (directory, project) => {
+      let expected;
+      if (fs5.existsSync(import_node_path5.default.join(directory, ANALYSIS_PROJECT_MANIFEST))) {
+        const store = openAnalysisProjectStore(directory);
+        try {
+          expected = store.transaction(() => analysisProjectRevision(store.manifest()), false);
+        } finally {
+          store.close();
+        }
+      }
+      return publish(directory, project, expected);
+    };
+    compactAnalysisProject = (directory) => {
+      const store = openAnalysisProjectStore(directory);
+      try {
+        const before = fs5.statSync(store.file).size;
+        store.compact();
+        return {
+          ...committed(store.manifest()),
+          maintenance: {
+            removedBytes: Math.max(0, before - fs5.statSync(store.file).size),
+            warnings: []
+          }
+        };
+      } finally {
+        store.close();
       }
     };
   }
@@ -30591,7 +30589,7 @@ var init_runtime_trace = __esm({
   "packages/disassembler/src/runtime-trace.ts"() {
     "use strict";
     import_node_crypto8 = require("node:crypto");
-    init_project_store();
+    init_canonical_json();
     init_runtime_trace_profile();
     init_trace_detail();
     RUNTIME_INSTRUCTION_TRACE_FORMAT = "uttori-asm-instruction-trace";
@@ -31260,7 +31258,7 @@ var init_runtime_trace_file = __esm({
     import_node_fs4 = require("node:fs");
     import_promises2 = require("node:fs/promises");
     import_node_string_decoder = require("node:string_decoder");
-    init_project_store();
+    init_canonical_json();
     init_runtime_trace();
     DEFAULT_RUNTIME_TRACE_MAX_BYTES = 2 * 1024 * 1024 * 1024;
     MAX_VALUE_CHARACTERS = 32 * 1024 * 1024;
@@ -31960,7 +31958,7 @@ var init_static_analysis = __esm({
         }
         ownedByNode.set(nodeId, byteOffsets);
         const outgoingState = adapter.transfer(instruction2, incomingState);
-        const path51 = [...item.path, nodeId];
+        const path50 = [...item.path, nodeId];
         nodes.set(nodeId, {
           id: nodeId,
           address: instruction2.address,
@@ -31976,7 +31974,7 @@ var init_static_analysis = __esm({
           effectiveAddresses: instruction2.effectiveAddresses ?? [],
           entryPoint: item.entryPoint,
           evidence: nodeEvidence,
-          evidencePath: path51
+          evidencePath: path50
         });
         if (item.predecessor && item.edgeKind) {
           const edgeId = edgeIdFor(item.predecessor, item.edgeKind, item.address, item.override);
@@ -32033,7 +32031,7 @@ var init_static_analysis = __esm({
             context,
             entryPoint: item.entryPoint,
             evidence: targetEvidence,
-            path: path51,
+            path: path50,
             edgeKind: kind,
             predecessor: nodeId,
             indirect: target.indirect,
@@ -32048,7 +32046,7 @@ var init_static_analysis = __esm({
                 address: target.address,
                 source: kind === "call" ? "call" : "interrupt",
                 evidence: targetEvidence,
-                evidencePath: path51
+                evidencePath: path50
               });
             }
           }
@@ -32083,7 +32081,7 @@ var init_static_analysis = __esm({
               context: item.context.slice(0, -1),
               entryPoint: item.entryPoint,
               evidence: nodeEvidence,
-              path: path51,
+              path: path50,
               edgeKind: "return",
               predecessor: nodeId
             });
@@ -32095,7 +32093,7 @@ var init_static_analysis = __esm({
             context: item.context,
             entryPoint: item.entryPoint,
             evidence: nodeEvidence,
-            path: path51,
+            path: path50,
             edgeKind: "fallthrough",
             predecessor: nodeId
           });
@@ -32182,10 +32180,10 @@ var init_runtime_trace_project = __esm({
           const importer2 = createRuntimeInstructionTraceImporter(source.metadata, context, {
             index,
             onMergeProgress: options.onMergeProgress,
-            onSource: (sha2566, profile) => {
-              const receipt = store.captureReceipt(sha2566);
+            onSource: (sha2564, profile) => {
+              const receipt = store.captureReceipt(sha2564);
               if (receipt && receipt.profile !== profile) {
-                retainedReport = store.loadTable("imports").find((report2) => report2.sourceSha256 === sha2566);
+                retainedReport = store.loadTable("imports").find((report2) => report2.sourceSha256 === sha2564);
                 if (!retainedReport) {
                   throw new Error("Capture receipt has no retained import provenance.");
                 }
@@ -33185,8 +33183,8 @@ var init_runtime_bus_project = __esm({
             // finish() calls onSource before onRecord inside the publication transaction,
             // after the entire source validates. This keeps the one-time namespace
             // lookup protected by the same writer lock as the inserts it authorizes.
-            onSource: (sha2566) => {
-              insert = store.runtimeBatchInserter(`runtime:bus-trace:${sha2566}:`);
+            onSource: (sha2564) => {
+              insert = store.runtimeBatchInserter(`runtime:bus-trace:${sha2564}:`);
             },
             onRecord: (record5) => {
               options.signal?.throwIfAborted();
@@ -33695,8 +33693,7 @@ __export(src_exports, {
   validateRuntimeTransferBoundary: () => validateRuntimeTransferBoundary,
   validateSourceExportFiles: () => validateSourceExportFiles,
   validateSourceExportInputs: () => validateSourceExportInputs,
-  validateSourceLabelName: () => validateSourceLabelName,
-  writeAnalysisProject: () => writeAnalysisProject
+  validateSourceLabelName: () => validateSourceLabelName
 });
 var init_src = __esm({
   "packages/disassembler/src/index.ts"() {
@@ -35026,7 +35023,7 @@ var init_dap = __esm({
       #configurationHandshake;
       #configurationDone;
       #cancelConfiguration;
-      /** Needed because ares and MesenCE accept breakpoint-table changes only while stopped. */
+      /** Needed because ares accepts breakpoint-table changes only while stopped. */
       #executionState = "unknown";
       /** Monotonic event/transition revision prevents a failed request undoing a newer stop. */
       #executionRevision = 0;
@@ -41732,20 +41729,20 @@ var init_misc = __esm({
         if (eq < 1 || eq !== line.length - 2) {
           throw invalidTableLine(lineNumber);
         }
-        const hex16 = line.slice(0, eq);
-        if (!/^[\dA-Fa-f]+$/.test(hex16)) {
+        const hex15 = line.slice(0, eq);
+        if (!/^[\dA-Fa-f]+$/.test(hex15)) {
           throw invalidTableLine(lineNumber);
         }
-        return { char: line[eq + 1], value: Number.parseInt(hex16, 16) };
+        return { char: line[eq + 1], value: Number.parseInt(hex15, 16) };
       }
       if (line[1] !== "=" || line[3] === "x" || line[3] === "X") {
         throw invalidTableLine(lineNumber);
       }
-      const hex15 = line.slice(2);
-      if (!/^[\dA-Fa-f]+$/.test(hex15)) {
+      const hex14 = line.slice(2);
+      if (!/^[\dA-Fa-f]+$/.test(hex14)) {
         throw invalidTableLine(lineNumber);
       }
-      return { char: line[0], value: Number.parseInt(hex15, 16) };
+      return { char: line[0], value: Number.parseInt(hex14, 16) };
     };
     handleClearTable = ({ session }) => {
       session.characterMappings.clear();
@@ -47155,8 +47152,8 @@ var init_asset_assembly_service = __esm({
        * @param {string} path Provider identity.
        * @returns {Uint8Array | undefined} Owned snapshot copy, when the path was read.
        */
-      snapshot(path51) {
-        return this.#files.get(path51)?.slice();
+      snapshot(path50) {
+        return this.#files.get(path50)?.slice();
       }
       /** Evaluate a typed literal. Numeric expressions may use defines but no layout symbols.
        * @param {AssetValueNode} node Typed source value.
@@ -47204,13 +47201,13 @@ var init_asset_assembly_service = __esm({
        * @param {string} path Source-relative path.
        * @returns {string} Stable provider identity.
        */
-      #resolve(path51) {
+      #resolve(path50) {
         const resolved = this.session.fileProvider.resolvePath(
-          path51,
+          path50,
           this.session.includeSource.resolutionOptions
         );
         if (!resolved) {
-          throw new Error(`includeAsset cannot find '${path51}'.`);
+          throw new Error(`includeAsset cannot find '${path50}'.`);
         }
         return resolved;
       }
@@ -47219,22 +47216,22 @@ var init_asset_assembly_service = __esm({
        * @param {"binary" | "resource"} kind Dependency role.
        * @returns {Uint8Array} Build-owned bytes.
        */
-      #read(path51, kind) {
-        const cached = this.#files.get(path51);
+      #read(path50, kind) {
+        const cached = this.#files.get(path50);
         if (cached) {
           return cached;
         }
-        const bytes = this.session.fileProvider.readFile(path51).slice();
-        this.#files.set(path51, bytes);
-        this.dependencies.set(path51, kind);
+        const bytes = this.session.fileProvider.readFile(path50).slice();
+        this.#files.set(path50, bytes);
+        this.dependencies.set(path50, kind);
         return bytes;
       }
       /** Media type is inferred only from a declared, supported input extension.
        * @param {string} path Provider identity.
        * @returns {string} Portable media type.
        */
-      #mediaType(path51) {
-        const extension = path51.toLowerCase().split(".").pop();
+      #mediaType(path50) {
+        const extension = path50.toLowerCase().split(".").pop();
         if (extension === "png") {
           return "image/png";
         }
@@ -47390,7 +47387,7 @@ var init_asset_assembly_service = __esm({
         const resources = {};
         const resourceIdentities = [];
         const declaredResources = format.resourcePaths?.(options) ?? [];
-        if (!Array.isArray(declaredResources) || declaredResources.some((path51) => typeof path51 !== "string" || !path51)) {
+        if (!Array.isArray(declaredResources) || declaredResources.some((path50) => typeof path50 !== "string" || !path50)) {
           throw new Error(`Asset format '${format.id}' returned invalid resource paths.`);
         }
         for (const resourceName of declaredResources) {
@@ -47484,12 +47481,12 @@ var init_asset_assembly_service = __esm({
           }
           const names = [.../* @__PURE__ */ new Set([...schemaResources, ...resourcePaths])];
           for (const name of names) {
-            const path51 = this.#resolve(name);
+            const path50 = this.#resolve(name);
             transformResources[name] = {
-              bytes: this.#read(path51, "resource"),
-              mediaType: this.#mediaType(path51)
+              bytes: this.#read(path50, "resource"),
+              mediaType: this.#mediaType(path50)
             };
-            transformResourceIdentities.push(`${name}\0${path51}`);
+            transformResourceIdentities.push(`${name}\0${path50}`);
           }
           transforms.push({
             provider: transform,
@@ -60448,10 +60445,10 @@ var init_spc700 = __esm({
             opcodeByte = 202;
           }
         }
-        const hex15 = mem.addressText.match(/^\$([\da-f]+)$/i);
+        const hex14 = mem.addressText.match(/^\$([\da-f]+)$/i);
         let addr;
-        if (hex15) {
-          addr = Number.parseInt(hex15[1], 16) & 65535;
+        if (hex14) {
+          addr = Number.parseInt(hex14[1], 16) & 65535;
         } else {
           addr = this.assembler.operandResolver.getnum(mem.addressText) & 65535;
         }
@@ -77900,1053 +77897,6 @@ var init_dizraw_import = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
-var import_node_crypto21, MESEN_CE_EVIDENCE_REVISION, CDL_HEADER, CDL_HEADER_SIZE, CDL_CODE, CDL_DATA, CDL_JUMP_TARGET, CDL_SUB_ENTRY, CDL_INDEX_8, CDL_MEMORY_8, CDL_GSU, CDL_CX4, sha2564, stableSuffix, hex8, assertContext, littleEndian32, rangeRecords, annotationForInstruction, evidenceRecord, importReport, importMesenSnesCdl, TAG_PATTERNS, taggedHex, parseStatus, accessFor, memoryWidthFor, incrementRecord, importMesen65816Trace;
-var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
-    "use strict";
-    import_node_crypto21 = require("node:crypto");
-    init_src3();
-    init_src();
-    init_decoder();
-    init_address_identities();
-    MESEN_CE_EVIDENCE_REVISION = "af2342818ca81a93b346146802047760400fc7b1";
-    CDL_HEADER = new TextEncoder().encode("CDLv2");
-    CDL_HEADER_SIZE = 9;
-    CDL_CODE = 1;
-    CDL_DATA = 2;
-    CDL_JUMP_TARGET = 4;
-    CDL_SUB_ENTRY = 8;
-    CDL_INDEX_8 = 16;
-    CDL_MEMORY_8 = 32;
-    CDL_GSU = 64;
-    CDL_CX4 = 128;
-    sha2564 = (value) => (0, import_node_crypto21.createHash)("sha256").update(value).digest("hex");
-    stableSuffix = (value) => sha2564(canonicalJson(value)).slice(0, 16);
-    hex8 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
-    assertContext = (rom, mapper, context) => {
-      if (context.projectRomContentSha256 !== rom.identity.contentSha256) {
-        throw new Error(
-          `ROM/project mismatch: project expects ${context.projectRomContentSha256}, loaded ROM is ${rom.identity.contentSha256}.`
-        );
-      }
-      if (context.projectMapper !== mapper) {
-        throw new Error(
-          `Mapper/project mismatch: project expects '${context.projectMapper}', importer received '${mapper}'.`
-        );
-      }
-    };
-    littleEndian32 = (bytes, offset) => ((bytes[offset] ?? 0) | (bytes[offset + 1] ?? 0) << 8 | (bytes[offset + 2] ?? 0) << 16 | (bytes[offset + 3] ?? 0) << 24) >>> 0;
-    rangeRecords = (flags, mask, coverage, evidenceId, sourceSha256) => {
-      const records2 = [];
-      let start = -1;
-      for (let offset = 0; offset <= flags.length; offset++) {
-        const matches = offset < flags.length && (flags[offset] & mask) !== 0;
-        if (matches && start < 0) {
-          start = offset;
-        }
-        if (!matches && start >= 0) {
-          records2.push({
-            id: `runtime:mesence-cdl:${sourceSha256}:${coverage}:${hex8(start, 6)}-${hex8(offset, 6)}`,
-            kind: "runtime-coverage",
-            architecture: "snes.65816",
-            addressSpace: SNES_FILE_ADDRESS_SPACE,
-            start,
-            end: offset,
-            coverage,
-            count: 1,
-            evidence: [evidenceId]
-          });
-          start = -1;
-        }
-      }
-      return records2;
-    };
-    annotationForInstruction = (fileOffset, size, state, evidenceId, sourceSha256) => {
-      const suffix = `${sourceSha256}:${hex8(fileOffset, 6)}:${stableSuffix(state)}`;
-      const normalizedState = {
-        ...typeof state.e === "boolean" ? { e: state.e } : {},
-        ...typeof state.m === "boolean" ? { m: state.m } : {},
-        ...typeof state.x === "boolean" ? { x: state.x } : {},
-        ...state.programBank === void 0 ? {} : { programBank: state.programBank },
-        ...state.dataBank === void 0 ? {} : { dataBank: state.dataBank },
-        ...state.directPage === void 0 ? {} : { directPage: state.directPage }
-      };
-      return [
-        {
-          id: `runtime:mesence:opcode:${suffix}`,
-          addressSpace: SNES_FILE_ADDRESS_SPACE,
-          start: fileOffset,
-          end: fileOffset + 1,
-          classification: "opcode",
-          architecture: "snes.65816",
-          state: normalizedState,
-          points: ["in"],
-          evidence: [evidenceId]
-        },
-        ...size > 1 ? [
-          {
-            id: `runtime:mesence:operand:${suffix}`,
-            addressSpace: SNES_FILE_ADDRESS_SPACE,
-            start: fileOffset + 1,
-            end: fileOffset + size,
-            classification: "operand",
-            architecture: "snes.65816",
-            evidence: [evidenceId]
-          }
-        ] : []
-      ];
-    };
-    evidenceRecord = (kind, sourceSha256, rom, mapper, detail) => ({
-      id: `runtime:mesence-${kind}:${sourceSha256}`,
-      source: "runtime",
-      sourceId: `mesence:${MESEN_CE_EVIDENCE_REVISION}:${kind}`,
-      confidence: "certain",
-      detail,
-      artifact: {
-        format: kind === "cdl" ? "mesence-cdl" : "mesence-trace",
-        formatVersion: kind === "cdl" ? "CDLv2" : "text-v1",
-        sha256: sourceSha256,
-        romContentSha256: rom.identity.contentSha256,
-        mapper
-      }
-    });
-    importReport = (kind, sourceName, sourceSha256, imported, unsupported, warnings) => ({
-      id: `import:mesence-${kind}:${sourceSha256}`,
-      format: kind === "cdl" ? "mesence-cdl" : "mesence-trace",
-      sourceName,
-      sourceSha256,
-      sourceVersion: `${kind === "cdl" ? "CDLv2" : "text-v1"}@${MESEN_CE_EVIDENCE_REVISION}`,
-      imported,
-      unsupported,
-      warnings
-    });
-    importMesenSnesCdl = (bytes, rom, mapper, context) => {
-      assertContext(rom, mapper, context);
-      if (bytes.length < CDL_HEADER_SIZE || !CDL_HEADER.every((value, index) => bytes[index] === value)) {
-        throw new Error("MesenCE CDL import requires a CDLv2 header. CRC-less legacy CDL is unsafe.");
-      }
-      if (bytes.length !== CDL_HEADER_SIZE + rom.length) {
-        throw new Error(
-          `MesenCE CDL payload mismatch: expected ${rom.length} bytes, received ${bytes.length - CDL_HEADER_SIZE}.`
-        );
-      }
-      const expectedCrc = littleEndian32(bytes, CDL_HEADER.length);
-      const actualCrc = CRC32.compute(rom.bytes());
-      if (expectedCrc !== actualCrc) {
-        throw new Error(
-          `MesenCE CDL ROM CRC mismatch: CDL expects $${hex8(expectedCrc, 8)}, loaded ROM is $${hex8(actualCrc, 8)}.`
-        );
-      }
-      const sourceSha256 = sha2564(bytes);
-      const evidenceId = `runtime:mesence-cdl:${sourceSha256}`;
-      const flags = bytes.slice(CDL_HEADER_SIZE);
-      const source = new Uint8ArrayDecoderSource(rom.bytes());
-      const decoder = new Cpu65816Decoder();
-      const addressContext = createSnesAddressContext(mapper);
-      const runtime = [
-        ...rangeRecords(flags, CDL_CODE, "executed", evidenceId, sourceSha256),
-        ...rangeRecords(flags, CDL_DATA, "read", evidenceId, sourceSha256)
-      ];
-      const annotations = [];
-      let decodedInstructions = 0;
-      let undecodedCodeBytes = 0;
-      let coprocessorCodeBytes = 0;
-      for (let fileOffset = 0; fileOffset < flags.length; ) {
-        const byteFlags = flags[fileOffset];
-        if ((byteFlags & CDL_CODE) === 0) {
-          fileOffset++;
-          continue;
-        }
-        if ((byteFlags & (CDL_GSU | CDL_CX4)) !== 0) {
-          coprocessorCodeBytes++;
-          fileOffset++;
-          continue;
-        }
-        const identity2 = identifySnesFileOffset(fileOffset, addressContext, rom.length);
-        if (!identity2) {
-          undecodedCodeBytes++;
-          fileOffset++;
-          continue;
-        }
-        const state = {
-          m: (byteFlags & CDL_MEMORY_8) !== 0,
-          x: (byteFlags & CDL_INDEX_8) !== 0,
-          ...(byteFlags & (CDL_MEMORY_8 | CDL_INDEX_8)) !== (CDL_MEMORY_8 | CDL_INDEX_8) ? { e: false } : {},
-          programBank: identity2.canonicalCpuAddress >>> 16
-        };
-        const decoded = decoder.decode({
-          source,
-          offset: fileOffset,
-          logicalAddress: identity2.canonicalCpuAddress,
-          state
-        });
-        if (decoded.kind !== "instruction" || decoded.instruction.size === 0 || decoded.instruction.bytes.some(
-          (_, index) => (flags[fileOffset + index] & CDL_CODE) === 0 || (flags[fileOffset + index] & (CDL_GSU | CDL_CX4)) !== 0
-        )) {
-          undecodedCodeBytes++;
-          fileOffset++;
-          continue;
-        }
-        const instruction2 = decoded.instruction;
-        const recordSuffix = `${sourceSha256}:${hex8(fileOffset, 6)}:${instruction2.size}`;
-        runtime.push({
-          id: `runtime:mesence-cdl:execution:${recordSuffix}`,
-          kind: "runtime-execution",
-          architecture: "snes.65816",
-          addressSpace: SNES_CPU_ADDRESS_SPACE,
-          address: identity2.canonicalCpuAddress,
-          fileOffset,
-          size: instruction2.size,
-          opcode: instruction2.opcode,
-          count: 1,
-          evidence: [evidenceId]
-        });
-        runtime.push({
-          id: `runtime:mesence-cdl:state:${recordSuffix}`,
-          kind: "runtime-cpu-state",
-          architecture: "snes.65816",
-          addressSpace: SNES_CPU_ADDRESS_SPACE,
-          address: identity2.canonicalCpuAddress,
-          state: {
-            ...state.e === void 0 ? {} : { e: state.e },
-            m: state.m,
-            x: state.x
-          },
-          count: 1,
-          evidence: [evidenceId]
-        });
-        annotations.push(
-          ...annotationForInstruction(fileOffset, instruction2.size, state, evidenceId, sourceSha256)
-        );
-        decodedInstructions++;
-        fileOffset += instruction2.size;
-      }
-      const executedRanges = runtime.filter(
-        (record5) => record5.kind === "runtime-coverage" && record5.coverage === "executed"
-      ).length;
-      const readRanges = runtime.filter(
-        (record5) => record5.kind === "runtime-coverage" && record5.coverage === "read"
-      ).length;
-      const report2 = importReport(
-        "cdl",
-        context.sourceName,
-        sourceSha256,
-        { decodedInstructions, executedRanges, readRanges, annotations: annotations.length },
-        [
-          ...undecodedCodeBytes > 0 ? [
-            {
-              field: "codeBytes",
-              count: undecodedCodeBytes,
-              reason: "Code byte could not be aligned to a complete 65816 instruction."
-            }
-          ] : [],
-          ...coprocessorCodeBytes > 0 ? [
-            {
-              field: "coprocessorCodeBytes",
-              count: coprocessorCodeBytes,
-              reason: "GSU/Cx4-marked code is retained as coverage but not decoded as 65816."
-            }
-          ] : []
-        ],
-        [
-          "CDL stores byte coverage but not execution counts or write accesses.",
-          ...flags.some((value) => (value & (CDL_JUMP_TARGET | CDL_SUB_ENTRY)) !== 0) ? [] : ["CDL contains no jump-target or sub-entry flags."]
-        ]
-      );
-      const evidence = evidenceRecord(
-        "cdl",
-        sourceSha256,
-        rom,
-        mapper,
-        `MesenCE CDLv2 with verified ROM CRC $${hex8(actualCrc, 8)}.`
-      );
-      return {
-        report: report2,
-        batch: { runtime, annotations, evidence: [evidence], imports: [report2] }
-      };
-    };
-    TAG_PATTERNS = {
-      A: /(?:^|\s)A:([\dA-Fa-f]+)(?:\s|$)/,
-      X: /(?:^|\s)X:([\dA-Fa-f]+)(?:\s|$)/,
-      Y: /(?:^|\s)Y:([\dA-Fa-f]+)(?:\s|$)/,
-      S: /(?:^|\s)S:([\dA-Fa-f]+)(?:\s|$)/,
-      D: /(?:^|\s)D:([\dA-Fa-f]+)(?:\s|$)/,
-      DB: /(?:^|\s)DB:([\dA-Fa-f]+)(?:\s|$)/
-    };
-    taggedHex = (line, tag) => {
-      const match = TAG_PATTERNS[tag].exec(line);
-      return match ? Number.parseInt(match[1], 16) : void 0;
-    };
-    parseStatus = (line) => {
-      const match = /(?:^|\s)P:([\dA-Fa-f]{2}|[CDIMNVXZcdimnvxz]{8})(?:\s|$)/.exec(line);
-      if (!match) {
-        return void 0;
-      }
-      if (/^[\dA-Fa-f]{2}$/.test(match[1])) {
-        return Number.parseInt(match[1], 16);
-      }
-      return Array.from(match[1]).reduce(
-        (value, character, index) => character === character.toUpperCase() ? value | 1 << 7 - index : value,
-        0
-      );
-    };
-    accessFor = (instruction2) => {
-      if (["STA", "STX", "STY", "STZ"].includes(instruction2.mnemonic)) {
-        return "write";
-      }
-      if (["ASL", "DEC", "INC", "LSR", "ROL", "ROR", "TRB", "TSB"].includes(instruction2.mnemonic)) {
-        return "read-write";
-      }
-      return "read";
-    };
-    memoryWidthFor = (instruction2, state) => {
-      if (["LDX", "LDY", "STX", "STY", "CPX", "CPY"].includes(instruction2.mnemonic)) {
-        return state.x ? 1 : 2;
-      }
-      return state.m ? 1 : 2;
-    };
-    incrementRecord = (records2, record5) => {
-      const current = records2.get(record5.id);
-      records2.set(record5.id, current ? { ...current, count: current.count + 1 } : record5);
-    };
-    importMesen65816Trace = (text2, metadata, rom, mapper, context) => {
-      assertContext(rom, mapper, context);
-      if (metadata.schemaVersion !== 1 || metadata.architecture !== "snes.65816") {
-        throw new Error("Unsupported MesenCE trace capture metadata.");
-      }
-      if (metadata.romContentSha256 !== rom.identity.contentSha256) {
-        throw new Error(
-          `Trace/ROM mismatch: trace expects ${metadata.romContentSha256}, loaded ROM is ${rom.identity.contentSha256}.`
-        );
-      }
-      if (metadata.mapper !== mapper) {
-        throw new Error(
-          `Trace mapper mismatch: trace expects '${metadata.mapper}', loaded project uses '${mapper}'.`
-        );
-      }
-      const sourceSha256 = sha2564(text2);
-      const evidenceId = `runtime:mesence-trace:${sourceSha256}`;
-      const decoder = new Cpu65816Decoder();
-      const source = new Uint8ArrayDecoderSource(rom.bytes());
-      const addressContext = createSnesAddressContext(mapper);
-      const parsed = [];
-      let malformedLines = 0;
-      let unmappedLines = 0;
-      let undecodableLines = 0;
-      let linesWithUnparsedEffectiveAddress = 0;
-      for (const [lineIndex, line] of text2.split(/\r?\n/).entries()) {
-        if (line.trim() === "") {
-          continue;
-        }
-        const pcMatch = /^([\dA-Fa-f]{6})\s{2}/.exec(line);
-        const status = parseStatus(line);
-        if (!pcMatch || status === void 0) {
-          malformedLines++;
-          continue;
-        }
-        const pc = Number.parseInt(pcMatch[1], 16);
-        const identity2 = identifySnesCpuAddress(pc, addressContext, rom.length);
-        if (!identity2) {
-          unmappedLines++;
-          continue;
-        }
-        const decodeState2 = {
-          m: (status & 32) !== 0,
-          x: (status & 16) !== 0,
-          ...(status & 48) !== 48 ? { e: false } : {},
-          programBank: pc >>> 16,
-          ...taggedHex(line, "DB") === void 0 ? {} : { dataBank: taggedHex(line, "DB") },
-          ...taggedHex(line, "D") === void 0 ? {} : { directPage: taggedHex(line, "D") }
-        };
-        const decoded = decoder.decode({
-          source,
-          offset: identity2.fileOffset,
-          logicalAddress: pc,
-          state: decodeState2
-        });
-        if (decoded.kind !== "instruction") {
-          undecodableLines++;
-          continue;
-        }
-        const state = {
-          status,
-          m: (status & 32) !== 0,
-          x: (status & 16) !== 0,
-          ...(status & 48) !== 48 ? { e: false } : {},
-          programBank: pc >>> 16
-        };
-        for (const [field, tag] of [
-          ["a", "A"],
-          ["xRegister", "X"],
-          ["y", "Y"],
-          ["stackPointer", "S"],
-          ["directPage", "D"],
-          ["dataBank", "DB"]
-        ]) {
-          const value = taggedHex(line, tag);
-          if (value !== void 0) {
-            state[field] = value;
-          }
-        }
-        const effectiveMatches = [...line.matchAll(/\[\$([\dA-Fa-f]{4,6})]/g)];
-        const effectiveMatch = effectiveMatches.at(-1);
-        const memoryMatch = /=\s*\$([\dA-Fa-f]{2,4})(?:\s|$)/.exec(line);
-        if (decoded.instruction.references.some((reference) => reference.kind === "data") && !effectiveMatch) {
-          linesWithUnparsedEffectiveAddress++;
-        }
-        parsed.push({
-          line: lineIndex + 1,
-          pc,
-          fileOffset: identity2.fileOffset,
-          state,
-          decodeState: decodeState2,
-          instruction: decoded.instruction,
-          ...effectiveMatch ? { effectiveAddress: Number.parseInt(effectiveMatch[1], 16) } : {},
-          ...memoryMatch ? {
-            memoryValue: Number.parseInt(memoryMatch[1], 16),
-            memoryWidth: memoryMatch[1].length <= 2 ? 1 : 2
-          } : {}
-        });
-      }
-      const runtimeById = /* @__PURE__ */ new Map();
-      const annotationById = /* @__PURE__ */ new Map();
-      const targetOverrides = /* @__PURE__ */ new Map();
-      for (const [index, event] of parsed.entries()) {
-        const executionKey = {
-          pc: event.pc,
-          fileOffset: event.fileOffset,
-          size: event.instruction.size,
-          opcode: event.instruction.opcode
-        };
-        const execution = {
-          id: `runtime:mesence-trace:execution:${sourceSha256}:${stableSuffix(executionKey)}`,
-          kind: "runtime-execution",
-          architecture: "snes.65816",
-          addressSpace: SNES_CPU_ADDRESS_SPACE,
-          address: event.pc,
-          fileOffset: event.fileOffset,
-          size: event.instruction.size,
-          opcode: event.instruction.opcode,
-          count: 1,
-          evidence: [evidenceId]
-        };
-        incrementRecord(runtimeById, execution);
-        const stateKey = { pc: event.pc, state: event.state };
-        const stateRecord = {
-          id: `runtime:mesence-trace:state:${sourceSha256}:${stableSuffix(stateKey)}`,
-          kind: "runtime-cpu-state",
-          architecture: "snes.65816",
-          addressSpace: SNES_CPU_ADDRESS_SPACE,
-          address: event.pc,
-          state: event.state,
-          count: 1,
-          evidence: [evidenceId]
-        };
-        incrementRecord(runtimeById, stateRecord);
-        for (const coverage of [
-          { start: event.fileOffset, end: event.fileOffset + 1, kind: "executed" },
-          ...event.instruction.size > 1 ? [
-            {
-              start: event.fileOffset + 1,
-              end: event.fileOffset + event.instruction.size,
-              kind: "operand"
-            }
-          ] : []
-        ]) {
-          const record5 = {
-            id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverage.kind}:${hex8(coverage.start, 6)}-${hex8(coverage.end, 6)}`,
-            kind: "runtime-coverage",
-            architecture: "snes.65816",
-            addressSpace: SNES_FILE_ADDRESS_SPACE,
-            start: coverage.start,
-            end: coverage.end,
-            coverage: coverage.kind,
-            count: 1,
-            evidence: [evidenceId]
-          };
-          incrementRecord(runtimeById, record5);
-        }
-        for (const annotation of annotationForInstruction(
-          event.fileOffset,
-          event.instruction.size,
-          event.decodeState,
-          evidenceId,
-          sourceSha256
-        )) {
-          annotationById.set(annotation.id, annotation);
-        }
-        const hasDataReference = event.instruction.references.some(
-          (reference) => reference.kind === "data" || reference.kind === "pointer"
-        );
-        if (event.effectiveAddress !== void 0 && hasDataReference) {
-          const access = accessFor(event.instruction);
-          const width2 = event.memoryWidth ?? memoryWidthFor(event.instruction, event.decodeState);
-          const accessKey = {
-            pc: event.pc,
-            address: event.effectiveAddress,
-            access,
-            width: width2,
-            value: event.memoryValue
-          };
-          const memory = {
-            id: `runtime:mesence-trace:memory:${sourceSha256}:${stableSuffix(accessKey)}`,
-            kind: "runtime-memory-access",
-            architecture: "snes.65816",
-            instructionAddressSpace: SNES_CPU_ADDRESS_SPACE,
-            instructionAddress: event.pc,
-            accessedAddressSpace: SNES_CPU_ADDRESS_SPACE,
-            accessedAddress: event.effectiveAddress,
-            access,
-            width: width2,
-            ...event.memoryValue === void 0 ? {} : { value: event.memoryValue },
-            count: 1,
-            evidence: [evidenceId]
-          };
-          incrementRecord(runtimeById, memory);
-          let coverageKinds = ["read"];
-          if (access === "read-write") {
-            coverageKinds = ["read", "written"];
-          } else if (access === "write") {
-            coverageKinds = ["written"];
-          }
-          for (const coverageKind of coverageKinds) {
-            const mapped = identifySnesCpuAddress(event.effectiveAddress, addressContext, rom.length);
-            if (!mapped) {
-              continue;
-            }
-            const coverage = {
-              id: `runtime:mesence-trace:coverage:${sourceSha256}:${coverageKind}:${hex8(mapped.fileOffset, 6)}-${hex8(mapped.fileOffset + width2, 6)}`,
-              kind: "runtime-coverage",
-              architecture: "snes.65816",
-              addressSpace: SNES_FILE_ADDRESS_SPACE,
-              start: mapped.fileOffset,
-              end: Math.min(rom.length, mapped.fileOffset + width2),
-              coverage: coverageKind,
-              count: 1,
-              evidence: [evidenceId]
-            };
-            incrementRecord(runtimeById, coverage);
-          }
-        }
-        const next = parsed[index + 1];
-        if (!next) {
-          continue;
-        }
-        const fallthrough = event.pc & 16711680 | event.pc + event.instruction.size & 65535;
-        const flow = event.instruction.flow;
-        const followsControl = flow.kind !== "fallthrough" && flow.kind !== "stop" && flow.kind !== "wait";
-        if (!followsControl || next.pc === fallthrough) {
-          continue;
-        }
-        const targetKey = {
-          from: event.pc,
-          to: next.pc,
-          flow: flow.kind,
-          indirect: flow.indirect ?? false
-        };
-        const target = {
-          id: `runtime:mesence-trace:target:${sourceSha256}:${stableSuffix(targetKey)}`,
-          kind: "runtime-control-target",
-          architecture: "snes.65816",
-          fromAddressSpace: SNES_CPU_ADDRESS_SPACE,
-          fromAddress: event.pc,
-          toAddressSpace: SNES_CPU_ADDRESS_SPACE,
-          toAddress: next.pc,
-          flowKind: flow.kind,
-          indirect: flow.indirect ?? false,
-          count: 1,
-          evidence: [evidenceId]
-        };
-        incrementRecord(runtimeById, target);
-        if (flow.indirect) {
-          const override = targetOverrides.get(event.pc) ?? {
-            targets: /* @__PURE__ */ new Set(),
-            evidence: /* @__PURE__ */ new Set()
-          };
-          override.targets.add(next.pc);
-          override.evidence.add(evidenceId);
-          targetOverrides.set(event.pc, override);
-        }
-      }
-      const analysis = [...targetOverrides.entries()].map(
-        ([address5, observation]) => ({
-          id: `runtime:target-override:snes.cpu:${hex8(address5, 6)}`,
-          kind: "target-override",
-          addressSpace: SNES_CPU_ADDRESS_SPACE,
-          address: address5,
-          targets: [...observation.targets].sort((left, right) => left - right),
-          evidence: [...observation.evidence].sort((left, right) => left.localeCompare(right))
-        })
-      );
-      const runtime = [...runtimeById.values()];
-      const annotations = [...annotationById.values()];
-      const report2 = importReport(
-        "trace",
-        context.sourceName,
-        sourceSha256,
-        {
-          traceLines: parsed.length,
-          executions: runtime.filter((record5) => record5.kind === "runtime-execution").length,
-          cpuStates: runtime.filter((record5) => record5.kind === "runtime-cpu-state").length,
-          memoryAccesses: runtime.filter((record5) => record5.kind === "runtime-memory-access").length,
-          controlTargets: runtime.filter((record5) => record5.kind === "runtime-control-target").length,
-          targetOverrides: analysis.length,
-          annotations: annotations.length
-        },
-        [
-          ...malformedLines > 0 ? [
-            {
-              field: "traceLines",
-              count: malformedLines,
-              reason: "Line did not contain a six-digit PC and parseable P status field."
-            }
-          ] : [],
-          ...unmappedLines > 0 ? [
-            {
-              field: "traceLines",
-              count: unmappedLines,
-              reason: "Execution PC did not map to the loaded ROM."
-            }
-          ] : [],
-          ...undecodableLines > 0 ? [
-            {
-              field: "traceLines",
-              count: undecodableLines,
-              reason: "Instruction could not be decoded from the verified ROM and observed P state."
-            }
-          ] : [],
-          ...linesWithUnparsedEffectiveAddress > 0 ? [
-            {
-              field: "effectiveAddress",
-              count: linesWithUnparsedEffectiveAddress,
-              reason: "Default trace effective address was absent or replaced by a label."
-            }
-          ] : []
-        ],
-        [
-          "Raw trace text has no embedded ROM identity. Required capture metadata supplied the checked ROM and mapper.",
-          ...metadata.mesenRevision && metadata.mesenRevision !== MESEN_CE_EVIDENCE_REVISION ? [
-            `Trace reports MesenCE revision ${metadata.mesenRevision}. Importer was checked against ${MESEN_CE_EVIDENCE_REVISION}.`
-          ] : []
-        ]
-      );
-      const evidence = evidenceRecord(
-        "trace",
-        sourceSha256,
-        rom,
-        mapper,
-        `MesenCE trace with ${parsed.length} decoded 65816 line(s). Capture identity metadata schema 1.`
-      );
-      return {
-        report: report2,
-        batch: {
-          analysis,
-          annotations,
-          runtime,
-          evidence: [evidence],
-          imports: [report2]
-        }
-      };
-    };
-  }
-});
-
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
-var import_node_crypto22, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
-var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
-    "use strict";
-    import_node_crypto22 = require("node:crypto");
-    SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
-    SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
-      id: SPC700_ARAM_ADDRESS_SPACE,
-      name: "SPC700 ARAM",
-      addressBits: 16,
-      kind: "memory"
-    });
-    Spc700AramImage = class {
-      loadAddress;
-      contentSha256;
-      #bytes;
-      /**
-       * @param {ArrayLike<number>} bytes Contiguous bytes copied into the image.
-       * @param {number} [loadAddress] First 16-bit ARAM address represented by `bytes`.
-       */
-      constructor(bytes, loadAddress = 0) {
-        if (!Number.isInteger(loadAddress) || loadAddress < 0 || loadAddress > 65535) {
-          throw new Error("SPC700 ARAM loadAddress must be a 16-bit unsigned integer.");
-        }
-        if (bytes.length > 65536 || loadAddress + bytes.length > 65536) {
-          throw new Error("SPC700 ARAM images must fit contiguously within the 16-bit address space.");
-        }
-        this.#bytes = Uint8Array.from(bytes);
-        this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto22.createHash)("sha256").update(this.#bytes).digest("hex");
-      }
-      /**
-       * Number of represented ARAM bytes.
-       * @returns {number} Backing-image length.
-       */
-      get length() {
-        return this.#bytes.length;
-      }
-      /**
-       * Returns a defensive copy of the represented bytes.
-       * @returns {Uint8Array} Copied image bytes.
-       */
-      bytes() {
-        return this.#bytes.slice();
-      }
-      /**
-       * Reads one byte by 16-bit ARAM address.
-       * @param {number} address SPC700 memory address.
-       * @returns {number | undefined} Byte value, or `undefined` outside the image.
-       */
-      readByte(address5) {
-        const identity2 = this.identifyAddress(address5);
-        return identity2 ? this.#bytes[identity2.imageOffset] : void 0;
-      }
-      /**
-       * Maps a represented ARAM address to its backing-image offset.
-       * @param {number} address SPC700 memory address.
-       * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
-       */
-      identifyAddress(address5) {
-        if (!Number.isInteger(address5) || address5 < this.loadAddress) {
-          return void 0;
-        }
-        const imageOffset = address5 - this.loadAddress;
-        if (address5 > 65535 || imageOffset >= this.length) {
-          return void 0;
-        }
-        return { addressSpace: SPC700_ARAM_ADDRESS_SPACE, address: address5, imageOffset };
-      }
-      /**
-       * Maps a backing-image offset to its 16-bit ARAM address.
-       * @param {number} imageOffset Offset in the contiguous backing image.
-       * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
-       */
-      identifyOffset(imageOffset) {
-        if (!Number.isInteger(imageOffset) || imageOffset < 0 || imageOffset >= this.length) {
-          return void 0;
-        }
-        return {
-          addressSpace: SPC700_ARAM_ADDRESS_SPACE,
-          address: this.loadAddress + imageOffset,
-          imageOffset
-        };
-      }
-    };
-  }
-});
-
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
-var import_node_crypto23, LABEL_PATTERN, MEMORY_TYPES, sha2565, reportFor, splitMesenLine, importMesenLabels, exportAddress, escapeComment, exportMesenLabels;
-var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
-    "use strict";
-    import_node_crypto23 = require("node:crypto");
-    init_address_identities();
-    init_mesen_runtime();
-    init_spc700_address_space();
-    LABEL_PATTERN = /^[@A-Z_a-z]+[\w@]*$/;
-    MEMORY_TYPES = {
-      SnesPrgRom: {
-        memoryType: "SnesPrgRom",
-        addressSpace: SNES_FILE_ADDRESS_SPACE,
-        maximum: 16777216
-      },
-      PRG: {
-        memoryType: "SnesPrgRom",
-        addressSpace: SNES_FILE_ADDRESS_SPACE,
-        maximum: 16777216
-      },
-      SnesWorkRam: {
-        memoryType: "SnesWorkRam",
-        addressSpace: SNES_WRAM_ADDRESS_SPACE,
-        maximum: 131072
-      },
-      WORK: {
-        memoryType: "SnesWorkRam",
-        addressSpace: SNES_WRAM_ADDRESS_SPACE,
-        maximum: 131072
-      },
-      SnesSaveRam: {
-        memoryType: "SnesSaveRam",
-        addressSpace: SNES_SRAM_ADDRESS_SPACE,
-        maximum: 16777216
-      },
-      SAVE: {
-        memoryType: "SnesSaveRam",
-        addressSpace: SNES_SRAM_ADDRESS_SPACE,
-        maximum: 16777216
-      },
-      SpcRam: {
-        memoryType: "SpcRam",
-        addressSpace: SPC700_ARAM_ADDRESS_SPACE,
-        maximum: 65536
-      },
-      SPCRAM: {
-        memoryType: "SpcRam",
-        addressSpace: SPC700_ARAM_ADDRESS_SPACE,
-        maximum: 65536
-      }
-    };
-    sha2565 = (value) => (0, import_node_crypto23.createHash)("sha256").update(value).digest("hex");
-    reportFor = (operation, sourceName, sourceSha256, imported, unsupported, warnings) => ({
-      id: `${operation}:mesence-labels:${sourceSha256}`,
-      format: "mesence-labels",
-      sourceName,
-      sourceSha256,
-      sourceVersion: `text@${MESEN_CE_EVIDENCE_REVISION}`,
-      imported,
-      unsupported,
-      warnings
-    });
-    splitMesenLine = (line) => {
-      const fields = [];
-      let remainder = line;
-      for (let index = 0; index < 3; index++) {
-        const separator = remainder.indexOf(":");
-        if (separator < 0) {
-          break;
-        }
-        fields.push(remainder.slice(0, separator));
-        remainder = remainder.slice(separator + 1);
-      }
-      fields.push(remainder);
-      return fields;
-    };
-    importMesenLabels = (text2, rom, mapper, context) => {
-      if (context.projectRomContentSha256 !== rom.identity.contentSha256) {
-        throw new Error(
-          `ROM/project mismatch: project expects ${context.projectRomContentSha256}, loaded ROM is ${rom.identity.contentSha256}.`
-        );
-      }
-      if (context.projectMapper !== mapper) {
-        throw new Error(
-          `Mapper/project mismatch: project expects '${context.projectMapper}', importer received '${mapper}'.`
-        );
-      }
-      const sourceSha256 = sha2565(text2);
-      const evidenceId = `import:mesence-labels:${sourceSha256}`;
-      const labels = [];
-      const comments = [];
-      const regions = [];
-      const unsupported = [];
-      let invalidLines = 0;
-      for (const [lineIndex, rawLine] of text2.split(/\r?\n/).entries()) {
-        const line = lineIndex === 0 ? rawLine.replace(/^\uFEFF/, "") : rawLine;
-        if (line === "") {
-          continue;
-        }
-        const fields = splitMesenLine(line);
-        const memory = MEMORY_TYPES[fields[0] ?? ""];
-        if (fields.length < 3 || !memory) {
-          invalidLines++;
-          continue;
-        }
-        const range = (fields[1] ?? "").split("-");
-        if (range.length > 2 || !range.every((value) => /^[\dA-Fa-f]+$/.test(value))) {
-          invalidLines++;
-          continue;
-        }
-        const start = Number.parseInt(range[0], 16);
-        const inclusiveEnd = range[1] === void 0 ? start : Number.parseInt(range[1], 16);
-        const maximum = memory.memoryType === "SnesPrgRom" ? rom.length : memory.maximum;
-        if (!Number.isSafeInteger(start) || !Number.isSafeInteger(inclusiveEnd) || start < 0 || inclusiveEnd < start || inclusiveEnd >= maximum) {
-          invalidLines++;
-          continue;
-        }
-        const name = fields[2] ?? "";
-        if (name !== "" && !LABEL_PATTERN.test(name)) {
-          invalidLines++;
-          continue;
-        }
-        const comment2 = (fields[3] ?? "").replaceAll("\\n", "\n");
-        const suffix = `${sourceSha256}:${lineIndex + 1}`;
-        if (name !== "") {
-          labels.push({
-            id: `mesence:label:${suffix}`,
-            addressSpace: memory.addressSpace,
-            address: start,
-            name,
-            ...comment2 === "" ? {} : { comment: comment2 },
-            evidence: [evidenceId]
-          });
-        } else if (comment2 !== "") {
-          comments.push({
-            id: `mesence:comment:${suffix}`,
-            addressSpace: memory.addressSpace,
-            address: start,
-            text: comment2,
-            evidence: [evidenceId]
-          });
-        }
-        if (inclusiveEnd > start) {
-          regions.push({
-            id: `mesence:region:${suffix}`,
-            addressSpace: memory.addressSpace,
-            start,
-            end: inclusiveEnd + 1,
-            name: name || `${memory.memoryType}_${start.toString(16).toUpperCase()}`,
-            attributes: { mesenMemoryType: memory.memoryType },
-            evidence: [evidenceId]
-          });
-        }
-      }
-      if (invalidLines > 0) {
-        unsupported.push({
-          field: "labelLines",
-          count: invalidLines,
-          reason: "Line was malformed, out of range, used an unsupported memory type, or had an invalid Mesen label name."
-        });
-      }
-      const report2 = reportFor(
-        "import",
-        context.sourceName,
-        sourceSha256,
-        { labels: labels.length, comments: comments.length, regions: regions.length },
-        unsupported,
-        [
-          "MesenCE label text has no embedded ROM identity. Addresses were checked against the loaded project context."
-        ]
-      );
-      return {
-        report: report2,
-        batch: {
-          labels,
-          comments,
-          regions,
-          evidence: [
-            {
-              id: evidenceId,
-              source: "import",
-              sourceId: `mesence:${MESEN_CE_EVIDENCE_REVISION}:labels`,
-              confidence: "high",
-              detail: `Imported MesenCE labels from ${context.sourceName}.`
-            }
-          ],
-          imports: [report2]
-        }
-      };
-    };
-    exportAddress = (addressSpace, address5, rom, mapper) => {
-      if (addressSpace === SNES_FILE_ADDRESS_SPACE && address5 < rom.length) {
-        return { memoryType: "SnesPrgRom", address: address5 };
-      }
-      if (addressSpace === SNES_CPU_ADDRESS_SPACE) {
-        const identity2 = identifySnesCpuAddress(address5, createSnesAddressContext(mapper), rom.length);
-        return identity2 ? { memoryType: "SnesPrgRom", address: identity2.fileOffset } : void 0;
-      }
-      if (addressSpace === SNES_WRAM_ADDRESS_SPACE && address5 < 131072) {
-        return { memoryType: "SnesWorkRam", address: address5 };
-      }
-      if (addressSpace === SNES_SRAM_ADDRESS_SPACE && address5 < 16777216) {
-        return { memoryType: "SnesSaveRam", address: address5 };
-      }
-      if (addressSpace === SPC700_ARAM_ADDRESS_SPACE && address5 < 65536) {
-        return { memoryType: "SpcRam", address: address5 };
-      }
-      return void 0;
-    };
-    escapeComment = (value) => value.replace(/\r\n|\r|\n/g, "\\n");
-    exportMesenLabels = (labels, comments, rom, mapper, sourceName = "project.mlb") => {
-      const entries3 = [];
-      const unsupported = [];
-      let invalidNames = 0;
-      let unsupportedAddresses = 0;
-      for (const label of labels) {
-        if (!LABEL_PATTERN.test(label.name)) {
-          invalidNames++;
-          continue;
-        }
-        const mapped = exportAddress(label.addressSpace, label.address, rom, mapper);
-        if (!mapped) {
-          unsupportedAddresses++;
-          continue;
-        }
-        entries3.push({
-          ...mapped,
-          name: label.name,
-          ...label.comment ? { comment: label.comment } : {},
-          sourceId: label.id
-        });
-      }
-      for (const comment2 of comments) {
-        const mapped = exportAddress(comment2.addressSpace, comment2.address, rom, mapper);
-        if (!mapped) {
-          unsupportedAddresses++;
-          continue;
-        }
-        entries3.push({ ...mapped, name: "", comment: comment2.text, sourceId: comment2.id });
-      }
-      if (invalidNames > 0) {
-        unsupported.push({
-          field: "labels.name",
-          count: invalidNames,
-          reason: "Native label name does not match MesenCE's label grammar."
-        });
-      }
-      if (unsupportedAddresses > 0) {
-        unsupported.push({
-          field: "labels.addressSpace",
-          count: unsupportedAddresses,
-          reason: "Address is not representable as Mesen SNES PRG/WRAM/SRAM or SPC RAM."
-        });
-      }
-      const byAddress2 = /* @__PURE__ */ new Map();
-      let collisions = 0;
-      for (const entry of entries3.sort((left, right) => left.sourceId.localeCompare(right.sourceId))) {
-        const key3 = `${entry.memoryType}:${entry.address}`;
-        const current = byAddress2.get(key3);
-        if (!current) {
-          byAddress2.set(key3, entry);
-          continue;
-        }
-        collisions++;
-        if (current.name === "" && entry.name !== "") {
-          byAddress2.set(key3, {
-            ...entry,
-            comment: [entry.comment, current.comment].filter(Boolean).join("\n")
-          });
-        } else if (entry.comment) {
-          byAddress2.set(key3, {
-            ...current,
-            comment: [current.comment, entry.comment].filter(Boolean).join("\n")
-          });
-        }
-      }
-      if (collisions > 0) {
-        unsupported.push({
-          field: "labels.collisions",
-          count: collisions,
-          reason: "Multiple native records at one Mesen address were deterministically combined."
-        });
-      }
-      const order = {
-        SnesPrgRom: 0,
-        SnesWorkRam: 1,
-        SnesSaveRam: 2,
-        SpcRam: 3
-      };
-      const rows = [...byAddress2.values()].sort(
-        (left, right) => order[left.memoryType] - order[right.memoryType] || left.address - right.address || left.sourceId.localeCompare(right.sourceId)
-      ).map(
-        (entry) => `${entry.memoryType}:${entry.address.toString(16).toUpperCase().padStart(4, "0")}:${entry.name}${entry.comment ? `:${escapeComment(entry.comment)}` : ""}`
-      );
-      const text2 = rows.length === 0 ? "" : `${rows.join("\n")}
-`;
-      const outputSha256 = sha2565(text2);
-      return {
-        text: text2,
-        report: reportFor("export", sourceName, outputSha256, { labels: rows.length }, unsupported, [])
-      };
-    };
-  }
-});
-
 // packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
 var assertInteger, readLittleEndian3, decodeFrameworkRelativePointerTable, deriveFrameworkAssetExtractionRanges, decodeFrameworkSamplePointers, deriveFrameworkSampleExtractionRanges;
 var init_framework_asset_helpers = __esm({
@@ -79142,7 +78092,7 @@ var init_code_preservation = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/ram-map.ts
-var fs16, import_node_path15, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex9, cleanText, sramWindowEnd, parseAddress2, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, isLegacySourceNote, renderSnesRamDefines, renderSnesRamMapSchema;
+var fs16, import_node_path15, SNES_RAM_MAP_FORMAT, SNES_RAM_MAP_SCHEMA_VERSION, SNES_RAM_MAP_SOURCE, SNES_RAM_MAP_SCHEMA_SOURCE, SNES_RAM_DEFINES_SOURCE, hex8, cleanText, sramWindowEnd, parseAddress2, validateSnesRamMap, emptySnesRamMap, loadSnesRamMap, canonicalSnesWramAddress, indexSnesRamMap, isLegacySourceNote, renderSnesRamDefines, renderSnesRamMapSchema;
 var init_ram_map = __esm({
   "packages/plugin-snes/src/disassembler/ram-map.ts"() {
     "use strict";
@@ -79154,7 +78104,7 @@ var init_ram_map = __esm({
     SNES_RAM_MAP_SOURCE = "ram-map.json";
     SNES_RAM_MAP_SCHEMA_SOURCE = "ram-map.schema.json";
     SNES_RAM_DEFINES_SOURCE = "ram-defines.asm";
-    hex9 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    hex8 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
     cleanText = (value, field) => {
       const cleaned = value.replaceAll(/\s+/g, " ").trim();
       if (!cleaned) {
@@ -79243,7 +78193,7 @@ var init_ram_map = __esm({
         }
         const address5 = parseAddress2(record5.address, memory);
         if (addresses3.has(address5)) {
-          throw new Error(`Duplicate RAM-map address '${hex9(address5)}'. Combine aliases in one entry.`);
+          throw new Error(`Duplicate RAM-map address '${hex8(address5)}'. Combine aliases in one entry.`);
         }
         addresses3.add(address5);
         const size = record5.size ?? 1;
@@ -79299,7 +78249,7 @@ var init_ram_map = __esm({
         const current = sorted2[index];
         if (current.address < previous.address + previous.size) {
           throw new Error(
-            `RAM-map variables '${previous.name}' and '${current.name}' overlap at ${hex9(current.address)}.`
+            `RAM-map variables '${previous.name}' and '${current.name}' overlap at ${hex8(current.address)}.`
           );
         }
       }
@@ -79380,7 +78330,7 @@ var init_ram_map = __esm({
           const sentence = /[!.?]$/.test(comment2) ? comment2 : `${comment2}.`;
           return [
             ...index > 0 && variables[index - 1]?.category !== variable.category ? [""] : [],
-            `${variable.name} = ${hex9(variable.address)} ; ${sentence}`
+            `${variable.name} = ${hex8(variable.address)} ; ${sentence}`
           ];
         }),
         ""
@@ -79903,7 +78853,7 @@ var init_struct_expressions = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/struct-instruction-uses.ts
-var record4, integer5, text, hex10, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, structUseCommentLimit, compactStructUseComment, describeObservation, renderSnesStructUseComments;
+var record4, integer5, text, hex9, validateSnesStructInstructionUses, indexSnesStructInstructionUses, applySnesStructInstructionOperand, structUseCommentLimit, compactStructUseComment, describeObservation, renderSnesStructUseComments;
 var init_struct_instruction_uses = __esm({
   "packages/plugin-snes/src/disassembler/struct-instruction-uses.ts"() {
     "use strict";
@@ -79927,7 +78877,7 @@ var init_struct_instruction_uses = __esm({
       }
       return value.replaceAll(/\s+/g, " ").trim();
     };
-    hex10 = (value) => `$${value.toString(16).toUpperCase()}`;
+    hex9 = (value) => `$${value.toString(16).toUpperCase()}`;
     validateSnesStructInstructionUses = (value, structures, bindings, constants = []) => {
       if (value === void 0) {
         return [];
@@ -79944,7 +78894,7 @@ var init_struct_instruction_uses = __esm({
         const entry = record4(input);
         const address5 = integer5(entry.address, 0, 16777215);
         if (addresses3.has(address5)) {
-          throw new Error(`Duplicate struct instruction use at ${hex10(address5)}.`);
+          throw new Error(`Duplicate struct instruction use at ${hex9(address5)}.`);
         }
         addresses3.add(address5);
         if (!Array.isArray(entry.expectedBytes) || entry.expectedBytes.length < 1 || entry.expectedBytes.length > 4) {
@@ -80032,14 +78982,14 @@ var init_struct_instruction_uses = __esm({
         const offset = toFileOffset2(use.address);
         const last = toFileOffset2(use.address + use.expectedBytes.length - 1);
         if (offset === void 0 || offset < 0 || last !== offset + use.expectedBytes.length - 1) {
-          throw new Error(`Struct instruction use at ${hex10(use.address)} is not contiguous ROM.`);
+          throw new Error(`Struct instruction use at ${hex9(use.address)} is not contiguous ROM.`);
         }
         if (result.has(offset)) {
-          throw new Error(`Aliased struct instruction uses at ROM ${hex10(offset)}.`);
+          throw new Error(`Aliased struct instruction uses at ROM ${hex9(offset)}.`);
         }
         const bytes = rom.read(offset, use.expectedBytes.length);
         if (!bytes || use.expectedBytes.some((byte2, index) => byte2 !== bytes[index])) {
-          throw new Error(`Stale struct instruction bytes at ${hex10(use.address)}.`);
+          throw new Error(`Stale struct instruction bytes at ${hex9(use.address)}.`);
         }
         for (const observation of use.observations) {
           if (observation.romSha256 !== rom.identity.contentSha256) {
@@ -80053,11 +79003,11 @@ var init_struct_instruction_uses = __esm({
     applySnesStructInstructionOperand = (instruction2, source, use) => {
       if (instruction2.size !== use.expectedBytes.length || use.expectedBytes.some((byte2, index) => instruction2.bytes[index] !== byte2)) {
         throw new Error(
-          `Struct instruction use at ${hex10(use.address)} does not match the decoded instruction.`
+          `Struct instruction use at ${hex9(use.address)} does not match the decoded instruction.`
         );
       }
       if (use.observations.length && !instruction2.references.some(({ kind }) => kind === "data" || kind === "pointer")) {
-        throw new Error(`Struct observations at ${hex10(use.address)} require a memory operand.`);
+        throw new Error(`Struct observations at ${hex9(use.address)} require a memory operand.`);
       }
       if (use.memoryOperand) {
         const modes = {
@@ -80079,7 +79029,7 @@ var init_struct_instruction_uses = __esm({
         const operand2 = instruction2.operands[0];
         if (!mode3 || instruction2.operands.length !== 1 || operand2?.kind !== "address" || operand2.width !== mode3[0] || operand2.value !== use.memoryOperand.value || !instruction2.references.some(({ kind }) => kind === "data" || kind === "pointer")) {
           throw new Error(
-            `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex10(use.address)}.`
+            `Struct memoryOperand '${use.memoryOperand.expression}' does not match the encoded memory address at ${hex9(use.address)}.`
           );
         }
         const width2 = ["", "b", "w", "l"][mode3[0]];
@@ -80092,7 +79042,7 @@ var init_struct_instruction_uses = __esm({
       const statusMask = instruction2.mode === "signature" && ["REP", "SEP"].includes(instruction2.mnemonic);
       if (instruction2.mode !== "immediate" && !statusMask || instruction2.operands.length !== 1 || operand?.width !== 1 && operand?.width !== 2 || operand.value !== use.operand.value || use.operand.value >= 2 ** (operand.width * 8)) {
         throw new Error(
-          `Struct operand '${use.operand.expression}' does not match the encoded immediate at ${hex10(use.address)}.`
+          `Struct operand '${use.operand.expression}' does not match the encoded immediate at ${hex9(use.address)}.`
         );
       }
       if (statusMask) {
@@ -80114,10 +79064,10 @@ var init_struct_instruction_uses = __esm({
       if (observation.parts.length > 1 || !observation.parts[0].field) {
         coverage = `. Covers: ${observation.parts.map((part) => `${part.expression} (${part.width} byte(s)${part.field ? "" : ", opaque"})`).join(", ")}`;
       }
-      return `${observation.expression} (${hex10(observation.address)}, ${observation.width} byte(s))${coverage}`;
+      return `${observation.expression} (${hex9(observation.address)}, ${observation.width} byte(s))${coverage}`;
     };
     renderSnesStructUseComments = (use) => {
-      const locator = ` Details: struct-map.json instructionUses address=${use.address} (${hex10(use.address)}).`;
+      const locator = ` Details: struct-map.json instructionUses address=${use.address} (${hex9(use.address)}).`;
       const reason = omitResearchReferences(use.comment ?? use.reason);
       const observations = use.observations.filter(
         (observation) => observation.provenance === "observed"
@@ -80153,7 +79103,7 @@ var init_struct_instruction_uses = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/struct-map.ts
-var fs17, import_node_path16, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex11, comment, object, integer6, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializerFields, renderSnesStructData;
+var fs17, import_node_path16, SNES_STRUCT_MAP_SOURCE, SNES_STRUCT_DEFINES_SOURCE, widths, fieldType, hex10, comment, object, integer6, identifier, notes, entryComments, validateSnesStructMap, loadSnesStructMap, completeFields, renderSnesStructDefines, fieldExpression, indexSnesStructFields, planSnesStructRomFields, renderSnesStructInitializerFields, renderSnesStructData;
 var init_struct_map = __esm({
   "packages/plugin-snes/src/disassembler/struct-map.ts"() {
     "use strict";
@@ -80165,7 +79115,7 @@ var init_struct_map = __esm({
     SNES_STRUCT_DEFINES_SOURCE = "structs.asm";
     widths = { db: 1, dw: 2, dl: 3, dd: 4 };
     fieldType = (field) => field.type ?? (["", "db", "dw", "dl", "dd"][field.size] || `db[${field.size}]`);
-    hex11 = (value) => `$${value.toString(16).toUpperCase()}`;
+    hex10 = (value) => `$${value.toString(16).toUpperCase()}`;
     comment = (value) => value.replaceAll(/\s+/g, " ").trim();
     object = (value) => {
       if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -80393,17 +79343,17 @@ var init_struct_map = __esm({
         ""
       ];
       for (const constant of map.constants ?? []) {
-        lines.push(`; ${constant.description}`, `${constant.name} = ${hex11(constant.value)}`, "");
+        lines.push(`; ${constant.description}`, `${constant.name} = ${hex10(constant.value)}`, "");
       }
       const render = (name, base, structure, detail, binding) => {
-        lines.push(`; ${name}: ${hex11(structure.size)} bytes per record.`);
+        lines.push(`; ${name}: ${hex10(structure.size)} bytes per record.`);
         for (const note of detail) {
           lines.push(`; ${note}`);
         }
-        lines.push(`struct ${name} ${hex11(base)}`);
+        lines.push(`struct ${name} ${hex10(base)}`);
         for (const field of completeFields(structure)) {
           lines.push(
-            `  .${field.name}: ${fieldType(field)} ; +${hex11(field.offset)}${field.description ? ` ${field.description}` : ""}`
+            `  .${field.name}: ${fieldType(field)} ; +${hex10(field.offset)}${field.description ? ` ${field.description}` : ""}`
           );
         }
         lines.push(
@@ -80442,7 +79392,7 @@ var init_struct_map = __esm({
             const expression = fieldExpression(binding, index, field);
             for (let offset = 0; offset < field.size; offset++) {
               const address5 = binding.address + index * binding.structure.size + field.offset + offset;
-              result.set(address5, offset === 0 ? expression : `(${expression} + ${hex11(offset)})`);
+              result.set(address5, offset === 0 ? expression : `(${expression} + ${hex10(offset)})`);
             }
           }
         }
@@ -80458,7 +79408,7 @@ var init_struct_map = __esm({
               const expression = `${binding.name}.${field.name}`;
               result.set(
                 base + field.offset + offset,
-                offset === 0 ? expression : `(${expression} + ${hex11(offset)})`
+                offset === 0 ? expression : `(${expression} + ${hex10(offset)})`
               );
             }
           }
@@ -80525,7 +79475,7 @@ var init_struct_map = __esm({
     };
     renderSnesStructData = (field, start, bytes) => {
       const offset = start - field.start;
-      const expression = offset === 0 ? field.expression : `${field.expression} + ${hex11(offset)}`;
+      const expression = offset === 0 ? field.expression : `${field.expression} + ${hex10(offset)}`;
       const width2 = offset === 0 && bytes.length === field.end - field.start && bytes.length <= 4 ? bytes.length : 1;
       const values = [];
       for (let index = 0; index < bytes.length; index += width2) {
@@ -80546,7 +79496,7 @@ var init_struct_map = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/source-export.ts
-var fs18, import_node_path17, sourceFlowTarget, renderFlowLabel, loadAssetIncludeMap, applyAssetIncludes, hex12, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
+var fs18, import_node_path17, sourceFlowTarget, renderFlowLabel, loadAssetIncludeMap, applyAssetIncludes, hex11, byteList, asciiString, capacity, bytesField, byteField, wordField, asciiComment, structuredRomLayout, known2, decodeState, formatSnes65816SourceInstruction, mapperDirective, roleAt, toFileOffset, snesSourceLabelNames, metadataLines, renderedMetadata, rawClassifications, isCapturedRomInstruction, rejectedByAnnotation, planInstructions, reconcileInferredFunctionMarkers, planSpans, groupStructRecords, preflight, writeFile, regionIdsFor, exportSnes65816Source;
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
@@ -80594,10 +79544,10 @@ var init_source_export2 = __esm({
         operand = `(${name} & $FFFF)`;
       } else if (flow.mode === "absoluteLong" && flow.address !== labelAddress) {
         if ((flow.address & 65535) === (labelAddress & 65535)) {
-          operand = `((${name} & $FFFF) | ${hex12(flow.address & 16711680, 6)})`;
+          operand = `((${name} & $FFFF) | ${hex11(flow.address & 16711680, 6)})`;
         } else {
           const delta = flow.address - labelAddress;
-          operand = `(${name} ${delta < 0 ? "-" : "+"} ${hex12(Math.abs(delta), 6)})`;
+          operand = `(${name} ${delta < 0 ? "-" : "+"} ${hex11(Math.abs(delta), 6)})`;
         }
       }
       return `${source.slice(0, source.indexOf(" "))} ${operand}`;
@@ -80642,7 +79592,7 @@ var init_source_export2 = __esm({
         }
         if (span.instruction || span.structured || span.structField || span.structRecord) {
           throw new Error(
-            `Asset include boundary at ROM offset ${hex12(offset)} splits typed data or code.`
+            `Asset include boundary at ROM offset ${hex11(offset)} splits typed data or code.`
           );
         }
         spans.splice(index, 1, { ...span, end: offset }, { ...span, start: offset });
@@ -80657,7 +79607,7 @@ var init_source_export2 = __esm({
         }
         if (spans[index]?.start !== entry.start || Math.floor(entry.start / bankSize) !== Math.floor((entry.end - 1) / bankSize)) {
           throw new Error(
-            `Asset include at ROM offset ${hex12(entry.start)} does not start on one bank-local span.`
+            `Asset include at ROM offset ${hex11(entry.start)} does not start on one bank-local span.`
           );
         }
         let end = entry.start;
@@ -80666,14 +79616,14 @@ var init_source_export2 = __esm({
           const span = spans[index];
           if (span.start !== end || span.end > entry.end || span.instruction || span.structured || span.start !== entry.start && metadata.has(span.start)) {
             throw new Error(
-              `Asset include at ROM offset ${hex12(entry.start)} conflicts with exported data or metadata.`
+              `Asset include at ROM offset ${hex11(entry.start)} conflicts with exported data or metadata.`
             );
           }
           end = span.end;
           index++;
         }
         if (end !== entry.end) {
-          throw new Error(`Asset include at ROM offset ${hex12(entry.start)} has no exact end boundary.`);
+          throw new Error(`Asset include at ROM offset ${hex11(entry.start)} has no exact end boundary.`);
         }
         result.push({ start: entry.start, end: entry.end, role: "raw", assetInclude: entry.directive });
       }
@@ -80682,8 +79632,8 @@ var init_source_export2 = __esm({
       }
       return result;
     };
-    hex12 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
-    byteList = (bytes) => [...bytes].map((byte2) => hex12(byte2, 2)).join(", ");
+    hex11 = (value, width2 = 6) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    byteList = (bytes) => [...bytes].map((byte2) => hex11(byte2, 2)).join(", ");
     asciiString = (bytes) => {
       if (![...bytes].every((byte2) => byte2 >= 32 && byte2 <= 126)) {
         return void 0;
@@ -80720,7 +79670,7 @@ var init_source_export2 = __esm({
       start,
       end: start + 2,
       role,
-      lines: [`${symbol}:`, `  dw ${hex12(value, 4)} ; ${comment2}`]
+      lines: [`${symbol}:`, `  dw ${hex11(value, 4)} ; ${comment2}`]
     });
     asciiComment = (value) => `"${value.replaceAll('"', '\\"')}"`;
     structuredRomLayout = (rom, mapper) => {
@@ -80845,7 +79795,7 @@ var init_source_export2 = __esm({
         if (vector.state && vector.targetAddress === void 0) {
           comment2 = `${mode3} ${vector.name} vector is unpopulated.`;
         } else if (vector.state) {
-          comment2 = `${mode3} ${vector.name} handler. Target bank is forced to $00 -> ${hex12(vector.targetAddress, 6)}.`;
+          comment2 = `${mode3} ${vector.name} handler. Target bank is forced to $00 -> ${hex11(vector.targetAddress, 6)}.`;
         }
         fields.push(wordField(vector.fileOffset, vector.value, vector.symbol, comment2, "vectors"));
       }
@@ -80927,7 +79877,7 @@ var init_source_export2 = __esm({
           symbolic = `(${variableExpression} & $FFFF)`;
           const encodedBank = rawValue & 16711680;
           if (encodedBank !== 0) {
-            symbolic += ` | ${hex12(encodedBank, 6)}`;
+            symbolic += ` | ${hex11(encodedBank, 6)}`;
           }
         } else if (rawWidth !== 3) {
           symbolic = `${variableExpression} & ${rawWidth === 1 ? "$FF" : "$FFFF"}`;
@@ -81353,7 +80303,7 @@ var init_source_export2 = __esm({
       for (const [offset, instruction2] of instructions) {
         if (structIndex.overlapping(offset, instruction2.end).length > 0) {
           throw new Error(
-            `ROM struct overlaps decoded code at ${hex12(offset)}. Resolve the conflicting evidence before export.`
+            `ROM struct overlaps decoded code at ${hex11(offset)}. Resolve the conflicting evidence before export.`
           );
         }
         cuts.add(offset);
@@ -81552,7 +80502,7 @@ var init_source_export2 = __esm({
       for (const [offset, use] of instructionUses ?? []) {
         if (!instructions.has(offset)) {
           throw new Error(
-            `Struct instruction use at ${hex12(use.address)} requires an accepted instruction.`
+            `Struct instruction use at ${hex11(use.address)} requires an accepted instruction.`
           );
         }
       }
@@ -81593,9 +80543,9 @@ var init_source_export2 = __esm({
             (total, range) => total + range.end - range.start,
             0
           );
-          const net5 = added - bytes;
+          const net3 = added - bytes;
           throw new Error(
-            `Source export would replace ${bytes} previously emitted code byte(s) with non-code spans, starting at ROM offset ${hex12(lost[0].start, 6)}. Generated source was preserved. The proposal also adds ${added} new code byte(s), for a net change of ${net5 >= 0 ? "+" : ""}${net5} byte(s). Code absent from a capture is not evidence that it stopped being code. Resolve the analysis gaps or explicitly pass --allow-code-regression after reviewing the change.`
+            `Source export would replace ${bytes} previously emitted code byte(s) with non-code spans, starting at ROM offset ${hex11(lost[0].start, 6)}. Generated source was preserved. The proposal also adds ${added} new code byte(s), for a net change of ${net3 >= 0 ? "+" : ""}${net3} byte(s). Code absent from a capture is not evidence that it stopped being code. Resolve the analysis gaps or explicitly pass --allow-code-regression after reviewing the change.`
           );
         }
       }
@@ -81619,7 +80569,7 @@ var init_source_export2 = __esm({
         for (const [spanIndex, span] of bankSpans.entries()) {
           const address5 = snesRomAddressSpace.fromOutputOffset(span.start, context);
           if (address5 < 0) {
-            throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex12(span.start)}.`);
+            throw new Error(`Mapper '${mapper}' cannot represent ROM offset ${hex11(span.start)}.`);
           }
           const spanMetadata = metadata.get(span.start);
           const named = span.structured ? [] : renderedMetadata(
@@ -81635,7 +80585,7 @@ var init_source_export2 = __esm({
             closedTable = true;
           }
           if (nextAddress !== address5) {
-            lines.push("", `org ${hex12(address5)}`);
+            lines.push("", `org ${hex11(address5)}`);
           }
           if ((named.length || closedTable || !table && (span.structRecord || bankSpans[spanIndex - 1]?.structRecord)) && lines.at(-1) !== "") {
             lines.push("");
@@ -82121,6 +81071,95 @@ var init_source_export2 = __esm({
         canonicalSourceExportJson(manifest)
       );
       return manifest;
+    };
+  }
+});
+
+// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+var import_node_crypto21, SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR, Spc700AramImage;
+var init_spc700_address_space = __esm({
+  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+    "use strict";
+    import_node_crypto21 = require("node:crypto");
+    SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
+    SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
+      id: SPC700_ARAM_ADDRESS_SPACE,
+      name: "SPC700 ARAM",
+      addressBits: 16,
+      kind: "memory"
+    });
+    Spc700AramImage = class {
+      loadAddress;
+      contentSha256;
+      #bytes;
+      /**
+       * @param {ArrayLike<number>} bytes Contiguous bytes copied into the image.
+       * @param {number} [loadAddress] First 16-bit ARAM address represented by `bytes`.
+       */
+      constructor(bytes, loadAddress = 0) {
+        if (!Number.isInteger(loadAddress) || loadAddress < 0 || loadAddress > 65535) {
+          throw new Error("SPC700 ARAM loadAddress must be a 16-bit unsigned integer.");
+        }
+        if (bytes.length > 65536 || loadAddress + bytes.length > 65536) {
+          throw new Error("SPC700 ARAM images must fit contiguously within the 16-bit address space.");
+        }
+        this.#bytes = Uint8Array.from(bytes);
+        this.loadAddress = loadAddress;
+        this.contentSha256 = (0, import_node_crypto21.createHash)("sha256").update(this.#bytes).digest("hex");
+      }
+      /**
+       * Number of represented ARAM bytes.
+       * @returns {number} Backing-image length.
+       */
+      get length() {
+        return this.#bytes.length;
+      }
+      /**
+       * Returns a defensive copy of the represented bytes.
+       * @returns {Uint8Array} Copied image bytes.
+       */
+      bytes() {
+        return this.#bytes.slice();
+      }
+      /**
+       * Reads one byte by 16-bit ARAM address.
+       * @param {number} address SPC700 memory address.
+       * @returns {number | undefined} Byte value, or `undefined` outside the image.
+       */
+      readByte(address5) {
+        const identity2 = this.identifyAddress(address5);
+        return identity2 ? this.#bytes[identity2.imageOffset] : void 0;
+      }
+      /**
+       * Maps a represented ARAM address to its backing-image offset.
+       * @param {number} address SPC700 memory address.
+       * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
+       */
+      identifyAddress(address5) {
+        if (!Number.isInteger(address5) || address5 < this.loadAddress) {
+          return void 0;
+        }
+        const imageOffset = address5 - this.loadAddress;
+        if (address5 > 65535 || imageOffset >= this.length) {
+          return void 0;
+        }
+        return { addressSpace: SPC700_ARAM_ADDRESS_SPACE, address: address5, imageOffset };
+      }
+      /**
+       * Maps a backing-image offset to its 16-bit ARAM address.
+       * @param {number} imageOffset Offset in the contiguous backing image.
+       * @returns {Spc700AramAddressIdentity | undefined} Address identity when represented.
+       */
+      identifyOffset(imageOffset) {
+        if (!Number.isInteger(imageOffset) || imageOffset < 0 || imageOffset >= this.length) {
+          return void 0;
+        }
+        return {
+          addressSpace: SPC700_ARAM_ADDRESS_SPACE,
+          address: this.loadAddress + imageOffset,
+          imageOffset
+        };
+      }
     };
   }
 });
@@ -82682,7 +81721,7 @@ var init_spc700_analysis = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/spc700-upload.ts
-var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex13, materializeSpc700UploadBlock, spc700UploadProjectRecords;
+var wordAt, validatePositiveLimit, parseSpc700UploadStream, hex12, materializeSpc700UploadBlock, spc700UploadProjectRecords;
 var init_spc700_upload = __esm({
   "packages/plugin-snes/src/disassembler/spc700-upload.ts"() {
     "use strict";
@@ -82710,7 +81749,7 @@ var init_spc700_upload = __esm({
       let offset = startOffset;
       while (true) {
         if (offset + 4 > rom.length) {
-          throw new Error(`Truncated SPC700 upload record header at ROM offset $${hex13(offset, 6)}.`);
+          throw new Error(`Truncated SPC700 upload record header at ROM offset $${hex12(offset, 6)}.`);
         }
         if (offset - startOffset + 4 > maxBytes) {
           throw new Error(`SPC700 upload stream exceeds the ${maxBytes}-byte parsing limit.`);
@@ -82737,7 +81776,7 @@ var init_spc700_upload = __esm({
         const endOffset = payloadOffset + size;
         if (endOffset > rom.length) {
           throw new Error(
-            `Truncated SPC700 upload payload at ROM offset $${hex13(payloadOffset, 6)}: expected ${size} byte(s).`
+            `Truncated SPC700 upload payload at ROM offset $${hex12(payloadOffset, 6)}: expected ${size} byte(s).`
           );
         }
         if (endOffset - startOffset > maxBytes) {
@@ -82755,7 +81794,7 @@ var init_spc700_upload = __esm({
         offset = endOffset;
       }
     };
-    hex13 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
+    hex12 = (value, width2) => value.toString(16).toUpperCase().padStart(width2, "0");
     materializeSpc700UploadBlock = (rom, block) => {
       const payload = rom.read(block.payloadOffset, block.size);
       if (!payload) {
@@ -82777,7 +81816,7 @@ var init_spc700_upload = __esm({
         ]
       ];
       return parts.map((part, index) => ({
-        id: `spc-upload:${hex13(block.headerOffset, 6)}:segment:${index}`,
+        id: `spc-upload:${hex12(block.headerOffset, 6)}:segment:${index}`,
         blockIndex: block.index,
         segmentIndex: index,
         sourceAddressSpace: SNES_FILE_ADDRESS_SPACE,
@@ -82787,7 +81826,7 @@ var init_spc700_upload = __esm({
       }));
     };
     spc700UploadProjectRecords = (rom, stream) => {
-      const streamId = `spc-upload:${hex13(stream.startOffset, 6)}`;
+      const streamId = `spc-upload:${hex12(stream.startOffset, 6)}`;
       const evidenceId = `detector:${streamId}:${rom.identity.contentSha256}`;
       const regions = [
         {
@@ -82795,7 +81834,7 @@ var init_spc700_upload = __esm({
           addressSpace: SNES_FILE_ADDRESS_SPACE,
           start: stream.startOffset,
           end: stream.endOffset,
-          name: `SPC upload stream $${hex13(stream.startOffset, 6)}`,
+          name: `SPC upload stream $${hex12(stream.startOffset, 6)}`,
           context: "snes.spc700.upload-stream",
           attributes: {
             format: stream.format,
@@ -82868,7 +81907,7 @@ var init_spc700_upload = __esm({
             source: "detector",
             sourceId: "snes.spc700.nspc-v1",
             confidence: "certain",
-            detail: `Explicit NSPC stream at ROM offset $${hex13(stream.startOffset, 6)} contains ${stream.blocks.length} block(s) and executes at $${hex13(stream.executeAddress, 4)}.`
+            detail: `Explicit NSPC stream at ROM offset $${hex12(stream.startOffset, 6)} contains ${stream.blocks.length} block(s) and executes at $${hex12(stream.executeAddress, 4)}.`
           }
         ]
       };
@@ -82958,7 +81997,7 @@ var init_superfx_state = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/processor-source-export.ts
-var hex14, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
+var hex13, dataLine, spc700Lines, renderSpc700AramSource, renderSpc700UploadSource, renderSuperFxRomSource;
 var init_processor_source_export = __esm({
   "packages/plugin-snes/src/disassembler/processor-source-export.ts"() {
     "use strict";
@@ -82966,8 +82005,8 @@ var init_processor_source_export = __esm({
     init_spc700_decoder();
     init_superfx_decoder();
     init_superfx_state();
-    hex14 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
-    dataLine = (bytes) => `db ${[...bytes].map((value) => hex14(value, 2)).join(",")}`;
+    hex13 = (value, width2) => `$${value.toString(16).toUpperCase().padStart(width2, "0")}`;
+    dataLine = (bytes) => `db ${[...bytes].map((value) => hex13(value, 2)).join(",")}`;
     spc700Lines = (bytes, loadAddress) => {
       const decoder = new Spc700Decoder();
       const source = new Uint8ArrayDecoderSource(bytes);
@@ -82994,14 +82033,14 @@ var init_processor_source_export = __esm({
       "; Generated standalone SPC700 payload.",
       "arch spc700-raw",
       "org $000000",
-      `base ${hex14(image.loadAddress, 4)}`,
+      `base ${hex13(image.loadAddress, 4)}`,
       ...spc700Lines(image.bytes(), image.loadAddress),
       ""
     ].join("\n");
     renderSpc700UploadSource = (rom, stream) => {
       const lines = ["; Generated Nintendo-style SPC700 upload stream.", "lorom", "org $008000"];
       if (stream.blocks.length === 0) {
-        lines.push(`dw $0000,${hex14(stream.executeAddress, 4)}`, "");
+        lines.push(`dw $0000,${hex13(stream.executeAddress, 4)}`, "");
         return lines.join("\n");
       }
       for (const block of stream.blocks) {
@@ -83009,12 +82048,12 @@ var init_processor_source_export = __esm({
         if (!bytes) {
           throw new Error(`SPC700 upload block ${block.index} is outside the ROM image.`);
         }
-        lines.push("", `spcblock ${hex14(block.destination, 4)} nspc`);
+        lines.push("", `spcblock ${hex13(block.destination, 4)} nspc`);
         for (const line of spc700Lines(bytes, block.destination)) {
           lines.push(line);
         }
         lines.push(
-          block.index === stream.blocks.length - 1 ? `endspcblock execute ${hex14(stream.executeAddress, 4)}` : "endspcblock"
+          block.index === stream.blocks.length - 1 ? `endspcblock execute ${hex13(stream.executeAddress, 4)}` : "endspcblock"
         );
       }
       lines.push("");
@@ -83030,7 +82069,7 @@ var init_processor_source_export = __esm({
         "; Generated standalone SuperFX payload.",
         "norom",
         "org $000000",
-        `base ${hex14(image.loadAddress, 6)}`,
+        `base ${hex13(image.loadAddress, 6)}`,
         "arch superfx"
       ];
       while (offset < bytes.length) {
@@ -83058,11 +82097,11 @@ var init_processor_source_export = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/function-heuristics.ts
-var import_node_crypto24, isArray4, rank2, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses2, immediate3, analyzeSnesFunctionRoles;
+var import_node_crypto22, isArray4, rank2, writes, reads, builtins, SNES_HEURISTIC_RULE_IDS, validateSnesHeuristicConfiguration, width, addresses2, immediate3, analyzeSnesFunctionRoles;
 var init_function_heuristics = __esm({
   "packages/plugin-snes/src/disassembler/function-heuristics.ts"() {
     "use strict";
-    import_node_crypto24 = require("node:crypto");
+    import_node_crypto22 = require("node:crypto");
     init_src();
     init_hardware_registers();
     isArray4 = (value) => Array.isArray(value);
@@ -83247,7 +82286,7 @@ var init_function_heuristics = __esm({
         const key3 = `${node.addressSpace}:${node.address}:${rule}:${role}:${relationship}`;
         const prior = found.get(key3);
         found.set(key3, {
-          id: `heuristic:snes:${(0, import_node_crypto24.createHash)("sha256").update(key3).digest("hex").slice(0, 24)}`,
+          id: `heuristic:snes:${(0, import_node_crypto22.createHash)("sha256").update(key3).digest("hex").slice(0, 24)}`,
           rule,
           role,
           addressSpace: node.addressSpace,
@@ -83601,7 +82640,7 @@ var init_function_heuristics = __esm({
       const roles = [...found.values()].sort(
         (a, b) => a.address - b.address || a.id.localeCompare(b.id)
       );
-      const signature2 = (0, import_node_crypto24.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
+      const signature2 = (0, import_node_crypto22.createHash)("sha256").update(canonicalJson(config)).digest("hex").slice(0, 16);
       const evidence = roles.map((role) => ({
         id: `${role.id}:evidence`,
         source: "detector",
@@ -83625,11 +82664,11 @@ var init_function_heuristics = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/runtime-code.ts
-var import_node_crypto25, runtimeDecodeState, analyzeSnesRuntimeCode;
+var import_node_crypto23, runtimeDecodeState, analyzeSnesRuntimeCode;
 var init_runtime_code = __esm({
   "packages/plugin-snes/src/disassembler/runtime-code.ts"() {
     "use strict";
-    import_node_crypto25 = require("node:crypto");
+    import_node_crypto23 = require("node:crypto");
     init_src3();
     init_src();
     init_decoder();
@@ -83670,7 +82709,7 @@ var init_runtime_code = __esm({
           continue;
         }
         const state = runtimeDecodeState(sample);
-        const variant = (0, import_node_crypto25.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
+        const variant = (0, import_node_crypto23.createHash)("sha256").update(canonicalJson({ address: sample.address, bytes: sample.bytes, state })).digest("hex").slice(0, 24);
         const id = `runtime:code:${variant}`;
         const duplicate = nodes.get(id);
         if (duplicate) {
@@ -83856,11 +82895,11 @@ var init_runtime_code = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/superfx-address-space.ts
-var import_node_crypto26, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
+var import_node_crypto24, SUPERFX_ROM_ADDRESS_SPACE, SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR, SuperFxRomImage;
 var init_superfx_address_space = __esm({
   "packages/plugin-snes/src/disassembler/superfx-address-space.ts"() {
     "use strict";
-    import_node_crypto26 = require("node:crypto");
+    import_node_crypto24 = require("node:crypto");
     SUPERFX_ROM_ADDRESS_SPACE = "snes.superfx.rom";
     SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
       id: SUPERFX_ROM_ADDRESS_SPACE,
@@ -83881,7 +82920,7 @@ var init_superfx_address_space = __esm({
         }
         this.#bytes = Uint8Array.from(bytes);
         this.loadAddress = loadAddress;
-        this.contentSha256 = (0, import_node_crypto26.createHash)("sha256").update(this.#bytes).digest("hex");
+        this.contentSha256 = (0, import_node_crypto24.createHash)("sha256").update(this.#bytes).digest("hex");
       }
       get length() {
         return this.#bytes.length;
@@ -84081,7 +83120,7 @@ var init_project_initializer = __esm({
         ...imported.report.warnings,
         `Explicit mapper '${options.mapper}' overrides imported mapper '${imported.mapping.mapper}'.`
       ] : imported?.report.warnings;
-      const importReport2 = imported ? { ...imported.report, ...importWarnings ? { warnings: importWarnings } : {} } : void 0;
+      const importReport = imported ? { ...imported.report, ...importWarnings ? { warnings: importWarnings } : {} } : void 0;
       let mappingSource = "detected";
       if (options.mapper) {
         mappingSource = "override";
@@ -84111,11 +83150,11 @@ var init_project_initializer = __esm({
             SUPERFX_ROM_ADDRESS_SPACE_DESCRIPTOR
           ]
         },
-        shards: imported ? { ...imported.shards, imports: importReport2 ? [importReport2] : [] } : emptyShards()
+        shards: imported ? { ...imported.shards, imports: importReport ? [importReport] : [] } : emptyShards()
       };
       const staging = temporarySibling(projectDirectory, "analysis");
       try {
-        const manifest = writeAnalysisProject(staging, project);
+        const manifest = publishAnalysisProject(staging, project).manifest;
         validateAnalysisProject(staging, rom);
         throwIfCancelled(options.signal);
         commitStagedDirectory(staging, projectDirectory);
@@ -84123,7 +83162,7 @@ var init_project_initializer = __esm({
           projectDirectory,
           probe,
           manifest,
-          ...importReport2 ? { importReport: importReport2 } : {}
+          ...importReport ? { importReport } : {}
         };
       } catch (error) {
         removeDirectory(staging);
@@ -84833,7 +83872,7 @@ function retainModificationBaseline(root, sourceDirectory, romFile, interfaceByt
       validateSourceExportInputs(import_node_path20.default.join(destination, "source"), manifest);
       return relative5;
     } catch {
-      relative5 += `-${(0, import_node_crypto27.randomUUID)()}`;
+      relative5 += `-${(0, import_node_crypto25.randomUUID)()}`;
       destination = import_node_path20.default.join(root, relative5);
     }
   }
@@ -84863,11 +83902,11 @@ function retainModificationBaseline(root, sourceDirectory, romFile, interfaceByt
   }
   return relative5;
 }
-var import_node_crypto27, import_node_fs15, import_node_path20;
+var import_node_crypto25, import_node_fs15, import_node_path20;
 var init_modification_baseline = __esm({
   "packages/plugin-snes/src/disassembler/modification-baseline.ts"() {
     "use strict";
-    import_node_crypto27 = require("node:crypto");
+    import_node_crypto25 = require("node:crypto");
     import_node_fs15 = __toESM(require("node:fs"), 1);
     import_node_path20 = __toESM(require("node:path"), 1);
     init_node();
@@ -84876,11 +83915,11 @@ var init_modification_baseline = __esm({
 });
 
 // packages/plugin-snes/src/disassembler/modification-project.ts
-var import_node_crypto28, import_node_fs16, import_node_path21, MODIFICATION_MANIFEST, modificationOwnedPath, expectedBytes, isArray5, loadRomModificationProject, ModificationFiles, mergeModifiedMaps, createRomModificationProject, addRomReplacement, buildModifiedRom, deriveModifiedRomProject;
+var import_node_crypto26, import_node_fs16, import_node_path21, MODIFICATION_MANIFEST, modificationOwnedPath, expectedBytes, isArray5, loadRomModificationProject, ModificationFiles, mergeModifiedMaps, createRomModificationProject, addRomReplacement, buildModifiedRom, deriveModifiedRomProject;
 var init_modification_project = __esm({
   "packages/plugin-snes/src/disassembler/modification-project.ts"() {
     "use strict";
-    import_node_crypto28 = require("node:crypto");
+    import_node_crypto26 = require("node:crypto");
     import_node_fs16 = __toESM(require("node:fs"), 1);
     import_node_path21 = __toESM(require("node:path"), 1);
     init_src3();
@@ -85442,7 +84481,7 @@ ${emit} "${modificationOwnedPath(root, replacement.input)}"
           throw new Error("Baseline ROM changed during build.");
         }
         options.signal?.throwIfAborted();
-        const build = import_node_path21.default.join(root, "build", (0, import_node_crypto28.randomUUID)());
+        const build = import_node_path21.default.join(root, "build", (0, import_node_crypto26.randomUUID)());
         import_node_fs16.default.mkdirSync(build, { recursive: true });
         const outputPath = import_node_path21.default.join(build, "modified.sfc");
         const finalOutput = import_node_path21.default.join(build, "modified-final.sfc");
@@ -85830,7 +84869,7 @@ var init_superfx_analysis = __esm({
 // packages/plugin-snes/src/disassembler/modification-operations.ts
 function publishModificationManifest(file, project) {
   const root = import_node_path22.default.dirname(file);
-  const candidate = import_node_path22.default.join(root, `.candidate-${(0, import_node_crypto29.randomUUID)()}.json`);
+  const candidate = import_node_path22.default.join(root, `.candidate-${(0, import_node_crypto27.randomUUID)()}.json`);
   const bytes = JSON.stringify(project, null, 2) + "\n";
   durableReplace(candidate, bytes);
   try {
@@ -85906,7 +84945,7 @@ function applyRomPlacement(options) {
       if (!/^[A-Z_a-z]\w*$/.test(pointer.id)) {
         throw new Error("Pointer IDs must be assembly identifiers.");
       }
-      const input = `inputs/${pointer.id}-${(0, import_node_crypto29.randomUUID)()}.asm`;
+      const input = `inputs/${pointer.id}-${(0, import_node_crypto27.randomUUID)()}.asm`;
       const value = pointer.width === 2 ? `(Patch_${previous.id} + ${addend}) & $ffff` : `Patch_${previous.id} + ${addend}`;
       durableReplace(
         modificationOwnedPath(root, input),
@@ -85993,7 +85032,7 @@ async function extractRomAsset(options) {
     if (!bytes.equals(encoded)) {
       throw new Error("Extraction did not reencode to the exact original asset bytes.");
     }
-    const input = `inputs/${entry.id}-${(0, import_node_crypto29.randomUUID)()}.${extracted.extension}`;
+    const input = `inputs/${entry.id}-${(0, import_node_crypto27.randomUUID)()}.${extracted.extension}`;
     options.signal?.throwIfAborted();
     durableReplace(modificationOwnedPath(root, input), extracted.bytes);
     publishModificationManifest(file, {
@@ -86041,7 +85080,7 @@ async function importRomAsset(options) {
       );
     }
     const extension = import_node_path22.default.extname(options.sourceFile).replace(/[^\w.]/g, "") || ".bin";
-    const input = `inputs/${entry.id}-${(0, import_node_crypto29.randomUUID)()}${extension}`;
+    const input = `inputs/${entry.id}-${(0, import_node_crypto27.randomUUID)()}${extension}`;
     options.signal?.throwIfAborted();
     durableReplace(modificationOwnedPath(root, input), source);
     publishModificationManifest(file, {
@@ -86129,11 +85168,11 @@ async function retainRomModificationBaseline(options) {
     lease.release();
   }
 }
-var import_node_crypto29, import_node_fs17, import_node_path22;
+var import_node_crypto27, import_node_fs17, import_node_path22;
 var init_modification_operations = __esm({
   "packages/plugin-snes/src/disassembler/modification-operations.ts"() {
     "use strict";
-    import_node_crypto29 = require("node:crypto");
+    import_node_crypto27 = require("node:crypto");
     import_node_fs17 = __toESM(require("node:fs"), 1);
     import_node_path22 = __toESM(require("node:path"), 1);
     init_src();
@@ -86381,7 +85420,7 @@ async function acceptRomRebase(options) {
       );
     }
   }
-  const proposed = import_node_path23.default.join(root, `.accept-${(0, import_node_crypto30.randomUUID)()}.json`);
+  const proposed = import_node_path23.default.join(root, `.accept-${(0, import_node_crypto28.randomUUID)()}.json`);
   durableReplace(proposed, accepted);
   const build = await buildModifiedRom({ ...options, manifestFile: proposed });
   const lease = acquireFileLease(import_node_path23.default.join(root, ".build.lock"));
@@ -86398,7 +85437,7 @@ async function acceptRomRebase(options) {
   return { manifestFile: file, build };
 }
 async function detachRomSource(options) {
-  const temp = import_node_path23.default.join(import_node_path23.default.dirname(options.directory), `.detach-${(0, import_node_crypto30.randomUUID)()}`);
+  const temp = import_node_path23.default.join(import_node_path23.default.dirname(options.directory), `.detach-${(0, import_node_crypto28.randomUUID)()}`);
   let draft;
   let verifiedSource = options.sourceDirectory;
   let verifiedRom = options.romFile;
@@ -86549,11 +85588,11 @@ async function refreshRomRebaseReview(options) {
     lease.release();
   }
 }
-var import_node_crypto30, import_node_fs18, import_node_path23;
+var import_node_crypto28, import_node_fs18, import_node_path23;
 var init_modification_rebase = __esm({
   "packages/plugin-snes/src/disassembler/modification-rebase.ts"() {
     "use strict";
-    import_node_crypto30 = require("node:crypto");
+    import_node_crypto28 = require("node:crypto");
     import_node_fs18 = __toESM(require("node:fs"), 1);
     import_node_path23 = __toESM(require("node:path"), 1);
     init_node();
@@ -86576,7 +85615,7 @@ function reviewSourceEdit(options) {
   const sourceFile = import_node_path24.default.resolve(options.sourceFile);
   const relative5 = import_node_path24.default.relative(sourceDirectory, sourceFile).split(import_node_path24.default.sep).join("/");
   const current = import_node_fs19.default.readFileSync(sourceFile);
-  const id = `source-${(0, import_node_crypto31.randomUUID)()}`;
+  const id = `source-${(0, import_node_crypto29.randomUUID)()}`;
   const directory = import_node_path24.default.join(root, ".source-drafts", id);
   import_node_fs19.default.mkdirSync(directory, { recursive: true });
   const draftFile = import_node_path24.default.join(directory, "edited.asm");
@@ -86667,7 +85706,7 @@ function reviewSourceEdit(options) {
           ];
           return matches.at(-1)?.[1] === "8" ? 8 : 16;
         };
-        const replacementId = `import_${(0, import_node_crypto31.randomUUID)().replaceAll("-", "_")}`;
+        const replacementId = `import_${(0, import_node_crypto29.randomUUID)().replaceAll("-", "_")}`;
         replacement = {
           id: replacementId,
           offset,
@@ -86763,11 +85802,11 @@ async function restoreReviewedSource(options) {
     lease.release();
   }
 }
-var import_node_crypto31, import_node_fs19, import_node_path24;
+var import_node_crypto29, import_node_fs19, import_node_path24;
 var init_source_reconciliation = __esm({
   "packages/plugin-snes/src/disassembler/source-reconciliation.ts"() {
     "use strict";
-    import_node_crypto31 = require("node:crypto");
+    import_node_crypto29 = require("node:crypto");
     import_node_fs19 = __toESM(require("node:fs"), 1);
     import_node_path24 = __toESM(require("node:path"), 1);
     init_node();
@@ -86880,7 +85919,7 @@ async function previewRomEditor(options) {
     if (bytes.length > 4 * 1024 * 1024) {
       throw new Error("Edited input exceeds 4 MiB.");
     }
-    const id = (0, import_node_crypto32.randomUUID)();
+    const id = (0, import_node_crypto30.randomUUID)();
     const draft = import_node_path25.default.join(root, ".editor-drafts", id);
     const hashes = modificationInputHashes(root);
     for (const relative5 of Object.keys(hashes)) {
@@ -86979,11 +86018,11 @@ function saveRomEditor(options) {
     lease.release();
   }
 }
-var import_node_crypto32, import_node_fs20, import_node_path25;
+var import_node_crypto30, import_node_fs20, import_node_path25;
 var init_modification_editor = __esm({
   "packages/plugin-snes/src/disassembler/modification-editor.ts"() {
     "use strict";
-    import_node_crypto32 = require("node:crypto");
+    import_node_crypto30 = require("node:crypto");
     import_node_fs20 = __toESM(require("node:fs"), 1);
     import_node_path25 = __toESM(require("node:path"), 1);
     init_image();
@@ -87223,7 +86262,7 @@ function reviewMetadataMigration(options) {
     });
   }
   const review = {
-    id: (0, import_node_crypto33.randomUUID)(),
+    id: (0, import_node_crypto31.randomUUID)(),
     sourceProject,
     sourceRevision: analysisProjectRevision(snapshot.manifest).manifestSha256,
     sourceRomSha256: original.identity.sha256,
@@ -87345,7 +86384,7 @@ async function applyMetadataMigration(options) {
         shards[item.kind].push(record5);
       }
     }
-    writeAnalysisProject(projectDirectory, { manifest: created.manifest, shards });
+    publishAnalysisProject(projectDirectory, { manifest: created.manifest, shards });
     if (selected.has("struct-library")) {
       const library = review.items.find((item) => item.id === "struct-library").after;
       const value = {
@@ -87412,11 +86451,11 @@ async function applyMetadataMigration(options) {
     lease.release();
   }
 }
-var import_node_crypto33, import_node_fs21, import_node_path26;
+var import_node_crypto31, import_node_fs21, import_node_path26;
 var init_metadata_migration = __esm({
   "packages/plugin-snes/src/disassembler/metadata-migration.ts"() {
     "use strict";
-    import_node_crypto33 = require("node:crypto");
+    import_node_crypto31 = require("node:crypto");
     import_node_fs21 = __toESM(require("node:fs"), 1);
     import_node_path26 = __toESM(require("node:path"), 1);
     init_src();
@@ -87431,7 +86470,7 @@ var init_metadata_migration = __esm({
 
 // packages/plugin-snes/src/disassembler/modification-retention.ts
 function treeIdentity(file) {
-  const hash2 = (0, import_node_crypto34.createHash)("sha256");
+  const hash2 = (0, import_node_crypto32.createHash)("sha256");
   let bytes = 0;
   let modified = 0;
   const visit = (current, relative5) => {
@@ -87753,7 +86792,7 @@ function pruneModificationRetention(options) {
     if (!selected.size || selected.size !== options.selected.length || items.length !== selected.size || items.some((item) => item.protected.length)) {
       throw new Error("Only reviewed, unprotected retention items can be removed.");
     }
-    const receiptFile = import_node_path27.default.join(root, ".retention-receipts", `${(0, import_node_crypto34.randomUUID)()}.json`);
+    const receiptFile = import_node_path27.default.join(root, ".retention-receipts", `${(0, import_node_crypto32.randomUUID)()}.json`);
     const removed = [];
     const receipt = (phase) => durableReplace(
       receiptFile,
@@ -87793,11 +86832,11 @@ function pruneModificationRetention(options) {
     }
   }
 }
-var import_node_crypto34, import_node_fs22, import_node_path27;
+var import_node_crypto32, import_node_fs22, import_node_path27;
 var init_modification_retention = __esm({
   "packages/plugin-snes/src/disassembler/modification-retention.ts"() {
     "use strict";
-    import_node_crypto34 = require("node:crypto");
+    import_node_crypto32 = require("node:crypto");
     import_node_fs22 = __toESM(require("node:fs"), 1);
     import_node_path27 = __toESM(require("node:path"), 1);
     init_src();
@@ -87813,7 +86852,6 @@ __export(src_exports3, {
   ArchSPC700: () => ArchSPC700,
   ArchSuperFX: () => ArchSuperFX,
   Cpu65816Decoder: () => Cpu65816Decoder,
-  MESEN_CE_EVIDENCE_REVISION: () => MESEN_CE_EVIDENCE_REVISION,
   MODIFICATION_MANIFEST: () => MODIFICATION_MANIFEST,
   SNES_CPU_ADDRESS_SPACE: () => SNES_CPU_ADDRESS_SPACE,
   SNES_CPU_VECTOR_DEFINITIONS: () => SNES_CPU_VECTOR_DEFINITIONS,
@@ -87888,7 +86926,6 @@ __export(src_exports3, {
   encodeSuperFxMoveShortAddress: () => encodeSuperFxMoveShortAddress,
   enterCpu65816Address: () => enterCpu65816Address,
   enterSuperFxAddress: () => enterSuperFxAddress,
-  exportMesenLabels: () => exportMesenLabels,
   exportSnes65816Source: () => exportSnes65816Source,
   exportSnesProject: () => exportSnesProject,
   extractOwnedAsset: () => extractOwnedAsset,
@@ -87913,9 +86950,6 @@ __export(src_exports3, {
   identifySnesHardwareRegister: () => identifySnesHardwareRegister,
   identifySpc700HardwareRegister: () => identifySpc700HardwareRegister,
   importDizRaw: () => importDizRaw,
-  importMesen65816Trace: () => importMesen65816Trace,
-  importMesenLabels: () => importMesenLabels,
-  importMesenSnesCdl: () => importMesenSnesCdl,
   importRomAsset: () => importRomAsset,
   indexSnesRamMap: () => indexSnesRamMap,
   initialSuperFxState: () => initialSuperFxState,
@@ -88003,8 +87037,6 @@ var init_src5 = __esm({
     init_address_identities();
     init_dizraw_import();
     init_hardware_registers();
-    init_mesen_runtime();
-    init_mesen_labels();
     init_framework_asset_helpers();
     init_rom_header();
     init_source_export2();
@@ -88055,7 +87087,7 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var path50 = __toESM(require("node:path"), 1);
+var path49 = __toESM(require("node:path"), 1);
 var import_vscode21 = require("vscode");
 var import_node4 = __toESM(require_main5(), 1);
 
@@ -92430,7 +91462,7 @@ var AssetPreviewController = class {
 
 // packages/vscode-extension/src/debug/session.ts
 var fs31 = __toESM(require("node:fs"), 1);
-var path43 = __toESM(require("node:path"), 1);
+var path42 = __toESM(require("node:path"), 1);
 init_debug_map();
 init_src2();
 
@@ -92855,421 +91887,18 @@ var parseAresRuntimeManifest = (value) => {
   });
 };
 
-// packages/debug-sidecar-mesence/src/profile.ts
-var MESEN_BACKEND_ID = "mesence-debug-server";
-var MESEN_65816_ARCHITECTURE = "snes.65816";
-var MESEN_SPC700_ARCHITECTURE = "snes.spc700";
-var MESEN_SUPERFX_ARCHITECTURE = "snes.superfx";
-var MESEN_65816_ADDRESS_SPACE = "snes.cpu";
-var MESEN_65816_WRAM_ADDRESS_SPACE = "snes.wram";
-var MESEN_65816_ROM_ADDRESS_SPACE = "snes.cartridge-rom";
-var MESEN_SPC700_ADDRESS_SPACE = "spc.aram";
-var MESEN_SUPERFX_ROM_ADDRESS_SPACE = "superfx.rom";
-var MESEN_SUPERFX_RAM_ADDRESS_SPACE = "superfx.ram";
-var MESEN_STEP_KINDS = Object.freeze(["instruction", "in"]);
-var MESEN_CAPABILITIES = Object.freeze({
-  pause: true,
-  step: true,
-  stepKinds: MESEN_STEP_KINDS,
-  registers: true,
-  memory: true,
-  stackFrames: true,
-  breakpoints: true,
-  disassemble: true,
-  reconnect: true,
-  architectures: Object.freeze([
-    Object.freeze({
-      architecture: MESEN_65816_ARCHITECTURE,
-      addressSpaces: Object.freeze([
-        MESEN_65816_ADDRESS_SPACE,
-        MESEN_65816_WRAM_ADDRESS_SPACE,
-        MESEN_65816_ROM_ADDRESS_SPACE
-      ]),
-      memorySpaces: Object.freeze([
-        Object.freeze({ addressSpace: MESEN_65816_WRAM_ADDRESS_SPACE, sideEffectFree: true }),
-        Object.freeze({ addressSpace: MESEN_65816_ROM_ADDRESS_SPACE, sideEffectFree: true })
-      ]),
-      trace: null,
-      pause: true,
-      step: true,
-      stepKinds: MESEN_STEP_KINDS,
-      registers: true,
-      memory: true,
-      stackFrames: true,
-      breakpoints: true,
-      disassemble: true
-    }),
-    Object.freeze({
-      architecture: MESEN_SPC700_ARCHITECTURE,
-      addressSpaces: Object.freeze([MESEN_SPC700_ADDRESS_SPACE]),
-      memorySpaces: Object.freeze([
-        Object.freeze({ addressSpace: MESEN_SPC700_ADDRESS_SPACE, sideEffectFree: true })
-      ]),
-      trace: null,
-      pause: true,
-      step: true,
-      stepKinds: MESEN_STEP_KINDS,
-      registers: true,
-      memory: true,
-      stackFrames: true,
-      breakpoints: false,
-      disassemble: true
-    }),
-    Object.freeze({
-      architecture: MESEN_SUPERFX_ARCHITECTURE,
-      addressSpaces: Object.freeze([
-        MESEN_SUPERFX_ROM_ADDRESS_SPACE,
-        MESEN_SUPERFX_RAM_ADDRESS_SPACE
-      ]),
-      memorySpaces: Object.freeze([
-        Object.freeze({ addressSpace: MESEN_SUPERFX_ROM_ADDRESS_SPACE, sideEffectFree: true }),
-        Object.freeze({ addressSpace: MESEN_SUPERFX_RAM_ADDRESS_SPACE, sideEffectFree: true })
-      ]),
-      trace: null,
-      pause: true,
-      step: true,
-      stepKinds: MESEN_STEP_KINDS,
-      registers: true,
-      memory: true,
-      stackFrames: true,
-      breakpoints: false,
-      disassemble: true
-    })
-  ])
-});
-
-// packages/debug-sidecar-mesence/src/mesen-process-host.ts
-var import_node_child_process4 = require("node:child_process");
-var import_node_crypto35 = require("node:crypto");
-var import_node_fs23 = require("node:fs");
-var import_node_net4 = __toESM(require("node:net"), 1);
-var import_node_path28 = __toESM(require("node:path"), 1);
-
-// packages/debug-sidecar-mesence/src/node-tcp-mesen-transport.ts
-var import_node_net3 = __toESM(require("node:net"), 1);
-var NodeTcpMesenTransport = class _NodeTcpMesenTransport {
-  #socket;
-  #shutdownTimeoutMs;
-  #dataListeners = /* @__PURE__ */ new Set();
-  #closeListeners = /* @__PURE__ */ new Set();
-  #terminalError;
-  #closed = false;
-  #notified = false;
-  constructor(socket, shutdownTimeoutMs) {
-    this.#socket = socket;
-    this.#shutdownTimeoutMs = shutdownTimeoutMs;
-    this.#socket.setNoDelay(true);
-    this.#socket.on("data", (data) => {
-      const bytes = typeof data === "string" ? Buffer.from(data) : data;
-      for (const listener of this.#dataListeners) {
-        listener(bytes);
-      }
-    });
-    this.#socket.on("error", (error) => {
-      this.#terminalError = error;
-    });
-    this.#socket.on("close", () => this.#notifyClosed(this.#terminalError));
-  }
-  /**
-   * Opens a bounded connection to a numeric loopback address.
-   * @param {NodeTcpMesenTransportOptions} options Loopback endpoint and deadlines.
-   * @returns {Promise<NodeTcpMesenTransport>} Connected transport.
-   */
-  static async connect(options) {
-    const host = options.host ?? "127.0.0.1";
-    if (host !== "127.0.0.1" && host !== "::1") {
-      throw new Error("Mesen transport host must be a numeric loopback address.");
-    }
-    if (!Number.isSafeInteger(options.port) || options.port < 1 || options.port > 65535) {
-      throw new Error("Mesen transport port must be an integer between 1 and 65535.");
-    }
-    const connectTimeoutMs = options.connectTimeoutMs ?? 3e3;
-    const shutdownTimeoutMs = options.shutdownTimeoutMs ?? 1e3;
-    for (const [name, value] of [
-      ["Mesen connect timeout", connectTimeoutMs],
-      ["Mesen shutdown timeout", shutdownTimeoutMs]
-    ]) {
-      if (!Number.isSafeInteger(value) || value <= 0) {
-        throw new Error(`${name} must be a positive safe integer.`);
-      }
-    }
-    const socket = new import_node_net3.default.Socket();
-    await new Promise((resolve12, reject) => {
-      const timeout = setTimeout(() => {
-        cleanup();
-        socket.destroy();
-        reject(new Error(`Mesen connection to ${host}:${options.port} timed out.`));
-      }, connectTimeoutMs);
-      const cleanup = () => {
-        clearTimeout(timeout);
-        socket.off("connect", connected);
-        socket.off("error", failed);
-      };
-      const connected = () => {
-        cleanup();
-        resolve12();
-      };
-      const failed = (error) => {
-        cleanup();
-        socket.destroy();
-        reject(error);
-      };
-      socket.once("connect", connected);
-      socket.once("error", failed);
-      socket.connect(options.port, host);
-    });
-    return new _NodeTcpMesenTransport(socket, shutdownTimeoutMs);
-  }
-  /** @inheritdoc */
-  write(data) {
-    if (this.#closed) {
-      return Promise.reject(new Error("Mesen TCP transport is closed."));
-    }
-    return new Promise((resolve12, reject) => {
-      this.#socket.write(data, (error) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve12();
-        }
-      });
-    });
-  }
-  /** @inheritdoc */
-  onData(listener) {
-    this.#dataListeners.add(listener);
-    return { dispose: () => this.#dataListeners.delete(listener) };
-  }
-  /** @inheritdoc */
-  onClose(listener) {
-    if (this.#notified) {
-      queueMicrotask(() => listener(this.#terminalError));
-      return { dispose: () => void 0 };
-    }
-    this.#closeListeners.add(listener);
-    return { dispose: () => this.#closeListeners.delete(listener) };
-  }
-  /** @inheritdoc */
-  async close() {
-    if (this.#closed) {
-      return;
-    }
-    this.#closed = true;
-    if (this.#socket.destroyed) {
-      this.#notifyClosed(this.#terminalError);
-      return;
-    }
-    await new Promise((resolve12) => {
-      const timeout = setTimeout(() => {
-        this.#socket.destroy();
-        resolve12();
-      }, this.#shutdownTimeoutMs);
-      this.#socket.once("close", () => {
-        clearTimeout(timeout);
-        resolve12();
-      });
-      this.#socket.end();
-    });
-  }
-  #notifyClosed(error) {
-    if (this.#notified) {
-      return;
-    }
-    this.#notified = true;
-    this.#closed = true;
-    for (const listener of this.#closeListeners) {
-      listener(error);
-    }
-    this.#closeListeners.clear();
-    this.#dataListeners.clear();
-  }
-};
-
-// packages/debug-sidecar-mesence/src/mesen-process-host.ts
-var MESEN_RUNTIME_MANIFEST_VERSION = 1;
-var sha256Pattern2 = /^[\dA-Fa-f]{64}$/;
-var revisionPattern2 = /^[\dA-Fa-f]{40}$/;
-var checkedSha2562 = (value, name) => {
-  if (!sha256Pattern2.test(value)) {
-    throw new Error(`${name} must be a 64-digit SHA-256 value.`);
-  }
-  return value.toLowerCase();
-};
-var checkedRevision2 = (value) => {
-  if (!revisionPattern2.test(value)) {
-    throw new Error("Mesen upstream revision must be a 40-digit git revision.");
-  }
-  return value.toLowerCase();
-};
-var checkedResourcePath2 = (value) => {
-  if (value === "." || value.includes("\\") || import_node_path28.default.posix.isAbsolute(value) || import_node_path28.default.posix.normalize(value) !== value || value.split("/").includes("..")) {
-    throw new Error(`Mesen resource path '${value}' must be normalized and relative.`);
-  }
-  return value;
-};
-var NodeMesenProcessHandle = class {
-  #child;
-  #exit;
-  #exited = false;
-  constructor(options) {
-    let spawnError;
-    this.#child = (0, import_node_child_process4.spawn)(options.command, [...options.args], {
-      cwd: options.cwd,
-      env: { ...process.env, ...options.env },
-      shell: false,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true
-    });
-    this.#child.stdout?.on("data", (data) => options.onOutput("stdout", data));
-    this.#child.stderr?.on("data", (data) => options.onOutput("stderr", data));
-    this.#child.once("error", (error) => {
-      spawnError = error;
-    });
-    this.#exit = new Promise((resolve12) => {
-      this.#child.once("close", (code, signal) => {
-        this.#exited = true;
-        resolve12({ code, signal, ...spawnError ? { error: spawnError } : {} });
-      });
-    });
-  }
-  get pid() {
-    return this.#child.pid;
-  }
-  get exited() {
-    return this.#exited;
-  }
-  waitForExit() {
-    return this.#exit;
-  }
-  kill(signal) {
-    if (!this.#exited) {
-      this.#child.kill(signal);
-    }
-  }
-};
-var nodeSha2562 = async (file) => {
-  const digest = (0, import_node_crypto35.createHash)("sha256");
-  for await (const chunk2 of (0, import_node_fs23.createReadStream)(file)) {
-    digest.update(chunk2);
-  }
-  return digest.digest("hex");
-};
-var reserveLoopbackPort2 = async () => {
-  const server = import_node_net4.default.createServer();
-  await new Promise((resolve12, reject) => {
-    server.once("error", reject);
-    server.listen({ host: "127.0.0.1", port: 0, exclusive: true }, resolve12);
-  });
-  const address5 = server.address();
-  if (!address5 || typeof address5 === "string") {
-    server.close();
-    throw new Error("Unable to reserve an IPv4 loopback port for MesenCE.");
-  }
-  await new Promise(
-    (resolve12, reject) => server.close((error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve12();
-      }
-    })
-  );
-  return address5.port;
-};
-var nodeMesenProcessRuntime = Object.freeze({
-  platform: process.platform,
-  architecture: process.arch,
-  sha256: nodeSha2562,
-  randomToken: () => (0, import_node_crypto35.randomBytes)(32).toString("hex"),
-  reserveLoopbackPort: reserveLoopbackPort2,
-  launch: (options) => new NodeMesenProcessHandle(options),
-  connect: (port, timeoutMs) => NodeTcpMesenTransport.connect({
-    host: "127.0.0.1",
-    port,
-    connectTimeoutMs: timeoutMs
-  }),
-  delay: (milliseconds) => new Promise((resolve12) => {
-    const timer = setTimeout(resolve12, milliseconds);
-    timer.unref();
-  })
-});
-var manifestRecord2 = (value) => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error("Mesen runtime manifest must be an object.");
-  }
-  return value;
-};
-var manifestString2 = (value, name) => {
-  if (typeof value !== "string" || value.length === 0) {
-    throw new Error(`${name} must be a non-empty string.`);
-  }
-  return value;
-};
-var parseMesenRuntimeManifest = (value) => {
-  const manifest = manifestRecord2(value);
-  if (manifest.schemaVersion !== MESEN_RUNTIME_MANIFEST_VERSION) {
-    throw new Error(
-      `Unsupported Mesen runtime manifest version ${String(manifest.schemaVersion)}.`
-    );
-  }
-  if (manifest.emulator !== "MesenCE") {
-    throw new Error("Runtime manifest is not for MesenCE.");
-  }
-  if (!Array.isArray(manifest.resources)) {
-    throw new Error("Mesen runtime manifest resources must be an array.");
-  }
-  const resources = Object.freeze(
-    manifest.resources.map((value2, index) => {
-      const resource = manifestRecord2(value2);
-      const resourcePath = checkedResourcePath2(
-        manifestString2(resource.path, `Mesen resource ${index} path`)
-      );
-      return Object.freeze({
-        path: resourcePath,
-        sha256: checkedSha2562(
-          manifestString2(resource.sha256, `Resource '${resourcePath}' SHA-256`),
-          `Resource '${resourcePath}' SHA-256`
-        )
-      });
-    })
-  );
-  if (new Set(resources.map(({ path: resourcePath }) => resourcePath)).size !== resources.length) {
-    throw new Error("Mesen runtime manifest contains duplicate resource paths.");
-  }
-  return Object.freeze({
-    schemaVersion: MESEN_RUNTIME_MANIFEST_VERSION,
-    emulator: "MesenCE",
-    upstreamRevision: checkedRevision2(
-      manifestString2(manifest.upstreamRevision, "Mesen upstream revision")
-    ),
-    patchSha256: checkedSha2562(
-      manifestString2(manifest.patchSha256, "Mesen patch SHA-256"),
-      "Mesen patch SHA-256"
-    ),
-    executableSha256: checkedSha2562(
-      manifestString2(manifest.executableSha256, "Mesen executable SHA-256"),
-      "Mesen executable SHA-256"
-    ),
-    romSha256: checkedSha2562(manifestString2(manifest.romSha256, "ROM SHA-256"), "ROM SHA-256"),
-    platform: manifestString2(manifest.platform, "Mesen manifest platform"),
-    architecture: manifestString2(manifest.architecture, "Mesen manifest architecture"),
-    buildConfiguration: manifestString2(manifest.buildConfiguration, "Mesen build configuration"),
-    resources
-  });
-};
-
 // packages/vscode-extension/src/debug/session.ts
 var import_vscode12 = require("vscode");
 
 // packages/vscode-extension/src/disassembly/maintenance.ts
 var fs29 = __toESM(require("node:fs"), 1);
-var path40 = __toESM(require("node:path"), 1);
+var path39 = __toESM(require("node:path"), 1);
 init_src();
 init_src5();
 var import_vscode11 = require("vscode");
 
 // packages/vscode-extension/src/disassembly/maintenance-client.ts
-var import_node_child_process5 = require("node:child_process");
+var import_node_child_process4 = require("node:child_process");
 
 // packages/vscode-extension/src/disassembly/maintenance-log.ts
 var seconds = (milliseconds) => `${(milliseconds / 1e3).toFixed(1)}s`;
@@ -93413,7 +92042,7 @@ var DisassemblyMaintenanceClient = class {
       );
     }
     return new Promise((resolve12, reject) => {
-      const child2 = (0, import_node_child_process5.fork)(this.processFile, [], {
+      const child2 = (0, import_node_child_process4.fork)(this.processFile, [], {
         execArgv: [`--max-old-space-size=${options.maxMemoryMiB}`],
         env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
         stdio: ["ignore", "ignore", "pipe", "ipc"]
@@ -93542,7 +92171,7 @@ var fileChanges = (before, after) => {
 };
 
 // packages/vscode-extension/src/project/snes-rom-bindings.ts
-var path39 = __toESM(require("node:path"), 1);
+var path38 = __toESM(require("node:path"), 1);
 var ROM_BINDINGS_KEY = "snesProjectRomBindings.v1";
 var MAX_ROM_BINDINGS = 32;
 var capRomBindings = (bindings, keepKey) => {
@@ -93557,12 +92186,12 @@ var capRomBindings = (bindings, keepKey) => {
 };
 var rememberedSnesRom = (context, contentSha256) => context.globalState.get(ROM_BINDINGS_KEY, {})[contentSha256]?.path;
 var rememberSnesRom = async (context, identity2, romFile) => {
-  const { sha256: sha2566, contentSha256, headerSize } = identity2;
+  const { sha256: sha2564, contentSha256, headerSize } = identity2;
   const next = {
     ...context.globalState.get(ROM_BINDINGS_KEY, {}),
     [contentSha256]: {
-      path: path39.resolve(romFile),
-      fileSha256: sha2566,
+      path: path38.resolve(romFile),
+      fileSha256: sha2564,
       contentSha256,
       headerSize,
       updatedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -94004,20 +92633,20 @@ var showMarkdown = async (content) => {
   );
 };
 var insideWorkspace = (directory) => {
-  const absolute = path40.resolve(directory);
+  const absolute = path39.resolve(directory);
   return (import_vscode11.workspace.workspaceFolders ?? []).some((folder) => {
     if (folder.uri.scheme !== "file") {
       return false;
     }
-    const relative5 = path40.relative(path40.resolve(folder.uri.fsPath), absolute);
-    return relative5 === "" || relative5 !== ".." && !relative5.startsWith(`..${path40.sep}`) && !path40.isAbsolute(relative5);
+    const relative5 = path39.relative(path39.resolve(folder.uri.fsPath), absolute);
+    return relative5 === "" || relative5 !== ".." && !relative5.startsWith(`..${path39.sep}`) && !path39.isAbsolute(relative5);
   });
 };
 var readProjectChoice = (directory) => {
   const manifest = parseAnalysisProjectManifest(
-    JSON.parse(fs29.readFileSync(path40.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+    JSON.parse(fs29.readFileSync(path39.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
   );
-  return { directory: path40.resolve(directory), manifest };
+  return { directory: path39.resolve(directory), manifest };
 };
 var chooseProject = async (preferred, romContentSha256) => {
   if (preferred) {
@@ -94046,7 +92675,7 @@ var chooseProject = async (preferred, romContentSha256) => {
   }
   return (await import_vscode11.window.showQuickPick(
     choices.map((choice) => ({
-      label: path40.basename(choice.directory),
+      label: path39.basename(choice.directory),
       description: choice.directory,
       choice
     })),
@@ -94072,13 +92701,13 @@ var chooseSource = async (project, preferred) => {
     if (!insideWorkspace(preferred)) {
       throw new Error("Generated source must be inside the trusted workspace.");
     }
-    const manifest = sourceMatches(path40.resolve(preferred), project);
+    const manifest = sourceMatches(path39.resolve(preferred), project);
     if (!manifest) {
       throw new Error("The selected source export does not match this analysis project.");
     }
-    return { directory: path40.resolve(preferred), manifest };
+    return { directory: path39.resolve(preferred), manifest };
   }
-  const nearby = path40.dirname(project.directory);
+  const nearby = path39.dirname(project.directory);
   const nearManifest = sourceMatches(nearby, project);
   if (nearManifest) {
     return { directory: nearby, manifest: nearManifest };
@@ -94089,7 +92718,7 @@ var chooseSource = async (project, preferred) => {
     64
   );
   const matches = files.flatMap((file) => {
-    const directory = path40.dirname(file.fsPath);
+    const directory = path39.dirname(file.fsPath);
     const manifest = insideWorkspace(directory) ? sourceMatches(directory, project) : void 0;
     return manifest ? [{ directory, manifest }] : [];
   });
@@ -94101,7 +92730,7 @@ var chooseSource = async (project, preferred) => {
   }
   return (await import_vscode11.window.showQuickPick(
     matches.map((match) => ({
-      label: path40.basename(match.directory),
+      label: path39.basename(match.directory),
       description: match.directory,
       match
     })),
@@ -94119,8 +92748,8 @@ var exactRom = (file, manifest) => {
 var chooseRom = async (context, project, sourceDirectory, source) => {
   const candidates = [
     rememberedSnesRom(context, project.manifest.rom.contentSha256),
-    path40.join(sourceDirectory, source.finalOutput),
-    ...project.manifest.rom.headerSize === 0 ? [path40.join(sourceDirectory, source.contentOutput)] : []
+    path39.join(sourceDirectory, source.finalOutput),
+    ...project.manifest.rom.headerSize === 0 ? [path39.join(sourceDirectory, source.contentOutput)] : []
   ].filter((value) => Boolean(value));
   for (const file2 of candidates) {
     if (fs29.existsSync(file2) && exactRom(file2, project.manifest)) {
@@ -94377,7 +93006,7 @@ var statusReport = async (client3, resolved) => {
     `- Source status: ${current ? "current" : `STALE \u2014 ${staleReasons.join(". ")}`}`,
     `- Generated-file integrity: ${integrity}`,
     `- Source-input integrity: ${inputIntegrity}`,
-    `- Publication verification: ${publication?.phase === "published" && publication.revision === resolved.sourceManifest.sourceProjectSha256 && publication.after === sourceExportSha256(fs29.readFileSync(path40.join(resolved.sourceDirectory, SOURCE_EXPORT_MANIFEST))) ? `verified ${publication.romSha256} at ${publication.verifiedAt}` : "no matching durable verification receipt"}`,
+    `- Publication verification: ${publication?.phase === "published" && publication.revision === resolved.sourceManifest.sourceProjectSha256 && publication.after === sourceExportSha256(fs29.readFileSync(path39.join(resolved.sourceDirectory, SOURCE_EXPORT_MANIFEST))) ? `verified ${publication.romSha256} at ${publication.verifiedAt}` : "no matching durable verification receipt"}`,
     ...publication ? [
       `- Last publication: ${publication.id} (${publication.phase})`,
       `- Retained previous generation: ${publication.previous}`
@@ -94474,7 +93103,7 @@ var withMaintenanceProgress = async (title, action, sourceDirectory) => import_v
 );
 var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
   const client3 = new DisassemblyMaintenanceClient(
-    path40.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs"),
+    path39.join(context.extensionUri.fsPath, "out", "disassembly-maintenance-process.cjs"),
     outputChannel2
   );
   const activeProjects = /* @__PURE__ */ new Set();
@@ -94520,7 +93149,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
         if (!selected) {
           throw new Error("Choose a native analysis project to recover.");
         }
-        const sourceDirectory = target?.sourceDirectory ?? path40.dirname(selected.directory);
+        const sourceDirectory = target?.sourceDirectory ?? path39.dirname(selected.directory);
         const result = await withMaintenanceProgress(
           "Assembly: recovering source publication",
           (options) => client3.run(
@@ -94571,7 +93200,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
         if (selected.manifest.target !== "snes.sfc") {
           throw new Error("Function heuristics require a SNES analysis project.");
         }
-        const file = path40.join(selected.directory, "heuristics.json");
+        const file = path39.join(selected.directory, "heuristics.json");
         try {
           await fs29.promises.writeFile(
             file,
@@ -94602,7 +93231,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
         if (!selected) {
           throw new Error("No native analysis project was found in the workspace.");
         }
-        const file = path40.join(selected.directory, "heuristics.json");
+        const file = path39.join(selected.directory, "heuristics.json");
         if (import_vscode11.workspace.textDocuments.some(
           (document) => document.uri.fsPath === file && document.isDirty
         )) {
@@ -94655,7 +93284,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
         }
         loadSnesRamMap(resolved.sourceDirectory);
         await import_vscode11.window.showTextDocument(
-          import_vscode11.Uri.file(path40.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
+          import_vscode11.Uri.file(path39.join(resolved.sourceDirectory, SNES_RAM_MAP_SOURCE)),
           { preview: false }
         );
       })
@@ -94820,7 +93449,7 @@ var registerDisassemblyMaintenance = (context, refresh, outputChannel2) => {
 };
 
 // packages/vscode-extension/src/runtime/binding.ts
-var path41 = __toESM(require("node:path"), 1);
+var path40 = __toESM(require("node:path"), 1);
 var runtimeBindingFromLaunch = (configurations, root) => {
   const bindings = /* @__PURE__ */ new Map();
   for (const configuration of configurations) {
@@ -94828,7 +93457,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
       continue;
     }
     const config = configuration;
-    if (config.type !== "uttori-asm" || config.request !== "launch" || config.backend !== "ares" && config.backend !== "mesence") {
+    if (config.type !== "uttori-asm" || config.request !== "launch" || config.backend !== "ares") {
       continue;
     }
     const resolve12 = (value) => {
@@ -94836,7 +93465,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
         return void 0;
       }
       const expanded = value.replaceAll("${workspaceFolder}", root);
-      return expanded.includes("${") ? void 0 : path41.resolve(root, expanded);
+      return expanded.includes("${") ? void 0 : path40.resolve(root, expanded);
     };
     const runtimeManifest = resolve12(config.runtimeManifest);
     const emulator = resolve12(config.emulator);
@@ -94845,7 +93474,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
       continue;
     }
     const binding = {
-      backend: config.backend,
+      backend: "ares",
       runtimeManifest,
       emulator,
       runtimeDirectory,
@@ -94858,7 +93487,7 @@ var runtimeBindingFromLaunch = (configurations, root) => {
 };
 
 // packages/vscode-extension/src/runtime/live-bus-analysis.ts
-var import_node_child_process6 = require("node:child_process");
+var import_node_child_process5 = require("node:child_process");
 var LiveBusAnalysis = class {
   /** Resolves only after guarded project publication. Rejection leaves the recording available. */
   completion;
@@ -94872,7 +93501,7 @@ var LiveBusAnalysis = class {
     if (!Number.isSafeInteger(maxMemoryMiB) || maxMemoryMiB < 128) {
       throw new Error("Live analysis requires a heap budget of at least 128 MiB.");
     }
-    this.#worker = (0, import_node_child_process6.fork)(workerFile, [], {
+    this.#worker = (0, import_node_child_process5.fork)(workerFile, [], {
       execArgv: [`--max-old-space-size=${maxMemoryMiB}`],
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
       stdio: ["ignore", "ignore", "pipe", "ipc"]
@@ -95322,37 +93951,37 @@ var createSnesDebugAddressResolvers = (map, output) => {
 };
 
 // packages/vscode-extension/src/debug/source-root.ts
-var import_node_fs24 = __toESM(require("node:fs"), 1);
-var import_node_path29 = __toESM(require("node:path"), 1);
+var import_node_fs23 = __toESM(require("node:fs"), 1);
+var import_node_path28 = __toESM(require("node:path"), 1);
 var sourceMatches2 = (root, source) => {
-  if (import_node_path29.default.isAbsolute(source.path)) {
+  if (import_node_path28.default.isAbsolute(source.path)) {
     return false;
   }
-  const resolved = import_node_path29.default.resolve(root, source.path);
-  const relative5 = import_node_path29.default.relative(root, resolved);
-  if (!relative5 || relative5.startsWith(`..${import_node_path29.default.sep}`) || import_node_path29.default.isAbsolute(relative5)) {
+  const resolved = import_node_path28.default.resolve(root, source.path);
+  const relative5 = import_node_path28.default.relative(root, resolved);
+  if (!relative5 || relative5.startsWith(`..${import_node_path28.default.sep}`) || import_node_path28.default.isAbsolute(relative5)) {
     return false;
   }
   try {
-    const stat3 = import_node_fs24.default.statSync(resolved);
+    const stat3 = import_node_fs23.default.statSync(resolved);
     return stat3.isFile() && stat3.size === source.size;
   } catch {
     return false;
   }
 };
 var resolveDebugSourceRoot = (options) => {
-  const configuredRoot = import_node_path29.default.resolve(options.configuredRoot);
+  const configuredRoot = import_node_path28.default.resolve(options.configuredRoot);
   const candidates = [
     configuredRoot,
-    ...options.workspaceRoot ? [import_node_path29.default.resolve(options.workspaceRoot)] : [],
-    import_node_path29.default.dirname(import_node_path29.default.resolve(options.debugMapFile)),
+    ...options.workspaceRoot ? [import_node_path28.default.resolve(options.workspaceRoot)] : [],
+    import_node_path28.default.dirname(import_node_path28.default.resolve(options.debugMapFile)),
     // Generated ROMs/maps commonly live in build/, with mapped sources in its parent.
-    import_node_path29.default.dirname(import_node_path29.default.dirname(import_node_path29.default.resolve(options.debugMapFile))),
-    import_node_path29.default.dirname(import_node_path29.default.resolve(options.programFile)),
-    import_node_path29.default.dirname(import_node_path29.default.dirname(import_node_path29.default.resolve(options.programFile)))
+    import_node_path28.default.dirname(import_node_path28.default.dirname(import_node_path28.default.resolve(options.debugMapFile))),
+    import_node_path28.default.dirname(import_node_path28.default.resolve(options.programFile)),
+    import_node_path28.default.dirname(import_node_path28.default.dirname(import_node_path28.default.resolve(options.programFile)))
   ];
   const unique2 = [...new Set(candidates)];
-  const relativeSources = options.map.sources.filter((source) => !import_node_path29.default.isAbsolute(source.path)).slice(0, 128);
+  const relativeSources = options.map.sources.filter((source) => !import_node_path28.default.isAbsolute(source.path)).slice(0, 128);
   if (relativeSources.length === 0) {
     return configuredRoot;
   }
@@ -95422,11 +94051,6 @@ var configureEmulatorRuntime = async (context, resource) => {
         label: "ares",
         description: "65816 debugging and runtime capture. Select a desktop manifest for a game window.",
         backend: "ares"
-      },
-      {
-        label: "MesenCE",
-        description: "65816, SPC700, and Super FX inspection. No instruction capture stream yet.",
-        backend: "mesence"
       }
     ],
     { placeHolder: "Select the live emulator backend" }
@@ -95457,17 +94081,14 @@ var configureEmulatorRuntime = async (context, resource) => {
     return void 0;
   }
   const manifest = JSON.parse(fs31.readFileSync(runtimeManifest, "utf8"));
-  if (selectedBackend.backend === "ares") {
-    parseAresRuntimeManifest(manifest);
-  } else {
-    parseMesenRuntimeManifest(manifest);
-  }
+  parseAresRuntimeManifest(manifest);
   const binding = {
-    backend: selectedBackend.backend,
+    backend: "ares",
     runtimeManifest,
     emulator,
     runtimeDirectory,
-    ...selectedBackend.backend === "ares" ? { aresSystem: "Super Famicom", fastBoot: true } : {}
+    aresSystem: "Super Famicom",
+    fastBoot: true
   };
   const bindings = context.globalState.get(
     EMULATOR_RUNTIME_BINDINGS_KEY,
@@ -95485,13 +94106,13 @@ var configureEmulatorRuntime = async (context, resource) => {
 var liveDebugConfiguration = (binding, artifacts, folder) => ({
   type: UTTORI_ASM_DEBUG_TYPE,
   request: "launch",
-  name: `Debug Uttori ASM (${binding.backend === "mesence" ? "MesenCE" : "ares"})`,
+  name: "Debug Uttori ASM (ares)",
   backend: binding.backend,
   program: artifacts.outputPath,
   debugMap: artifacts.debugMapPath,
   ...artifacts.outputSha256 ? { outputSha256: artifacts.outputSha256 } : {},
   ...artifacts.debugMapFingerprint ? { debugMapFingerprint: artifacts.debugMapFingerprint } : {},
-  sourceRoot: folder?.uri.fsPath ?? path43.dirname(artifacts.outputPath),
+  sourceRoot: folder?.uri.fsPath ?? path42.dirname(artifacts.outputPath),
   runtimeManifest: binding.runtimeManifest,
   emulator: binding.emulator,
   runtimeDirectory: binding.runtimeDirectory,
@@ -95502,7 +94123,7 @@ var activeTraceRecording;
 var debuggingExtensionRoot = "";
 var liveAnalyses = /* @__PURE__ */ new Set();
 var sessionContexts = /* @__PURE__ */ new Map();
-var resolvedPath = (value, folder) => path43.isAbsolute(value) ? value : path43.resolve(folder?.uri.fsPath ?? process.cwd(), value);
+var resolvedPath = (value, folder) => path42.isAbsolute(value) ? value : path42.resolve(folder?.uri.fsPath ?? process.cwd(), value);
 var requiredLivePath = (value, name, folder) => {
   if (!value) {
     throw new Error(`Live Uttori ASM debugging requires '${name}'.`);
@@ -95570,7 +94191,7 @@ var defaultTraceUri = (session, extension, bus) => {
   }
   const timestamp = (/* @__PURE__ */ new Date()).toISOString().replaceAll(":", "-");
   const prefix = bus ? "bus-trace" : "instruction-trace";
-  return import_vscode12.Uri.file(path43.join(root, `${prefix}-${timestamp}.${extension}`));
+  return import_vscode12.Uri.file(path42.join(root, `${prefix}-${timestamp}.${extension}`));
 };
 var startRuntimeTraceWithLease = async () => {
   if (activeTraceRecording) {
@@ -95646,7 +94267,7 @@ var startRuntimeTraceWithLease = async () => {
       status.show();
       try {
         live = new LiveBusAnalysis(
-          path43.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
+          path42.join(debuggingExtensionRoot, "out", "live-bus-analysis-process.cjs"),
           {
             file: destination.fsPath,
             projectDirectory: liveProject,
@@ -95890,9 +94511,8 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
   if (!import_vscode12.workspace.isTrusted) {
     throw new Error("Live Uttori ASM debugging requires a trusted workspace.");
   }
-  const kind = configuration.backend;
-  if (kind !== "ares" && kind !== "mesence") {
-    throw new Error(`Unsupported live Uttori ASM backend '${String(kind)}'.`);
+  if (configuration.backend !== "ares") {
+    throw new Error(`Unsupported live Uttori ASM backend '${String(configuration.backend)}'.`);
   }
   const manifest = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
   const emulator = requiredLivePath(configuration.emulator, "emulator", folder);
@@ -95901,25 +94521,18 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
     "runtimeDirectory",
     folder
   );
-  const bundledSidecar = path43.join(
-    extensionRoot,
-    "sidecars",
-    kind === "ares" ? "ares.mjs" : "mesence.mjs"
-  );
+  const bundledSidecar = path42.join(extensionRoot, "sidecars", "ares.mjs");
   const sidecar = configuration.sidecar ? resolvedPath(configuration.sidecar, folder) : bundledSidecar;
-  const backend = kind === "ares" ? ARES_RSP_BACKEND_ID : MESEN_BACKEND_ID;
-  const capabilities = kind === "ares" ? ARES_RSP_CAPABILITIES : MESEN_CAPABILITIES;
   return new SidecarDebugBackend({
-    backend,
-    capabilities,
+    backend: ARES_RSP_BACKEND_ID,
+    capabilities: ARES_RSP_CAPABILITIES,
     createClient: () => {
       const session = createDebugSidecarSessionToken();
-      const emulatorFlag = kind === "ares" ? "--ares" : "--mesen";
       const args = [
         sidecar,
         "--manifest",
         manifest,
-        emulatorFlag,
+        "--ares",
         emulator,
         "--rom",
         program,
@@ -95928,10 +94541,10 @@ var createLiveBackend = (configuration, folder, extensionRoot, program, romSha25
         "--runtime-dir",
         runtimeDirectory
       ];
-      if (kind === "ares" && configuration.aresSystem) {
+      if (configuration.aresSystem) {
         args.push("--system", configuration.aresSystem);
       }
-      if (kind === "ares" && configuration.fastBoot === false) {
+      if (configuration.fastBoot === false) {
         args.push("--no-fast-boot");
       }
       const transport = new NodeStdioSidecarTransport({
@@ -96060,7 +94673,7 @@ var UttoriDebugConfigurationProvider = class {
     const configuredProgram = typeof configuration.program === "string" ? configuration.program : void 0;
     const configuredMap = typeof configuration.debugMap === "string" ? configuration.debugMap : void 0;
     const configuredSourceRoot = typeof configuration.sourceRoot === "string" ? configuration.sourceRoot : void 0;
-    const program = configuredProgram ?? path43.join(root, "build", "rebuilt-content.sfc");
+    const program = configuredProgram ?? path42.join(root, "build", "rebuilt-content.sfc");
     return {
       ...configuration,
       type: typeof configuration.type === "string" ? configuration.type : UTTORI_ASM_DEBUG_TYPE,
@@ -96184,8 +94797,8 @@ var registerDebugging = (extensionRoot) => {
 };
 
 // packages/vscode-extension/src/disassembly/metadata-controller.ts
-var import_node_crypto36 = require("node:crypto");
-var import_node_path30 = __toESM(require("node:path"), 1);
+var import_node_crypto33 = require("node:crypto");
+var import_node_path29 = __toESM(require("node:path"), 1);
 init_src();
 init_src5();
 var import_vscode13 = require("vscode");
@@ -96237,7 +94850,7 @@ var DisassemblyMetadataController = class {
       if (!project) {
         const choice = await import_vscode13.window.showQuickPick(
           projects.map((item) => ({
-            label: import_node_path30.default.basename(item.directory),
+            label: import_node_path29.default.basename(item.directory),
             description: item.directory,
             project: item
           })),
@@ -96249,7 +94862,7 @@ var DisassemblyMetadataController = class {
         project = choice.project;
       }
       const directory = project.directory;
-      const sourceDirectory = target.sourceDirectory ?? managed?.directory ?? import_node_path30.default.dirname(directory);
+      const sourceDirectory = target.sourceDirectory ?? managed?.directory ?? import_node_path29.default.dirname(directory);
       let source;
       let selectedId = target.selectedId;
       let shard = target.shard ?? "labels";
@@ -96300,7 +94913,7 @@ var DisassemblyMetadataController = class {
         if (target.action && owner2?.kind !== "label") {
           if (target.action === "remove-label" && owner2?.kind === "function" && anchor) {
             generatedSuppression = {
-              id: `manual-hidden-name:${(0, import_node_crypto36.randomUUID)()}`,
+              id: `manual-hidden-name:${(0, import_node_crypto33.randomUUID)()}`,
               ...anchor,
               name: owner2.symbol ?? "Generated_Function",
               suppressed: true,
@@ -96338,7 +94951,7 @@ var DisassemblyMetadataController = class {
       let reviewed;
       let busy = false;
       let draftGeneration = 0;
-      let draftId = (0, import_node_crypto36.randomUUID)();
+      let draftId = (0, import_node_crypto33.randomUUID)();
       let draftText;
       const send = (value) => {
         void panel.webview.postMessage(value);
@@ -96357,7 +94970,7 @@ var DisassemblyMetadataController = class {
           return;
         }
         if (input.type === "draft-new") {
-          draftId = (0, import_node_crypto36.randomUUID)();
+          draftId = (0, import_node_crypto33.randomUUID)();
           draftText = void 0;
           reviewed = void 0;
           draftGeneration++;
@@ -96433,7 +95046,7 @@ var DisassemblyMetadataController = class {
             if (!page || !input.request) {
               throw new Error("Load a record before previewing an edit.");
             }
-            const id = (0, import_node_crypto36.randomUUID)();
+            const id = (0, import_node_crypto33.randomUUID)();
             const request = {
               ...input.request,
               id: `metadata:${id}`,
@@ -96477,7 +95090,7 @@ var DisassemblyMetadataController = class {
           } else if (input.type === "map-preview" || input.type === "map-restore-preview") {
             const intent = {
               action: input.type,
-              operationId: (0, import_node_crypto36.randomUUID)(),
+              operationId: (0, import_node_crypto33.randomUUID)(),
               receiptId: input.receiptId,
               revision: page?.revision,
               map: input.map
@@ -96582,16 +95195,16 @@ var DisassemblyMetadataController = class {
 };
 
 // packages/vscode-extension/src/disassembly/modification-controller.ts
-var import_node_fs26 = __toESM(require("node:fs"), 1);
-var import_node_path32 = __toESM(require("node:path"), 1);
+var import_node_fs25 = __toESM(require("node:fs"), 1);
+var import_node_path31 = __toESM(require("node:path"), 1);
 init_src();
 init_src5();
 var import_vscode15 = require("vscode");
 
 // packages/vscode-extension/src/disassembly/rom-workbench.ts
-var import_node_crypto37 = require("node:crypto");
-var import_node_fs25 = __toESM(require("node:fs"), 1);
-var import_node_path31 = __toESM(require("node:path"), 1);
+var import_node_crypto34 = require("node:crypto");
+var import_node_fs24 = __toESM(require("node:fs"), 1);
+var import_node_path30 = __toESM(require("node:path"), 1);
 init_src();
 init_src5();
 var import_vscode14 = require("vscode");
@@ -96607,8 +95220,8 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
     }
   );
   panel.webview.html = renderWebviewTemplate(panel.webview, extensionUri, "rom-editor");
-  let rawDraftId = (0, import_node_crypto37.randomUUID)();
-  const root = import_node_path31.default.dirname(import_node_path31.default.resolve(manifestFile));
+  let rawDraftId = (0, import_node_crypto34.randomUUID)();
+  const root = import_node_path30.default.dirname(import_node_path30.default.resolve(manifestFile));
   let busy = false;
   let generation = 0;
   let selected;
@@ -96623,7 +95236,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
     send({
       type: "project",
       project: loadRomModificationProject(manifestFile),
-      manifestSha256: sourceExportSha256(import_node_fs25.default.readFileSync(manifestFile)),
+      manifestSha256: sourceExportSha256(import_node_fs24.default.readFileSync(manifestFile)),
       file: manifestFile
     });
   };
@@ -96636,7 +95249,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
         const text2 = JSON.stringify({ selected, document: message.document });
         if (Buffer.byteLength(text2) <= 10 * 1024 * 1024) {
           try {
-            durableReplace(import_node_path31.default.join(root, ".editor-drafts", rawDraftId, "form.json"), text2);
+            durableReplace(import_node_path30.default.join(root, ".editor-drafts", rawDraftId, "form.json"), text2);
           } catch (error) {
             send({ type: "error", text: `Draft recovery could not be saved: ${String(error)}` });
           }
@@ -96667,25 +95280,25 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
           }
           send({ type: "navigate", tab: initialTab });
         } else if (message.type === "select" && message.id) {
-          rawDraftId = (0, import_node_crypto37.randomUUID)();
+          rawDraftId = (0, import_node_crypto34.randomUUID)();
           selected = readRomEditor({ manifestFile, id: message.id });
           reviewId = void 0;
           send({ type: "document", ...selected });
         } else if (message.type === "recover") {
-          const directory = import_node_path31.default.join(root, ".editor-drafts");
-          const drafts = import_node_fs25.default.existsSync(directory) ? import_node_fs25.default.readdirSync(directory).filter(
-            (id) => /^[\da-f-]{36}$/.test(id) && import_node_fs25.default.existsSync(import_node_path31.default.join(directory, id, "form.json")) && !import_node_fs25.default.existsSync(import_node_path31.default.join(directory, id, "saved.json"))
+          const directory = import_node_path30.default.join(root, ".editor-drafts");
+          const drafts = import_node_fs24.default.existsSync(directory) ? import_node_fs24.default.readdirSync(directory).filter(
+            (id) => /^[\da-f-]{36}$/.test(id) && import_node_fs24.default.existsSync(import_node_path30.default.join(directory, id, "form.json")) && !import_node_fs24.default.existsSync(import_node_path30.default.join(directory, id, "saved.json"))
           ) : [];
           const choice = await import_vscode14.window.showQuickPick(
             drafts.map((id) => ({
               label: id,
-              description: import_node_fs25.default.statSync(import_node_path31.default.join(directory, id, "form.json")).mtime.toISOString()
+              description: import_node_fs24.default.statSync(import_node_path30.default.join(directory, id, "form.json")).mtime.toISOString()
             })),
             { title: "Recover visual editor draft" }
           );
           if (choice) {
             const saved = JSON.parse(
-              import_node_fs25.default.readFileSync(import_node_path31.default.join(directory, choice.label, "form.json"), "utf8")
+              import_node_fs24.default.readFileSync(import_node_path30.default.join(directory, choice.label, "form.json"), "utf8")
             );
             selected = saved.selected;
             rawDraftId = choice.label;
@@ -96715,7 +95328,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
           reviewId = void 0;
           try {
             durableReplace(
-              import_node_path31.default.join(root, ".editor-drafts", rawDraftId, "saved.json"),
+              import_node_path30.default.join(root, ".editor-drafts", rawDraftId, "saved.json"),
               JSON.stringify({ saved: true })
             );
           } catch (error) {
@@ -96724,7 +95337,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
               text: `Input saved; recovery marker could not be written: ${String(error)}`
             });
           }
-          rawDraftId = (0, import_node_crypto37.randomUUID)();
+          rawDraftId = (0, import_node_crypto34.randomUUID)();
           if (selected) {
             selected = readRomEditor({ manifestFile, id: selected.entry.id });
             send({ type: "document", ...selected });
@@ -96742,15 +95355,15 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
           });
         } else if (message.type === "metadata") {
           const bound = loadRomModificationProject(manifestFile);
-          const sourceDirectory = import_node_path31.default.resolve(root, bound.baseline.sourceDirectory);
+          const sourceDirectory = import_node_path30.default.resolve(root, bound.baseline.sourceDirectory);
           await import_vscode14.commands.executeCommand("asm.disassembly.editMetadata", {
-            projectDirectory: import_node_path31.default.join(sourceDirectory, "analysis"),
+            projectDirectory: import_node_path30.default.join(sourceDirectory, "analysis"),
             sourceDirectory,
             useActiveSelection: false
           });
         } else if (message.type === "source" && selected) {
           await import_vscode14.window.showTextDocument(
-            import_vscode14.Uri.file(import_node_path31.default.resolve(import_node_path31.default.dirname(manifestFile), selected.entry.input)),
+            import_vscode14.Uri.file(import_node_path30.default.resolve(import_node_path30.default.dirname(manifestFile), selected.entry.input)),
             { viewColumn: import_vscode14.ViewColumn.Beside }
           );
         } else if (message.type === "allocation" && message.plan) {
@@ -96824,7 +95437,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
         } else if (message.type === "migration-apply" && migrationId && message.selected) {
           const destination = await import_vscode14.window.showSaveDialog({
             title: "New workspace for migrated research",
-            defaultUri: import_vscode14.Uri.file(import_node_path31.default.join(import_node_path31.default.dirname(manifestFile), "migrated-analysis"))
+            defaultUri: import_vscode14.Uri.file(import_node_path30.default.join(import_node_path30.default.dirname(manifestFile), "migrated-analysis"))
           });
           if (destination) {
             const result = await run("metadataMigrationApply", {
@@ -96845,7 +95458,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
             filters: { JSON: ["json"] }
           }))?.[0]?.fsPath;
           if (file) {
-            const bytes = import_node_fs25.default.readFileSync(file);
+            const bytes = import_node_fs24.default.readFileSync(file);
             const value = JSON.parse(bytes.toString());
             if (value.format !== "uttori-rom-rebase-review") {
               throw new Error("Select a ROM rebase review.");
@@ -96854,7 +95467,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
             send({ type: "rebase", review: value });
           }
         } else if ((message.type === "rebase-save" || message.type === "rebase-accept" || message.type === "rebase-refresh") && rebase) {
-          if (sourceExportSha256(import_node_fs25.default.readFileSync(rebase.file)) !== rebase.hash) {
+          if (sourceExportSha256(import_node_fs24.default.readFileSync(rebase.file)) !== rebase.hash) {
             throw new Error("Rebase review changed on disk. Reopen it.");
           }
           const resolutions = message.resolutions ?? {};
@@ -96864,7 +95477,7 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
             throw new Error("Invalid conflict resolution.");
           }
           durableReplace(rebase.file, JSON.stringify({ ...rebase.value, resolutions }, null, 2));
-          rebase.hash = sourceExportSha256(import_node_fs25.default.readFileSync(rebase.file));
+          rebase.hash = sourceExportSha256(import_node_fs24.default.readFileSync(rebase.file));
           rebase.value = { ...rebase.value, resolutions };
           if (message.type === "rebase-accept") {
             const result = await run("rebaseAccept", { reviewFile: rebase.file });
@@ -96874,8 +95487,8 @@ function openRomWorkbench(extensionUri, manifestFile, run, initialTab = "edit") 
             });
           } else if (message.type === "rebase-refresh") {
             await run("rebaseRefresh", { reviewFile: rebase.file, reviewSha256: rebase.hash });
-            rebase.value = JSON.parse(import_node_fs25.default.readFileSync(rebase.file, "utf8"));
-            rebase.hash = sourceExportSha256(import_node_fs25.default.readFileSync(rebase.file));
+            rebase.value = JSON.parse(import_node_fs24.default.readFileSync(rebase.file, "utf8"));
+            rebase.hash = sourceExportSha256(import_node_fs24.default.readFileSync(rebase.file));
             send({ type: "rebase", review: rebase.value });
           } else {
             send({
@@ -96907,7 +95520,7 @@ var ModificationController = class {
     this.buildCompleted = buildCompleted;
     this.inputChanged = inputChanged;
     this.#worker = new DisassemblyMaintenanceClient(
-      import_node_path32.default.join(context.extensionPath, "out/disassembly-maintenance-process.cjs"),
+      import_node_path31.default.join(context.extensionPath, "out/disassembly-maintenance-process.cjs"),
       output
     );
     this.#status.command = "asm.buildTarget.select";
@@ -97048,10 +95661,10 @@ var ModificationController = class {
       return void 0;
     }
     const root = import_vscode15.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!root && !import_node_path32.default.isAbsolute(relative5)) {
+    if (!root && !import_node_path31.default.isAbsolute(relative5)) {
       return void 0;
     }
-    return import_node_path32.default.resolve(root ?? ".", relative5);
+    return import_node_path31.default.resolve(root ?? ".", relative5);
   }
   /** Modified watches include manifest, interface, assembly includes and binary inputs, excluding build outputs.
    * @param {string} file Absolute changed filename.
@@ -97062,10 +95675,10 @@ var ModificationController = class {
     if (this.target !== "modified" || !manifest) {
       return false;
     }
-    if (this.#baselineInputs.has(import_node_path32.default.resolve(file))) {
+    if (this.#baselineInputs.has(import_node_path31.default.resolve(file))) {
       return true;
     }
-    const relative5 = import_node_path32.default.relative(import_node_path32.default.dirname(manifest), file).split(import_node_path32.default.sep).join("/");
+    const relative5 = import_node_path31.default.relative(import_node_path31.default.dirname(manifest), file).split(import_node_path31.default.sep).join("/");
     return relative5 === "modification.json" || relative5 === "baseline-interface.asm" || relative5.startsWith("inputs/");
   }
   /** Route generic Build/Run/Debug through the selected target. Undefined retains ordinary assembly projects.
@@ -97098,7 +95711,7 @@ var ModificationController = class {
         }
         this.#baseline = target;
         const verified = await this.run("verify", target);
-        const map = JSON.parse(import_node_fs26.default.readFileSync(verified.debugMap, "utf8"));
+        const map = JSON.parse(import_node_fs25.default.readFileSync(verified.debugMap, "utf8"));
         result = {
           ok: true,
           outputPath: verified.contentOutput,
@@ -97141,7 +95754,7 @@ var ModificationController = class {
       return;
     }
     const watcher = import_vscode15.workspace.createFileSystemWatcher(
-      new import_vscode15.RelativePattern(import_node_path32.default.dirname(manifest), "**/*")
+      new import_vscode15.RelativePattern(import_node_path31.default.dirname(manifest), "**/*")
     );
     const changed = (uri) => {
       if (this.watches(uri.fsPath)) {
@@ -97156,7 +95769,7 @@ var ModificationController = class {
     ];
     try {
       const project = loadRomModificationProject(manifest);
-      const source = import_node_path32.default.resolve(import_node_path32.default.dirname(manifest), project.baseline.sourceDirectory);
+      const source = import_node_path31.default.resolve(import_node_path31.default.dirname(manifest), project.baseline.sourceDirectory);
       const exported = loadSourceExportManifest(source);
       for (const name of [
         "generated-files.json",
@@ -97164,7 +95777,7 @@ var ModificationController = class {
         ...exported.files.map((entry) => entry.path),
         ...(exported.inputs ?? []).map((entry) => entry.path)
       ]) {
-        this.#baselineInputs.add(import_node_path32.default.join(source, name));
+        this.#baselineInputs.add(import_node_path31.default.join(source, name));
       }
       const baselineWatcher = import_vscode15.workspace.createFileSystemWatcher(
         new import_vscode15.RelativePattern(source, "**/*")
@@ -97252,7 +95865,7 @@ var ModificationController = class {
     if (!name) {
       return;
     }
-    const directory = import_node_path32.default.join(import_node_path32.default.dirname(target.sourceDirectory), name);
+    const directory = import_node_path31.default.join(import_node_path31.default.dirname(target.sourceDirectory), name);
     const file = await this.run("modificationCreate", {
       sourceDirectory: target.sourceDirectory,
       romFile: target.romFile,
@@ -97334,7 +95947,7 @@ var ModificationController = class {
       }
       size = parse(sizeText);
     }
-    const rom = RomImage.load(import_node_path32.default.resolve(import_node_path32.default.dirname(manifestFile), project.baseline.romFile), {
+    const rom = RomImage.load(import_node_path31.default.resolve(import_node_path31.default.dirname(manifestFile), project.baseline.romFile), {
       headerSize: project.baseline.rom.headerSize
     });
     const original = Buffer.from(rom.read(offset, size) ?? []);
@@ -97439,7 +96052,7 @@ var ModificationController = class {
         return;
       }
       const recipe = JSON.parse(
-        import_node_fs26.default.readFileSync(file.fsPath, "utf8")
+        import_node_fs25.default.readFileSync(file.fsPath, "utf8")
       );
       if (!recipe.transforms?.length) {
         throw new Error("Choose a recipe with explicit versioned transforms.");
@@ -97494,7 +96107,7 @@ var ModificationController = class {
         return;
       }
       recipe = JSON.parse(
-        import_node_fs26.default.readFileSync(file.fsPath, "utf8")
+        import_node_fs25.default.readFileSync(file.fsPath, "utf8")
       );
     }
     const input = await this.run("assetImport", {
@@ -97513,7 +96126,7 @@ var ModificationController = class {
     if (selected) {
       await import_vscode15.commands.executeCommand(
         "vscode.open",
-        import_vscode15.Uri.file(import_node_path32.default.join(import_node_path32.default.dirname(selected.manifestFile), selected.entry.input))
+        import_vscode15.Uri.file(import_node_path31.default.join(import_node_path31.default.dirname(selected.manifestFile), selected.entry.input))
       );
     }
   }
@@ -97523,7 +96136,7 @@ var ModificationController = class {
     if (!selected) {
       return;
     }
-    const file = import_node_path32.default.join(import_node_path32.default.dirname(selected.manifestFile), selected.entry.input);
+    const file = import_node_path31.default.join(import_node_path31.default.dirname(selected.manifestFile), selected.entry.input);
     if (!await import_vscode15.env.openExternal(import_vscode15.Uri.file(file))) {
       throw new Error(
         "No external application could open this asset. Choose an indexed-image editor through your operating system."
@@ -97554,12 +96167,12 @@ var ModificationController = class {
       return;
     }
     const project = loadRomModificationProject(selected.manifestFile);
-    const file = import_node_path32.default.join(import_node_path32.default.dirname(selected.manifestFile), `placement-${Date.now()}.json`);
-    import_node_fs26.default.writeFileSync(
+    const file = import_node_path31.default.join(import_node_path31.default.dirname(selected.manifestFile), `placement-${Date.now()}.json`);
+    import_node_fs25.default.writeFileSync(
       file,
       JSON.stringify(
         {
-          manifestSha256: sourceExportSha256(import_node_fs26.default.readFileSync(selected.manifestFile)),
+          manifestSha256: sourceExportSha256(import_node_fs25.default.readFileSync(selected.manifestFile)),
           replacement: selected.entry.id,
           offset: selected.entry.offset,
           size: selected.entry.expected.length / 2,
@@ -97608,7 +96221,7 @@ var ModificationController = class {
     const destination = await import_vscode15.window.showSaveDialog({
       title: "New rebased modification directory",
       defaultUri: import_vscode15.Uri.file(
-        import_node_path32.default.join(import_node_path32.default.dirname(import_node_path32.default.dirname(manifestFile)), `modifications-rebased-${Date.now()}`)
+        import_node_path31.default.join(import_node_path31.default.dirname(import_node_path31.default.dirname(manifestFile)), `modifications-rebased-${Date.now()}`)
       )
     });
     if (!destination) {
@@ -97627,23 +96240,23 @@ var ModificationController = class {
   }
   async rebaseRefresh() {
     const editor = import_vscode15.window.activeTextEditor;
-    if (!editor || editor.document.isDirty || import_node_path32.default.basename(editor.document.uri.fsPath) !== "rebase-review.json") {
+    if (!editor || editor.document.isDirty || import_node_path31.default.basename(editor.document.uri.fsPath) !== "rebase-review.json") {
       throw new Error("Open and save rebase-review.json before refreshing it.");
     }
     const reviewFile = editor.document.uri.fsPath;
     await this.run("rebaseRefresh", {
       reviewFile,
-      reviewSha256: sourceExportSha256(import_node_fs26.default.readFileSync(reviewFile))
+      reviewSha256: sourceExportSha256(import_node_fs25.default.readFileSync(reviewFile))
     });
     await import_vscode15.window.showTextDocument(import_vscode15.Uri.file(reviewFile));
     const review = JSON.parse(
-      import_node_fs26.default.readFileSync(reviewFile, "utf8")
+      import_node_fs25.default.readFileSync(reviewFile, "utf8")
     );
     const first = review.editedInputs?.[0];
     if (first) {
-      const original = import_node_path32.default.join(import_node_path32.default.dirname(reviewFile), ".old-owned", first);
-      const edited = import_node_path32.default.join(import_node_path32.default.dirname(reviewFile), first);
-      if (import_node_fs26.default.existsSync(original) && import_node_fs26.default.existsSync(edited)) {
+      const original = import_node_path31.default.join(import_node_path31.default.dirname(reviewFile), ".old-owned", first);
+      const edited = import_node_path31.default.join(import_node_path31.default.dirname(reviewFile), first);
+      if (import_node_fs25.default.existsSync(original) && import_node_fs25.default.existsSync(edited)) {
         await import_vscode15.commands.executeCommand(
           "vscode.diff",
           import_vscode15.Uri.file(original),
@@ -97658,7 +96271,7 @@ var ModificationController = class {
   }
   async rebaseAccept() {
     const editor = import_vscode15.window.activeTextEditor;
-    if (!editor || editor.document.isDirty || import_node_path32.default.basename(editor.document.uri.fsPath) !== "rebase-review.json") {
+    if (!editor || editor.document.isDirty || import_node_path31.default.basename(editor.document.uri.fsPath) !== "rebase-review.json") {
       throw new Error("Open and save rebase-review.json before accepting it.");
     }
     const result = await this.run("rebaseAccept", { reviewFile: editor.document.uri.fsPath });
@@ -97684,7 +96297,7 @@ var ModificationController = class {
     const file = await this.run("sourceReview", { manifestFile, sourceFile });
     await import_vscode15.window.showTextDocument(import_vscode15.Uri.file(file));
     const review = JSON.parse(
-      import_node_fs26.default.readFileSync(file, "utf8")
+      import_node_fs25.default.readFileSync(file, "utf8")
     );
     await import_vscode15.commands.executeCommand(
       "vscode.diff",
@@ -97709,8 +96322,8 @@ var ModificationController = class {
       throw new Error(review.unsupported ?? "Open a source edit review.");
     }
     const project = loadRomModificationProject(review.manifestFile);
-    const sourceDirectory = import_node_path32.default.resolve(
-      import_node_path32.default.dirname(review.manifestFile),
+    const sourceDirectory = import_node_path31.default.resolve(
+      import_node_path31.default.dirname(review.manifestFile),
       project.baseline.sourceDirectory
     );
     const target = await resolveTarget(this.context, { sourceDirectory });
@@ -97727,7 +96340,7 @@ var ModificationController = class {
     }
     const result = await this.run("sourceImport", {
       reviewFile,
-      reviewSha256: sourceExportSha256(import_node_fs26.default.readFileSync(reviewFile)),
+      reviewSha256: sourceExportSha256(import_node_fs25.default.readFileSync(reviewFile)),
       target
     });
     void import_vscode15.window.showInformationMessage(result);
@@ -97754,19 +96367,19 @@ var ModificationController = class {
     }
     const result = await this.run("sourceRestore", {
       reviewFile,
-      reviewSha256: sourceExportSha256(import_node_fs26.default.readFileSync(reviewFile))
+      reviewSha256: sourceExportSha256(import_node_fs25.default.readFileSync(reviewFile))
     });
     void import_vscode15.window.showInformationMessage(result.detail);
   }
   async detachSource() {
     const editor = import_vscode15.window.activeTextEditor;
     let draft;
-    if (editor && !editor.document.isDirty && import_node_path32.default.basename(editor.document.uri.fsPath) === "review.json") {
+    if (editor && !editor.document.isDirty && import_node_path31.default.basename(editor.document.uri.fsPath) === "review.json") {
       const value = JSON.parse(editor.document.getText());
       if (value.format === "uttori-source-edit-review") {
         draft = {
           reviewFile: editor.document.uri.fsPath,
-          sha256: sourceExportSha256(import_node_fs26.default.readFileSync(editor.document.uri.fsPath))
+          sha256: sourceExportSha256(import_node_fs25.default.readFileSync(editor.document.uri.fsPath))
         };
       }
     }
@@ -97776,7 +96389,7 @@ var ModificationController = class {
     }
     const destination = await import_vscode15.window.showSaveDialog({
       title: "New manually owned source directory",
-      defaultUri: import_vscode15.Uri.file(import_node_path32.default.join(import_node_path32.default.dirname(target.sourceDirectory), "detached-source"))
+      defaultUri: import_vscode15.Uri.file(import_node_path31.default.join(import_node_path31.default.dirname(target.sourceDirectory), "detached-source"))
     });
     if (!destination) {
       return;
@@ -97799,7 +96412,7 @@ var ModificationController = class {
     }
     const destination = await import_vscode15.window.showSaveDialog({
       title: "New derived analysis workspace directory",
-      defaultUri: import_vscode15.Uri.file(import_node_path32.default.join(import_node_path32.default.dirname(manifestFile), "derived-disassembly"))
+      defaultUri: import_vscode15.Uri.file(import_node_path31.default.join(import_node_path31.default.dirname(manifestFile), "derived-disassembly"))
     });
     if (!destination) {
       return;
@@ -97854,7 +96467,7 @@ var ModificationController = class {
 };
 
 // packages/vscode-extension/src/disassembly/ownership-controller.ts
-var import_node_path33 = __toESM(require("node:path"), 1);
+var import_node_path32 = __toESM(require("node:path"), 1);
 init_src();
 var import_vscode16 = require("vscode");
 var DisassemblyOwnershipController = class {
@@ -98066,7 +96679,7 @@ Owner: ${owner2.kind} \xB7 ${owner2.name ?? owner2.symbol ?? owner2.id}`
         input = await import_vscode16.window.showQuickPick(inputs, { title: "Open owning input" });
       }
       if (input) {
-        await import_vscode16.window.showTextDocument(import_vscode16.Uri.file(import_node_path33.default.join(result.managed.directory, input)));
+        await import_vscode16.window.showTextDocument(import_vscode16.Uri.file(import_node_path32.default.join(result.managed.directory, input)));
       }
     } catch (error) {
       await import_vscode16.window.showErrorMessage(String(error));
@@ -99759,7 +98372,7 @@ function iconForSymbolKind(kind) {
 }
 
 // packages/vscode-extension/src/project/panel.ts
-var path48 = __toESM(require("node:path"), 1);
+var path47 = __toESM(require("node:path"), 1);
 var import_vscode19 = require("vscode");
 var ProjectPanelProvider = class {
   constructor(extensionUri, getClient, initConfig2) {
@@ -99865,7 +98478,7 @@ var ProjectPanelProvider = class {
         const { status } = await this.snapshot();
         const root = import_vscode19.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (root && status.configFile) {
-          await import_vscode19.window.showTextDocument(import_vscode19.Uri.file(path48.resolve(root, status.configFile)));
+          await import_vscode19.window.showTextDocument(import_vscode19.Uri.file(path47.resolve(root, status.configFile)));
         }
         return;
       }
@@ -99949,7 +98562,7 @@ var ProjectPanelProvider = class {
     const next = [...current];
     for (const uri of picked) {
       const folder = import_vscode19.workspace.workspaceFolders?.[0];
-      const relative5 = folder ? path48.relative(folder.uri.fsPath, uri.fsPath) : void 0;
+      const relative5 = folder ? path47.relative(folder.uri.fsPath, uri.fsPath) : void 0;
       const value = relative5 && !relative5.startsWith("..") ? relative5 : uri.fsPath;
       if (!next.includes(value)) {
         next.push(value);
@@ -100013,7 +98626,7 @@ function asString(value) {
 
 // packages/vscode-extension/src/project/wizard.ts
 var fs34 = __toESM(require("node:fs"), 1);
-var import_node_path34 = __toESM(require("node:path"), 1);
+var import_node_path33 = __toESM(require("node:path"), 1);
 init_src5();
 var import_vscode20 = require("vscode");
 var CREATE_DISASSEMBLY_PROJECT_COMMAND = "asm.createDisassemblyProject";
@@ -100127,7 +98740,7 @@ var chooseFile = async (title, filters) => {
 var chooseOutputDirectory = async (romFile) => {
   const selected = await import_vscode20.window.showOpenDialog({
     title: "Select an empty output directory",
-    defaultUri: import_vscode20.Uri.file(import_node_path34.default.dirname(romFile)),
+    defaultUri: import_vscode20.Uri.file(import_node_path33.default.dirname(romFile)),
     canSelectFiles: false,
     canSelectFolders: true,
     canSelectMany: false,
@@ -100227,7 +98840,7 @@ var runProjectWizard = async (context, outputChannel2, importDiz) => {
     const detectedMapper = resolvedProbe.detection.mapper ?? "needs selection";
     const header = resolvedProbe.rom.headerSize === 0 ? "none" : `${resolvedProbe.rom.headerSize} bytes`;
     const create = await import_vscode20.window.showInformationMessage(
-      `Create a disassembly project in '${import_node_path34.default.basename(outputDirectory)}'?`,
+      `Create a disassembly project in '${import_node_path33.default.basename(outputDirectory)}'?`,
       {
         modal: true,
         detail: `SNES \xB7 ${detectedMapper} \xB7 ${formatBytes3(resolvedProbe.rom.contentSize)} \xB7 copier header: ${header}
@@ -100323,7 +98936,7 @@ function activate(context) {
     maxMemoryMiB: (directory) => import_vscode21.workspace.getConfiguration("asm", import_vscode21.Uri.file(directory)).get("analysis.maxMemoryMiB", 4096)
   });
   context.subscriptions.push(worker);
-  const serverModule = context.asAbsolutePath(path50.join("server", "server.mjs"));
+  const serverModule = context.asAbsolutePath(path49.join("server", "server.mjs"));
   const assetPreviewController = new AssetPreviewController(() => client2);
   context.subscriptions.push(assetPreviewController);
   const serverOptions = {
@@ -100461,7 +99074,7 @@ function activate(context) {
         editorInformationController?.configurationChanged();
         editorInformationController?.buildCompleted(
           result.debugMapPath,
-          path50.dirname(result.outputPath)
+          path49.dirname(result.outputPath)
         );
       }
     },
@@ -100677,7 +99290,7 @@ function toggleWatch() {
     }
     saveListener = import_vscode21.workspace.onDidSaveTextDocument(onDocumentSaved);
     void import_vscode21.window.showInformationMessage(
-      `Assembly: watching ${path50.basename(import_vscode21.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
+      `Assembly: watching ${path49.basename(import_vscode21.Uri.parse(watchEntryUri).fsPath)} - rebuilding on save.`
     );
   }
   updateStatusItem();
@@ -100782,7 +99395,7 @@ function resolveBuildEntryUri() {
   const folder = activeUri ? import_vscode21.workspace.getWorkspaceFolder(activeUri) : import_vscode21.workspace.workspaceFolders?.[0];
   if (entryPoints.length > 0 && folder) {
     const first = entryPoints[0];
-    const resolved = path50.isAbsolute(first) ? import_vscode21.Uri.file(first).toString() : import_vscode21.Uri.joinPath(folder.uri, first).toString();
+    const resolved = path49.isAbsolute(first) ? import_vscode21.Uri.file(first).toString() : import_vscode21.Uri.joinPath(folder.uri, first).toString();
     outputChannel?.info(
       `Build entry from asm.entryPoints: ${first} \u2192 ${import_vscode21.Uri.parse(resolved).fsPath}`
     );
@@ -100848,9 +99461,9 @@ async function initConfig() {
   let entryPoints = config.get("entryPoints", []);
   const active = import_vscode21.window.activeTextEditor?.document;
   if (entryPoints.length === 0 && active && isAssemblyDocument(active)) {
-    const relative5 = path50.relative(folder.uri.fsPath, active.fileName);
+    const relative5 = path49.relative(folder.uri.fsPath, active.fileName);
     entryPoints = [
-      relative5 && !relative5.startsWith("..") ? relative5 : path50.basename(active.fileName)
+      relative5 && !relative5.startsWith("..") ? relative5 : path49.basename(active.fileName)
     ];
   }
   const includePaths = config.get("includePaths", []);
@@ -100933,7 +99546,7 @@ async function runBuild(documentUri, transient = false) {
       if (result.debugMapPath) {
         editorInformationController?.buildCompleted(
           result.debugMapPath,
-          import_vscode21.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path50.dirname(document.fsPath)
+          import_vscode21.workspace.getWorkspaceFolder(document)?.uri.fsPath ?? path49.dirname(document.fsPath)
         );
       }
       const changed = result.outputChanged === false && result.debugMapChanged === false ? " (unchanged)" : "";
@@ -100961,11 +99574,11 @@ function resolveConfiguredPath(configuredPath, document) {
   if (!configuredPath) {
     return void 0;
   }
-  if (path50.isAbsolute(configuredPath)) {
-    return path50.normalize(configuredPath);
+  if (path49.isAbsolute(configuredPath)) {
+    return path49.normalize(configuredPath);
   }
   const folder = import_vscode21.workspace.getWorkspaceFolder(document);
-  return path50.resolve(folder?.uri.fsPath ?? path50.dirname(document.fsPath), configuredPath);
+  return path49.resolve(folder?.uri.fsPath ?? path49.dirname(document.fsPath), configuredPath);
 }
 function updateStatusItem() {
   if (!statusItem) {

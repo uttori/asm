@@ -6,7 +6,7 @@ import { constants, type StatementSync } from "node:sqlite";
 import { test } from "../../../tests/ava-helper.js";
 import {
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   openAnalysisProjectStore,
   buildInstructionAnalysisAnnotations,
   buildRomCoverageMap,
@@ -125,7 +125,7 @@ const project = (): AnalysisProject => ({
 const ranges = [{ addressSpace: "cpu", start: 0x100, end: 0x101, outputStart: 0, outputEnd: 1 }];
 const fixture = (t: { teardown(callback: () => void): void }, input = project()) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-annotations-"));
-  writeAnalysisProject(directory, input);
+  publishAnalysisProject(directory, input);
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => {
     store.close();
@@ -499,7 +499,7 @@ test("SQL coverage pages and totals match the standalone sweep and survive unrel
       },
     ],
   };
-  writeAnalysisProject(directory, { ...fixture, shards });
+  publishAnalysisProject(directory, { ...fixture, shards });
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => store.close());
   const expected = buildRomCoverageMap(fixture.manifest, shards);
@@ -581,7 +581,7 @@ test("SQL call ownership preserves aliases, missing edges, and last-entry eviden
       },
     ],
   };
-  writeAnalysisProject(directory, { ...fixture, shards });
+  publishAnalysisProject(directory, { ...fixture, shards });
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => store.close());
   const graph = store.callGraph();
@@ -614,7 +614,7 @@ test("SQL call ownership preserves aliases, missing edges, and last-entry eviden
 test("selected SQL edits preserve omitted CFG/runtime rows and reject undo with retained provenance", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-selected-sql-edit-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => store.close());
   const selected = store.annotationEditView();
@@ -675,7 +675,7 @@ test("selected SQL edits preserve omitted CFG/runtime rows and reject undo with 
 test("SQL result caching publishes after unrelated writes and invalidates only declared inputs", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-cache-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   const store = openAnalysisProjectStore(directory),
     writer = openAnalysisProjectStore(directory);
   t.teardown(() => {

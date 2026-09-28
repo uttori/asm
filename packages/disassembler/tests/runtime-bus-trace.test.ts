@@ -11,7 +11,7 @@ import {
   loadAnalysisProject,
   openAnalysisProjectStore,
   validateRuntimeBusTraceMetadata,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type RuntimeBusAccess,
   type RuntimeBusTraceSource,
@@ -207,7 +207,7 @@ test("falsy and malformed native PPU annotations cannot bypass fact validation",
 test("bounded fact caches preserve exact counts across eviction and SQLite flushes", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "bus-cache-eviction-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const reference = createRuntimeBusTraceImporter(metadata, context);
   const trace: RuntimeBusTraceSource = {
     metadata,
@@ -235,7 +235,7 @@ test("bounded fact caches preserve exact counts across eviction and SQLite flush
 test("SQLite bus import survives reopen, deduplicates renamed captures and leaves execution counts empty", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-bus-project-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   const expected = createRuntimeBusTraceImporter(metadata, context);
   expected.push({ accesses: events });
   const first = await importRuntimeBusTraceSourceIntoProject(source(), root, context);
@@ -277,7 +277,7 @@ test("SQLite bus import survives reopen, deduplicates renamed captures and leave
 test("bus reimport repairs a partial namespace and still rejects altered surviving observations", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "bus-repair-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   await importRuntimeBusTraceSourceIntoProject(source(), directory, context);
   const original = loadAnalysisProject(directory).shards.runtime;
   const modify = (runtime: typeof original) => {
@@ -307,7 +307,7 @@ test("bus reimport repairs a partial namespace and still rejects altered survivi
 test("late failure, cancellation and stale revisions publish no bus facts or retention changes", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-bus-atomic-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   const before = loadAnalysisProject(root);
   const failing = {
     ...source(),
@@ -362,7 +362,7 @@ test("late failure, cancellation and stale revisions publish no bus facts or ret
 test("large repeated bus streams use bounded chunks and retain exact aggregate counts", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-bus-large-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   const total = 1_000_000;
   const large = {
     metadata,
@@ -389,7 +389,7 @@ test("large repeated bus streams use bounded chunks and retain exact aggregate c
 test("separate sessions share bus facts while conflicting provenance rolls back new rows", async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-bus-provenance-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   await importRuntimeBusTraceSourceIntoProject(source(), root, context);
   const secondSource = { ...source(), metadata: { ...metadata, session: "b".repeat(32) } };
   const second = await importRuntimeBusTraceSourceIntoProject(secondSource, root, context);

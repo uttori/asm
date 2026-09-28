@@ -11,7 +11,7 @@ import {
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   importRuntimeBusTraceSourceIntoProject,
   validateRuntimeBusTraceMetadata,
   type AnalysisProject,
@@ -97,7 +97,7 @@ for (const file of [
 }
 
 try {
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   global.gc?.();
   const memoryBefore = process.memoryUsage();
   const started = performance.now();

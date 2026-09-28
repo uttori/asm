@@ -6,7 +6,7 @@ import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
 
@@ -41,7 +41,7 @@ test("source catalog reads validated identities without loading CFG or runtime h
       evidence: [{ id: "manual", source: "manual", sourceId: "manual", confidence: "certain" }],
     },
   };
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const catalog = readAnalysisSourceCatalog(directory);
   t.is(catalog.manifest.target, "fixture");
   t.is(catalog.sources.length, 1);

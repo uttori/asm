@@ -759,9 +759,9 @@ var canonicalJson = (value) => `${JSON.stringify(canonicalValue(value), void 0, 
 `;
 
 // packages/disassembler/src/sqlite-store.ts
-var import_node_crypto4 = require("node:crypto");
+var import_node_crypto3 = require("node:crypto");
 var import_node_fs3 = __toESM(require("node:fs"), 1);
-var import_node_path3 = __toESM(require("node:path"), 1);
+var import_node_path2 = __toESM(require("node:path"), 1);
 var import_node_sqlite2 = require("node:sqlite");
 
 // packages/disassembler/src/analysis-sources.ts
@@ -828,18 +828,6 @@ var validateSourceLabelName = (name) => {
     );
   }
 };
-
-// packages/disassembler/src/project-store.ts
-var fs2 = __toESM(require("node:fs"), 1);
-var import_node_path2 = __toESM(require("node:path"), 1);
-
-// packages/disassembler/src/project-transaction.ts
-var import_node_crypto = require("node:crypto");
-
-// packages/disassembler/src/project-types.ts
-var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
-var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
-var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
 // packages/disassembler/src/metadata-validation.ts
 var validateEditableMetadataRecord = (shard, record) => {
@@ -947,6 +935,11 @@ var validateMetadataReceipt = (receipt) => {
     }
   }
 };
+
+// packages/disassembler/src/project-types.ts
+var ANALYSIS_PROJECT_FORMAT = "uttori-asm-analysis";
+var ANALYSIS_PROJECT_SCHEMA_VERSION = 3;
+var ANALYSIS_PROJECT_MANIFEST = "analysis.json";
 
 // packages/disassembler/src/record-id-set.ts
 var import_node_fs = __toESM(require("node:fs"), 1);
@@ -1619,32 +1612,300 @@ var validateLoadedShards = (shards, project) => {
   assertNoRomPayload({ ...shards, runtime: [] }, "shards");
 };
 
-// packages/disassembler/src/project-transaction.ts
-var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
-var ANALYSIS_PROJECT_REVISION_VERSION = 1;
-var AnalysisProjectStaleError = class extends Error {
-  constructor(expected, actual) {
-    super(
-      `Analysis project changed since it was loaded (expected ${expected.manifestSha256}, found ${actual.manifestSha256}).`
-    );
-    this.expected = expected;
-    this.actual = actual;
-    this.name = "AnalysisProjectStaleError";
+// packages/disassembler/src/metadata-edit.ts
+var manuallyOwnedMetadata = (shards) => new Set(
+  shards.analysis.filter((record) => record.kind === "metadata-edit").flatMap((receipt) => receipt.changes.map((change) => `${change.shard}:${change.id}`))
+);
+
+// packages/disassembler/src/project-edit.ts
+var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+var evidenceReferences = (shards, evidenceId) => [
+  ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
+  ...shards.annotations.filter((record) => record.evidence.includes(evidenceId)).map((record) => `annotations:${record.id}`),
+  ...shards.labels.filter((record) => record.evidence.includes(evidenceId)).map((record) => `labels:${record.id}`),
+  ...shards.comments.filter((record) => record.evidence.includes(evidenceId)).map((record) => `comments:${record.id}`),
+  ...shards.regions.filter((record) => record.evidence.includes(evidenceId)).map((record) => `regions:${record.id}`),
+  ...shards.runtime.filter((record) => record.evidence.includes(evidenceId)).map((record) => `runtime:${record.id}`)
+];
+var explainProjectEvidence = (shards, shard, recordId) => {
+  const records = shards[shard];
+  const record = records.find(({ id }) => id === recordId);
+  if (!record) {
+    throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
   }
-  expected;
-  actual;
+  let evidenceIds = [];
+  if (shard === "evidence") {
+    evidenceIds = [record.id];
+  } else if ("evidence" in record) {
+    evidenceIds = record.evidence;
+  }
+  const evidence = evidenceIds.map((id) => {
+    const found = shards.evidence.find((entry) => entry.id === id);
+    if (!found) {
+      throw new Error(`Analysis record '${recordId}' refers to missing evidence '${id}'.`);
+    }
+    return found;
+  });
+  const referencedBy = sortedUnique(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));
+  const evidenceSet = new Set(evidenceIds);
+  const conflicts = shards.analysis.filter(
+    (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
+  ).sort((left, right) => left.id.localeCompare(right.id));
+  return { shard, record, evidence, referencedBy, conflicts };
 };
-var analysisProjectRevision = (manifest) => ({
-  format: ANALYSIS_PROJECT_REVISION_FORMAT,
-  version: ANALYSIS_PROJECT_REVISION_VERSION,
-  manifestSha256: (0, import_node_crypto.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+
+// packages/disassembler/src/runtime-evidence.ts
+var emptyCounts = () => ({
+  analysis: 0,
+  annotations: 0,
+  labels: 0,
+  comments: 0,
+  regions: 0,
+  runtime: 0,
+  evidence: 0,
+  imports: 0
 });
-var assertAnalysisProjectRevision = (store, expected) => {
-  const actual = analysisProjectRevision(store.manifest());
-  if (expected.manifestSha256 !== actual.manifestSha256) {
-    throw new AnalysisProjectStaleError(expected, actual);
+var sortedUnique2 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
+var stateValueKey = (value) => `${typeof value}:${String(value)}`;
+var conflictReport = (runtime) => {
+  const observations = [];
+  for (const record of runtime) {
+    if (record.kind === "runtime-cpu-state") {
+      for (const [field, value] of Object.entries(record.state)) {
+        observations.push({
+          architecture: record.architecture,
+          addressSpace: record.addressSpace,
+          address: record.address,
+          field,
+          value,
+          record: record.id,
+          evidence: record.evidence
+        });
+      }
+    } else if (record.kind === "runtime-execution") {
+      if (record.size !== void 0) {
+        observations.push({
+          architecture: record.architecture,
+          addressSpace: record.addressSpace,
+          address: record.address,
+          field: "instruction-size",
+          value: record.size,
+          record: record.id,
+          evidence: record.evidence
+        });
+      }
+      if (record.opcode !== void 0) {
+        observations.push({
+          architecture: record.architecture,
+          addressSpace: record.addressSpace,
+          address: record.address,
+          field: "opcode",
+          value: record.opcode,
+          record: record.id,
+          evidence: record.evidence
+        });
+      }
+    }
   }
+  const groups = /* @__PURE__ */ new Map();
+  for (const observation of observations) {
+    const key3 = [
+      observation.architecture,
+      observation.addressSpace,
+      observation.address,
+      observation.field
+    ].join(":");
+    const group = groups.get(key3);
+    if (group) {
+      group.push(observation);
+    } else {
+      groups.set(key3, [observation]);
+    }
+  }
+  const conflicts = [];
+  for (const [key3, group] of groups) {
+    const byValue = /* @__PURE__ */ new Map();
+    for (const observation of group) {
+      const valueKey = stateValueKey(observation.value);
+      const entries = byValue.get(valueKey);
+      if (entries) {
+        entries.push(observation);
+      } else {
+        byValue.set(valueKey, [observation]);
+      }
+    }
+    if (byValue.size < 2) {
+      continue;
+    }
+    const first = group[0];
+    conflicts.push({
+      id: `runtime-conflict:${key3}`,
+      kind: first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
+      architecture: first.architecture,
+      addressSpace: first.addressSpace,
+      address: first.address,
+      field: first.field,
+      values: [...byValue.values()].map((entries) => ({
+        value: entries[0].value,
+        records: sortedUnique2(entries.map((entry) => entry.record)),
+        evidence: sortedUnique2(entries.flatMap((entry) => entry.evidence))
+      })).sort((left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value)))
+    });
+  }
+  return conflicts.sort((left, right) => left.id.localeCompare(right.id));
 };
+var explanationReport = (shards) => {
+  const runtimeEvidence = new Set(
+    shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id)
+  );
+  const explanations = [];
+  for (const annotation of shards.annotations) {
+    const evidence = annotation.evidence.filter((id) => runtimeEvidence.has(id));
+    if (evidence.length === 0) {
+      continue;
+    }
+    const stateFields = Object.keys(annotation.state ?? {}).sort();
+    explanations.push({
+      recordId: annotation.id,
+      detail: stateFields.length > 0 ? `Runtime observation supplies ${stateFields.join(", ")} state.` : `Runtime observation classifies bytes as ${annotation.classification}.`,
+      evidence: sortedUnique2(evidence)
+    });
+  }
+  for (const record of shards.analysis) {
+    if (record.kind !== "target-override") {
+      continue;
+    }
+    const evidence = record.evidence.filter((id) => runtimeEvidence.has(id));
+    if (evidence.length === 0) {
+      continue;
+    }
+    explanations.push({
+      recordId: record.id,
+      detail: `Runtime observation resolves control flow to ${record.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
+      evidence: sortedUnique2(evidence)
+    });
+  }
+  return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
+};
+var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
+  if (incoming.length === 0) {
+    return prior;
+  }
+  const records = new Map(prior.map((record) => [record.id, record]));
+  for (const record of incoming) {
+    const current = records.get(record.id);
+    if (!current) {
+      records.set(record.id, record);
+      added[kind]++;
+    } else if (canonicalJson(current) === canonicalJson(record)) {
+      existing[kind]++;
+    } else if (kind === "analysis" && "kind" in current && "kind" in record && current.kind === "target-override" && record.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
+      const left = current;
+      const right = record;
+      if (left.addressSpace !== right.addressSpace || left.address !== right.address) {
+        throw new Error(`Runtime target override '${record.id}' changed its control-flow site.`);
+      }
+      const merged = {
+        ...left,
+        targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
+        evidence: sortedUnique2([...left.evidence, ...right.evidence])
+      };
+      if (canonicalJson(current) === canonicalJson(merged)) {
+        existing[kind]++;
+      } else {
+        records.set(record.id, merged);
+        updated[kind]++;
+      }
+    } else {
+      throw new Error(
+        `Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`
+      );
+    }
+  }
+  return [...records.values()];
+};
+var mergeRuntimeEvidence = (shards, batch) => {
+  const traceProfiles = /* @__PURE__ */ new Map();
+  for (const report of [...shards.imports, ...batch.imports ?? []]) {
+    if (report.format !== "uttori-asm-instruction-trace") {
+      continue;
+    }
+    if (traceProfiles.has(report.sourceSha256) && traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
+      throw new Error(
+        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
+      );
+    }
+    traceProfiles.set(report.sourceSha256, report.indexProfile);
+  }
+  const owned = manuallyOwnedMetadata(shards);
+  const added = emptyCounts();
+  const updated = emptyCounts();
+  const existing = emptyCounts();
+  const merged = {
+    analysis: mergeRecords(
+      "analysis",
+      shards.analysis,
+      (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)),
+      added,
+      updated,
+      existing
+    ),
+    annotations: mergeRecords(
+      "annotations",
+      shards.annotations,
+      (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)),
+      added,
+      updated,
+      existing
+    ),
+    labels: mergeRecords(
+      "labels",
+      shards.labels,
+      (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)),
+      added,
+      updated,
+      existing
+    ),
+    comments: mergeRecords(
+      "comments",
+      shards.comments,
+      (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)),
+      added,
+      updated,
+      existing
+    ),
+    regions: mergeRecords("regions", shards.regions, batch.regions ?? [], added, updated, existing),
+    runtime: mergeRecords("runtime", shards.runtime, batch.runtime ?? [], added, updated, existing),
+    evidence: mergeRecords(
+      "evidence",
+      shards.evidence,
+      batch.evidence ?? [],
+      added,
+      updated,
+      existing
+    ),
+    imports: mergeRecords("imports", shards.imports, batch.imports ?? [], added, updated, existing)
+  };
+  let conflicts;
+  let explanations;
+  return {
+    shards: merged,
+    changed: Object.values(added).some((count) => count > 0) || Object.values(updated).some((count) => count > 0),
+    added,
+    updated,
+    existing,
+    get conflicts() {
+      return conflicts ??= conflictReport(merged.runtime);
+    },
+    get explanations() {
+      return explanations ??= explanationReport(merged);
+    }
+  };
+};
+var inspectRuntimeEvidence = (shards) => ({
+  conflicts: conflictReport(shards.runtime),
+  explanations: explanationReport(shards)
+});
 
 // packages/disassembler/src/sqlite-payload.ts
 var import_node_util = require("node:util");
@@ -2121,325 +2382,6 @@ var analysisAddress = (record) => {
   }
   return { addressSpace: null, address: null };
 };
-
-// packages/disassembler/src/project-store.ts
-var parseAnalysisProjectManifest = (input) => {
-  if (!input || typeof input !== "object") {
-    throw new Error("Invalid analysis project manifest.");
-  }
-  const manifest = input;
-  if (manifest.schemaVersion > 3) {
-    throw new Error(
-      `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
-    );
-  }
-  validateAnalysisProjectManifest(manifest);
-  if (manifest.db !== "analysis.sqlite") {
-    throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
-  }
-  return manifest;
-};
-var openAnalysisProjectStore = (directory) => {
-  const manifest = parseAnalysisProjectManifest(
-    JSON.parse(fs2.readFileSync(import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
-  );
-  return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
-};
-
-// packages/disassembler/src/metadata-edit.ts
-var manuallyOwnedMetadata = (shards) => new Set(
-  shards.analysis.filter((record) => record.kind === "metadata-edit").flatMap((receipt) => receipt.changes.map((change) => `${change.shard}:${change.id}`))
-);
-
-// packages/disassembler/src/project-edit.ts
-var sortedUnique = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
-var evidenceReferences = (shards, evidenceId) => [
-  ...shards.analysis.filter((record) => record.evidence.includes(evidenceId)).map((record) => `analysis:${record.id}`),
-  ...shards.annotations.filter((record) => record.evidence.includes(evidenceId)).map((record) => `annotations:${record.id}`),
-  ...shards.labels.filter((record) => record.evidence.includes(evidenceId)).map((record) => `labels:${record.id}`),
-  ...shards.comments.filter((record) => record.evidence.includes(evidenceId)).map((record) => `comments:${record.id}`),
-  ...shards.regions.filter((record) => record.evidence.includes(evidenceId)).map((record) => `regions:${record.id}`),
-  ...shards.runtime.filter((record) => record.evidence.includes(evidenceId)).map((record) => `runtime:${record.id}`)
-];
-var explainProjectEvidence = (shards, shard, recordId) => {
-  const records = shards[shard];
-  const record = records.find(({ id }) => id === recordId);
-  if (!record) {
-    throw new Error(`Analysis ${shard} record '${recordId}' does not exist.`);
-  }
-  let evidenceIds = [];
-  if (shard === "evidence") {
-    evidenceIds = [record.id];
-  } else if ("evidence" in record) {
-    evidenceIds = record.evidence;
-  }
-  const evidence = evidenceIds.map((id) => {
-    const found = shards.evidence.find((entry) => entry.id === id);
-    if (!found) {
-      throw new Error(`Analysis record '${recordId}' refers to missing evidence '${id}'.`);
-    }
-    return found;
-  });
-  const referencedBy = sortedUnique(evidenceIds.flatMap((id) => evidenceReferences(shards, id)));
-  const evidenceSet = new Set(evidenceIds);
-  const conflicts = shards.analysis.filter(
-    (entry) => entry.kind === "conflict" && (entry.id === recordId || entry.nodes.includes(recordId) || entry.evidence.some((id) => evidenceSet.has(id)))
-  ).sort((left, right) => left.id.localeCompare(right.id));
-  return { shard, record, evidence, referencedBy, conflicts };
-};
-
-// packages/disassembler/src/runtime-evidence.ts
-var emptyCounts = () => ({
-  analysis: 0,
-  annotations: 0,
-  labels: 0,
-  comments: 0,
-  regions: 0,
-  runtime: 0,
-  evidence: 0,
-  imports: 0
-});
-var sortedUnique2 = (values) => [...new Set(values)].sort((left, right) => left.localeCompare(right));
-var stateValueKey = (value) => `${typeof value}:${String(value)}`;
-var conflictReport = (runtime) => {
-  const observations = [];
-  for (const record of runtime) {
-    if (record.kind === "runtime-cpu-state") {
-      for (const [field, value] of Object.entries(record.state)) {
-        observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
-          field,
-          value,
-          record: record.id,
-          evidence: record.evidence
-        });
-      }
-    } else if (record.kind === "runtime-execution") {
-      if (record.size !== void 0) {
-        observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
-          field: "instruction-size",
-          value: record.size,
-          record: record.id,
-          evidence: record.evidence
-        });
-      }
-      if (record.opcode !== void 0) {
-        observations.push({
-          architecture: record.architecture,
-          addressSpace: record.addressSpace,
-          address: record.address,
-          field: "opcode",
-          value: record.opcode,
-          record: record.id,
-          evidence: record.evidence
-        });
-      }
-    }
-  }
-  const groups = /* @__PURE__ */ new Map();
-  for (const observation of observations) {
-    const key3 = [
-      observation.architecture,
-      observation.addressSpace,
-      observation.address,
-      observation.field
-    ].join(":");
-    const group = groups.get(key3);
-    if (group) {
-      group.push(observation);
-    } else {
-      groups.set(key3, [observation]);
-    }
-  }
-  const conflicts = [];
-  for (const [key3, group] of groups) {
-    const byValue = /* @__PURE__ */ new Map();
-    for (const observation of group) {
-      const valueKey = stateValueKey(observation.value);
-      const entries = byValue.get(valueKey);
-      if (entries) {
-        entries.push(observation);
-      } else {
-        byValue.set(valueKey, [observation]);
-      }
-    }
-    if (byValue.size < 2) {
-      continue;
-    }
-    const first = group[0];
-    conflicts.push({
-      id: `runtime-conflict:${key3}`,
-      kind: first.field === "instruction-size" || first.field === "opcode" ? first.field : "cpu-state",
-      architecture: first.architecture,
-      addressSpace: first.addressSpace,
-      address: first.address,
-      field: first.field,
-      values: [...byValue.values()].map((entries) => ({
-        value: entries[0].value,
-        records: sortedUnique2(entries.map((entry) => entry.record)),
-        evidence: sortedUnique2(entries.flatMap((entry) => entry.evidence))
-      })).sort((left, right) => stateValueKey(left.value).localeCompare(stateValueKey(right.value)))
-    });
-  }
-  return conflicts.sort((left, right) => left.id.localeCompare(right.id));
-};
-var explanationReport = (shards) => {
-  const runtimeEvidence = new Set(
-    shards.evidence.filter((record) => record.source === "runtime").map((record) => record.id)
-  );
-  const explanations = [];
-  for (const annotation of shards.annotations) {
-    const evidence = annotation.evidence.filter((id) => runtimeEvidence.has(id));
-    if (evidence.length === 0) {
-      continue;
-    }
-    const stateFields = Object.keys(annotation.state ?? {}).sort();
-    explanations.push({
-      recordId: annotation.id,
-      detail: stateFields.length > 0 ? `Runtime observation supplies ${stateFields.join(", ")} state.` : `Runtime observation classifies bytes as ${annotation.classification}.`,
-      evidence: sortedUnique2(evidence)
-    });
-  }
-  for (const record of shards.analysis) {
-    if (record.kind !== "target-override") {
-      continue;
-    }
-    const evidence = record.evidence.filter((id) => runtimeEvidence.has(id));
-    if (evidence.length === 0) {
-      continue;
-    }
-    explanations.push({
-      recordId: record.id,
-      detail: `Runtime observation resolves control flow to ${record.targets.map((target) => `$${target.toString(16).toUpperCase().padStart(6, "0")}`).join(", ")}.`,
-      evidence: sortedUnique2(evidence)
-    });
-  }
-  return explanations.sort((left, right) => left.recordId.localeCompare(right.recordId));
-};
-var mergeRecords = (kind, prior, incoming, added, updated, existing) => {
-  if (incoming.length === 0) {
-    return prior;
-  }
-  const records = new Map(prior.map((record) => [record.id, record]));
-  for (const record of incoming) {
-    const current = records.get(record.id);
-    if (!current) {
-      records.set(record.id, record);
-      added[kind]++;
-    } else if (canonicalJson(current) === canonicalJson(record)) {
-      existing[kind]++;
-    } else if (kind === "analysis" && "kind" in current && "kind" in record && current.kind === "target-override" && record.kind === "target-override" && current.id.startsWith("runtime:target-override:")) {
-      const left = current;
-      const right = record;
-      if (left.addressSpace !== right.addressSpace || left.address !== right.address) {
-        throw new Error(`Runtime target override '${record.id}' changed its control-flow site.`);
-      }
-      const merged = {
-        ...left,
-        targets: [.../* @__PURE__ */ new Set([...left.targets, ...right.targets])].sort((a, b) => a - b),
-        evidence: sortedUnique2([...left.evidence, ...right.evidence])
-      };
-      if (canonicalJson(current) === canonicalJson(merged)) {
-        existing[kind]++;
-      } else {
-        records.set(record.id, merged);
-        updated[kind]++;
-      }
-    } else {
-      throw new Error(
-        `Runtime evidence id '${record.id}' in '${kind}' changed content. Use a content-derived id.`
-      );
-    }
-  }
-  return [...records.values()];
-};
-var mergeRuntimeEvidence = (shards, batch) => {
-  const traceProfiles = /* @__PURE__ */ new Map();
-  for (const report of [...shards.imports, ...batch.imports ?? []]) {
-    if (report.format !== "uttori-asm-instruction-trace") {
-      continue;
-    }
-    if (traceProfiles.has(report.sourceSha256) && traceProfiles.get(report.sourceSha256) !== report.indexProfile) {
-      throw new Error(
-        `Trace '${report.sourceName}' was already imported with a different index profile. Reuse that profile or import into a separate project. Mixing projections would double-count observations.`
-      );
-    }
-    traceProfiles.set(report.sourceSha256, report.indexProfile);
-  }
-  const owned = manuallyOwnedMetadata(shards);
-  const added = emptyCounts();
-  const updated = emptyCounts();
-  const existing = emptyCounts();
-  const merged = {
-    analysis: mergeRecords(
-      "analysis",
-      shards.analysis,
-      (batch.analysis ?? []).filter((record) => !owned.has("analysis:" + record.id)),
-      added,
-      updated,
-      existing
-    ),
-    annotations: mergeRecords(
-      "annotations",
-      shards.annotations,
-      (batch.annotations ?? []).filter((record) => !owned.has("annotations:" + record.id)),
-      added,
-      updated,
-      existing
-    ),
-    labels: mergeRecords(
-      "labels",
-      shards.labels,
-      (batch.labels ?? []).filter((record) => !owned.has("labels:" + record.id)),
-      added,
-      updated,
-      existing
-    ),
-    comments: mergeRecords(
-      "comments",
-      shards.comments,
-      (batch.comments ?? []).filter((record) => !owned.has("comments:" + record.id)),
-      added,
-      updated,
-      existing
-    ),
-    regions: mergeRecords("regions", shards.regions, batch.regions ?? [], added, updated, existing),
-    runtime: mergeRecords("runtime", shards.runtime, batch.runtime ?? [], added, updated, existing),
-    evidence: mergeRecords(
-      "evidence",
-      shards.evidence,
-      batch.evidence ?? [],
-      added,
-      updated,
-      existing
-    ),
-    imports: mergeRecords("imports", shards.imports, batch.imports ?? [], added, updated, existing)
-  };
-  let conflicts;
-  let explanations;
-  return {
-    shards: merged,
-    changed: Object.values(added).some((count) => count > 0) || Object.values(updated).some((count) => count > 0),
-    added,
-    updated,
-    existing,
-    get conflicts() {
-      return conflicts ??= conflictReport(merged.runtime);
-    },
-    get explanations() {
-      return explanations ??= explanationReport(merged);
-    }
-  };
-};
-var inspectRuntimeEvidence = (shards) => ({
-  conflicts: conflictReport(shards.runtime),
-  explanations: explanationReport(shards)
-});
 
 // packages/disassembler/src/sqlite-annotation-query.ts
 var QUERY_LAYOUT = "5";
@@ -3688,7 +3630,7 @@ var collectRuntimeHistory = (db) => {
 };
 
 // packages/disassembler/src/sqlite-runtime-storage.ts
-var import_node_crypto2 = require("node:crypto");
+var import_node_crypto = require("node:crypto");
 var RUNTIME_RECORD_STREAM_SQL = [true, false].map(
   (paired) => `
   SELECT i.value AS id,p.value AS id_prefix,e.value AS evidence,o.count,
@@ -3843,7 +3785,7 @@ var SqliteRuntimeWriter = class {
       }
     }
     const payload = columns2.payload;
-    const fingerprint = (0, import_node_crypto2.createHash)("sha256").update(
+    const fingerprint = (0, import_node_crypto.createHash)("sha256").update(
       // Fixed scalar fields in canonicalJson's key order avoid sorting/cloning
       // per row. Nulls, two-space indentation and the trailing newline preserve
       // persisted fact fingerprints. Changing the layout would duplicate retained facts.
@@ -3921,7 +3863,7 @@ var SqliteRuntimeWriter = class {
 };
 
 // packages/disassembler/src/sqlite-runtime-summary.ts
-var import_node_crypto3 = require("node:crypto");
+var import_node_crypto2 = require("node:crypto");
 var KEY = "instruction_variants";
 var BUILD = "instruction_variants_build";
 var INVALIDATE = `DELETE FROM query_cache WHERE name IN ('${KEY}','${BUILD}');`;
@@ -4030,7 +3972,7 @@ var runtimeInstructionSummary = (db, transaction, architecture, space, fields, m
     });
   }
   if (!isCurrent(db, signature)) {
-    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto2.randomUUID)()}`;
     let incremental = false;
     transaction(() => {
       incremental = readQueryCache(db, KEY, signature) !== void 0;
@@ -4552,7 +4494,7 @@ var analysisProjectSqlitePath = (directory, manifest) => {
   if (relative !== ANALYSIS_PROJECT_SQLITE_FILE) {
     throw new Error(`Unsupported analysis sqlite path '${relative}'.`);
   }
-  return import_node_path3.default.join(directory, relative);
+  return import_node_path2.default.join(directory, relative);
 };
 var parseRecord = (payload) => parseSqlitePayload(payload);
 var sqliteFileIdentity = (file) => {
@@ -5470,7 +5412,7 @@ var SqliteAnalysisStore = class {
     if (cached !== void 0) {
       return cached;
     }
-    const pending = `pending:${(0, import_node_crypto4.randomUUID)()}`;
+    const pending = `pending:${(0, import_node_crypto3.randomUUID)()}`;
     this.transaction(() => {
       installQueryCache(this.#database, key3, dependencies);
       writeQueryCache(this.#database, key3, pending, null);
@@ -5849,11 +5791,11 @@ var SqliteAnalysisStore = class {
    * @param {string} directory Project root for the watcher hint.
    */
   writePointer(directory) {
-    const temporary = import_node_path3.default.join(directory, `.analysis.json.${(0, import_node_crypto4.randomUUID)()}.tmp`);
+    const temporary = import_node_path2.default.join(directory, `.analysis.json.${(0, import_node_crypto3.randomUUID)()}.tmp`);
     try {
       this.transaction(() => {
         import_node_fs3.default.writeFileSync(temporary, canonicalJson(this.manifest()), { flag: "wx" });
-        import_node_fs3.default.renameSync(temporary, import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
+        import_node_fs3.default.renameSync(temporary, import_node_path2.default.join(directory, ANALYSIS_PROJECT_MANIFEST));
       });
     } catch (error) {
       process.emitWarning(
@@ -5868,7 +5810,7 @@ var SqliteAnalysisStore = class {
   }
   /** Checkpoint and reclaim unused SQLite pages. Run only during explicit storage maintenance. */
   compact() {
-    const disk = import_node_fs3.default.statfsSync(import_node_path3.default.dirname(this.file));
+    const disk = import_node_fs3.default.statfsSync(import_node_path2.default.dirname(this.file));
     const pageCount = Number(this.#database.prepare("PRAGMA page_count").get()?.page_count);
     const pageSize = Number(this.#database.prepare("PRAGMA page_size").get()?.page_size);
     if (disk.bavail * disk.bsize < 2 * pageCount * pageSize) {
@@ -5963,6 +5905,60 @@ var SqliteAnalysisStore = class {
   /** Close once in finally, releasing statements and any active transaction. Further use throws. */
   close() {
     this.#database.close();
+  }
+};
+
+// packages/disassembler/src/project-store.ts
+var fs4 = __toESM(require("node:fs"), 1);
+var import_node_path3 = __toESM(require("node:path"), 1);
+var parseAnalysisProjectManifest = (input) => {
+  if (!input || typeof input !== "object") {
+    throw new Error("Invalid analysis project manifest.");
+  }
+  const manifest = input;
+  if (manifest.schemaVersion > 3) {
+    throw new Error(
+      `Analysis project schema ${manifest.schemaVersion} is newer than supported schema 3. Refusing to downgrade.`
+    );
+  }
+  validateAnalysisProjectManifest(manifest);
+  if (manifest.db !== "analysis.sqlite") {
+    throw new Error("Legacy analysis storage is no longer supported. Use a SQLite project.");
+  }
+  return manifest;
+};
+var openAnalysisProjectStore = (directory) => {
+  const manifest = parseAnalysisProjectManifest(
+    JSON.parse(fs4.readFileSync(import_node_path3.default.join(directory, ANALYSIS_PROJECT_MANIFEST), "utf8"))
+  );
+  return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
+};
+
+// packages/disassembler/src/project-transaction.ts
+var import_node_crypto4 = require("node:crypto");
+var ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
+var ANALYSIS_PROJECT_REVISION_VERSION = 1;
+var AnalysisProjectStaleError = class extends Error {
+  constructor(expected, actual) {
+    super(
+      `Analysis project changed since it was loaded (expected ${expected.manifestSha256}, found ${actual.manifestSha256}).`
+    );
+    this.expected = expected;
+    this.actual = actual;
+    this.name = "AnalysisProjectStaleError";
+  }
+  expected;
+  actual;
+};
+var analysisProjectRevision = (manifest) => ({
+  format: ANALYSIS_PROJECT_REVISION_FORMAT,
+  version: ANALYSIS_PROJECT_REVISION_VERSION,
+  manifestSha256: (0, import_node_crypto4.createHash)("sha256").update(canonicalJson(manifest)).digest("hex")
+});
+var assertAnalysisProjectRevision = (store, expected) => {
+  const actual = analysisProjectRevision(store.manifest());
+  if (expected.manifestSha256 !== actual.manifestSha256) {
+    throw new AnalysisProjectStaleError(expected, actual);
   }
 };
 

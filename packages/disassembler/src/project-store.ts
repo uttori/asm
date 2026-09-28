@@ -1,12 +1,12 @@
 import * as fs from "node:fs";
 import path from "node:path";
 
-import { publishAnalysisProject } from "./project-transaction.js";
 import {
   ANALYSIS_PROJECT_MANIFEST,
-  type AnalysisProject,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
+  type LoadedAnalysisProject,
+  type LoadedAnalysisProjectView,
 } from "./project-types.js";
 import {
   validateAnalysisProjectManifest,
@@ -58,18 +58,6 @@ export const openAnalysisProjectStore = (directory: string): SqliteAnalysisStore
   );
   return new SqliteAnalysisStore(analysisProjectSqlitePath(directory, manifest), false);
 };
-
-/** One consistent revision, detached from storage. Readonly types do not freeze records at runtime. */
-export interface LoadedAnalysisProject {
-  readonly manifest: AnalysisProjectManifest;
-  readonly shards: AnalysisProjectShards;
-}
-
-/** Metadata and optional runtime projection. Never pass this partial view to a full replacement. */
-export interface LoadedAnalysisProjectView {
-  readonly manifest: AnalysisProjectManifest;
-  readonly view: AnalysisProjectShards;
-}
 
 /**
  * Load one SQLite read snapshot. Ordinary views skip runtime entirely. Explicit reducers stream
@@ -145,19 +133,6 @@ export const loadAnalysisProjectView = (
   const { manifest, shards } = loadProject(directory, false, createProjection);
   return { manifest, view: shards };
 };
-
-/**
- * Atomically create or replace all records, including runtime. Use view updates to preserve history.
- * Samples the current revision at call time, so it cannot detect an edit derived from an older
- * caller snapshot. Editing clients must use the explicit revision-checked commit APIs instead.
- * @param {string} directory Project root to create or replace.
- * @param {AnalysisProject} project Complete replacement, including runtime history.
- * @returns {AnalysisProjectManifest} Committed manifest and next revision.
- */
-export const writeAnalysisProject = (
-  directory: string,
-  project: AnalysisProject,
-): AnalysisProjectManifest => publishAnalysisProject(directory, project).manifest;
 
 /**
  * Throw if the ROM's full-file hash, headerless-content hash, or copier-header size differs.

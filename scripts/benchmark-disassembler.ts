@@ -30,7 +30,7 @@ import {
   prepareAnalysisProjectTransaction,
   revertRangeClassificationEdit,
   sourceExportSha256,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type AnalysisProjectShards,
   type AnalysisTargetOverrideRecord,
@@ -409,7 +409,7 @@ const analyzedProject = (fixture: Fixture, rom: RomImage): AnalysisProject =>
   analyzeProject(fixture, rom, baseProject(fixture, rom));
 
 const writeAndLoad = (directory: string, project: AnalysisProject): LoadedAnalysisProject => {
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   return loadAnalysisProject(directory);
 };
 
@@ -603,7 +603,7 @@ const prepareOperation = (
   const projectDirectory = path.join(temporary, "project.analysis");
   if (operation === "project-serialization") {
     return () => {
-      const manifest = writeAnalysisProject(projectDirectory, project);
+      const manifest = publishAnalysisProject(projectDirectory, project).manifest;
       return {
         retained: manifest,
         observation: {
@@ -668,7 +668,7 @@ const prepareOperation = (
   if (operation === "project-load") {
     // Measure one retained load. Loading here during setup would leave a full project reachable or
     // resident and make the timed operation a misleading second-copy measurement.
-    writeAnalysisProject(projectDirectory, project);
+    publishAnalysisProject(projectDirectory, project);
     return () => {
       const reloaded = loadAnalysisProject(projectDirectory);
       return {
@@ -684,7 +684,7 @@ const prepareOperation = (
     // Commit needs one caller snapshot and a validated in-memory edit. Write the fixture,
     // then load exactly that single snapshot. WriteAndLoad() plus another snapshot would retain two
     // equivalent projects before the measured commit begins.
-    writeAnalysisProject(projectDirectory, project);
+    publishAnalysisProject(projectDirectory, project);
     const snapshot = loadAnalysisProjectSnapshot(projectDirectory);
     const edited = editLoadedProject(snapshot);
     const prepared = prepareAnalysisProjectTransaction(projectDirectory, edited.project);

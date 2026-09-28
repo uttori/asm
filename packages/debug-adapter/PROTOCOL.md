@@ -17,7 +17,7 @@ catches callback failures so optional analysis cannot interrupt debugging.
 
 ## Backend conformance
 
-`runDebugBackendConformance()` is the versioned acceptance harness shared by replay and live emulator adapters. It creates a fresh backend for each shared scenario and verifies protocol/capability negotiation, architecture-specific address spaces, stopped-state inspection, exact instruction stepping, continue-to-breakpoint behavior, reconnect without reset, and request bounds. Live ares and MesenCE adapters must run this harness unchanged. Backend-private tests may add timing and emulator-specific coverage but cannot replace it.
+`runDebugBackendConformance()` is the versioned acceptance harness shared by replay and live emulator adapters. It creates a fresh backend for each shared scenario and verifies protocol/capability negotiation, architecture-specific address spaces, stopped-state inspection, exact instruction stepping, continue-to-breakpoint behavior, reconnect without reset, and request bounds. The live ares adapter must run this harness unchanged. Backend-private tests may add timing and emulator-specific coverage but cannot replace it.
 
 Architecture capabilities are explicit. A backend may declare reduced SPC700 or SuperFX support, but it must preserve their architecture and address-space identities rather than folding them into the 65816 view. Each readable memory space is declared separately with a `sideEffectFree` guarantee. `readMemory` rejects address spaces omitted from that list even when they remain valid for program counters, breakpoints, or disassembly.
 

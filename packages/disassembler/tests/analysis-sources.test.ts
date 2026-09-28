@@ -6,7 +6,7 @@ import { test } from "../../../tests/ava-helper.js";
 import {
   buildAnalysisSourceCatalog,
   openAnalysisProjectStore,
-  writeAnalysisProject,
+  publishAnalysisProject,
   RomImage,
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -143,7 +143,7 @@ test("SQL source counts deduplicate instruction variants, keep qualified identit
   const project = fixture();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-sql-sources-"));
   const records = Array.from({ length: 450 }, (_, address) => execution("a", address));
-  writeAnalysisProject(directory, {
+  publishAnalysisProject(directory, {
     ...project,
     shards: {
       ...project.shards,
@@ -223,7 +223,7 @@ test("SQL source counts deduplicate instruction variants, keep qualified identit
 test("source catalog orders durable import receipts newest first across reimports and compaction", (t) => {
   const project = fixture();
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-source-recency-"));
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => {
     store.close();

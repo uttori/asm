@@ -35,15 +35,13 @@ test("VS Code contributes and activates the inline Uttori ASM debugger", (t) => 
   t.deepEqual(debuggerContribution?.configurationAttributes.launch.properties.backend.enum, [
     "replay",
     "ares",
-    "mesence",
   ]);
   t.deepEqual(
     debuggerContribution?.configurationSnippets.map(({ body }) => body.backend),
-    ["replay", "ares", "mesence"],
+    ["replay", "ares"],
   );
   t.is(manifest.dependencies["@uttori/asm-debug-adapter"], "1.0.0");
   t.is(manifest.dependencies["@uttori/asm-debug-sidecar-ares"], "1.0.0");
-  t.is(manifest.dependencies["@uttori/asm-debug-sidecar-mesence"], "1.0.0");
 
   const extension = fs.readFileSync(
     path.join(root, "packages/vscode-extension/src/extension.ts"),

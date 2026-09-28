@@ -13,7 +13,7 @@ import {
   loadAnalysisProject,
   loadAnalysisProjectViewSnapshot,
   mergeRuntimeEvidence,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type RuntimeInstructionTraceArtifact,
 } from "../src/index.js";
@@ -57,7 +57,7 @@ test("in-memory chunks publish the same facts and roll back on a late producer f
   const project = fixture();
   const artifact = trace(project);
   const directory = path.join(root, "analysis");
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const before = loadAnalysisProject(directory);
   const context = {
     projectRomContentSha256: artifact.romContentSha256,
@@ -103,7 +103,7 @@ test("in-memory chunks publish the same facts and roll back on a late producer f
   t.deepEqual(actual.report, expected.report);
   const merged = mergeRuntimeEvidence(project.shards, expected.batch);
   const expectedDirectory = path.join(root, "expected");
-  writeAnalysisProject(expectedDirectory, { ...project, shards: merged.shards });
+  publishAnalysisProject(expectedDirectory, { ...project, shards: merged.shards });
   t.deepEqual(loadAnalysisProject(directory).shards, loadAnalysisProject(expectedDirectory).shards);
 });
 
@@ -156,7 +156,7 @@ for (const indexMode of ["full", "65816-disassembly", "65816-analysis"] as const
     const artifact = trace(project);
     const file = path.join(root, "trace.json");
     fs.writeFileSync(file, JSON.stringify(artifact));
-    writeAnalysisProject(directory, project);
+    publishAnalysisProject(directory, project);
     const context = {
       projectRomContentSha256: artifact.romContentSha256,
       sourceName: "trace.json",
@@ -164,7 +164,7 @@ for (const indexMode of ["full", "65816-disassembly", "65816-analysis"] as const
     };
     const expected = importRuntimeInstructionTrace(artifact, context);
     const merged = mergeRuntimeEvidence(project.shards, expected.batch);
-    writeAnalysisProject(path.join(root, "expected"), {
+    publishAnalysisProject(path.join(root, "expected"), {
       ...project,
       shards: merged.shards,
     });
@@ -199,11 +199,11 @@ for (const indexMode of ["full", "65816-disassembly", "65816-analysis"] as const
         runtime: complete.shards.runtime.filter((record) => record.kind !== "runtime-cpu-state"),
       },
     };
-    writeAnalysisProject(directory, shortened);
+    publishAnalysisProject(directory, shortened);
     const repaired = await importRuntimeTraceIntoProject(file, directory, context);
     t.is(repaired.added.runtime, complete.shards.runtime.length - shortened.shards.runtime.length);
     t.deepEqual(loadAnalysisProject(directory).shards, complete.shards);
-    writeAnalysisProject(directory, {
+    publishAnalysisProject(directory, {
       ...complete,
       shards: {
         ...complete.shards,
@@ -225,7 +225,7 @@ test("disk import rejects invalid tails, budgets and cancellation without public
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const directory = path.join(root, "analysis");
   const project = fixture();
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const file = path.join(root, "trace.json");
   const artifact = trace(project);
   const context = { projectRomContentSha256: artifact.romContentSha256, sourceName: "trace.json" };
@@ -264,7 +264,7 @@ test("disk import rejects invalid record budgets before reading the capture body
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-import-preflight-"));
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const project = fixture();
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   const before = loadAnalysisProject(root);
   const source = {
     metadata: validateRuntimeInstructionTraceMetadata(trace(project)),
@@ -290,7 +290,7 @@ test("disk import refuses to overwrite a project edited after runtime merging", 
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const directory = path.join(root, "analysis");
   const project = fixture();
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const artifact = trace(project);
   const file = path.join(root, "trace.json");
   fs.writeFileSync(file, JSON.stringify(artifact));
@@ -320,7 +320,7 @@ test("disk import refuses to overwrite a project edited after runtime merging", 
       {
         onStage: (message) => {
           if (message.startsWith("Validating")) {
-            writeAnalysisProject(directory, concurrent);
+            publishAnalysisProject(directory, concurrent);
           }
         },
       },
@@ -349,7 +349,7 @@ test("SQLite import rolls back emitted facts when final provenance publication f
   const project = fixture();
   const file = path.join(root, "trace.json");
   fs.writeFileSync(file, JSON.stringify(trace(project)));
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   const before = loadAnalysisProject(root);
   const database = new DatabaseSync(path.join(root, "analysis.sqlite"));
   database.exec(`CREATE TRIGGER fail_import BEFORE INSERT ON imports
@@ -387,7 +387,7 @@ test("SQLite import validates the actual destination ROM before publishing any f
   const artifact = trace(project);
   const file = path.join(root, "trace.json");
   fs.writeFileSync(file, JSON.stringify(artifact));
-  writeAnalysisProject(root, {
+  publishAnalysisProject(root, {
     ...project,
     manifest: { ...project.manifest, rom: new RomImage(new Uint8Array(0x8000).fill(1)).identity },
   });

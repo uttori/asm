@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, canonicalDebugMapJson, createDebugMap } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, compareByteImages, openAnalysisProjectStore, analysisProjectRevision, assertAnalysisProjectRevision, commitAnalysisProjectViewUpdate, loadSourceExportManifest, sourceGenerationIdentity, assertSourceGeneration, validateAnalysisProject, validateProjectRom, validateSourceExportFiles, validateSourceExportInputs, writeAnalysisProject, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_FORMAT, ANALYSIS_PROJECT_SCHEMA_VERSION, RomImage, compareByteImages, openAnalysisProjectStore, analysisProjectRevision, assertAnalysisProjectRevision, commitAnalysisProjectViewUpdate, loadSourceExportManifest, sourceGenerationIdentity, assertSourceGeneration, validateAnalysisProject, validateProjectRom, validateSourceExportFiles, validateSourceExportInputs, publishAnalysisProject, } from "@uttori/asm-disassembler";
 import { snesRomAddressSpace } from "../target/address-space.js";
 import { analyzeSnes65816 } from "./65816-analysis.js";
 import { createSnesAddressContext, SNES_CPU_ADDRESS_SPACE, SNES_FILE_ADDRESS_SPACE, SNES_SRAM_ADDRESS_SPACE_DESCRIPTOR, SNES_WRAM_ADDRESS_SPACE_DESCRIPTOR, } from "./address-identities.js";
@@ -231,7 +231,7 @@ export const createSnesAnalysisProject = (options) => {
     };
     const staging = temporarySibling(projectDirectory, "analysis");
     try {
-        const manifest = writeAnalysisProject(staging, project);
+        const manifest = publishAnalysisProject(staging, project).manifest;
         validateAnalysisProject(staging, rom);
         throwIfCancelled(options.signal);
         commitStagedDirectory(staging, projectDirectory);

@@ -5,7 +5,6 @@ import os from "node:os";
 import path from "node:path";
 
 import { ReplayDebugBackend, type ReplaySnapshot } from "@uttori/asm-debug-adapter";
-import { MESEN_CAPABILITIES } from "@uttori/asm-debug-sidecar-mesence/profile";
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
@@ -157,14 +156,8 @@ try {
   } finally {
     subscription.dispose();
   }
-  assert.equal(
-    MESEN_CAPABILITIES.architectures.find(({ architecture }) => architecture === "snes.spc700")
-      ?.breakpoints,
-    false,
-  );
-  assert.ok(MESEN_CAPABILITIES.architectures.every(({ trace }) => trace === null));
   console.log(
-    "Installed trace/debug: guide, limits, cancellation, rollback, reimport, ownership, replay lifecycle, and reduced capabilities passed",
+    "Installed trace/debug: guide, limits, cancellation, rollback, reimport, ownership, and replay lifecycle passed",
   );
 } finally {
   fs.rmSync(scratch, { recursive: true, force: true });

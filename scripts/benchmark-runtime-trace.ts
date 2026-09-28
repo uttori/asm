@@ -15,7 +15,7 @@ import {
   validateRuntimeInstructionTraceMetadata,
   importRuntimeTraceIntoProject,
   importRuntimeTraceSourceIntoProject,
-  writeAnalysisProject,
+  publishAnalysisProject,
   loadAnalysisProject,
   RomImage,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
@@ -231,8 +231,8 @@ try {
       const legacyDirectory = path.join(directory, `legacy-${indexMode}-${repetition}`);
       const legacyFile = path.join(directory, `legacy-${indexMode}-${repetition}.json`);
       // Fresh projects prevent identical-import fast paths from distorting publication costs.
-      writeAnalysisProject(directDirectory, project);
-      writeAnalysisProject(legacyDirectory, project);
+      publishAnalysisProject(directDirectory, project);
+      publishAnalysisProject(legacyDirectory, project);
       const importContext = {
         projectRomContentSha256: captureFixtureHeader.romContentSha256,
         sourceName: "capture",

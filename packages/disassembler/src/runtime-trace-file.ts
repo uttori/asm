@@ -2,7 +2,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { StringDecoder } from "node:string_decoder";
 
-import { canonicalJson } from "./project-store.js";
+import { canonicalJson } from "./canonical-json.js";
 import {
   createRuntimeInstructionTraceImporter,
   createRuntimeTraceChunkValidator,

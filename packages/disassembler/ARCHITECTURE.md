@@ -33,10 +33,10 @@ code, and processor state can be undecidable from ROM bytes alone.
        ├──── plugin loader + target plugins      debug adapter
        │                        │                  │
        │                        │          neutral sidecar protocol
-       │                        │             ┌────┴────┐
-       │                        │         ares sidecar  MesenCE sidecar
-       │                        │             │             │
-       ├──────────── disassembler             separate emulator process
+       │                        │                  │
+       │                        │             ares sidecar
+       │                        │                  │
+       ├──────────── disassembler        separate emulator process
        │                        │
        └────────────────────── core
 ```
@@ -47,12 +47,12 @@ The arrows show composition, not permission to leak lower-layer types upward.
 | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
 | `@uttori/asm-core`               | parsing, expressions, stages, symbols, diagnostics, plugin contracts, decoder-neutral types, debug maps                        | SNES opcodes, mappers, project storage, emulator APIs    |
 | `@uttori/asm-disassembler`       | ROM identity, project schema/storage, transactions, generic analysis, evidence, coverage, call graph, assets, export manifests | SNES mapping/opcodes, Diz fields, DAP, emulator commands |
-| `@uttori/asm-plugin-snes`        | 65816/SPC700/SuperFX specifications, state transfer, SNES mapping/detection, Diz/Mesen import, native source rendering         | VS Code UI, DAP, native process lifecycle                |
+| `@uttori/asm-plugin-snes`        | 65816/SPC700/SuperFX specifications, state transfer, SNES mapping/detection, Diz import, native source rendering               | VS Code UI, DAP, native process lifecycle                |
 | `@uttori/asm-plugin-65xx`        | other 65xx-family specifications and targets                                                                                   | SNES-specific behavior                                   |
 | `@uttori/asm-plugin-loader-node` | trusted Node plugin discovery and configuration                                                                                | plugin semantics                                         |
 | `@uttori/asm-cli`                | command parsing and explicit workflow orchestration                                                                            | duplicate analysis or mapper algorithms                  |
 | `@uttori/asm-debug-adapter`      | neutral backend, replay, conformance, framing, DAP translation                                                                 | emulator SDK/command types, project mutation             |
-| ares/MesenCE sidecars            | native transport translation, runtime validation, child lifecycle                                                              | DAP, VS Code models, project format                      |
+| ares sidecar                     | native transport translation, runtime validation, child lifecycle                                                              | DAP, VS Code models, project format                      |
 | language server                  | editor protocol and workspace analysis over the plugin environment                                                             | independent opcode catalogs                              |
 | VS Code extension                | commands, views, trust policy, navigation, DAP host                                                                            | analysis inference or emulator implementation            |
 
@@ -172,8 +172,7 @@ union destinations and provenance rather than discarding an earlier legitimate t
 
 The `.dizraw` importer lives in the SNES plugin because Diz classifications and SNES mapping are
 target-specific. It imports what can be represented and records unsupported fields. There is no
-`.dizraw` export. MesenCE CDL, trace text, labels, and native instruction traces follow the same
-identity/provenance rule.
+`.dizraw` export. Native instruction traces follow the same identity/provenance rule.
 
 ## Coverage, call graph, and instruction annotations
 
@@ -239,9 +238,9 @@ The neutral sidecar wire format is four-byte big-endian length plus UTF-8 JSON. 
 breakpoint, trace, pending-request, and deadline limits fail closed. Child stdout is protocol-only.
 Stderr is separately bounded and token-redacted.
 
-The ares sidecar translates a narrow maintained-fork RSP surface. The MesenCE sidecar translates a
-separate experimental service. They are MIT clean-room code and distribute no emulator. Runtime
-manifests pin executable, patch, ROM, resource, and build identities. See the [ares distribution inventory](https://github.com/uttori/asm/blob/master/packages/debug-sidecar-ares/RUNTIME.md).
+The ares sidecar translates a narrow maintained-fork RSP surface. It is MIT clean-room code and
+distributes no emulator. Runtime manifests pin executable, patch, ROM, resource, and build
+identities. See the [ares distribution inventory](https://github.com/uttori/asm/blob/master/packages/debug-sidecar-ares/RUNTIME.md).
 
 macOS arm64 is the first live-native validated host. Hosted portable workflows validate the
 TypeScript protocol and editor architecture. They do not prove an emulator runtime until a separate

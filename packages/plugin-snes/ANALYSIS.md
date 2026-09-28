@@ -74,7 +74,7 @@ For separately negotiated lossless modes, see [ares capture](https://github.com/
 
 `pc` selects a smaller stream containing instruction addresses. Explicitly requesting full detail
 from a runtime without that capability fails. PC-only files identify reachability but lack the
-captured bytes/state needed to reconstruct RAM code. Replay remains a PC-only workflow fixture. MesenCE has no instruction trace producer.
+captured bytes/state needed to reconstruct RAM code. Replay remains a PC-only workflow fixture.
 
 Import creates execution counts, captured instruction variants, CPU-state observations, and memory-access records. Fetches supply code bytes and are excluded from data-read facts. Reimporting the same artifact is idempotent. The sidecar, DAP path, disk recorder and import all retain the details.
 

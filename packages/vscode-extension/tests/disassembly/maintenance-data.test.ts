@@ -26,7 +26,7 @@ test("normalized seeds keep unique 24-bit PCs and drop unknown evidence ids", (t
   t.throws(
     () =>
       normalizedSeeds(
-        Array.from({ length: 100_001 }, (_, address) => ({ address })),
+        Array.from({ length: 1_000_001 }, (_, address) => ({ address })),
         { shards: { evidence: [] } },
       ),
     { message: /narrower window/ },

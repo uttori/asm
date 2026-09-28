@@ -11,7 +11,7 @@ import {
   sourceExportSha256,
   syncDirectory,
   validateProjectRom,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProjectShards,
   type EditableMetadataRecord,
   type MetadataShard,
@@ -502,7 +502,7 @@ export async function applyMetadataMigration(
         ).push(record);
       }
     }
-    writeAnalysisProject(projectDirectory, { manifest: created.manifest, shards });
+    publishAnalysisProject(projectDirectory, { manifest: created.manifest, shards });
     if (selected.has("struct-library")) {
       const library = review.items.find((item) => item.id === "struct-library")!.after as Record<
         string,

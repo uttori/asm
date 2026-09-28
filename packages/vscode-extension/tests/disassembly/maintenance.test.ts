@@ -7,7 +7,7 @@ import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type AnalysisStorageSnapshot,
 } from "@uttori/asm-disassembler";
@@ -206,7 +206,7 @@ const writeProject = (directory: string, target = "fixture"): AnalysisProject =>
       runtime: [],
     },
   };
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   return project;
 };
 

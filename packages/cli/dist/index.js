@@ -1,9 +1,9 @@
 import * as fs from "node:fs";
 import path from "node:path";
 import { Assembler, NodeAssemblyFileProvider, PluginError, canonicalDebugMapJson, createDebugMap, } from "@uttori/asm-core";
-import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeInstructionTraceFile, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, findManagedSourceFile, sourceGenerationIdentity, assertSourceGeneration, mergeRuntimeEvidence, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, commitRuntimeEvidenceBatch, analysisProjectRevision, validateProjectRom, } from "@uttori/asm-disassembler";
+import { ANALYSIS_PROJECT_MANIFEST, SOURCE_EXPORT_MANIFEST, RomImage, canonicalJson, compareByteImages, importRuntimeTraceIntoProject, openAnalysisProjectStore, loadAnalysisProjectView, loadSourceExportManifest, findManagedSourceFile, sourceGenerationIdentity, assertSourceGeneration, validateSourceExportFiles, validateSourceExportInputs, compactAnalysisProject, DEFAULT_STATIC_ANALYSIS_MAX_CALL_DEPTH, DEFAULT_STATIC_ANALYSIS_MAX_WORK_ITEMS, validateProjectRom, } from "@uttori/asm-disassembler";
 import { loadProjectEnvironment, PROJECT_CONFIG_FILENAME, } from "@uttori/asm-plugin-loader-node";
-import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, exportMesenLabels, identifySnesFileOffset, importMesen65816Trace, importMesenLabels, importMesenSnesCdl, } from "@uttori/asm-plugin-snes";
+import snesPlugin, { SNES_MAPPERS, SNES_TARGET_ID, analyzeSnesProject, createSnesAnalysisProject, createSnesAddressContext, exportSnesProject, identifySnesFileOffset, } from "@uttori/asm-plugin-snes";
 import { publishOutputFiles } from "./output-files.js";
 /** Flags are command-specific so a misspelled workflow cannot silently ignore a requested policy. */
 const commandOptions = {
@@ -35,10 +35,6 @@ const commandOptions = {
     "project-storage": ["--cache-max-mib", "--storage-max-mib"],
     "evidence-import": [
         "--rom",
-        "--mesen-cdl",
-        "--mesen-trace",
-        "--trace-metadata",
-        "--mesen-labels",
         "--instruction-trace",
         "--trace-max-mib",
         "--trace-index",
@@ -46,7 +42,6 @@ const commandOptions = {
         "--storage-max-mib",
     ],
     "evidence-report": [],
-    "mesen-labels-export": ["--rom"],
 };
 const knownOptions = new Set(["--help", ...Object.values(commandOptions).flat()]);
 const booleanOptions = new Set([
@@ -62,7 +57,6 @@ const commandsWithOutput = new Set([
     "disassemble",
     "export",
     "evidence-report",
-    "mesen-labels-export",
 ]);
 /** Installed executable's help text. All flags are long options. -- ends option parsing. */
 export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
@@ -72,7 +66,6 @@ export const usage = `Usage: uttori-asm <input.asm> [output] [assemble-options]
   uttori-asm evidence-import <project-directory> --rom <rom> [evidence-options]
   uttori-asm evidence-report <project-directory> [report.json]
   uttori-asm export <project-directory> [source-directory] --rom <rom> [--force] [--allow-code-regression]
-  uttori-asm mesen-labels-export <project-directory> [labels.mlb] --rom <rom>
   uttori-asm verify-roundtrip <source-directory> --rom <rom>
   uttori-asm project-validate <project-directory> [--rom <rom>]
   uttori-asm project-compact <project-directory>
@@ -84,14 +77,10 @@ Creation options (disassemble):
   --dizraw <path>              Import uncompressed DiztinGUIsh XML
   Defaults: <rom stem>.analysis. Copier header and mapper detected unless overridden.
 
-ROM identity (analyze, export, verify-roundtrip, evidence-import, mesen-labels-export):
+ROM identity (analyze, export, verify-roundtrip, evidence-import):
   --rom <path>                Required original ROM. Optional with project-validate
 
 Evidence options (evidence-import):
-  --mesen-cdl <path>           Import verified MesenCE CDLv2 coverage
-  --mesen-trace <path>         Import MesenCE default 65816 text trace
-  --trace-metadata <path>      Required JSON identity sidecar for --mesen-trace
-  --mesen-labels <path>        Import MesenCE label text
   --instruction-trace <path>   Import a native explicit instruction recording
   --trace-max-mib <count>      Native trace import size limit in MiB (default 2048)
   --trace-index <mode>         65816-analysis (native SNES default), full, or 65816-disassembly
@@ -158,10 +147,6 @@ export const parseCliArguments = (argv) => {
     let headerSize;
     let dizraw;
     let rom;
-    let mesenCdl;
-    let mesenTrace;
-    let traceMetadata;
-    let mesenLabels;
     let instructionTrace;
     let traceMaxMiB;
     const storagePolicy = {};
@@ -273,18 +258,6 @@ export const parseCliArguments = (argv) => {
                 break;
             case "--rom":
                 rom = value;
-                break;
-            case "--mesen-cdl":
-                mesenCdl = value;
-                break;
-            case "--mesen-trace":
-                mesenTrace = value;
-                break;
-            case "--trace-metadata":
-                traceMetadata = value;
-                break;
-            case "--mesen-labels":
-                mesenLabels = value;
                 break;
             case "--instruction-trace":
                 instructionTrace = value;
@@ -402,10 +375,6 @@ export const parseCliArguments = (argv) => {
         headerSize,
         dizraw,
         rom,
-        mesenCdl,
-        mesenTrace,
-        traceMetadata,
-        mesenLabels,
         instructionTrace,
         traceMaxMiB,
         traceIndex,
@@ -516,7 +485,8 @@ const validateProject = (parsed, cwd) => {
     }
 };
 /**
- * Imports one or more offline MesenCE evidence artifacts into a verified native project.
+ * Imports a native instruction recording into a verified project.
+ * The shared disk importer streams the capture without loading prior runtime history.
  * @param {CliArguments} parsed Parsed command-line arguments.
  * @param {string} cwd Current working directory.
  * @returns {number} Process exit code.
@@ -527,137 +497,44 @@ const importProjectEvidence = async (parsed, cwd) => {
         console.error("Evidence import failed: --rom is required so project identity can be verified.");
         return 1;
     }
-    if (!parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels && !parsed.instructionTrace) {
-        console.error("Evidence import failed: provide --mesen-cdl, --mesen-trace, --mesen-labels, or --instruction-trace.");
-        return 1;
-    }
-    if (parsed.mesenTrace && !parsed.traceMetadata) {
-        console.error("Evidence import failed: --trace-metadata is required with --mesen-trace.");
+    if (!parsed.instructionTrace) {
+        console.error("Evidence import failed: provide --instruction-trace.");
         return 1;
     }
     try {
-        // A native capture on its own can use the shared disk importer without loading prior history.
-        // Mixed-format imports retain the all-or-nothing batch path below so a later invalid input
-        // cannot leave earlier files partially published.
-        if (parsed.instructionTrace && !parsed.mesenCdl && !parsed.mesenTrace && !parsed.mesenLabels) {
-            const store = openAnalysisProjectStore(directory);
-            const manifest = (() => {
-                try {
-                    return store.transaction(() => store.manifest(), false);
-                }
-                finally {
-                    store.close();
-                }
-            })();
-            const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
-                headerSize: manifest.rom.headerSize,
-            });
-            validateProjectRom(manifest, rom);
-            if (!SNES_MAPPERS.includes(manifest.mapping.mapper)) {
-                throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
-            }
-            const filename = path.resolve(cwd, parsed.instructionTrace);
-            const result = await importRuntimeTraceIntoProject(filename, directory, {
-                projectRomContentSha256: manifest.rom.contentSha256,
-                sourceName: path.basename(filename),
-                indexMode: parsed.traceIndex,
-            }, {
-                maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024,
-                onStage: (stage) => console.log(stage),
-                storagePolicy: parsed.storagePolicy,
-            });
-            console.log(`Storage: ${JSON.stringify(result.storage)}`);
-            for (const warning of result.warnings) {
-                console.warn(warning);
-            }
-            const action = result.changed ? "updated" : "no-op reimport for";
-            console.log(`Success: ${action} '${directory}'. ${result.added.runtime} new runtime record(s).`);
-            console.log(`Import: ${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported.`);
-            return 0;
-        }
         const store = openAnalysisProjectStore(directory);
-        const loaded = (() => {
+        const manifest = (() => {
             try {
-                const manifest = store.manifest();
-                return { manifest, revision: analysisProjectRevision(manifest) };
+                return store.transaction(() => store.manifest(), false);
             }
             finally {
                 store.close();
             }
         })();
         const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
-            headerSize: loaded.manifest.rom.headerSize,
+            headerSize: manifest.rom.headerSize,
         });
-        validateProjectRom(loaded.manifest, rom);
-        if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
-            throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
+        validateProjectRom(manifest, rom);
+        if (!SNES_MAPPERS.includes(manifest.mapping.mapper)) {
+            throw new Error(`Unsupported SNES mapper '${manifest.mapping.mapper}'.`);
         }
-        const mapper = loaded.manifest.mapping.mapper;
-        let shards = {
-            analysis: [],
-            annotations: [],
-            labels: [],
-            comments: [],
-            regions: [],
-            evidence: [],
-            imports: [],
-            runtime: [],
-        };
-        let changed = false;
-        let conflictCount = 0;
-        let explanationCount = 0;
-        // Detailed batch reports expand incoming register observations. Whole-project diagnostics use
-        // the separate evidence-report SQL reader, keeping saved histories out of this import path.
-        const includeDiagnostics = !parsed.instructionTrace || parsed.traceIndex !== "65816-disassembly";
-        const reports = [];
-        const merge = (result) => {
-            const merged = mergeRuntimeEvidence(shards, result.batch);
-            shards = merged.shards;
-            changed ||= merged.changed;
-            if (includeDiagnostics) {
-                conflictCount = merged.conflicts.length;
-                explanationCount = merged.explanations.length;
-            }
-            reports.push(`${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported`);
-        };
-        const projectContext = (sourceName) => ({
-            sourceName,
-            projectRomContentSha256: loaded.manifest.rom.contentSha256,
-            projectMapper: mapper,
+        const filename = path.resolve(cwd, parsed.instructionTrace);
+        const result = await importRuntimeTraceIntoProject(filename, directory, {
+            projectRomContentSha256: manifest.rom.contentSha256,
+            sourceName: path.basename(filename),
+            indexMode: parsed.traceIndex,
+        }, {
+            maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024,
+            onStage: (stage) => console.log(stage),
+            storagePolicy: parsed.storagePolicy,
         });
-        if (parsed.mesenCdl) {
-            const filename = path.resolve(cwd, parsed.mesenCdl);
-            merge(importMesenSnesCdl(fs.readFileSync(filename), rom, mapper, projectContext(path.basename(filename))));
+        console.log(`Storage: ${JSON.stringify(result.storage)}`);
+        for (const warning of result.warnings) {
+            console.warn(warning);
         }
-        if (parsed.mesenTrace) {
-            const filename = path.resolve(cwd, parsed.mesenTrace);
-            const metadata = JSON.parse(fs.readFileSync(path.resolve(cwd, parsed.traceMetadata), "utf8"));
-            merge(importMesen65816Trace(fs.readFileSync(filename, "utf8"), metadata, rom, mapper, projectContext(path.basename(filename))));
-        }
-        if (parsed.mesenLabels) {
-            const filename = path.resolve(cwd, parsed.mesenLabels);
-            merge(importMesenLabels(fs.readFileSync(filename, "utf8"), rom, mapper, projectContext(path.basename(filename))));
-        }
-        if (parsed.instructionTrace) {
-            const filename = path.resolve(cwd, parsed.instructionTrace);
-            merge(await importRuntimeInstructionTraceFile(filename, {
-                projectRomContentSha256: loaded.manifest.rom.contentSha256,
-                sourceName: path.basename(filename),
-                indexMode: parsed.traceIndex,
-            }, { maxBytes: (parsed.traceMaxMiB ?? 2048) * 1024 * 1024 }));
-        }
-        // Only incoming batches are merged in memory. Destination collisions and append-only writes
-        // are checked atomically in SQL, including when several artifact formats are imported together.
-        changed = commitRuntimeEvidenceBatch(directory, loaded.revision, shards).changed;
-        const importAction = changed ? "updated" : "no-op reimport for";
-        let diagnosticSummary = "detailed diagnostics deferred for compact trace indexing.";
-        if (includeDiagnostics) {
-            diagnosticSummary = `incoming batch: ${conflictCount} conflict(s), ${explanationCount} explanation(s).`;
-        }
-        console.log(`Success: ${importAction} '${directory}'. ${diagnosticSummary}`);
-        for (const report of reports) {
-            console.log(`Import: ${report}.`);
-        }
+        const action = result.changed ? "updated" : "no-op reimport for";
+        console.log(`Success: ${action} '${directory}'. ${result.added.runtime} new runtime record(s).`);
+        console.log(`Import: ${result.report.format}: ${Object.values(result.report.imported).reduce((sum, count) => sum + count, 0)} normalized item(s), ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} unsupported.`);
         return 0;
     }
     catch (error) {
@@ -697,52 +574,6 @@ const reportProjectEvidence = (parsed, cwd) => {
     }
     catch (error) {
         console.error(`Evidence report failed: ${formatFailure(error)}`);
-        return 1;
-    }
-};
-/**
- * Exports native project labels and comments in MesenCE label-file syntax.
- * @param {CliArguments} parsed Parsed command-line arguments.
- * @param {string} cwd Current working directory.
- * @returns {number} Process exit code.
- */
-const exportProjectMesenLabels = (parsed, cwd) => {
-    const directory = path.resolve(cwd, parsed.input);
-    if (!parsed.rom) {
-        console.error("Mesen label export failed: --rom is required so project identity can be verified.");
-        return 1;
-    }
-    try {
-        const store = openAnalysisProjectStore(directory);
-        const loaded = (() => {
-            try {
-                return store.transaction(() => ({
-                    manifest: store.manifest(),
-                    view: { labels: store.loadTable("labels"), comments: store.loadTable("comments") },
-                }), false);
-            }
-            finally {
-                store.close();
-            }
-        })();
-        const rom = RomImage.load(path.resolve(cwd, parsed.rom), {
-            headerSize: loaded.manifest.rom.headerSize,
-        });
-        validateProjectRom(loaded.manifest, rom);
-        if (!SNES_MAPPERS.includes(loaded.manifest.mapping.mapper)) {
-            throw new Error(`Unsupported SNES mapper '${loaded.manifest.mapping.mapper}'.`);
-        }
-        const output = parsed.output
-            ? path.resolve(cwd, parsed.output)
-            : defaultOutputPath(directory, ".mlb");
-        const result = exportMesenLabels(loaded.view.labels, loaded.view.comments, rom, loaded.manifest.mapping.mapper, path.basename(output));
-        fs.mkdirSync(path.dirname(output), { recursive: true });
-        fs.writeFileSync(output, result.text);
-        console.log(`Success: Exported ${result.report.imported.labels ?? 0} MesenCE label row(s) to '${output}'. ${result.report.unsupported.reduce((sum, item) => sum + item.count, 0)} loss item(s).`);
-        return 0;
-    }
-    catch (error) {
-        console.error(`Mesen label export failed: ${formatFailure(error)}`);
         return 1;
     }
 };
@@ -1090,9 +921,6 @@ const runCommand = async (parsed, cwd) => {
     }
     if (parsed.command === "export") {
         return exportProjectSource(parsed, cwd);
-    }
-    if (parsed.command === "mesen-labels-export") {
-        return exportProjectMesenLabels(parsed, cwd);
     }
     if (parsed.command === "project-validate") {
         return validateProject(parsed, cwd);

@@ -1,7 +1,7 @@
 import { type AnalysisStoragePolicy } from "@uttori/asm-disassembler";
 import { type SnesMapper } from "@uttori/asm-plugin-snes";
 /** Explicit subcommands. An invocation without one defaults to assemble. */
-export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "mesen-labels-export" | "project-compact" | "project-storage" | "project-validate" | "verify-roundtrip";
+export type CliCommand = "analyze" | "assemble" | "disassemble" | "evidence-import" | "evidence-report" | "export" | "project-compact" | "project-storage" | "project-validate" | "verify-roundtrip";
 /** Parsed values only: no filesystem access, configuration loading, or path resolution has occurred. */
 export interface CliArguments {
     readonly command: CliCommand;
@@ -25,10 +25,6 @@ export interface CliArguments {
     readonly headerSize?: 0 | 512;
     readonly dizraw?: string;
     readonly rom?: string;
-    readonly mesenCdl?: string;
-    readonly mesenTrace?: string;
-    readonly traceMetadata?: string;
-    readonly mesenLabels?: string;
     readonly instructionTrace?: string;
     /** Positive integer MiB limit. Undefined delegates to the import default of 2048. */
     readonly traceMaxMiB?: number;

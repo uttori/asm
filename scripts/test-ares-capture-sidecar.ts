@@ -24,7 +24,7 @@ import { ARES_RSP_CAPABILITIES } from "../packages/debug-sidecar-ares/src/ares-r
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
 } from "../packages/disassembler/src/index.js";
 import { createRuntimeBusTraceImporter } from "../packages/disassembler/src/runtime-bus-trace.js";
 import { createEditorRuntimeBusSource } from "../packages/vscode-extension/src/runtime/bus-source.js";
@@ -306,7 +306,7 @@ try {
   void recorder.completion.catch(() => undefined);
   if (liveAnalysis && recorder instanceof NativeCaptureFileRecorder) {
     const directory = path.join(temporary, "analysis");
-    writeAnalysisProject(directory, {
+    publishAnalysisProject(directory, {
       manifest: {
         format: "uttori-asm-analysis",
         schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,

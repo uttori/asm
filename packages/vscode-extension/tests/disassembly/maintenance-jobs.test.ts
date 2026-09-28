@@ -8,7 +8,7 @@ import {
   RomImage,
   SOURCE_EXPORT_FORMAT,
   SOURCE_EXPORT_SCHEMA_VERSION,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type SourceExportManifest,
 } from "@uttori/asm-disassembler";
@@ -70,7 +70,7 @@ const tempTarget = (t: {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-maintenance-jobs-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const project = fixtureProject();
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const sourceDirectory = path.join(directory, "source");
   fs.mkdirSync(sourceDirectory);
   const source: ResolvedProjectSource = {
@@ -155,6 +155,10 @@ test("progress callback receives completed timing for coverage", async (t) => {
 
 test("prepare reports coverage and empty entry points for a fixture project", async (t) => {
   const { target } = tempTarget(t);
+  fs.writeFileSync(
+    path.join(target.sourceDirectory, "generated-files.json"),
+    JSON.stringify(target.sourceManifest),
+  );
   const result = (await runMaintenanceJob(
     { operation: "prepare", input: { target } },
     new AbortController().signal,

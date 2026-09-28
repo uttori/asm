@@ -1,5 +1,5 @@
+import { canonicalJson } from "./canonical-json.js";
 import { projectSourceLabelNames, validateSourceLabelName } from "./project-labels.js";
-import { canonicalJson, type LoadedAnalysisProject } from "./project-store.js";
 import type {
   AnalysisConflictRecord,
   AnalysisProject,
@@ -10,6 +10,7 @@ import type {
   EvidenceRecord,
   ImportReport,
   IntervalAnnotation,
+  LoadedAnalysisProject,
   ProjectComment,
   ProjectLabel,
   ProjectRegion,

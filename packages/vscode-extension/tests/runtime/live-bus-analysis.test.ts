@@ -18,7 +18,7 @@ import type { NativeCaptureFilePosition } from "../../../debug-adapter/src/captu
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   loadAnalysisProject,
   openAnalysisProjectStore,
   createRuntimeBusTraceImporter,
@@ -84,7 +84,7 @@ test.after.always(() => fs.rmSync(root, { recursive: true, force: true }));
 test("live worker stages provisional facts, then publishes the same result as offline import", async (t) => {
   const directory = path.join(root, "success");
   const file = path.join(root, "success.act2");
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const prefix = Buffer.concat([header, pair(1)]);
   fs.writeFileSync(file + ".partial", Buffer.concat([prefix, pair(2)]));
   let progress: LiveBusProgress | undefined;
@@ -143,7 +143,7 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
   for (const failure of ["cancel", "lag", "budget", "corrupt", "stale"] as const) {
     const directory = path.join(root, failure);
     const file = path.join(root, failure + ".act2");
-    writeAnalysisProject(directory, project);
+    publishAnalysisProject(directory, project);
     const prefix = Buffer.concat([header, pair(1)]);
     fs.writeFileSync(file + ".partial", prefix);
     let progress = false;
@@ -174,7 +174,7 @@ test("live worker cancellation, lag exhaustion and corrupt completion never publ
     }
     if (failure === "stale") {
       const changed = loadAnalysisProject(directory);
-      writeAnalysisProject(directory, {
+      publishAnalysisProject(directory, {
         ...changed,
         manifest: { ...changed.manifest, target: "edited" },
       });

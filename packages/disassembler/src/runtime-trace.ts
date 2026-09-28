@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import { canonicalJson } from "./project-store.js";
+import { canonicalJson } from "./canonical-json.js";
 import type {
   EvidenceRecord,
   ImportReport,

@@ -10,7 +10,7 @@ import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
   loadAnalysisProject,
-  writeAnalysisProject,
+  publishAnalysisProject,
 } from "@uttori/asm-disassembler";
 import { create65xxAssemblerEnvironment, RAW_65XX_TARGET_ID } from "@uttori/asm-plugin-65xx";
 import { loadProjectEnvironment } from "@uttori/asm-plugin-loader-node";
@@ -88,7 +88,7 @@ const project = {
     imports: [],
   },
 };
-writeAnalysisProject("analysis", project);
+publishAnalysisProject("analysis", project);
 assert.equal(
   loadAnalysisProject("analysis").manifest.rom.contentSha256,
   rom.identity.contentSha256,

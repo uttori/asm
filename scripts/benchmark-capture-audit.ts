@@ -18,7 +18,7 @@ import {
   createRuntimeBusTraceImporter,
   importRuntimeBusTraceSourceIntoProject,
   openAnalysisProjectStore,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type RuntimeBusAccess,
   type RuntimeBusTraceMetadata,
@@ -252,7 +252,7 @@ function projectAt(directory: string): void {
       imports: [],
     },
   };
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
 }
 
 /** Produce a complete bounded bus archive before the read/worker timer starts.

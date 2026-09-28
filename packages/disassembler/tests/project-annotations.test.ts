@@ -11,7 +11,7 @@ import {
   revertDisassemblyAnnotationEdit,
   commitAnalysisProjectTransaction,
   loadAnalysisProjectSnapshot,
-  writeAnalysisProject,
+  publishAnalysisProject,
   projectSourceLabelNames,
   type AnalysisProject,
   type DisassemblyAnnotationEditRequest,
@@ -80,7 +80,7 @@ const request: DisassemblyAnnotationEditRequest = {
 const snapshotFor = (t: { teardown: (callback: () => void) => void }) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotations-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, fixture());
+  publishAnalysisProject(directory, fixture());
   return { directory, snapshot: loadAnalysisProjectSnapshot(directory) };
 };
 

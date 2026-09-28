@@ -36,7 +36,7 @@ const host = {
     | undefined,
   launchConfigurations: [] as unknown[],
   dialogs: [] as ({ scheme: string; fsPath: string }[] | undefined)[],
-  quickPick: undefined as { label: string; backend: "ares" | "mesence" } | undefined,
+  quickPick: undefined as { label: string; backend: "ares" } | undefined,
   messages: [] as string[],
   commands: new Map<string, (...args: unknown[]) => unknown>(),
   registered: [] as string[],
@@ -227,20 +227,20 @@ test.serial("liveDebugConfiguration names backends and resolves sourceRoot", (t)
   t.is(ares.sourceRoot, "/workspace");
   t.is(ares.aresSystem, "Super Famicom");
   t.true(ares.fastBoot);
-  const mesen = liveDebugConfiguration(
+  const plain = liveDebugConfiguration(
     {
-      backend: "mesence",
+      backend: "ares",
       runtimeManifest: "/manifest.json",
-      emulator: "/mesen",
+      emulator: "/ares",
       runtimeDirectory: "/runtime",
     },
     artifacts,
     undefined,
   );
-  t.is(mesen.name, "Debug Uttori ASM (MesenCE)");
-  t.is(mesen.sourceRoot, "/build");
-  t.false("aresSystem" in mesen);
-  t.false("fastBoot" in mesen);
+  t.is(plain.name, "Debug Uttori ASM (ares)");
+  t.is(plain.sourceRoot, "/build");
+  t.false("aresSystem" in plain);
+  t.false("fastBoot" in plain);
 });
 
 test.serial("debug launch rejects a valid ROM/map pair from a different selected build", (t) => {

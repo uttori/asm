@@ -19,7 +19,7 @@ import {
   validateProjectRom,
   validateSourceExportFiles,
   validateSourceExportInputs,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type AnalysisProjectManifest,
   type AnalysisProjectShards,
@@ -488,7 +488,7 @@ export const createSnesAnalysisProject = (
   };
   const staging = temporarySibling(projectDirectory, "analysis");
   try {
-    const manifest = writeAnalysisProject(staging, project);
+    const manifest = publishAnalysisProject(staging, project).manifest;
     validateAnalysisProject(staging, rom);
     throwIfCancelled(options.signal);
     commitStagedDirectory(staging, projectDirectory);

@@ -12,7 +12,7 @@ import {
   loadAnalysisProject,
   parseAnalysisProjectManifest,
   validateAnalysisProject,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "../src/index.js";
 
@@ -94,7 +94,7 @@ test("large SQLite payloads round trip without changing validation", async (t) =
   try {
     const project = projectFor(new RomImage(new Uint8Array(0x8000)));
     const evidence = [{ ...project.shards.evidence[0], note: "x".repeat(9 * 1024 * 1024) }];
-    writeAnalysisProject(temporary, { ...project, shards: { ...project.shards, evidence } });
+    publishAnalysisProject(temporary, { ...project, shards: { ...project.shards, evidence } });
     const loaded = loadAnalysisProject(temporary);
     t.deepEqual(loaded.shards.evidence, evidence);
   } finally {
@@ -107,12 +107,12 @@ test("analysis projects preserve deterministic records without ROM bytes", async
   try {
     const rom = new RomImage(new Uint8Array(0x8000).fill(0xa5));
     const input = projectFor(rom);
-    writeAnalysisProject(temporary, input);
+    publishAnalysisProject(temporary, input);
     const first = loadAnalysisProject(temporary).shards;
     const loaded = loadAnalysisProject(temporary);
     const { shards: ignored, ...manifest } = loaded.manifest;
     void ignored;
-    writeAnalysisProject(temporary, { manifest, shards: loaded.shards });
+    publishAnalysisProject(temporary, { manifest, shards: loaded.shards });
     const second = loadAnalysisProject(temporary).shards;
 
     t.deepEqual(second, first);
@@ -135,7 +135,7 @@ test("analysis projects preserve deterministic records without ROM bytes", async
         evidence: [{ ...forbiddenInput.shards.evidence[0], romBytes: [0xa5] }],
       },
     } as unknown as AnalysisProject;
-    t.throws(() => writeAnalysisProject(temporary, forbidden), {
+    t.throws(() => publishAnalysisProject(temporary, forbidden), {
       message: /ROM byte payload/,
     });
     const nested = {
@@ -147,7 +147,7 @@ test("analysis projects preserve deterministic records without ROM bytes", async
         ],
       },
     } as unknown as AnalysisProject;
-    t.throws(() => writeAnalysisProject(temporary, nested), {
+    t.throws(() => publishAnalysisProject(temporary, nested), {
       message: /shards\.evidence\[0]\.extra\[2]\.nested\.byteData/,
     });
   } finally {
@@ -164,7 +164,7 @@ test("analysis projects validate versioned plugin codec annotations", (t) => {
   });
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-invalid-codec-id",
         withAnnotation({
           ...base.shards.annotations[0],
@@ -175,7 +175,7 @@ test("analysis projects validate versioned plugin codec annotations", (t) => {
   );
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-invalid-codec-classification",
         withAnnotation({ ...base.shards.annotations[0], classification: "data16" }),
       ),
@@ -183,7 +183,7 @@ test("analysis projects validate versioned plugin codec annotations", (t) => {
   );
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-invalid-compression-capacity",
         withAnnotation({
           ...base.shards.annotations[0],
@@ -201,7 +201,7 @@ test("analysis projects validate versioned plugin codec annotations", (t) => {
   );
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-invalid-codec-options",
         withAnnotation({
           ...base.shards.annotations[0],
@@ -249,11 +249,11 @@ test("analysis projects validate normalized runtime records and artifact identit
         evidence: [...base.shards.evidence, evidence],
       },
     };
-    writeAnalysisProject(temporary, valid);
+    publishAnalysisProject(temporary, valid);
     t.is(loadAnalysisProject(temporary).shards.runtime.length, 1);
     t.throws(
       () =>
-        writeAnalysisProject(temporary, {
+        publishAnalysisProject(temporary, {
           ...valid,
           shards: { ...valid.shards, runtime: [{ ...runtime, count: 0 }] },
         }),
@@ -261,7 +261,7 @@ test("analysis projects validate normalized runtime records and artifact identit
     );
     t.throws(
       () =>
-        writeAnalysisProject(temporary, {
+        publishAnalysisProject(temporary, {
           ...valid,
           shards: { ...valid.shards, runtime: [{ ...runtime, fileOffset: rom.length }] },
         }),
@@ -269,7 +269,7 @@ test("analysis projects validate normalized runtime records and artifact identit
     );
     t.throws(
       () =>
-        writeAnalysisProject(temporary, {
+        publishAnalysisProject(temporary, {
           ...valid,
           shards: {
             ...valid.shards,
@@ -286,7 +286,7 @@ test("analysis projects validate normalized runtime records and artifact identit
     );
     t.throws(
       () =>
-        writeAnalysisProject(temporary, {
+        publishAnalysisProject(temporary, {
           ...valid,
           shards: {
             ...valid.shards,
@@ -312,7 +312,7 @@ test("analysis projects reject missing, cyclic, and non-containing region parent
   });
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-invalid-parent",
         withRegions([{ ...base.shards.regions[1], parentRegion: "missing" }]),
       ),
@@ -320,7 +320,7 @@ test("analysis projects reject missing, cyclic, and non-containing region parent
   );
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-cyclic-parent",
         withRegions([
           { ...base.shards.regions[0], parentRegion: "region-child" },
@@ -331,7 +331,7 @@ test("analysis projects reject missing, cyclic, and non-containing region parent
   );
   t.throws(
     () =>
-      writeAnalysisProject(
+      publishAnalysisProject(
         "/tmp/uttori-analysis-outside-parent",
         withRegions([base.shards.regions[0], { ...base.shards.regions[1], start: 1, end: 3 }]),
       ),
@@ -382,7 +382,7 @@ test("mixed-architecture records retain distinct validated address-space identit
         ],
       },
     };
-    writeAnalysisProject(temporary, mixed);
+    publishAnalysisProject(temporary, mixed);
     const loaded = loadAnalysisProject(temporary);
     t.deepEqual(
       loaded.shards.labels.map((label) => `${label.addressSpace}:${label.address}`),
@@ -391,7 +391,7 @@ test("mixed-architecture records retain distinct validated address-space identit
 
     t.throws(
       () =>
-        writeAnalysisProject(temporary, {
+        publishAnalysisProject(temporary, {
           ...mixed,
           shards: {
             ...mixed.shards,
@@ -402,7 +402,7 @@ test("mixed-architecture records retain distinct validated address-space identit
     );
     t.throws(
       () =>
-        writeAnalysisProject(temporary, {
+        publishAnalysisProject(temporary, {
           ...mixed,
           manifest: {
             ...mixed.manifest,

@@ -17097,20 +17097,6 @@ var init_trace_detail = __esm({
   }
 });
 
-// packages/disassembler/src/project-transaction.ts
-var init_project_transaction = __esm({
-  "packages/disassembler/src/project-transaction.ts"() {
-    "use strict";
-  }
-});
-
-// packages/disassembler/src/project-store.ts
-var init_project_store = __esm({
-  "packages/disassembler/src/project-store.ts"() {
-    "use strict";
-  }
-});
-
 // packages/disassembler/src/metadata-edit.ts
 var init_metadata_edit = __esm({
   "packages/disassembler/src/metadata-edit.ts"() {
@@ -17457,6 +17443,20 @@ PRAGMA user_version=4;
     AND identity_id=(SELECT iid FROM runtime_identities
       WHERE (${runtimeIdentityKey("value")})=(${runtimeIdentityKey("?2")}) AND value=?2)
 )`;
+  }
+});
+
+// packages/disassembler/src/project-store.ts
+var init_project_store = __esm({
+  "packages/disassembler/src/project-store.ts"() {
+    "use strict";
+  }
+});
+
+// packages/disassembler/src/project-transaction.ts
+var init_project_transaction = __esm({
+  "packages/disassembler/src/project-transaction.ts"() {
+    "use strict";
   }
 });
 
@@ -38978,37 +38978,6 @@ var init_dizraw_import = __esm({
   }
 });
 
-// packages/plugin-snes/src/disassembler/mesen-runtime.ts
-var CDL_HEADER;
-var init_mesen_runtime = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-runtime.ts"() {
-    "use strict";
-    CDL_HEADER = new TextEncoder().encode("CDLv2");
-  }
-});
-
-// packages/plugin-snes/src/disassembler/spc700-address-space.ts
-var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
-var init_spc700_address_space = __esm({
-  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
-    "use strict";
-    SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
-    SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
-      id: SPC700_ARAM_ADDRESS_SPACE,
-      name: "SPC700 ARAM",
-      addressBits: 16,
-      kind: "memory"
-    });
-  }
-});
-
-// packages/plugin-snes/src/disassembler/mesen-labels.ts
-var init_mesen_labels = __esm({
-  "packages/plugin-snes/src/disassembler/mesen-labels.ts"() {
-    "use strict";
-  }
-});
-
 // packages/plugin-snes/src/disassembler/framework-asset-helpers.ts
 var init_framework_asset_helpers = __esm({
   "packages/plugin-snes/src/disassembler/framework-asset-helpers.ts"() {
@@ -39027,6 +38996,21 @@ var init_ram_map = __esm({
 var init_source_export2 = __esm({
   "packages/plugin-snes/src/disassembler/source-export.ts"() {
     "use strict";
+  }
+});
+
+// packages/plugin-snes/src/disassembler/spc700-address-space.ts
+var SPC700_ARAM_ADDRESS_SPACE, SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR;
+var init_spc700_address_space = __esm({
+  "packages/plugin-snes/src/disassembler/spc700-address-space.ts"() {
+    "use strict";
+    SPC700_ARAM_ADDRESS_SPACE = "snes.spc700.aram";
+    SPC700_ARAM_ADDRESS_SPACE_DESCRIPTOR = Object.freeze({
+      id: SPC700_ARAM_ADDRESS_SPACE,
+      name: "SPC700 ARAM",
+      addressBits: 16,
+      kind: "memory"
+    });
   }
 });
 
@@ -39267,8 +39251,6 @@ var init_src4 = __esm({
     init_address_identities();
     init_dizraw_import();
     init_hardware_registers();
-    init_mesen_runtime();
-    init_mesen_labels();
     init_framework_asset_helpers();
     init_rom_header();
     init_source_export2();

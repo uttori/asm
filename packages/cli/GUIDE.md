@@ -140,7 +140,7 @@ Use `@uttori/asm-core` directly when the host needs structured results and owns 
 ## SNES
 
 The bundled `@uttori/asm-plugin-snes` provides the default assembly target. The CLI's ROM analysis,
-MesenCE evidence import, and native source-export commands below currently operate on SNES projects.
+native instruction-trace import, and native source-export commands below currently operate on SNES projects.
 Installing another architecture plugin changes assembly choices. It does not add these SNES analysis
 workflows to that architecture. See the [SNES manual](https://github.com/uttori/asm/blob/master/packages/plugin-snes/MANUAL.md)
 for mapper, instruction, and hardware details.
@@ -221,7 +221,7 @@ uttori-asm disassemble game.sfc game.analysis --dizraw game.dizraw --mapper hiro
 
 The importer stores its deterministic loss report in SQLite's imports table. Compressed `.diz` input and `.dizraw` export are unsupported.
 
-Standalone `--instruction-trace` imports stream through SQLite without loading prior runtime history. Combined Mesen/native imports retain the existing atomic in-memory batch path. Use separate commands for large captures.
+`--instruction-trace` imports stream through SQLite without loading prior runtime history. Use separate commands for large captures.
 
 SQLite storage shares runtime facts across captures, stores exact instruction / state pairs once, and retains compact per-capture counts and provenance. Imports preserve prior runtime history. Exact reimports do not rewrite records or run VACUUM.
 
@@ -258,18 +258,14 @@ The complete ROM remains external. Imported captures can retain bounded instruct
 
 ### Offline Runtime Evidence
 
-Import stock MesenCE CDL, default 65816 trace text, and labels into an existing project:
+Import a native instruction recording into an existing project:
 
 ```sh
-uttori-asm evidence-import game.analysis --rom game.sfc --mesen-cdl game.cdl
-uttori-asm evidence-import game.analysis --rom game.sfc \
-  --mesen-trace game.trace --trace-metadata game.trace.json
-uttori-asm evidence-import game.analysis --rom game.sfc --mesen-labels game.mlb
 uttori-asm evidence-import game.analysis --rom game.sfc \
   --instruction-trace instruction-trace.json
 ```
 
-Multiple evidence options can be supplied in one command. Every import verifies the project's exact ROM identity and stored mapper first. `CDLv2` also verifies its embedded ROM CRC. Native instruction traces preserve ordered pull chunks and producer-loss metadata and use the same `snes.cpu` CPU-bus identity as native analysis projects. An identical reimport preserves facts and the semantic revision, while refreshing its import receipt.
+Every import verifies the project's exact ROM identity and stored mapper first. Native instruction traces preserve ordered pull chunks and producer-loss metadata and use the same `snes.cpu` CPU-bus identity as native analysis projects. An identical reimport preserves facts and the semantic revision, while refreshing its import receipt.
 
 Native trace files are read incrementally with a default 2 GiB file-size limit. Use `--trace-max-mib 4096` to permit a 4 GiB capture. This avoids JavaScript's single-string size limit. Use `--trace-index 65816-disassembly` to reduce the index for large 65816 instruction captures: it preserves all PCs, fetched-byte and decoding-state variants, execution counts and bus observations in the analysis index, while full register history stays in the original capture. `--trace-index 65816-analysis` is the default for native SNES CPU captures. Other processors default to full. It normalizes aliases and retains only P width bits, E, D and DB, together with fetched bytes and the qualified PC. Explicit `full` retains general-register history. SQLite project imports have no fixed 2,000,000/8,000,000 record ceiling in any profile; input-file and configured storage budgets still apply. Library imports that retain counters or final records in memory default to 2,000,000 compact records or 8,000,000 full records. Budget overflow never commits a partial import. The editor equivalents are `asm.trace.maxImportSizeMiB` and `asm.trace.indexMode`.
 
@@ -277,23 +273,10 @@ See the [trace contract](https://github.com/uttori/asm/blob/master/packages/disa
 
 Compact imports defer the detailed conflict/explanation report to avoid expanding every saved register observation during import. Run `evidence-report` separately when those diagnostics are needed, with enough memory for the project's full set of observations.
 
-MesenCE trace text has no embedded ROM fingerprint, so its required identity sidecar is explicit:
-
-```json
-{
-  "schemaVersion": 1,
-  "architecture": "snes.65816",
-  "romContentSha256": "<64 lowercase hex characters>",
-  "mapper": "lorom",
-  "mesenRevision": "<optional source revision>"
-}
-```
-
-Inspect retained contradictions and runtime-derived explanations, or export native labels for MesenCE:
+Inspect retained contradictions and runtime-derived explanations:
 
 ```sh
 uttori-asm evidence-report game.analysis evidence-report.json
-uttori-asm mesen-labels-export game.analysis game.mlb --rom game.sfc
 ```
 
 ### Native Source Export

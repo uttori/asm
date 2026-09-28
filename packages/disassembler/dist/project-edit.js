@@ -1,5 +1,5 @@
+import { canonicalJson } from "./canonical-json.js";
 import { projectSourceLabelNames, validateSourceLabelName } from "./project-labels.js";
-import { canonicalJson } from "./project-store.js";
 export * from "./metadata-edit.js";
 /** Classifications accepted by a manual range edit. */
 export const RANGE_CLASSIFICATIONS = [

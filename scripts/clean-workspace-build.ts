@@ -7,7 +7,6 @@ const GENERATED_PACKAGE_DIRECTORIES = [
   "packages/core/dist",
   "packages/debug-adapter/dist",
   "packages/debug-sidecar-ares/dist",
-  "packages/debug-sidecar-mesence/dist",
   "packages/disassembler/dist",
   "packages/assets/dist",
   "packages/plugin-loader-node/dist",

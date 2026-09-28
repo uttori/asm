@@ -98,7 +98,7 @@ export interface DisassemblyRegenerationSummary {
 /**
  * Validate and deduplicate 24-bit observed PCs, keeping only project-owned evidence and
  * returning sorted observation entry points.
- * Missing seeds produce an empty list; invalid addresses or more than 100,000 distinct PCs
+ * Missing seeds produce an empty list; invalid addresses or more than 1,000,000 distinct PCs
  * throw.
  * @param {readonly DisassemblyEntrySeed[] | undefined} value Observed CPU addresses and optional evidence IDs.
  * @param {object} snapshot Project evidence used to reject foreign provenance links.

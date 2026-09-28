@@ -43,7 +43,6 @@
     "@uttori/asm-core": "1.0.0",
     "@uttori/asm-debug-adapter": "1.0.0",
     "@uttori/asm-debug-sidecar-ares": "1.0.0",
-    "@uttori/asm-debug-sidecar-mesence": "1.0.0",
     "@uttori/asm-disassembler": "1.0.0",
     "@uttori/asm-plugin-snes": "1.0.0",
     "vscode-languageclient": "^10.1.1",
@@ -961,8 +960,7 @@
                 "type": "string",
                 "enum": [
                   "replay",
-                  "ares",
-                  "mesence"
+                  "ares"
                 ],
                 "default": "replay",
                 "description": "Debug backend. Live backends require a trusted workspace and separately managed emulator runtime."
@@ -990,7 +988,7 @@
               "fastBoot": {
                 "type": "boolean",
                 "default": true,
-                "description": "Use ares fast boot. Ignored by other backends."
+                "description": "Use ares fast boot."
               }
             }
           }
@@ -1034,22 +1032,6 @@
               "runtimeManifest": "^\"${workspaceFolder}/.debug/ares-runtime-manifest.json\"",
               "emulator": "^\"${workspaceFolder}/.debug/ares/bin/ares-headless\"",
               "runtimeDirectory": "^\"${workspaceFolder}/.debug/ares\""
-            }
-          },
-          {
-            "label": "Uttori ASM: Live MesenCE Debug",
-            "description": "Debug a fingerprinted SNES ROM with a manifest-verified MesenCE runtime.",
-            "body": {
-              "type": "uttori-asm",
-              "request": "launch",
-              "name": "Debug Uttori ASM (MesenCE)",
-              "backend": "mesence",
-              "program": "^\"${workspaceFolder}/build/rebuilt-content.sfc\"",
-              "debugMap": "^\"${workspaceFolder}/build/rebuilt-content.sfc.debug.json\"",
-              "sourceRoot": "^\"${workspaceFolder}\"",
-              "runtimeManifest": "^\"${workspaceFolder}/.debug/mesence-runtime-manifest.json\"",
-              "emulator": "^\"${workspaceFolder}/.debug/Mesen\"",
-              "runtimeDirectory": "^\"${workspaceFolder}/.debug/mesence\""
             }
           }
         ]

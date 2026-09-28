@@ -7,7 +7,7 @@ import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
 } from "@uttori/asm-disassembler";
 import {
   downloadAndUnzipVSCode,
@@ -274,7 +274,7 @@ const main = async (): Promise<void> => {
       path.join(workspacePath, "main.asm"),
       "lorom\norg $008000\nStart:\n  sei\nRAM_EASTER_EGG_COUNTER = $7E002B\n  LDA.w RAM_EASTER_EGG_COUNTER & $FFFF,x\n  RTS\n",
     );
-    writeAnalysisProject(path.join(workspacePath, "analysis"), {
+    publishAnalysisProject(path.join(workspacePath, "analysis"), {
       manifest: {
         format: ANALYSIS_PROJECT_FORMAT,
         schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,

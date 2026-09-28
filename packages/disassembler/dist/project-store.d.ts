@@ -1,4 +1,4 @@
-import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards } from "./project-types.js";
+import { type AnalysisProjectManifest, type LoadedAnalysisProject, type LoadedAnalysisProjectView } from "./project-types.js";
 import { type RuntimeRecordProjection } from "./project-validation.js";
 import type { RomImage } from "./rom-image.js";
 import { SqliteAnalysisStore } from "./sqlite-store.js";
@@ -18,16 +18,6 @@ export declare const parseAnalysisProjectManifest: (input: unknown) => AnalysisP
  * @returns {SqliteAnalysisStore} Owned connection. Close exactly once in a finally block.
  */
 export declare const openAnalysisProjectStore: (directory: string) => SqliteAnalysisStore;
-/** One consistent revision, detached from storage. Readonly types do not freeze records at runtime. */
-export interface LoadedAnalysisProject {
-    readonly manifest: AnalysisProjectManifest;
-    readonly shards: AnalysisProjectShards;
-}
-/** Metadata and optional runtime projection. Never pass this partial view to a full replacement. */
-export interface LoadedAnalysisProjectView {
-    readonly manifest: AnalysisProjectManifest;
-    readonly view: AnalysisProjectShards;
-}
 /**
  * Load and validate the complete project, including all runtime facts.
  * Closes its connection before returning. Editing the result alone changes nothing on disk.
@@ -42,15 +32,6 @@ export declare const loadAnalysisProject: (directory: string) => LoadedAnalysisP
  * @returns {LoadedAnalysisProjectView} Metadata and optional projection from one revision.
  */
 export declare const loadAnalysisProjectView: (directory: string, createProjection?: () => RuntimeRecordProjection) => LoadedAnalysisProjectView;
-/**
- * Atomically create or replace all records, including runtime. Use view updates to preserve history.
- * Samples the current revision at call time, so it cannot detect an edit derived from an older
- * caller snapshot. Editing clients must use the explicit revision-checked commit APIs instead.
- * @param {string} directory Project root to create or replace.
- * @param {AnalysisProject} project Complete replacement, including runtime history.
- * @returns {AnalysisProjectManifest} Committed manifest and next revision.
- */
-export declare const writeAnalysisProject: (directory: string, project: AnalysisProject) => AnalysisProjectManifest;
 /**
  * Throw if the ROM's full-file hash, headerless-content hash, or copier-header size differs.
  * Does not open the manifest's source path or alter the supplied ROM.

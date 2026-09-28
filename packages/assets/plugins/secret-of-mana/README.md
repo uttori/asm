@@ -1,11 +1,11 @@
 # Secret of Mana asset plugin
 
-[`som-asset-plugin.mjs`](som-asset-plugin.mjs) is a complete game plugin for the SNES
+[`som-asset-plugin.ts`](../../src/secret-of-mana/som-asset-plugin.ts) is a complete game plugin for the SNES
 assembler target. It registers `som.tile.actor3bpp`, an indexed PNG conversion built on
 `@uttori/asm-assets/image` and `/snes`, `som.sprite.frames` for framed 4bpp sprites,
 `som.boss.graphics` for the mask-expanded boss sheets, playable WAVE formats `som.brr.pcm` and
 `som.brr.segment`, `som.palette.bgr555` for shared ROM palettes, and `som.lz`, a reversible transform backed by
-[`som-lz.mjs`](som-lz.mjs). The LZ implementation handles the game's six boot/graphics
+[`som-lz.ts`](../../src/secret-of-mana/som-lz.ts). The LZ implementation handles the game's six boot/graphics
 distance-mask modes and returns the exact consumed stream extent. Room map-piece and
 metatile compression have separate grammars and are not registered as `som.lz`.
 
@@ -396,7 +396,7 @@ A change to an uncaptured tileset or layout needs new preview resources.
 
 Shared compressed layouts, graphics and palettes are **references**, not
 additional ROM ownership of the room source. Editing a preview dependency alone
-does not change those ROM resources. `som-map-piece.mjs` is the bounded native
+does not change those ROM resources. `som-map-piece.ts` is the bounded native
 layout decoder; unchanged compressed streams are preserved. The seven initial
 room assets are seeded by `secret-of-mana/tools/build-haunted-room-assets.mjs`,
 which refuses to overwrite an edited source. Its `--check` mode verifies the

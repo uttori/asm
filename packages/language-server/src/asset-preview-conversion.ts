@@ -8,31 +8,31 @@ import {
   type PcmAudio,
 } from "@uttori/asm-assets/audio";
 import { rawEncoder, rawImporter, jsonImporter } from "@uttori/asm-assets/data";
-import { pngImporter, withImageEncoders, type IndexedImage } from "@uttori/asm-assets/image";
+import { pngImporter, withImageEncoders } from "@uttori/asm-assets/image";
 import { rgbaPreviewPng, waveformPreviewPng } from "@uttori/asm-assets/preview";
-import { snesNativeEncoders } from "@uttori/asm-assets/snes";
-
 import {
   convertBossImage,
   sliceBrrSegment,
   verifiedBrrFromWave,
-} from "../../assets/plugins/secret-of-mana/som-asset-plugin.mjs";
+} from "@uttori/asm-assets/secret-of-mana/som-asset-plugin";
 import {
   encodeInspectedFrameSegment,
   inspectFrameAtlas,
   readFrameLayout,
-} from "../../assets/plugins/secret-of-mana/som-frame-atlas.mjs";
+} from "@uttori/asm-assets/secret-of-mana/som-frame-atlas";
 import {
   convertRoomAsset,
   parseRoomAsset,
   renderRoomAsset,
-} from "../../assets/plugins/secret-of-mana/som-room-assets.mjs";
+  RoomPreview,
+} from "@uttori/asm-assets/secret-of-mana/som-room-assets";
 import {
   parseSpritePaletteCatalog,
   readSpritePaletteCatalog,
   spritePaletteBytes,
   spritePalettePreview,
-} from "../../assets/plugins/secret-of-mana/som-sprite-palettes.mjs";
+} from "@uttori/asm-assets/secret-of-mana/som-sprite-palettes";
+import { snesNativeEncoders } from "@uttori/asm-assets/snes";
 
 /** Inputs are already resolved and size checked in the language server. */
 export interface AssetPreviewInput {
@@ -100,24 +100,13 @@ function storagePixels(
   return result;
 }
 
-interface SomPreviewLayout {
-  readonly paletteRefs: readonly string[];
-  readonly segments: Readonly<Record<string, { readonly palette: number }>>;
-}
-
-interface SomPreviewCatalog {
-  readonly palettes: Readonly<
-    Record<string, { readonly romAddress: string; readonly users: unknown[] }>
-  >;
-}
-
 /** Preview the authored frame arrangement while validating the same source tiles as assembly.
  * @param {AssetPreviewInput} input Resolved source and sidecars from the editor.
  * @returns {AssetPreviewResult} Display PNG and the validated native byte count.
  */
 function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
-  const layout = readFrameLayout(input.options, input.resources) as SomPreviewLayout;
-  const catalog = readSpritePaletteCatalog(input.options, input.resources) as SomPreviewCatalog;
+  const layout = readFrameLayout(input.options, input.resources);
+  const catalog = readSpritePaletteCatalog(input.options, input.resources);
   const segment = input.options.segment;
   if (typeof segment !== "string") {
     throw new Error("Frame atlas preview requires a segment name.");
@@ -138,7 +127,7 @@ function convertSomFramePreview(input: AssetPreviewInput): AssetPreviewResult {
   if (input.output !== undefined && input.output !== output) {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const image = inspected.image as IndexedImage;
+  const image = inspected.image;
   if (image.kind !== "indexed-image") {
     throw new Error("Frame atlas preview requires an indexed PNG.");
   }
@@ -187,13 +176,9 @@ function convertSomPalettePreview(input: AssetPreviewInput): AssetPreviewResult 
   if (input.output !== undefined && input.output !== "palette") {
     throw new Error(`Asset format '${input.format}' has no output '${input.output}'.`);
   }
-  const catalog = parseSpritePaletteCatalog(input.source.bytes) as SomPreviewCatalog;
+  const catalog = parseSpritePaletteCatalog(input.source.bytes);
   const bytes = spritePaletteBytes(catalog, id);
-  const preview = spritePalettePreview(catalog, id) as {
-    rgba: Uint8Array;
-    width: number;
-    height: number;
-  };
+  const preview = spritePalettePreview(catalog, id);
   const png = Buffer.from(rgbaPreviewPng(preview.rgba, preview.width, preview.height));
   const palette = catalog.palettes[id];
   return {
@@ -232,10 +217,14 @@ function convertSomRoomPreview(input: AssetPreviewInput): AssetPreviewResult {
   if (resource.mediaType !== "application/json") {
     throw new Error("Room preview resource must be JSON.");
   }
-  const room = parseRoomAsset(input.source) as { id: number; name?: string };
-  const preview = renderRoomAsset(room, JSON.parse(new TextDecoder().decode(resource.bytes)), {
-    layer: input.options.layer,
-  });
+  const room = parseRoomAsset(input.source);
+  const preview = renderRoomAsset(
+    room,
+    JSON.parse(new TextDecoder().decode(resource.bytes)) as RoomPreview,
+    {
+      layer: input.options.layer,
+    },
+  );
   return {
     kind: "image",
     sourceBytes: input.source.bytes.length,

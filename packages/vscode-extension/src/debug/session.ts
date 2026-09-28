@@ -21,8 +21,6 @@ import {
 } from "@uttori/asm-debug-adapter";
 import { ARES_RSP_BACKEND_ID, ARES_RSP_CAPABILITIES } from "@uttori/asm-debug-sidecar-ares/profile";
 import { parseAresRuntimeManifest } from "@uttori/asm-debug-sidecar-ares/runtime-manifest";
-import { MESEN_BACKEND_ID, MESEN_CAPABILITIES } from "@uttori/asm-debug-sidecar-mesence/profile";
-import { parseMesenRuntimeManifest } from "@uttori/asm-debug-sidecar-mesence/runtime-manifest";
 import {
   DebugAdapterInlineImplementation,
   EventEmitter,
@@ -97,7 +95,7 @@ export interface BuiltDebugArtifacts {
  * Machine-local live-backend selection and filesystem paths, with optional ares launch settings.
  */
 export interface EmulatorRuntimeBinding {
-  readonly backend: "ares" | "mesence";
+  readonly backend: "ares";
   readonly runtimeManifest: string;
   readonly emulator: string;
   readonly runtimeDirectory: string;
@@ -222,11 +220,6 @@ export const configureEmulatorRuntime = async (
           "65816 debugging and runtime capture. Select a desktop manifest for a game window.",
         backend: "ares" as const,
       },
-      {
-        label: "MesenCE",
-        description: "65816, SPC700, and Super FX inspection. No instruction capture stream yet.",
-        backend: "mesence" as const,
-      },
     ],
     { placeHolder: "Select the live emulator backend" },
   );
@@ -257,17 +250,14 @@ export const configureEmulatorRuntime = async (
   }
 
   const manifest = JSON.parse(fs.readFileSync(runtimeManifest, "utf8")) as unknown;
-  if (selectedBackend.backend === "ares") {
-    parseAresRuntimeManifest(manifest);
-  } else {
-    parseMesenRuntimeManifest(manifest);
-  }
+  parseAresRuntimeManifest(manifest);
   const binding: EmulatorRuntimeBinding = {
-    backend: selectedBackend.backend,
+    backend: "ares",
     runtimeManifest,
     emulator,
     runtimeDirectory,
-    ...(selectedBackend.backend === "ares" ? { aresSystem: "Super Famicom", fastBoot: true } : {}),
+    aresSystem: "Super Famicom",
+    fastBoot: true,
   };
   const bindings = context.globalState.get<EmulatorRuntimeBindings>(
     EMULATOR_RUNTIME_BINDINGS_KEY,
@@ -297,7 +287,7 @@ export const liveDebugConfiguration = (
 ): DebugConfiguration => ({
   type: UTTORI_ASM_DEBUG_TYPE,
   request: "launch",
-  name: `Debug Uttori ASM (${binding.backend === "mesence" ? "MesenCE" : "ares"})`,
+  name: "Debug Uttori ASM (ares)",
   backend: binding.backend,
   program: artifacts.outputPath,
   debugMap: artifacts.debugMapPath,
@@ -320,7 +310,7 @@ interface UttoriDebugConfiguration extends DebugConfiguration {
   readonly debugMap: string;
   readonly sourceRoot?: string;
   readonly replay?: string;
-  readonly backend?: "replay" | "ares" | "mesence";
+  readonly backend?: "replay" | "ares";
   readonly runtimeManifest?: string;
   readonly emulator?: string;
   readonly runtimeDirectory?: string;
@@ -921,7 +911,7 @@ const debugSessionTerminated = (session: DebugSession): void => {
  * optional sidecar override.
  * The backend creates its transport on connection; the debug adapter owns termination and
  * disposal.
- * @param {UttoriDebugConfiguration} configuration Live launch settings for ares or mesence.
+ * @param {UttoriDebugConfiguration} configuration Live launch settings for ares.
  * @param {WorkspaceFolder | undefined} folder Workspace used to resolve relative runtime paths.
  * @param {string} extensionRoot Installed extension root containing bundled sidecars.
  * @param {string} program Absolute ROM filename to load.
@@ -941,9 +931,8 @@ const createLiveBackend = (
   if (!workspace.isTrusted) {
     throw new Error("Live Uttori ASM debugging requires a trusted workspace.");
   }
-  const kind = configuration.backend;
-  if (kind !== "ares" && kind !== "mesence") {
-    throw new Error(`Unsupported live Uttori ASM backend '${String(kind)}'.`);
+  if (configuration.backend !== "ares") {
+    throw new Error(`Unsupported live Uttori ASM backend '${String(configuration.backend)}'.`);
   }
   const manifest = requiredLivePath(configuration.runtimeManifest, "runtimeManifest", folder);
   const emulator = requiredLivePath(configuration.emulator, "emulator", folder);
@@ -952,27 +941,20 @@ const createLiveBackend = (
     "runtimeDirectory",
     folder,
   );
-  const bundledSidecar = path.join(
-    extensionRoot,
-    "sidecars",
-    kind === "ares" ? "ares.mjs" : "mesence.mjs",
-  );
+  const bundledSidecar = path.join(extensionRoot, "sidecars", "ares.mjs");
   const sidecar = configuration.sidecar
     ? resolvedPath(configuration.sidecar, folder)
     : bundledSidecar;
-  const backend = kind === "ares" ? ARES_RSP_BACKEND_ID : MESEN_BACKEND_ID;
-  const capabilities = kind === "ares" ? ARES_RSP_CAPABILITIES : MESEN_CAPABILITIES;
   return new SidecarDebugBackend({
-    backend,
-    capabilities,
+    backend: ARES_RSP_BACKEND_ID,
+    capabilities: ARES_RSP_CAPABILITIES,
     createClient: () => {
       const session = createDebugSidecarSessionToken();
-      const emulatorFlag = kind === "ares" ? "--ares" : "--mesen";
       const args = [
         sidecar,
         "--manifest",
         manifest,
-        emulatorFlag,
+        "--ares",
         emulator,
         "--rom",
         program,
@@ -981,10 +963,10 @@ const createLiveBackend = (
         "--runtime-dir",
         runtimeDirectory,
       ];
-      if (kind === "ares" && configuration.aresSystem) {
+      if (configuration.aresSystem) {
         args.push("--system", configuration.aresSystem);
       }
-      if (kind === "ares" && configuration.fastBoot === false) {
+      if (configuration.fastBoot === false) {
         args.push("--no-fast-boot");
       }
       const transport = new NodeStdioSidecarTransport({

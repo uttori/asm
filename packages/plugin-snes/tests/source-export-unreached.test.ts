@@ -5,7 +5,7 @@ import path from "node:path";
 import {
   RomImage,
   openAnalysisProjectStore,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type AnalysisFunctionRecord,
   type IntervalAnnotation,
@@ -241,7 +241,7 @@ test("emitted fallback and imported labels resolve direct transfers without chan
       .equal,
   );
   const analysisDirectory = path.join(directory, "analysis");
-  writeAnalysisProject(analysisDirectory, input);
+  publishAnalysisProject(analysisDirectory, input);
   const store = openAnalysisProjectStore(analysisDirectory);
   try {
     store.prepareAnnotationQueries();
@@ -322,7 +322,7 @@ test("captured instruction extents supersede inferred operand entry markers in m
       .equal,
   );
   const analysisDirectory = path.join(directory, "analysis");
-  writeAnalysisProject(analysisDirectory, input);
+  publishAnalysisProject(analysisDirectory, input);
   const store = openAnalysisProjectStore(analysisDirectory);
   try {
     store.prepareAnnotationQueries();
@@ -453,7 +453,7 @@ test("captured ROM instructions supersede unreached in memory and SQL without pr
   );
 
   const analysisDirectory = path.join(directory, "analysis");
-  writeAnalysisProject(analysisDirectory, input);
+  publishAnalysisProject(analysisDirectory, input);
   const store = openAnalysisProjectStore(analysisDirectory);
   try {
     store.prepareAnnotationQueries();

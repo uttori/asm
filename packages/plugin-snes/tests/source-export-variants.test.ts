@@ -4,7 +4,7 @@ import path from "node:path";
 
 import {
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   openAnalysisProjectStore,
   type AnalysisProject,
   type AnalysisControlFlowNodeRecord,
@@ -188,7 +188,7 @@ for (const scenario of [
     const reordered = { ...project, shards: { ...project.shards, analysis: [observed, unknown] } };
     t.deepEqual(exportSnes65816Source(reordered, rom, directory, options), exported);
     const analysisDirectory = path.join(workspace, "analysis");
-    writeAnalysisProject(analysisDirectory, project);
+    publishAnalysisProject(analysisDirectory, project);
     const store = openAnalysisProjectStore(analysisDirectory);
     try {
       store.prepareAnnotationQueries();
@@ -304,7 +304,7 @@ for (const scenario of [
         confidence: "certain" as const,
       }),
     );
-    writeAnalysisProject(analysisDirectory, {
+    publishAnalysisProject(analysisDirectory, {
       ...project,
       shards: { ...project.shards, evidence },
     });

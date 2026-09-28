@@ -3,7 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CRC32, validateDebugMap, type DebugMap } from "@uttori/asm-core";
+import { validateDebugMap, type DebugMap } from "@uttori/asm-core";
 import {
   applyDisassemblyAnnotationEdit,
   commitAnalysisProjectTransaction,
@@ -12,7 +12,7 @@ import {
   openAnalysisProjectStore,
   RomImage,
   sourceExportSha256,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
 
@@ -267,15 +267,11 @@ test("parseCliArguments: parses analysis project commands and validates mapper/h
   });
 });
 
-test("parseCliArguments: parses evidence, storage, and Mesen export flags", (t) => {
+test("parseCliArguments: parses evidence and storage flags", (t) => {
   const evidence = parseCliArguments([
     "evidence-import",
     "game.analysis",
     "--rom=game.sfc",
-    "--mesen-cdl=game.cdl",
-    "--mesen-trace=game.trace",
-    "--trace-metadata=game.trace.json",
-    "--mesen-labels=game.mlb",
     "--instruction-trace=game.uttori-trace.json",
     "--trace-max-mib=4096",
     "--trace-index=65816-disassembly",
@@ -283,10 +279,6 @@ test("parseCliArguments: parses evidence, storage, and Mesen export flags", (t) 
     "--storage-max-mib=8",
   ]);
   t.is(evidence.command, "evidence-import");
-  t.is(evidence.mesenCdl, "game.cdl");
-  t.is(evidence.mesenTrace, "game.trace");
-  t.is(evidence.traceMetadata, "game.trace.json");
-  t.is(evidence.mesenLabels, "game.mlb");
   t.is(evidence.instructionTrace, "game.uttori-trace.json");
   t.is(evidence.traceMaxMiB, 4096);
   t.is(evidence.traceIndex, "65816-disassembly");
@@ -315,10 +307,6 @@ test("parseCliArguments: parses evidence, storage, and Mesen export flags", (t) 
   t.is(
     parseCliArguments(["evidence-report", "game.analysis", "report.json"]).output,
     "report.json",
-  );
-  t.is(
-    parseCliArguments(["mesen-labels-export", "game.analysis", "game.mlb"]).command,
-    "mesen-labels-export",
   );
   const storage = parseCliArguments([
     "project-storage",
@@ -865,7 +853,7 @@ test.serial(
     const project = path.join(temporary, "fixture.analysis");
     const bytes = new Uint8Array(0x8000);
     await fs.writeFile(rom, bytes);
-    writeAnalysisProject(project, {
+    publishAnalysisProject(project, {
       manifest: {
         format: "uttori-asm-analysis",
         schemaVersion: 3,
@@ -879,19 +867,7 @@ test.serial(
     t.is(await runCli(["evidence-import", project]), 1);
     t.true(logs.stderr.join("\n").includes("--rom is required"));
     t.is(await runCli(["evidence-import", project, "--rom", rom]), 1);
-    t.true(logs.stderr.join("\n").includes("provide --mesen-cdl"));
-    t.is(
-      await runCli([
-        "evidence-import",
-        project,
-        "--rom",
-        rom,
-        "--mesen-trace",
-        path.join(temporary, "t.txt"),
-      ]),
-      1,
-    );
-    t.true(logs.stderr.join("\n").includes("--trace-metadata is required"));
+    t.true(logs.stderr.join("\n").includes("provide --instruction-trace"));
     const traceFile = path.join(temporary, "capture.json");
     await fs.writeFile(traceFile, instructionTrace(new RomImage(bytes).identity.contentSha256));
     t.is(
@@ -903,55 +879,23 @@ test.serial(
     t.true(logs.stderr.join("\n").includes("Analysis failed: --rom is required"));
     t.is(await runCli(["export", project]), 1);
     t.true(logs.stderr.join("\n").includes("Export failed: --rom is required"));
-    t.is(await runCli(["mesen-labels-export", project]), 1);
-    t.true(logs.stderr.join("\n").includes("Mesen label export failed: --rom is required"));
     t.is(await runCli(["verify-roundtrip", project]), 1);
     t.true(logs.stderr.join("\n").includes("Round-trip verification failed: --rom is required"));
-    t.is(await runCli(["mesen-labels-export", project, "--rom", rom]), 1);
     t.is(await runCli(["evidence-report", path.join(temporary, "missing")]), 1);
   },
 );
 
-test("E2E: runCli imports, reports, reimports, and exports MesenCE offline evidence", async (t) => {
+test("E2E: runCli imports, reports, and reimports a native instruction trace", async (t) => {
   const temporary = await temporaryDirectory(t, "uttori-asm-cli-evidence-");
   const romFile = path.join(temporary, "fixture.sfc");
   const project = path.join(temporary, "fixture.analysis");
-  const cdlFile = path.join(temporary, "fixture.cdl");
-  const traceFile = path.join(temporary, "fixture.trace");
-  const metadataFile = path.join(temporary, "fixture.trace.json");
-  const labelsFile = path.join(temporary, "fixture.mlb");
   const instructionTraceFile = path.join(temporary, "fixture.uttori-trace.json");
-  const exportedLabels = path.join(temporary, "exported.mlb");
   const reportFile = path.join(temporary, "evidence.json");
   const bytes = new Uint8Array(0x8000);
   bytes.set([0xa9, 0x34, 0x12, 0xdb], 0);
   await fs.writeFile(romFile, bytes);
   t.is(await runCli(["disassemble", romFile, project, "--mapper=lorom"]), 0);
   const created = loadAnalysisProject(project);
-  const cdl = new Uint8Array(9 + bytes.length);
-  cdl.set(new TextEncoder().encode("CDLv2"));
-  const crc = CRC32.compute(bytes);
-  cdl.set([crc & 0xff, (crc >>> 8) & 0xff, (crc >>> 16) & 0xff, crc >>> 24], 5);
-  cdl.set([0x01, 0x01, 0x01, 0x01], 9);
-  await fs.writeFile(cdlFile, cdl);
-  await fs.writeFile(
-    traceFile,
-    [
-      "808000  LDA #$1234 A:0000 X:0000 Y:0000 S:01FF D:0000 DB:00 P:00 ",
-      "808003  STP A:1234 X:0000 Y:0000 S:01FF D:0000 DB:00 P:00 ",
-      "",
-    ].join("\n"),
-  );
-  await fs.writeFile(
-    metadataFile,
-    JSON.stringify({
-      schemaVersion: 1,
-      architecture: "snes.65816",
-      romContentSha256: created.manifest.rom.contentSha256,
-      mapper: "lorom",
-    }),
-  );
-  await fs.writeFile(labelsFile, "SnesPrgRom:0000:TraceEntry:Imported\\nlabel\n");
   await fs.writeFile(
     instructionTraceFile,
     JSON.stringify({
@@ -977,14 +921,6 @@ test("E2E: runCli imports, reports, reimports, and exports MesenCE offline evide
     project,
     "--rom",
     romFile,
-    "--mesen-cdl",
-    cdlFile,
-    "--mesen-trace",
-    traceFile,
-    "--trace-metadata",
-    metadataFile,
-    "--mesen-labels",
-    labelsFile,
     "--instruction-trace",
     instructionTraceFile,
     "--trace-index=65816-disassembly",
@@ -993,52 +929,19 @@ test("E2E: runCli imports, reports, reimports, and exports MesenCE offline evide
   const imported = loadAnalysisProject(project);
   t.true(imported.shards.imports.some((report) => report.indexProfile === "65816-disassembly-v1"));
   t.true(imported.shards.runtime.length > 0);
-  t.true(imported.shards.annotations.some((annotation) => annotation.state?.m === false));
-  t.true(imported.shards.labels.some((label) => label.name === "TraceEntry"));
   const manifestBefore = await fs.readFile(path.join(project, "analysis.json"), "utf8");
   const runtimeBefore = imported.shards.runtime;
   t.is(await runCli(importArguments), 0);
   t.is(await fs.readFile(path.join(project, "analysis.json"), "utf8"), manifestBefore);
   t.deepEqual(loadAnalysisProject(project).shards.runtime, runtimeBefore);
-  const nativeArguments = [
-    "evidence-import",
-    project,
-    "--rom",
-    romFile,
-    "--instruction-trace",
-    instructionTraceFile,
-    "--trace-index=65816-disassembly",
-  ];
-  t.is(await runCli(nativeArguments), 0);
-  t.is(await fs.readFile(path.join(project, "analysis.json"), "utf8"), manifestBefore);
-  t.deepEqual(loadAnalysisProject(project).shards.runtime, runtimeBefore);
-  // The receipt reuses the retained profile and leaves the earlier combined import untouched.
-  t.is(await runCli([...nativeArguments.slice(0, -1), "--trace-index=full"]), 0);
+  t.is(await runCli([...importArguments.slice(0, -1), "--trace-index=full"]), 0);
   t.deepEqual(loadAnalysisProject(project), imported);
-
-  t.is(
-    await runCli(["evidence-import", project, "--rom", romFile, "--mesen-labels", labelsFile]),
-    0,
-  );
 
   t.is(await runCli(["evidence-report", project, reportFile]), 0);
   const report = JSON.parse(await fs.readFile(reportFile, "utf8")) as {
     readonly runtimeRecords: number;
-    readonly explanations: readonly unknown[];
   };
   t.true(report.runtimeRecords > 0);
-  t.true(report.explanations.length > 0);
-  t.is(await runCli(["mesen-labels-export", project, exportedLabels, "--rom", romFile]), 0);
-  t.regex(await fs.readFile(exportedLabels, "utf8"), /SnesPrgRom:0{4}:TraceEntry/);
-  t.is(await runCli(["mesen-labels-export", project, "--rom", romFile]), 0);
-  t.true((await fs.stat(path.join(temporary, "fixture.mlb"))).isFile());
-
-  t.is(await runCli(["analyze", project, "--rom", romFile]), 0);
-  const analyzed = loadAnalysisProject(project);
-  const wide = analyzed.shards.analysis.find(
-    (record) => record.kind === "cfg-node" && record.address === 0x808000,
-  );
-  t.like(wide, { kind: "cfg-node", size: 3, mnemonic: "LDA" });
 });
 
 test.serial(
@@ -1121,7 +1024,7 @@ test("E2E: runCli export writes deterministic native source and verifies a compl
   const analyzed = loadAnalysisProject(project);
   const { shards: ignoredShards, ...projectManifest } = analyzed.manifest;
   void ignoredShards;
-  writeAnalysisProject(project, {
+  publishAnalysisProject(project, {
     manifest: projectManifest,
     shards: {
       ...analyzed.shards,

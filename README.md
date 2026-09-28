@@ -7,11 +7,11 @@ Build binaries, inspect evidence, regenerate source, and verify byte-identical R
 
 - Node.js 26 or newer for npm packages, standalone tools, and development.
 - VS Code 1.128.0 or newer for the extension. It uses the editor's embedded runtime.
-- Live debugging requires a separately installed, manifest-matched ares or MesenCE runtime.
+- Live debugging requires a separately installed, manifest-matched ares runtime.
 
 Support starts at the versions currently declared in the package manifests and moves forward.
 Earlier Node/editor releases and earlier development project formats are outside the support baseline.
-See the [release gates](TESTING.md#release-candidate-evidence-checklist) and each sidecar's runtime
+See the [release gates](TESTING.md#release-candidate-evidence-checklist) and the ares sidecar runtime
 setup for validation requirements and platform limits.
 
 ## Quick start
@@ -42,18 +42,17 @@ For editor setup, see the [VS Code extension](packages/vscode-extension/README.m
 
 ## Packages
 
-| Package                                                               | Purpose                                                       |
-| --------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [asm-cli](packages/cli/README.md)                                     | Assembly, analysis, import, export, and verification commands |
-| [asm-assets](packages/assets/README.md)                               | Standalone PNG, WAVE, data, and native conversion             |
-| [asm-core](packages/core/README.md)                                   | Assembly engine, analysis, and plugin contracts               |
-| [asm-disassembler](packages/disassembler/README.md)                   | SQLite projects, evidence, transactions, and declarations     |
-| [asm-plugin-loader-node](packages/plugin-loader-node/README.md)       | Project configuration and trusted plugin loading              |
-| [asm-plugin-snes](packages/plugin-snes/README.md)                     | SNES, 65816, SPC700, and Super FX                             |
-| [asm-plugin-65xx](packages/plugin-65xx/README.md)                     | 6502-family, raw, ca65-style, and NES targets                 |
-| [asm-debug-adapter](packages/debug-adapter/README.md)                 | Debugger contracts, DAP, replay, and sidecar protocol         |
-| [asm-debug-sidecar-ares](packages/debug-sidecar-ares/README.md)       | ares process host and debugger translator                     |
-| [asm-debug-sidecar-mesence](packages/debug-sidecar-mesence/README.md) | Experimental MesenCE process host and translator              |
+| Package                                                         | Purpose                                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------------- |
+| [asm-cli](packages/cli/README.md)                               | Assembly, analysis, import, export, and verification commands |
+| [asm-assets](packages/assets/README.md)                         | Standalone PNG, WAVE, data, and native conversion             |
+| [asm-core](packages/core/README.md)                             | Assembly engine, analysis, and plugin contracts               |
+| [asm-disassembler](packages/disassembler/README.md)             | SQLite projects, evidence, transactions, and declarations     |
+| [asm-plugin-loader-node](packages/plugin-loader-node/README.md) | Project configuration and trusted plugin loading              |
+| [asm-plugin-snes](packages/plugin-snes/README.md)               | SNES, 65816, SPC700, and Super FX                             |
+| [asm-plugin-65xx](packages/plugin-65xx/README.md)               | 6502-family, raw, ca65-style, and NES targets                 |
+| [asm-debug-adapter](packages/debug-adapter/README.md)           | Debugger contracts, DAP, replay, and sidecar protocol         |
+| [asm-debug-sidecar-ares](packages/debug-sidecar-ares/README.md) | ares process host and debugger translator                     |
 
 The [language server](packages/language-server/README.md),
 [VS Code extension](packages/vscode-extension/README.md), and

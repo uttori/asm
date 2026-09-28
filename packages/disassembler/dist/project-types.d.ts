@@ -427,5 +427,15 @@ export interface AnalysisProject {
     readonly manifest: Omit<AnalysisProjectManifest, "shards">;
     readonly shards: AnalysisProjectShards;
 }
+/** One consistent revision, detached from storage. Readonly types do not freeze records at runtime. */
+export interface LoadedAnalysisProject {
+    readonly manifest: AnalysisProjectManifest;
+    readonly shards: AnalysisProjectShards;
+}
+/** Metadata and optional runtime projection. Never pass this partial view to a full replacement. */
+export interface LoadedAnalysisProjectView {
+    readonly manifest: AnalysisProjectManifest;
+    readonly view: AnalysisProjectShards;
+}
 export {};
 //# sourceMappingURL=project-types.d.ts.map

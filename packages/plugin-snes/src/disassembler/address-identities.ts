@@ -7,7 +7,7 @@ import type { SnesMapper } from "./rom-header.js";
 export const SNES_FILE_ADDRESS_SPACE = "rom.file";
 /** Address space id for the 24-bit SNES CPU bus. */
 export const SNES_CPU_ADDRESS_SPACE = "snes.cpu";
-/** Address space id for Mesen-compatible physical 128 KiB SNES work RAM offsets. */
+/** Address space id for physical 128 KiB SNES work RAM offsets. */
 export const SNES_WRAM_ADDRESS_SPACE = "snes.wram";
 /** Address space id for physical cartridge save-RAM offsets. */
 export const SNES_SRAM_ADDRESS_SPACE = "snes.sram";

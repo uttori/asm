@@ -9,7 +9,7 @@ import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   loadAnalysisProjectSnapshot,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
 
@@ -96,7 +96,7 @@ test("lookupDisassemblyAnnotation uses named locations or a current debug map", 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-lookup-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const project = fixtureProject();
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const snapshot = loadAnalysisProjectSnapshot(directory);
   const named = lookupDisassemblyAnnotation(snapshot, { maps: [] });
   t.true(named.choices.some((choice) => choice.location.address === 0xc3002c));
@@ -151,7 +151,7 @@ test("lookupDisassemblyAnnotation uses named locations or a current debug map", 
 test("saveDisassemblyAnnotation rejects stale revisions and changed source bytes", (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-annotation-save-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, fixtureProject());
+  publishAnalysisProject(directory, fixtureProject());
   const snapshot = loadAnalysisProjectSnapshot(directory);
   const source = path.join(directory, "bank.asm");
   fs.writeFileSync(source, sourceText);

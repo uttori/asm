@@ -89,7 +89,48 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.trace.restore",
       "asm.editorInfo.choosePreset",
       "asm.editorInfo.configureInline",
+      "asm.editorInfo.showStatus",
       "asm.editorInfo.inspectLine",
+      "asm.disassembly.inspectOwnership",
+      "asm.disassembly.editOwnedAnnotation",
+      "asm.disassembly.openOwningInput",
+      "asm.disassembly.showOwnedStatus",
+      "asm.disassembly.regenerateOwned",
+      "asm.disassembly.editMetadata",
+      "asm.disassembly.removeLabel",
+      "asm.disassembly.resetLabel",
+      "asm.disassembly.editComments",
+      "asm.disassembly.editClassification",
+      "asm.disassembly.editTargets",
+      "asm.disassembly.recoverPublication",
+      "asm.buildTarget.select",
+      "asm.baseline.verify",
+      "asm.modification.create",
+      "asm.modification.add",
+      "asm.modification.open",
+      "asm.modification.build",
+      "asm.modification.run",
+      "asm.modification.debug",
+      "asm.modification.watch",
+      "asm.modification.derive",
+      "asm.modification.openInput",
+      "asm.modification.remove",
+      "asm.asset.extract",
+      "asm.asset.import",
+      "asm.allocation.review",
+      "asm.allocation.apply",
+      "asm.rebase.review",
+      "asm.rebase.accept",
+      "asm.source.review",
+      "asm.source.import",
+      "asm.source.detach",
+      "asm.asset.openExternal",
+      "asm.source.restore",
+      "asm.rebase.refresh",
+      "asm.modification.edit",
+      "asm.asset.edit",
+      "asm.metadata.migrate",
+      "asm.retention.manage",
     ],
   );
   t.true(manifest.contributes.commands.every((entry) => entry.category === "Assembly"));
@@ -178,6 +219,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.trace.indexMode",
       "asm.baseImage",
       "asm.buildOutput",
+      "asm.buildTarget",
       "asm.configFile",
       "asm.debug.captureContext",
       "asm.debug.traceDetail",
@@ -197,6 +239,7 @@ test("VS Code manifest exposes 65xx and SNES language modes", (t) => {
       "asm.editorInfo.hover.rows",
       "asm.entryPoints",
       "asm.includePaths",
+      "asm.modificationProject",
       "asm.plugins",
       "asm.target",
       "uttoriAsmLanguageServer.trace.server",
@@ -402,13 +445,17 @@ test("VS Code disassembly maintenance makes trace-to-source changes explicit and
     path.join(root, "packages/vscode-extension/src/disassembly/maintenance-jobs.ts"),
     "utf8",
   );
+  const publisher = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/disassembly/source-publisher.ts"),
+    "utf8",
+  );
   const panel = fs.readFileSync(
     path.join(root, "packages/vscode-extension/media/disassembly.html"),
     "utf8",
   );
   t.true(jobs.includes("importRuntimeTraceSourceIntoProject"));
   t.true(jobs.includes("analyzeSnesProject"));
-  t.true(jobs.includes("exportSnesProject"));
+  t.true(publisher.includes("exportSnesProject"));
   t.true(jobs.includes("verifySnesProjectRoundTrip"));
   t.false(source.includes("loadAnalysisProjectSnapshot"));
   t.true(source.includes("DisassemblyMaintenanceClient"));
@@ -463,6 +510,10 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
     path.join(root, "packages/vscode-extension/src/analysis/annotation-controller.ts"),
     "utf8",
   );
+  const format = fs.readFileSync(
+    path.join(root, "packages/vscode-extension/src/editor-info/format.ts"),
+    "utf8",
+  );
   const debugAnnotations = fs.readFileSync(
     path.join(root, "packages/vscode-extension/src/debug/analysis-annotations.ts"),
     "utf8",
@@ -480,7 +531,7 @@ test("analysis annotations remain hash-gated and presentation-only", (t) => {
   t.true(extension.includes("onDidChangeTextDocument"));
   t.true(extension.includes("onDidSaveTextDocument"));
   t.false(controller.includes("loadAnalysisProject"));
-  t.true(controller.includes("info.annotations ?? []"));
+  t.true(format.includes("info.annotations ?? []"));
   t.true(controller.includes("createTextEditorDecorationType"));
   t.true(controller.includes("this.provider.invalidate()"));
   t.true(controller.includes("editor.visibleRanges"));

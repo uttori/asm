@@ -1,5 +1,5 @@
-import { type LoadedAnalysisProject, type LoadedAnalysisProjectView, type RuntimeRecordProjection } from "./project-store.js";
-import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards } from "./project-types.js";
+import { type RuntimeRecordProjection } from "./project-store.js";
+import { type AnalysisProject, type AnalysisProjectManifest, type AnalysisProjectShards, type LoadedAnalysisProject, type LoadedAnalysisProjectView } from "./project-types.js";
 import { SqliteAnalysisStore } from "./sqlite-store.js";
 /** Identity marker for optimistic project revision tokens. */
 export declare const ANALYSIS_PROJECT_REVISION_FORMAT = "uttori-asm-analysis-revision";
@@ -130,11 +130,13 @@ export declare const commitAnalysisProjectAnnotationUpdate: (directory: string, 
  */
 export declare const commitAnalysisProjectSelectedEdit: (directory: string, snapshot: AnalysisProjectSnapshot, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
 /**
- * Create or replace a complete project. Editing clients should use an explicit snapshot revision.
- * Protects against a writer racing this call, but cannot detect a stale caller-owned replacement.
- * @param {string} directory Destination project root.
- * @param {AnalysisProject} project Complete replacement including runtime.
- * @returns {CommittedAnalysisProjectTransaction} Committed identity and publication result.
+ * Atomically create or replace every record, including runtime history.
+ * Samples the current revision when called, so an edit built from an older caller snapshot is not
+ * detected. A writer racing this call is rejected. Editing clients must use the explicit
+ * revision-checked commit APIs instead. Use a view update to preserve runtime history.
+ * @param {string} directory Project root to create or replace.
+ * @param {AnalysisProject} project Complete replacement, including runtime history.
+ * @returns {CommittedAnalysisProjectTransaction} Committed manifest, revision, and publication result.
  */
 export declare const publishAnalysisProject: (directory: string, project: AnalysisProject) => CommittedAnalysisProjectTransaction;
 /**

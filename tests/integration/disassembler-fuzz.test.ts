@@ -29,7 +29,7 @@ import {
   loadAnalysisProject,
   parseAnalysisProjectManifest,
   validateAnalysisProjectManifest,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type AnalysisProjectManifest,
   type RuntimeInstructionTraceArtifact,
@@ -257,7 +257,7 @@ test("deterministic project fuzz bounds SQLite payload parsing and validation", 
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-project-fuzz-"));
   try {
     const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, emptyProject(rom));
+    publishAnalysisProject(directory, emptyProject(rom));
     const database = new DatabaseSync(path.join(directory, "analysis.sqlite"));
     t.teardown(() => database.close());
     let accepted = 0;

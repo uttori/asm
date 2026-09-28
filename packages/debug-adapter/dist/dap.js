@@ -150,7 +150,7 @@ export class DebugAdapterSession {
     #configurationHandshake;
     #configurationDone;
     #cancelConfiguration;
-    /** Needed because ares and MesenCE accept breakpoint-table changes only while stopped. */
+    /** Needed because ares accepts breakpoint-table changes only while stopped. */
     #executionState = "unknown";
     /** Monotonic event/transition revision prevents a failed request undoing a newer stop. */
     #executionRevision = 0;

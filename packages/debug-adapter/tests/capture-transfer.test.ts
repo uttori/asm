@@ -9,7 +9,7 @@ import { busJsonFrame } from "../../../tests/helpers/capture-bus.js";
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   loadAnalysisProject,
   importRuntimeBusTraceSourceIntoProject,
 } from "../../disassembler/src/index.js";
@@ -97,7 +97,7 @@ test("native transfer framing survives chunk boundaries, archive recovery and ne
   t.is(result.summary.transfers?.windows[0].begin?.configuration.das, 2050);
   t.is(result.summary.transfers?.windows[0].end?.configuration.das, 0);
   const directory = path.join(root, "analysis");
-  writeAnalysisProject(directory, {
+  publishAnalysisProject(directory, {
     manifest: {
       format: "uttori-asm-analysis",
       schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,

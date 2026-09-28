@@ -9,7 +9,7 @@ import { busJsonFrame } from "../../../tests/helpers/capture-bus.js";
 import {
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   loadAnalysisProject,
   importRuntimeBusTraceSourceIntoProject,
 } from "../../disassembler/src/index.js";
@@ -144,7 +144,7 @@ test("native PPU effects survive framing, SQL import, duplicate import", async (
     }),
   );
   const directory = path.join(root, "analysis");
-  writeAnalysisProject(directory, {
+  publishAnalysisProject(directory, {
     manifest: {
       format: "uttori-asm-analysis",
       schemaVersion: ANALYSIS_PROJECT_SCHEMA_VERSION,

@@ -403,6 +403,7 @@ test("named data stays outside code and guide labels with configurable comment w
   );
   t.regex(
     bank,
+    // oxlint-disable-next-line security/detect-unsafe-regex
     /\n; A long description\.[^\n]+\n(?:; [^\n]+\n)+dataStruct LongNote, {\n  value = \$EAEA\n}\n/,
   );
   t.notRegex(bank, /^[\t ]+(?:dataStructs? |endDataStructs)/m);

@@ -48,7 +48,6 @@ The complete gate map, including fixtures and the Extension Host smoke, is in [t
 | LSP diagnostics or editor language features                        | [architecture guide](packages/disassembler/ARCHITECTURE.md#language-and-editor-path) | `packages/language-server/src/`                                  |
 | DAP, neutral debug contracts, framing, replay                      | [debug-adapter reference](packages/debug-adapter/README.md)                          | `packages/debug-adapter/src/`                                    |
 | ares translation/process hosting                                   | [ares sidecar reference](packages/debug-sidecar-ares/README.md)                      | `packages/debug-sidecar-ares/src/`                               |
-| MesenCE translation/process hosting                                | [MesenCE sidecar reference](packages/debug-sidecar-mesence/README.md)                | `packages/debug-sidecar-mesence/src/`                            |
 | VS Code commands, trees, annotations, launch settings              | [extension reference](packages/vscode-extension/README.md)                           | `packages/vscode-extension/src/`                                 |
 | performance-sensitive analysis/persistence                         | [performance guide](packages/disassembler/PERFORMANCE.md)                            | relevant implementation plus `scripts/benchmark-disassembler.ts` |
 

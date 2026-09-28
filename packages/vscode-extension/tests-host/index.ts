@@ -410,7 +410,7 @@ export async function run(): Promise<void> {
   assert.ok(folder, "Smoke test requires its temporary workspace.");
   const extension = vscode.extensions.getExtension(EXTENSION_ID);
   assert.ok(extension, `Extension '${EXTENSION_ID}' was not discovered.`);
-  for (const name of ["ares", "mesence"]) {
+  for (const name of ["ares"]) {
     // These are separately built Node 24 bundles, so verify launch with Electron's executable,
     // not the Node 26 binary that compiled the repository or the standalone npm artifacts.
     const executable = vscode.Uri.joinPath(extension.extensionUri, "sidecars", `${name}.mjs`);

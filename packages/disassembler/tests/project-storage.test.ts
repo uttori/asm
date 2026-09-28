@@ -15,7 +15,7 @@ import {
   openAnalysisProjectStore,
   prepareAnalysisProjectTransaction,
   resolveProjectNativeAssetId,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "../src/index.js";
 import { DatabaseSync } from "./sqlite-connection.js";
@@ -80,7 +80,7 @@ test("legacy native asset declarations survive storage and resolve only for anal
       ],
     },
   };
-  writeAnalysisProject(root, project);
+  publishAnalysisProject(root, project);
   const loaded = loadAnalysisProject(root).shards.annotations[0]?.asset;
   t.deepEqual(loaded, declaration);
   t.is(resolveProjectNativeAssetId(loaded!), "snes.tile.4bpp");
@@ -92,7 +92,7 @@ test("legacy native asset declarations survive storage and resolve only for anal
 test("prepared edits are validated again and stale commits cannot overwrite newer rows", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, fixture());
+  publishAnalysisProject(root, fixture());
   const snapshot = loadAnalysisProjectSnapshot(root);
   const prepared = prepareAnalysisProjectTransaction(root, changed(snapshot, 1));
   t.deepEqual(loadAnalysisProjectSnapshot(root), snapshot);
@@ -121,7 +121,7 @@ test("prepared edits are validated again and stale commits cannot overwrite newe
 test("SQL failures roll back rows, provenance and revision together", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, changed(fixture(), 1));
+  publishAnalysisProject(root, changed(fixture(), 1));
   const snapshot = loadAnalysisProjectSnapshot(root);
   const database = new DatabaseSync(path.join(root, "analysis.sqlite"));
   database.exec(`CREATE TRIGGER fail_revision BEFORE INSERT ON meta WHEN NEW.k='revision'
@@ -136,7 +136,7 @@ test("SQL failures roll back rows, provenance and revision together", (t) => {
 test("database snapshots and optimistic revisions stay correct when the watcher pointer is stale", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, changed(fixture(), 1));
+  publishAnalysisProject(root, changed(fixture(), 1));
   const pointer = fs.readFileSync(path.join(root, "analysis.json"));
   const before = loadAnalysisProjectSnapshot(root);
   const reader = openAnalysisProjectStore(root);
@@ -167,7 +167,7 @@ test("database snapshots and optimistic revisions stay correct when the watcher 
 test("an interrupted writer leaves the last committed SQLite project readable", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, changed(fixture(), 1));
+  publishAnalysisProject(root, changed(fixture(), 1));
   const before = loadAnalysisProjectSnapshot(root);
   const child = spawnSync(process.execPath, [
     "--input-type=module",
@@ -187,7 +187,7 @@ test("an interrupted writer leaves the last committed SQLite project readable", 
 test("SQLite serializes competing writers and releases locks after failure", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, changed(fixture(), 1));
+  publishAnalysisProject(root, changed(fixture(), 1));
   const snapshot = loadAnalysisProjectSnapshot(root);
   const writer = new DatabaseSync(path.join(root, "analysis.sqlite"));
   writer.exec("BEGIN IMMEDIATE");
@@ -213,7 +213,7 @@ test("SQLite serializes competing writers and releases locks after failure", (t)
 test("compaction preserves logical records and revision without producing shard generations", (t) => {
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
-  writeAnalysisProject(root, changed(fixture(), 1));
+  publishAnalysisProject(root, changed(fixture(), 1));
   const before = loadAnalysisProjectSnapshot(root);
   const result = compactAnalysisProject(root);
   t.deepEqual(result.revision, before.revision);

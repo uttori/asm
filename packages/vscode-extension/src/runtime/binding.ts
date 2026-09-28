@@ -19,11 +19,7 @@ export const runtimeBindingFromLaunch = (
       continue;
     }
     const config = configuration as Record<string, unknown>;
-    if (
-      config.type !== "uttori-asm" ||
-      config.request !== "launch" ||
-      (config.backend !== "ares" && config.backend !== "mesence")
-    ) {
+    if (config.type !== "uttori-asm" || config.request !== "launch" || config.backend !== "ares") {
       continue;
     }
     const resolve = (value: unknown): string | undefined => {
@@ -40,7 +36,7 @@ export const runtimeBindingFromLaunch = (
       continue;
     }
     const binding: EmulatorRuntimeBinding = {
-      backend: config.backend,
+      backend: "ares",
       runtimeManifest,
       emulator,
       runtimeDirectory,

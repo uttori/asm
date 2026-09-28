@@ -1,5 +1,4 @@
-import { type LoadedAnalysisProject } from "./project-store.js";
-import type { AnalysisConflictRecord, AnalysisProject, AnalysisProjectManifest, AnalysisProjectShards, AnalysisRecord, AnalysisTargetOverrideRecord, EvidenceRecord, ImportReport, IntervalAnnotation, ProjectComment, ProjectLabel, ProjectRegion, RuntimeEvidenceRecord } from "./project-types.js";
+import type { AnalysisConflictRecord, AnalysisProject, AnalysisProjectManifest, AnalysisProjectShards, AnalysisRecord, AnalysisTargetOverrideRecord, EvidenceRecord, ImportReport, IntervalAnnotation, LoadedAnalysisProject, ProjectComment, ProjectLabel, ProjectRegion, RuntimeEvidenceRecord } from "./project-types.js";
 export * from "./metadata-edit.js";
 /** Classifications accepted by a manual range edit. */
 export declare const RANGE_CLASSIFICATIONS: readonly ["unreached", "opcode", "operand", "data8", "data16", "data24", "data32", "pointer16", "pointer24", "pointer32", "graphics", "music", "compressed", "asset", "empty", "text"];

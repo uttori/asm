@@ -93,7 +93,6 @@ await build({
 const embeddedExecutables = [
   ["../language-server/src/server.ts", "server/server.mjs", true],
   ["../debug-sidecar-ares/src/sidecar.ts", "sidecars/ares.mjs", false],
-  ["../debug-sidecar-mesence/src/sidecar.ts", "sidecars/mesence.mjs", false],
 ];
 for (const [source, destination, needsRequireShim] of embeddedExecutables) {
   const outfile = path.join(here, destination);

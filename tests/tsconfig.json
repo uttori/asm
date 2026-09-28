@@ -21,8 +21,6 @@
     "../packages/debug-sidecar-ares/tests/sidecar.test.ts",
     "../packages/debug-sidecar-ares/tests/node-tcp-gdb-rsp-transport.test.ts",
     "../packages/debug-sidecar-ares/tests/gdb-rsp-client.test.ts",
-    "../packages/debug-sidecar-mesence/tests/sidecar.test.ts",
-    "../packages/debug-sidecar-mesence/tests/node-tcp-mesen-transport.test.ts",
     "../packages/plugin-snes/tests/disassembler/superfx-address-space.test.ts",
     "../packages/plugin-snes/tests/runtime-code.test.ts",
     "../packages/plugin-snes/tests/fixtures/large-runtime-code.ts"

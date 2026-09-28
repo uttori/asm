@@ -7,7 +7,7 @@ import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "@uttori/asm-disassembler";
 
@@ -95,7 +95,7 @@ const fixtureProject = (): AnalysisProject => {
 const tempProject = (t: { teardown(callback: () => void): void }): string => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-analysis-worker-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, fixtureProject());
+  publishAnalysisProject(directory, fixtureProject());
   return directory;
 };
 

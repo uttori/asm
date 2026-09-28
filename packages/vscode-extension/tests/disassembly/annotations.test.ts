@@ -10,7 +10,7 @@ import { canonicalDebugMapJson } from "@uttori/asm-core/debug-map";
 import type { DebugMap } from "@uttori/asm-core/debug-map";
 import {
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   loadAnalysisProjectSnapshot,
   commitAnalysisProjectTransaction,
   type AnalysisProject,
@@ -221,7 +221,7 @@ const harness = (t: { teardown(callback: () => void): void }) => {
       ],
     },
   };
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const mapFile = path.join(directory, "main.debug.json");
   const payload = {
     format: "uttori-asm-debug-map",

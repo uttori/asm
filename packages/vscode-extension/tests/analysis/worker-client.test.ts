@@ -7,7 +7,7 @@ import {
   ANALYSIS_PROJECT_FORMAT,
   ANALYSIS_PROJECT_SCHEMA_VERSION,
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type RomCoverageMap,
   type RomCoverageSegment,
@@ -94,7 +94,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     },
   };
   try {
-    writeAnalysisProject(projectDirectory, project);
+    publishAnalysisProject(projectDirectory, project);
     // Invalid CFG payloads must not prevent the lightweight Sources catalog from loading.
     const database = new DatabaseSync(path.join(projectDirectory, "analysis.sqlite"));
     database.exec(
@@ -213,7 +213,7 @@ test("analysis worker isolates validated shards, serves bounded pages, invalidat
     });
     await t.throwsAsync(client.request(path.join(directory, "missing"), "manifest"));
     t.deepEqual(await client.request(projectDirectory, "annotations"), []);
-    writeAnalysisProject(projectDirectory, {
+    publishAnalysisProject(projectDirectory, {
       ...project,
       shards: { ...project.shards, annotations: [] },
     });

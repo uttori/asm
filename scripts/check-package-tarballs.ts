@@ -351,7 +351,6 @@ try {
     ["@uttori/asm-disassembler/dist/runtime-trace-project.d.ts", "A pointer-file error"],
     ["@uttori/asm-disassembler/dist/runtime-trace-file.d.ts", "2 GiB"],
     ["@uttori/asm-debug-adapter/dist/sidecar-client.d.ts", "Starts when queued"],
-    ["@uttori/asm-debug-sidecar-mesence/dist/mesen-process-host.d.ts", "86,400"],
   ]) {
     assert.ok(
       fs.readFileSync(path.join(consumer, "node_modules", file), "utf8").includes(contract),

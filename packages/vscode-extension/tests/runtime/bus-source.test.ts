@@ -24,7 +24,7 @@ import {
   importRuntimeBusTraceSourceIntoProject,
   loadAnalysisProject,
   openAnalysisProjectStore,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "../../../disassembler/src/index.js";
 import { DisassemblyMaintenanceClient } from "../../src/disassembly/maintenance-client.js";
@@ -83,7 +83,7 @@ test("ACT2 bus import runs in a bounded worker and reports channel activity with
   const directory = path.join(root, "analysis");
   const processFile = path.join(root, "maintenance.cjs");
   fs.writeFileSync(file, bytes);
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   await build({
     entryPoints: [path.resolve("packages/vscode-extension/src/disassembly/maintenance-process.ts")],
     outfile: processFile,
@@ -185,7 +185,7 @@ test("bus source rejects torn tails, replacement, wrong scope, byte budgets and 
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const file = path.join(root, "bus.act2");
   const directory = path.join(root, "analysis");
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const before = loadAnalysisProject(directory);
   fs.writeFileSync(file, bytes);
   await t.throwsAsync(createEditorRuntimeBusSource(file, { maxBytes: 10 }), {

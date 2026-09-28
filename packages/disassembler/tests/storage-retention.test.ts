@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "../../../tests/ava-helper.js";
 import {
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   openAnalysisProjectStore,
   importRuntimeInstructionTrace,
   importRuntimeTraceIntoProject,
@@ -96,7 +96,7 @@ test("default decoder profile preserves joint width/bank unknowns and normalizes
 test("shared facts and virtual state pairs keep exact per-capture counts and detach independent mutations", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   const first = await importRuntimeTraceSourceIntoProject(source(trace()), directory, context);
   const second = await importRuntimeTraceSourceIntoProject(source(trace("2")), directory, context);
   t.is(first.storage.newFacts, 2);
@@ -145,7 +145,7 @@ test("file imports retain receipts and exact counts without copying the source",
   const root = temporary();
   t.teardown(() => fs.rmSync(root, { recursive: true, force: true }));
   const directory = path.join(root, "analysis");
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   const file = path.join(root, "trace.json");
   const contents = JSON.stringify(trace());
   fs.writeFileSync(file, contents);
@@ -170,7 +170,7 @@ test("file imports retain receipts and exact counts without copying the source",
 test("cache eviction invalidates disposable projections and rebuilds them without touching facts", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   await importRuntimeTraceSourceIntoProject(source(trace()), directory, context);
   const store = openAnalysisProjectStore(directory);
   try {
@@ -193,7 +193,7 @@ test("cache eviction invalidates disposable projections and rebuilds them withou
 test("full-profile capture imports increment summaries once and no-op reimports preserve the warm cache", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   const options = { ...context, indexMode: "full" as const };
   await importRuntimeTraceSourceIntoProject(source(trace()), directory, options);
   const store = openAnalysisProjectStore(directory);
@@ -237,7 +237,7 @@ test("full-profile capture imports increment summaries once and no-op reimports 
 test("project byte ceiling rolls back a complete new publication and its capture receipt", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, project());
+  publishAnalysisProject(directory, project());
   const store = openAnalysisProjectStore(directory);
   const revision = store.revision();
   store.transaction(() => store.setStoragePolicy({ databaseMaxBytes: 1 }));

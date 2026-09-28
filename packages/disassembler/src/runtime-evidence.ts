@@ -1,5 +1,5 @@
+import { canonicalJson } from "./canonical-json.js";
 import { manuallyOwnedMetadata } from "./metadata-edit.js";
-import { canonicalJson } from "./project-store.js";
 import {
   type AnalysisProjectShards,
   type AnalysisRecord,

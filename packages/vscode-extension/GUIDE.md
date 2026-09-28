@@ -14,7 +14,7 @@ The extension, workers, language server, and embedded sidecars run on VS Code's 
 - Target-filtered hover and completion from the active plugins, including bundled 65816 / SPC700 / Super FX support.
 - Signature help, semantic tokens, and cross-file rename for user-defined symbols.
 - **Uttori SNES** and **Uttori 65xx** language modes (status bar / Change Language Mode). SNES is the default for `.asm` and includes SPC700, Super FX, and mapper directives. 65xx is CPU-only.
-- Inline **Uttori ASM Debugger** with replay, live ares, and live MesenCE backends. Source / instruction breakpoints, stepping, threads, stack frames, registers, native watch expressions, memory, and virtual disassembly source.
+- Inline **Uttori ASM Debugger** with replay and live ares backends. Source / instruction breakpoints, stepping, threads, stack frames, registers, native watch expressions, memory, and virtual disassembly source.
 - Native **Analysis Coverage** tree for ROM classifications, conflicts, runtime coverage, and projection diagnostics.
 - Optional **Functions & Calls** tree for persisted function candidates, resolved call/interrupt edges, unresolved control flow, and ownership diagnostics.
 - Hash-gated inline source and disassembly annotations for effective addresses, runtime coverage, memory access, and static/observed CPU state.
@@ -95,7 +95,7 @@ The extension rejects stale maps whose binary identity does not match. Without a
 
 ## Live Debugging
 
-The extension ships the two MIT protocol sidecars, but never bundles an emulator executable, its runtime resources, or a test ROM. Live launch is allowed only in a trusted workspace and requires explicit paths to a versioned runtime manifest, the manifest-matched emulator executable, and its portable runtime root. The exact `program` bytes must still match the debug map before the emulator starts.
+The extension ships the MIT ares protocol sidecar, but never bundles an emulator executable, its runtime resources, or a test ROM. Live launch is allowed only in a trusted workspace and requires explicit paths to a versioned runtime manifest, the manifest-matched emulator executable, and its portable runtime root. The exact `program` bytes must still match the debug map before the emulator starts.
 
 For the selected ares backend:
 
@@ -114,7 +114,7 @@ For the selected ares backend:
 }
 ```
 
-Use `"backend": "mesence"` with the corresponding patched MesenCE manifest, executable, and runtime root to expose its negotiated 65816, SPC700, and SuperFX threads. The extension starts sidecars without a shell, passes a fresh 256-bit session token through the child environment rather than command-line arguments, and rejects any capability profile that differs from the built editor profile. An optional `sidecar` path is a development-only override for the bundled MIT module. It does not bypass protocol, token, or capability validation.
+The extension starts the ares sidecar without a shell, passes a fresh 256-bit session token through the child environment rather than command-line arguments, and rejects any capability profile that differs from the built editor profile. An optional `sidecar` path is a development-only override for the bundled MIT module. It does not bypass protocol, token, or capability validation.
 
 Watches evaluate only bounded integer expressions against the selected stopped frame's registers. Native `$hex`, `%binary`, low/high/bank selectors, arithmetic, comparisons, logical operations, bitwise operations, shifts, and parentheses are supported. Expressions cannot call JavaScript, read files, access emulator memory, or mutate emulator state.
 
@@ -122,7 +122,7 @@ The ares manifest selects `"frontend": "desktop"` for a graphical game window, a
 
 Set a source breakpoint by clicking the editor gutter or pressing **F9** on a generated assembly line, then use **Continue (F5)**. A label, comment, or directive breakpoint moves to the next mapped executable line and VS Code shows the resolved location. Breakpoints may also be added, removed, or changed while the emulator is running: the adapter performs a hidden pause/update/resume transaction because the native emulator protocols only mutate execute breakpoints at a stopped boundary. The next matching instruction produces a normal breakpoint stop, where stepping and inspection are available. Use **Debug in Emulator**, not **Run in Emulator**, when breakpoints are required.
 
-Run **Assembly: Configure Emulator Runtime** once per workspace and select ares or MesenCE, its versioned runtime manifest, emulator executable, and runtime directory. The absolute binding is kept in machine-local extension storage rather than project settings. **Run in Emulator** and **Debug in Emulator** build first and launch only the returned ROM/debug-map pair. If no picker binding exists, these commands reuse a single unambiguous live runtime explicitly configured in the folder's `launch.json`. Conflicting runtime configurations require the picker. Unresolved variables other than `${workspaceFolder}` are not guessed. Startup status, the chosen frontend, native stderr, and failures appear in **Output → Uttori Emulator**. Launch errors also produce a notification. Optional analysis annotations load asynchronously after debugger connection rather than delaying initialization. **Run and Watch** rebuilds on a debounced save and performs a deterministic full emulator restart only when a successful build changes the ROM or map. A compilation error leaves the current session running, and VS Code reapplies source breakpoints against the replacement map.
+Run **Assembly: Configure Emulator Runtime** once per workspace and select the ares runtime manifest, emulator executable, and runtime directory. The absolute binding is kept in machine-local extension storage rather than project settings. **Run in Emulator** and **Debug in Emulator** build first and launch only the returned ROM/debug-map pair. If no picker binding exists, these commands reuse a single unambiguous live runtime explicitly configured in the folder's `launch.json`. Conflicting runtime configurations require the picker. Unresolved variables other than `${workspaceFolder}` are not guessed. Startup status, the chosen frontend, native stderr, and failures appear in **Output → Uttori Emulator**. Launch errors also produce a notification. Optional analysis annotations load asynchronously after debugger connection rather than delaying initialization. **Run and Watch** rebuilds on a debounced save and performs a deterministic full emulator restart only when a successful build changes the ROM or map. A compilation error leaves the current session running, and VS Code reapplies source breakpoints against the replacement map.
 
 Generated configs contain `entryPoints: ["main.asm"]`. To open a parent folder instead of the generated directory, set `asm.configFile` to `disassembly/uttori-asm.config.json` and `asm.analysisProject` to `disassembly/analysis` in the parent's `.vscode/settings.json`. Paths read from the config resolve beside that config. Explicit `asm.*` path settings resolve from the workspace root. Run **Build Binary** before using a direct F5 launch after switching workspace roots so portable debug-map source paths match the launch's `sourceRoot`. At launch the debugger also checks the map's portable source paths against the configured root and adjacent artifact parents, choosing and logging the best on-disk match. This keeps source navigation valid for an initial generated map when the project is opened from its parent folder.
 
@@ -130,7 +130,7 @@ Every generated SNES project also includes `defines.asm`. `main.asm` includes it
 
 While stopped, the Variables view groups registers by processor and native group, decodes the 65816 `N V M X D I Z C E` flags while retaining raw `P`/`E`, lists only named memory spaces whose backend reads are guaranteed side-effect-free, and shows 32 bytes from the 65816 or SPC700 stack pointer. Native bridges currently expose an explicit “current frame only” row instead of inventing a call stack. Virtual disassembly is discarded and regenerated at every stopped boundary.
 
-Replay scripts can model instruction, step-in, step-over, and step-out transitions. The current live ares and MesenCE bridges negotiate exact instruction and step-in support only. Step-over and step-out are labeled unavailable and rejected instead of being approximated.
+Replay scripts can model instruction, step-in, step-over, and step-out transitions. The live ares bridge negotiates exact instruction and step-in support only. Step-over and step-out are labeled unavailable and rejected instead of being approximated.
 
 ## Commands
 
@@ -138,7 +138,7 @@ Replay scripts can model instruction, step-in, step-over, and step-out transitio
 - **Assembly: Import Diz Disassembly Project** (`asm.importDizProject`) - imports an uncompressed DiztinGUIsh `.dizraw` project with a matching ROM and reports deterministic conversion loss.
 - **Assembly: Build Binary** (`asm.build`) - assembles the active file with the selected target and atomically publishes its matching debug map. Available from the command palette and the editor title run menu when editing an Uttori Assembly file. Unsaved buffers are built and source-fingerprinted as-is.
 - **Assembly: Toggle Build on Save (Watch)** (`asm.toggleWatch`) - rebuilds the entry file (first `asm.entryPoints` value, else the active file) every time an assembly file is saved. A status bar item shows the watch state. Click it to toggle.
-- **Assembly: Configure Emulator Runtime** (`asm.configureEmulatorRuntime`) - validates and stores the machine-local manifest, executable, and runtime root for ares or MesenCE.
+- **Assembly: Configure Emulator Runtime** (`asm.configureEmulatorRuntime`) - validates and stores the machine-local ares manifest, executable, and runtime root.
 - **Assembly: Run in Emulator** (`asm.runEmulator`) - builds the artifact pair and launches the configured live backend without enabling breakpoints.
 - **Assembly: Debug in Emulator** (`asm.debugEmulator`) - builds and launches the configured live backend with the VS Code debugger UI.
 - **Assembly: Run and Watch** (`asm.runAndWatch`) - debounces saves and fully reloads a changed, successfully rebuilt ROM while retaining the current session after build failures.
@@ -236,7 +236,7 @@ New exports include `source-ownership.json`, bound to analysis revision, ROM ide
 4. Choose **Stop Execution Capture and Show Routines** to import, analyze, regenerate, and verify.
 5. Inspect the new source entry, instruction observations, and unresolved locations.
 
-A trace records executed instructions. It does not reconstruct a complete call stack. Pause before stopping when the end boundary matters. Bounded live streams report dropped events. Lossless modes require the matching capture runtime. MesenCE does not provide instruction tracing.
+A trace records executed instructions. It does not reconstruct a complete call stack. Pause before stopping when the end boundary matters. Bounded live streams report dropped events. Lossless modes require the matching capture runtime.
 
 ## Settings
 
@@ -327,7 +327,7 @@ The status-bar target selector controls the normal Build, Run, Debug and Watch c
 
 Explicit **Verify Baseline ROM**, **Build Modified ROM**, **Run Modified ROM**, **Debug Modified ROM**, and **Run Modified ROM and Watch** commands are also available. `asm.modificationProject` selects the manifest; `asm.buildTarget` persists the target for the workspace. Watch detects editor saves and external assembly/binary input changes. Switching targets stops the old watch. Save changes before building; builds consume disk snapshots.
 
-Each successful modified build gets its own immutable `build/<id>/` directory with a headerless ROM and matching debug map, a final ROM retaining the original copier header, and `verification.json`. `build/current.json` is updated only after the complete generation is written. Failed or cancelled builds preserve the last successful output. The debugger checks the exact selected ROM/map identity and passes that build hash to ares/MesenCE for the session. Installed runtime manifests and their executable/resource pins stay unchanged. No automatic pruning is performed.
+Each successful modified build gets its own immutable `build/<id>/` directory with a headerless ROM and matching debug map, a final ROM retaining the original copier header, and `verification.json`. `build/current.json` is updated only after the complete generation is written. Failed or cancelled builds preserve the last successful output. The debugger checks the exact selected ROM/map identity and passes that build hash to ares for the session. Installed runtime manifests and their executable/resource pins stay unchanged. No automatic pruning is performed.
 
 Modified verification checks the baseline ROM and generation hashes, interface hash, expected original bytes, mapper bounds, overlapping ranges, exact emission sizes, and dependency stability. It rejects unmapped/noncanonical writes, repeated writes and implicit gaps, including writes whose value happens to equal the original. A replacement must fit within one mapper bank. Checksums are preserved unless explicitly replaced. Modification builds deliberately differ from the baseline; that difference is reported as a changed-byte count, not a failed baseline comparison.
 

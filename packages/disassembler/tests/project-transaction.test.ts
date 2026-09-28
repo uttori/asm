@@ -19,7 +19,7 @@ import {
   revertRangeClassificationEdit,
   revertStateEntryPointEdit,
   revertTargetResolutionEdit,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
 } from "../src/index.js";
 
@@ -64,7 +64,7 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
 test("annotation transactions validate only editable metadata, preserve provenance, and reject stale saves", async (t) => {
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-annotation-transaction-"));
   t.teardown(() => fs.rm(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const before = loadAnalysisProjectSnapshot(directory);
   const updates = {
     evidence: before.shards.evidence,
@@ -125,7 +125,7 @@ test("range classification is evidence-preserving, visibly conflicting, and exac
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-range-edit-"));
   try {
     const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
+    publishAnalysisProject(directory, projectFor(rom));
     const snapshot = loadAnalysisProjectSnapshot(directory);
     const applied = applyRangeClassificationEdit(snapshot, {
       annotationId: "manual.text.2-6",
@@ -186,7 +186,7 @@ test("state and entry-point overlays preserve contradictory state and undo exact
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-state-edit-"));
   try {
     const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
+    publishAnalysisProject(directory, projectFor(rom));
     const snapshot = loadAnalysisProjectSnapshot(directory);
     const withState = {
       ...snapshot,
@@ -241,7 +241,7 @@ test("target resolutions union prior targets and provenance and restore the prio
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-target-edit-"));
   try {
     const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
+    publishAnalysisProject(directory, projectFor(rom));
     const snapshot = loadAnalysisProjectSnapshot(directory);
     const withOverride = {
       ...snapshot,
@@ -283,7 +283,7 @@ test("label rename records manual provenance, explains it, and restores the exac
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), "uttori-analysis-label-edit-"));
   try {
     const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
+    publishAnalysisProject(directory, projectFor(rom));
     const snapshot = loadAnalysisProjectSnapshot(directory);
     const withLabel = {
       ...snapshot,

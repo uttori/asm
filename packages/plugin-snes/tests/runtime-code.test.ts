@@ -7,7 +7,7 @@ import { promisify } from "node:util";
 
 import {
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   openAnalysisProjectStore,
   type AnalysisProjectShards,
   type RuntimeEvidenceRecord,
@@ -72,7 +72,7 @@ test("runtime projections retain identical CFG variants, aliases, conflicts and 
     sourceId: "fixture",
     confidence: "certain" as const,
   }));
-  writeAnalysisProject(directory, {
+  publishAnalysisProject(directory, {
     manifest: {
       format: "uttori-asm-analysis",
       schemaVersion: 3,

@@ -13,7 +13,7 @@ import {
   SqliteAnalysisStore,
   loadAnalysisProject,
   loadAnalysisProjectView,
-  writeAnalysisProject,
+  publishAnalysisProject,
   type AnalysisProject,
   type RuntimeEvidenceRecord,
   openAnalysisProjectStore,
@@ -30,7 +30,7 @@ import { DatabaseSync } from "./sqlite-connection.js";
 test("synchronous transactions reject promises and roll back their writes and revision", async (t) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-async-transaction-"));
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(32768))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(32768))));
   const before = loadAnalysisProjectSnapshot(directory);
   const store = openAnalysisProjectStore(directory);
   try {
@@ -111,7 +111,7 @@ const projectFor = (rom: RomImage): AnalysisProject => ({
 test("trace cache eviction retains exact counts and lazy payload creation for arbitrary keys", async (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const store = openAnalysisProjectStore(directory);
   const metrics = {
     hits: 0,
@@ -153,7 +153,7 @@ test("trace cache eviction retains exact counts and lazy payload creation for ar
 test("runtime batch insertion keeps namespace, uniqueness and existing-record collision checks", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const store = openAnalysisProjectStore(directory);
   const record: RuntimeEvidenceRecord = {
     id: "runtime:batch:a",
@@ -330,7 +330,7 @@ test("instruction variants preserve shared facts, paired states, payload codecs 
 
 test("initial metadata insertion rejects duplicate IDs atomically and remains retryable", (t) => {
   const directory = temporary();
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const store = openAnalysisProjectStore(directory);
   t.teardown(() => {
     store.close();
@@ -364,7 +364,7 @@ test("metadata replacement preserves identical and reordered records without inv
       evidence: ["manual-1"],
     },
   ];
-  writeAnalysisProject(directory, { ...project, shards: { ...project.shards, comments } });
+  publishAnalysisProject(directory, { ...project, shards: { ...project.shards, comments } });
   const store = openAnalysisProjectStore(directory);
   const database = new DatabaseSync(store.file);
   t.teardown(() => {
@@ -398,7 +398,7 @@ test("sqlite preserves the original failure when SQLite already rolled back the 
   const directory = temporary();
   try {
     const project = projectFor(new RomImage(new Uint8Array(0x8000)));
-    writeAnalysisProject(directory, project);
+    publishAnalysisProject(directory, project);
     const file = path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE);
     const database = new DatabaseSync(file);
     // RAISE(ROLLBACK) reproduces SQLite's automatic abort without exhausting the host's disk.
@@ -430,7 +430,7 @@ test("sqlite creation preserves records and serves interval queries", (t) => {
   const directory = temporary();
   try {
     const rom = new RomImage(new Uint8Array(0x8000));
-    writeAnalysisProject(directory, projectFor(rom));
+    publishAnalysisProject(directory, projectFor(rom));
     t.true(fs.existsSync(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE)));
     t.false(fs.existsSync(path.join(directory, "analysis")));
     const loaded = loadAnalysisProject(directory);
@@ -541,7 +541,7 @@ test("SQLite round trips every runtime variant including optional and zero-value
       width: 1,
     },
   ];
-  writeAnalysisProject(directory, { ...project, shards: { ...project.shards, runtime } });
+  publishAnalysisProject(directory, { ...project, shards: { ...project.shards, runtime } });
   const loaded = loadAnalysisProject(directory);
   t.deepEqual(loaded.shards.runtime, runtime);
   const physical = new DatabaseSync(path.join(directory, ANALYSIS_PROJECT_SQLITE_FILE));
@@ -595,7 +595,7 @@ test("SQLite round trips every runtime variant including optional and zero-value
 test("missing, unsupported and corrupt SQLite files are rejected without silently creating a database", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const file = path.join(directory, "analysis.sqlite");
   const database = new DatabaseSync(file);
   database.exec("PRAGMA user_version=99");
@@ -615,7 +615,7 @@ test("dictionary inserts roll back atomically and a retained connection can retr
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const project = projectFor(new RomImage(new Uint8Array(0x8000)));
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const store = openAnalysisProjectStore(directory);
   const database = new DatabaseSync(store.file);
   const record = {
@@ -649,7 +649,7 @@ test("dictionary inserts roll back atomically and a retained connection can retr
 test("missing normalized dictionaries cannot silently hide retained runtime records", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const database = new DatabaseSync(path.join(directory, "analysis.sqlite"));
   database.exec("PRAGMA foreign_keys=OFF; DELETE FROM runtime_evidence");
   database.close();
@@ -659,7 +659,7 @@ test("missing normalized dictionaries cannot silently hide retained runtime reco
 test("missing identity dictionary entries fail reads instead of hiding observations", (t) => {
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
-  writeAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
+  publishAnalysisProject(directory, projectFor(new RomImage(new Uint8Array(0x8000))));
   const database = new DatabaseSync(path.join(directory, "analysis.sqlite"));
   database.exec("PRAGMA foreign_keys=OFF; DELETE FROM runtime_identities");
   database.close();
@@ -706,7 +706,7 @@ test("runtime identity lookup probes both complete observation keys before readi
 test("runtime lookup distinguishes colliding hash keys, shared suffixes, and text identities", (t) => {
   const directory = temporary();
   const project = projectFor(new RomImage(new Uint8Array(0x8000)));
-  writeAnalysisProject(directory, project);
+  publishAnalysisProject(directory, project);
   const store = openAnalysisProjectStore(directory);
   const suffix = "a".repeat(16);
   const ids = [
@@ -771,7 +771,7 @@ test("state-first pairing survives identity collection and preserves full regist
   const directory = temporary();
   t.teardown(() => fs.rmSync(directory, { recursive: true, force: true }));
   const project = projectFor(new RomImage(new Uint8Array(0x8000)));
-  writeAnalysisProject(directory, { ...project, shards: { ...project.shards, runtime: [] } });
+  publishAnalysisProject(directory, { ...project, shards: { ...project.shards, runtime: [] } });
   const store = openAnalysisProjectStore(directory);
   const code: Extract<RuntimeEvidenceRecord, { kind: "runtime-instruction" }> = {
     id: `runtime:instruction-trace:${"a".repeat(64)}:code:${"b".repeat(64)}`,
@@ -827,7 +827,7 @@ test("runtime replacement rejects repeated IDs even when changed content would g
     const project = projectFor(new RomImage(new Uint8Array(0x8000)));
     const first = project.shards.runtime[0]!;
     const second = { ...first, id: "second-runtime-id" };
-    writeAnalysisProject(directory, {
+    publishAnalysisProject(directory, {
       ...project,
       shards: { ...project.shards, runtime: [first, second] },
     });

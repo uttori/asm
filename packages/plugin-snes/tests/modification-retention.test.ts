@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { sourceExportSha256, writeAnalysisProject } from "@uttori/asm-disassembler";
+import { sourceExportSha256, publishAnalysisProject } from "@uttori/asm-disassembler";
 import test from "ava";
 
 import { ownershipFixture } from "../../../tests/helpers/ownership-fixture.js";
@@ -101,7 +101,7 @@ test("unfinished drafts, sibling dependencies and changed files block cleanup", 
   );
 
   // A real sibling analysis manifest pins the content hash, independent of where its ROM path is stored.
-  writeAnalysisProject(path.join(f.directory, "derived/analysis"), {
+  publishAnalysisProject(path.join(f.directory, "derived/analysis"), {
     ...f.snapshot,
     manifest: {
       ...f.snapshot.manifest,

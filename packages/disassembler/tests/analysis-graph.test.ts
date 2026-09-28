@@ -5,7 +5,7 @@ import path from "node:path";
 import { test } from "../../../tests/ava-helper.js";
 import {
   openAnalysisProjectStore,
-  writeAnalysisProject,
+  publishAnalysisProject,
   RomImage,
   type AnalysisControlFlowNodeRecord,
   type AnalysisProjectShards,
@@ -51,7 +51,7 @@ const emptyShards = (): AnalysisProjectShards => ({
 const graphFor = (shards: AnalysisProjectShards) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), "uttori-call-graph-"));
   try {
-    writeAnalysisProject(directory, {
+    publishAnalysisProject(directory, {
       manifest: {
         format: "uttori-asm-analysis",
         schemaVersion: 3,

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import {
   RomImage,
-  writeAnalysisProject,
+  publishAnalysisProject,
   loadAnalysisProjectSnapshot,
   analysisProjectRevision,
 } from "@uttori/asm-disassembler";
@@ -38,7 +38,7 @@ export const ownershipFixture = (parentDirectory = os.tmpdir()) => {
     }),
   );
   const stagedProject = path.join(directory, "analysis");
-  writeAnalysisProject(stagedProject, {
+  publishAnalysisProject(stagedProject, {
     manifest: {
       format: "uttori-asm-analysis",
       schemaVersion: 3,

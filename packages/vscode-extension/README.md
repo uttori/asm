@@ -28,7 +28,7 @@ This example demonstrates assembly. It is not a bootable game. For NES / 6502 pr
 - Diagnostics, completion, hover, symbols, navigation, rename, and semantic highlighting.
 - Project builds, build on save, and configurable entry points and include paths.
 - ROM disassembly, SQLite analysis views, persistent annotations, and verified source regeneration.
-- Replay debugging and optional ares / MesenCE live debugging.
+- Replay debugging and optional ares live debugging.
 - Runtime capture and evidence import when supported by the selected native runtime.
 - `includeAsset` format/option completion, path navigation, image thumbnails, and WAVE/BRR comparison previews.
 
@@ -84,7 +84,7 @@ For supported SNES cartridge mappings, a source breakpoint covers every confirme
 
 Use `uttori-asm.config.json` for project plugins, target, architecture, and paths. VS Code's `asm.*` settings override project values. See Settings under **Uttori Assembly** for all defaults.
 
-Built-in assembly works in Restricted Mode. Workspace plugins execute code and require Workspace Trust. Analysis edits and live emulator launch require a trusted local filesystem workspace. Virtual workspaces are unsupported. Remote native-emulator workflows have not been validated. Replay is a snapshot viewer, not an emulator. MesenCE live integration is experimental. Ares capabilities depend on its separately verified runtime.
+Built-in assembly works in Restricted Mode. Workspace plugins execute code and require Workspace Trust. Analysis edits and live emulator launch require a trusted local filesystem workspace. Virtual workspaces are unsupported. Remote native-emulator workflows have not been validated. Replay is a snapshot viewer, not an emulator. Ares capabilities depend on its separately verified runtime.
 
 For build failures, check **Output → Uttori Assembly Language Server**. Analysis and emulator operations have **Uttori Analysis** and **Uttori Emulator** output channels. Rebuild stale debug maps or regenerate stale source before retrying navigation/debugging.
 

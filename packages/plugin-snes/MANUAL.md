@@ -40,10 +40,6 @@ See the [package reference](README.md).
 
 See the [package reference](../cli/GUIDE.md#analysis-projects).
 
-## MesenCE Offline Evidence
-
-See the [package reference](README.md).
-
 ## Labels, Namespaces, & Structs
 
 See the [package reference](../core/STRUCTS.md).
